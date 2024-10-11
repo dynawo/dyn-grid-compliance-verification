@@ -1,0 +1,25 @@
+# Exclude emacs backups and Python bytecode caches:
+*~
+__pycache__/
+
+# IntelliJ
+/.idea
+*.iml
+
+# VS Code
+.vscode
+
+# Exclude package build artifacts:
+dist/
+*.egg-info/
+build/
+
+# Exclude the recommended virtual env:
+dgcv_venv/
+
+# Exclude default results (for those cases when we run the tool in the src tree, which we shouldn't)
+Results/
+
+# Exlude auto-generate docs
+docs/manual/source/usage/helps
+docs/manual_dev/source/man/_autosummary

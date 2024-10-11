@@ -1,0 +1,9 @@
+Dynamic grid compliance verification tool authors:
+
+Carmen CARDOZO
+Marcos DE MIGUEL CRUZ
+Louis GARBAY
+Adrien GUIRONNET
+Jose Luis MARIN
+Guiu OMS
+Philibert PARQUIER

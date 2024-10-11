@@ -1,0 +1,199 @@
+    \subsection{Overview of DTR PCS \DTRPcs}
+
+    Checks for compliant behavior of the generator under a grid scenario where there is a
+    severe drop of voltage at the PDR bus (which simulates the effect of a fault
+    nearby in the network).
+
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+
+    \noindent Important reminders:
+    \begin{itemize}
+        \item Contrary to the modeling that the DTR suggests for this PCS, which uses a
+        variable shunt impedance Zv and a short-circuit network impedance Zcc, here
+        the voltage drop is simulated via a variable Infinite Bus source (Modelica
+        model \code{ControllableSource}), directly attached to the PDR bus, and for
+        which we specify a voltage curve that faithfully follows the shape prescribed
+        by PCS I6.
+    \end{itemize}
+
+    In this PCS there are several events, which correspond to the changes that are
+    forced upon the PDR bus voltage curve:
+    \begin{itemize}
+        \item At $t = T_{0}$, voltage drops to $U_{fault}$
+        \item At $t = T_{clear}$, voltage rises to $U_{clear}$
+        \item At $t = T_{rec1}$, voltage starts ramping up linearly, from $U_{clear}$ to
+        $U_{rec2}$ (reached at $t = T_{rec2}$).
+        \item At $t = T_{rec2}$ the voltage stops ramping up and remains at $U_{rec2}$
+        indefinitely.
+    \end{itemize}
+    These values of time and voltage are specified by the DTR as follows. (Remember
+    that the classification of generators into class A, B, C, D, is in the DTR under
+    Chapter 5, Article 5.1.1, Section 3. See the reminder in the document
+    \code{Summary\_data\_from\_the\_DTR.md}.)
+
+    For generator units of classes B and C:
+    \begin{center}
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{variable} & \textbf{for HTB1} & \textbf{other Volt Levels} \\
+            \midrule
+            $U_{initial}$     & 1.0 pu            & 1.0 pu                     \\
+            $T_{0}$           & (free)            & (free)                     \\
+            $U_{fault}$       & 0.05 pu           & 0.05 pu                    \\
+            $T_{clear}$       & $T_{0}$ + 250 ms  & $T_{0}$ + 150 ms           \\
+            $U_{clear}$       & 0.7 pu            & 0.7 pu                     \\
+            $T_{rec1 }$       & $T_{0}$ + 750 ms  & $T_{0}$ + 700 ms           \\
+            $T_{rec2 }$       & $T_{0}$ + 1550 ms & $T_{0}$ + 1500 ms          \\
+            $U_{rec2}$        & 0.9 pu            & 0.9 pu                     \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    For generator units of class D:
+    \begin{center}
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{variable} & \textbf{for HTB2} & \textbf{other Volt Levels} \\
+            \midrule
+            $U_{initial}$     & 1.0 pu            & 1.0 pu                     \\
+            $T_{0}$           & (free)            & (free)                     \\
+            $U_{fault}$       & 0.00 pu           & 0.00 pu                    \\
+            $T_{clear}$       & $T_{0}$ + 250 ms  & $T_{0}$ + 150 ms           \\
+            $U_{clear}$       & 0.5 pu            & 0.5 pu                     \\
+            $T_{rec1 }$       & $T_{0}$ + 750 ms  & $T_{0}$ + 700 ms           \\
+            $T_{rec2 }$       & $T_{0}$ + 1400 ms & $T_{0}$ + 1350 ms          \\
+            $U_{rec2}$        & 0.9 pu            & 0.9 pu                     \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+
+    \subsubsection{Simulation}
+    As required by the DTR PCS \DTRPcs, the figures below show the
+    following magnitudes:
+    \begin{itemize}
+        \item Voltage at connection point: modulus of the AC complex voltage at
+        the PDR bus.
+        \item Reactive power supplied at the connection point (obtained from
+        the controllable Infinite Bus on TSO side).
+        \item Active power supplied at the connection point (obtained from
+        the controllable Infinite Bus on TSO side).
+        \item Rotor speed.
+        \item Magnitude controlled by the AVR.
+        \item Generator's internal angle.
+    \end{itemize}
+
+    \subsubsection{Simulation results}
+    The blue line shows the calculated curve, if a reference curve has been entered it is
+    shown in orange.
+
+% For now we won't use floats for figures, to get more precise placement
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I6.GridVoltageDip.Qzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude measured at the PDR bus.
+            The vertical dashed line marks the rise time $T_{85U}$.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I6.GridVoltageDip.Qzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Stator voltage magnitude, in pu. The gray dotted line show
+            the AVR setpoint.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I6.GridVoltageDip.Qzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Real power output P, measured at the PDR bus. Green-dashed
+            lines: $\pm 10\%$ margin around the final value of P.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I6.GridVoltageDip.Qzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_W_PCS_RTE-I6.GridVoltageDip.Qzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Rotor speed.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Theta_PCS_RTE-I6.GridVoltageDip.Qzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Generator's internal angle, in rad.
+        \end{minipage}
+    \end{minipage}
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI6GridVoltageDipQzero }}
+
+
+    \subsubsection{Analysis of results}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
+
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Parameter} & \multicolumn{1}{c}{\textbf{value}} \\
+            \midrule
+            \BLOCK{for row in rmPCSI6GridVoltageDipQzero}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Key:
+    \begin{description}
+        \item[Settling time $T_{10P}$:] time at which the suplied real power
+        P stays within the +/-10\% tube centered on the final value of P.
+        \item[Rise time $T_{85U}$:] time at which the the voltage at the
+        PDR bus returns back above 0.85pu, regardless of any possible
+        overshooting/undershooting that may take place later on.
+    \end{description}
+
+
+    \subsubsection{Compliance checks}
+
+    Compliance checks required by PCS \DTRPcs:
+    \begin{center}
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{Check} & \multicolumn{1}{c}{\textbf{value}} & \multicolumn{1}{c}{\textbf{Compliant?}} \\
+            \midrule
+            \BLOCK{for row in cmPCSI6GridVoltageDipQzero}
+            {{row[0]}}     & {{row[1]}}                         & {{row[2]}}                              \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

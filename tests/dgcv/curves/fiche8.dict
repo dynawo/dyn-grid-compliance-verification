@@ -1,0 +1,8 @@
+[Curves-Dictionary]
+time = TIME
+bus_PDR_V = V/N1
+StepUp_Xfmr_V = V/STAT
+generator_V = GEN     -IEEEST4B-4
+line_P = - P
+line_Q = - Q
+generator_Omega = GEN     -OMEGA

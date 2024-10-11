@@ -1,0 +1,14 @@
+#1
+double TableOmegaRefPu(2,2)
+{{simulation_start}} 1.0
+{{simulation_stop}} 1.0
+
+double TableUPhase(2,2)
+{{simulation_start}} 0.0
+{{simulation_stop}} 0.0
+
+double TableUPu(4,2)
+{{simulation_start}} {{bus_u0pu}}
+{{start_event}} {{bus_u0pu}}
+{{start_event}} {{bus_upu}}
+{{simulation_stop}} {{bus_upu}}

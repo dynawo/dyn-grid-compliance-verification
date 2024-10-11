@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dyn:jobs xmlns:dyn="http://www.rte-france.com/dynawo">
+  <dyn:job name="{{job_name}}">
+    <dyn:solver lib="{{solver_lib}}" parFile="solvers.par" parId="{{solver_id}}"/>
+    <dyn:modeler compileDir="outputs/compilation">
+      <dyn:dynModels dydFile="TSOModel.dyd"/>
+      <dyn:dynModels dydFile="Omega.dyd"/>
+      <dyn:dynModels dydFile="{{producer_dyd}}"/>
+      <dyn:precompiledModels useStandardModels="true">
+        <dyn:directory path="{{dgcv_ddb_path}}" recursive="false"/>
+      </dyn:precompiledModels>
+      <dyn:modelicaModels useStandardModels="true">
+        <dyn:directory path="." recursive="false"/>
+      </dyn:modelicaModels>
+    </dyn:modeler>
+    <dyn:simulation startTime="{{simulation_start}}" stopTime="{{simulation_stop}}" precision="{{simulation_precision}}" />
+    <dyn:outputs directory="outputs">
+      <dyn:timeline exportMode="XML"/>      
+      <dyn:finalState exportIIDMFile="true" exportDumpFile="false"/>
+      <dyn:curves inputFile="TSOModel.crv" exportMode="CSV"/>
+      <dyn:logs>
+        <dyn:appender tag="" file="dynawo.log" lvlFilter="INFO"/>
+      </dyn:logs>
+    </dyn:outputs>
+  </dyn:job>
+</dyn:jobs>

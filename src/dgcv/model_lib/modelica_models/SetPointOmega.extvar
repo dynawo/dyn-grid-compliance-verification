@@ -1,0 +1,3 @@
+<external_variables xmlns="http://www.rte-france.com/dynawo">
+  <variable type="continuous" id="omegaRefPu.value"/>
+</external_variables>

@@ -1,0 +1,33 @@
+[Curves-Metadata]
+# True when the reference curves are field measurements
+is_field_measurements =
+# Instant of time at which the event or fault starts
+# Variable sim_t_event_start is called simply sim_t_event in the DTR
+sim_t_event_start =
+# Duration of the event or fault
+fault_duration =
+# Frequency sampling of the reference curves
+frequency_sampling =
+# Maximum injected current by Wind Turbine or PV Array
+# Replace "[WT_ID]" with the Wind Turbine id or PV Array id
+[WT_ID]_GEN_MaxInjectedCurrentPu = 
+
+[Curves-Dictionary]
+time = 
+BusPDR_BUS_ActivePower =
+BusPDR_BUS_ReactivePower =
+BusPDR_BUS_Voltage =
+# Replace "[XFMR_ID]" with the transformer id associating to the Wind Turbine or PV Array
+[XFMR_ID]_XFMR_Tap =
+# Replace "[WT_ID]" with the Wind Turbine id or PV Array id
+[WT_ID]_GEN_MagnitudeControlledByAVRPu =
+[WT_ID]_GEN_AVRSetpointPu =
+[WT_ID]_GEN_InjectedActiveCurrent =
+[WT_ID]_GEN_InjectedReactiveCurrent =
+[WT_ID]_GEN_InjectedCurrent =
+# To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
+# and the suffixes _a, _b and _c must be added as in the following example:
+#    BusPDR_BUS_Voltage_a =
+#    BusPDR_BUS_Voltage_b =
+#    BusPDR_BUS_Voltage_c =
+

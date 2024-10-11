@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="InfiniteBus">
+    <par type="DOUBLE" name="infiniteBus_UPu" value="{{infiniteBus_U0Pu}}"/>
+    <par type="DOUBLE" name="infiniteBus_UPhase" value="0.000"/>
+  </set>
+  <set id="Line1">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="Line2">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="Line3">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="Line4a">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu_1}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="Line4b">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu_99}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="DisconnectLine">
+    <par type="DOUBLE" name="event_tEvent" value="{{event_end}}"/>
+    <par type="BOOL" name="event_stateEvent1" value="true"/>
+  </set>
+  <set id="NodeFault">
+    <par type="DOUBLE" name="fault_tBegin" value="{{event_start}}"/>
+    <par type="DOUBLE" name="fault_tEnd" value="{{event_end}}"/>
+    <par type="DOUBLE" name="fault_RPu" value="0.0173"/>
+    <par type="DOUBLE" name="fault_XPu" value="0.0"/>
+  </set>
+</parametersSet>
