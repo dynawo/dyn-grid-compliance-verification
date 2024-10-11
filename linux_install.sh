@@ -41,7 +41,7 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
-RELEASE_TAG="v0.5.0"
+RELEASE_TAG="v0.5.1"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.7.0.zip"
 DYNAWO_CHECKSUM="69bec858b6b245ce4bf0b2cd38b2ac8f271c17bb"
 ###TODO: RESTORE THIS LINE WHEN GONE PUBLIC
