@@ -11,7 +11,7 @@ def write_output(file, text):
 
 def generate_help_files():
     output_path = Path(__file__).parent / "source" / "usage" / "helps"
-    output_path.mkdir(parents=True)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     with open(output_path / "dgcv.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
