@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="Main_Load">
+    <par type="DOUBLE" name="load_P0Pu" value="{{main_P0Pu}}"/>
+    <par type="DOUBLE" name="load_Q0Pu" value="{{main_Q0Pu}}"/>
+    <par type="DOUBLE" name="load_U0Pu" value="{{main_U0Pu}}"/>
+    <par type="DOUBLE" name="load_UPhase0" value="{{main_UPhase0}}"/>
+  </set>
+  <set id="Secondary_Load">
+    <par type="DOUBLE" name="load_P0Pu" value="{{secondary_P0Pu}}"/>
+    <par type="DOUBLE" name="load_Q0Pu" value="{{secondary_Q0Pu}}"/>
+    <par type="DOUBLE" name="load_U0Pu" value="{{secondary_U0Pu}}"/>
+    <par type="DOUBLE" name="load_UPhase0" value="{{secondary_UPhase0}}"/>
+  </set>
+  <set id="DisconnectLoad">
+    <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>
+    <par type="BOOL" name="event_stateEvent1" value="true"/>
+  </set>
+</parametersSet>

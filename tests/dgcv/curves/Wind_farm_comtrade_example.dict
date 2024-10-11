@@ -1,0 +1,17 @@
+[Curves-Dictionary]
+Vac_a = meas_PCC1/Vac_a@control
+Vac_b = meas_PCC1/Vac_b@control
+Vac_c = meas_PCC1/Vac_c@control
+Vneg = meas_PCC1/Vneg@control
+Vpos = meas_PCC1/Vpos@control
+Vzero = meas_PCC1/Vzero@control
+Iac_a = meas_PCC1/Iac_a@control
+Iac_b = meas_PCC1/Iac_b@control
+Iac_c = meas_PCC1/Iac_c@control
+Ipos = meas_PCC1/Ipos@control
+Ineg = meas_PCC1/Ineg@control
+Izero = meas_PCC1/Izero@control
+Ipos_d = meas_PCC1/Ipos_d@control
+Ipos_q = meas_PCC1/Ipos_q@control
+Ineg_d = meas_PCC1/Ineg_d@control
+Ineg_q = meas_PCC1/Ineg_q@control

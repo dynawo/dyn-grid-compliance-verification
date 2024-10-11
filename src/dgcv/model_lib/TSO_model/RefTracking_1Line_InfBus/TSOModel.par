@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="InfiniteBus">
+    <par type="DOUBLE" name="infiniteBus_UPu" value="{{infiniteBus_U0Pu}}"/>
+    <par type="DOUBLE" name="infiniteBus_UPhase" value="0"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="SetPoint">
+    <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
+    <par type="DOUBLE" name="step_Value0" value="{{event_pre_value}}"/>
+    <par type="DOUBLE" name="step_Height" value="{{event_step_value}}"/>
+  </set>
+</parametersSet>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="Line1">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="Generator">
+    <par type="INT" name="generator_ExcitationPu" value="1"/>
+    <par type="BOOL" name="generator_UseApproximation" value="true"/>
+    <par type="DOUBLE" name="generator_md" value="0"/> <!-- To be double checked but md, mq equal to zero to get rid of the saturation (no model without saturation into Dynawo)-->
+    <par type="DOUBLE" name="generator_mq" value="0"/>
+    <par type="DOUBLE" name="generator_nd" value="9.9"/>
+    <par type="DOUBLE" name="generator_nq" value="9.9"/>
+    <par type="DOUBLE" name="generator_DPu" value="0"/>
+    <par type="DOUBLE" name="generator_MdPuEfd" value="2.086"/>
+    <par type="DOUBLE" name="generator_RTfPu" value="0"/>
+    <par type="DOUBLE" name="generator_XTfPu" value="0"/>
+    <par type="DOUBLE" name="generator_SnTfo" value="340000"/>
+    <par type="DOUBLE" name="generator_UNomHV" value="225"/>
+    <par type="DOUBLE" name="generator_UNomLV" value="225"/>
+    <par type="DOUBLE" name="generator_UBaseHV" value="225"/>
+    <par type="DOUBLE" name="generator_UBaseLV" value="225"/>
+    <par type="DOUBLE" name="generator_H" value="8"/>
+    <par type="DOUBLE" name="generator_RaPu" value="0.003"/>
+    <par type="DOUBLE" name="generator_XlPu" value="0.18"/>
+    <par type="DOUBLE" name="generator_XdPu" value="1.09"/>
+    <par type="DOUBLE" name="generator_XpdPu" value="0.28"/>
+    <par type="DOUBLE" name="generator_XppdPu" value="0.185"/>
+    <par type="DOUBLE" name="generator_Tpd0" value="11.1"/>
+    <par type="DOUBLE" name="generator_Tppd0" value="0.073"/>
+    <par type="DOUBLE" name="generator_XqPu" value="0.65"/>
+    <par type="DOUBLE" name="generator_XppqPu" value="0.25"/>
+    <par type="DOUBLE" name="generator_Tppq0" value="0.11"/>
+    <par type="DOUBLE" name="generator_UNom" value="225"/>
+    <par type="DOUBLE" name="generator_SNom" value="340000"/>
+    <par type="DOUBLE" name="generator_PNomTurb" value="340000"/>
+    <par type="DOUBLE" name="generator_PNomAlt" value="320000"/>
+    <par type="DOUBLE" name="generator_P0Pu" value="{{gen_P0Pu}}"/> <!-- To be consistent with the Producer.par set, it should be negative in case of production -->
+    <par type="DOUBLE" name="generator_Q0Pu" value="{{gen_Q0Pu}}"/>
+    <par type="DOUBLE" name="generator_U0Pu" value="{{gen_U0Pu}}"/>
+    <par type="DOUBLE" name="generator_UPhase0" value="{{gen_UPhase0}}"/>
+    <par type="DOUBLE" name="URef_ValueIn" value="0"/>
+    <par type="DOUBLE" name="Pm_ValueIn" value="0"/>
+  </set>
+  <set id="Load_EQ">
+    <par type="DOUBLE" name="load_P0Pu" value="3000.000"/>
+    <par type="DOUBLE" name="load_Q0Pu" value="0.0"/>
+    <par type="DOUBLE" name="load_U0Pu" value="1.0453"/>
+    <par type="DOUBLE" name="load_UPhase0" value="0.0"/>
+  </set>
+  <set id="Load_PE">
+    <par type="DOUBLE" name="load_P0Pu" value="70.0"/>
+    <par type="DOUBLE" name="load_Q0Pu" value="0.0"/>
+    <par type="DOUBLE" name="load_U0Pu" value="1.0453"/>
+    <par type="DOUBLE" name="load_UPhase0" value="0.0"/>
+  </set>
+  <set id="DisconnectLoad">
+    <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>
+    <par type="BOOL" name="event_stateEvent1" value="true"/>
+  </set>
+</parametersSet>

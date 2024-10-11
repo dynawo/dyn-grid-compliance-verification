@@ -1,0 +1,119 @@
+    \subsection{Overview of DTR PCS \DTRPcs}
+
+    Checks for compliant behavior of the generator under a grid scenario where there is a
+    severe loss of load in the bulk transmission network: 7GW out of 307GW. In this
+    case the network side is simulated by means of a large generator (340 GVA) and
+    two large loads (300 and 7 GW).
+
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+
+
+    \subsubsection{Simulation}
+    As required by the DTR PCS \DTRPcs, the figures below show the
+    following magnitudes:
+    \begin{itemize}
+        \item Voltage at connection point: modulus of the AC complex voltage at
+        the PDR bus.
+        \item Reactive power supplied at the connection point: sum of reactive power
+        over all lines on TSO side.
+        \item Active power supplied at the connection point: sum of active power
+        over all lines on TSO side.
+        \item Rotor speed.
+        \item Magnitude controlled by the AVR.
+        \item Network frequency.
+    \end{itemize}
+
+    \subsubsection{Simulation results}
+    The blue line shows the calculated curve, if a reference curve has been entered it is
+    shown in orange.
+
+% For now we won't use floats for figures, to get more precise placement
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I8.LoadShedDisturbance.PmaxQzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I8.LoadShedDisturbance.PmaxQzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Stator voltage magnitude, in pu. The gray dotted line show
+            the AVR setpoint. The red dashed lines show the $\pm 5\%$ margin
+            around the AVR setpoint.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I8.LoadShedDisturbance.PmaxQzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Real power output P, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I8.LoadShedDisturbance.PmaxQzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_W_PCS_RTE-I8.LoadShedDisturbance.PmaxQzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Rotor speed.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_WRef_PCS_RTE-I8.LoadShedDisturbance.PmaxQzero}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Network frequency, in Hz. The dashed horizontal lines mark
+            the $\pm$200mHz (green line) and $\pm$250mHz (red line) ranges, respectively (centered on
+            the starting value of frequency).
+        \end{minipage}
+    \end{minipage}
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI8LoadShedDisturbancePmaxQzero }}
+
+
+    \subsubsection{Analysis of results}
+
+    \noindent No analysis is needed in PCS \DTRPcs.
+
+
+    \subsubsection{Compliance checks}
+
+    Compliance checks required by PCS \DTRPcs:
+
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{Check} & \multicolumn{1}{c}{\textbf{value}} & \multicolumn{1}{c}{\textbf{Compliant?}} \\
+            \midrule
+            \BLOCK{for row in cmPCSI8LoadShedDisturbancePmaxQzero}
+            {{row[0]}}     & {{row[1]}}                         & {{row[2]}}                              \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{minipage}

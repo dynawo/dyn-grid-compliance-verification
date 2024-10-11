@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+import logging
+import operator
+import os
+import shutil
+import subprocess
+import sys
+from operator import attrgetter
+from pathlib import Path
+
+from dgcv.configuration.cfg import config
+from dgcv.core.execution_parameters import Parameters
+from dgcv.core.global_variables import (
+    ELECTRIC_PERFORMANCE_PPM,
+    ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION_PPM,
+    REPORT_NAME,
+)
+from dgcv.files import manage_files
+from dgcv.logging.logging import dgcv_logging
+from dgcv.model.pcs import Pcs
+from dgcv.report import report
+from dgcv.report.LatexReportException import LatexReportException
+
+
+def _open_document(file: Path):
+    if os.name == "nt":
+        dgcv_logging.get_logger("ModelValidation").info(f"Opening the report: {file}")
+        subprocess.run(["start", file], shell=True)
+    else:
+        if shutil.which("open") and os.environ.get("DISPLAY"):
+            dgcv_logging.get_logger("ModelValidation").info(f"Opening the report: {file}")
+            subprocess.run(["open", file], check=True)
+        else:
+            dgcv_logging.get_logger("ModelValidation").info(f"Report saved in: {file}")
+
+
+class ModelValidation:
+    """Validation of producer inputs.
+    There are two types of validations, electrical performance and model validation.
+    Additionally, the electrical performance differs between the synchronous generator-type
+    producer models and the Power Park Modules.
+
+    Args
+    ----
+    parameters: Parameters
+        Tool parameters
+    """
+
+    def __init__(
+        self,
+        parameters: Parameters,
+    ):
+        self._parameters = parameters
+        self.__initialize_working_environment()
+
+        # Environment Path
+        self._modelica_path = Path(config.get_value("Global", "modelica_path"))
+        self._templates_path = Path(config.get_value("Global", "templates_path"))
+        self._path_latex_files = config.get_value("Global", "latex_templates_path")
+
+        # Read the Pcs list to validate
+        validation_pcs = set()
+        if parameters.get_selected_pcs():
+            validation_pcs.add(parameters.get_selected_pcs())
+
+        if parameters.get_sim_type() == ELECTRIC_PERFORMANCE_SM:
+            dgcv_logging.get_logger("ModelValidation").info(
+                "Electric Performance Verification for Synchronous Machines"
+            )
+            self.__get_validation_pcs(
+                validation_pcs, "electric_performance_verification_pcs", "performance/SM"
+            )
+
+        elif parameters.get_sim_type() == ELECTRIC_PERFORMANCE_PPM:
+            dgcv_logging.get_logger("ModelValidation").info(
+                "Electric Performance Verification for Power Park Modules"
+            )
+            self.__get_validation_pcs(
+                validation_pcs, "electric_performance_ppm_verification_pcs", "performance/PPM"
+            )
+
+        elif parameters.get_sim_type() == MODEL_VALIDATION_PPM:
+            dgcv_logging.get_logger("ModelValidation").info("DGCV Model Validation")
+            self.__get_validation_pcs(validation_pcs, "model_validation_pcs", "model/PPM")
+        self._validation_pcs = validation_pcs
+
+        # Prepare the environment to execute the tool
+        pcs_list = [Pcs(pcs_name, parameters) for pcs_name in self._validation_pcs]
+        self._pcs_list = sorted(pcs_list, key=attrgetter("_id", "_zone"))
+
+    def __get_validation_pcs(
+        self, validation_pcs: set, validation_key: str, validation_path: str
+    ) -> None:
+        tool_path = Path(__file__).resolve().parent.parent
+        if not validation_pcs:
+            validation_pcs.update(config.get_list("Global", validation_key))
+        if not validation_pcs:
+            if not self._parameters.get_only_dtr():
+                validation_pcs.update(
+                    manage_files.list_directories(
+                        config.get_config_dir() / self._templates_path / validation_path
+                    )
+                )
+            validation_pcs.update(
+                manage_files.list_directories(tool_path / self._templates_path / validation_path)
+            )
+
+    def __initialize_working_environment(self) -> None:
+        """Create the tool's working directory."""
+        # prepare tool folders
+        manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
+        manage_files.create_dir(self._parameters.get_working_dir() / "Reports", clean_first=False)
+        manage_files.create_dir(self._parameters.get_working_dir() / "Latex", clean_first=False)
+
+        # Check if results path exists to avoid overwriting if the user does not
+        #  want to lose the files
+        if manage_files.check_output_dir(self._parameters.get_output_dir()):
+            logging.getLogger("Model Validation").warning(
+                "Exiting. Please rename your current Results directory, otherwise it will be "
+                "erased and a new one will be created."
+            )
+            sys.exit()
+        manage_files.create_dir(self._parameters.get_output_dir())
+
+    def __create_report(self, summary_list: list, report_results: dict) -> None:
+        """Create the full report."""
+        sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone"))
+        dgcv_logging.get_logger("ModelValidation").debug(f"Sorted summary {sorted_summary_list}")
+        try:
+            report.create_pdf(
+                sorted_summary_list,
+                report_results,
+                self._parameters,
+                Path(self._path_latex_files),
+            )
+        except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
+            if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
+                dgcv_logging.get_logger("ModelValidation").exception(f"Aborted execution. {e}")
+            else:
+                dgcv_logging.get_logger("ModelValidation").error(f"Aborted execution. {e}")
+            exit(1)
+
+        for pcs_results in report_results.values():
+            pcs = pcs_results["pcs"]
+            manage_files.copy_output_files(
+                pcs.get_name(),
+                self._parameters.get_working_dir(),
+                self._parameters.get_output_dir(),
+            )
+
+        # Move output files to destination folder
+        manage_files.copy_output_files(
+            "Reports",
+            self._parameters.get_working_dir(),
+            self._parameters.get_output_dir(),
+        )
+
+    @staticmethod
+    def get_project_path() -> Path:
+        """Get the tool path
+        Returns
+        -------
+        Path
+            Tool path
+        """
+        return Path(__file__).parent.parent
+
+    def validate(self, is_test_validation: bool = False) -> list:
+        """Validate the Producer inputs.
+
+        Parameters
+        ----------
+        is_test_validation: bool
+            True if the validation is used from unit tests
+
+        Returns
+        -------
+        list
+            Compliance results in a list
+        """
+
+        # Validate each configured Pcs
+        summary_list = []
+        report_results = {}
+        for pcs in self._pcs_list:
+            try:
+                if not pcs.is_valid():
+                    dgcv_logging.get_logger("ModelValidation").error(
+                        f"{pcs.get_name()} is not a valid PCS"
+                    )
+                    continue
+
+                report_name, success, pcs_results = pcs.validate(
+                    summary_list,
+                )
+                pcs_results["pcs"] = pcs
+                pcs_results["sim_type"] = self._parameters.get_sim_type()
+                pcs_results["success"] = success
+                pcs_results["report_name"] = report_name
+                report_results[pcs.get_name()] = pcs_results
+            except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
+                if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
+                    dgcv_logging.get_logger("ModelValidation").exception(f"Aborted execution. {e}")
+                else:
+                    dgcv_logging.get_logger("ModelValidation").error(f"Aborted execution. {e}")
+                exit(1)
+
+        # Create the pcs report
+        if not is_test_validation:
+            self.__create_report(summary_list, report_results)
+
+            manage_files.copy_output_files(
+                "Reports",
+                self._parameters.get_working_dir(),
+                self._parameters.get_output_dir(),
+            )
+
+            _open_document(
+                self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
+            )
+
+        # Remove temporal files
+        if dgcv_logging.getEffectiveLevel() != logging.DEBUG or is_test_validation:
+            manage_files.remove_dir(self._parameters.get_working_dir())
+
+        return list(map(operator.attrgetter("compliance"), summary_list))

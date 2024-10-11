@@ -1,0 +1,22 @@
+\documentclass[crop,tikz]{standalone}
+\usepackage{circuitikz}
+\usetikzlibrary{arrows}
+\tikzset{
+  font={\fontsize{7pt}{7}\selectfont}}
+\begin{document}
+\begin{tikzpicture}
+    \draw   (0.2,0) to [vsourcesin,l=Group] (1,0)
+    to [draw,voosource,align=center,l={Group\\ transformer}]  node[above,yshift=0.5cm] {PDR} (5,0)
+    to [L,l=2b] (6.5,0) to (6.5,1)
+    to [L,l_=2b,mirror] (5,1) to (5,-1)
+    to [L,l=2b] (6.5,-1) to (6.5,0)
+    to  (7.5,0) to  (8.0,0) node[draw,thick,circle,minimum width=9mm,fill=white]{$\infty$};
+    \draw (5.1,-1) to (5.2,-0.8);
+    \draw (6.3,-1) to (6.4,-0.8);
+    \draw (1.8,0.5) to (1.8,-0.5);
+    \draw (4.2,0.5) to (4.2,-0.5);
+    \draw (1.8,-1.4) node[ground]{~$U_s$} to (1.8,-0.8) to [short,i=$$] (1.8,-0.8); 
+    \draw (4.2,-1.4) node[ground]{~$U$} -- (4.2,-0.8) to [short,i=$$] (4.2,-0.8); 
+    \draw (7.0,-1.4) node[ground]{~$U_\infty$} -- (7.0,-0.8) to [short,i=$$] (7.0,-0.8); 
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,1154 @@
+
+===========================
+
+DESIGN SPECIFICATION
+
+(c) 2022 RTE
+Developed by Grupo AIA
+
+===========================
+
+
+# Architecture
+
+## Organization of the code
+
+### Main
+
+Currently, this script is too long and includes methods that are not
+necessary, and can be moved to other scripts.  First of all, we must
+remove the variant management for the test files from the main module,
+this first level of the code only needs to know that it has to do a
+test with a certain number of files and place the results in the final
+directories.  The command that allows the execution of the Dynawo
+application, which is currently in the main, will now have its own
+script called Dynawo, and possibly it will be placed in a directory
+with the same name. For the execution of the simulation, the 'execute'
+or 'simulate' method of the mentioned script will be called, this
+method should simplify the reading of the code, since some of the
+tests that request the cards will cause several Dynawo simulations to
+be executed. You don't want to have multiple system calls spread
+across different scripts.
+
+### Organization of the scripts
+
+To facilitate the reading of the code, it is proposed to organize the
+existing scripts, as well as future ones, in the following modules:
+
+  - Configuration: The Configuration folder is essential for managing the 
+  tool's setup, containing all necessary files and scripts. It includes 
+  configuration parameters to customize tool behavior, test scripts for 
+  validating functionality, and resources for generating figures. This 
+  folder is crucial for ensuring the tool operates as intended in various 
+  environments.
+  
+  - Core: The folder houses the primary scripts essential to the tool's 
+  operation. This includes the initialization scripts, simulation scripts 
+  for running cases, and validation scripts to validate it, among others.
+  
+  - Curves: The Curves folder is designated for storing all the code that 
+  handles, saves, imports, modifies, and manages the curves used in the tool. 
+  This folder is essential for ensuring that all curve-related operations are 
+  efficiently organized and accessible.
+  
+  - Dynawo: Contains the code used to work with Dynawo. This includes 
+  managing models, running simulations, adapting variables, compiling models, 
+  and other related tasks. It serves as the hub for all operations involving 
+  Dynawo within the tool.
+  
+  - Electrical: This directory contains all the scripts with the
+  calculations of the electrical variables that depend on the network
+  modeled by the user. See calculation of infinite bus voltages,
+  and/or producer generator, line reactance, etc.
+  
+  - Files: This directory contains all the scripts whose purpose is to
+  manage files and/or replace template placeholders, in order to
+  obtain the input files for the simulation of each fiche.
+  
+  - Logging: The Logging folder is dedicated to managing and configuring 
+  the tool's logging system. It contains all the necessary files and 
+  scripts to set up, customize, and control how logging is performed, 
+  ensuring that all relevant activities and errors are accurately recorded 
+  and monitored.
+  
+  - Model: Contains the model definition based around the concept of the 
+  **PCS**, as defined by RTE's DTR document. When one translates the tests 
+  defined by the DTR PCSs into actual simulations, it is observed that the 
+  PCSs implicitly define a hierarchy of logical concepts. To reflect this 
+  hierarchy in unambiguous terms, the following terminology has been adopted:
+  PCS ==> Benchmarks ==> OperatingPoint.
+  
+  - Model lib: Contains the collection of models used in simulations. 
+  This folder serves as a repository for all simulation models, providing 
+  the necessary resources to accurately run and analyze different scenarios 
+  within the tool.
+  
+  - Report: This directory contains the scripts that allow you to
+  create and collect the graphs, tables and data necessary to generate
+  the final PDF with the analysis of each fiche. In case the module
+  expands a lot, the possibility of adding subdirectories will be
+  studied, leaving in the main directory the scripts that collect the
+  necessary information to create the final PDF and placing the more
+  specific scripts in the subdirectories, such as a subdirectory
+  called Tables, which contains the scripts where the tables are
+  generated with a specific format, or another called Charts with the
+  scripts to generate the graphs.
+  
+  - Sigpro: Responsible for signal processing. It contains the code and 
+  resources necessary for handling, analyzing, and processing signals within 
+  the tool.
+  
+  - Templates: The Templates folder stores all the templates for inputs, PCS, 
+  and reports used by the tool.
+  
+  - Validation: The Tests folder contains the code responsible for executing 
+  electrical tests, including performance tests, sanity checks, and comparison 
+  tests, among others.
+
+
+## Executing a Fiche
+
+All files generated by the application will be stored in a tmp
+directory located in the output directory. Once the execution of each
+individual file has finished correctly, the files specified in the
+following section will be copied to the output directory.  The tmp
+directory must always be deleted at the end of the application
+execution if the user has not expressly specified that he wishes to
+keep it by using the --debug flag when executing the application.
+
+
+## Presentation of a simulated Fiche
+
+The PDF report of the analysis of a Fiche must be saved in the output
+directory specified by the user or one by default. If a File requests
+to perform several simulations with variants in the inputs, an
+individual subdirectory will be created for each variant where the
+final report of each simulation will be saved.  In addition to the
+report, the files used as input for the Fiche simulation must be saved
+in the output directory. If there are variants to simulate, the input
+files of each variant will be stored in the corresponding
+subdirectories.  Similarly, the output files of the main Dynawo
+simulation must be stored.
+
+
+
+
+
+# Configuration
+
+## INI file structure
+
+The INI file is a text file where each line represents a configurable
+variable within the application. The variable is informed following
+the following pattern:
+
+  ```
+  key = value
+  ```
+   
+Additionally, the lines of the file will be grouped into sections
+where all the variables that make up a section must be related to each
+other and to the title of the section. This file must allow comments
+to be included following the pattern:
+      
+  ```
+  # comments
+  ```
+
+The sections that make up the file are listed below:
+
+  - Global: Parameters that allow you to modify the operation of the tool.
+
+  - Figures: These parameters are used when the tool sets the visible range 
+  on the X/Y axes of report figures.
+
+  - Dynawo: All the variables that allow configuring the type of
+  simulation to be carried out in Dynawo are reported. Variables such
+  as the duration of the simulation, debug options if considered
+  appropriate, type of solver if necessary, etc.
+  
+  - GridCode: In this section, the variables informed in the DTR
+  that do not depend on the different fiches of the document are
+  configured. Variables such as line reactance, Udim, etc.
+  
+  - CurvesVariables: Allows you to add and/or remove curves in the dynamic 
+  simulation.
+
+There are two INI files: one is internal to the application, containing the
+default values for _all_ configurable variables; the other belongs to the user
+(located at $HOME/.config) and allows to override virtually any variable
+in the application INI.
+
+When the application requires the use of the variables configured in
+INI files, the following priority rule will be followed:
+
+  1. If the requested variable has been configured by the user, this
+     value takes precedence over all available options.
+  
+  2. In the event that the user does not configure the requested variable, the
+     default value present in the application INI file will be used.
+
+
+
+
+
+# DTR Sheets: our implementation
+
+This chapter describes our implementation of the DTR Sheets. We say
+`our` because the DTR is sometimes ambiguous or even contradictory in
+some of the details, and also because some of the tests are not done
+(e.g., we do not do three-phase simulations in the case of PPM
+Sheets).
+
+Nomenclature: Sheets ending in **SM** are for Synchronous Machines,
+and those ending in **PPM** are for Power Park Modules (wind & solar
+farms).
+
+
+
+
+## Sheet I3SM
+
+_Applies to generator classes: B, C, D_
+
+Checks for compliant behavior of the generator under a scenario where there is a
+sudden change in the admittance of the connection to the network (loss of one of
+the three transmission lines, i.e. a 33% loss in branch admittance).
+
+The opening of the line (Line3) takes place at an instant of time denoted by
+**T_{event}**.
+
+
+### Initialization
+
+The following values are specified at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = 0
+  * U = U_{dim}
+
+
+### Magnitudes to plot (curves)
+
+The following 6 curves are the same for Sheets I3 and I4:
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power supplied at the connection point: sum of `line_Q2Pu` over all
+   lines on RTE side.
+3. Active power supplied at the connection point: sum of `line_P2Pu` over all
+   lines on RTE side.
+4. Rotor speed: `generator_omegaPu`.
+5. AVR setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+
+
+### Analyses to perform
+
+1. Find the `settling time T_{10P}`: time at which the supplied power P stays
+   inside the +/-10% "tube" centered on the final value of P.
+2. Find the `settling time T_{5P}`: time at which the supplied power P stays
+   inside the +/-5% "tube" centered on the final value of P.
+
+
+### Compliance checks to perform
+
+1. Check that the generator remains stable:
+   a) Check that the generator protections (if any) have not disconnected it.
+   b) Check that the rotor angle *generator_theta* has stabilized to a
+      steady-state value (presumably this angle should be within +/- 90º?).
+2. Check that `T_{10p} - T_{event} < 5 sec`
+3. Check that `T_{5p} - T_{event} < 10 sec`
+
+
+
+
+## Sheet I4SM
+
+_Applies to generator classes: B, C, D_
+
+Checks for compliant behavior of the generator under a scenario where there is a
+symmetric three-phase fault at one of the four transmission lines (at a 1%
+distance from the PDR).
+
+In Dynawo this has been modeled by splitting Line4 into Line4a and Line4b, and
+then inserting an intermediate bus between them, in which a `NodeFault` model is
+attached.
+
+There are two relevant events at play here:
+  * `T_{fault}`, time at which the short-circuit takes place. This becomes the
+    default reference when checking for compliance times.
+  * `T_{clear}`, time at which the line (actually, both Line4a and Line4b) is
+    disconnected at both ends.
+
+`T_{clear}` is a parameter that is specified in the DTR and depends on the
+voltage level in question.
+
+
+### Initialization
+
+The following values are specified at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = 0
+  * U = U_{dim}
+
+
+### Magnitudes to plot (curves)
+
+These 6 curves are the same for Sheets I3 and I4:
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power supplied at the connection point: sum of `line_Q2Pu` over all
+   lines on RTE side.
+3. Active power supplied at the connection point: sum of `line_P2Pu` over all
+   lines on RTE side.
+4. Rotor speed: `generator_omegaPu`.
+5. AVR setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+
+
+### Analyses to perform
+
+1. Find the *settling time* `T_{10P}`: time at which the power supplied P stays
+   within the +/-10% tube centered on the final value of P.
+2. Find the *settling time* `T_{5P}`: time at which the power supplied P stays
+   within the +/-5% tube centered on the final value of P.
+3. Find the *rise time* `T_{85U}`: time at which the voltage at the PDR bus
+   returns back above 0.85pu, regardless of any possible
+   overshooting/undershooting that may take place later on.
+4. Calculate the critical clearing time `T_{cct}`, i.e., the
+   time-threshold for the onset of rotor-angle stability. Search for
+   it using the bisection method, monitoring the variable
+   `generator_theta`. Start with an initial window of t=(20ms, 50s).
+
+
+### Compliance checks to perform
+
+1. Check that the generator remains stable:
+   a) Check that the generator protections (if any) have not disconnected it.
+   b) Check that the rotor angle `generator_theta` has stabilized to a
+      steady-state value (presumably this angle should be within +/- 90º?).
+2. Check that:
+   * `(T_{10p} - T_{85U}) < 5 sec`
+   * `(T_{10p} - T_{clear}) < 5 sec`
+3. Check that:
+   * `(T_{5p} - T_{85U}) < 10 sec`
+   * `(T_{5p} - T_{clear}) < 10 sec`
+
+
+
+
+
+## Sheet I6SM
+
+_Applies to generator classes: B, C, D_
+
+Checks for compliant behavior of the generator under a scenario where there is a
+severe drop of voltage at the PDR bus (which simulates the effect of a fault).
+
+Contrary to the modeling that the DTR suggests for this Sheet, which uses a
+variable shunt impedance Zv and a short-circuit network impedance Zcc, here the
+voltage drop is simulated via a variable Infinite Bus source (Modelica model
+`ControllableSource`), directly attached to the PDR bus, and for which we
+specify a voltage curve that faithfully follows the shape prescribed by Sheet
+I6.
+
+In this Sheet there are several "events", corresponding to the changes in that
+voltage curve:
+1. At t = `T_{0}`, voltage drops to `U_{fault}`
+2. At t = `T_{clear}`, voltage rises to `U_{clear}`
+3. At t = `T_{rec1}`, voltage starts ramping up linearly, from
+   `U_{clear}` to `U_{rec2}` (reached at t = `T_{rec2}`).
+4. At t = `T_{rec2}` the voltage stops ramping up and remains at
+   `U_{rec2}` indefinitely.
+
+These values of time and voltage are specified by the DTR as follows. Remember
+that the classification of generators into class A, B, C, D, is in the DTR under
+Chapter 5, Article 5.1.1, Section 3.  See the reminder in the document
+`Summary_data_from_the_DTR.md`).
+
+For generator units of classes B and C:
+
+|  variable       | for HTB1           | other Volt Levels  |
+|-----------------|--------------------|--------------------|
+|  `U_{initial}`  |  1.0 pu            |  1.0 pu            |
+|  `T_{0}`        |  (free)            |  (free)            |
+|  `U_{fault}`    |  0.05 pu           |  0.05 pu           |
+|  `T_{clear}`    |  `T_{0}` + 250 ms  |  `T_{0}` + 150 ms  |
+|  `U_{clear}`    |  0.7 pu            |  0.7 pu            |
+|  `T_{rec1 }`    |  `T_{0}` + 750 ms  |  `T_{0}` + 700 ms  |
+|  `T_{rec2 }`    |  `T_{0}` + 1550 ms |  `T_{0}` + 1500 ms |
+|  `U_{rec2}`     |  0.9 pu            |  0.9 pu            |
+
+
+For generator units of class D:
+
+|  variable       | for HTB2           | other Volt Levels  |
+|-----------------|--------------------|--------------------|
+|  `U_{initial}`  |  1.0 pu            |  1.0 pu            |
+|  `T_{0}`        |  (free)            |  (free)            |
+|  `U_{fault}`    |  0.00 pu           |  0.00 pu           |
+|  `T_{clear}`    |  `T_{0}` + 250 ms  |  `T_{0}` + 150 ms  |
+|  `U_{clear}`    |  0.5 pu            |  0.5 pu            |
+|  `T_{rec1 }`    |  `T_{0}` + 750 ms  |  `T_{0}` + 700 ms  |
+|  `T_{rec2 }`    |  `T_{0}` + 1400 ms |  `T_{0}` + 1350 ms |
+|  `U_{rec2}`     |  0.9 pu            |  0.9 pu            |
+
+
+### Initialization
+
+The following values are specified at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = 0
+  * U = U_dim
+
+
+### Magnitudes to plot (curves)
+
+These are the same as those of Sheets I3 & I4, with the addition of one
+more, the generator's internal angle:
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power Q supplied at the connection point. In this case there are no
+   connection lines, therefore the flow has to be calculated by means of the
+   "terminal equipment" connected at the PDR bus on RTE's side, which in this
+   case is one single `ControllableSource` object.
+   [TODO: find out what variables are provided by this object, in order to get the PQ flows.]
+3. Active power P supplied at the connection point.  Same as for the Q flow
+   mentioned above.
+4. Rotor speed: `generator_omegaPu`.
+5. AVR setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+7. The generator's internal angle: `generator_thetaInternal_value`
+
+
+### Analyses to perform
+
+1. Find the *settling time* `T_{10P}`: time at which the power supplied P stays
+   within the +/-10% tube centered on the final value of P. [Note: the exact
+   wording of the DTR suggests that the tube is to be centered on P_{max_unité},
+   but RTE was consulted and it was decided that the correct interpretation is
+   that the tube center should be the final steady state value of P, as it is
+   done in Fiche I4.]
+   
+2. Find the *rise time* `T_{85U}`: time at which the voltage at the PDR bus
+   returns back above 0.85pu, regardless of any possible
+   overshooting/undershooting that may take place later on.
+
+
+### Compliance checks to perform
+
+1. Check that the generator remains stable:
+   a) Check that the generator protections (if any) have not disconnected it.
+   b) Check that the rotor angle *generator_theta* has stabilized to a
+      steady-state value (presumably this angle should be within +/- 90º?).
+
+2. Check that the auxiliary loads also remain stable; in this case this just
+   means checking that the load protections (if any) have not disconnected it.
+
+3. Check that:
+   * `(T_{10P} - T_{85U}) < 5 sec`
+
+
+
+
+
+## Sheet I7SM
+
+_Applies to generator classes: B, C, D_
+
+Checks for compliant behavior of the generator under a scenario where there is a
+severe overvoltage at the PDR bus (which simulates the effect of clearing a
+fault in the network).
+
+Contrary to the modeling that the DTR suggests for this Sheet, which uses a
+variable shunt impedance Zv, here the voltage surge is simulated via a variable
+Infinite Bus source (Modelica model `ControllableSource`), directly attached to
+the PDR bus, and for which we specify a voltage curve that faithfully follows
+the shape prescribed by Sheet I7.
+
+In this Sheet there are several "events", corresponding to the changes in that
+voltage curve:
+1. At t = `T_{0}`, voltage surges to `U_{surge}`
+2. At t = `T_{rec1}`, voltage drops to `U_{rec2}`
+3. At t = `T_{rec2}`, voltage drops to `U_{rec3}`
+4. At t = `T_{rec3}`, voltage drops to `U_{rec4}`
+
+These values of time and voltage are specified by the DTR as follows:
+
+|  variable       | all Volt Levels    |
+|-----------------|--------------------|
+|  `U_{initial}`  |  1.0 pu            |
+|  `T_{0}`        |  (free)            |
+|  `U_{surge}`    |  1.3 pu            |
+|  `T_{rec1}`     |  `T_{0}` + 50 ms   |
+|  `U_{rec2}`     |  1.25 pu           |
+|  `T_{rec2}`     |  `T_{0}` + 2.5 s   |
+|  `U_{rec3}`     |  1.15 pu           |
+|  `T_{rec3}`     |  `T_{0}` + 30 s    |
+|  `U_{rec4}`     |  1.10 pu           |
+
+
+Note that the simulation should at least go on for another 30s or so, in order
+to allow enough time to reach the steady state in cases with long time
+oscillations. Therefore, the **minimum duration time** for the simulation should
+be 60 seconds plus whatever lead time is used before the first event (i.e.,
+`T_{0}` seconds).
+
+
+### Initialization
+
+Two different simulations are specified by the DTR.
+
+Scenario 1: using the following values at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = Q_{max}
+  * U = U_dim
+
+Scenario 2: using the following values at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = Q_{min}
+  * U = U_dim
+
+
+### Magnitudes to plot (curves)
+
+These are the same as those of Sheets I3 & I4, with the addition of one
+more, the generator's internal angle (just like Sheet I6):
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power Q supplied at the connection point. Same as for the
+   P flow mentioned above.
+3. Active power P supplied at the connection point. In this case there
+   are no connection lines, therefore the flow has to be calculated by
+   means of the "terminal equipment" connected at the PDR bus on RTE's
+   side, which in this case is one single `ControllableSource`
+   object. [TODO: find out what variables are provided by this object
+   in order to get the flow P.]
+4. Rotor speed: `generator_omegaPu`.
+5. AVR setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+7. The generator's internal angle: `generator_thetaInternal_value`
+
+
+### Analyses to perform
+
+None.
+
+
+### Compliance checks to perform
+
+1. Check that the generator remains stable:
+   a) Check that the generator protections (if any) have not disconnected it.
+   b) Check that the rotor angle *generator_theta* has stabilized to a
+      steady-state value (presumably this angle should be within +/- 90º?).
+
+
+
+
+
+## Sheet I8SM
+
+_Applies to generator classes: B, C, D_
+
+Checks for compliant behavior of the generator under a scenario where there is a
+severe loss of load in the bulk transmission network: 7GW out of 307GW. In this
+case the network side is simulated by means of a large generator (340 GVA) and
+two large loads (300 and 7 GW).
+
+The relevant event here is `T_{ldshed}`, time at which the 7GW load is disconnected.
+
+
+### Initialization
+
+The following values are specified at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = 0
+  * U = U_dim
+
+
+### Magnitudes to plot (curves)
+
+The curves to plot are the same as those in Sheets I3 and I4. **However**, Sheet
+I8 mentions that the expected frequency excursion will be, at most, 250 mHz; and
+that the resulting frequency rise at steady state will be around 200
+mHz. Therefore, **in addition** to those 6 curves, this Fiche should also show a
+graph for the **network frequency**, in order to monitor that this is indeed the
+case.
+
+The curves:
+
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power supplied at the connection point: sum of `line_Q2Pu` over all
+   lines on RTE side.
+3. Active power supplied at the connection point: sum of `line_P2Pu` over all
+   lines on RTE side.
+4. Rotor speed: `generator_omegaPu`.
+5. AVR setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the AVR: `generator_UStatorPu_value`. Show with
+   dashed lines a +/-%5 tube centered around the AVR setpoint (this
+   corresponds to compliance check No. 2 below).
+7. Network frequency: `generator_omegaRefPu` (see note below). Show
+   dashed horizontal lines marking the maximum excursion values
+   (+/-250 mHz for the transient and +/-200mHz for the final steady
+   state, both referred to the starting value of the frequency).
+
+Note on reading variable `generator_omegaRefPu`: in this case there are two
+generators, the producer's and the one on the network side. We can obtain the
+curve values from either one, as they are guaranteed to be the same (it's the
+network-wide value of frequency, which is signaled to all generators).
+
+
+### Analyses to perform
+
+No calculations are needed, other that the steady-state error of the
+stator voltage, which will be needed to verify the compliance test (2)
+below.
+
+
+### Compliance checks to perform
+
+1. Check that the generator remains synchronized (i.e., stable):
+   a) Check that the generator protections (if any) have not disconnected it.
+   b) Check that the rotor angle `generator_theta` has stabilized to a
+      steady-state value (presumably this angle should be within +/- 90º?).
+      
+2. Check that the magnitude controlled by the AVR (`generator_UStatorPu_value`)
+   never deviates more than 5% from its setpoint. This deviation is calculated
+   as:
+     ```
+     `abs(generator_UStatorPu_value - voltageRegulator_UsRefPu`) / voltageRegulator_UsRefPu`
+     ```
+   (see the Jinja placeholder variable `statorUsserr` in the LaTeX template)
+
+
+
+
+## Sheet I10SM
+
+_Applies to generator classes: C, D_
+
+Checks for compliant behavior of the generator under an islanding event
+scenario, i.e., the network has been split in such a way that the generator is
+left as the only synchronous machine that should sustain the frequency of its
+subnetwork. The generator should maintain the stability until the restoration
+process re-synchronizes this subnetwork with the bulk transmission network.
+
+In this case the network is not modeled. In Dynawo, we simply attach two loads
+of type LoadPQ (since the DTR specifies that the loads have alpha=beta=0 and do
+not depend on frequency). With PQ values as follows:
+  * Load 1: P = 0.7/0.9 Pmax, Q = +/- 0.04 Pmax
+  * Load 2: P = +/-0.1 Pmax,  Q = -/+ 0.04 Pmax
+  
+And then disconnect Load 2. This complies with the initial conditions and the
+desired changes specified by the DTR. Note that, since the variations of P and Q
+could be either positive or negative, there should be four different scenarios
+to simulate:
+1.  Load 2: P = +0.1 Pmax, Q = + 0.04 Pmax  (Load 1: P = 0.7 Pmax, Q = -0.04 Pmax)
+2.  Load 2: P = +0.1 Pmax, Q = - 0.04 Pmax  (Load 1: P = 0.7 Pmax, Q = +0.04 Pmax)
+3.  Load 2: P = -0.1 Pmax, Q = + 0.04 Pmax  (Load 1: P = 0.9 Pmax, Q = -0.04 Pmax)
+4.  Load 2: P = -0.1 Pmax, Q = - 0.04 Pmax  (Load 1: P = 0.9 Pmax, Q = +0.04 Pmax)
+
+The relevant event here is `T_{ldshed}`, time at which the load 2 is
+disconnected.
+
+
+### Initialization
+
+At the start of the simulation, all four scenarios have the following values
+specified at the PDR bus:
+  * P = 0.8 P_{max_unité}
+  * Q = 0
+  * U = U_dim
+  * f = 50 Hz (this is always the default in Dynawo)
+
+
+### Magnitudes to plot (curves)
+
+The curves to plot are the same as for Sheet I8, except that **the
+dashed lines in curve 7** are representing different limits:
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power supplied at the connection point: sum of `load_QPu` over all
+   loads connected at the PDR bus on RTE side.
+3. Active power supplied at the connection point: sum of `load_PPu` over all
+   loads connected at the PDR bus on RTE side.
+4. Rotor speed: `generator_omegaPu`.
+5. AVR setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+7. Network frequency, with dashed horizontal lines marking the
+   compliance limits: 49 Hz and 51 Hz. Take this value from variable
+   `generator_omegaRefPu`. Note that since in this case the Producer's
+   generator is the only one on the island, this curve will be (must
+   be!) exactly the same as curve 4 above.
+
+
+### Analyses to perform
+
+None.
+
+
+### Compliance checks to perform
+
+1. Check that the generator remains synchronized (i.e., stable):
+   a) Check that the generator protections (if any) have not disconnected it.
+   b) Check that the rotor angle `generator_theta` has stabilized to a
+      steady-state value (presumably this angle should be within +/- 90º?).
+      
+2. Check that the frequency:
+   a) Stays always above 49 Hz.
+   b) Stays always below 51 Hz.
+
+
+
+
+## Sheet I5PPM
+
+_Applies to PPM classes: B, C, D, and Offshore_
+
+Checks for compliant behavior of the PPM under a scenario where there is a
+symmetric three-phase fault at one of the four transmission lines (at a 1%
+distance from the PDR). The PPM should remain connected and be able to supply
+the necessary reactive injection.
+
+In Dynawo this fault has been modeled by splitting Line4 into Line4a and Line4b,
+and then inserting an intermediate bus between them, to which a `NodeFault`
+model is attached.
+
+Note that although the DTR Sheet also requires simulating a one-phase fault,
+this tool will not implement it, as it would require the simulation of a
+three-phase model. All simulations are only positive-sequence.
+
+There are two relevant events at play here:
+  * `T_{fault}`, time at which the short-circuit takes place. This becomes the
+    default reference when checking for compliance times.
+  * `T_{clear}`, time at which the line (actually, both Line4a and Line4b) is
+    disconnected at both ends.
+
+`T_{clear}` is a parameter that is specified in the DTR and depends on the
+voltage level in question.
+
+In this case, since it is a PPM, there are two additional inputs specified by
+RTE, besides Udim and `T_{clear}`:
+  * Gain constant Kd
+  * Gain constant Ki
+
+[**TODO**: Confirm with RTE which are the parameters that these should map
+to. Presumably, these parameters correspond to `*_Kc` and `*_Ki`???  (Where "*"
+stands for WTG4A, WTG4B, or photovoltaics, depending on the type of PPM units
+used.)]
+
+
+### Initialization
+
+The following values are specified at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = 0
+  * U = U_{dim}
+
+
+### Magnitudes to plot (curves)
+
+The following curves should be extracted from the simulation and plotted in a
+graph:
+
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power supplied at the connection point: sum of `line_Q2Pu` over all
+   lines on RTE side.
+3. Active power supplied at the connection point: sum of `line_P2Pu` over all
+   lines on RTE side.
+4. The injected active and reactive currents, "id" and "iq": `*_injector_idPu`,
+   `*_injector_iqPu` (for the case of the WindTurbine4AWeccCurrentSource model,
+   for example). **Plot all PPM units on the same graph** (for now).
+5. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+   graph** (for now).
+6. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+   `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
+7. The PPM's main transformer tap ratio: `tapChanger_tap_value` if it is a transformer with
+   an automatic tap changer.
+
+[**TODO:** double check with RTE that the variables for the AVR and its
+controlled magnitude are the ones chosen here. These two graphs are used in the
+rest of the PPM sheets too.]
+
+
+### Analyses to perform
+
+1. Find the *recovery time* `T_{10P_{floor}}`: time at which the supplied power P
+   recovers and stays above -10% of the final value of P (note this is
+   not a "tube", but a "floor").
+2. Find the *rise time* `T_{85U}`: time at which the voltage at the PDR bus
+   returns back above 0.85pu, regardless of any possible
+   overshooting/undershooting that may take place later on.
+
+
+### Compliance checks to perform
+
+1. Check that the generating units remain connected and working: check that the
+   protections (if any) have not disconnected any PPM unit.
+2. Check that:
+   * `(T_{10P_{floor}} - T_{85U}) < 2 sec`
+   * `(T_{10P_{floor}} - T_{clear}) < 2 sec`
+3. Check that, if Imax is reached, reactive support is prioritized over active
+   power supply: check that `*_injector_idPu` **decreases** right after Imax is
+   reached.  See the explanation below on how to actually check this.
+   
+
+To perform this last check, the code performs the following steps:
+  * From the curves of the injected active and reactive currents, "id"
+    and "iq" (`*_injector_idPu`, `*_injector_iqPu`), construct the
+    curve of the current modulus, i.e., `I = sqrt(id^2 + iq^2)`.
+  * If and when this value `I` reaches Imax (take Imax from `WTG4B_IMaxPu`,
+    `photovoltaics_IMaxPu`, etc.), we save the value of the active
+    current `*_injector_idPu` at that instant of time.
+  * Then we check that, at any time **after** this happens, the value
+    of `*_injector_idPu` never goes over that value.
+
+[**TODO:** To discuss with RTE: which are the proper variables from which we
+should obtain the active and reactive currents injected by the PPM, as well as
+how to perform the compliance check regarding these currents and Imax.]
+
+
+
+
+## Sheet I6PPM
+
+_Applies to PPM classes: B, C, D, and Offshore_
+
+Checks for compliant behavior of the generator under a scenario where there is a
+severe drop of voltage at the PDR bus (which simulates the effect of a fault).
+
+**Note:** only a symmetric 3-phase fault will be simulated, as the tool does not
+model a three-phase system.
+
+Contrary to the modeling that the DTR suggests for this Sheet, which uses a
+variable shunt impedance Zv and a short-circuit network impedance Zcc, here the
+voltage drop is simulated via a variable Infinite Bus source (Modelica model
+`ControllableSource`), directly attached to the PDR bus, and for which we
+specify a voltage curve that faithfully follows the shape prescribed by Sheet
+I6PPM.
+
+In this Sheet there are several "events", corresponding to the changes in that
+voltage curve:
+1. At t = `T_{0}`, voltage drops to `U_{fault}`
+2. At t = `T_{clear}`, voltage starts ramping up linearly, from
+   `U_{fault}` to `U_{rec2}` (reached at t = `T_{rec2}`).
+3. At t = `T_{rec2}` the voltage stops ramping up and remains at
+   `U_{rec2}` indefinitely.
+
+These values of time and voltage are specified by the DTR as follows. Remember
+that the classification of generators into class A, B, C, D, is in the DTR under
+Chapter 5, Article 5.1.1, Section 3.  See the reminder in the document
+`Summary_data_from_the_DTR.md`).
+
+For PPMs of classes B, C, and Offshore (under 110 kV in this last case):
+
+|  variable       | value              |
+|-----------------|--------------------|
+|  `U_{initial}`  |  1.0 pu            |
+|  `T_{0}`        |  (free)            |
+|  `U_{fault}`    |  0.05 pu           |
+|  `T_{clear}`    |  `T_{0}` + 150 ms  |
+|  `T_{rec2}`     |  `T_{0}` + 1150 ms |
+|  `U_{rec2}`     |  0.85 pu           |
+
+
+For PPMs of class D and Offshore systems at 110 kV and above:
+
+|  variable       | value              |
+|-----------------|--------------------|
+|  `U_{initial}`  |  1.0 pu            |
+|  `T_{0}`        |  (free)            |
+|  `U_{fault}`    |  0.0 pu            |
+|  `T_{clear}`    |  `T_{0}` + 150 ms  |
+|  `T_{rec2}`     |  `T_{0}` + 1500 ms |
+|  `U_{rec2}`     |  0.85 pu           |
+
+
+### Initialization
+
+The following values are specified at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = 0
+  * U = U_dim
+
+
+### Magnitudes to plot (curves)
+
+The following curves should be extracted from the simulation and plotted in a
+graph:
+
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power Q supplied at the connection point. In this case there are no
+   connection lines, therefore the flow has to be calculated by means of the
+   "terminal equipment" connected at the PDR bus on RTE's side, which in this
+   case is one single `ControllableSource` object.
+   [TODO: find out what variables are provided by this object, in order to get the PQ flows.]
+3. Active power P supplied at the connection point.  Same as for the Q flow
+   mentioned above.
+4. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+   graph** (for now).
+5. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+   `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
+
+
+### Analyses to perform
+
+Same as in Fiche I5PPM:
+
+1. Find the *recovery time* `T_{10P_{floor}}`: time at which the supplied power P
+   recovers and stays above -10% of the final value of P (note this is
+   not a "tube", but a "floor").
+2. Find the *rise time* `T_{85U}`: time at which the voltage at the PDR bus
+   returns back above 0.85pu, regardless of any possible
+   overshooting/undershooting that may take place later on.
+
+
+### Compliance checks to perform
+
+1. Check that the generating units remain connected and working: check that the
+   protections (if any) have not disconnected any PPM unit.
+
+2. Check that the auxiliary loads also remain stable; in this case this just
+   means checking that the load protections (if any) have not disconnected it.
+
+3. Check that:
+   * `(T_{10P_{floor}} - T_{85U}) < 2 sec`
+   * `(T_{10P_{floor}} - T_{clear}) < 2 sec`
+
+
+
+
+## Sheet I7PPM
+
+_Applies to PPM classes: B, C, D, and Offshore_
+
+Checks for compliant behavior of the PPM under a scenario where there is a
+severe overvoltage at the PDR bus (which simulates the effect of clearing a
+fault in the network).
+
+**Note:** only a symmetric 3-phase fault will be simulated, as the tool does not
+model a three-phase system.
+
+Contrary to the modeling that the DTR suggests for this Sheet, which uses a
+variable shunt impedance Zv, here the voltage surge is simulated via a variable
+Infinite Bus source (Modelica model `ControllableSource`), directly attached to
+the PDR bus, and for which we specify a voltage curve that faithfully follows
+the shape prescribed by Sheet I7PPM.
+
+In this Sheet there are several "events", corresponding to the changes in that
+voltage curve:
+1. At t = `T_{0}`, voltage surges to `U_{surge}`
+2. At t = `T_{rec1}`, voltage drops to `U_{rec2}`
+3. At t = `T_{rec2}`, voltage drops to `U_{rec3}`
+4. At t = `T_{rec3}`, voltage drops to `U_{rec4}`
+
+These values of time and voltage are specified by the DTR as follows:
+
+|  variable       | all Volt Levels    |
+|-----------------|--------------------|
+|  `U_{initial}`  |  1.0 pu            |
+|  `T_{0}`        |  (free)            |
+|  `U_{surge}`    |  1.3 pu            |
+|  `T_{rec1}`     |  `T_{0}` + 50 ms   |
+|  `U_{rec2}`     |  1.25 pu           |
+|  `T_{rec2}`     |  `T_{0}` + 2.5 s   |
+|  `U_{rec3}`     |  1.15 pu           |
+|  `T_{rec3}`     |  `T_{0}` + 30 s    |
+|  `U_{rec4}`     |  1.10 pu           |
+
+
+Note that the simulation should at least go on for another 30s or so, in order
+to allow enough time to reach the steady state in cases with long time
+oscillations. Therefore, the **minimum duration time** for the simulation should
+be 60 seconds plus whatever lead time is used before the first event (i.e.,
+`T_{0}` seconds).
+
+
+### Initialization
+
+Two different simulations are specified by the DTR.
+
+Scenario 1: using the following values at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = Q_{max}
+  * U = U_dim
+
+Scenario 2: using the following values at the PDR bus at the start of the
+simulation:
+  * P = P_{max_unité}
+  * Q = Q_{min}
+  * U = U_dim
+
+
+### Magnitudes to plot (curves)
+
+The following curves should be extracted from the simulation and plotted in a
+graph (the same as those in I6PPM):
+
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power Q supplied at the connection point. In this case there are no
+   connection lines, therefore the flow has to be calculated by means of the
+   "terminal equipment" connected at the PDR bus on RTE's side, which in this
+   case is one single `ControllableSource` object.
+   [TODO: find out what variables are provided by this object, in order to get the PQ flows.]
+3. Active power P supplied at the connection point.  Same as for the Q flow
+   mentioned above.
+4. The injected active and reactive currents, "id" and "iq": `*_injector_idPu`,
+   `*_injector_iqPu` (for the case of the WindTurbine4AWeccCurrentSource model,
+   for example). **Plot all PPM units on the same graph** (for now).
+5. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+   graph** (for now).
+6. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+   `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
+
+
+### Analyses to perform
+
+None.
+
+
+### Compliance checks to perform
+
+1. Check that the generating units remain connected and working: check that the
+   protections (if any) have not disconnected any PPM unit.
+
+
+
+## Sheet I10PPM
+
+_Applies to PPM classes: C, D, and Offshore_
+
+Checks for compliant behavior of the PPM under an islanding event scenario,
+i.e., the network has been split in such a way that the PPM is left as the only
+generating system that should sustain the frequency of its subnetwork. Note,
+however, that the DTR assumes that the PPM technology is "grid-following" and
+therefore suggests the use of a fictitious **synchronous condenser unit** to
+provide inertia and frequency reference for the island.
+
+In this case the network is not modeled. In Dynawo, we simply attach two loads
+of type LoadPQ (since the DTR specifies that the loads have alpha=beta=0 and do
+not depend on frequency). With PQ values as follows:
+  * Load 1: P = 0.7/0.9 Pmax, Q = +/- 0.04 Pmax
+  * Load 2: P = +/-0.1 Pmax,  Q = -/+ 0.04 Pmax
+  
+And then disconnect Load 2. This complies with the initial conditions and the
+desired changes specified by the DTR. Note that, since the variations of P and Q
+could be either positive or negative, there should be four different scenarios
+to simulate:
+1.  Load 2: P = +0.1 Pmax, Q = + 0.04 Pmax  (Load 1: P = 0.7 Pmax, Q = -0.04 Pmax)
+2.  Load 2: P = +0.1 Pmax, Q = - 0.04 Pmax  (Load 1: P = 0.7 Pmax, Q = +0.04 Pmax)
+3.  Load 2: P = -0.1 Pmax, Q = + 0.04 Pmax  (Load 1: P = 0.9 Pmax, Q = -0.04 Pmax)
+4.  Load 2: P = -0.1 Pmax, Q = - 0.04 Pmax  (Load 1: P = 0.9 Pmax, Q = +0.04 Pmax)
+
+The relevant event here is `T_{ldshed}`, time at which the load 2 is
+disconnected.
+
+
+### Initialization
+
+At the start of the simulation, all four scenarios have the following values
+specified at the PDR bus:
+  * P = 0.8 P_{max_unité}
+  * Q = 0
+  * U = U_dim
+  * f = 50 Hz (this is always the default in Dynawo)
+
+Note also that the fictitious synchronous condenser should be modeled with the
+parameters prescribed by the DTR Sheet, namely:
+  * Xd = Xq = b (reactance value defined for connection lines)
+  * Sn = Sn of the PPM
+  * H = 1.25 Pmax / Sn
+
+
+### Magnitudes to plot (curves)
+
+The following curves should be extracted from the simulation and plotted in a
+graph:
+
+1. Voltage at connection point: modulus of `(bus_terminal_V_re,
+   bus_terminal_V_im)`, at the PDR bus.
+2. Reactive power supplied at the connection point: sum of `load_QPu` over all
+   loads connected at the PDR bus on RTE side.
+3. Active power supplied at the connection point: sum of `load_PPu` over all
+   loads connected at the PDR bus on RTE side.
+4. Network frequency, with dashed horizontal lines marking the
+   compliance limits: 49 Hz and 51 Hz. Take this value from variable
+   `generator_omegaRefPu`.
+5. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+   graph** (for now).
+6. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+   `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
+
+
+
+### Analyses to perform
+
+None.
+
+
+### Compliance checks to perform
+
+1. Check that the PPM remains connected and stable:
+   a) Check that the PPM protections (if any) have not disconnected any unit.
+   b) Check that the island frequency `generator_omegaRefPu` has stabilized to a
+      steady-state value.
+
+2. Check that the frequency:
+   a) Stays always above 49 Hz.
+   b) Stays always below 51 Hz.
+
+
+
+
+
+# Appendix I: Notes on per-unit conversions
+
+This section deals with the conversion between the per-unit conventions used in
+Dynawo and the ones used (or assumed) in the DTR.  Occasionally we will also
+mention Eurostag, but the focus is on DTR vs. Dynawo.
+
+## The DTR uses generator-centric pu; Dynawo uses network-centric pu
+
+The quickest way to describe the differences is to realize that the DTR uses a pu system
+focused on the generator, while Dynawo uses a pu system based on a system-level choice:
+  * The DTR pu system uses:
+      - Udim, the voltage at the connection point (PDR bus)
+      - Snom, the nominal apparent power of the generator
+  * Dynawo pu system uses:
+      - Uvl, the network voltage level at the connection point
+      - SnRef, the network-wide choice of MVA base, always 100 MVA
+
+Therefore, the conversion, for reactance values, is given by:
+```
+Xdwo = Xdtr * (Udim^2 / Snom) * (SnRef / Uvl^2)
+```
+For instance, for the example generator we use in sheets I3, I4, I8:
+  * The generator has Snom = 555 MVA and it's connected at HTB2 (in this case, Uvl = 225 kV)
+  * We use a specified value of Udim = 235kV (the default for HTB2)
+  * Xdtr is specified by the DTR, value b=0.54 pu
+Therefore the conversion for the line's reactance X into Dynawo's pu system yields:
+```
+0.54 * (235^2 / 555) * (100 / 225^2) = 0.10613813
+```
+
+The formula for voltages:
+```
+Vdwo = Vdtr * Udim / Uvl
+```
+
+The formula for S, P, or Q:
+```
+Pdwo = Pdtr * Snom / SnRef
+```

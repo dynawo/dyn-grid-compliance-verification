@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="InfiniteBus">
+    <par type="STRING" name="infiniteBus_UPuTableName" value="TableUPu"/>
+    <par type="STRING" name="infiniteBus_UPhaseTableName" value="TableUPhase"/>
+    <par type="STRING" name="infiniteBus_OmegaRefPuTableName" value="TableOmegaRefPu"/>
+    <par type="STRING" name="infiniteBus_TableFile" value="TableInfiniteBus.txt"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+</parametersSet>
