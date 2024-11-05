@@ -64,16 +64,10 @@ def _precompile_model(
                 + str(model_name)
                 + " "
                 + str(output_path)
-                + "cd "
-                + str(output_path)
-                + " && "
-                + "Vsx64.cmd"
-                + " "
-                + str(launcher_dwo)
                 + " "
                 + str(compiled_model + extension)
                 + " "
-                + str(compiled_model)
+                + str(compiled_model  + ".desc.xml")
                 + ""
             )
             subprocess.run(
@@ -89,16 +83,10 @@ def _precompile_model(
                 + str(model_name)
                 + " "
                 + str(output_path)
-                + "cd "
-                + str(output_path)
-                + " && "
-                + "Vsx64.cmd"
-                + " "
-                + str(launcher_dwo)
                 + " "
                 + str(compiled_model + extension)
                 + " "
-                + str(compiled_model)
+                + str(compiled_model + ".desc.xml")
                 + "",
                 shell=True,
                 stdout=log_file,

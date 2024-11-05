@@ -6,7 +6,9 @@ for /f "usebackq delims=" %%i in (`"%VSWHERE%" -prerelease -latest -property ins
   if exist "%%i\VC\Auxiliary\Build\vcvars64.bat" (
     "%%i\VC\Auxiliary\Build\vcvars64.bat"
     cd %1 
-    %2  jobs --generate-preassembled --model-list %3 --non-recursive-modelica-models-dir . --output-dir %4
+    %2  generate-preassembled --model-list %3 --non-recursive-modelica-models-dir . --output-dir %4
+    cd %4
+    %2 dump-model --model-file %5 --output-file %6
     exit /b
   )
 )
