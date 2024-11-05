@@ -8,6 +8,7 @@ __pycache__/
 
 # VS Code
 .vscode
+.vs\
 
 # Exclude package build artifacts:
 dist/
