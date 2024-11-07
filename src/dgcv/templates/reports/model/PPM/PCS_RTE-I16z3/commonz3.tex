@@ -5,7 +5,7 @@
     \IfFileExists{circuit_\DTRPcs.\OCname.tikz}{
         \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.\OCname.tikz}
     }{
-        \ifthenelse{\equal{\OCname}{SetPoint}}{
+        \ifthenelse{\equal{\DTRPcs}{PSetPointStep} \or \equal{\DTRPcs}{QSetPointStep} \or \equal{\DTRPcs}{USetPointStep}}{
             \includestandalone[width=0.8\textwidth]{circuit_RefTracking.tikz}
         }{
             \includestandalone[width=0.8\textwidth]{circuit_GridV.tikz}
