@@ -67,7 +67,7 @@ def _precompile_model(
                 + " "
                 + str(compiled_model + extension)
                 + " "
-                + str(compiled_model  + ".desc.xml")
+                + str(compiled_model + ".desc.xml")
                 + ""
             )
             subprocess.run(

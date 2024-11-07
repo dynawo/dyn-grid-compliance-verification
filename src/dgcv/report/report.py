@@ -363,15 +363,17 @@ def create_pdf(
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
-        dynawo_version = str(dynawo.get_dynawo_version(parameters.get_launcher_dwo())).replace('\\', '\\\\')
+        dynawo_version = str(dynawo.get_dynawo_version(parameters.get_launcher_dwo())).replace(
+            "\\", "\\\\"
+        )
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
-    model_template = str(producer.get_producer_path()).replace('\\', '\\\\')
+    model_template = str(producer.get_producer_path()).replace("\\", "\\\\")
     summary_description += f"Model: {model_template} \\\\"
 
     reference_template = None
     if producer.has_reference_curves():
-        reference_template = str(producer.get_reference_path()).replace('\\', '\\\\')
+        reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
         summary_description += f"Reference: {reference_template} \\\\"
 
     _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
