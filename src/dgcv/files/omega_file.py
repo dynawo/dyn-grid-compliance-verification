@@ -48,7 +48,9 @@ def _connect_generator_to_setpoint(
 ) -> None:
     variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyValue")
     if variable:
-        _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint_value")
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint_value"
+        )
 
 
 def _connect_generator_to_infinitebus(
