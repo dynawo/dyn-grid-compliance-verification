@@ -59,9 +59,14 @@ def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element) -> l
         _append_generator(dyd_root, par_root, model_parameter, generators)
 
     # Photovoltaics
-    for model_parameter in find_bbmodel_by_type(dyd_root, "photovoltaics"):
+    for model_parameter in find_bbmodel_by_type(dyd_root, "PhotovoltaicsWecc"):
         _append_generator(dyd_root, par_root, model_parameter, generators)
 
+    # BESS
+    for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
+        _append_generator(dyd_root, par_root, model_parameter, generators)
+
+    print(generators)
     return generators
 
 
@@ -407,20 +412,20 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
         parameters["PfFlag"] = None
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'Vflag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VFlag')}']"
     )
     if par is not None:
-        parameters["Vflag"] = par.get("value")
+        parameters["VFlag"] = par.get("value")
     else:
-        parameters["Vflag"] = None
+        parameters["VFlag"] = None
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'Qflag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'QFlag')}']"
     )
     if par is not None:
-        parameters["Qflag"] = par.get("value")
+        parameters["QFlag"] = par.get("value")
     else:
-        parameters["Qflag"] = None
+        parameters["QFlag"] = None
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'RefFlag')}']"

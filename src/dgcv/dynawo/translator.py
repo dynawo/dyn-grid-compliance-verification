@@ -14,6 +14,12 @@ def get_generator_family_level(generator):
             level = "Plant"
         elif "WTU" in generator.lib:
             level = "Turbine"
+        elif "Photovoltaics" in generator.lib:
+            level = "Plant"
+        elif "BESS" in generator.lib:
+            level = "Plant"
+            if "NoPlantControl" in generator.lib:
+                level = "Turbine"
     elif "IEC" in generator.lib:
         family = "IEC"
         if "IECWPP" in generator.lib:
