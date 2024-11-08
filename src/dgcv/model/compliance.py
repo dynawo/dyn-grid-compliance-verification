@@ -9,7 +9,7 @@ class Compliance(Enum):
     UndefinedValidations = 5
     WithoutCurves = 6
     WithoutReferenceCurves = 7
-    WithoutProducerCurves =  8
+    WithoutProducerCurves = 8
 
     def to_str(self) -> str:
         if self == Compliance.Compliant:
