@@ -66,7 +66,6 @@ def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element) -> l
     for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
         _append_generator(dyd_root, par_root, model_parameter, generators)
 
-    print(generators)
     return generators
 
 
