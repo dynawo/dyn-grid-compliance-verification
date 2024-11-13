@@ -160,7 +160,7 @@ Once all required tools are installed, follow the steps below to install the `dy
          
    .. code-block:: console
 
-     cd path	o\dyn-grid-compliance-verification
+     cd path-to-repo\dyn-grid-compliance-verification
 
    - Create a new virtual environment with:
          
