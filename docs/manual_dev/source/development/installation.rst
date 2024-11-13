@@ -110,7 +110,7 @@ Before installing the `dyn-grid-compliance-verification` package, you need to en
     
    .. code-block:: console
 
-	python --version
+	python.exe --version
       
 
 
@@ -166,34 +166,34 @@ Once all required tools are installed, follow the steps below to install the `dy
          
    .. code-block:: console
 
-     python3 -m venv dgcv_venv
+     python.exe -m venv dgcv_venv
      
    - This will create a directory `dgcv_venv` in your repository folder.
-
-3. **Activate the Virtual Environment**  
-   Now that the virtual environment is created, activate it to use the isolated environment:
-       
-   .. code-block:: console
-
-   	dgcv_venv\Scriptsctivate
    
-   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dgcv_venv)` at the beginning of the prompt).
-   
-4. **Build the Package**  
+3. **Build the Package**  
    The next step is to compile the package into a distributable format:
        
    .. code-block:: console
 
-   	python3 -m build
+   	python.exe -m build
    
    - This command will create the necessary build files in the `dist` folder of the repository. The build process might take a few minutes to complete.
+
+4. **Activate the Virtual Environment**  
+   Now that the virtual environment is created, activate it to use the isolated environment:
+       
+   .. code-block:: console
+
+   	dgcv_venv\Scripts\activate
+   
+   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dgcv_venv)` at the beginning of the prompt).
 
 5. **Install the Package**  
    Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
        
    .. code-block:: console
 
-   	python3 -m pip install dist\dgcv....whl
+   	python.exe -m pip install dist\dgcv....whl
    
    - This will install the package into your active virtual environment.
 
