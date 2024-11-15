@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 
+# TODO: remove generator types ("WTG", "WT", "Photovoltaics", etc. ==> we'll need
+#       entries in the master dictionary).
+#       The same goes for generator families ("IEC", "Wecc").
+#
+
 
 def get_generator_family_level(generator):
     family = ""
@@ -12,7 +17,7 @@ def get_generator_family_level(generator):
         family = "WECC"
         if "WTG" in generator.lib:
             level = "Plant"
-        elif "WTU" in generator.lib:
+        elif "WT" in generator.lib:
             level = "Turbine"
         elif "Photovoltaics" in generator.lib:
             level = "Plant"
@@ -62,6 +67,7 @@ class Translator:
     _bus: configparser.ConfigParser
     _synchronous_machine: configparser.ConfigParser
     _power_park: configparser.ConfigParser
+    _storage: configparser.ConfigParser
     _line: configparser.ConfigParser
     _load: configparser.ConfigParser
     _transformer: configparser.ConfigParser
@@ -111,6 +117,8 @@ class Translator:
             return self._synchronous_machine.get(lib, name)
         elif self._power_park.has_option(lib, name):
             return self._power_park.get(lib, name)
+        elif self._storage.has_option(lib, name):
+            return self._storage.get(lib, name)
         elif self._line.has_option(lib, name):
             return self._line.get(lib, name)
         elif self._load.has_option(lib, name):
@@ -176,6 +184,16 @@ class Translator:
             Dynamic power park models
         """
         return self._power_park.sections()
+
+    def get_storage_models(self) -> list:
+        """Get a list of available dynamic storage models.
+
+        Returns
+        -------
+        list
+            Dynamic storage models
+        """
+        return self._storage.sections()
 
     def get_line_models(self) -> list:
         """Get a list of available dynamic line models.
@@ -247,6 +265,8 @@ def _get_instance() -> Translator:
     synchronous_machine.optionxform = str
     power_park = configparser.ConfigParser()
     power_park.optionxform = str
+    storage = configparser.ConfigParser()
+    storage.optionxform = str
     line = configparser.ConfigParser()
     line.optionxform = str
     load = configparser.ConfigParser()
@@ -258,11 +278,14 @@ def _get_instance() -> Translator:
     _load_dictionary("Bus.ini", bus)
     _load_dictionary("Synch_Gen.ini", synchronous_machine)
     _load_dictionary("Power_Park.ini", power_park)
+    _load_dictionary("Storage.ini", storage)
     _load_dictionary("Line.ini", line)
     _load_dictionary("Load.ini", load)
     _load_dictionary("Transformer.ini", transformer)
     _load_dictionary("Control_Modes.ini", control_modes)
-    return Translator(bus, synchronous_machine, power_park, line, load, transformer, control_modes)
+    return Translator(
+        bus, synchronous_machine, power_park, storage, line, load, transformer, control_modes
+    )
 
 
 dynawo_translator = _get_instance()

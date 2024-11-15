@@ -8,10 +8,9 @@
 #     demiguelm@aia.es
 #
 
-# TODO: remove s_nom from Producer.INI, and read it from the Producer.DYD instead
-#       ("generator_SNom", "WTG4B_SNom", etc. ==> we'll need entries in the master dictionary).
-#       The same goes for some other quantities, such as UNom.  Leave in Producer.INI only the
-#       quantities that do not exist in the Dynawo model.
+# TODO: remove generator types ("GeneratorSynchronous", "IECWPP", "WTG4", etc. ==> we'll need
+#       entries in the master dictionary).
+#       The same goes for generator families ("IEC", "Wecc").
 #
 
 from __future__ import annotations
@@ -563,6 +562,7 @@ def get_producer_values(
     Line_params
         Internal line parameters of the producer model
     """
+
     producer_dyd_tree = etree.parse(producer_dyd, etree.XMLParser(remove_blank_text=True))
     producer_dyd_root = producer_dyd_tree.getroot()
 
@@ -583,7 +583,7 @@ def get_producer_values(
             stepup_xfmrs.append(transformer)
         elif "AuxLoad_Xfmr" in transformer.id:
             auxload_xfmr = transformer
-        elif "PPM_Xfmr" in transformer.id:
+        elif "Main_Xfmr" in transformer.id:
             ppm_xfmr = transformer
 
     aux_load = None
