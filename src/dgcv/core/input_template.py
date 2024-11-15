@@ -24,7 +24,9 @@ def create_input_template(launcher_dwo: Path, target: Path, topology: str, templ
         Input template name:
         * 'performance_SM' if it is electrical performance for Synchronous Machine Model
         * 'performance_PPM' if it is electrical performance for Power Park Module Model
-        * 'model' if it is model validation
+        * 'performance_BESS' if it is electrical performance for Storage Model
+        * 'model_PPM' if it is model validation for Power Park Module Model
+        * 'model_BESS' if it is model validation for Storage Model
     """
 
     if target.exists():
@@ -37,10 +39,10 @@ def create_input_template(launcher_dwo: Path, target: Path, topology: str, templ
     input_templates_path = config.get_value("Global", "input_templates_path")
     if template == "performance_SM":
         manage_files.copy_path(Path(input_templates_path) / "performance/SM", target)
-    elif template == "performance_PPM":
+    elif template == "performance_PPM" or template == "performance_BESS":
         manage_files.copy_path(Path(input_templates_path) / "performance/PPM", target)
-    elif template == "model":
-        manage_files.copy_path(Path(input_templates_path) / "model/PPM", target)
+    elif template.startswith("model"):
+        manage_files.copy_path(Path(input_templates_path) / "model", target)
 
     dgcv_logging.get_logger("Create input files").info(f"Creating the input DYD file in {target}.")
     create_producer_dyd_file(target, topology, template)

@@ -367,7 +367,7 @@ def _is_valid_auxiliary_transformer(auxiliary_transformer: Xfmr_params) -> None:
 
 
 def _is_valid_transformer(transformer: Xfmr_params) -> None:
-    if transformer is not None and transformer.id == "PPM_Xfmr":
+    if transformer is not None and transformer.id == "Main_Xfmr":
         return True
     return False
 
@@ -428,7 +428,7 @@ def check_producer_params(p_max_pu: float, u_nom: float) -> None:
         raise ValueError("Unexpected nominal voltage in the PDR Bus.")
 
 
-def check_generators(generators: list) -> tuple[int, int]:
+def check_generators(generators: list) -> tuple[int, int, int]:
     """Check whether the user-supplied generators parameters are consistent:
     * All generators are SM, PPM or BESS, mixing is not allowed.
 
@@ -439,17 +439,21 @@ def check_generators(generators: list) -> tuple[int, int]:
     """
     sm_models = 0
     ppm_models = 0
+    bess_models = 0
     for generator in generators:
         if generator.lib in dynawo_translator.get_synchronous_machine_models():
             sm_models += 1
         if generator.lib in dynawo_translator.get_power_park_models():
             ppm_models += 1
+        if generator.lib in dynawo_translator.get_storage_models():
+            bess_models += 1
 
-    if sm_models > 0 and ppm_models > 0:
+    total = len(generators)
+    if sm_models < total and ppm_models < total and bess_models < total:
         raise ValueError(
             "The supplied network contains two or more different generator model types."
         )
-    return sm_models, ppm_models
+    return sm_models, ppm_models, bess_models
 
 
 def check_trafos(xfmrs: list) -> None:
