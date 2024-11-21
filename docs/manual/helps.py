@@ -6,7 +6,7 @@ from pathlib import Path
 def write_output(file, text):
     for line in text.splitlines():
         file.write(f"\t{line}\n")
-    file.write(f"\n")
+    file.write("\n")
 
 
 def generate_help_files():

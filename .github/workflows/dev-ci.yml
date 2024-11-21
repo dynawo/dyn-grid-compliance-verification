@@ -41,19 +41,23 @@ jobs:
       # - name: Type checking
       #   run: mypy -p dgcv
 
+      # Pending to be added in the near future:
+      #   * flake8 src --count --exit-zero --max-complexity=10 --statistics
       - name: Linting with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src --count --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 99 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --statistics
+          flake8 src --count --exit-zero --statistics 
           
       - name: Run tests
-        working-directory: ./tests # Run in subdir to use installed lib, not sources
         run: |
-          pytest
+          source dgcv_venv/bin/activate
+          pytest tests
+          deactivate
 
       - name: Generate coverage
         run: |
+          source dgcv_venv/bin/activate
           pytest --cov=. --cov-report=xml tests
-
+          deactivate
