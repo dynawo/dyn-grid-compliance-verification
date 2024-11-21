@@ -43,10 +43,12 @@ jobs:
       #   * flake8 src --count --exit-zero --max-complexity=10 --statistics
       - name: Linting with flake8
         run: |
+          source dgcv_venv/bin/activate
           # stop the build if there are Python syntax errors or undefined names
           flake8 src --count --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 99 chars wide
           flake8 src --count --exit-zero --statistics 
+          deactivate
           
       - name: Run tests
         run: |
