@@ -27,39 +27,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Build package
+      - name: Install dependencies
         run: |
-          python -m venv dgcv_venv
-          source dgcv_venv/bin/activate
           python -m pip install --upgrade pip build setuptools wheel
           python -m pip install --upgrade flake8 pytest pytest-cov
-          python -m build --wheel
-          deactivate
 
-      # - name: Type checking
-      #   run: mypy -p dgcv
+      - name: Build package
+        run: python -m build --wheel
+
+      - name: Install wheel
+        run: pip install dist/*.whl
 
       # Pending to be added in the near future:
-      #   * flake8 src --count --exit-zero --max-complexity=10 --statistics
+      #   * flake8 src --count --exit-zero --max-complexity=10 
       - name: Linting with flake8
         run: |
-          source dgcv_venv/bin/activate
           # stop the build if there are Python syntax errors or undefined names
           flake8 src --count --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 99 chars wide
           flake8 src --count --exit-zero --statistics 
-          deactivate
           
       - name: Run tests
-        run: |
-          source dgcv_venv/bin/activate
-          pip install dist/*.whl
-          pytest tests
-          deactivate
+        run: pytest
 
       - name: Generate coverage
-        run: |
-          source dgcv_venv/bin/activate
-          pip install dist/*.whl
-          pytest --cov=. --cov-report=xml tests
-          deactivate
+        run: pytest --cov=. --cov-report=xml 
+

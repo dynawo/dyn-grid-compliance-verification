@@ -44,8 +44,8 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
 
         compliance = md.validate(True)
         print(f"{compliance}")
-    except Exception:
-        compliance = []
+    except Exception as e:
+        compliance = str(e)
     finally:
         shutil.rmtree(output_dir)
         return compliance
@@ -53,7 +53,6 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
 
 def test_perf_sm_model():
     compliance = _execute_tool("../../examples/SM/Dynawo/SingleAux", None, None)
-    print(compliance)
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
