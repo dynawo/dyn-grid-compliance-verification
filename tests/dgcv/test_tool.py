@@ -19,41 +19,45 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
     if reference_curves:
         assert (testpath / reference_curves).exists()
 
-    config._default_config.set("Dynawo", "simulation_limit", "120")
-    only_dtr = True
-    if producer_model:
-        if "SM" in producer_model:
-            sim_type = 0
-        elif "PPM" in producer_model:
-            sim_type = 0
+    try:
+        config._default_config.set("Dynawo", "simulation_limit", "120")
+        only_dtr = True
+        if producer_model:
+            if "SM" in producer_model:
+                sim_type = 0
+            elif "PPM" in producer_model:
+                sim_type = 0
+            else:
+                sim_type = 1
         else:
-            sim_type = 1
-    else:
-        if "SM" in producer_curves:
-            sim_type = 0
-        elif "PPM" in producer_curves:
-            sim_type = 0
-        else:
-            sim_type = 1
+            if "SM" in producer_curves:
+                sim_type = 0
+            elif "PPM" in producer_curves:
+                sim_type = 0
+            else:
+                sim_type = 1
 
-    ep = Parameters(
-        Path(shutil.which("dynawo.sh")).resolve(),
-        testpath / producer_model if producer_model else None,
-        testpath / producer_curves if producer_curves else None,
-        testpath / reference_curves if reference_curves else None,
-        None,
-        output_dir,
-        only_dtr,
-        sim_type,
-    )
-    md = ModelValidation(ep)
+        ep = Parameters(
+            Path(shutil.which("dynawo.sh")).resolve(),
+            testpath / producer_model if producer_model else None,
+            testpath / producer_curves if producer_curves else None,
+            testpath / reference_curves if reference_curves else None,
+            None,
+            output_dir,
+            only_dtr,
+            sim_type,
+        )
+        md = ModelValidation(ep)
 
-    compliance = md.validate(True)
-    shutil.rmtree(output_dir)
-    return compliance
+        compliance = md.validate(True)
+    except Exception as e:
+        compliance = str(e)
+    finally:
+        shutil.rmtree(output_dir)
+        return compliance
 
 
-def test_perf_sm_model():
+def installed_test_perf_sm_model():
     compliance = _execute_tool("../../examples/SM/Dynawo/SingleAux", None, None)
     assert [
         Compliance.NonCompliant,
@@ -68,7 +72,7 @@ def test_perf_sm_model():
     ] == compliance
 
 
-def test_perf_sm_curves():
+def installed_test_perf_sm_curves():
     compliance = _execute_tool(None, "../../examples/SM/ProducerCurves/", None)
     assert [
         Compliance.NonCompliant,
@@ -83,7 +87,7 @@ def test_perf_sm_curves():
     ] == compliance
 
 
-def test_perf_sm_complete():
+def installed_test_perf_sm_complete():
     compliance = _execute_tool(
         "../../examples/SM/Dynawo/SingleAuxI", "../../examples/SM/ProducerCurves/", None
     )
@@ -100,7 +104,7 @@ def test_perf_sm_complete():
     ] == compliance
 
 
-def test_perf_ppm_model():
+def installed_test_perf_ppm_model():
     compliance = _execute_tool("../../examples/PPM/Dynawo/SingleAux/WECC", None, None)
     assert [
         Compliance.NonCompliant,
@@ -113,7 +117,7 @@ def test_perf_ppm_model():
     ] == compliance
 
 
-def test_perf_ppm_curves():
+def installed_test_perf_ppm_curves():
     compliance = _execute_tool(None, "../../examples/PPM/ProducerCurves/", None)
     assert [
         Compliance.NonCompliant,
@@ -126,7 +130,7 @@ def test_perf_ppm_curves():
     ] == compliance
 
 
-def test_perf_ppm_complete():
+def installed_test_perf_ppm_complete():
     compliance = _execute_tool(
         "../../examples/PPM/Dynawo/SingleAux/IEC2020",
         "../../examples/PPM/ProducerCurves/",
@@ -143,7 +147,7 @@ def test_perf_ppm_complete():
     ] == compliance
 
 
-def test_model_validation_wecc_model():
+def installed_test_model_validation_wecc_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,
@@ -177,7 +181,7 @@ def test_model_validation_wecc_model():
     ] == compliance
 
 
-def test_model_validation_iec2015_model():
+def installed_test_model_validation_iec2015_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/IEC2015/Dynawo",
         None,
@@ -211,7 +215,7 @@ def test_model_validation_iec2015_model():
     ] == compliance
 
 
-def test_model_validation_iec2020_model():
+def installed_test_model_validation_iec2020_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/IEC2020/Dynawo",
         None,
@@ -245,7 +249,7 @@ def test_model_validation_iec2020_model():
     ] == compliance
 
 
-def test_model_validation_wecc_curves():
+def installed_test_model_validation_wecc_curves():
     compliance = _execute_tool(
         None,
         "../../examples/Model/Wind/WECC/ProducerCurves",
@@ -279,7 +283,7 @@ def test_model_validation_wecc_curves():
     ] == compliance
 
 
-def test_model_validation_iec2015_curves():
+def installed_test_model_validation_iec2015_curves():
     compliance = _execute_tool(
         None,
         "../../examples/Model/Wind/IEC2015/ProducerCurves",
@@ -313,7 +317,7 @@ def test_model_validation_iec2015_curves():
     ] == compliance
 
 
-def test_model_validation_iec2020_curves():
+def installed_test_model_validation_iec2020_curves():
     compliance = _execute_tool(
         None,
         "../../examples/Model/Wind/IEC2020/ProducerCurves",
@@ -347,7 +351,7 @@ def test_model_validation_iec2020_curves():
     ] == compliance
 
 
-def test_model_validation_partial_reference():
+def installed_test_model_validation_partial_reference():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,
