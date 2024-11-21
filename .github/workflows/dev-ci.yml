@@ -27,15 +27,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Build package
         run: |
+          python -m venv dgcv_venv
+          source dgcv_venv/bin/activate
           python -m pip install --upgrade pip build setuptools wheel
           python -m pip install --upgrade flake8 pytest pytest-cov
-          python -m venv dgcv_venv
-
-      - name: Build package
-        run: python -m build --wheel
-
+          python -m build --wheel
+          deactivate
 
       # - name: Type checking
       #   run: mypy -p dgcv
@@ -52,13 +51,13 @@ jobs:
       - name: Run tests
         run: |
           source dgcv_venv/bin/activate
-          pip install dist/*.whl --user
+          pip install dist/*.whl
           pytest tests
           deactivate
 
       - name: Generate coverage
         run: |
           source dgcv_venv/bin/activate
-          pip install dist/*.whl --user
+          pip install dist/*.whl
           pytest --cov=. --cov-report=xml tests
           deactivate
