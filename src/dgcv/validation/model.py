@@ -56,7 +56,7 @@ def _check_measure_curve_error_by_event(
     measure: str,
     error: str,
     window_thresholds: dict,
-) -> [float, bool]:
+) -> tuple[float, bool]:
     curve_value_error, curve_check_error, curve_terror, curve_yerror = _check_measure_curve_error(
         compliance_values,
         measure,
@@ -70,7 +70,7 @@ def _check_setpoint_tracking_by_window(
     compliance_values: dict,
     measure: str,
     error: str,
-) -> [float, bool, float, bool, float, bool]:
+) -> tuple[float, bool, float, bool, float, bool]:
     windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values()
     (
         before_value,
@@ -222,7 +222,7 @@ def _check_voltage_dips(
     measure: str,
     error: str,
     is_field_measurements: bool = True,
-) -> [float, bool, float, bool, float, bool]:
+) -> tuple[float, bool, float, bool, float, bool]:
     windows_thresholds = threshold_variables.get_voltage_dip_threshold_values(
         measure, is_field_measurements
     )
@@ -1204,6 +1204,9 @@ class ModelValidator(Validator):
                 t_faultQS_excl,
                 t_clearQS_excl,
             ),
+        )
+        sanity_checks.check_pre_stable(
+            list(before_calculated["time"]), list(before_calculated["BusPDR_BUS_Voltage"])
         )
 
         before_reference, during_reference, after_reference = signal_windows.get(
