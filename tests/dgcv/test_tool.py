@@ -19,42 +19,38 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
     if reference_curves:
         assert (testpath / reference_curves).exists()
 
-    try:
-        config._default_config.set("Dynawo", "simulation_limit", "120")
-        only_dtr = True
-        if producer_model:
-            if "SM" in producer_model:
-                sim_type = 0
-            elif "PPM" in producer_model:
-                sim_type = 0
-            else:
-                sim_type = 1
+    config._default_config.set("Dynawo", "simulation_limit", "120")
+    only_dtr = True
+    if producer_model:
+        if "SM" in producer_model:
+            sim_type = 0
+        elif "PPM" in producer_model:
+            sim_type = 0
         else:
-            if "SM" in producer_curves:
-                sim_type = 0
-            elif "PPM" in producer_curves:
-                sim_type = 0
-            else:
-                sim_type = 1
+            sim_type = 1
+    else:
+        if "SM" in producer_curves:
+            sim_type = 0
+        elif "PPM" in producer_curves:
+            sim_type = 0
+        else:
+            sim_type = 1
 
-        ep = Parameters(
-            Path(shutil.which("dynawo.sh")).resolve(),
-            testpath / producer_model if producer_model else None,
-            testpath / producer_curves if producer_curves else None,
-            testpath / reference_curves if reference_curves else None,
-            None,
-            output_dir,
-            only_dtr,
-            sim_type,
-        )
-        md = ModelValidation(ep)
+    ep = Parameters(
+        Path(shutil.which("dynawo.sh")).resolve(),
+        testpath / producer_model if producer_model else None,
+        testpath / producer_curves if producer_curves else None,
+        testpath / reference_curves if reference_curves else None,
+        None,
+        output_dir,
+        only_dtr,
+        sim_type,
+    )
+    md = ModelValidation(ep)
 
-        compliance = md.validate(True)
-    except Exception as e:
-        compliance = str(e)
-    finally:
-        shutil.rmtree(output_dir)
-        return compliance
+    compliance = md.validate(True)
+    shutil.rmtree(output_dir)
+    return compliance
 
 
 def test_perf_sm_model():
