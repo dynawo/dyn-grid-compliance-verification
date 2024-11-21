@@ -36,8 +36,6 @@ jobs:
       - name: Build package
         run: python -m build --wheel
 
-      - name: Install wheel
-        run: pip install dist/*.whl --user
 
       # - name: Type checking
       #   run: mypy -p dgcv
@@ -54,11 +52,13 @@ jobs:
       - name: Run tests
         run: |
           source dgcv_venv/bin/activate
+          pip install dist/*.whl --user
           pytest tests
           deactivate
 
       - name: Generate coverage
         run: |
           source dgcv_venv/bin/activate
+          pip install dist/*.whl --user
           pytest --cov=. --cov-report=xml tests
           deactivate
