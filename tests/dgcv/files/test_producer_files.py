@@ -91,9 +91,9 @@ def test_single_ppm_ko():
     assert get_reference_content("SingleSM.dyd") != generate_dyd_file("S", "performance_PPM")
 
 
-def installed_test_par_file_ok():
+def dynawo_test_par_file_ok():
     assert get_reference_content("Reference.par") == generate_par_file()
 
 
-def installed_test_par_file_ko():
+def dynawo_test_par_file_ko():
     assert get_reference_content("Invalid.par") != generate_par_file()

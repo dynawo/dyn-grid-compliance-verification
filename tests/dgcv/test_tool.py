@@ -57,7 +57,7 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
         return compliance
 
 
-def installed_test_perf_sm_model():
+def dynawo_test_perf_sm_model():
     compliance = _execute_tool("../../examples/SM/Dynawo/SingleAux", None, None)
     assert [
         Compliance.NonCompliant,
@@ -72,7 +72,7 @@ def installed_test_perf_sm_model():
     ] == compliance
 
 
-def installed_test_perf_sm_curves():
+def test_perf_sm_curves():
     compliance = _execute_tool(None, "../../examples/SM/ProducerCurves/", None)
     assert [
         Compliance.NonCompliant,
@@ -87,7 +87,7 @@ def installed_test_perf_sm_curves():
     ] == compliance
 
 
-def installed_test_perf_sm_complete():
+def dynawo_test_perf_sm_complete():
     compliance = _execute_tool(
         "../../examples/SM/Dynawo/SingleAuxI", "../../examples/SM/ProducerCurves/", None
     )
@@ -104,7 +104,7 @@ def installed_test_perf_sm_complete():
     ] == compliance
 
 
-def installed_test_perf_ppm_model():
+def dynawo_test_perf_ppm_model():
     compliance = _execute_tool("../../examples/PPM/Dynawo/SingleAux/WECC", None, None)
     assert [
         Compliance.NonCompliant,
@@ -117,7 +117,7 @@ def installed_test_perf_ppm_model():
     ] == compliance
 
 
-def installed_test_perf_ppm_curves():
+def test_perf_ppm_curves():
     compliance = _execute_tool(None, "../../examples/PPM/ProducerCurves/", None)
     assert [
         Compliance.NonCompliant,
@@ -130,7 +130,7 @@ def installed_test_perf_ppm_curves():
     ] == compliance
 
 
-def installed_test_perf_ppm_complete():
+def dynawo_test_perf_ppm_complete():
     compliance = _execute_tool(
         "../../examples/PPM/Dynawo/SingleAux/IEC2020",
         "../../examples/PPM/ProducerCurves/",
@@ -147,7 +147,7 @@ def installed_test_perf_ppm_complete():
     ] == compliance
 
 
-def installed_test_model_validation_wecc_model():
+def dynawo_test_model_validation_wecc_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,
@@ -181,7 +181,7 @@ def installed_test_model_validation_wecc_model():
     ] == compliance
 
 
-def installed_test_model_validation_iec2015_model():
+def dynawo_test_model_validation_iec2015_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/IEC2015/Dynawo",
         None,
@@ -215,7 +215,7 @@ def installed_test_model_validation_iec2015_model():
     ] == compliance
 
 
-def installed_test_model_validation_iec2020_model():
+def dynawo_test_model_validation_iec2020_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/IEC2020/Dynawo",
         None,
@@ -249,7 +249,7 @@ def installed_test_model_validation_iec2020_model():
     ] == compliance
 
 
-def installed_test_model_validation_wecc_curves():
+def test_model_validation_wecc_curves():
     compliance = _execute_tool(
         None,
         "../../examples/Model/Wind/WECC/ProducerCurves",
@@ -283,7 +283,7 @@ def installed_test_model_validation_wecc_curves():
     ] == compliance
 
 
-def installed_test_model_validation_iec2015_curves():
+def test_model_validation_iec2015_curves():
     compliance = _execute_tool(
         None,
         "../../examples/Model/Wind/IEC2015/ProducerCurves",
@@ -317,7 +317,7 @@ def installed_test_model_validation_iec2015_curves():
     ] == compliance
 
 
-def installed_test_model_validation_iec2020_curves():
+def test_model_validation_iec2020_curves():
     compliance = _execute_tool(
         None,
         "../../examples/Model/Wind/IEC2020/ProducerCurves",
@@ -351,7 +351,7 @@ def installed_test_model_validation_iec2020_curves():
     ] == compliance
 
 
-def installed_test_model_validation_partial_reference():
+def dynawo_test_model_validation_partial_reference():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,
