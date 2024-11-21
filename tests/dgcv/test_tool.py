@@ -9,6 +9,7 @@ from dgcv.model.compliance import Compliance
 
 def _execute_tool(producer_model, producer_curves, reference_curves):
     testpath = Path(__file__).resolve().parent
+    assert "TEST" == testpath
     output_dir = Path(__file__).resolve().parent / "tmp"
     output_dir.mkdir(exist_ok=True)
 
@@ -43,7 +44,6 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
         md = ModelValidation(ep)
 
         compliance = md.validate(True)
-        print(f"{compliance}")
     except Exception as e:
         compliance = str(e)
     finally:
