@@ -355,7 +355,7 @@ def dynawo_test_model_validation_partial_reference():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,
-        "../partial_reference_curves",
+        "../resources/partial_reference_curves",
     )
     assert [
         Compliance.NonCompliant,

@@ -205,7 +205,7 @@ def _check_topology_m(
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
-            "  - A transformer with id 'transformer' connected between the internal bus and the "
+            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
             "PDR bus\n"
         )
 
@@ -244,7 +244,7 @@ def _check_topology_mi(
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
-            "  - A transformer with id 'transformer' connected between the internal bus and the "
+            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
             "internal line\n"
             "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
             "with id 'transformer' and the PDR bus\n"
@@ -290,7 +290,7 @@ def _check_topology_maux(
             "  - An auxiliary load with id 'auxiliary_load'\n"
             "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
             "load and the internal bus\n"
-            "  - A transformer with id 'transformer' connected between the internal bus and the "
+            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
             "PDR bus\n"
         )
 
@@ -333,7 +333,7 @@ def _check_topology_mauxi(
             "  - An auxiliary load with id 'auxiliary_load'\n"
             "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
             "load and the internal bus\n"
-            "  - A transformer with id 'transformer' connected between the internal bus and the "
+            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
             "internal line\n"
             "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
             "with id 'transformer' and the PDR bus\n"
