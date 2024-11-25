@@ -5,9 +5,13 @@ from dgcv.files.producer_dyd_file import create_producer_dyd_file
 from dgcv.files.producer_par_file import create_producer_par_file
 
 
+def _get_resources_path():
+    return (Path(__file__).resolve().parent) / "resources"
+
+
 def generate_dyd_file(topology, template):
-    path = Path(__file__).resolve().parent / "tmp"
-    shutil.copytree(Path(__file__).resolve().parent, path, dirs_exist_ok=True)
+    path = _get_resources_path() / "tmp"
+    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     content = ""
     try:
@@ -20,8 +24,8 @@ def generate_dyd_file(topology, template):
 
 
 def generate_par_file():
-    path = Path(__file__).resolve().parent / "tmp"
-    shutil.copytree(Path(__file__).resolve().parent, path, dirs_exist_ok=True)
+    path = _get_resources_path() / "tmp"
+    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     content = ""
     try:
@@ -34,7 +38,7 @@ def generate_par_file():
 
 
 def get_reference_content(reference):
-    path = Path(__file__).resolve().parent / "ref"
+    path = _get_resources_path() / "ref"
     with open(path / reference) as f:
         content = f.read()
 
