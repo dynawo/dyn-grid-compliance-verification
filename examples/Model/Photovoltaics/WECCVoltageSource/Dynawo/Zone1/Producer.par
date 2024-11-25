@@ -102,7 +102,7 @@
     <par type="DOUBLE" name="photovoltaics_VDLIq32" value="1"/>
     <par type="DOUBLE" name="photovoltaics_VDLIq41" value="1.17"/>
     <par type="DOUBLE" name="photovoltaics_VDLIq42" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_tHoldIq" value="0"/>
     <par type="DOUBLE" name="photovoltaics_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="photovoltaics_IqFrzPu" value="0"/>
