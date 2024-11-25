@@ -80,7 +80,7 @@
     <par type="DOUBLE" name="BESScb_VDLIq32" value="1"/>
     <par type="DOUBLE" name="BESScb_VDLIq41" value="1.17"/>
     <par type="DOUBLE" name="BESScb_VDLIq42" value="1"/>
-    <par type="DOUBLE" name="BESScb_VRef1Pu" value="1.0"/>
+    <par type="DOUBLE" name="BESScb_VRef1Pu" value="0"/>
     <par type="DOUBLE" name="BESScb_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="BESScb_tHoldIq" value="0"/>
     <par type="DOUBLE" name="BESScb_IqFrzPu" value="0"/>

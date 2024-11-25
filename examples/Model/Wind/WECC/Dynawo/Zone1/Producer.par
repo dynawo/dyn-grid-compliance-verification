@@ -76,7 +76,7 @@
     <par type="DOUBLE" name="WT4B_VDLIq32" value="1"/>
     <par type="DOUBLE" name="WT4B_VDLIq41" value="1.17"/>
     <par type="DOUBLE" name="WT4B_VDLIq42" value="1"/>
-    <par type="DOUBLE" name="WT4B_VRef1Pu" value="1.0"/>
+    <par type="DOUBLE" name="WT4B_VRef1Pu" value="0"/>
     <par type="DOUBLE" name="WT4B_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="WT4B_tHoldIq" value="0"/>
     <par type="DOUBLE" name="WT4B_IqFrzPu" value="0"/>
