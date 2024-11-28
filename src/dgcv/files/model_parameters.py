@@ -50,8 +50,6 @@ def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element) -> l
     # WindTurbines
     for model_parameter in find_bbmodel_by_type(dyd_root, "IECWT"):
         _append_generator(dyd_root, par_root, model_parameter, generators)
-    for model_parameter in find_bbmodel_by_type(dyd_root, "WTU4"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
     for model_parameter in find_bbmodel_by_type(dyd_root, "WT4"):
         if "IECWT" in model_parameter.get("lib"):
             continue

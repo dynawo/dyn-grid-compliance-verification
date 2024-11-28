@@ -384,8 +384,8 @@ An example of the ``ControlModes`` section:
     USetpoint_WECC_Plant = WTG_UControl_Local_Coordinated,WTG_Only_UControl
     QSetpoint_WECC_Plant = WTG_QControl_Local_Coordinated,WTG_Only_QControl
 
-    USetpoint_WECC_Turbine = WTU_Local_Coordinated,WTU_UControl
-    QSetpoint_WECC_Turbine = WTU_Local_Coordinated,WTU_QControl
+    USetpoint_WECC_Turbine = WT_Local_Coordinated,WT_UControl
+    QSetpoint_WECC_Turbine = WT_Local_Coordinated,WT_QControl
 
     USetpoint_IEC_Plant = IECWPP_UQStatic,IECWPP_Openloop_UQStatic,IECWPP_UControl
     QSetpoint_IEC_Plant = IECWPP_QControl,IECWPP_Openloop_QControl
