@@ -3,6 +3,7 @@ from pathlib import Path
 
 from lxml import etree
 
+from dgcv.dynawo.translator import dynawo_translator
 from dgcv.files.model_parameters import find_bbmodel_by_type
 from dgcv.logging.logging import dgcv_logging
 
@@ -233,6 +234,79 @@ def _check_curves(target: Path) -> bool:
     return all_declared and exists_files
 
 
+def _get_performance_templates(
+    model_path: Path,
+    template: str,
+):
+    producer_dyd_tree = etree.parse(
+        model_path / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
+    )
+    producer_dyd_root = producer_dyd_tree.getroot()
+    xfmrs = []
+    for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
+        if "StepUp_Xfmr" in xfmr.get("id"):
+            xfmrs.append(xfmr)
+
+    if template == "performance_SM":
+        gen_sms = []
+        for model in dynawo_translator.get_synchronous_machine_models():
+            gen_sms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+        producer_curves_txt = _get_sm_file_template()
+        curves_names_txt = _get_sm_curves_template(xfmrs, gen_sms)
+    else:
+        gen_ppms = []
+        if template == "performance_PPM":
+            for model in dynawo_translator.get_power_park_models():
+                gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+        elif template == "performance_BESS":
+            for model in dynawo_translator.get_storage_models():
+                gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+        producer_curves_txt = _get_ppm_file_template()
+        curves_names_txt = _get_ppm_curves_template(xfmrs, gen_ppms)
+
+    return producer_curves_txt, curves_names_txt
+
+
+def _get_model_templates(
+    model_path: Path,
+    template: str,
+):
+    producer_dyd_tree = etree.parse(
+        model_path / "Zone3" / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
+    )
+    producer_dyd_root = producer_dyd_tree.getroot()
+    xfmrs = []
+    for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
+        if "StepUp_Xfmr" in xfmr.get("id"):
+            xfmrs.append(xfmr)
+
+    z3_gen_ppms = []
+    if template == "model_PPM":
+        for model in dynawo_translator.get_power_park_models():
+            z3_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+    elif template == "model_BESS":
+        for model in dynawo_translator.get_storage_models():
+            z3_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+
+    producer_dyd_tree = etree.parse(
+        model_path / "Zone1" / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
+    )
+    producer_dyd_root = producer_dyd_tree.getroot()
+
+    z1_gen_ppms = []
+    if template == "model_PPM":
+        for model in dynawo_translator.get_power_park_models():
+            z1_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+    elif template == "model_BESS":
+        for model in dynawo_translator.get_storage_models():
+            z1_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+
+    producer_curves_txt = _get_model_file_template()
+    curves_names_txt = _get_model_curves_template(xfmrs, z1_gen_ppms, z3_gen_ppms)
+
+    return producer_curves_txt, curves_names_txt
+
+
 def create_producer_curves(
     model_path: Path,
     curves_path: Path,
@@ -250,60 +324,18 @@ def create_producer_curves(
         Input template name:
         * 'performance_SM' if it is electrical performance for Synchronous Machine Model
         * 'performance_PPM' if it is electrical performance for Power Park Module Model
-        * 'model' if it is model validation
+        * 'performance_BESS' if it is electrical performance for Storage Model
+        * 'model_PPM' if it is model validation for Power Park Module Model
+        * 'model_BESS' if it is model validation for Storage Model
     """
 
-    if template == "performance_SM":
-        producer_dyd_tree = etree.parse(
-            model_path / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
-        )
-        producer_dyd_root = producer_dyd_tree.getroot()
-        xfmrs = []
-        for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
-            if "StepUp_Xfmr" in xfmr.get("id"):
-                xfmrs.append(xfmr)
-
-        gen_sms = find_bbmodel_by_type(producer_dyd_root, "GeneratorSynchronous")
-        producer_curves_txt = _get_sm_file_template()
-        curves_names_txt = _get_sm_curves_template(xfmrs, gen_sms)
-    elif template == "performance_PPM":
-        producer_dyd_tree = etree.parse(
-            model_path / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
-        )
-        producer_dyd_root = producer_dyd_tree.getroot()
-        xfmrs = []
-        for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
-            if "StepUp_Xfmr" in xfmr.get("id"):
-                xfmrs.append(xfmr)
-
-        gen_ppms = find_bbmodel_by_type(producer_dyd_root, "IECWPP")
-        gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, "WTG4"))
-        producer_curves_txt = _get_ppm_file_template()
-        curves_names_txt = _get_ppm_curves_template(xfmrs, gen_ppms)
-    elif template == "model":
-        producer_dyd_tree = etree.parse(
-            model_path / "Zone3" / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
-        )
-        producer_dyd_root = producer_dyd_tree.getroot()
-        xfmrs = []
-        for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
-            if "StepUp_Xfmr" in xfmr.get("id"):
-                xfmrs.append(xfmr)
-
-        z3_gen_ppms = find_bbmodel_by_type(producer_dyd_root, "IECWPP")
-        z3_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, "WTG4"))
-
-        producer_dyd_tree = etree.parse(
-            model_path / "Zone1" / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
-        )
-        producer_dyd_root = producer_dyd_tree.getroot()
-        z1_gen_ppms = find_bbmodel_by_type(producer_dyd_root, "IECWT")
-        z1_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, "WTU4"))
-        z1_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, "WT4"))
-        producer_curves_txt = _get_model_file_template()
-        curves_names_txt = _get_model_curves_template(xfmrs, z1_gen_ppms, z3_gen_ppms)
+    if template.startswith("performance"):
+        producer_curves_txt, curves_names_txt = _get_performance_templates(model_path, template)
+    elif template.startswith("model"):
+        producer_curves_txt, curves_names_txt = _get_model_templates(model_path, template)
     else:
         producer_curves_txt = ""
+        curves_names_txt = ""
 
     with open(curves_path / "CurvesFiles.ini", "w") as f:
         f.write("[Curves-Files]\n")

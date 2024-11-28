@@ -26,8 +26,10 @@ def _template_cmd_config(template: str, cmd: str):
 
 def _template_config(template: str):
     _template_cmd_config(template, "model")
+    _template_cmd_config(f"{template}/model", "BESS")
     _template_cmd_config(f"{template}/model", "PPM")
     _template_cmd_config(template, "performance")
+    _template_cmd_config(f"{template}/performance", "BESS")
     _template_cmd_config(f"{template}/performance", "PPM")
     _template_cmd_config(f"{template}/performance", "SM")
 
@@ -69,8 +71,18 @@ def _dummysamples_config(tool_path: Path, source: str):
         dirs_exist_ok=True,
     )
     shutil.copytree(
+        tool_path / "templates" / source / "performance" / "BESS" / ".DummySample",
+        config.get_config_dir() / "templates" / source / "performance" / "BESS" / ".DummySample",
+        dirs_exist_ok=True,
+    )
+    shutil.copytree(
         tool_path / "templates" / source / "model" / "PPM" / ".DummySample",
         config.get_config_dir() / "templates" / source / "model" / "PPM" / ".DummySample",
+        dirs_exist_ok=True,
+    )
+    shutil.copytree(
+        tool_path / "templates" / source / "model" / "BESS" / ".DummySample",
+        config.get_config_dir() / "templates" / source / "model" / "BESS" / ".DummySample",
         dirs_exist_ok=True,
     )
 
