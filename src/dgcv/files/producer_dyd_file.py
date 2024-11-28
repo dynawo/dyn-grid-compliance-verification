@@ -18,7 +18,7 @@ PAR_FILE = "Producer.par"
 
 PERFORMANCE_SM = 1
 PERFORMANCE_PPM = 2
-performance_BESS = 3
+PERFORMANCE_BESS = 3
 
 VALIDATION_PPM = 11
 VALIDATION_BESS = 12
@@ -358,13 +358,13 @@ def _create_producer_dyd_file(
     elif "S+Aux+i".casefold() == topology.casefold():
         _create_sauxi_topology(dyd_root, ns, validation_type)
     elif "M".casefold() == topology.casefold():
-        _create_m_topology(dyd_root, ns)
+        _create_m_topology(dyd_root, ns, validation_type)
     elif "M+i".casefold() == topology.casefold():
-        _create_mi_topology(dyd_root, ns)
+        _create_mi_topology(dyd_root, ns, validation_type)
     elif "M+Aux".casefold() == topology.casefold():
-        _create_maux_topology(dyd_root, ns)
+        _create_maux_topology(dyd_root, ns, validation_type)
     elif "M+Aux+i".casefold() == topology.casefold():
-        _create_mauxi_topology(dyd_root, ns)
+        _create_mauxi_topology(dyd_root, ns, validation_type)
     else:
         raise ValueError(
             "Select one of the 8 available topologies:\n"
@@ -413,7 +413,7 @@ def create_producer_dyd_file(
         if template == "performance_PPM":
             validation_type = PERFORMANCE_PPM
         elif template == "performance_BESS":
-            validation_type = performance_BESS
+            validation_type = PERFORMANCE_BESS
         _create_producer_dyd_file(target, topology, validation_type)
 
     elif template.startswith("model"):

@@ -394,10 +394,10 @@ An example of the console output:
 (dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI
 2024-02-01 11:52:16,161 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
 2024-02-01 11:52:16,164 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:52:39,151 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile WTU4AWeccCurrentSource.xml
-2024-02-01 11:52:39,153 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list WTU4AWeccCurrentSource.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:53:35,949 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile WTU4BWeccCurrentSource.xml
-2024-02-01 11:53:35,950 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list WTU4BWeccCurrentSource.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
+2024-02-01 11:52:39,151 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile 4AWeccCurrentSource.xml
+2024-02-01 11:52:39,153 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list WT4AWeccCurrentSource.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
+2024-02-01 11:53:35,949 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile WT4BWeccCurrentSource.xml
+2024-02-01 11:53:35,950 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list WT4BWeccCurrentSource.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
 2024-02-01 11:54:32,140 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile TransformerTapChanger.xml
 2024-02-01 11:54:32,141 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list TransformerTapChanger.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
 2024-02-01 11:55:11,153 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
@@ -492,17 +492,7 @@ dgcv$
 │   ├── TransformerTapChanger.extvar
 │   ├── TransformerTapChanger_INIT.mo
 │   ├── TransformerTapChanger.mo
-│   ├── TransformerTapChanger.so
-│   ├── WTU4AWeccCurrentSource
-│   ├── WTU4AWeccCurrentSource.extvar
-│   ├── WTU4AWeccCurrentSource_INIT.mo
-│   ├── WTU4AWeccCurrentSource.mo
-│   ├── WTU4AWeccCurrentSource.so
-│   ├── WTU4BWeccCurrentSource
-│   ├── WTU4BWeccCurrentSource.extvar
-│   ├── WTU4BWeccCurrentSource_INIT.mo
-│   ├── WTU4BWeccCurrentSource.mo
-│   └── WTU4BWeccCurrentSource.so
+│   └── TransformerTapChanger.so
 ├── log
 │   └── dgcv.log
 ├── templates
