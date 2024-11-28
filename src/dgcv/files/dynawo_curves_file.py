@@ -204,10 +204,10 @@ def create_curves_file(
     _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
     if sim_type == ELECTRIC_PERFORMANCE_SM:
         _add_sm_curves(curves_root, generators, curves_dict)
-    elif sim_type == ELECTRIC_PERFORMANCE_PPM:
-        _add_ppm_curves(curves_root, generators, curves_dict)
-    elif sim_type == MODEL_VALIDATION_PPM:
+    elif sim_type >= MODEL_VALIDATION_PPM:
         _add_model_validation_curves(curves_root, generators, zone, curves_dict)
+    else:
+        _add_ppm_curves(curves_root, generators, curves_dict)
 
     # This process is done to parse the news Elements and make the pretty_print work correctly
     curves_tree = etree.ElementTree(

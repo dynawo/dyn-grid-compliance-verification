@@ -103,10 +103,10 @@ Currently supported models:
         current source as interface with the grid
     * WTG4BWeccCurrentSource
         WECC Wind Turbine model with a current source as interface with the grid
-    * WTU4AWeccCurrentSource
+    * WT4AWeccCurrentSource
         WECC Wind Turbine model with a simplified drive train model (dual-mass model), without the
         plant controller and with a current source as interface with the grid
-    * WTU4BWeccCurrentSource
+    * WT4BWeccCurrentSource
         WECC Wind Turbine model without the plant controller and with a current source as interface
         with the grid
 * IEC Wind models:
