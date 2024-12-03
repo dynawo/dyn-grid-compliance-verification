@@ -29,9 +29,14 @@ OutputBaseFilename=DGCV_win_Installer
 Compression=lzma
 SolidCompression=yes
 
+[Dirs]
+Name: "{app}\dyn-grid-compliance-verification"; Flags: deleteafterinstall
+
 [Files]
 ; Add project files
 Source: "{#SourceDir}\dgcv_repo\*"; Excludes: ".git"; DestDir: "{app}\dyn-grid-compliance-verification\"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Add examples files
+Source: "{#SourceDir}\dgcv_repo\examples\*"; Excludes: ".git"; DestDir: "{app}\examples\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Dynawo files in the root directory
 Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Python installer
@@ -74,6 +79,12 @@ StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; 
 
 ; Install the built package in the virtual environment
 StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install dyn-grid-compliance-verification\dist\dgcv-{#DGCVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
+
+[Registry]
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"; Check: NeedsAddPath({app})
 
 [Code]
 function GetPythonPath(Param: String): String;
@@ -150,4 +161,40 @@ begin
   if Result = True then
     MsgBox('Avoiding the installation of VisualStudio2019, it is already installed on the system.', mbInformation, MB_OK);
     
+end;
+
+function NeedsAddPath(Param: string): boolean;
+var
+  OrigPath: string;
+begin
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path', OrigPath)
+  then begin
+    Result := True;
+    exit;
+  end;
+  { look for the path with leading and trailing semicolon }
+  { Pos() returns 0 if not found }
+  Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
+end;
+
+[Code]
+function CreateBatch(): boolean;
+var
+  fileName : string;
+  lines : TArrayOfString;
+begin
+  fileName := ExpandConstant('{userdesktop}\DGCV.bat');
+  SetArrayLength(lines, 1);
+  lines[0] := ExpandConstant('start cmd /k "{app}\dgcv_venv\Scripts\activate && cd /d {app}"');
+  Result := SaveStringsToFile(filename,lines,true);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if  CurStep=ssPostInstall then
+    begin
+         CreateBatch();
+    end
 end;
