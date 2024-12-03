@@ -1,33 +1,49 @@
 [CustomMessages]
 #define PythonVersion "11"
 #define DGCVVersion "0.5.2"
-#define CMakeVersion "3.31.0"
+#define CMakeVersion "3.31.1"
 #define MiktexVersion "24.1"
-#define SourceDir "C:\Users\path\to\src"
+#define SourceDir "SOURCE DIRECTORY"
+; SourceDir directory should contain the following items:
+;   * cmake installer (https://cmake.org/download/)
+;   * Visual Studio 2019 BuildTools installer (https://learn.microsoft.com/en-us/visualstudio/releases/2019/history#release-dates-and-build-numbers)
+;   * MikTeX installer (https://miktex.org/download)
+;   * Python installer (https://www.python.org/downloads/windows/)
+;   * dgcv_repo: tool directory (https://github.com/dynawo/dyn-grid-compliance-verification)
+;   * dynawo: Directory with the installation for Windows systems of Dynawo (https://github.com/dynawo/dynawo/releases)
+;       After installing Dynawo applies the following corrections:
+;		- Edit the file share\cmake\FindSundials.cmake removing the lines:
+;			if(MSVC)
+;				set(LIBRARY_DIR bin)
+;			endif()
+;		- Edit the file dynawo.cmd adding the lines:
+;			if /I "%~1"=="dump-model" (
+;	            for /f "tokens=1,* delims= " %%a in ("%*") do set DUMP_MODEL_ARGS=%%b
+;				%DYNAWO_INSTALL_DIR%"sbin\dumpModel.exe !DUMP_MODEL_ARGS!
 
 [Setup]
 AppName=Dynamic Grid Compliance Verification
 AppVersion={#DGCVVersion}
-DefaultDirName={pf}\DGCV
+DefaultDirName={sd}\DGCV
 OutputBaseFilename=DGCV_win_Installer
 Compression=lzma
 SolidCompression=yes
 
 [Files]
 ; Add project files
-Source: "{#SourceDir}\dyn-grid-compliance-verification\*"; DestDir: "{app}\dyn-grid-compliance-verification\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dgcv_repo\*"; Excludes: ".git"; DestDir: "{app}\dyn-grid-compliance-verification\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Dynawo files in the root directory
 Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Python installer
-Source: "{#SourceDir}\python-3.{#PythonVersion}.0-amd64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#SourceDir}\python-3.{#PythonVersion}.6-amd64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 ; Add MiKTeX, VS2019, and CMake installers
 Source: "{#SourceDir}\basic-miktex-{#MiktexVersion}-x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#SourceDir}\cmake-{#CMakeVersion}-windows-x86_64.msi"; DestDir: "{tmp}"; Flags: deleteafterinstall
-Source: "{#SourceDir}\vs_Community2019.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#SourceDir}\vs_BuildTools.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Run]
 ; Install Python if not found
-StatusMsg: "Installing Python..."; Filename: "{tmp}\python-3.{#PythonVersion}.0-amd64.exe"; Parameters: "InstallAllUsers=1 PrependPath=1"; Check: not IsPythonInstalled
+StatusMsg: "Installing Python..."; Filename: "{tmp}\python-3.{#PythonVersion}.6-amd64.exe"; Parameters: "InstallAllUsers=1 PrependPath=1"; Check: not IsPythonInstalled
 
 ; Install MiKTeX if not found
 StatusMsg: "Installing MiKTeX..."; Filename: "{tmp}\basic-miktex-{#MiktexVersion}-x64.exe"; Check: not IsMikTeXInstalled
@@ -36,7 +52,7 @@ StatusMsg: "Installing MiKTeX..."; Filename: "{tmp}\basic-miktex-{#MiktexVersion
 StatusMsg: "Installing CMake..."; Filename: "msiexec"; Parameters: "/i {tmp}\cmake-{#CMakeVersion}-windows-x86_64.msi /norestart"; Check: not IsCMakeInstalled
 
 ; Install VS2019 if not found
-StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_Community2019.exe"; Parameters: "--wait"; Check: not IsVSInstalled
+StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_BuildTools.exe"; Parameters: "--wait --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.VC.ASAN --add Microsoft.VisualStudio.Component.VC.CMake.Project --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041"; Check: not IsVSInstalled
 
 ; Install build module for Python
 StatusMsg: "Installing Python build module..."; Filename: "python.exe"; Parameters: "-m pip install build"; Flags: runhidden; Check: IsPythonInPath
@@ -51,13 +67,13 @@ StatusMsg: "Compiling the project..."; Filename: "python.exe"; Parameters: "-m b
 StatusMsg: "Compiling the project..."; Filename: "{code:GetPythonPath}"; Parameters: "-m build --wheel"; WorkingDir: "{app}\dyn-grid-compliance-verification\"; Flags: runhidden; Check: not IsPythonInPath
 
 ; Create a virtual environment
-StatusMsg: "Creating virtual environment..."; Filename: "python.exe"; Parameters: "-m venv {app}\dgcv_venv"; Flags: runhidden; Check: IsPythonInPath
+StatusMsg: "Creating virtual environment..."; Filename: "python.exe"; Parameters: "-m venv dgcv_venv"; WorkingDir: "{app}"; Flags: runhidden; Check: IsPythonInPath
 
 ; Create a virtual environment
-StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv {app}\dgcv_venv"; Flags: runhidden; Check: not IsPythonInPath
+StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dgcv_venv"; WorkingDir: "{app}"; Flags: runhidden; Check: not IsPythonInPath
 
 ; Install the built package in the virtual environment
-StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install {app}\dyn-grid-compliance-verification\dist\dgcv-{#DGCVVersion}-py3-none-any.whl"; Flags: runhidden;
+StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install dyn-grid-compliance-verification\dist\dgcv-{#DGCVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
 
 [Code]
 function GetPythonPath(Param: String): String;
