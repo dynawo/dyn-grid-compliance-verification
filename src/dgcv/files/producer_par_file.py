@@ -154,9 +154,11 @@ def create_producer_par_file(
         Input template name:
         * 'performance_SM' if it is electrical performance for Synchronous Machine Model
         * 'performance_PPM' if it is electrical performance for Power Park Module Model
-        * 'model' if it is model validation
+        * 'performance_BESS' if it is electrical performance for Storage Model
+        * 'model_PPM' if it is model validation for Power Park Module Model
+        * 'model_BESS' if it is model validation for Storage Model
     """
-    if template == "model":
+    if template.startswith("model"):
         _create_producer_par_file(launcher_dwo, target / "Zone1")
         _create_producer_par_file(launcher_dwo, target / "Zone3")
     else:
@@ -170,13 +172,20 @@ def check_parameters(target: Path, template: str) -> bool:
     ----------
     target: Path
         Target path
+    template: str
+        Input template name:
+        * 'performance_SM' if it is electrical performance for Synchronous Machine Model
+        * 'performance_PPM' if it is electrical performance for Power Park Module Model
+        * 'performance_BESS' if it is electrical performance for Storage Model
+        * 'model_PPM' if it is model validation for Power Park Module Model
+        * 'model_BESS' if it is model validation for Storage Model
 
     Returns
     -------
     bool
         False if there are empty values in the PAR file
     """
-    if template == "model":
+    if template.startswith("model"):
         check_zone1 = _check_parameters(target / "Zone1")
         check_zone3 = _check_parameters(target / "Zone3")
         return check_zone1 and check_zone3
