@@ -388,28 +388,56 @@ def create_pdf(
         }
     ).dump(str(working_path / REPORT_NAME))
 
-    str_remove = ""
-    if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-        if os.name == "nt":
-            str_remove = " && del *.toc *.aux *.log *.out *.bbl *.blg *.run.xml *.bcf"
-        else:
-            str_remove = " && rm -f *.toc *.aux *.log *.out *.bbl *.blg *.run.xml *.bcf"
-
     report_name_ = REPORT_NAME.replace(".tex", "")
     proc = subprocess.run(
-        "cd "
-        + str(working_path)
-        + " && "
-        + "pdflatex -shell-escape -halt-on-error "
-        + report_name_
-        + " && "
-        + "pdflatex -shell-escape -halt-on-error "
-        + report_name_
-        + str_remove,
-        shell=True,
+        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
+        cwd=working_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    proc = subprocess.run(
+        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
+        cwd=working_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
+        if os.name == "nt":
+            proc = subprocess.run(
+                [
+                    "del",
+                    "*.toc",
+                    "*.aux",
+                    "*.log",
+                    "*.out",
+                    "*.bbl",
+                    "*.blg",
+                    "*.run.xml",
+                    "*.bcf",
+                ],
+                cwd=working_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        else:
+            proc = subprocess.run(
+                [
+                    "rm",
+                    "-f",
+                    "*.toc",
+                    "*.aux",
+                    "*.log",
+                    "*.out",
+                    "*.bbl",
+                    "*.blg",
+                    "*.run.xml",
+                    "*.bcf",
+                ],
+                cwd=working_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
     dgcv_logging.get_logger("PDFLatex").debug(proc.stderr.decode("utf-8"))
     if move_report(working_path, output_path, REPORT_NAME):
