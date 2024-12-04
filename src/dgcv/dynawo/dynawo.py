@@ -64,43 +64,23 @@ def _precompile_model(
                 + str(model_name)
                 + " "
                 + str(output_path)
-                + "cd "
-                + str(output_path)
-                + " && "
-                + "Vsx64.cmd"
-                + " "
-                + str(launcher_dwo)
                 + " "
                 + str(compiled_model + extension)
                 + " "
-                + str(compiled_model)
+                + str(compiled_model + ".desc.xml")
                 + ""
             )
             subprocess.run(
-                "cd "
-                + str(Path(__file__).parent.resolve())
-                + " && "
-                + "Vsx64.cmd"
-                + " "
-                + str(models_path)
-                + " "
-                + str(launcher_dwo)
-                + " "
-                + str(model_name)
-                + " "
-                + str(output_path)
-                + "cd "
-                + str(output_path)
-                + " && "
-                + "Vsx64.cmd"
-                + " "
-                + str(launcher_dwo)
-                + " "
-                + str(compiled_model + extension)
-                + " "
-                + str(compiled_model)
-                + "",
-                shell=True,
+                [
+                    Path(__file__).parent.resolve() / "Vsx64.cmd",
+                    models_path,
+                    launcher_dwo,
+                    model_name,
+                    output_path,
+                    compiled_model + extension,
+                    compiled_model + ".desc.xml",
+                ],
+                cwd=Path(__file__).parent.resolve(),
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
             )
@@ -126,25 +106,32 @@ def _precompile_model(
                 + ".desc.xml"
             )
             subprocess.run(
-                "cd "
-                + str(models_path)
-                + " && "
-                + str(launcher_dwo)
-                + " jobs --generate-preassembled --model-list "
-                + str(model_name)
-                + " --non-recursive-modelica-models-dir . --output-dir "
-                + str(output_path)
-                + " && "
-                + "cd "
-                + str(output_path)
-                + " && "
-                + str(launcher_dwo)
-                + " jobs --dump-model --model-file "
-                + str(compiled_model + extension)
-                + " --output-file "
-                + str(compiled_model)
-                + ".desc.xml",
-                shell=True,
+                [
+                    launcher_dwo,
+                    "jobs",
+                    "--generate-preassembled",
+                    "--model-list",
+                    model_name,
+                    "--non-recursive-modelica-models-dir",
+                    ".",
+                    "--output-dir",
+                    output_path,
+                ],
+                cwd=models_path,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+            )
+            subprocess.run(
+                [
+                    launcher_dwo,
+                    "jobs",
+                    "--dump-model",
+                    "--model-file",
+                    compiled_model + extension,
+                    "--output-file",
+                    compiled_model + ".desc.xml",
+                ],
+                cwd=output_path,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
             )
@@ -175,22 +162,16 @@ def _run_dynawo(
     jobs_filename: str,
     inputs_path: Path,
 ) -> tuple[bool, str]:
-    jobs_opt = " jobs "
-
     tic = time.time()
     simulation_limit = config.get_float("Dynawo", "simulation_limit", 300.0)
 
     proc = subprocess.Popen(
-        (
-            "cd "
-            + str(inputs_path)
-            + " && "
-            + str(launcher_dwo)
-            + jobs_opt
-            + str(jobs_filename)
-            + ".jobs"
-        ).replace("$", "\$"),
-        shell=True,
+        [
+            launcher_dwo,
+            "jobs",
+            str(jobs_filename) + ".jobs",
+        ],
+        cwd=inputs_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -444,8 +425,7 @@ def get_dynawo_version(
     """
 
     return subprocess.run(
-        str(launcher_dwo) + " version",
-        shell=True,
+        [launcher_dwo, "version"],
         capture_output=True,
         text=True,
     ).stdout.strip("\n")

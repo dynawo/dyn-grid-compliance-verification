@@ -8,12 +8,13 @@
 #     demiguelm@aia.es
 #
 
-import curses
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-
 from dgcv.logging.custom_formatter import CustomFormatter
+import colorama
+
+colorama.init()
 
 
 class DgcvLogger(logging.getLoggerClass()):
@@ -39,25 +40,14 @@ class DgcvLogger(logging.getLoggerClass()):
 
         stdout_handler = logging.StreamHandler()
         stdout_handler.setLevel(console_log_level)
-        curses.initscr()
-        if curses.has_colors():
+
+        if colorama:
             stdout_handler.setFormatter(CustomFormatter(console_formatter))
         else:
             stdout_handler.setFormatter(logging.Formatter(console_formatter))
-        curses.endwin()
+
         if not disable_console:
             self.addHandler(stdout_handler)
-
-        log_name = "dgcv.log"
-        log_file = log_dir / log_name
-        file_handler = RotatingFileHandler(
-            log_file, mode="a", maxBytes=file_max_bytes, backupCount=5, encoding=None, delay=0
-        )
-        file_handler.setLevel(file_log_level)
-
-        file_handler.setFormatter(logging.Formatter(file_formatter))
-        if not disable_file:
-            self.addHandler(file_handler)
 
     def get_logger(self, name: str):
         logger = self.getChild(name)
