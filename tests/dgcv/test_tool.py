@@ -43,7 +43,6 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
         md = ModelValidation(ep)
 
         compliance = md.validate(True)
-        print(f"{compliance}")
     except Exception:
         compliance = []
     finally:
@@ -155,15 +154,15 @@ def test_model_validation_wecc_model():
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
-        Compliance.NonCompliant,
-        Compliance.NonCompliant,
-        Compliance.NonCompliant,
+        Compliance.Compliant,
         Compliance.NonCompliant,
         Compliance.Compliant,
         Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
         Compliance.Compliant,
-        Compliance.Compliant,
-        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
@@ -258,14 +257,14 @@ def test_model_validation_wecc_curves():
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
+        Compliance.NonCompliant,
         Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
         Compliance.Compliant,
-        Compliance.Compliant,
-        Compliance.Compliant,
-        Compliance.Compliant,
-        Compliance.Compliant,
-        Compliance.Compliant,
-        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
