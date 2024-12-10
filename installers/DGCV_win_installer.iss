@@ -6,6 +6,7 @@
 #define SourceDir "SOURCE DIRECTORY"
 ; SourceDir directory should contain the following items:
 ;   * dgcv_repo: tool directory (https://github.com/dynawo/dyn-grid-compliance-verification)
+;   * manual: compiled user manual of the tool (PDF & HTML)
 ;   * dynawo: Directory with the installation for Windows systems of Dynawo (https://github.com/dynawo/dynawo/releases)
 ;       After installing Dynawo applies the following corrections:
 ;		- Edit the file share\cmake\FindSundials.cmake removing the lines:
@@ -24,15 +25,15 @@ DefaultDirName={sd}\DGCV
 OutputBaseFilename=DGCV_win_Installer
 Compression=lzma
 SolidCompression=yes
-
-[Dirs]
-Name: "{app}\dyn-grid-compliance-verification"; Flags: deleteafterinstall
+AlwaysRestart=yes
 
 [Files]
 ; Add project files
-Source: "{#SourceDir}\dgcv_repo\*"; Excludes: ".git"; DestDir: "{app}\dyn-grid-compliance-verification\"; Flags: deleteafterinstall ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dgcv_repo\*"; Excludes: ".git"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add examples files
 Source: "{#SourceDir}\dgcv_repo\examples\*"; Excludes: ".git"; DestDir: "{app}\examples\"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Add Manuals in the root directory
+Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Dynawo files in the root directory
 Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -53,73 +54,31 @@ StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_BuildTools.ex
 StatusMsg: "Installing Python build module..."; Filename: "{code:GetPythonPath}"; Parameters: "-m pip install build"; Flags: runhidden
 
 ; Compile the project using build
-StatusMsg: "Compiling the project..."; Filename: "{code:GetPythonPath}"; Parameters: "-m build --wheel"; WorkingDir: "{app}\dyn-grid-compliance-verification\"; Flags: runhidden
+StatusMsg: "Compiling the project..."; Filename: "{code:GetPythonPath}"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
 
 ; Create a virtual environment
 StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dgcv_venv"; WorkingDir: "{app}"; Flags: runhidden
 
 ; Install the built package in the virtual environment
-StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install dyn-grid-compliance-verification\dist\dgcv-{#DGCVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
-
-[InstallDelete]
-Type: filesandordirs; Name: "{app}\dyn-grid-compliance-verification"
+StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dgcv-{#DGCVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 Type: files; Name: "{userdesktop}\DGCV.bat"
 
 [Registry]
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"; Check: NeedsAddPath()
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"
 
 [Code]
 const
-  SHCONTCH_NOPROGRESSBOX = 4;
-  SHCONTCH_RESPONDYESTOALL = 16;
+  PYTHON_REGISTRY = 'SOFTWARE\Python\PythonCore';
+  CMAKE_REGISTRY = 'SOFTWARE\Kitware\CMake';
+  VS_REGISTRY = 'SOFTWARE\Microsoft\VisualStudio\14.0';
+  MIKTEK_REGISTRY = 'SOFTWARE\MiKTeX.org\MiKTeX';
 
 var
   DownloadPage: TDownloadWizardPage;
-
-function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
-begin
-  if Progress = ProgressMax then
-    Log(Format('Successfully downloaded file to {tmp}: %s', [FileName]));
-  Result := True;
-end;
-
-procedure InitializeWizard;
-begin
-  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
-  DownloadPage.ShowBaseNameInsteadOfUrl := True;
-end;
-
-function NextButtonClick(CurPageID: Integer): Boolean;
-begin
-  if CurPageID = wpReady then begin
-    DownloadPage.Clear;
-    // Use AddEx to specify a username and password
-    DownloadPage.Add('https://github.com/Kitware/CMake/releases/download/v{#CMakeVersion}/cmake-{#CMakeVersion}-windows-x86_64.msi', 'cmake-{#CMakeVersion}-windows-x86_64.msi', '');
-    DownloadPage.Add('https://miktex.org/download/ctan/systems/win32/miktex/setup/windows-x64/basic-miktex-{#MiktexVersion}-x64.exe', 'basic-miktex-{#MiktexVersion}-x64.exe', '');
-    DownloadPage.Add('https://www.python.org/ftp/python/3.{#PythonVersion}.{#PythonSubVersion}/python-3.{#PythonVersion}.{#PythonSubVersion}-amd64.exe', 'python-3.{#PythonVersion}.{#PythonSubVersion}-amd64.exe', '');
-    DownloadPage.Add('https://download.visualstudio.microsoft.com/download/pr/8497e528-d106-4143-95eb-3deb1b2f4851/d247112120128c790c6e2a89fe4c6acbf0f714a7a9f15df223c4722b861090fd/vs_BuildTools.exe', 'vs_BuildTools.exe', '');
-    DownloadPage.Show;
-    try
-      try
-        DownloadPage.Download; // This downloads the files to {tmp}
-        Result := True;
-      except
-        if DownloadPage.AbortedByUser then
-          Log('Aborted by user.')
-        else
-          SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbCriticalError, MB_OK, IDOK);
-        Result := False;
-      end;
-    finally
-      DownloadPage.Hide;
-    end;
-  end else
-    Result := True;
-end;
-
+  
 function IsPythonInPath: Boolean;
 var
   ExitCode: Integer;
@@ -156,68 +115,41 @@ begin
 end;
 
 function IsPythonInstalled: Boolean;
-var
-  ExitCode: Integer;
 begin
-  Result := Exec('cmd.exe', '/C python.exe --version', '', SW_HIDE, ewWaitUntilTerminated, ExitCode);
-  
-  if ExitCode = 0 then
-    Result := True
-  else
-    Result := False;
-    
-  if Result = True then
-    MsgBox('Avoiding the installation of Python, it is already installed on the system.', mbInformation, MB_OK);
+  Result := RegKeyExists(HKLM32, PYTHON_REGISTRY) 
+  or RegKeyExists(HKLM64, PYTHON_REGISTRY)
+  or RegKeyExists(HKCU32, PYTHON_REGISTRY)
+  or RegKeyExists(HKCU64, PYTHON_REGISTRY); // Python
     
 end;
 
 function IsMikTeXInstalled: Boolean;
 begin
-  Result := DirExists('C:\Program Files\MiKTeX') or 
-             DirExists('C:\Program Files (x86)\MiKTeX');
-    
-  if Result = True then 
-    MsgBox('Avoiding the installation of MiKTeX, it is already installed on the system.', mbInformation, MB_OK);
-    
+  Result := RegKeyExists(HKLM32, MIKTEK_REGISTRY) 
+  or RegKeyExists(HKLM64, MIKTEK_REGISTRY)
+  or RegKeyExists(HKCU32, MIKTEK_REGISTRY)
+  or RegKeyExists(HKCU64, MIKTEK_REGISTRY);
+   
 end;
 
 function IsCMakeInstalled: Boolean;
 begin
-  Result := DirExists('C:\Program Files\CMake') 
-  or DirExists('C:\Program Files (x86)\CMake');
-  
-  if Result = True then
-    MsgBox('Avoiding the installation of CMake, it is already installed on the system.', mbInformation, MB_OK);
-    
+  Result := RegKeyExists(HKLM32, CMAKE_REGISTRY) 
+  or RegKeyExists(HKLM64, CMAKE_REGISTRY)
+  or RegKeyExists(HKCU32, CMAKE_REGISTRY)
+  or RegKeyExists(HKCU64, CMAKE_REGISTRY);
+ 
 end;
 
 function IsVSInstalled: Boolean;
 begin
-  Result := RegKeyExists(HKLM, 'SOFTWARE\Microsoft\VisualStudio\14.0') 
-  or RegKeyExists(HKCU, 'SOFTWARE\Microsoft\VisualStudio\14.0'); // VS 2019 key
-    
-  if Result = True then
-    MsgBox('Avoiding the installation of VisualStudio2019, it is already installed on the system.', mbInformation, MB_OK);
+  Result := RegKeyExists(HKLM32, VS_REGISTRY) 
+  or RegKeyExists(HKLM64, VS_REGISTRY)
+  or RegKeyExists(HKCU32, VS_REGISTRY)
+  or RegKeyExists(HKCU64, VS_REGISTRY);
     
 end;
 
-function NeedsAddPath: boolean;
-var
-  OrigPath: string;
-begin
-  if not RegQueryStringValue(HKEY_LOCAL_MACHINE,
-    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
-    'Path', OrigPath)
-  then begin
-    Result := True;
-    exit;
-  end;
-  { look for the path with leading and trailing semicolon }
-  { Pos() returns 0 if not found }
-  Result := Pos(';' + {app} + ';', ';' + OrigPath + ';') = 0;
-end;
-
-[Code]
 function CreateBatch: boolean;
 var
   fileName : string;
@@ -229,11 +161,55 @@ begin
   Result := SaveStringsToFile(filename,lines,true);
 end;
 
+function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
+begin
+  if Progress = ProgressMax then
+    Log(Format('Successfully downloaded file to {tmp}: %s', [FileName]));
+  Result := True;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  if CurPageID = wpReady then begin
+    DownloadPage.Clear;
+    // Use AddEx to specify a username and password
+    if not IsCMakeInstalled then 
+      DownloadPage.Add('https://github.com/Kitware/CMake/releases/download/v{#CMakeVersion}/cmake-{#CMakeVersion}-windows-x86_64.msi', 'cmake-{#CMakeVersion}-windows-x86_64.msi', '');
+    if not IsMikTeXInstalled then 
+      DownloadPage.Add('https://miktex.org/download/ctan/systems/win32/miktex/setup/windows-x64/basic-miktex-{#MiktexVersion}-x64.exe', 'basic-miktex-{#MiktexVersion}-x64.exe', '');
+    if not IsPythonInstalled then 
+      DownloadPage.Add('https://www.python.org/ftp/python/3.{#PythonVersion}.{#PythonSubVersion}/python-3.{#PythonVersion}.{#PythonSubVersion}-amd64.exe', 'python-3.{#PythonVersion}.{#PythonSubVersion}-amd64.exe', '');
+    if not IsVSInstalled then 
+      DownloadPage.Add('https://download.visualstudio.microsoft.com/download/pr/8497e528-d106-4143-95eb-3deb1b2f4851/d247112120128c790c6e2a89fe4c6acbf0f714a7a9f15df223c4722b861090fd/vs_BuildTools.exe', 'vs_BuildTools.exe', '');
+    DownloadPage.Show;
+    try
+      try
+        DownloadPage.Download; // This downloads the files to {tmp}
+        Result := True;
+      except
+        if DownloadPage.AbortedByUser then
+          Log('Aborted by user.')
+        else
+          SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbCriticalError, MB_OK, IDOK);
+        Result := False;
+      end;
+    finally
+      DownloadPage.Hide;
+    end;
+  end else
+    Result := True;
+end;
+
+procedure InitializeWizard;
+begin
+  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
+  DownloadPage.ShowBaseNameInsteadOfUrl := True;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if  CurStep=ssPostInstall then
     begin
-      DelTree('{app}\dyn-grid-compliance-verification', True, True, True);
       CreateBatch;
     end
 end;
