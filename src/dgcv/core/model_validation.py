@@ -19,8 +19,10 @@ from pathlib import Path
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import (
+    ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
@@ -88,9 +90,24 @@ class ModelValidation:
                 validation_pcs, "electric_performance_ppm_verification_pcs", "performance/PPM"
             )
 
+        elif parameters.get_sim_type() == ELECTRIC_PERFORMANCE_BESS:
+            dgcv_logging.get_logger("ModelValidation").info(
+                "Electric Performance Verification for Storage"
+            )
+            self.__get_validation_pcs(
+                validation_pcs, "electric_performance_bess_verification_pcs", "performance/BESS"
+            )
+
         elif parameters.get_sim_type() == MODEL_VALIDATION_PPM:
-            dgcv_logging.get_logger("ModelValidation").info("DGCV Model Validation")
-            self.__get_validation_pcs(validation_pcs, "model_validation_pcs", "model/PPM")
+            dgcv_logging.get_logger("ModelValidation").info(
+                "DGCV Model Validation for Power Park Modules"
+            )
+            self.__get_validation_pcs(validation_pcs, "model_ppm_validation_pcs", "model/PPM")
+
+        elif parameters.get_sim_type() == MODEL_VALIDATION_BESS:
+            dgcv_logging.get_logger("ModelValidation").info("DGCV Model Validation for Storage")
+            self.__get_validation_pcs(validation_pcs, "model_bess_validation_pcs", "model/BESS")
+
         self._validation_pcs = validation_pcs
 
         # Prepare the environment to execute the tool
