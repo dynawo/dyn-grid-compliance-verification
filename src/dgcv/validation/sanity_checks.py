@@ -19,6 +19,7 @@ from dgcv.dynawo.translator import dynawo_translator
 from dgcv.files.producer_curves import create_producer_curves
 from dgcv.logging.logging import dgcv_logging
 from dgcv.model.parameters import Line_params, Load_params, Xfmr_params
+from dgcv.validation import common
 
 
 def _check_topology_s(
@@ -372,6 +373,41 @@ def _is_valid_transformer(transformer: Xfmr_params) -> None:
     return False
 
 
+def check_t_fault(start_time: float, event_time: float, range_len: float) -> None:
+    """Check that the difference between the curve start time and the event trigger time is
+    greater than or equal to the range length.
+
+    Parameters
+    ----------
+    start_time: float
+        The curve start time.
+    event_time: float
+        The event trigger time.
+    range_len: float
+        The range length.
+    """
+    if event_time - start_time < range_len:
+        dgcv_logging.get_logger("Sanity Checks").warning(
+            f"The event is triggered before {range_len} seconds have elapsed since the start"
+            f" of the curve."
+        )
+
+
+def check_pre_stable(time: list, curve: list) -> None:
+    """Check that the curve is stable.
+
+    Parameters
+    ----------
+    curve: float
+        Pre window curve.
+    """
+    stable, _ = common.is_stable(time, curve, time[-1] - time[0])
+    if not stable:
+        dgcv_logging.get_logger("Sanity Checks").warning(
+            "Unstable curve before the event is triggered."
+        )
+
+
 def check_sampling_interval(sampling_interval: float, cutoff: float) -> None:
     """Check that the sampling interval and cut-off values do not exceed the maximum allowed value.
     The maximum value for the sampling interval is determined by 2 times the filter Cut-off
@@ -436,6 +472,13 @@ def check_generators(generators: list) -> tuple[int, int, int]:
     ----------
     generators: list
         Generators parameters list.
+
+    Returns
+    -------
+    int
+        Number of Synchronous Machines
+    int
+        Number of Power Park Modules
     """
     sm_models = 0
     ppm_models = 0

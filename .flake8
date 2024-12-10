@@ -14,4 +14,3 @@ extend-ignore =
 
 # flake-quote settings: Set this to match black style:
 inline-quotes = double
-
