@@ -81,7 +81,7 @@ be used along Dyna&omega;o simulations (just for plotting both and comparing the
 
 
 
-# Installation
+# Linux installation
 
 ## System requirements
 
@@ -152,6 +152,15 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    
 The dgcv application is now ready to use.
 
+# Windows installation
+
+## System requirements
+
+An easy-to-use installer is being created to simplify and unify the installation of the package on Windows. In the meantime, the package requirements for Windows can be found in the [installation tutorial for developers](https://github.com/dynawo/dyn-grid-compliance-verification/blob/windows_version/docs/manual_dev/source/development/installation.rst).
+
+## Installation
+
+An easy-to-use installer is being created to simplify and unify the installation of the package on Windows. In the meantime, the package installation steps for Windows can be found in the [installation tutorial for developers](https://github.com/dynawo/dyn-grid-compliance-verification/blob/windows_version/docs/manual_dev/source/development/installation.rst).
 
 # Quick start
 

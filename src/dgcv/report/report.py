@@ -363,15 +363,17 @@ def create_pdf(
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
-        dynawo_version = dynawo.get_dynawo_version(parameters.get_launcher_dwo())
+        dynawo_version = str(dynawo.get_dynawo_version(parameters.get_launcher_dwo())).replace(
+            "\\", "\\\\"
+        )
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
-    model_template = producer.get_producer_path()
+    model_template = str(producer.get_producer_path()).replace("\\", "\\\\")
     summary_description += f"Model: {model_template} \\\\"
 
     reference_template = None
     if producer.has_reference_curves():
-        reference_template = producer.get_reference_path()
+        reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
         summary_description += f"Reference: {reference_template} \\\\"
 
     _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
@@ -386,28 +388,56 @@ def create_pdf(
         }
     ).dump(str(working_path / REPORT_NAME))
 
-    str_remove = ""
-    if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-        if os.name == "nt":
-            str_remove = " && del *.toc *.aux *.log *.out *.bbl *.blg *.run.xml *.bcf"
-        else:
-            str_remove = " && rm -f *.toc *.aux *.log *.out *.bbl *.blg *.run.xml *.bcf"
-
     report_name_ = REPORT_NAME.replace(".tex", "")
     proc = subprocess.run(
-        "cd "
-        + str(working_path)
-        + " && "
-        + "pdflatex -shell-escape -halt-on-error "
-        + report_name_
-        + " && "
-        + "pdflatex -shell-escape -halt-on-error "
-        + report_name_
-        + str_remove,
-        shell=True,
+        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
+        cwd=working_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    proc = subprocess.run(
+        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
+        cwd=working_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
+        if os.name == "nt":
+            proc = subprocess.run(
+                [
+                    "del",
+                    "*.toc",
+                    "*.aux",
+                    "*.log",
+                    "*.out",
+                    "*.bbl",
+                    "*.blg",
+                    "*.run.xml",
+                    "*.bcf",
+                ],
+                cwd=working_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        else:
+            proc = subprocess.run(
+                [
+                    "rm",
+                    "-f",
+                    "*.toc",
+                    "*.aux",
+                    "*.log",
+                    "*.out",
+                    "*.bbl",
+                    "*.blg",
+                    "*.run.xml",
+                    "*.bcf",
+                ],
+                cwd=working_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
     dgcv_logging.get_logger("PDFLatex").debug(proc.stderr.decode("utf-8"))
     if move_report(working_path, output_path, REPORT_NAME):
