@@ -28,6 +28,7 @@ def generate_par_file():
         create_producer_par_file("dynawo.sh", path, "performance_SM")
         with open(path / "Producer.par") as f:
             content = f.read()
+            print(content)
     finally:
         shutil.rmtree(path)
         return content
