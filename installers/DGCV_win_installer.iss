@@ -1,5 +1,6 @@
 [CustomMessages]
 #define PythonVersion "11"
+#define PythonSubVersion "6"
 #define DGCVVersion "0.5.2"
 #define CMakeVersion "3.31.1"
 #define MiktexVersion "24.1"
