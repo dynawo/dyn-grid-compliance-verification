@@ -22,7 +22,7 @@ Developed by Grupo AIA
 #### Table of Contents
 
 1. [Overview](#overview)
-2. [Installation](#installation)
+2. [DGCV Installation](#dgcv-installation)
 3. [Quick start](#quick-start)
 4. [Running examples](#running-examples)
 5. [Configuration](#configuration)
@@ -78,12 +78,11 @@ In the case of _Electric Performance_ testing, the user has also the option of
 providing test curves, either to be used _instead of_ Dyna&omega;o simulations, or to
 be used along Dyna&omega;o simulations (just for plotting both and comparing them).
 
+# DGCV installation
 
+## Linux installation
 
-
-# Linux installation
-
-## System requirements
+### System requirements
 
 The requirements at the OS-level are rather minimal: one just needs a recent
 Linux distribution in which you should install
@@ -116,7 +115,7 @@ all of its dependencies (NumPy, etc.) will get installed at the user-level, i.e.
 inside the user's `$HOME` directory, under a _Python virtual environment_.
 
 
-## Installation
+### Installation
 
 1. Choose a base directory of your choice and run the following command:
 
@@ -152,9 +151,9 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    
 The dgcv application is now ready to use.
 
-# Windows installation
+## Windows installation
 
-## System requirements
+### System requirements
 
 The requirements at the OS-level are rather minimal: one just needs a recent Windows
 distribution in which you should install a few packages, **LaTeX**, and **Python**. If
@@ -183,7 +182,7 @@ Note that the tool itself is also a Python package. However, this package and
 all of its dependencies (NumPy, etc.) will get installed under a 
 *Python virtual environment*.
 
-## Installation
+### Installation
 
 1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.5.2/DGCV_win_Installer.exe).
 
