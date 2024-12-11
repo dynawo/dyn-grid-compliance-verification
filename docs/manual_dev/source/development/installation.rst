@@ -23,7 +23,7 @@ you do not have any strong preference, we would recommend Debian 12 or higher, a
 as Ubuntu 22.04 LTS or higher. In the case of Windows, we recommend using Windows 10.
 
 Installation for Linux
-------------------------
+----------------------
 
 To be more specific, we explicitly list here the packages to be installed, assuming a
 Debian/Ubuntu system:
@@ -57,7 +57,7 @@ inside the user's `$HOME` directory, under a *Python virtual environment*.
 
 	
 Installation for Linux developers
----------------------------
+---------------------------------
 
 #. Clone the repository via:
 
