@@ -566,9 +566,10 @@ The dgcv application is now ready to use.
    - Enter the following URL to clone the repository:
          
    ```winbatch
-     git clone https://github.com/dynawo/dyn-grid-compliance-verification
+     git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
    ```
-     
+   (you may of course use any name for the top-level directory, here `"dgcv_repo"`.)
+
    - Choose a local directory where you want to save the repository and click **Clone**.
 
 2. Set Up Virtual Environment
@@ -577,7 +578,7 @@ The dgcv application is now ready to use.
    - Navigate to the root folder of the cloned repository using the `cd` command:
          
    ```winbatch
-     cd path-to-repo\dyn-grid-compliance-verification
+     cd dgcv_repo
    ```
 
    - Create a new virtual environment with:
