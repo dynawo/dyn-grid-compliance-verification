@@ -134,7 +134,7 @@
     <par type="BOOL" name="governor_limitedFirstOrder_I_use_reset" value="false"/>
     <par type="BOOL" name="governor_limitedFirstOrder_I_use_set" value="false"/>
     <par type="DOUBLE" name="governor_limitedFirstOrder_K" value="1"/>
-    <par type="INT" name="governor_limitedFirstOrder_lim_homotopyType" value="2"/>
+    <par type="INT" name="governor_limitedFirstOrder_lim_homotopyType" value="1"/>
     <par type="BOOL" name="governor_limitedFirstOrder_lim_limitsAtInit" value="true"/>
     <par type="BOOL" name="governor_limitedFirstOrder_lim_strict" value="false"/>
     <par type="DOUBLE" name="governor_transferFunction_a_1_" value="1"/>
@@ -146,23 +146,19 @@
     <par type="DOUBLE" name="governor_transferFunction_y_start" value="0"/>
     <par type="DOUBLE" name="pss_KOmega" value="1"/>
     <par type="DOUBLE" name="pss_KOmegaRef" value="0"/>
-    <par type="DOUBLE" name="pss_PPssOffPu" value="-1000"/>
-    <par type="DOUBLE" name="pss_PPssOnPu" value="-999"/>
     <par type="DOUBLE" name="pss_add_k2" value="1"/>
-    <par type="DOUBLE" name="pss_const_k" value="0"/>
     <par type="INT" name="pss_firstOrder1_initType" value="1"/>
     <par type="DOUBLE" name="pss_firstOrder1_y_start" value="0"/>
     <par type="INT" name="pss_firstOrder_initType" value="1"/>
     <par type="DOUBLE" name="pss_firstOrder_k" value="1"/>
     <par type="DOUBLE" name="pss_firstOrder_y_start" value="0"/>
-    <par type="BOOL" name="pss_hysteresis_pre_y_start" value="false"/>
-    <par type="INT" name="pss_limiter1_homotopyType" value="2"/>
+    <par type="INT" name="pss_limiter1_homotopyType" value="1"/>
     <par type="BOOL" name="pss_limiter1_limitsAtInit" value="true"/>
     <par type="BOOL" name="pss_limiter1_strict" value="false"/>
-    <par type="INT" name="pss_limiter2_homotopyType" value="2"/>
+    <par type="INT" name="pss_limiter2_homotopyType" value="1"/>
     <par type="BOOL" name="pss_limiter2_limitsAtInit" value="true"/>
     <par type="BOOL" name="pss_limiter2_strict" value="false"/>
-    <par type="INT" name="pss_limiter_homotopyType" value="2"/>
+    <par type="INT" name="pss_limiter_homotopyType" value="1"/>
     <par type="BOOL" name="pss_limiter_limitsAtInit" value="true"/>
     <par type="BOOL" name="pss_limiter_strict" value="false"/>
     <par type="DOUBLE" name="pss_rampTrackingFilter_K" value="1"/>
@@ -244,10 +240,6 @@
     <par type="INT" name="pss_rampTrackingFilter_leadMOrderLagCascade_3__leadlag_nx" value="1"/>
     <par type="DOUBLE" name="pss_rampTrackingFilter_leadMOrderLagCascade_3__leadlag_x_start_0_" value="0"/>
     <par type="DOUBLE" name="pss_rampTrackingFilter_leadMOrderLagCascade_3__leadlag_y_start" value="0"/>
-    <par type="DOUBLE" name="pss_t10" value="1.0000000000000001e-05"/>
-    <par type="DOUBLE" name="pss_t11" value="1.0000000000000001e-05"/>
-    <par type="DOUBLE" name="pss_t12" value="1.0000000000000001e-05"/>
-    <par type="DOUBLE" name="pss_t13" value="1.0000000000000001e-05"/>
     <par type="DOUBLE" name="pss_transferFunction1_a_1_" value="1"/>
     <par type="DOUBLE" name="pss_transferFunction1_b_1_" value="1"/>
     <par type="INT" name="pss_transferFunction1_initType" value="1"/>
@@ -256,22 +248,6 @@
     <par type="INT" name="pss_transferFunction1_nx" value="1"/>
     <par type="DOUBLE" name="pss_transferFunction1_x_start_0_" value="0"/>
     <par type="DOUBLE" name="pss_transferFunction1_y_start" value="0"/>
-    <par type="DOUBLE" name="pss_transferFunction2_a_1_" value="1"/>
-    <par type="DOUBLE" name="pss_transferFunction2_b_1_" value="1"/>
-    <par type="INT" name="pss_transferFunction2_initType" value="1"/>
-    <par type="INT" name="pss_transferFunction2_na" value="2"/>
-    <par type="INT" name="pss_transferFunction2_nb" value="2"/>
-    <par type="INT" name="pss_transferFunction2_nx" value="1"/>
-    <par type="DOUBLE" name="pss_transferFunction2_x_start_0_" value="0"/>
-    <par type="DOUBLE" name="pss_transferFunction2_y_start" value="0"/>
-    <par type="DOUBLE" name="pss_transferFunction3_a_1_" value="1"/>
-    <par type="DOUBLE" name="pss_transferFunction3_b_1_" value="1"/>
-    <par type="INT" name="pss_transferFunction3_initType" value="1"/>
-    <par type="INT" name="pss_transferFunction3_na" value="2"/>
-    <par type="INT" name="pss_transferFunction3_nb" value="2"/>
-    <par type="INT" name="pss_transferFunction3_nx" value="1"/>
-    <par type="DOUBLE" name="pss_transferFunction3_x_start_0_" value="0"/>
-    <par type="DOUBLE" name="pss_transferFunction3_y_start" value="0"/>
     <par type="DOUBLE" name="pss_transferFunction_a_1_" value="1"/>
     <par type="DOUBLE" name="pss_transferFunction_b_1_" value="1"/>
     <par type="INT" name="pss_transferFunction_initType" value="1"/>
@@ -303,7 +279,7 @@
     <par type="DOUBLE" name="voltageRegulator_limitedFirstOrder_I_k" value="1"/>
     <par type="BOOL" name="voltageRegulator_limitedFirstOrder_I_use_reset" value="false"/>
     <par type="BOOL" name="voltageRegulator_limitedFirstOrder_I_use_set" value="false"/>
-    <par type="INT" name="voltageRegulator_limitedFirstOrder_lim_homotopyType" value="2"/>
+    <par type="INT" name="voltageRegulator_limitedFirstOrder_lim_homotopyType" value="1"/>
     <par type="BOOL" name="voltageRegulator_limitedFirstOrder_lim_limitsAtInit" value="true"/>
     <par type="BOOL" name="voltageRegulator_limitedFirstOrder_lim_strict" value="false"/>
   </set>
