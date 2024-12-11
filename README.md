@@ -210,13 +210,13 @@ all of its dependencies (NumPy, etc.) will get installed under a
 4. The tool is used via a single command `dgcv` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
    you all available subcommands:
-   ```bash
+   ```winbatch
    dgcv -h
    ```
 
 5. Upon the first use, the tool will automatically compile the Modelica models
    internally defined by the tool. You can also run this command explicitly, as follows:
-   ```bash
+   ```winbatch
    dgcv compile
    ```
    (Note: this command is also used to compile any new Modelica models custom-defined by the
@@ -565,9 +565,9 @@ The dgcv application is now ready to use.
    - Open GitHub Desktop and click **File** > **Clone repository**.
    - Enter the following URL to clone the repository:
          
-   .. code-block:: console
-
+   ```winbatch
      git clone https://github.com/dynawo/dyn-grid-compliance-verification
+   ```
      
    - Choose a local directory where you want to save the repository and click **Clone**.
 
@@ -576,60 +576,60 @@ The dgcv application is now ready to use.
    - Open a **CMD terminal** (Command Prompt) as administrator.
    - Navigate to the root folder of the cloned repository using the `cd` command:
          
-   .. code-block:: console
-
+   ```winbatch
      cd path-to-repo\dyn-grid-compliance-verification
+   ```
 
    - Create a new virtual environment with:
          
-   .. code-block:: console
-
+   ```winbatch
      python.exe -m venv dgcv_venv
+   ```
      
    - This will create a directory `dgcv_venv` in your repository folder.
    
 3. Build the Package
    The next step is to compile the package into a distributable format:
        
-   .. code-block:: console
-
+   ```winbatch
    	python.exe -m build
+   ```
    
    - This command will create the necessary build files in the `dist` folder of the repository. The build process might take a few minutes to complete.
 
 4. Activate the Virtual Environment
    Now that the virtual environment is created, activate it to use the isolated environment:
        
-   .. code-block:: console
-
+   ```winbatch
    	dgcv_venv\Scripts\activate
+   ```
    
    - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dgcv_venv)` at the beginning of the prompt).
 
 5. Install the Package
    Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
        
-   .. code-block:: console
-
+   ```winbatch
    	python.exe -m pip install dist\dgcv....whl
+   ```
    
    - This will install the package into your active virtual environment.
 
 6. Verify Installation
    After installation, verify that the tool was installed correctly by running the following command:
        
-   .. code-block:: console
-
+   ```winbatch
    	dgcv -h
+   ```
    
    - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
 
 7. Pre-Execution Compilation
    Before running the tool for the first time, it's recommended to compile the tool's resources:
        
-   .. code-block:: console
-
+   ```winbatch
    	dgcv compile
+   ```
    
    - This step ensures that all necessary files are generated and compiled for optimal performance.
 
