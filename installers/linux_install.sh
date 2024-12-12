@@ -43,10 +43,8 @@ set -o errexit -o pipefail
 # Configuration vars that depend on the release:
 RELEASE_TAG="v0.6.0"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.7.0.zip"
-DYNAWO_CHECKSUM="69bec858b6b245ce4bf0b2cd38b2ac8f271c17bb"
-###TODO: RESTORE THIS LINE WHEN GONE PUBLIC
-#DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
-DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/$DYNAWO_ZIP_FILE"
+DYNAWO_CHECKSUM="57562c458702ba35d654952fb2690e489c43be89"
+DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
 # The configurable section ends here, you shouldn't need to edit the rest.
 
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
