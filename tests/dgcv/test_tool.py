@@ -38,7 +38,7 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
                 sim_type = 1
 
         ep = Parameters(
-            Path(shutil.which("dynawo.sh")).resolve(),
+            Path(shutil.which("dynawo.sh")).resolve() if shutil.which("dynawo.sh") else None,
             testpath / producer_model if producer_model else None,
             testpath / producer_curves if producer_curves else None,
             testpath / reference_curves if reference_curves else None,
@@ -50,6 +50,8 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
         md = ModelValidation(ep)
 
         compliance = md.validate(True)
+    except Exception as e:
+        compliance = str(e)
     finally:
         shutil.rmtree(output_dir)
         return compliance
