@@ -183,8 +183,10 @@ def _check_topology_m(
     internal_line: Line_params,
 ) -> None:
     has_error = False
+    print(f"1: {has_error}")
     if len(generators) < 2 or len(transformers) < 2 or transformer is None:
         has_error |= True
+        print(f"2: {has_error}")
 
     if (
         auxiliary_load is not None
@@ -192,11 +194,15 @@ def _check_topology_m(
         or internal_line is not None
     ):
         has_error |= True
+        print(f"3: {has_error}")
 
     for generator in generators:
         has_error |= not (_is_valid_generator(generator.id, False))
+        print(f"4: {has_error}")
     has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
+    print(f"5: {has_error}")
     has_error |= not (_is_valid_transformer(transformer))
+    print(f"6: {has_error}")
 
     if has_error:
         raise ValueError(

@@ -93,12 +93,27 @@ def test_generators():
         P=0.1,
         Q=0.05,
     )
-    sm_models, ppm_models = sanity_checks.check_generators([sm])
+    bess = parameters.Gen_params(
+        id=None,
+        lib="BESScbWeccCurrentSource",
+        connectedXmfr="",
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+    )
+    sm_models, ppm_models, bess_models = sanity_checks.check_generators([sm])
     assert sm_models == 1
     assert ppm_models == 0
-    sm_models, ppm_models = sanity_checks.check_generators([ppm])
+    assert bess_models == 0
+    sm_models, ppm_models, bess_models = sanity_checks.check_generators([ppm])
     assert sm_models == 0
     assert ppm_models == 1
+    assert bess_models == 0
+    sm_models, ppm_models, bess_models = sanity_checks.check_generators([bess])
+    assert sm_models == 0
+    assert ppm_models == 0
+    assert bess_models == 1
 
     with pytest.raises(ValueError) as pytest_wrapped_e:
         sm_models, ppm_models = sanity_checks.check_generators([sm, ppm])
