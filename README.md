@@ -22,7 +22,7 @@ Developed by Grupo AIA
 #### Table of Contents
 
 1. [Overview](#overview)
-2. [Installation](#installation)
+2. [DGCV Installation](#dgcv-installation)
 3. [Quick start](#quick-start)
 4. [Running examples](#running-examples)
 5. [Configuration](#configuration)
@@ -78,12 +78,11 @@ In the case of _Electric Performance_ testing, the user has also the option of
 providing test curves, either to be used _instead of_ Dyna&omega;o simulations, or to
 be used along Dyna&omega;o simulations (just for plotting both and comparing them).
 
+# DGCV installation
 
+## Linux installation
 
-
-# Installation
-
-## System requirements
+### System requirements
 
 The requirements at the OS-level are rather minimal: one just needs a recent
 Linux distribution in which you should install
@@ -116,7 +115,7 @@ all of its dependencies (NumPy, etc.) will get installed at the user-level, i.e.
 inside the user's `$HOME` directory, under a _Python virtual environment_.
 
 
-## Installation
+### Installation
 
 1. Choose a base directory of your choice and run the following command:
 
@@ -152,6 +151,78 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    
 The dgcv application is now ready to use.
 
+## Windows installation
+
+### System requirements
+
+The requirements at the OS-level are rather minimal: one just needs a recent Windows
+distribution in which you should install a few packages, **LaTeX**, and **Python**. If
+you do not have any strong preference, we would recommend Windows 10 or higher. 
+
+To be more specific, we explicitly list here the packages to be installed:
+
+* Install Dynawo (v1.7.0 or later) and its required packages:
+   Dynawo is a simulation platform required by this tool. Follow the steps outlined in the official Dynawo installation guide at [Dynawo Installation Guide](https://dynawo.github.io/install/).
+   - **Nightly Version**: Download the **Nightly version** of Dynawo from the repository to ensure you have the latest features and updates.
+   - During installation, you will also need the following tools:
+     - **CMake**: CMake is used to configure the build process for Dynawo. Download it from [cmake.org](https://cmake.org/download/).
+     - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from [here](https://visualstudio.microsoft.com/vs/older-downloads/). During the installation, select the "Desktop development with C++" workload.
+
+* Install these LaTeX packages:
+   LaTeX is used for document processing. You can choose between two LaTeX distributions:
+   - **MiKTeX**: Download it from [MiKTeX Download](https://miktex.org/download).
+   - **TeX Live**: Download it from [TeX Live Download](https://www.tug.org/texlive/).
+
+* Install a basic Python installation (version 3.9 or higher), containing at least `pip` and the `venv` module:
+   - Go to the [official Python website](https://www.python.org/downloads/).
+   - Download the latest version of Python 3 (ensure that you select the option to add Python to the system PATH during installation).
+   - To verify the installation, open a terminal and run:
+
+Note that the tool itself is also a Python package. However, this package and
+all of its dependencies (NumPy, etc.) will get installed under a 
+*Python virtual environment*.
+
+### Installation
+
+1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.5.2/DGCV_win_Installer.exe).
+
+
+2. Next, execute the downloaded installer:
+
+   This executable will install the DGCV tool, together with a matching version of Dynawo,
+   under the selected directory (default installation path: `c:/dgcv`).  It will do this 
+   by copying the latest stable version and compiling and installing the application (and 
+   all its dependencies, such as NumPy, etc.) into a Python virtual environment. The 
+   installer will also install any third-party applications required for the proper 
+   functioning of the tool.
+
+    The MikTex installer allows you to select the configuration that you want to apply. 
+    For the tool to work correctly, you must select the "Yes" or "Ask me first" option on the 
+    following screen:
+    ![MikTex Installer Settings](./docs/manual/source/usage/figs_installation/miktex_settings.png)
+
+
+3. Next, you must activate the virtual environment that has just been created by double-clicking on the DGCV.bat file that has been created on the desktop.
+
+    This action will open a new Command Prompt with the virtual environment activated where the tool can be used.
+    To finish using the tool, you only need to close the Command Prompt.
+
+4. The tool is used via a single command `dgcv` having several subcommands. Quickly
+   check that your installation is working by running the help option, which will show
+   you all available subcommands:
+   ```winbatch
+   dgcv -h
+   ```
+
+5. Upon the first use, the tool will automatically compile the Modelica models
+   internally defined by the tool. You can also run this command explicitly, as follows:
+   ```winbatch
+   dgcv compile
+   ```
+   (Note: this command is also used to compile any new Modelica models custom-defined by the
+   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
+   
+The dgcv application is now ready to use.
 
 # Quick start
 
@@ -452,7 +523,7 @@ options:
 
 # For developers
 
-## Build and install
+## Build and install on Linux
 
 1. Clone the repository via: 
    ```bash
@@ -487,6 +558,83 @@ options:
    
 The dgcv application is now ready to use.
 
+## Build and install on Windows
+
+1. Clone the Repository
+   The first step is to clone the repository to your local machine. Using GitHub Desktop:
+   - Open GitHub Desktop and click **File** > **Clone repository**.
+   - Enter the following URL to clone the repository:
+         
+   ```winbatch
+     git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+   ```
+   (you may of course use any name for the top-level directory, here `"dgcv_repo"`.)
+
+   - Choose a local directory where you want to save the repository and click **Clone**.
+
+2. Set Up Virtual Environment
+   A virtual environment is recommended to manage dependencies for the project. This ensures that the package uses the correct Python version and dependencies without affecting other projects on your system.
+   - Open a **CMD terminal** (Command Prompt) as administrator.
+   - Navigate to the root folder of the cloned repository using the `cd` command:
+         
+   ```winbatch
+     cd dgcv_repo
+   ```
+
+   - Create a new virtual environment with:
+         
+   ```winbatch
+     python.exe -m venv dgcv_venv
+   ```
+     
+   - This will create a directory `dgcv_venv` in your repository folder.
+   
+3. Build the Package
+   The next step is to compile the package into a distributable format:
+       
+   ```winbatch
+   	python.exe -m build
+   ```
+   
+   - This command will create the necessary build files in the `dist` folder of the repository. The build process might take a few minutes to complete.
+
+4. Activate the Virtual Environment
+   Now that the virtual environment is created, activate it to use the isolated environment:
+       
+   ```winbatch
+   	dgcv_venv\Scripts\activate
+   ```
+   
+   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dgcv_venv)` at the beginning of the prompt).
+
+5. Install the Package
+   Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
+       
+   ```winbatch
+   	python.exe -m pip install dist\dgcv....whl
+   ```
+   
+   - This will install the package into your active virtual environment.
+
+6. Verify Installation
+   After installation, verify that the tool was installed correctly by running the following command:
+       
+   ```winbatch
+   	dgcv -h
+   ```
+   
+   - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
+
+7. Pre-Execution Compilation
+   Before running the tool for the first time, it's recommended to compile the tool's resources:
+       
+   ```winbatch
+   	dgcv compile
+   ```
+   
+   - This step ensures that all necessary files are generated and compiled for optimal performance.
+
+The dgcv application is now ready to use.
 
 Finally, if you want to further _develop_ the source code of this tool, consult
 the [Developer Manual](docs/manual_dev).

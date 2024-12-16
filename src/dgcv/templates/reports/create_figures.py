@@ -5,14 +5,16 @@ from pathlib import Path
 
 ELECTRIC_PERFORMANCE_SM = 0
 ELECTRIC_PERFORMANCE_PPM = 1
+ELECTRIC_PERFORMANCE_BESS = 2
 MODEL_VALIDATION_PPM = 10
+MODEL_VALIDATION_BESS = 11
 
 
 def _get_pcs_name(pcs_name, simulation_type):
     pcs = pcs_name.replace("PCS_", "")
     if simulation_type == ELECTRIC_PERFORMANCE_SM:
         return pcs + "SM"
-    elif simulation_type == ELECTRIC_PERFORMANCE_PPM:
+    elif simulation_type <= ELECTRIC_PERFORMANCE_BESS:
         return pcs + "PPM"
 
     return pcs

@@ -234,7 +234,7 @@ class DynawoSimulator(Simulator):
             oc_name,
         )
         if reference_event_start_time and event_params["start_time"] != reference_event_start_time:
-            dgcv_logging.get_logger("Dynawo Simulator").warn(
+            dgcv_logging.get_logger("Dynawo Simulator").warning(
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
                 f"({event_params['start_time']})."
@@ -290,6 +290,7 @@ class DynawoSimulator(Simulator):
             self._rte_loads,
             self.get_producer().get_sim_type(),
             self.get_producer().get_zone(),
+            control_mode,
         )
         return event_params
 

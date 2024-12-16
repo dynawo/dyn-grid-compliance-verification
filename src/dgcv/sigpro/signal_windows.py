@@ -10,6 +10,8 @@
 import numpy as np
 import pandas as pd
 
+from dgcv.validation import sanity_checks
+
 
 def calculate(
     time_values: list,
@@ -57,6 +59,8 @@ def calculate(
     # nous préconisons 1 secondes pour la période avant événement (régime établi initial) et
     # 5 secondes après événement."
     pre_windows_len = 1.0
+    sanity_checks.check_t_fault(time_values[0], t_fault, pre_windows_len)
+
     t_init = t_fault - t_integrator_tol - t_faultLP_excl - pre_windows_len
     if t_init < time_values[0]:
         t_init = time_values[0]
