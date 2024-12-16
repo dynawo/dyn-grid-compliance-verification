@@ -290,6 +290,7 @@ class DynawoSimulator(Simulator):
             self._rte_loads,
             self.get_producer().get_sim_type(),
             self.get_producer().get_zone(),
+            control_mode,
         )
         return event_params
 

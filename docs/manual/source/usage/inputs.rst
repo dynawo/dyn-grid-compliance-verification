@@ -398,7 +398,6 @@ are correct.
             BusPDR_BUS_ReactivePower =
             StepUp_Xfmr_XFMR_Tap =
             Synch_Gen_GEN_RotorSpeedPu =
-            Synch_Gen_GEN_RotorAngle =
             Synch_Gen_GEN_InternalAngle =
             Synch_Gen_GEN_AVRSetpointPu =
             Synch_Gen_GEN_MagnitudeControlledByAVRP =
