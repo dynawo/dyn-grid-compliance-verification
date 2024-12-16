@@ -9,7 +9,7 @@
 
     <!-- Electrical Control -->
     <par type="BOOL" name="BESScb_QFlag" value="true"/>
-    <par type="BOOL" name="BESScb_VFlag" value="true"/>
+    <par type="BOOL" name="BESScb_VFlag" value="false"/>
     <par type="BOOL" name="BESScb_VCompFlag" value="false"/>
     <par type="BOOL" name="BESScb_PfFlag" value="false"/>
     <par type="BOOL" name="BESScb_PQFlag" value="false"/>

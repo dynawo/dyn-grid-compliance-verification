@@ -384,16 +384,13 @@ def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
     )
     if par is not None:
         parameters["MwpqMode"] = par.get("value")
-    else:
-        parameters["MwpqMode"] = None
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MqG')}']"
     )
     if par is not None:
         parameters["MqG"] = par.get("value")
-    else:
-        parameters["MqG"] = None
+
     return parameters
 
 
@@ -404,32 +401,25 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     )
     if par is not None:
         parameters["PfFlag"] = par.get("value")
-    else:
-        parameters["PfFlag"] = None
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VFlag')}']"
     )
     if par is not None:
         parameters["VFlag"] = par.get("value")
-    else:
-        parameters["VFlag"] = None
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'QFlag')}']"
     )
     if par is not None:
         parameters["QFlag"] = par.get("value")
-    else:
-        parameters["QFlag"] = None
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'RefFlag')}']"
     )
     if par is not None:
         parameters["RefFlag"] = par.get("value")
-    else:
-        parameters["RefFlag"] = None
+
     return parameters
 
 
@@ -449,9 +439,6 @@ def _get_default_control_mode_parameters(generator, generator_control_mode) -> d
 
 def _set_control_mode_parameters(generator, parset, ns, control_mode_parameters: dict):
     for name, value in control_mode_parameters.items():
-        # if "MqG" == name and int(value) == 0:
-        #    dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, "VoltageRef0Pu")
-        #    _set_parameter(parset, ns, dynawo_name, 1.0)
         dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
         _set_parameter(parset, ns, dynawo_name, value.lower())
 

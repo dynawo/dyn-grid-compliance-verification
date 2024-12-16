@@ -9,7 +9,7 @@
 
     <!-- Electrical Control -->
     <par type="BOOL" name="photovoltaics_QFlag" value="true"/>
-    <par type="BOOL" name="photovoltaics_VFlag" value="true"/>
+    <par type="BOOL" name="photovoltaics_VFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_PQFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_PPriority" value="false"/>

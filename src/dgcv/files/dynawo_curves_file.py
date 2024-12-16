@@ -105,13 +105,47 @@ def _add_xfmrs_curves(curves_root: etree.Element, xfmrs: list, curves_dict: dict
             )
 
 
+def _is_composed_setpoint(
+    generator_lib: str, tool_variable: str, dynawo_variable: str, control_mode: str
+) -> bool:
+    # Some models use the same variable to assign the setpoint of Q and V, to avoid
+    # showing the wrong setpoint in the figures, we only use the setpoint according to the
+    # assigned control mode.
+
+    # If the control mode is not one of those affected, False is returned.
+    if control_mode == "USetpoint":
+        control_variable = "AVRSetpointPu"
+    elif control_mode == "QSetpoint":
+        control_variable = "ReactivePowerSetpointPu"
+    else:
+        return False
+
+    # If the input variable is the complementary variable to the control mode, False is returned.
+    if tool_variable == control_variable:
+        return False
+
+    # If the model defines different variables for the Q and V setpoints, False is returned.
+    if dynawo_variable != dynawo_translator.get_dynawo_variable(generator_lib, control_variable):
+        return False
+
+    return True
+
+
 def _add_generators_curves(
-    curves_root: etree.Element, generators: list, generator_variables: list, curves_dict: dict
+    curves_root: etree.Element,
+    generators: list,
+    generator_variables: list,
+    control_mode: str,
+    curves_dict: dict,
 ) -> None:
+
     for generator in generators:
         for variable in generator_variables:
             dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, variable)
             if not dynawo_variable:
+                continue
+
+            if _is_composed_setpoint(generator.lib, variable, dynawo_variable, control_mode):
                 continue
 
             _add_curve_to_file(
@@ -122,25 +156,28 @@ def _add_generators_curves(
 def _add_sm_curves(
     curves_root: etree.Element,
     generators: list,
+    control_mode: str,
     curves_dict: dict,
 ) -> None:
     generator_variables = config.get_list("CurvesVariables", "SM")
-    _add_generators_curves(curves_root, generators, generator_variables, curves_dict)
+    _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)
 
 
 def _add_ppm_curves(
     curves_root: etree.Element,
     generators: list,
+    control_mode: str,
     curves_dict: dict,
 ) -> None:
     generator_variables = config.get_list("CurvesVariables", "PPM")
-    _add_generators_curves(curves_root, generators, generator_variables, curves_dict)
+    _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)
 
 
 def _add_model_validation_curves(
     curves_root: etree.Element,
     generators: list,
     zone: int,
+    control_mode: str,
     curves_dict: dict,
 ) -> None:
     if zone == 3:
@@ -149,7 +186,7 @@ def _add_model_validation_curves(
         generator_variables = config.get_list("CurvesVariables", "ModelValidationZ1")
     else:
         generator_variables = []
-    _add_generators_curves(curves_root, generators, generator_variables, curves_dict)
+    _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)
 
 
 def create_curves_file(
@@ -161,6 +198,7 @@ def create_curves_file(
     rte_loads: list,
     sim_type: int,
     zone: int,
+    control_mode: str,
 ) -> dict:
     """Creates the CRV file to Dynawo.
 
@@ -186,7 +224,8 @@ def create_curves_file(
         If it is running the Model Validation:
         * 1: Zone1 (the individual generating unit)
         * 3: Zone3 (the whole plant)
-
+    control_mode: str
+        Control mode
 
     Returns
     -------
@@ -203,11 +242,11 @@ def create_curves_file(
     _add_pdr_curves(curves_root, connected_to_pdr, curves_dict)
     _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
     if sim_type == ELECTRIC_PERFORMANCE_SM:
-        _add_sm_curves(curves_root, generators, curves_dict)
+        _add_sm_curves(curves_root, generators, control_mode, curves_dict)
     elif sim_type >= MODEL_VALIDATION_PPM:
-        _add_model_validation_curves(curves_root, generators, zone, curves_dict)
+        _add_model_validation_curves(curves_root, generators, zone, control_mode, curves_dict)
     else:
-        _add_ppm_curves(curves_root, generators, curves_dict)
+        _add_ppm_curves(curves_root, generators, control_mode, curves_dict)
 
     # This process is done to parse the news Elements and make the pretty_print work correctly
     curves_tree = etree.ElementTree(
