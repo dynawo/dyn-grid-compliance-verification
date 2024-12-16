@@ -146,7 +146,7 @@ def test_launchers():
     with pytest.raises(OSError) as pytest_wrapped_e:
         sanity_checks.check_launchers("dynawo.sh")
     assert pytest_wrapped_e.type == OSError
-    assert pytest_wrapped_e.value.args[0] == "Dynawo not found.\n"
+    assert pytest_wrapped_e.value.args[0] == "Dynawo not found.\nPdfLatex not found.\n"
 
 
 def test_curves_file():
