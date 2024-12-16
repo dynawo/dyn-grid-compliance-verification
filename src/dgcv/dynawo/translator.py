@@ -53,7 +53,8 @@ def _is_valid_control_mode_paremeters(generator_parameters: dict, valid_paramete
     for parameter_name in valid_parameters.keys():
         if (
             parameter_name not in generator_parameters
-            or generator_parameters[parameter_name] != valid_parameters[parameter_name]
+            or generator_parameters[parameter_name].lower()
+            != valid_parameters[parameter_name].lower()
         ):
             return False
 

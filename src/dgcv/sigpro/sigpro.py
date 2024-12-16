@@ -135,6 +135,9 @@ def interpolate_same_time_grid(curves_final, curves_ref, fs=1000):
         if "time" in key:
             continue
 
+        if key not in curves_final:
+            continue
+
         final_values = curves_final[key][final_unique_indices]
         ref_values = curves_ref[key][ref_unique_indices]
         icurves_final[key] = PchipInterpolator(final_times, final_values)(itime)
