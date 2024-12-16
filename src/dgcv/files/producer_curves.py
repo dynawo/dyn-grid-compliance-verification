@@ -37,7 +37,6 @@ def _get_sm_curves_template(xfmrs: list, gen_sms: list) -> str:
     for gen_sm in gen_sms:
         curves_dictionary += (
             f"{gen_sm.get('id')}_GEN_RotorSpeedPu = \n"
-            f"{gen_sm.get('id')}_GEN_RotorAngle = \n"
             f"{gen_sm.get('id')}_GEN_InternalAngle = \n"
             f"{gen_sm.get('id')}_GEN_AVRSetpointPu = \n"
             f"{gen_sm.get('id')}_GEN_MagnitudeControlledByAVRP = \n"
@@ -165,11 +164,6 @@ def _get_model_curves_template(xfmrs: list, z1_gen_ppms: list, z3_gen_ppms: list
             f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
             f"{gen_ppm.get('id')}_GEN_InjectedCurrent = \n"
             f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-            # Zone1
-            f"{gen_ppm.get('id')}_GEN_InjectedActivePower = \n"
-            f"{gen_ppm.get('id')}_GEN_InjectedReactivePower = \n"
-            f"{gen_ppm.get('id')}_GEN_ActivePowerPu = \n"
-            f"{gen_ppm.get('id')}_GEN_ReactivePowerPu = \n"
         )
 
     curves_dictionary += (

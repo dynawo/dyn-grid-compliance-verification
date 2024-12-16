@@ -995,7 +995,7 @@ class ModelValidator(Validator):
             # We only calculate the % error if math.isclose() used relative tolerance:
             check_results["calc_overshoot"] = calc_overshoot
             check_results["ref_overshoot"] = ref_overshoot
-            if rtol * max(abs(calc_overshoot), abs(ref_overshoot)) > atol:
+            if rtol * max(abs(calc_overshoot), abs(ref_overshoot)) > atol and ref_overshoot != 0.0:
                 check_results["overshoot_error"] = 100 * (
                     abs(calc_overshoot - ref_overshoot) / ref_overshoot
                 )

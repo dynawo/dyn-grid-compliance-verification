@@ -88,9 +88,6 @@ The Tool uses the following keywords to define the dynamic model:
     Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
     *InfiniteBus*.
 
-* ``'RotorAngle'``
-    Rotor Angle. It is required for Synchronous Machine Electrical Performance.
-
 * ``'InternalAngle'``
     Internal angle in rad. It is required for Synchronous Machine Electrical Performance.
 
@@ -98,15 +95,7 @@ The Tool uses the following keywords to define the dynamic model:
     Control voltage in per unit. It is required.
 
 * ``'MagnitudeControlledByAVRPu'``
-    Magnitude voltage amplitude in per unit. If the dynamic model does not have this information,
-    the tool calculates it from 'MagnitudeControlledByAVRPuRe' and 'MagnitudeControlledByAVRPuIm'.
-    It is required.
-
-* ``'MagnitudeControlledByAVRPuRe'``
-    Real part of the magnitude voltage in per unit.
-
-* ``'MagnitudeControlledByAVRPuIm'``
-    Real part of the magnitude voltage in per unit.
+    Magnitude voltage amplitude in per unit. It is required.
 
 * ``'InjectedActiveCurrent'``
     Injected active current in per unit. It is required for Power Park Electrical Performance and
@@ -124,23 +113,11 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'InjectedCurrentMax'``
     Maximum current amplitude in per unit. It is required for Power Park Electrical Performance.
 
-* ``'InjectedActivePower'``
-    Injected active power in per unit. It is required Model Validation.
-
-* ``'InjectedReactivePower'``
-    Injected reactive power in per unit. It is required Model Validation.
-
 * ``'ActivePowerSetpointPu'``
     Active power set-point in per unit. It is required Model Validation.
 
 * ``'ReactivePowerSetpointPu'``
     Reactive power set-point in per unit. It is required Model Validation.
-
-* ``'ActivePowerPu'``
-    Active power in per unit. It is required Model Validation.
-
-* ``'ReactivePowerPu'``
-    Reactive power in per unit. It is required Model Validation.
 
 
 Power Park
@@ -175,9 +152,6 @@ The Tool uses the following keywords to define the dynamic model:
     Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
     *InfiniteBus*.
 
-* ``'RotorAngle'``
-    Rotor Angle. It is required for Synchronous Machine Electrical Performance.
-
 * ``'InternalAngle'``
     Internal angle in rad. It is required for Synchronous Machine Electrical Performance.
 
@@ -185,15 +159,7 @@ The Tool uses the following keywords to define the dynamic model:
     Control voltage in per unit. It is required.
 
 * ``'MagnitudeControlledByAVRPu'``
-    Magnitude voltage amplitude in per unit. If the dynamic model does not have this information,
-    the tool calculates it from 'MagnitudeControlledByAVRPuRe' and 'MagnitudeControlledByAVRPuIm'.
-    It is required.
-
-* ``'MagnitudeControlledByAVRPuRe'``
-    Real part of the magnitude voltage in per unit.
-
-* ``'MagnitudeControlledByAVRPuIm'``
-    Real part of the magnitude voltage in per unit.
+    Magnitude voltage amplitude in per unit. It is required.
 
 * ``'InjectedActiveCurrent'``
     Injected active current in per unit. It is required for Power Park Electrical Performance and
@@ -211,23 +177,11 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'InjectedCurrentMax'``
     Maximum current amplitude in per unit. It is required for Power Park Electrical Performance.
 
-* ``'InjectedActivePower'``
-    Injected active power in per unit. It is required Model Validation.
-
-* ``'InjectedReactivePower'``
-    Injected reactive power in per unit. It is required Model Validation.
-
 * ``'ActivePowerSetpointPu'``
     Active power set-point in per unit. It is required Model Validation.
 
 * ``'ReactivePowerSetpointPu'``
     Reactive power set-point in per unit. It is required Model Validation.
-
-* ``'ActivePowerPu'``
-    Active power in per unit. It is required Model Validation.
-
-* ``'ReactivePowerPu'``
-    Reactive power in per unit. It is required Model Validation.
 
 WECC Family
 """""""""""

@@ -22,11 +22,8 @@ NetworkFrequencyPu =
 # Replace "[WT_ID]" with the Wind Turbine id or PV Array id
 [WT_ID]_GEN_InjectedActiveCurrent =
 [WT_ID]_GEN_InjectedReactiveCurrent =
-[WT_ID]_GEN_InjectedActivePower =
-[WT_ID]_GEN_InjectedReactivePower =
+[WT_ID]_GEN_AVRSetpointPu =
 [WT_ID]_GEN_MagnitudeControlledByAVRPu =
-[WT_ID]_GEN_ActivePowerPu =
-[WT_ID]_GEN_ReactivePowerPu =
 [WT_ID]_GEN_InjectedCurrent =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:
