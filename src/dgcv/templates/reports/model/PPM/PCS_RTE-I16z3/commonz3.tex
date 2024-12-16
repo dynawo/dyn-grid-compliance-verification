@@ -1,6 +1,18 @@
 \renewcommand{\DTRPcs}{USetPointStep} % DTR pcs definition
 \renewcommand{\OCname}{AReactance}
 
+\newcommand{\IncludeCircuit}{
+    \IfFileExists{circuit_\DTRPcs.\OCname.tikz}{
+        \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.\OCname.tikz}
+    }{
+        \ifthenelse{\equal{\DTRPcs}{PSetPointStep} \or \equal{\DTRPcs}{QSetPointStep} \or \equal{\DTRPcs}{USetPointStep}}{
+            \includestandalone[width=0.8\textwidth]{circuit_RefTracking.tikz}
+        }{
+            \includestandalone[width=0.8\textwidth]{circuit_GridV.tikz}
+        }
+    }
+}
+
 %% Our colors (for backgrounds and code listings):
 \definecolor{light-gray}{gray}{0.9}
 \definecolor{dark-gray}{gray}{0.4}
@@ -12,7 +24,7 @@
 \newcommand{\GridCircuitZthree}{
     The grid model and its operational point is as in the following schematic:
     \begin{center}
-        \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.\OCname.tikz}
+        \IncludeCircuit
     \end{center}
     \begin{center}
         \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's

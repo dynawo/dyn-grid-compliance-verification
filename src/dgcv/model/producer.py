@@ -13,8 +13,10 @@ from pathlib import Path
 
 from dgcv.configuration.cfg import config
 from dgcv.core.global_variables import (
+    ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
 )
 from dgcv.files import model_parameters
@@ -46,34 +48,37 @@ class Producer:
         Directory to the Dynamic Model, if it is given
     producer_curves: Path
         Directory to the User Curves, if it is given
-    sim_type: int
-        0 if it is an electrical performance for Synchronous Machine Model
-        1 if it is an electrical performance for Power Park Module Model
-        2 if it is a model validation
+    verification_type: int
+        0 if it is an electrical performance verification
+        1 if it is a model validation
     """
 
     def __init__(
-        self, producer_model: Path, producer_curves: Path, reference_curves: Path, sim_type: int
+        self,
+        producer_model: Path,
+        producer_curves: Path,
+        reference_curves: Path,
+        verification_type: int,
     ):
         self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
         self._producer_model = producer_model
         self._producer_curves = producer_curves
         self._reference_curves = reference_curves
-        self._sim_type = sim_type
         self._zone = 0
 
         self._is_dynawo_model = self._producer_model is not None
         self._is_user_curves = self._producer_curves is not None
         self._has_reference_curves = self._reference_curves is not None
 
-        if sim_type == ELECTRIC_PERFORMANCE:
+        if verification_type == ELECTRIC_PERFORMANCE:
             self.__set_electric_performance_type()
-        elif sim_type == MODEL_VALIDATION:
+        elif verification_type == MODEL_VALIDATION:
             self.__set_model_validation_type()
 
     def __set_electric_performance_type(self):
         sm_models = 0
         ppm_models = 0
+        bess_models = 0
         if self.is_dynawo_model():
             (
                 generators,
@@ -87,7 +92,7 @@ class Producer:
                 self.get_producer_par(),
                 self._s_nref,
             )
-            sm_models, ppm_models = sanity_checks.check_generators(generators)
+            sm_models, ppm_models, bess_models = sanity_checks.check_generators(generators)
         else:
             default_section = "DEFAULT"
             producer_config = self.read_producer_ini()
@@ -96,15 +101,24 @@ class Producer:
                 sm_models = 1
             elif "PPM" == generator_type:
                 ppm_models = 1
+            elif "BESS" == generator_type:
+                bess_models = 1
 
         if sm_models > 0:
             self._sim_type = ELECTRIC_PERFORMANCE_SM
         elif ppm_models > 0:
             self._sim_type = ELECTRIC_PERFORMANCE_PPM
+        elif bess_models > 0:
+            self._sim_type = ELECTRIC_PERFORMANCE_BESS
+        else:
+            raise ValueError(
+                "Electric performance verification does not support the modeled generator type"
+            )
 
     def __set_model_validation_type(self):
         sm_models = 0
         ppm_models = 0
+        bess_models = 0
         if self.is_dynawo_model():
             self._zone = 1
             (
@@ -132,7 +146,9 @@ class Producer:
                 self.get_producer_par(),
                 self._s_nref,
             )
-            sm_models, ppm_models = sanity_checks.check_generators(generators_z1 + generators_z3)
+            sm_models, ppm_models, bess_models = sanity_checks.check_generators(
+                generators_z1 + generators_z3
+            )
             self._zone = 0
         else:
             default_section = "DEFAULT"
@@ -146,15 +162,23 @@ class Producer:
                 sm_models += 1
             elif "PPM" == generator_type_z1:
                 ppm_models += 1
+            elif "BESS" == generator_type_z1:
+                bess_models += 1
             if "SM" == generator_type_z3:
                 sm_models += 1
             elif "PPM" == generator_type_z3:
                 ppm_models += 1
+            elif "BESS" == generator_type_z3:
+                bess_models += 1
 
         if sm_models > 0:
             raise ValueError("Synchronous machine models are not allowed for model validation")
         elif ppm_models > 0:
             self._sim_type = MODEL_VALIDATION_PPM
+        elif bess_models > 0:
+            self._sim_type = MODEL_VALIDATION_BESS
+        else:
+            raise ValueError("Model validation does not support the modeled generator type")
 
     def read_producer_ini(self):
         pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
@@ -351,9 +375,11 @@ class Producer:
         Returns
         -------
         str
-            'performance_SM' if it is an electrical performance for a Synchronous Machine Model
-            'performance_PPM' if it is an electrical performance for a Power Park Module Model
-            'model' if it is a model validation
+            'performance/SM' if it is an electrical performance for a Synchronous Machine Model
+            'performance/PPM' if it is an electrical performance for a Power Park Module Model
+            'performance/BESS' if it is an electrical performance for a Storage Model
+            'model/PPM' if it is a model validation for a Power Park Module Model
+            'model/PPM' if it is a model validation for a Storage Model
         """
         if self._sim_type == ELECTRIC_PERFORMANCE_SM:
             return "performance/SM"
@@ -361,8 +387,15 @@ class Producer:
         elif self._sim_type == ELECTRIC_PERFORMANCE_PPM:
             return "performance/PPM"
 
+        elif self._sim_type == ELECTRIC_PERFORMANCE_BESS:
+            return "performance/BESS"
+
         elif self._sim_type == MODEL_VALIDATION_PPM:
             return "model/PPM"
+
+        elif self._sim_type == MODEL_VALIDATION_BESS:
+            return "model/BESS"
+
         return ""
 
     def get_sim_type(self) -> int:
@@ -373,7 +406,9 @@ class Producer:
         int
             0 if it is an electrical performance for Synchronous Machine Model
             1 if it is an electrical performance for Power Park Module Model
-            10 if it is a model validation
+            2 if it is an electrical performance for Storage Model
+            10 if it is a model validation for Power Park Module Model
+            11 if it is a model validation for Storage Model
         """
         return self._sim_type
 

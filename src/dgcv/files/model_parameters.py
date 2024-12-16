@@ -8,10 +8,9 @@
 #     demiguelm@aia.es
 #
 
-# TODO: remove s_nom from Producer.INI, and read it from the Producer.DYD instead
-#       ("generator_SNom", "WTG4B_SNom", etc. ==> we'll need entries in the master dictionary).
-#       The same goes for some other quantities, such as UNom.  Leave in Producer.INI only the
-#       quantities that do not exist in the Dynawo model.
+# TODO: remove generator types ("GeneratorSynchronous", "IECWPP", "WTG4", etc. ==> we'll need
+#       entries in the master dictionary).
+#       The same goes for generator families ("IEC", "Wecc").
 #
 
 from __future__ import annotations
@@ -51,15 +50,17 @@ def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element) -> l
     # WindTurbines
     for model_parameter in find_bbmodel_by_type(dyd_root, "IECWT"):
         _append_generator(dyd_root, par_root, model_parameter, generators)
-    for model_parameter in find_bbmodel_by_type(dyd_root, "WTU4"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
     for model_parameter in find_bbmodel_by_type(dyd_root, "WT4"):
         if "IECWT" in model_parameter.get("lib"):
             continue
         _append_generator(dyd_root, par_root, model_parameter, generators)
 
     # Photovoltaics
-    for model_parameter in find_bbmodel_by_type(dyd_root, "photovoltaics"):
+    for model_parameter in find_bbmodel_by_type(dyd_root, "PhotovoltaicsWecc"):
+        _append_generator(dyd_root, par_root, model_parameter, generators)
+
+    # BESS
+    for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
         _append_generator(dyd_root, par_root, model_parameter, generators)
 
     return generators
@@ -383,16 +384,13 @@ def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
     )
     if par is not None:
         parameters["MwpqMode"] = par.get("value")
-    else:
-        parameters["MwpqMode"] = None
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MqG')}']"
     )
     if par is not None:
         parameters["MqG"] = par.get("value")
-    else:
-        parameters["MqG"] = None
+
     return parameters
 
 
@@ -403,32 +401,25 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     )
     if par is not None:
         parameters["PfFlag"] = par.get("value")
-    else:
-        parameters["PfFlag"] = None
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'Vflag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VFlag')}']"
     )
     if par is not None:
-        parameters["Vflag"] = par.get("value")
-    else:
-        parameters["Vflag"] = None
+        parameters["VFlag"] = par.get("value")
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'Qflag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'QFlag')}']"
     )
     if par is not None:
-        parameters["Qflag"] = par.get("value")
-    else:
-        parameters["Qflag"] = None
+        parameters["QFlag"] = par.get("value")
 
     par = parset.find(
         f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'RefFlag')}']"
     )
     if par is not None:
         parameters["RefFlag"] = par.get("value")
-    else:
-        parameters["RefFlag"] = None
+
     return parameters
 
 
@@ -448,9 +439,6 @@ def _get_default_control_mode_parameters(generator, generator_control_mode) -> d
 
 def _set_control_mode_parameters(generator, parset, ns, control_mode_parameters: dict):
     for name, value in control_mode_parameters.items():
-        # if "MqG" == name and int(value) == 0:
-        #    dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, "VoltageRef0Pu")
-        #    _set_parameter(parset, ns, dynawo_name, 1.0)
         dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
         _set_parameter(parset, ns, dynawo_name, value.lower())
 
@@ -559,6 +547,7 @@ def get_producer_values(
     Line_params
         Internal line parameters of the producer model
     """
+
     producer_dyd_tree = etree.parse(producer_dyd, etree.XMLParser(remove_blank_text=True))
     producer_dyd_root = producer_dyd_tree.getroot()
 
@@ -579,7 +568,7 @@ def get_producer_values(
             stepup_xfmrs.append(transformer)
         elif "AuxLoad_Xfmr" in transformer.id:
             auxload_xfmr = transformer
-        elif "PPM_Xfmr" in transformer.id:
+        elif "Main_Xfmr" in transformer.id:
             ppm_xfmr = transformer
 
     aux_load = None
