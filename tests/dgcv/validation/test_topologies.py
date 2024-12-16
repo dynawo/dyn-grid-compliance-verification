@@ -174,7 +174,7 @@ def test_check_topology_m():
     auxiliary_load = None
     auxiliary_transformer = None
     transformer = parameters.Xfmr_params(
-        id="PPM_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
+        id="Main_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
     )
     internal_line = None
     sanity_checks.check_topology(
@@ -220,7 +220,7 @@ def test_check_topology_mi():
     auxiliary_load = None
     auxiliary_transformer = None
     transformer = parameters.Xfmr_params(
-        id="PPM_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
+        id="Main_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
     )
     internal_line = parameters.Line_params(
         id="IntNetwork_Line", lib=None, connectedPdr=None, R=0.01, X=0.01, B=0.1, G=0.3
@@ -272,7 +272,7 @@ def test_check_topology_maux():
         id="AuxLoad_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
     )
     transformer = parameters.Xfmr_params(
-        id="PPM_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
+        id="Main_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
     )
     internal_line = None
     sanity_checks.check_topology(
@@ -322,7 +322,7 @@ def test_check_topology_mauxi():
         id="AuxLoad_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
     )
     transformer = parameters.Xfmr_params(
-        id="PPM_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
+        id="Main_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
     )
     internal_line = parameters.Line_params(
         id="IntNetwork_Line", lib=None, connectedPdr=None, R=0.01, X=0.01, B=0.1, G=0.3
