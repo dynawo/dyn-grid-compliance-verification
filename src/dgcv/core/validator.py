@@ -106,6 +106,7 @@ class Validator:
         sim_output_path: str,
         event_params: dict,
         fs: float,
+        curves: dict,
     ) -> dict:
         """Virtual method"""
         pass

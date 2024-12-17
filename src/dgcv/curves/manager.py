@@ -64,22 +64,18 @@ class CurvesManager(Simulator):
         if success:
             importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
             (
-                df_imported_curve,
+                df_imported_curves,
                 curves_dict,
                 sim_t_event_end,
                 fs,
             ) = importer.get_curves_dataframe(self._producer.get_zone())
-            if df_imported_curve.empty:
+            if df_imported_curves.empty:
                 success = False
                 has_imported_curves = False
 
-            df_imported_curve = df_imported_curve.set_index("time")
-            if is_reference:
-                df_imported_curve.to_csv(working_oc_dir / "curves_reference.csv", sep=";")
-            else:
-                df_imported_curve.to_csv(working_oc_dir / "curves_calculated.csv", sep=";")
-                self._generators = self.__get_generators(df_imported_curve)
-                self._gens = _get_generators_ini(self._generators, df_imported_curve)
+            if not is_reference:
+                self._generators = self.__get_generators(df_imported_curves)
+                self._gens = _get_generators_ini(self._generators, df_imported_curves)
 
             if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
                 self._is_field_measurements = bool(
@@ -116,6 +112,7 @@ class CurvesManager(Simulator):
             fault_duration = 0
             fs = 0
             self._generators_imax = {}
+            df_imported_curves = pd.DataFrame()
 
         config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
         connect_event_to = config.get_value(config_section, "connect_event_to")
@@ -139,6 +136,7 @@ class CurvesManager(Simulator):
             fs,
             success,
             has_imported_curves,
+            df_imported_curves,
         )
 
     def obtain_reference_curve(
@@ -147,7 +145,7 @@ class CurvesManager(Simulator):
         pcs_bm_name: str,
         oc_name: str,
         curves: Path,
-    ) -> float:
+    ) -> tuple[float, pd.DataFrame]:
         """Read the reference curves.
 
         Parameters
@@ -165,16 +163,19 @@ class CurvesManager(Simulator):
         -------
         float
             Instant of time when the event is triggered
+        DataFrame
+           Curves imported from the file
         """
         (
             event_params,
             fs,
             success,
             has_imported_curves,
+            curves,
         ) = self.__obtain_files_curve(
             working_oc_dir, pcs_bm_name, oc_name, curves, is_reference=True
         )
-        return event_params["start_time"]
+        return event_params["start_time"], curves
 
     def obtain_simulated_curve(
         self,
@@ -183,7 +184,7 @@ class CurvesManager(Simulator):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, float, bool, bool]:
+    ) -> tuple[str, dict, float, bool, bool, pd.DataFrame]:
         """Read the input curves to get the simulated curves.
 
         Parameters
@@ -213,12 +214,15 @@ class CurvesManager(Simulator):
             True if simulation is success
         bool
             True if simulation calculated curves
+        DataFrame
+           Simulation calculated curves
         """
         (
             event_params,
             fs,
             success,
             has_imported_curves,
+            curves,
         ) = self.__obtain_files_curve(
             working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves()
         )
@@ -229,6 +233,7 @@ class CurvesManager(Simulator):
             fs,
             success,
             has_imported_curves,
+            curves,
         )
 
     def get_disconnection_model(self) -> Disconnection_Model:

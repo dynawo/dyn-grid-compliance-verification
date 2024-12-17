@@ -522,6 +522,7 @@ class PerformanceValidator(Validator):
         sim_output_path: str,
         event_params: dict,
         fs: float,
+        curves: dict,
     ) -> dict:
         """Electric Performance Verification.
 
@@ -543,9 +544,11 @@ class PerformanceValidator(Validator):
         dict
             Compliance results
         """
-        calculated_curves = manage_files.read_curves(working_path / "curves_calculated.csv")
-        if (working_path / "curves_reference.csv").is_file():
-            reference_curves = manage_files.read_curves(working_path / "curves_reference.csv")
+        calculated_curves = curves["calculated"]
+        calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
+        if not curves["reference"].empty:
+            reference_curves = curves["reference"]
+            reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
         else:
             reference_curves = None
 
