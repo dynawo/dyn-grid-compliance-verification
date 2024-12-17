@@ -47,7 +47,10 @@ def _connect_generator_to_setpoint(
     dyd_root: etree.Element, ns: str, generator: Gen_params
 ) -> None:
     variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyValue")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint_value")
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint_value"
+        )
 
 
 def _connect_generator_to_infinitebus(
@@ -113,9 +116,6 @@ def complete_omega(
         * 1: Zone1 (the individual generating unit)
         * 3: Zone3 (the whole plant)
     """
-    if zone == 1:
-        return None
-
     dyd_tree = etree.parse(path / dyd_file, etree.XMLParser(remove_blank_text=True))
     dyd_root = dyd_tree.getroot()
     dyd_ns = etree.QName(dyd_root).namespace

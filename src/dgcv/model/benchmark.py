@@ -130,7 +130,7 @@ class Benchmark:
         reference_manager = CurvesManager(parameters)
         ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
-        if producer.get_sim_type() == MODEL_VALIDATION_PPM:
+        if producer.get_sim_type() >= MODEL_VALIDATION_PPM:
             validator = ModelValidator(
                 pcs_benchmark_name,
                 parameters,

@@ -5,9 +5,13 @@ from dgcv.files.producer_dyd_file import create_producer_dyd_file
 from dgcv.files.producer_par_file import create_producer_par_file
 
 
+def _get_resources_path():
+    return (Path(__file__).resolve().parent) / "resources"
+
+
 def generate_dyd_file(topology, template):
-    path = Path(__file__).resolve().parent / "tmp"
-    shutil.copytree(Path(__file__).resolve().parent, path, dirs_exist_ok=True)
+    path = _get_resources_path() / "tmp"
+    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     content = ""
     try:
@@ -20,21 +24,22 @@ def generate_dyd_file(topology, template):
 
 
 def generate_par_file():
-    path = Path(__file__).resolve().parent / "tmp"
-    shutil.copytree(Path(__file__).resolve().parent, path, dirs_exist_ok=True)
+    path = _get_resources_path() / "tmp"
+    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     content = ""
     try:
         create_producer_par_file("dynawo.sh", path, "performance_SM")
         with open(path / "Producer.par") as f:
             content = f.read()
+            print(content)
     finally:
         shutil.rmtree(path)
         return content
 
 
 def get_reference_content(reference):
-    path = Path(__file__).resolve().parent / "ref"
+    path = _get_resources_path() / "ref"
     with open(path / reference) as f:
         content = f.read()
 
@@ -91,9 +96,9 @@ def test_single_ppm_ko():
     assert get_reference_content("SingleSM.dyd") != generate_dyd_file("S", "performance_PPM")
 
 
-def test_par_file_ok():
+def dynawo_test_par_file_ok():
     assert get_reference_content("Reference.par") == generate_par_file()
 
 
-def test_par_file_ko():
+def dynawo_test_par_file_ko():
     assert get_reference_content("Invalid.par") != generate_par_file()

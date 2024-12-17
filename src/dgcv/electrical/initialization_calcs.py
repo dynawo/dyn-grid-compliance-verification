@@ -23,6 +23,7 @@ def _zero_imp_line(conn_line: mp.Pimodel_params) -> bool:
     return False
 
 
+# TODO: Is it necessary to take into account the possibility that the user enters P or Q as zero?
 def _solve_gen_circuits(
     gens: tuple[mp.Gen_params, ...],
     gen_xfmrs: tuple[mp.Xfmr_params, ...],
