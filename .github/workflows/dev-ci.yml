@@ -40,8 +40,8 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 99 chars wide
           flake8 src --count --exit-zero --statistics 
           
-      - name: Run tests
-        run: pytest
+      # - name: Run tests
+      #   run: pytest
 
       - name: Generate coverage
         run: pytest --cov=. --cov-report=xml 
