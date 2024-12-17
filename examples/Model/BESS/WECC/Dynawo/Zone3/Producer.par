@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Synchronous machine external parameters -->
-  <set id="Wind_Turbine">
+  <set id="Bess">
     <par type="DOUBLE" name="BESScb_P0Pu" value="-0.7"/>
     <par type="DOUBLE" name="BESScb_Q0Pu" value="-0.2"/>
     <par type="DOUBLE" name="BESScb_U0Pu" value="1.0"/>
