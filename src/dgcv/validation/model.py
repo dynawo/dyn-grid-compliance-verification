@@ -1131,6 +1131,7 @@ class ModelValidator(Validator):
         sim_output_path: str,
         event_params: dict,
         fs: float,
+        curves: dict,
     ) -> dict:
         """Model Validation.
 
@@ -1157,9 +1158,11 @@ class ModelValidator(Validator):
         # if reference_curves is None:
         #     reference_curves = calculated_curves
 
-        csv_calculated_curves = manage_files.read_curves(working_path / "curves_calculated.csv")
-        if (working_path / "curves_reference.csv").is_file():
-            csv_reference_curves = manage_files.read_curves(working_path / "curves_reference.csv")
+        csv_calculated_curves = curves["calculated"]
+        csv_calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
+        if not curves["reference"].empty:
+            csv_reference_curves = curves["reference"]
+            csv_reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
         else:
             csv_reference_curves = None
 

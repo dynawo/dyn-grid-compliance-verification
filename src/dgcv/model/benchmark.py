@@ -473,6 +473,7 @@ class Benchmark:
         fs: float,
         success: bool,
         has_simulated_curves: bool,
+        curves: dict,
     ):
         op_cond_success, results = op_cond.validate(
             pcs_benchmark_name,
@@ -482,6 +483,7 @@ class Benchmark:
             fs,
             success,
             has_simulated_curves,
+            curves,
         )
 
         # Statuses for the Summary Report
@@ -534,6 +536,7 @@ class Benchmark:
                 success,
                 has_simulated_curves,
                 has_curves,
+                curves,
             ) = op_cond.has_required_curves(pcs_benchmark_name, self._name)
             if has_curves == 0:
                 op_cond_success, results, compliance = self.__validate(
@@ -545,6 +548,7 @@ class Benchmark:
                     fs,
                     success,
                     has_simulated_curves,
+                    curves,
                 )
                 # If there is a correct simulation, the report must be created
                 success |= op_cond_success

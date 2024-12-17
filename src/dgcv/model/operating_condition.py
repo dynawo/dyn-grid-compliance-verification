@@ -79,9 +79,10 @@ class OperatingCondition:
         working_oc_dir = self._working_dir / self._pcs_name / bm_name / self._name
         manage_files.create_dir(working_oc_dir)
 
+        curves = dict()
         reference_event_start_time = None
         if self.__has_reference_curves():
-            reference_event_start_time = self._manager.obtain_reference_curve(
+            reference_event_start_time, curves["reference"] = self._manager.obtain_reference_curve(
                 working_oc_dir, pcs_bm_name, self._name, self.__get_reference_curves()
             )
 
@@ -91,6 +92,7 @@ class OperatingCondition:
             fs,
             success,
             has_simulated_curves,
+            curves["calculated"],
         ) = self._simulator.obtain_simulated_curve(
             working_oc_dir,
             pcs_bm_name,
@@ -106,6 +108,7 @@ class OperatingCondition:
             fs,
             success,
             has_simulated_curves,
+            curves,
         )
 
     def __validate(
@@ -115,6 +118,7 @@ class OperatingCondition:
         jobs_output_dir: Path,
         event_params: dict,
         fs: float,
+        curves: dict,
     ) -> dict:
 
         if self._validator.is_defined_cct():
@@ -137,6 +141,7 @@ class OperatingCondition:
             jobs_output_dir,
             event_params,
             fs,
+            curves,
         )
 
         # Operational point without defining its validations
@@ -158,6 +163,7 @@ class OperatingCondition:
         fs: float,
         success: bool,
         has_simulated_curves: bool,
+        curves: dict,
     ) -> tuple[bool, dict]:
         """Validate the Benchmark.
 
@@ -177,6 +183,8 @@ class OperatingCondition:
             True if simulation is success
         has_simulated_curves: bool
             True if simulation calculated curves
+        curves: dict
+            Calculated and reference curves
 
         Returns
         -------
@@ -193,6 +201,7 @@ class OperatingCondition:
                 jobs_output_dir,
                 event_params,
                 fs,
+                curves,
             )
         else:
             results = {"compliance": False, "curves": None}
@@ -204,7 +213,7 @@ class OperatingCondition:
         self,
         pcs_bm_name: str,
         bm_name: str,
-    ) -> tuple[Path, Path, dict, float, bool, bool, int]:
+    ) -> tuple[Path, Path, dict, float, bool, bool, int, dict]:
         """Check if all curves are present.
 
         Parameters
@@ -233,6 +242,8 @@ class OperatingCondition:
             1 producer's curves are missing
             2 reference curves are missing
             3 all curves are missing
+        dict
+            Calculated and reference curves
         """
         dgcv_logging.get_logger("Operating Condition").info(
             "RUNNING BENCHMARK: " + pcs_bm_name + ", OPER. COND.: " + self._name
@@ -245,6 +256,7 @@ class OperatingCondition:
             fs,
             success,
             has_simulated_curves,
+            curves,
         ) = self.__obtain_curve(
             pcs_bm_name,
             bm_name,
@@ -257,18 +269,15 @@ class OperatingCondition:
         #  handled differently.
         sim_curves = True
         if not self._producer.is_dynawo_model():
-            if not (working_oc_dir / "curves_calculated.csv").is_file():
+            if curves["calculated"].empty:
                 dgcv_logging.get_logger("Operating Condition").warning(
                     "Test without producer curves file"
                 )
                 sim_curves = False
             else:
-                csv_calculated_curves = manage_files.read_curves(
-                    working_oc_dir / "curves_calculated.csv"
-                )
                 missed_curves = []
                 for key in measurement_names:
-                    if key not in csv_calculated_curves:
+                    if key not in curves["calculated"]:
                         missed_curves.append(key)
                         sim_curves = False
                 if not sim_curves:
@@ -278,18 +287,15 @@ class OperatingCondition:
 
         ref_curves = True
         if self.__has_reference_curves():
-            if not (working_oc_dir / "curves_reference.csv").is_file():
+            if curves["reference"].empty:
                 dgcv_logging.get_logger("Operating Condition").warning(
                     "Test without reference curves file"
                 )
                 ref_curves = False
             else:
-                csv_reference_curves = manage_files.read_curves(
-                    working_oc_dir / "curves_reference.csv"
-                )
                 missed_curves = []
                 for key in measurement_names:
-                    if key not in csv_reference_curves:
+                    if key not in curves["reference"]:
                         missed_curves.append(key)
                         ref_curves = False
                 if not ref_curves:
@@ -315,6 +321,7 @@ class OperatingCondition:
             success,
             has_simulated_curves,
             has_curves,
+            curves,
         )
 
     def get_name(self) -> str:

@@ -517,7 +517,6 @@ class DynawoSimulator(Simulator):
             self._launcher_dwo,
             "TSOModel",
             self._curves_dict,
-            self._f_nom,
             working_oc_dir,
             jobs_output_dir,
         )
@@ -625,7 +624,7 @@ class DynawoSimulator(Simulator):
             fault_start,
             fault_duration,
             last_fault_xpu,
-            fault_rpu=last_fault_rpu,
+            last_fault_rpu,
         )
 
     def __get_bolted_fault(
@@ -681,7 +680,6 @@ class DynawoSimulator(Simulator):
             self._launcher_dwo,
             "TSOModel",
             self._curves_dict,
-            self._f_nom,
             working_oc_dir_attempt,
             jobs_output_dir,
             save_file=False,
@@ -809,7 +807,7 @@ class DynawoSimulator(Simulator):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool]:
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
         """Runs Dynawo to get the simulated curves.
 
         Parameters
@@ -837,6 +835,8 @@ class DynawoSimulator(Simulator):
             True if simulation is success
         bool
             True if simulation calculated curves
+        DataFrame
+           Simulation calculated curves
         """
 
         # Prepare environment to validate it,
@@ -896,6 +896,7 @@ class DynawoSimulator(Simulator):
             success = False
             has_dynawo_curves = False
             event_params = dict()
+            curves_calculated = pd.DataFrame()
 
         self._logger.close_handlers()
 
@@ -905,6 +906,7 @@ class DynawoSimulator(Simulator):
             0,
             success,
             has_dynawo_curves,
+            curves_calculated,
         )
 
     def get_disconnection_model(self) -> Disconnection_Model:

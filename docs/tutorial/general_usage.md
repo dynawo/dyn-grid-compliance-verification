@@ -648,6 +648,7 @@ The *operating condition* directory is structured in:
 (dgcv_venv) user@dynawo:~/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
 PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
 ├── curves_calculated.csv
+├── curves_reference.csv
 ├── Omega.dyd
 ├── Omega.par
 ├── outputs
