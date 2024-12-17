@@ -9,7 +9,6 @@
 #
 
 import logging
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from dgcv.logging.custom_formatter import CustomFormatter
 import colorama

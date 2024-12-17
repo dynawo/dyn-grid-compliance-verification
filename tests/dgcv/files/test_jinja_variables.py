@@ -3,8 +3,12 @@ from pathlib import Path
 from dgcv.files.replace_placeholders import get_all_variables
 
 
+def _get_resources_path():
+    return (Path(__file__).resolve().parent) / "resources"
+
+
 def test_par_file():
-    path = Path(__file__).parent
+    path = _get_resources_path()
     variables = get_all_variables(path, "TSOModel.par")
     control_variables = dict.fromkeys(
         {
@@ -34,7 +38,7 @@ def test_par_file():
 
 
 def test_txt_file():
-    path = Path(__file__).parent
+    path = _get_resources_path()
     variables = get_all_variables(path, "TableInfiniteBus.txt")
     control_variables = dict.fromkeys(
         {
