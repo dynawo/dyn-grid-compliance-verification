@@ -17,8 +17,12 @@ from dgcv.model import parameters
 from dgcv.validation import sanity_checks
 
 
+def _get_resources_path():
+    return (Path(__file__).resolve().parent) / "resources"
+
+
 def xml_check(xml_filename):
-    sanity_checks.check_well_formed_xml((Path(__file__).resolve().parent) / xml_filename)
+    sanity_checks.check_well_formed_xml(_get_resources_path() / xml_filename)
 
 
 def test_xmls():
@@ -70,6 +74,56 @@ def test_auxiliary_loads():
     )
 
 
+def test_generators():
+    sm = parameters.Gen_params(
+        id=None,
+        lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
+        connectedXmfr="",
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+    )
+    ppm = parameters.Gen_params(
+        id=None,
+        lib="WTG4AWeccCurrentSource",
+        connectedXmfr="",
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+    )
+    bess = parameters.Gen_params(
+        id=None,
+        lib="BESScbWeccCurrentSource",
+        connectedXmfr="",
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+    )
+    sm_models, ppm_models, bess_models = sanity_checks.check_generators([sm])
+    assert sm_models == 1
+    assert ppm_models == 0
+    assert bess_models == 0
+    sm_models, ppm_models, bess_models = sanity_checks.check_generators([ppm])
+    assert sm_models == 0
+    assert ppm_models == 1
+    assert bess_models == 0
+    sm_models, ppm_models, bess_models = sanity_checks.check_generators([bess])
+    assert sm_models == 0
+    assert ppm_models == 0
+    assert bess_models == 1
+
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sm_models, ppm_models = sanity_checks.check_generators([sm, ppm])
+    assert pytest_wrapped_e.type == ValueError
+    assert (
+        pytest_wrapped_e.value.args[0]
+        == "The supplied network contains two or more different generator model types."
+    )
+
+
 def test_internal_lines():
     line = parameters.Line_params(
         id="Line", lib=None, connectedPdr=True, R=0.02, X=0.004, B=0.0, G=0.0
@@ -86,3 +140,18 @@ def test_internal_lines():
         pytest_wrapped_e.value.args[0]
         == "The reactance and admittance of the internal line must be greater than zero."
     )
+
+
+def test_launchers():
+    with pytest.raises(OSError) as pytest_wrapped_e:
+        sanity_checks.check_launchers("dynawo.sh")
+    assert pytest_wrapped_e.type == OSError
+    assert pytest_wrapped_e.value.args[0] == "Dynawo not found.\nPdfLatex not found.\n"
+
+
+def test_curves_file():
+    sanity_checks.check_curves_files(None, _get_resources_path() / "Curves", "")
+
+    with pytest.raises(FileNotFoundError) as pytest_wrapped_e:
+        sanity_checks.check_curves_files(None, _get_resources_path() / "Non-Curves", "")
+    assert pytest_wrapped_e.type == FileNotFoundError

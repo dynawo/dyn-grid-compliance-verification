@@ -4,9 +4,13 @@ from pathlib import Path
 from dgcv.curves.importer import CurvesImporter
 
 
+def _get_resources_path():
+    return (Path(__file__).resolve().parent) / "resources"
+
+
 def test_comtrade():
-    path = Path(__file__).resolve().parent / "tmp"
-    shutil.copytree(Path(__file__).resolve().parent, path, dirs_exist_ok=True)
+    path = _get_resources_path() / "tmp"
+    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     try:
         importer = CurvesImporter(path, "Wind_farm_comtrade_example")
