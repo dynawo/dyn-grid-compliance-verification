@@ -8,6 +8,7 @@ __pycache__/
 
 # VS Code
 .vscode
+.vs/
 
 # Exclude package build artifacts:
 dist/
@@ -16,6 +17,9 @@ build/
 
 # Exclude the recommended virtual env:
 dgcv_venv/
+
+# Exclude windows installer output:
+installers/Output
 
 # Exclude default results (for those cases when we run the tool in the src tree, which we shouldn't)
 Results/

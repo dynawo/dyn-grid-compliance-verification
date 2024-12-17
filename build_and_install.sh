@@ -175,7 +175,7 @@ echo
 if [ $DEVELOPER = "y" ]; then
     echo
     colormsg "Installing additional Python packages for developers... "
-    pip install --upgrade-strategy eager -U pipdeptree black isort flake8 pytest sphinx jupyter
+    pip install --upgrade-strategy eager -U pipdeptree black isort flake8 pytest pytest-cov sphinx jupyter
     colormsg "OK."
     echo
 fi
