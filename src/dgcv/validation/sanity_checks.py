@@ -52,6 +52,7 @@ def _check_topology_s(
             "      * 'Synch_Gen' if a synchronous generator is modeled\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the PDR "
             "bus\n"
         )
@@ -83,6 +84,7 @@ def _check_topology_si(
             "      * 'Synch_Gen' if a synchronous generator is modeled\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the "
             "internal line\n"
             "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
@@ -122,6 +124,7 @@ def _check_topology_saux(
             "      * 'Synch_Gen' if a synchronous generator is modeled\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the PDR "
             "bus\n"
             "  - An auxiliary load with id 'auxiliary_load'\n"
@@ -164,6 +167,7 @@ def _check_topology_sauxi(
             "      * 'Synch_Gen' if a synchronous generator is modeled\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the "
             "internal bus\n"
             "  - An auxiliary load with id 'auxiliary_load'\n"
@@ -183,10 +187,8 @@ def _check_topology_m(
     internal_line: Line_params,
 ) -> None:
     has_error = False
-    print(f"1: {has_error}")
     if len(generators) < 2 or len(transformers) < 2 or transformer is None:
         has_error |= True
-        print(f"2: {has_error}")
 
     if (
         auxiliary_load is not None
@@ -194,15 +196,11 @@ def _check_topology_m(
         or internal_line is not None
     ):
         has_error |= True
-        print(f"3: {has_error}")
 
     for generator in generators:
         has_error |= not (_is_valid_generator(generator.id, False))
-        print(f"4: {has_error}")
     has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    print(f"5: {has_error}")
     has_error |= not (_is_valid_transformer(transformer))
-    print(f"6: {has_error}")
 
     if has_error:
         raise ValueError(
@@ -210,9 +208,10 @@ def _check_topology_m(
             "  - Two or more generators, their ids start with:\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
-            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
+            "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
             "PDR bus\n"
         )
 
@@ -249,9 +248,10 @@ def _check_topology_mi(
             "  - Two or more generators, their ids start with:\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
-            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
+            "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
             "internal line\n"
             "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
             "with id 'transformer' and the PDR bus\n"
@@ -292,12 +292,13 @@ def _check_topology_maux(
             "  - Two or more generators, their ids start with:\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
             "  - An auxiliary load with id 'auxiliary_load'\n"
             "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
             "load and the internal bus\n"
-            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
+            "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
             "PDR bus\n"
         )
 
@@ -335,12 +336,13 @@ def _check_topology_mauxi(
             "  - Two or more generators, their ids start with:\n"
             "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
             "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+            "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
             "  - An auxiliary load with id 'auxiliary_load'\n"
             "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
             "load and the internal bus\n"
-            "  - A transformer with id 'PPM_Xfmr' connected between the internal bus and the "
+            "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
             "internal line\n"
             "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
             "with id 'transformer' and the PDR bus\n"
@@ -350,7 +352,7 @@ def _check_topology_mauxi(
 def _is_valid_generator(gen_id, add_sm=True) -> None:
     # The generator id may contain numbered suffixes, for this reason it must be checked if the
     #  substring exists in the identifier
-    gen_types = ["Wind_Turbine", "PV_Array"]
+    gen_types = ["Wind_Turbine", "PV_Array", "Bess"]
     if add_sm:
         gen_types.append("Synch_Gen")
     if any(gen_type in gen_id for gen_type in gen_types):
