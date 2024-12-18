@@ -545,7 +545,7 @@ class PerformanceValidator(Validator):
         """
         calculated_curves = curves["calculated"]
         calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
-        if not curves["reference"].empty:
+        if "reference" in curves and not curves["reference"].empty:
             reference_curves = curves["reference"]
             reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
         else:
