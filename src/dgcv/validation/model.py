@@ -17,7 +17,6 @@ import pandas as pd
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.validator import Validator
-from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 from dgcv.sigpro import signal_windows, sigpro
 from dgcv.validation import common, compliance_list, sanity_checks, threshold_variables
