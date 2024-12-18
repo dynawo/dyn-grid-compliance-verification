@@ -19,7 +19,6 @@ from dgcv.core.global_variables import (
     MODEL_VALIDATION_PPM,
 )
 from dgcv.core.validator import Stability, Validator
-from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 from dgcv.validation import common, compliance_list
 
