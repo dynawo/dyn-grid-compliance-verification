@@ -908,12 +908,11 @@ class ModelValidator(Validator):
 
         return results
 
-    def __check(
+    def __create_results(
         self,
         compliance_values: dict,
-        modified_setpoint: str,
     ) -> dict:
-        check_results = {
+        return {
             "compliance": True,
             "times_check": True,
             "sim_t_event_start": compliance_values["t_event_start"],
@@ -921,6 +920,11 @@ class ModelValidator(Validator):
             "curves_error": compliance_values,
         }
 
+    def __check_times(
+        self,
+        check_results: dict,
+        compliance_values: dict,
+    ):
         if compliance_list.contains_key(["reaction_time"], self._validations):
             check_results["calc_reaction_target"] = compliance_values["calc_reaction_target"]
             check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
@@ -1001,6 +1005,11 @@ class ModelValidator(Validator):
             else:
                 check_results["overshoot_error"] = "-"
 
+    def __check_ramp(
+        self,
+        check_results: dict,
+        compliance_values: dict,
+    ):
         if compliance_list.contains_key(["ramp_time_lag"], self._validations):
             check_results["ramp_time_lag"] = compliance_values["ramp_time_lag"] * 100
             thr_ramp_time_lag = config.get_float("GridCode", "thr_ramp_time_lag", 0.10)
@@ -1019,6 +1028,11 @@ class ModelValidator(Validator):
             check_results["times_check"] &= check_results["ramp_error_check"]
             check_results["compliance"] &= check_results["ramp_error_check"]
 
+    def __check_mae(
+        self,
+        check_results: dict,
+        compliance_values: dict,
+    ):
         thr_final_ss_mae = config.get_float("GridCode", "thr_final_ss_mae", 0.01)
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
             check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
@@ -1064,6 +1078,17 @@ class ModelValidator(Validator):
                 compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
             )
             check_results["compliance"] &= check_results["mae_reactive_current_1P_check"]
+
+    def __check(
+        self,
+        compliance_values: dict,
+        modified_setpoint: str,
+    ) -> dict:
+        check_results = self.__create_results(compliance_values)
+
+        self.__check_times(check_results, compliance_values)
+        self.__check_ramp(check_results, compliance_values)
+        self.__check_mae(check_results, compliance_values)
 
         _save_measurement_errors(compliance_values, "voltage", check_results)
 

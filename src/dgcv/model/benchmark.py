@@ -284,20 +284,22 @@ class Benchmark:
         return validations
 
     def __init_figures_description(self, validations: list) -> None:
-        fig_P = config.get_list("ReportCurves", "fig_P")
-        fig_Q = config.get_list("ReportCurves", "fig_Q")
-        fig_Ire = config.get_list("ReportCurves", "fig_Ire")
-        fig_Iim = config.get_list("ReportCurves", "fig_Iim")
-        fig_Ustator = config.get_list("ReportCurves", "fig_Ustator")
-        fig_V = config.get_list("ReportCurves", "fig_V")
-        fig_W = config.get_list("ReportCurves", "fig_W")
-        fig_Theta = config.get_list("ReportCurves", "fig_Theta")
-        fig_WRef = config.get_list("ReportCurves", "fig_WRef")
-        fig_I = config.get_list("ReportCurves", "fig_I")
-        fig_Tap = config.get_list("ReportCurves", "fig_Tap")
-
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         self._figures_description = []
+        self.__init_figures_v(validations, pcs_benchmark_name)
+        self.__init_figures_p(validations, pcs_benchmark_name)
+        self.__init_figures_q(validations, pcs_benchmark_name)
+        self.__init_figures_ire(validations, pcs_benchmark_name)
+        self.__init_figures_iim(validations, pcs_benchmark_name)
+        self.__init_figures_w(validations, pcs_benchmark_name)
+        self.__init_figures_wref(validations, pcs_benchmark_name)
+        self.__init_figures_i(validations, pcs_benchmark_name)
+        self.__init_figures_ustator(validations, pcs_benchmark_name)
+        self.__init_figures_theta(validations, pcs_benchmark_name)
+        self.__init_figures_tap(validations, pcs_benchmark_name)
+
+    def __init_figures_v(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_V = config.get_list("ReportCurves", "fig_V")
         if pcs_benchmark_name in fig_V:
             tests = []
             if (
@@ -321,6 +323,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_p(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_P = config.get_list("ReportCurves", "fig_P")
         if pcs_benchmark_name in fig_P:
             tests = []
             if "time_5P" in validations:
@@ -334,22 +338,30 @@ class Benchmark:
 
             self._figures_description.append(["fig_P", "BusPDR_BUS_ActivePower", tests, "P(pu)"])
 
+    def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Q = config.get_list("ReportCurves", "fig_Q")
         if pcs_benchmark_name in fig_Q:
             tests = []
             self._figures_description.append(["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q(pu)"])
 
+    def __init_figures_ire(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Ire = config.get_list("ReportCurves", "fig_Ire")
         if pcs_benchmark_name in fig_Ire:
             tests = []
             self._figures_description.append(
                 ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ire(pu)"]
             )
 
+    def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Iim = config.get_list("ReportCurves", "fig_Iim")
         if pcs_benchmark_name in fig_Iim:
             tests = []
             self._figures_description.append(
                 ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iim(pu)"]
             )
 
+    def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_W = config.get_list("ReportCurves", "fig_W")
         if pcs_benchmark_name in fig_W:
             tests = []
             self._figures_description.append(
@@ -366,6 +378,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_wref(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_WRef = config.get_list("ReportCurves", "fig_WRef")
         if pcs_benchmark_name in fig_WRef:
             tests = []
             if "freq_1" in validations:
@@ -388,6 +402,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_i(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_I = config.get_list("ReportCurves", "fig_I")
         if pcs_benchmark_name in fig_I:
             tests = []
             self._figures_description.append(
@@ -408,6 +424,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_ustator(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Ustator = config.get_list("ReportCurves", "fig_Ustator")
         if pcs_benchmark_name in fig_Ustator:
             tests = []
             if "AVR_5" in validations:
@@ -431,6 +449,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_theta(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Theta = config.get_list("ReportCurves", "fig_Theta")
         if pcs_benchmark_name in fig_Theta:
             tests = []
             self._figures_description.append(
@@ -447,6 +467,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_tap(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Tap = config.get_list("ReportCurves", "fig_Tap")
         if pcs_benchmark_name in fig_Tap:
             tests = []
             self._figures_description.append(
