@@ -24,9 +24,9 @@ class FileVariables:
     def __obtain_section_value(self, section: str, key: str, generator_type: str) -> str:
         key_type = f"{key}_{generator_type}"
         if config.has_key(section, key):
-            return self.__obtain_value(config.get_value(self._bm_section, key))
+            return self.__obtain_value(config.get_value(section, key))
         elif config.has_key(section, key_type):
-            return self.__obtain_value(config.get_value(self._bm_section, key_type))
+            return self.__obtain_value(config.get_value(section, key_type))
 
         return None
 

@@ -46,7 +46,9 @@ class JobsFile(FileVariables):
         variables_dict["solver_id"] = "IDA"
 
         variables_dict["dgcv_ddb_path"] = config.get_config_dir() / "ddb"
-        variables_dict["producer_dyd"] = self._producer_curves.get_producer().get_producer_dyd().name
+        variables_dict["producer_dyd"] = (
+            self._producer_curves.get_producer().get_producer_dyd().name
+        )
 
         self.complete_parameters(variables_dict, event_params)
 
