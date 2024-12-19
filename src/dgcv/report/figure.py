@@ -524,7 +524,7 @@ def _get_time_range(
     figures_description: dict,
     results: dict,
     time: list,
-) -> dict:
+) -> tuple[float, float]:
 
     curves = results["curves"]
     xmin = 99999
@@ -549,6 +549,8 @@ def _get_time_range(
                 xmin = xrange_min
             if xrange_max > xmax:
                 xmax = xrange_max
+
+    return xmin, xmax
 
 
 def get_common_time_range(
