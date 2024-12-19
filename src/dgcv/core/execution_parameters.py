@@ -172,4 +172,4 @@ class Parameters:
         bool
             True if it is a complete execution, False otherwise
         """
-        return self.is_valid() and self._producer.has_reference_curves()
+        return self.is_valid() and self._producer.has_reference_curves_path()

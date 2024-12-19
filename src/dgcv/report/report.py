@@ -410,7 +410,7 @@ def create_pdf(
     summary_description += f"Model: {model_template} \\\\"
 
     reference_template = None
-    if producer.has_reference_curves():
+    if producer.has_reference_curves_path():
         reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
         summary_description += f"Reference: {reference_template} \\\\"
 

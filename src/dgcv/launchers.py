@@ -346,6 +346,8 @@ def _get_dwo_launcher(args: argparse.Namespace, dwo_launcher_name: str) -> Path:
     _check_launchers(dwo_launcher)
     initialization.init(dwo_launcher, args.debug)
 
+    return dwo_launcher
+
 
 def _execute_anonymize(
     p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path

@@ -177,9 +177,9 @@ def _add_model_validation_curves(
     curves_dict: dict,
 ) -> None:
     if zone == 3:
-        generator_variables = config.get_list("CurvesVariables", "ValidationZ3")
+        generator_variables = config.get_list("CurvesVariables", "ModelValidationZ3")
     elif zone == 1:
-        generator_variables = config.get_list("CurvesVariables", "ValidationZ1")
+        generator_variables = config.get_list("CurvesVariables", "ModelValidationZ1")
     else:
         generator_variables = []
     _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)
