@@ -120,56 +120,9 @@ class Producer:
         ppm_models = 0
         bess_models = 0
         if self.is_dynawo_model():
-            self._zone = 1
-            (
-                generators_z1,
-                _,
-                _,
-                _,
-                _,
-                _,
-            ) = model_parameters.get_producer_values(
-                self.get_producer_dyd(),
-                self.get_producer_par(),
-                self._s_nref,
-            )
-            self._zone = 3
-            (
-                generators_z3,
-                _,
-                _,
-                _,
-                _,
-                _,
-            ) = model_parameters.get_producer_values(
-                self.get_producer_dyd(),
-                self.get_producer_par(),
-                self._s_nref,
-            )
-            sm_models, ppm_models, bess_models = sanity_checks.check_generators(
-                generators_z1 + generators_z3
-            )
-            self._zone = 0
+            sm_models, ppm_models, bess_models = self.__set_dynawo_model_validation_type()
         else:
-            default_section = "DEFAULT"
-            self._zone = 1
-            producer_config = self.read_producer_ini()
-            generator_type_z1 = producer_config.get(default_section, "generator_type")
-            self._zone = 3
-            producer_config = self.read_producer_ini()
-            generator_type_z3 = producer_config.get(default_section, "generator_type")
-            if "SM" == generator_type_z1:
-                sm_models += 1
-            elif "PPM" == generator_type_z1:
-                ppm_models += 1
-            elif "BESS" == generator_type_z1:
-                bess_models += 1
-            if "SM" == generator_type_z3:
-                sm_models += 1
-            elif "PPM" == generator_type_z3:
-                ppm_models += 1
-            elif "BESS" == generator_type_z3:
-                bess_models += 1
+            sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
 
         if sm_models > 0:
             raise ValueError("Synchronous machine models are not allowed for model validation")
@@ -179,6 +132,66 @@ class Producer:
             self._sim_type = MODEL_VALIDATION_BESS
         else:
             raise ValueError("Model validation does not support the modeled generator type")
+
+    def __set_dynawo_model_validation_type(self):
+        self._zone = 1
+        (
+            generators_z1,
+            _,
+            _,
+            _,
+            _,
+            _,
+        ) = model_parameters.get_producer_values(
+            self.get_producer_dyd(),
+            self.get_producer_par(),
+            self._s_nref,
+        )
+        self._zone = 3
+        (
+            generators_z3,
+            _,
+            _,
+            _,
+            _,
+            _,
+        ) = model_parameters.get_producer_values(
+            self.get_producer_dyd(),
+            self.get_producer_par(),
+            self._s_nref,
+        )
+        sm_models, ppm_models, bess_models = sanity_checks.check_generators(
+            generators_z1 + generators_z3
+        )
+        self._zone = 0
+
+        return sm_models, ppm_models, bess_models
+
+    def __set_curves_model_validation_type(self):
+        default_section = "DEFAULT"
+        self._zone = 1
+        producer_config = self.read_producer_ini()
+        generator_type_z1 = producer_config.get(default_section, "generator_type")
+        self._zone = 3
+        producer_config = self.read_producer_ini()
+        generator_type_z3 = producer_config.get(default_section, "generator_type")
+        sm_models = 0
+        ppm_models = 0
+        bess_models = 0
+        if "SM" == generator_type_z1:
+            sm_models += 1
+        elif "PPM" == generator_type_z1:
+            ppm_models += 1
+        elif "BESS" == generator_type_z1:
+            bess_models += 1
+        if "SM" == generator_type_z3:
+            sm_models += 1
+        elif "PPM" == generator_type_z3:
+            ppm_models += 1
+        elif "BESS" == generator_type_z3:
+            bess_models += 1
+
+        return sm_models, ppm_models, bess_models
 
     def read_producer_ini(self):
         pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
