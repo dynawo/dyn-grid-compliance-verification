@@ -16,7 +16,7 @@ from pathlib import Path
 from dgcv.core import initialization
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.input_template import create_input_template
-from dgcv.core.model_validation import ModelValidation
+from dgcv.core.validation import Validation
 from dgcv.curves import anonymizer
 from dgcv.dynawo import prepare_tool
 from dgcv.logging.logging import dgcv_logging
@@ -54,7 +54,7 @@ def _performance_verification(
     )
 
     if ep.is_valid():
-        md = ModelValidation(
+        md = Validation(
             ep,
         )
         md.validate()
@@ -87,7 +87,7 @@ def _model_validation(
     if not ep.is_complete():
         return -1
 
-    md = ModelValidation(
+    md = Validation(
         ep,
     )
     md.validate()

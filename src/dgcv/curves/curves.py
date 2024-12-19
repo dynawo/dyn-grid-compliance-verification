@@ -13,7 +13,7 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.simulator import Simulator, get_cfg_oc_name
+from dgcv.core.producer_curves import ProducerCurves, get_cfg_oc_name
 from dgcv.core.validator import Disconnection_Model
 from dgcv.curves.importer import CurvesImporter
 from dgcv.files import manage_files
@@ -36,7 +36,7 @@ def _get_config_value(config, section, option, default=0.0):
     return default
 
 
-class CurvesManager(Simulator):
+class ImportedCurves(ProducerCurves):
     def __init__(
         self,
         parameters: Parameters,
@@ -240,7 +240,7 @@ class CurvesManager(Simulator):
             has_imported_curves,
             curves,
         ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves()
+            working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves_path()
         )
 
         return (

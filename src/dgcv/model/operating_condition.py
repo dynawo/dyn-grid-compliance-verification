@@ -10,14 +10,15 @@
 import logging
 from pathlib import Path
 
+import pandas as pd
+
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.simulator import Simulator, get_cfg_oc_name
+from dgcv.core.producer_curves import ProducerCurves, get_cfg_oc_name
 from dgcv.core.validator import Validator
-from dgcv.curves.manager import CurvesManager
+from dgcv.curves.curves import ImportedCurves
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
-import pandas as pd
 
 
 class OperatingCondition:
@@ -45,15 +46,15 @@ class OperatingCondition:
 
     def __init__(
         self,
-        simulator: Simulator,
-        manager: CurvesManager,
+        producer_curves: ProducerCurves,
+        reference_curves: ImportedCurves,
         validator: Validator,
         parameters: Parameters,
         pcs_name: str,
         oc_name: str,
     ):
-        self._simulator = simulator
-        self._manager = manager
+        self._producer_curves = producer_curves
+        self._reference_curves = reference_curves
         self._validator = validator
         self._working_dir = parameters.get_working_dir()
         self._producer = parameters.get_producer()
@@ -64,12 +65,12 @@ class OperatingCondition:
         self._thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
 
     def __has_reference_curves(self) -> bool:
-        return self._producer.has_reference_curves()
+        return self._producer.has_reference_curves_path()
 
-    def __get_reference_curves(self) -> Path:
-        if not hasattr(self, "_reference_curves"):
-            self._reference_curves = self._producer.get_reference_curves()
-        return self._reference_curves
+    def __get_reference_curves_path(self) -> Path:
+        if not hasattr(self, "_reference_curves_path"):
+            self._reference_curves_path = self._producer.get_reference_curves_path()
+        return self._reference_curves_path
 
     def __obtain_curve(
         self,
@@ -83,8 +84,10 @@ class OperatingCondition:
         curves = dict()
         reference_event_start_time = None
         if self.__has_reference_curves():
-            reference_event_start_time, curves["reference"] = self._manager.obtain_reference_curve(
-                working_oc_dir, pcs_bm_name, self._name, self.__get_reference_curves()
+            reference_event_start_time, curves["reference"] = (
+                self._reference_curves.obtain_reference_curve(
+                    working_oc_dir, pcs_bm_name, self._name, self.__get_reference_curves_path()
+                )
             )
         else:
             curves["reference"] = pd.DataFrame()
@@ -96,7 +99,7 @@ class OperatingCondition:
             success,
             has_simulated_curves,
             curves["calculated"],
-        ) = self._simulator.obtain_simulated_curve(
+        ) = self._producer_curves.obtain_simulated_curve(
             working_oc_dir,
             pcs_bm_name,
             bm_name,
@@ -126,16 +129,16 @@ class OperatingCondition:
 
         if self._validator.is_defined_cct():
             self._validator.set_time_cct(
-                self._simulator.get_time_cct(
+                self._producer_curves.get_time_cct(
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["duration_time"],
                 )
             )
-        self._validator.set_generators_imax(self._simulator.get_generators_imax())
-        self._validator.set_disconnection_model(self._simulator.get_disconnection_model())
+        self._validator.set_generators_imax(self._producer_curves.get_generators_imax())
+        self._validator.set_disconnection_model(self._producer_curves.get_disconnection_model())
         self._validator.set_setpoint_variation(
-            self._simulator.get_setpoint_variation(get_cfg_oc_name(pcs_bm_name, self._name))
+            self._producer_curves.get_setpoint_variation(get_cfg_oc_name(pcs_bm_name, self._name))
         )
 
         results = self._validator.validate(
@@ -200,7 +203,7 @@ class OperatingCondition:
         working_path: Path
             Working path.
         jobs_output_dir: Path
-            Simulator output path.
+            ProducerCurves output path.
         event_params: dict
             Event parameters
         fs: float
@@ -232,7 +235,7 @@ class OperatingCondition:
         else:
             results = {"compliance": False, "curves": None}
 
-        results["udim"] = self._simulator.get_generator_u_dim()
+        results["udim"] = self._producer_curves.get_generator_u_dim()
         return success, results
 
     def has_required_curves(
@@ -254,7 +257,7 @@ class OperatingCondition:
         Path
             Working path.
         Path
-            Simulator output path.
+            ProducerCurves output path.
         dict
             Event parameters
         float
