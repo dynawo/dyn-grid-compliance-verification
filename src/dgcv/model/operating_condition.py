@@ -17,6 +17,7 @@ from dgcv.core.validator import Validator
 from dgcv.curves.manager import CurvesManager
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
+import pandas as pd
 
 
 class OperatingCondition:
@@ -154,6 +155,29 @@ class OperatingCondition:
 
         return results
 
+    def _check_curves(
+        self, curves: pd.DataFrame, curves_name: str, review_curves_set: bool
+    ) -> bool:
+        measurement_names = self._validator.get_measurement_names()
+        has_curves = True
+        if review_curves_set:
+            if curves.empty:
+                dgcv_logging.get_logger("Operating Condition").warning(
+                    f"Test without {curves_name} curves file"
+                )
+                has_curves = False
+            else:
+                missed_curves = []
+                for key in measurement_names:
+                    if key not in curves:
+                        missed_curves.append(key)
+                        has_curves = False
+                if not has_curves:
+                    dgcv_logging.get_logger("Operating Condition").warning(
+                        f"Test without {curves_name} curve for keys {missed_curves}"
+                    )
+        return has_curves
+
     def validate(
         self,
         pcs_bm_name: str,
@@ -262,46 +286,15 @@ class OperatingCondition:
             bm_name,
         )
 
-        measurement_names = self._validator.get_measurement_names()
-
         # If the tool has the model, it is assumed that the simulated curves are always available,
         #  if they are not available it is due to a failure in the simulation, this event is
         #  handled differently.
-        sim_curves = True
-        if not self._producer.is_dynawo_model():
-            if curves["calculated"].empty:
-                dgcv_logging.get_logger("Operating Condition").warning(
-                    "Test without producer curves file"
-                )
-                sim_curves = False
-            else:
-                missed_curves = []
-                for key in measurement_names:
-                    if key not in curves["calculated"]:
-                        missed_curves.append(key)
-                        sim_curves = False
-                if not sim_curves:
-                    dgcv_logging.get_logger("Operating Condition").warning(
-                        f"Test without producer curve for keys {missed_curves}"
-                    )
-
-        ref_curves = True
-        if self.__has_reference_curves():
-            if curves["reference"].empty:
-                dgcv_logging.get_logger("Operating Condition").warning(
-                    "Test without reference curves file"
-                )
-                ref_curves = False
-            else:
-                missed_curves = []
-                for key in measurement_names:
-                    if key not in curves["reference"]:
-                        missed_curves.append(key)
-                        ref_curves = False
-                if not ref_curves:
-                    dgcv_logging.get_logger("Operating Condition").warning(
-                        f"Test without reference curve for keys {missed_curves}"
-                    )
+        sim_curves = self._check_curves(
+            curves["calculated"], "producer", not self._producer.is_dynawo_model()
+        )
+        ref_curves = self._check_curves(
+            curves["reference"], "reference", self.__has_reference_curves()
+        )
 
         if sim_curves and ref_curves:
             has_curves = 0
