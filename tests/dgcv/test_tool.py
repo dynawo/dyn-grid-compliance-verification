@@ -50,8 +50,6 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
         md = ModelValidation(ep)
 
         compliance = md.validate(True)
-    except Exception as e:
-        compliance = str(e)
     finally:
         shutil.rmtree(output_dir)
         return compliance
