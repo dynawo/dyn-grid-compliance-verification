@@ -62,6 +62,7 @@ class Benchmark:
         self._pcs_zone = pcs_zone
         self._report_name = report_name
         self._name = benchmark_name
+        self._parameters = parameters
         self._working_dir = parameters.get_working_dir()
         self._output_dir = parameters.get_output_dir()
         self._templates_path = Path(config.get_value("Global", "templates_path"))
@@ -74,16 +75,9 @@ class Benchmark:
             curves_manager,
             validator,
         ) = self.__prepare_benchmark_validation(parameters, stable_time)
-        self._op_cond_list = [
-            OperatingCondition(
-                curves_manager,
-                validator,
-                parameters,
-                pcs_name,
-                op_name,
-            )
-            for op_name in op_names
-        ]
+        self._curves_manager = curves_manager
+        self._validator = validator
+        self._op_names = op_names
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, stable_time: float
@@ -467,7 +461,7 @@ class Benchmark:
 
     def __validate(
         self,
-        op_cond: OperatingCondition,
+        op_name: str,
         pcs_benchmark_name: str,
         working_path: Path,
         jobs_output_dir: Path,
@@ -477,7 +471,15 @@ class Benchmark:
         has_simulated_curves: bool,
         curves: dict,
     ):
+        op_cond = OperatingCondition(
+            self._parameters,
+            self._pcs_name,
+            op_name,
+        )
+
         op_cond_success, results = op_cond.validate(
+            self._curves_manager,
+            self._validator,
             pcs_benchmark_name,
             working_path,
             jobs_output_dir,
@@ -529,7 +531,10 @@ class Benchmark:
 
         # Validate each operational point
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        for op_cond in self._op_cond_list:
+        for op_name in self._op_names:
+            dgcv_logging.get_logger("Benchmark").info(
+                "RUNNING BENCHMARK: " + pcs_benchmark_name + ", OPER. COND.: " + op_name
+            )
             (
                 working_path,
                 jobs_output_dir,
@@ -539,10 +544,16 @@ class Benchmark:
                 has_simulated_curves,
                 has_curves,
                 curves,
-            ) = op_cond.has_required_curves(pcs_benchmark_name, self._name)
+            ) = self._curves_manager.has_required_curves(
+                self._validator.get_measurement_names(),
+                pcs_benchmark_name,
+                self._name,
+                op_name,
+            )
+
             if has_curves == 0:
                 op_cond_success, results, compliance = self.__validate(
-                    op_cond,
+                    op_name,
                     pcs_benchmark_name,
                     working_path,
                     jobs_output_dir,
@@ -571,12 +582,12 @@ class Benchmark:
                     int(self._pcs_zone),
                     self._pcs_name,
                     self._name,
-                    op_cond.get_name(),
+                    op_name,
                     compliance,
                     self._report_name,
                 )
             )
-            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_cond.get_name()] = results
+            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_name] = results
 
         return success
 
