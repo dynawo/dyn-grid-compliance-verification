@@ -9,21 +9,21 @@
 #
 from pathlib import Path
 
+from dgcv.curves.producer import ProducerCurves
 from dgcv.dynawo.file_variables import FileVariables
-from dgcv.dynawo.simulator import Simulator
 from dgcv.dynawo.translator import dynawo_translator
 from dgcv.files import replace_placeholders
 
 
 class DydFile(FileVariables):
-    def __init__(self, simulator: Simulator, bm_section: str, oc_section: str):
+    def __init__(self, dynawo_curves: ProducerCurves, bm_section: str, oc_section: str):
         tool_variables = [
             "generator_id",
             "connection_event",
         ]
         super().__init__(
             tool_variables,
-            simulator,
+            dynawo_curves,
             bm_section,
             oc_section,
         )
@@ -42,9 +42,9 @@ class DydFile(FileVariables):
 
         if event_params["connect_to"]:
             connect_event_to = dynawo_translator.get_dynawo_variable(
-                self._simulator.get_producer().generators[0].lib, event_params["connect_to"]
+                self._dynawo_curves.get_producer().generators[0].lib, event_params["connect_to"]
             )
-            variables_dict["generator_id"] = self._simulator.get_producer().generators[0].id
+            variables_dict["generator_id"] = self._dynawo_curves.get_producer().generators[0].id
             variables_dict["connection_event"] = connect_event_to
 
         self.complete_parameters(variables_dict, event_params)

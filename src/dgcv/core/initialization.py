@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from dgcv.configuration.cfg import config
-from dgcv.core.model_validation import ModelValidation
+from dgcv.core.validation import Validation
 from dgcv.dynawo.prepare_tool import precompile
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
@@ -190,24 +190,24 @@ def init(launcher_dwo: Path, debug: bool) -> None:
         manage_files.create_dir(config.get_config_dir())
 
     manage_files.create_config_file(
-        ModelValidation.get_project_path() / "configuration" / "config.ini",
+        Validation.get_project_path() / "configuration" / "config.ini",
         config.get_config_dir() / "config.ini_BASIC",
     )
 
     manage_files.create_config_file(
-        ModelValidation.get_project_path() / "configuration" / "defaultConfig.ini",
+        Validation.get_project_path() / "configuration" / "defaultConfig.ini",
         config.get_config_dir() / "config.ini_ADVANCED",
     )
 
     if not _is_valid_config_file(config.get_config_dir() / "config.ini"):
         if not (config.get_config_dir() / "config.ini").is_file():
             manage_files.create_config_file(
-                ModelValidation.get_project_path() / "configuration" / "config.ini",
+                Validation.get_project_path() / "configuration" / "config.ini",
                 config.get_config_dir() / "config.ini",
             )
         else:
             _check_config_file(
-                ModelValidation.get_project_path() / "configuration" / "defaultConfig.ini",
+                Validation.get_project_path() / "configuration" / "defaultConfig.ini",
                 config.get_config_dir() / "config.ini",
             )
 

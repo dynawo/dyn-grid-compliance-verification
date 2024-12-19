@@ -9,14 +9,14 @@
 #
 from pathlib import Path
 
+from dgcv.curves.producer import ProducerCurves
 from dgcv.dynawo.file_variables import FileVariables
-from dgcv.dynawo.simulator import Simulator
 from dgcv.files import replace_placeholders
 from dgcv.model.parameters import Gen_init
 
 
 class TableFile(FileVariables):
-    def __init__(self, simulator: Simulator, bm_section: str, oc_section: str):
+    def __init__(self, dynawo_curves: ProducerCurves, bm_section: str, oc_section: str):
         tool_variables = [
             "start_event",
             "end_event",
@@ -26,7 +26,7 @@ class TableFile(FileVariables):
         ]
         super().__init__(
             tool_variables,
-            simulator,
+            dynawo_curves,
             bm_section,
             oc_section,
         )

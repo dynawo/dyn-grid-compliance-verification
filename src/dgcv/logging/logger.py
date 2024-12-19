@@ -10,8 +10,10 @@
 
 import logging
 from pathlib import Path
-from dgcv.logging.custom_formatter import CustomFormatter
+
 import colorama
+
+from dgcv.logging.custom_formatter import CustomFormatter
 
 colorama.init()
 

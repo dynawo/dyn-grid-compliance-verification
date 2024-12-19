@@ -12,10 +12,7 @@ from pathlib import Path
 from lxml import etree
 
 from dgcv.configuration.cfg import config
-from dgcv.core.global_variables import (
-    ELECTRIC_PERFORMANCE_SM,
-    MODEL_VALIDATION_PPM,
-)
+from dgcv.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION_PPM
 from dgcv.dynawo.translator import dynawo_translator
 
 

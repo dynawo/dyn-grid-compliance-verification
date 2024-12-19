@@ -16,8 +16,8 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.simulator import Simulator, get_cfg_oc_name
 from dgcv.core.validator import Disconnection_Model
+from dgcv.curves.producer import ProducerCurves, get_cfg_oc_name
 from dgcv.dynawo import dynawo
 from dgcv.dynawo.dyd import DydFile
 from dgcv.dynawo.jobs import JobsFile
@@ -41,7 +41,7 @@ from dgcv.model.parameters import Gen_params, Load_init, Load_params, Pdr_params
 from dgcv.validation import common, sanity_checks
 
 
-class DynawoSimulator(Simulator):
+class DynawoCurves(ProducerCurves):
     def __init__(
         self,
         parameters: Parameters,
@@ -71,11 +71,11 @@ class DynawoSimulator(Simulator):
         sanity_checks.check_simulation_duration(self.get_simulation_duration())
 
         logging.setLoggerClass(SimulationLogger)
-        self._logger = logging.getLogger("Simulator")
+        self._logger = logging.getLogger("ProducerCurves")
 
     def __log(self, message: str):
         self._logger.info(message)
-        dgcv_logging.get_logger("Simulator").debug(message)
+        dgcv_logging.get_logger("ProducerCurves").debug(message)
 
     def __prepare_oc_validation(
         self,
@@ -234,7 +234,7 @@ class DynawoSimulator(Simulator):
             oc_name,
         )
         if reference_event_start_time and event_params["start_time"] != reference_event_start_time:
-            dgcv_logging.get_logger("Dynawo Simulator").warning(
+            dgcv_logging.get_logger("ProducerCurves").warning(
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
                 f"({event_params['start_time']})."
@@ -517,7 +517,6 @@ class DynawoSimulator(Simulator):
             self._launcher_dwo,
             "TSOModel",
             self._curves_dict,
-            self._f_nom,
             working_oc_dir,
             jobs_output_dir,
         )
@@ -625,7 +624,7 @@ class DynawoSimulator(Simulator):
             fault_start,
             fault_duration,
             last_fault_xpu,
-            fault_rpu=last_fault_rpu,
+            last_fault_rpu,
         )
 
     def __get_bolted_fault(
@@ -681,7 +680,6 @@ class DynawoSimulator(Simulator):
             self._launcher_dwo,
             "TSOModel",
             self._curves_dict,
-            self._f_nom,
             working_oc_dir_attempt,
             jobs_output_dir,
             save_file=False,
@@ -809,7 +807,7 @@ class DynawoSimulator(Simulator):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool]:
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
         """Runs Dynawo to get the simulated curves.
 
         Parameters
@@ -837,6 +835,8 @@ class DynawoSimulator(Simulator):
             True if simulation is success
         bool
             True if simulation calculated curves
+        DataFrame
+           Simulation calculated curves
         """
 
         # Prepare environment to validate it,
@@ -896,6 +896,7 @@ class DynawoSimulator(Simulator):
             success = False
             has_dynawo_curves = False
             event_params = dict()
+            curves_calculated = pd.DataFrame()
 
         self._logger.close_handlers()
 
@@ -905,6 +906,7 @@ class DynawoSimulator(Simulator):
             0,
             success,
             has_dynawo_curves,
+            curves_calculated,
         )
 
     def get_disconnection_model(self) -> Disconnection_Model:

@@ -1,53 +1,55 @@
 import shutil
 from pathlib import Path
 
+import pytest
+
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.model_validation import ModelValidation
+from dgcv.core.validation import Validation
 from dgcv.model.compliance import Compliance
 
 
-def _execute_tool(producer_model, producer_curves, reference_curves):
+def _execute_tool(producer_model_path, producer_curves_path, reference_curves_path):
     testpath = Path(__file__).resolve().parent
     output_dir = Path(__file__).resolve().parent / "tmp"
     output_dir.mkdir(exist_ok=True)
     assert output_dir.exists()
-    if producer_model:
-        assert (testpath / producer_model).exists()
-    if producer_curves:
-        assert (testpath / producer_curves).exists()
-    if reference_curves:
-        assert (testpath / reference_curves).exists()
+    if producer_model_path:
+        assert (testpath / producer_model_path).exists()
+    if producer_curves_path:
+        assert (testpath / producer_curves_path).exists()
+    if reference_curves_path:
+        assert (testpath / reference_curves_path).exists()
 
     try:
         config._default_config.set("Dynawo", "simulation_limit", "120")
         only_dtr = True
-        if producer_model:
-            if "SM" in producer_model:
+        if producer_model_path:
+            if "SM" in producer_model_path:
                 sim_type = 0
-            elif "PPM" in producer_model:
+            elif "PPM" in producer_model_path:
                 sim_type = 0
             else:
                 sim_type = 1
         else:
-            if "SM" in producer_curves:
+            if "SM" in producer_curves_path:
                 sim_type = 0
-            elif "PPM" in producer_curves:
+            elif "PPM" in producer_curves_path:
                 sim_type = 0
             else:
                 sim_type = 1
 
         ep = Parameters(
             Path(shutil.which("dynawo.sh")).resolve() if shutil.which("dynawo.sh") else None,
-            testpath / producer_model if producer_model else None,
-            testpath / producer_curves if producer_curves else None,
-            testpath / reference_curves if reference_curves else None,
+            testpath / producer_model_path if producer_model_path else None,
+            testpath / producer_curves_path if producer_curves_path else None,
+            testpath / reference_curves_path if reference_curves_path else None,
             None,
             output_dir,
             only_dtr,
             sim_type,
         )
-        md = ModelValidation(ep)
+        md = Validation(ep)
 
         compliance = md.validate(True)
     except Exception as e:
@@ -57,7 +59,8 @@ def _execute_tool(producer_model, producer_curves, reference_curves):
         return compliance
 
 
-def dynawo_test_perf_sm_model():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_perf_sm_model():
     compliance = _execute_tool("../../examples/SM/Dynawo/SingleAux", None, None)
     assert [
         Compliance.NonCompliant,
@@ -87,7 +90,8 @@ def test_perf_sm_curves():
     ] == compliance
 
 
-def dynawo_test_perf_sm_complete():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_perf_sm_complete():
     compliance = _execute_tool(
         "../../examples/SM/Dynawo/SingleAuxI", "../../examples/SM/ProducerCurves/", None
     )
@@ -104,7 +108,8 @@ def dynawo_test_perf_sm_complete():
     ] == compliance
 
 
-def dynawo_test_perf_ppm_model():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_perf_ppm_model():
     compliance = _execute_tool("../../examples/PPM/Dynawo/SingleAux/WECC", None, None)
     assert [
         Compliance.NonCompliant,
@@ -130,7 +135,8 @@ def test_perf_ppm_curves():
     ] == compliance
 
 
-def dynawo_test_perf_ppm_complete():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_perf_ppm_complete():
     compliance = _execute_tool(
         "../../examples/PPM/Dynawo/SingleAux/IEC2020",
         "../../examples/PPM/ProducerCurves/",
@@ -147,7 +153,8 @@ def dynawo_test_perf_ppm_complete():
     ] == compliance
 
 
-def dynawo_test_model_validation_wecc_model():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_wecc_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,
@@ -181,7 +188,8 @@ def dynawo_test_model_validation_wecc_model():
     ] == compliance
 
 
-def dynawo_test_model_validation_iec2015_model():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_iec2015_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/IEC2015/Dynawo",
         None,
@@ -215,7 +223,8 @@ def dynawo_test_model_validation_iec2015_model():
     ] == compliance
 
 
-def dynawo_test_model_validation_iec2020_model():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_iec2020_model():
     compliance = _execute_tool(
         "../../examples/Model/Wind/IEC2020/Dynawo",
         None,
@@ -351,7 +360,8 @@ def test_model_validation_iec2020_curves():
     ] == compliance
 
 
-def dynawo_test_model_validation_partial_reference():
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_partial_reference():
     compliance = _execute_tool(
         "../../examples/Model/Wind/WECC/Dynawo",
         None,

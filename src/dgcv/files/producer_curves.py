@@ -261,12 +261,12 @@ def _get_performance_templates(
     return producer_curves_txt, curves_names_txt
 
 
-def _get_model_templates(
+def _get_xmfrs_models(
     model_path: Path,
-    template: str,
-):
+    zone: str,
+) -> list:
     producer_dyd_tree = etree.parse(
-        model_path / "Zone3" / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
+        model_path / zone / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
     )
     producer_dyd_root = producer_dyd_tree.getroot()
     xfmrs = []
@@ -274,26 +274,37 @@ def _get_model_templates(
         if "StepUp_Xfmr" in xfmr.get("id"):
             xfmrs.append(xfmr)
 
-    z3_gen_ppms = []
-    if template == "model_PPM":
-        for model in dynawo_translator.get_power_park_models():
-            z3_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
-    elif template == "model_BESS":
-        for model in dynawo_translator.get_storage_models():
-            z3_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+    return xfmrs
 
+
+def _get_generator_models(
+    model_path: Path,
+    template: str,
+    zone: str,
+) -> list:
     producer_dyd_tree = etree.parse(
-        model_path / "Zone1" / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
+        model_path / zone / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
     )
     producer_dyd_root = producer_dyd_tree.getroot()
 
-    z1_gen_ppms = []
+    gen_ppms = []
     if template == "model_PPM":
         for model in dynawo_translator.get_power_park_models():
-            z1_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+            gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
     elif template == "model_BESS":
         for model in dynawo_translator.get_storage_models():
-            z1_gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+            gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+
+    return gen_ppms
+
+
+def _get_model_templates(
+    model_path: Path,
+    template: str,
+):
+    xfmrs = _get_xmfrs_models(model_path, "Zone3")
+    z3_gen_ppms = _get_generator_models(model_path, template, "Zone3")
+    z1_gen_ppms = _get_generator_models(model_path, template, "Zone1")
 
     producer_curves_txt = _get_model_file_template()
     curves_names_txt = _get_model_curves_template(xfmrs, z1_gen_ppms, z3_gen_ppms)
