@@ -222,6 +222,19 @@ def _plot_additional_curves(
     ymin: float,
     ymax: float,
 ) -> tuple[float, float]:
+
+    _plot_additional_time_curves(additional_curves, results, last_val)
+    ymin, ymax = _plot_additional_frequency_curves(additional_curves, ymin, ymax)
+    _plot_additional_avr_curves(time, additional_curves, results)
+
+    return ymin, ymax
+
+
+def _plot_additional_time_curves(
+    additional_curves: list,
+    results: dict,
+    last_val: float,
+) -> None:
     # Plot first the additional info
     if "10P" in additional_curves:
         # Get the tube
@@ -277,6 +290,12 @@ def _plot_additional_curves(
         val_85 = results["time_85U"] + results["sim_t_event_start"]
         plt.axvline(x=val_85, color="0.8", linestyle="--")
 
+
+def _plot_additional_frequency_curves(
+    additional_curves: list,
+    ymin: float,
+    ymax: float,
+) -> tuple[float, float]:
     if "freq_1" in additional_curves:
         plt.axhline(y=(50 + 1) / 50, color="#c44e52", linestyle="--")
         if ymax < (50 + 1.5) / 50:
@@ -301,6 +320,14 @@ def _plot_additional_curves(
         if ymin > (50 - 0.3) / 50:
             ymin = (50 - 0.3) / 50
 
+    return ymin, ymax
+
+
+def _plot_additional_avr_curves(
+    time: list,
+    additional_curves: list,
+    results: dict,
+) -> tuple[float, float]:
     if "AVR5" in additional_curves:
         # Get the tube
         percent = 0.05
@@ -322,8 +349,6 @@ def _plot_additional_curves(
 
             plt.plot(time, line_max, color="#c44e52", linestyle="--")
             plt.plot(time, line_min, color="#c44e52", linestyle="--")
-
-    return ymin, ymax
 
 
 def _plot_response_characteristics(
@@ -451,6 +476,83 @@ def _plot_mxe(
         )
 
 
+def _save_plot(
+    time: list,
+    curves: list,
+    time_reference: list,
+    curves_reference: list,
+    time_range: dict,
+    output_file: Path,
+    unit: str,
+    ymin: float,
+    ymax: float,
+) -> None:
+    plt.clf()
+    plt.figure()
+
+    # Plot later the reference curves
+    if time_reference is not None and curves_reference is not None:
+        for curve_reference in curves_reference:
+            plt.plot(time_reference, curve_reference["curve"], color="#dd8452", linestyle="-")
+
+    # Plot finally the calculated curves
+    for curve in curves:
+        plt.plot(time, curve["curve"], color=curve["color"], linestyle=curve["style"])
+
+    plt.gca().yaxis.set_major_formatter(FormatStrFormatter("%.5g"))
+    plt.subplots_adjust(left=0.2)
+    if time_range["min"] is not None:
+        try:
+            plt.xlim(time_range["min"], time_range["max"])
+        except UserWarning as uw:
+            dgcv_logging.get_logger("PDFLatex").warning("X-axis warning: " + uw)
+    if ymin is not None:
+        try:
+            plt.ylim(ymin, ymax)
+        except UserWarning as uw:
+            dgcv_logging.get_logger("PDFLatex").warning("Y-axis warning: " + uw)
+
+    plt.xlabel("t(s)", fontsize=16)
+    plt.ylabel(unit, fontsize=16)
+    plt.savefig(output_file)
+    plt.close()
+
+
+def _get_time_range(
+    operating_condition: str,
+    unit_characteristics: dict,
+    figures_description: dict,
+    results: dict,
+    time: list,
+) -> tuple[float, float]:
+
+    curves = results["curves"]
+    xmin = 99999
+    xmax = -99999
+    figure_key = operating_condition.rsplit(".", 1)[0]
+    for figure_description in figures_description[figure_key]:
+        plot_curves = get_curves2plot(figure_description[1], curves)
+        if len(plot_curves) == 0:
+            continue
+
+        xrange_min, xrange_max = _get_xrange(
+            operating_condition,
+            unit_characteristics,
+            time,
+            plot_curves,
+            results["sim_t_event_start"],
+        )
+        if xrange_min is None:
+            continue
+        else:
+            if xrange_min < xmin:
+                xmin = xrange_min
+            if xrange_max > xmax:
+                xmax = xrange_max
+
+    return xmin, xmax
+
+
 def get_common_time_range(
     operating_condition: str,
     unit_characteristics: dict,
@@ -480,28 +582,9 @@ def get_common_time_range(
     """
     curves = results["curves"]
     time = list(curves["time"])
-    xmin = 99999
-    xmax = -99999
-    figure_key = operating_condition.rsplit(".", 1)[0]
-    for figure_description in figures_description[figure_key]:
-        plot_curves = get_curves2plot(figure_description[1], curves)
-        if len(plot_curves) == 0:
-            continue
-
-        xrange_min, xrange_max = _get_xrange(
-            operating_condition,
-            unit_characteristics,
-            time,
-            plot_curves,
-            results["sim_t_event_start"],
-        )
-        if xrange_min is None:
-            continue
-        else:
-            if xrange_min < xmin:
-                xmin = xrange_min
-            if xrange_max > xmax:
-                xmax = xrange_max
+    xmin, xmax = _get_time_range(
+        operating_condition, unit_characteristics, figures_description, results, time
+    )
 
     if xmin == 99999 and xmax == -99999:
         dgcv_logging.get_logger("PDFLatex").warning(
@@ -572,8 +655,6 @@ def create_plot(
     # Cut curves
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
 
-    plt.clf()
-    plt.figure()
     last_val = curves[0]["curve"][-1]
 
     ymin, ymax = _plot_additional_curves(time, additional_curves, results, last_val, ymin, ymax)
@@ -587,33 +668,9 @@ def create_plot(
     _plot_response_characteristics(curve_name, results)
     _plot_exclusion_windows(results)
     _plot_mxe(curve_name, results)
-
-    # Plot later the reference curves
-    if time_reference is not None and curves_reference is not None:
-        for curve_reference in curves_reference:
-            plt.plot(time_reference, curve_reference["curve"], color="#dd8452", linestyle="-")
-
-    # Plot finally the calculated curves
-    for curve in curves:
-        plt.plot(time, curve["curve"], color=curve["color"], linestyle=curve["style"])
-
-    plt.gca().yaxis.set_major_formatter(FormatStrFormatter("%.5g"))
-    plt.subplots_adjust(left=0.2)
-    if time_range["min"] is not None:
-        try:
-            plt.xlim(time_range["min"], time_range["max"])
-        except UserWarning as uw:
-            dgcv_logging.get_logger("PDFLatex").warning("X-axis warning: " + uw)
-    if ymin is not None:
-        try:
-            plt.ylim(ymin, ymax)
-        except UserWarning as uw:
-            dgcv_logging.get_logger("PDFLatex").warning("Y-axis warning: " + uw)
-
-    plt.xlabel("t(s)", fontsize=16)
-    plt.ylabel(unit, fontsize=16)
-    plt.savefig(output_file)
-    plt.close()
+    _save_plot(
+        time, curves, time_reference, curves_reference, time_range, output_file, unit, ymin, ymax
+    )
 
 
 def get_curves2plot(

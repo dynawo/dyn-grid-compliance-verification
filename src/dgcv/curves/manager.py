@@ -1,269 +1,202 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
-# (c) 2023/24 RTE
-# Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
-#
 from pathlib import Path
 
 import pandas as pd
 
-from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.simulator import Simulator, get_cfg_oc_name
-from dgcv.core.validator import Disconnection_Model
-from dgcv.curves.importer import CurvesImporter
+from dgcv.curves.curves import ImportedCurves
+from dgcv.curves.producer_factory import get_producer_curves
 from dgcv.files import manage_files
-from dgcv.model.parameters import Gen_init, Gen_params
+from dgcv.logging.logging import dgcv_logging
 
 
-def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
-    gens = list()
-    for generator in generators:
-        voltage = curves[generator.id + "_AVRSetpointPu"]
-        U0 = voltage.iloc[0]
-        gens.append(Gen_init(generator.id, 0, 0, U0, 0))
-
-    return gens
-
-
-class CurvesManager(Simulator):
+class CurvesManager:
     def __init__(
         self,
         parameters: Parameters,
+        pcs_benchmark_name: str,
+        stable_time: float,
+        lib_path: Path,
+        templates_path: Path,
+        pcs_name: str,
     ):
-        super().__init__(parameters)
-        self._is_field_measurements = False
+        self._working_dir = parameters.get_working_dir()
+        self._producer = parameters.get_producer()
+        self._pcs_name = pcs_name
 
-    def __get_generators(self, curves: pd.DataFrame) -> list:
-        generators = list()
-        for key in curves.keys():
-            if key.endswith("_AVRSetpointPu"):
-                gen_id = key.replace("_AVRSetpointPu", "")
-                generators.append(Gen_params(gen_id, "", "", "", "", "", ""))
-
-        self.get_producer().set_generators(generators)
-        return generators
-
-    def __obtain_files_curve(
-        self,
-        working_oc_dir: Path,
-        pcs_bm_name: str,
-        oc_name: str,
-        curves: Path,
-        is_reference: bool = False,
-    ):
-        # Copy base case and producers file
-        success = manage_files.copy_base_curves_files(
-            curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
+        self._producer_curves = get_producer_curves(
+            parameters, pcs_benchmark_name, stable_time, lib_path, templates_path, pcs_name
         )
-        has_imported_curves = True
-        if success:
-            importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
-            (
-                df_imported_curve,
-                curves_dict,
-                sim_t_event_end,
-                fs,
-            ) = importer.get_curves_dataframe(self._producer.get_zone())
-            if df_imported_curve.empty:
-                success = False
-                has_imported_curves = False
+        self._reference_curves = ImportedCurves(parameters)
 
-            df_imported_curve = df_imported_curve.set_index("time")
-            if is_reference:
-                df_imported_curve.to_csv(working_oc_dir / "curves_reference.csv", sep=";")
-            else:
-                df_imported_curve.to_csv(working_oc_dir / "curves_calculated.csv", sep=";")
-                self._generators = self.__get_generators(df_imported_curve)
-                self._gens = _get_generators_ini(self._generators, df_imported_curve)
+    def __has_reference_curves(self) -> bool:
+        return self._producer.has_reference_curves_path()
 
-            if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
-                self._is_field_measurements = bool(
-                    importer.config.get("Curves-Metadata", "is_field_measurements")
-                )
+    def __get_reference_curves_path(self) -> Path:
+        if not hasattr(self, "_reference_curves_path"):
+            self._reference_curves_path = self._producer.get_reference_curves_path()
+        return self._reference_curves_path
 
-            if importer.config.has_option("Curves-Metadata", "sim_t_event_start"):
-                sim_t_event_start = float(
-                    importer.config.get("Curves-Metadata", "sim_t_event_start")
-                )
-            else:
-                sim_t_event_start = 0
-
-            if importer.config.has_option("Curves-Metadata", "fault_duration"):
-                fault_duration = float(importer.config.get("Curves-Metadata", "fault_duration"))
-            else:
-                fault_duration = 0
-
-            if importer.config.has_option("Curves-Metadata", "frequency_sampling") and fs == 0:
-                fs = float(importer.config.get("Curves-Metadata", "frequency_sampling"))
-
-            generators_imax = {}
-            for key in importer.config["Curves-Metadata"].keys():
-                if key.endswith("_GEN_MaxInjectedCurrentPu"):
-                    generator_id = key.replace("_GEN_MaxInjectedCurrentPu", "")
-                    generators_imax[generator_id] = float(
-                        importer.config.get("Curves-Metadata", key)
-                    )
-            self._generators_imax = generators_imax
-
-        else:
-            has_imported_curves = False
-            sim_t_event_start = 0
-            fault_duration = 0
-            fs = 0
-            self._generators_imax = {}
-
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
-        connect_event_to = config.get_value(config_section, "connect_event_to")
-        if config.has_key(config_section, "setpoint_step_value"):
-            step_value = self.obtain_value(
-                str(config.get_value(config_section, "setpoint_step_value"))
-            )
-        else:
-            step_value = 0
-
-        event_params = {
-            "start_time": sim_t_event_start,
-            "duration_time": fault_duration,
-            "pre_value": 0.0,
-            "step_value": step_value,
-            "connect_to": connect_event_to,
-        }
-
-        return (
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-        )
-
-    def obtain_reference_curve(
+    def __obtain_curve(
         self,
-        working_oc_dir: Path,
-        pcs_bm_name: str,
-        oc_name: str,
-        curves: Path,
-    ) -> float:
-        """Read the reference curves.
-
-        Parameters
-        ----------
-        working_oc_dir: Path
-            Temporal working path
-        pcs_bm_name: str
-            PCS.Benchmark name
-        oc_name: str
-            Operating Condition name
-        curves: Path
-            Reference curves path
-
-        Returns
-        -------
-        float
-            Instant of time when the event is triggered
-        """
-        (
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-        ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, curves, is_reference=True
-        )
-        return event_params["start_time"]
-
-    def obtain_simulated_curve(
-        self,
-        working_oc_dir: Path,
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-        reference_event_start_time: float,
-    ) -> tuple[str, dict, float, bool, bool]:
-        """Read the input curves to get the simulated curves.
+    ):
+        # Create a specific folder by operational point
+        working_oc_dir = self._working_dir / self._pcs_name / bm_name / oc_name
+        manage_files.create_dir(working_oc_dir)
+
+        curves = dict()
+        reference_event_start_time = None
+        if self.__has_reference_curves():
+            (
+                reference_event_start_time,
+                curves["reference"],
+            ) = self.get_reference_curves().obtain_reference_curve(
+                working_oc_dir, pcs_bm_name, oc_name, self.__get_reference_curves_path()
+            )
+        else:
+            curves["reference"] = pd.DataFrame()
+
+        (
+            jobs_output_dir,
+            event_params,
+            fs,
+            success,
+            has_simulated_curves,
+            curves["calculated"],
+        ) = self.get_producer_curves().obtain_simulated_curve(
+            working_oc_dir,
+            pcs_bm_name,
+            bm_name,
+            oc_name,
+            reference_event_start_time,
+        )
+
+        return (
+            working_oc_dir,
+            jobs_output_dir,
+            event_params,
+            fs,
+            success,
+            has_simulated_curves,
+            curves,
+        )
+
+    def _check_curves(
+        self,
+        measurement_names: list,
+        curves: pd.DataFrame,
+        curves_name: str,
+        review_curves_set: bool,
+    ) -> bool:
+        has_curves = True
+        if review_curves_set:
+            if curves.empty:
+                dgcv_logging.get_logger("Curves Manager").warning(
+                    f"Test without {curves_name} curves file"
+                )
+                has_curves = False
+            else:
+                missed_curves = []
+                for key in measurement_names:
+                    if key not in curves:
+                        missed_curves.append(key)
+                        has_curves = False
+                if not has_curves:
+                    dgcv_logging.get_logger("Curves Manager").warning(
+                        f"Test without {curves_name} curve for keys {missed_curves}"
+                    )
+        return has_curves
+
+    def has_required_curves(
+        self,
+        measurement_names: list,
+        pcs_bm_name: str,
+        bm_name: str,
+        oc_name: str,
+    ) -> tuple[Path, Path, dict, float, bool, bool, int, dict]:
+        """Check if all curves are present.
 
         Parameters
         ----------
-        working_oc_dir: Path
-            Temporal working path
         pcs_bm_name: str
-            PCS.Benchmark name
+            Composite name, pcs + Benchmark name
         bm_name: str
             Benchmark name
-        oc_name: str
-            Operating Condition name
-        reference_event_start_time: float
-            Instant of time when the event is triggered in reference curves
 
         Returns
         -------
-        str
-            Simulation output dir
-        float
-            Instant of time when the event is triggered
-        float
-            Fault duration in seconds
+        Path
+            Working path.
+        Path
+            Simulator output path.
+        dict
+            Event parameters
         float
             Frequency sampling
         bool
             True if simulation is success
         bool
             True if simulation calculated curves
+        int
+            0 all curves are present
+            1 producer's curves are missing
+            2 reference curves are missing
+            3 all curves are missing
+        dict
+            Calculated and reference curves
         """
         (
+            working_oc_dir,
+            jobs_output_dir,
             event_params,
             fs,
             success,
-            has_imported_curves,
-        ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves()
+            has_simulated_curves,
+            curves,
+        ) = self.__obtain_curve(
+            pcs_bm_name,
+            bm_name,
+            oc_name,
         )
+
+        # If the tool has the model, it is assumed that the simulated curves are always available,
+        #  if they are not available it is due to a failure in the simulation, this event is
+        #  handled differently.
+        sim_curves = self._check_curves(
+            measurement_names,
+            curves["calculated"],
+            "producer",
+            not self._producer.is_dynawo_model(),
+        )
+        ref_curves = self._check_curves(
+            measurement_names, curves["reference"], "reference", self.__has_reference_curves()
+        )
+
+        if sim_curves and ref_curves:
+            has_curves = 0
+        elif not sim_curves and ref_curves:
+            has_curves = 1
+        elif sim_curves and not ref_curves:
+            has_curves = 2
+        else:
+            dgcv_logging.get_logger("Curves Manager").warning("Test without curves")
+            has_curves = 3
 
         return (
-            ".",
+            working_oc_dir,
+            jobs_output_dir,
             event_params,
             fs,
             success,
-            has_imported_curves,
+            has_simulated_curves,
+            has_curves,
+            curves,
         )
 
-    def get_disconnection_model(self) -> Disconnection_Model:
-        """Get all equipment in the model that can be disconnected in the simulation.
-        When there is no model to simulate, it is not possible to detect the equipment
-        that has been disconnected.
+    def get_producer_curves(self):
+        return self._producer_curves
 
-        Returns
-        -------
-        Disconnection_Model
-            Equipment that can be disconnected.
-        """
-        return Disconnection_Model(
-            None,
-            None,
-            [],
-            None,
-        )
-
-    def get_generators_imax(self) -> dict:
-        """Get maximum continuous current.
-
-        Returns
-        -------
-        dict
-            Get maximum continuous current by generator.
-        """
-        return self._generators_imax
-
-    def is_field_measurements(self) -> bool:
-        """Check if the reference curves are field measurements.
-
-        Returns
-        -------
-        bool
-            True if the reference signals are field measurements.
-        """
-        return self._is_field_measurements
+    def get_reference_curves(self):
+        return self._reference_curves

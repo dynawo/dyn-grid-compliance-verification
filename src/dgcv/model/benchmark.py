@@ -13,9 +13,8 @@ from pathlib import Path
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION_PPM
-from dgcv.core.simulator import Simulator
+from dgcv.core.validator import Validator
 from dgcv.curves.manager import CurvesManager
-from dgcv.dynawo.simulator import DynawoSimulator
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 from dgcv.model.compliance import Compliance
@@ -63,6 +62,7 @@ class Benchmark:
         self._pcs_zone = pcs_zone
         self._report_name = report_name
         self._name = benchmark_name
+        self._parameters = parameters
         self._working_dir = parameters.get_working_dir()
         self._output_dir = parameters.get_output_dir()
         self._templates_path = Path(config.get_value("Global", "templates_path"))
@@ -72,25 +72,16 @@ class Benchmark:
         stable_time = config.get_float("GridCode", "stable_time", 100.0)
         (
             op_names,
-            simulator,
-            reference_manager,
+            curves_manager,
             validator,
         ) = self.__prepare_benchmark_validation(parameters, stable_time)
-        self._op_cond_list = [
-            OperatingCondition(
-                simulator,
-                reference_manager,
-                validator,
-                parameters,
-                pcs_name,
-                op_name,
-            )
-            for op_name in op_names
-        ]
+        self._curves_manager = curves_manager
+        self._validator = validator
+        self._op_names = op_names
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, stable_time: float
-    ) -> tuple[list, Simulator, CurvesManager]:
+    ) -> tuple[list, CurvesManager, Validator]:
         # Read Benchmark configurations and prepare current Benchmark work path.
         # Creates a specific folder by pcs
         if not (self._working_dir / self._pcs_name).is_dir():
@@ -99,51 +90,34 @@ class Benchmark:
             manage_files.create_dir(self._working_dir / self._pcs_name / self._name)
 
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        producer = parameters.get_producer()
-        if producer.is_dynawo_model():
-            job_name = config.get_value(pcs_benchmark_name, "job_name")
-            rte_model = config.get_value(pcs_benchmark_name, "TSO_model")
-            omega_model = config.get_value(pcs_benchmark_name, "Omega_model")
+        curves_manager = CurvesManager(
+            parameters,
+            pcs_benchmark_name,
+            stable_time,
+            self._lib_path,
+            self._templates_path,
+            self._pcs_name,
+        )
 
-            file_path = Path(__file__).resolve().parent.parent
-            sim_type_path = producer.get_sim_type_str()
-            model_path = file_path / self._lib_path / "TSO_model" / rte_model
-            omega_path = file_path / self._lib_path / "Omega" / omega_model
-            pcs_path = file_path / self._templates_path / sim_type_path / self._pcs_name
-            if not pcs_path.exists():
-                pcs_path = (
-                    config.get_config_dir() / self._templates_path / sim_type_path / self._pcs_name
-                )
-
-            simulator = DynawoSimulator(
-                parameters,
-                self._pcs_name,
-                model_path,
-                omega_path,
-                pcs_path,
-                job_name,
-                stable_time,
-            )
-        elif producer.is_user_curves():
-            simulator = CurvesManager(parameters)
-
-        reference_manager = CurvesManager(parameters)
         ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
-        if producer.get_sim_type() >= MODEL_VALIDATION_PPM:
+        if parameters.get_producer().get_sim_type() >= MODEL_VALIDATION_PPM:
             validator = ModelValidator(
                 pcs_benchmark_name,
                 parameters,
                 validations,
-                reference_manager.is_field_measurements(),
+                curves_manager.get_reference_curves().is_field_measurements(),
             )
         else:
             validator = PerformanceValidator(
-                parameters, stable_time, validations, reference_manager.is_field_measurements()
+                parameters,
+                stable_time,
+                validations,
+                curves_manager.get_reference_curves().is_field_measurements(),
             )
 
         # If it is not a pcs with multiple operating conditions, returns itself
-        return ops, simulator, reference_manager, validator
+        return ops, curves_manager, validator
 
     def __initialize_validation_by_benchmark(self) -> list:
         # Prepare the validation list by pcs.benchmark
@@ -284,20 +258,22 @@ class Benchmark:
         return validations
 
     def __init_figures_description(self, validations: list) -> None:
-        fig_P = config.get_list("ReportCurves", "fig_P")
-        fig_Q = config.get_list("ReportCurves", "fig_Q")
-        fig_Ire = config.get_list("ReportCurves", "fig_Ire")
-        fig_Iim = config.get_list("ReportCurves", "fig_Iim")
-        fig_Ustator = config.get_list("ReportCurves", "fig_Ustator")
-        fig_V = config.get_list("ReportCurves", "fig_V")
-        fig_W = config.get_list("ReportCurves", "fig_W")
-        fig_Theta = config.get_list("ReportCurves", "fig_Theta")
-        fig_WRef = config.get_list("ReportCurves", "fig_WRef")
-        fig_I = config.get_list("ReportCurves", "fig_I")
-        fig_Tap = config.get_list("ReportCurves", "fig_Tap")
-
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         self._figures_description = []
+        self.__init_figures_v(validations, pcs_benchmark_name)
+        self.__init_figures_p(validations, pcs_benchmark_name)
+        self.__init_figures_q(validations, pcs_benchmark_name)
+        self.__init_figures_ire(validations, pcs_benchmark_name)
+        self.__init_figures_iim(validations, pcs_benchmark_name)
+        self.__init_figures_w(validations, pcs_benchmark_name)
+        self.__init_figures_wref(validations, pcs_benchmark_name)
+        self.__init_figures_i(validations, pcs_benchmark_name)
+        self.__init_figures_ustator(validations, pcs_benchmark_name)
+        self.__init_figures_theta(validations, pcs_benchmark_name)
+        self.__init_figures_tap(validations, pcs_benchmark_name)
+
+    def __init_figures_v(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_V = config.get_list("ReportCurves", "fig_V")
         if pcs_benchmark_name in fig_V:
             tests = []
             if (
@@ -321,6 +297,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_p(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_P = config.get_list("ReportCurves", "fig_P")
         if pcs_benchmark_name in fig_P:
             tests = []
             if "time_5P" in validations:
@@ -334,22 +312,30 @@ class Benchmark:
 
             self._figures_description.append(["fig_P", "BusPDR_BUS_ActivePower", tests, "P(pu)"])
 
+    def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Q = config.get_list("ReportCurves", "fig_Q")
         if pcs_benchmark_name in fig_Q:
             tests = []
             self._figures_description.append(["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q(pu)"])
 
+    def __init_figures_ire(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Ire = config.get_list("ReportCurves", "fig_Ire")
         if pcs_benchmark_name in fig_Ire:
             tests = []
             self._figures_description.append(
                 ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ire(pu)"]
             )
 
+    def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Iim = config.get_list("ReportCurves", "fig_Iim")
         if pcs_benchmark_name in fig_Iim:
             tests = []
             self._figures_description.append(
                 ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iim(pu)"]
             )
 
+    def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_W = config.get_list("ReportCurves", "fig_W")
         if pcs_benchmark_name in fig_W:
             tests = []
             self._figures_description.append(
@@ -366,6 +352,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_wref(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_WRef = config.get_list("ReportCurves", "fig_WRef")
         if pcs_benchmark_name in fig_WRef:
             tests = []
             if "freq_1" in validations:
@@ -388,6 +376,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_i(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_I = config.get_list("ReportCurves", "fig_I")
         if pcs_benchmark_name in fig_I:
             tests = []
             self._figures_description.append(
@@ -408,6 +398,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_ustator(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Ustator = config.get_list("ReportCurves", "fig_Ustator")
         if pcs_benchmark_name in fig_Ustator:
             tests = []
             if "AVR_5" in validations:
@@ -431,6 +423,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_theta(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Theta = config.get_list("ReportCurves", "fig_Theta")
         if pcs_benchmark_name in fig_Theta:
             tests = []
             self._figures_description.append(
@@ -447,6 +441,8 @@ class Benchmark:
                 ]
             )
 
+    def __init_figures_tap(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_Tap = config.get_list("ReportCurves", "fig_Tap")
         if pcs_benchmark_name in fig_Tap:
             tests = []
             self._figures_description.append(
@@ -465,7 +461,7 @@ class Benchmark:
 
     def __validate(
         self,
-        op_cond: OperatingCondition,
+        op_name: str,
         pcs_benchmark_name: str,
         working_path: Path,
         jobs_output_dir: Path,
@@ -473,8 +469,17 @@ class Benchmark:
         fs: float,
         success: bool,
         has_simulated_curves: bool,
+        curves: dict,
     ):
+        op_cond = OperatingCondition(
+            self._parameters,
+            self._pcs_name,
+            op_name,
+        )
+
         op_cond_success, results = op_cond.validate(
+            self._curves_manager,
+            self._validator,
             pcs_benchmark_name,
             working_path,
             jobs_output_dir,
@@ -482,6 +487,7 @@ class Benchmark:
             fs,
             success,
             has_simulated_curves,
+            curves,
         )
 
         # Statuses for the Summary Report
@@ -525,7 +531,10 @@ class Benchmark:
 
         # Validate each operational point
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        for op_cond in self._op_cond_list:
+        for op_name in self._op_names:
+            dgcv_logging.get_logger("Benchmark").info(
+                "RUNNING BENCHMARK: " + pcs_benchmark_name + ", OPER. COND.: " + op_name
+            )
             (
                 working_path,
                 jobs_output_dir,
@@ -534,10 +543,17 @@ class Benchmark:
                 success,
                 has_simulated_curves,
                 has_curves,
-            ) = op_cond.has_required_curves(pcs_benchmark_name, self._name)
+                curves,
+            ) = self._curves_manager.has_required_curves(
+                self._validator.get_measurement_names(),
+                pcs_benchmark_name,
+                self._name,
+                op_name,
+            )
+
             if has_curves == 0:
                 op_cond_success, results, compliance = self.__validate(
-                    op_cond,
+                    op_name,
                     pcs_benchmark_name,
                     working_path,
                     jobs_output_dir,
@@ -545,6 +561,7 @@ class Benchmark:
                     fs,
                     success,
                     has_simulated_curves,
+                    curves,
                 )
                 # If there is a correct simulation, the report must be created
                 success |= op_cond_success
@@ -565,12 +582,12 @@ class Benchmark:
                     int(self._pcs_zone),
                     self._pcs_name,
                     self._name,
-                    op_cond.get_name(),
+                    op_name,
                     compliance,
                     self._report_name,
                 )
             )
-            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_cond.get_name()] = results
+            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_name] = results
 
         return success
 

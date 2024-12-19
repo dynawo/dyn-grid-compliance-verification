@@ -38,6 +38,66 @@ from dgcv.report.tables import (
 from dgcv.templates.reports.create_figures import create_figures
 
 
+def _create_reports(
+    report_results: dict,
+    parameters: Parameters,
+    output_path: Path,
+    working_path: Path,
+) -> list:
+    reports = []
+    for pcs_results in report_results.values():
+        pcs = pcs_results["pcs"]
+        subreports = _create_full_tex(
+            pcs_results,
+            working_path,
+            output_path,
+            pcs.get_figures_description(),
+            pcs_results["report_name"],
+            parameters.get_producer(),
+        )
+        if subreports > 0:
+            reports.append(f"\\input{{{pcs_results['report_name'].replace('.tex', '')}}}")
+
+    return reports
+
+
+def _create_figures(
+    report_results: dict,
+    parameters: Parameters,
+    path_latex_files: Path,
+    working_path: Path,
+):
+    for pcs_results in report_results.values():
+        latex_template_path = (
+            path_latex_files
+            / parameters.get_producer().get_sim_type_str()
+            / pcs_results["pcs"].get_name()
+        )
+
+        latex_user_path = config.get_config_dir() / latex_template_path
+        dgcv_logging.get_logger("PDFLatex").debug(
+            f"PCS: {pcs_results['pcs'].get_name()} User LaTeX path:{latex_user_path}"
+        )
+        latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
+        dgcv_logging.get_logger("PDFLatex").debug(
+            f"PCS: {pcs_results['pcs'].get_name()} Tool LaTeX path:{latex_tool_path}"
+        )
+        if latex_user_path.exists():
+            copy_latex_files(latex_user_path, working_path)
+        if latex_tool_path.exists():
+            copy_latex_files(latex_tool_path, working_path)
+
+        if not (latex_tool_path.exists() or latex_user_path.exists()):
+            dgcv_logging.get_logger("PDFLatex").error("Latex Template do not exist")
+            return
+
+        create_figures(
+            working_path,
+            pcs_results["pcs"].get_name(),
+            pcs_results["sim_type"],
+        )
+
+
 def _pcs_replace(
     working_path: Path, pcs_results: dict, report_name: str, producer: Producer
 ) -> int:
@@ -127,6 +187,63 @@ def _get_template(path, template_file):
     return template
 
 
+def _generate_figures(
+    working_path: Path,
+    figures_description: dict,
+    figure_key: str,
+    oc_results: dict,
+    operating_condition: str,
+    xmin: float,
+    xmax: float,
+) -> tuple[list, list]:
+    plotted_curves = list()
+    figures = list()
+
+    curves = oc_results["curves"]
+    if "reference_curves" in oc_results:
+        reference_curves = oc_results["reference_curves"]
+    else:
+        reference_curves = None
+
+    for figure_description in figures_description[figure_key]:
+        plot_curves = figure.get_curves2plot(figure_description[1], curves)
+        if len(plot_curves) == 0:
+            continue
+
+        plot_reference_curves = None
+        if reference_curves is not None:
+            plot_reference_curves = figure.get_curves2plot(
+                figure_description[1], reference_curves, is_reference=True
+            )
+        figure.create_plot(
+            list(curves["time"]),
+            figure_description[1],
+            plot_curves,
+            list(reference_curves["time"]) if reference_curves is not None else None,
+            plot_reference_curves,
+            {"min": xmin, "max": xmax},
+            working_path / (figure_description[0] + "_" + operating_condition + ".pdf"),
+            figure_description[2],
+            oc_results,
+            figure_description[3],
+        )
+
+        try:
+            html_curves, html_figure = html.plotly_figures(
+                figure_description, curves, reference_curves, oc_results
+            )
+            plotted_curves.extend(html_curves)
+            if html_figure:
+                figures.append(html_figure)
+        except Exception as e:
+            dgcv_logging.get_logger("HTMLReport").error(
+                "A non fatal error occurred while generating the plotly figures"
+            )
+            dgcv_logging.get_logger("HTMLReport").error(f"{e}")
+
+    return plotted_curves, figures
+
+
 def _create_full_tex(
     pcs_results: dict,
     working_path: Path,
@@ -164,8 +281,7 @@ def _create_full_tex(
             )
             continue
 
-        curves = oc_results["curves"]
-        if curves is None:
+        if oc_results["curves"] is None:
             continue
 
         unit_characteristics = {
@@ -173,11 +289,6 @@ def _create_full_tex(
             "Qmax": producer.q_max_pu,
             "Udim": oc_results["udim"] / producer.u_nom,
         }
-
-        if "reference_curves" in oc_results:
-            reference_curves = oc_results["reference_curves"]
-        else:
-            reference_curves = None
 
         xmin, xmax = figure.get_common_time_range(
             operating_condition,
@@ -190,49 +301,18 @@ def _create_full_tex(
         if config.get_boolean("Debug", "show_figs_tend", False):
             xmax = None
 
-        plotted_curves = list()
-        figures = list()
-        for figure_description in figures_description[figure_key]:
-            plot_curves = figure.get_curves2plot(figure_description[1], curves)
-            if len(plot_curves) == 0:
-                continue
-
-            plot_reference_curves = None
-            if reference_curves is not None:
-                plot_reference_curves = figure.get_curves2plot(
-                    figure_description[1], reference_curves, is_reference=True
-                )
-            figure.create_plot(
-                list(curves["time"]),
-                figure_description[1],
-                plot_curves,
-                list(reference_curves["time"]) if reference_curves is not None else None,
-                plot_reference_curves,
-                {"min": xmin, "max": xmax},
-                working_path / (figure_description[0] + "_" + operating_condition + ".pdf"),
-                figure_description[2],
-                oc_results,
-                figure_description[3],
-            )
-
-            try:
-                html_curves, html_figure = html.plotly_figures(
-                    figure_description, curves, reference_curves, oc_results
-                )
-                plotted_curves.extend(html_curves)
-                if html_figure:
-                    figures.append(html_figure)
-            except Exception as e:
-                dgcv_logging.get_logger("HTMLReport").error(
-                    "A non fatal error occurred while generating the plotly figures"
-                )
-                dgcv_logging.get_logger("HTMLReport").error(f"{e}")
-
+        plotted_curves, figures = _generate_figures(
+            working_path,
+            figures_description,
+            figure_key,
+            oc_results,
+            operating_condition,
+            xmin,
+            xmax,
+        )
         try:
             if config.get_boolean("Debug", "plot_all_curves_in_html", False):
-                figures.extend(
-                    html.plotly_all_curves(plotted_curves, curves, reference_curves, oc_results)
-                )
+                figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
             html.create_html(figures, operating_condition, output_path)
         except Exception as e:
             dgcv_logging.get_logger("HTMLReport").error(
@@ -301,59 +381,17 @@ def create_pdf(
     if not working_path.exists():
         working_path.mkdir()
 
-    for pcs_results in report_results.values():
-        latex_template_path = (
-            path_latex_files
-            / parameters.get_producer().get_sim_type_str()
-            / pcs_results["pcs"].get_name()
-        )
-
-        latex_user_path = config.get_config_dir() / latex_template_path
-        dgcv_logging.get_logger("PDFLatex").debug(
-            f"PCS: {pcs_results['pcs'].get_name()} User LaTeX path:{latex_user_path}"
-        )
-        latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
-        dgcv_logging.get_logger("PDFLatex").debug(
-            f"PCS: {pcs_results['pcs'].get_name()} Tool LaTeX path:{latex_tool_path}"
-        )
-        if latex_user_path.exists():
-            copy_latex_files(latex_user_path, working_path)
-        if latex_tool_path.exists():
-            copy_latex_files(latex_tool_path, working_path)
-
-        if not (latex_tool_path.exists() or latex_user_path.exists()):
-            dgcv_logging.get_logger("PDFLatex").error("Latex Template do not exist")
-            return
-
-        create_figures(
-            working_path,
-            pcs_results["pcs"].get_name(),
-            pcs_results["sim_type"],
-        )
+    _create_figures(report_results, parameters, path_latex_files, working_path)
 
     latex_root_path = Path(__file__).resolve().parent.parent / path_latex_files
-    dgcv_logging.get_logger("PDFLatex").debug(
-        f"PCS: {pcs_results['pcs'].get_name()} Root LaTeX path:{latex_root_path}"
-    )
-    if latex_tool_path.exists():
+    dgcv_logging.get_logger("PDFLatex").debug(f"Root LaTeX path:{latex_root_path}")
+    if latex_root_path.exists():
         shutil.copy(latex_root_path / REPORT_NAME, working_path)
     else:
         dgcv_logging.get_logger("PDFLatex").error("Latex Template do not exist")
         return
 
-    reports = []
-    for pcs_results in report_results.values():
-        pcs = pcs_results["pcs"]
-        subreports = _create_full_tex(
-            pcs_results,
-            working_path,
-            output_path,
-            pcs.get_figures_description(),
-            pcs_results["report_name"],
-            parameters.get_producer(),
-        )
-        if subreports > 0:
-            reports.append(f"\\input{{{pcs_results['report_name'].replace('.tex', '')}}}")
+    reports = _create_reports(report_results, parameters, output_path, working_path)
 
     summary_description = ""
     now = time.time()
@@ -372,7 +410,7 @@ def create_pdf(
     summary_description += f"Model: {model_template} \\\\"
 
     reference_template = None
-    if producer.has_reference_curves():
+    if producer.has_reference_curves_path():
         reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
         summary_description += f"Reference: {reference_template} \\\\"
 

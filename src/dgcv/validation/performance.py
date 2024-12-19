@@ -19,7 +19,6 @@ from dgcv.core.global_variables import (
     MODEL_VALIDATION_PPM,
 )
 from dgcv.core.validator import Stability, Validator
-from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 from dgcv.validation import common, compliance_list
 
@@ -155,38 +154,13 @@ class PerformanceValidator(Validator):
         self._producer = parameters.get_producer()
         self._stable_time = stable_time
 
-    def __calculate(
+    def __calculate_simple_times(
         self,
+        compliance_values: dict,
         curves: pd.DataFrame,
         t_event_start: float,
-    ) -> dict:
-        compliance_values = {}
-
-        if compliance_list.contains_key(["static_diff"], self._validations):
-            max_static_diff = 0
-            filter_col = [col for col in curves if col.endswith("_GEN_MagnitudeControlledByAVRPu")]
-            for curve_name in filter_col:
-                generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
-                magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
-
-                static_diff = common.get_static_diff(
-                    list(curves[magnitude_controlled_by_avr]),
-                    list(curves[avr_setpoint]),
-                )
-                if max_static_diff < static_diff:
-                    max_static_diff = static_diff
-            compliance_values["static_diff"] = max_static_diff
-
+    ):
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
-        compliance_values["is_invalid_test"] = common.is_invalid_test(
-            list(curves["time"]),
-            list(curves[bus_pdr_voltage]),
-            list(curves["BusPDR_BUS_ActivePower"]),
-            list(curves["BusPDR_BUS_ReactivePower"]),
-            t_event_start,
-        )
-
         if compliance_list.contains_key(["time_5U"], self._validations):
             compliance_values["time_5u"] = common.get_txu_relative(
                 0.05,
@@ -203,6 +177,21 @@ class PerformanceValidator(Validator):
                 t_event_start,
             )
 
+        if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
+            compliance_values["time_10pfloor"] = common.get_txpfloor(
+                0.1,
+                list(curves["time"]),
+                list(curves["BusPDR_BUS_ActivePower"]),
+                t_event_start,
+            )
+
+    def __calculate_composed_times(
+        self,
+        compliance_values: dict,
+        curves: pd.DataFrame,
+        t_event_start: float,
+    ) -> dict:
+        bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         if compliance_list.contains_key(
             ["time_5P", "time_5P_85U", "time_5P_clear"], self._validations
         ):
@@ -245,13 +234,95 @@ class PerformanceValidator(Validator):
                 t_event_start,
             )
 
-        if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
-            compliance_values["time_10pfloor"] = common.get_txpfloor(
-                0.1,
-                list(curves["time"]),
-                list(curves["BusPDR_BUS_ActivePower"]),
-                t_event_start,
-            )
+    def __calculate_times(
+        self,
+        compliance_values: dict,
+        curves: pd.DataFrame,
+        t_event_start: float,
+    ):
+        self.__calculate_simple_times(compliance_values, curves, t_event_start)
+        self.__calculate_composed_times(compliance_values, curves, t_event_start)
+
+    def __calculate_avr(
+        self,
+        compliance_values: dict,
+        curves: pd.DataFrame,
+        t_event_start: float,
+    ):
+        if compliance_list.contains_key(["AVR_5"], self._validations):
+            AVR_5_crv = list()
+            AVR_5_check = True
+            AVR_5 = -1
+            filter_col = [col for col in curves if col.endswith("_GEN_MagnitudeControlledByAVRPu")]
+            for curve_name in filter_col:
+                generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
+                magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
+                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
+                gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
+                    list(curves["time"]),
+                    list(curves[magnitude_controlled_by_avr]),
+                    list(curves[avr_setpoint]),
+                    t_event_start,
+                )
+                AVR_5_crv.append(list(curves[avr_setpoint]))
+                AVR_5_check &= gen_AVR_5_check
+                if gen_AVR_5 != -1:
+                    AVR_5 = gen_AVR_5
+            compliance_values["AVR_5_check"] = AVR_5_check
+            compliance_values["AVR_5"] = AVR_5
+            compliance_values["AVR_5_crvs"] = AVR_5_crv
+
+    def __calculate_frequency(
+        self,
+        compliance_values: dict,
+        curves: pd.DataFrame,
+    ):
+        if compliance_list.contains_key(["freq_1"], self._validations):
+            check_freq1 = True
+            time_freq1 = -1
+            filter_col = [col for col in curves if col.endswith("_GEN_NetworkFrequencyPu")]
+            for curve_name in filter_col:
+                gen_check_freq1, gen_time_freq1 = common.check_frequency(
+                    1 / 50,
+                    list(curves[curve_name]),
+                    list(curves["time"]),
+                )
+                check_freq1 &= gen_check_freq1
+                if gen_time_freq1 != -1:
+                    time_freq1 = gen_time_freq1
+            compliance_values["check_freq1"] = check_freq1
+            compliance_values["time_freq1"] = time_freq1
+
+    def __calculate_others(
+        self,
+        compliance_values: dict,
+        curves: pd.DataFrame,
+        t_event_start: float,
+    ):
+        bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
+        compliance_values["is_invalid_test"] = common.is_invalid_test(
+            list(curves["time"]),
+            list(curves[bus_pdr_voltage]),
+            list(curves["BusPDR_BUS_ActivePower"]),
+            list(curves["BusPDR_BUS_ReactivePower"]),
+            t_event_start,
+        )
+
+        if compliance_list.contains_key(["static_diff"], self._validations):
+            max_static_diff = 0
+            filter_col = [col for col in curves if col.endswith("_GEN_MagnitudeControlledByAVRPu")]
+            for curve_name in filter_col:
+                generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
+                magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
+                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
+
+                static_diff = common.get_static_diff(
+                    list(curves[magnitude_controlled_by_avr]),
+                    list(curves[avr_setpoint]),
+                )
+                if max_static_diff < static_diff:
+                    max_static_diff = static_diff
+            compliance_values["static_diff"] = max_static_diff
 
         if compliance_list.contains_key(["imax_reac"], self._validations):
             imax_reac = -1
@@ -277,56 +348,25 @@ class PerformanceValidator(Validator):
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
 
-        if compliance_list.contains_key(["AVR_5"], self._validations):
-            AVR_5_crv = list()
-            AVR_5_check = True
-            AVR_5 = -1
-            filter_col = [col for col in curves if col.endswith("_GEN_MagnitudeControlledByAVRPu")]
-            for curve_name in filter_col:
-                generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
-                magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
-                gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
-                    list(curves["time"]),
-                    list(curves[magnitude_controlled_by_avr]),
-                    list(curves[avr_setpoint]),
-                    t_event_start,
-                )
-                AVR_5_crv.append(list(curves[avr_setpoint]))
-                AVR_5_check &= gen_AVR_5_check
-                if gen_AVR_5 != -1:
-                    AVR_5 = gen_AVR_5
-            compliance_values["AVR_5_check"] = AVR_5_check
-            compliance_values["AVR_5"] = AVR_5
-            compliance_values["AVR_5_crvs"] = AVR_5_crv
+    def __calculate(
+        self,
+        curves: pd.DataFrame,
+        t_event_start: float,
+    ) -> dict:
+        compliance_values = {}
 
-        if compliance_list.contains_key(["freq_1"], self._validations):
-            check_freq1 = True
-            time_freq1 = -1
-            filter_col = [col for col in curves if col.endswith("_GEN_NetworkFrequencyPu")]
-            for curve_name in filter_col:
-                gen_check_freq1, gen_time_freq1 = common.check_frequency(
-                    1 / 50,
-                    list(curves[curve_name]),
-                    list(curves["time"]),
-                )
-                check_freq1 &= gen_check_freq1
-                if gen_time_freq1 != -1:
-                    time_freq1 = gen_time_freq1
-            compliance_values["check_freq1"] = check_freq1
-            compliance_values["time_freq1"] = time_freq1
+        self.__calculate_times(compliance_values, curves, t_event_start)
+        self.__calculate_avr(compliance_values, curves, t_event_start)
+        self.__calculate_frequency(compliance_values, curves)
+        self.__calculate_others(compliance_values, curves, t_event_start)
+
         return compliance_values
 
-    def __check(
+    def __create_results(
         self,
-        simulation_path: Path,
-        has_dynamic_model: bool,
-        is_stable: Stability,
         t_event_start: float,
-        t_event_end: float,
-        is_ppm: bool,
         compliance_values: dict,
-    ):
+    ) -> dict:
         results = {
             "sim_t_event_start": t_event_start,
             "compliance": True,
@@ -335,15 +375,15 @@ class PerformanceValidator(Validator):
         if self._time_cct is not None:
             results["time_cct"] = self._time_cct
 
-        if compliance_list.contains_key(["static_diff"], self._validations):
-            _check_compliance(
-                results,
-                compliance_values["static_diff"],
-                "static_diff",
-                0.2,
-                100,
-            )
+        return results
 
+    def __check_simple_times(
+        self,
+        results: dict,
+        t_event_start: float,
+        t_event_end: float,
+        compliance_values: dict,
+    ):
         if compliance_list.contains_key(["time_5U"], self._validations):
             _check_compliance(
                 results,
@@ -376,25 +416,6 @@ class PerformanceValidator(Validator):
                 5.0,
             )
 
-        if compliance_list.contains_key(["time_5P_85U"], self._validations):
-            results["time_85U"] = compliance_values["time_85u"]
-            _check_compliance(
-                results,
-                compliance_values["time_5p"] - compliance_values["time_85u"],
-                "time_5P_85U",
-                10.0,
-            )
-
-        if compliance_list.contains_key(["time_10P_85U"], self._validations):
-            results["time_85U"] = compliance_values["time_85u"]
-            results["time_10P"] = compliance_values["time_10p"]
-            _check_compliance(
-                results,
-                compliance_values["time_10p"] - compliance_values["time_85u"],
-                "time_10P_85U",
-                5.0,
-            )
-
         if compliance_list.contains_key(["time_5P_clear"], self._validations):
             results["t_event_start"] = t_event_end
             _check_compliance(
@@ -413,20 +434,31 @@ class PerformanceValidator(Validator):
                 5.0,
             )
 
-        if compliance_list.contains_key(["stabilized"], self._validations):
-            if not is_ppm:
-                stabilized = (
-                    is_stable.p
-                    and is_stable.q
-                    and is_stable.v
-                    and is_stable.theta
-                    and is_stable.pi
-                )
-            else:
-                stabilized = is_stable.p and is_stable.q and is_stable.v
+    def __check_composed_times(
+        self,
+        results: dict,
+        t_event_start: float,
+        t_event_end: float,
+        compliance_values: dict,
+    ):
+        if compliance_list.contains_key(["time_5P_85U"], self._validations):
+            results["time_85U"] = compliance_values["time_85u"]
+            _check_compliance(
+                results,
+                compliance_values["time_5p"] - compliance_values["time_85u"],
+                "time_5P_85U",
+                10.0,
+            )
 
-            results["stabilized"] = stabilized
-            results["compliance"] &= stabilized
+        if compliance_list.contains_key(["time_10P_85U"], self._validations):
+            results["time_85U"] = compliance_values["time_85u"]
+            results["time_10P"] = compliance_values["time_10p"]
+            _check_compliance(
+                results,
+                compliance_values["time_10p"] - compliance_values["time_85u"],
+                "time_10P_85U",
+                5.0,
+            )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
             results["time_85U"] = compliance_values["time_85u"]
@@ -448,11 +480,32 @@ class PerformanceValidator(Validator):
                 2.0,
             )
 
-        if compliance_list.contains_key(["imax_reac"], self._validations):
-            results["imax_reac"] = compliance_values["imax_reac"]
-            results["imax_reac_check"] = compliance_values["imax_reac_check"]
-            results["compliance"] &= results["imax_reac_check"]
+        if compliance_list.contains_key(["time_85U_10P"], self._validations):
+            results["time_85U"] = compliance_values["time_85u"]
+            results["time_10P"] = compliance_values["time_10p"]
+            _check_compliance(
+                results,
+                compliance_values["time_10p"] - compliance_values["time_85u"],
+                "time_85U_10P",
+                5.0,
+            )
 
+    def __check_times(
+        self,
+        results: dict,
+        t_event_start: float,
+        t_event_end: float,
+        compliance_values: dict,
+    ):
+        self.__check_simple_times(results, t_event_start, t_event_end, compliance_values)
+        self.__check_composed_times(results, t_event_start, t_event_end, compliance_values)
+
+    def __check_diconnections(
+        self,
+        results: dict,
+        simulation_path: Path,
+        has_dynamic_model: bool,
+    ):
         if (
             compliance_list.contains_key(["no_disconnection_gen"], self._validations)
             and has_dynamic_model
@@ -493,25 +546,67 @@ class PerformanceValidator(Validator):
                     results["no_disconnection_load"] = True
             results["compliance"] &= results["no_disconnection_load"]
 
+    def __check_others(
+        self,
+        results: dict,
+        is_stable: Stability,
+        is_ppm: bool,
+        compliance_values: dict,
+    ):
+        if compliance_list.contains_key(["static_diff"], self._validations):
+            _check_compliance(
+                results,
+                compliance_values["static_diff"],
+                "static_diff",
+                0.2,
+                100,
+            )
+
+        if compliance_list.contains_key(["stabilized"], self._validations):
+            if not is_ppm:
+                stabilized = (
+                    is_stable.p
+                    and is_stable.q
+                    and is_stable.v
+                    and is_stable.theta
+                    and is_stable.pi
+                )
+            else:
+                stabilized = is_stable.p and is_stable.q and is_stable.v
+
+            results["stabilized"] = stabilized
+            results["compliance"] &= stabilized
+
+        if compliance_list.contains_key(["imax_reac"], self._validations):
+            results["imax_reac"] = compliance_values["imax_reac"]
+            results["imax_reac_check"] = compliance_values["imax_reac_check"]
+            results["compliance"] &= results["imax_reac_check"]
+
         if compliance_list.contains_key(["AVR_5"], self._validations):
             results["AVR_5_check"] = compliance_values["AVR_5_check"]
             results["AVR_5"] = compliance_values["AVR_5"]
             results["AVR_5_crvs"] = compliance_values["AVR_5_crvs"]
 
-        if compliance_list.contains_key(["time_85U_10P"], self._validations):
-            results["time_85U"] = compliance_values["time_85u"]
-            results["time_10P"] = compliance_values["time_10p"]
-            _check_compliance(
-                results,
-                compliance_values["time_10p"] - compliance_values["time_85u"],
-                "time_85U_10P",
-                5.0,
-            )
-
         if compliance_list.contains_key(["freq_1"], self._validations):
             results["freq1"] = compliance_values["time_freq1"]
             results["freq1_check"] = compliance_values["check_freq1"]
             results["compliance"] &= results["freq1_check"]
+
+    def __check(
+        self,
+        simulation_path: Path,
+        has_dynamic_model: bool,
+        is_stable: Stability,
+        t_event_start: float,
+        t_event_end: float,
+        is_ppm: bool,
+        compliance_values: dict,
+    ):
+        results = self.__create_results(t_event_start, compliance_values)
+
+        self.__check_times(results, t_event_start, t_event_end, compliance_values)
+        self.__check_diconnections(results, simulation_path, has_dynamic_model)
+        self.__check_others(results, is_stable, is_ppm, compliance_values)
 
         return results
 
@@ -522,6 +617,7 @@ class PerformanceValidator(Validator):
         sim_output_path: str,
         event_params: dict,
         fs: float,
+        curves: dict,
     ) -> dict:
         """Electric Performance Verification.
 
@@ -543,9 +639,11 @@ class PerformanceValidator(Validator):
         dict
             Compliance results
         """
-        calculated_curves = manage_files.read_curves(working_path / "curves_calculated.csv")
-        if (working_path / "curves_reference.csv").is_file():
-            reference_curves = manage_files.read_curves(working_path / "curves_reference.csv")
+        calculated_curves = curves["calculated"]
+        calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
+        if "reference" in curves and not curves["reference"].empty:
+            reference_curves = curves["reference"]
+            reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
         else:
             reference_curves = None
 
