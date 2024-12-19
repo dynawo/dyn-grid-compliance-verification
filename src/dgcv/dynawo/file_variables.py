@@ -1,5 +1,5 @@
 from dgcv.configuration.cfg import config
-from dgcv.core.producer_curves import ProducerCurves
+from dgcv.curves.producer import ProducerCurves
 from dgcv.electrical.generator_variables import generator_variables
 
 
@@ -7,11 +7,11 @@ class FileVariables:
     def __init__(
         self,
         tool_variables: list,
-        producer_curves: ProducerCurves,
+        dynawo_curves: ProducerCurves,
         bm_section: str,
         oc_section: str,
     ):
-        self._producer_curves = producer_curves
+        self._dynawo_curves = dynawo_curves
         self._bm_section = bm_section
         self._oc_section = oc_section
         self._model_section = f"{bm_section}.{oc_section}.Model"
@@ -19,7 +19,7 @@ class FileVariables:
         self._tool_variables = tool_variables
 
     def __obtain_value(self, value_definition: str) -> str:
-        return self._producer_curves.obtain_value(value_definition)
+        return self._dynawo_curves.obtain_value(value_definition)
 
     def __obtain_section_value(self, section: str, key: str, generator_type: str) -> str:
         key_type = f"{key}_{generator_type}"
@@ -32,7 +32,7 @@ class FileVariables:
 
     def __get_value(self, key: str) -> str:
         generator_type = generator_variables.get_generator_type(
-            self._producer_curves.get_producer().u_nom
+            self._dynawo_curves.get_producer().u_nom
         )
 
         value = self.__obtain_section_value(self._bm_section, key, generator_type)

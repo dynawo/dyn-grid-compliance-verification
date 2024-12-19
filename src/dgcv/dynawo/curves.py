@@ -16,8 +16,8 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.producer_curves import ProducerCurves, get_cfg_oc_name
 from dgcv.core.validator import Disconnection_Model
+from dgcv.curves.producer import ProducerCurves, get_cfg_oc_name
 from dgcv.dynawo import dynawo
 from dgcv.dynawo.dyd import DydFile
 from dgcv.dynawo.jobs import JobsFile
@@ -234,7 +234,7 @@ class DynawoCurves(ProducerCurves):
             oc_name,
         )
         if reference_event_start_time and event_params["start_time"] != reference_event_start_time:
-            dgcv_logging.get_logger("Dynawo ProducerCurves").warning(
+            dgcv_logging.get_logger("ProducerCurves").warning(
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
                 f"({event_params['start_time']})."
