@@ -44,9 +44,9 @@ class Producer:
 
     Args
     ----
-    producer_model: Path
+    producer_model_path: Path
         Directory to the Dynamic Model, if it is given
-    producer_curves: Path
+    producer_curves_path: Path
         Directory to the User Curves, if it is given
     verification_type: int
         0 if it is an electrical performance verification
@@ -55,20 +55,20 @@ class Producer:
 
     def __init__(
         self,
-        producer_model: Path,
-        producer_curves: Path,
-        reference_curves: Path,
+        producer_model_path: Path,
+        producer_curves_path: Path,
+        reference_curves_path: Path,
         verification_type: int,
     ):
         self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
-        self._producer_model = producer_model
-        self._producer_curves = producer_curves
-        self._reference_curves = reference_curves
+        self._producer_model_path = producer_model_path
+        self._producer_curves_path = producer_curves_path
+        self._reference_curves_path = reference_curves_path
         self._zone = 0
 
-        self._is_dynawo_model = self._producer_model is not None
-        self._is_user_curves = self._producer_curves is not None
-        self._has_reference_curves = self._reference_curves is not None
+        self._is_dynawo_model = self._producer_model_path is not None
+        self._is_user_curves = self._producer_curves_path is not None
+        self._has_reference_curves_path = self._reference_curves_path is not None
 
         if verification_type == ELECTRIC_PERFORMANCE:
             self.__set_electric_performance_type()
@@ -251,10 +251,10 @@ class Producer:
         sanity_checks.check_generators(self.generators)
 
     def __get_file_by_pattern(self, pattern) -> Path:
-        if self._producer_model is not None:
-            producer_path = self._producer_model
-        elif self._producer_curves is not None:
-            producer_path = self._producer_curves
+        if self._producer_model_path is not None:
+            producer_path = self._producer_model_path
+        elif self._producer_curves_path is not None:
+            producer_path = self._producer_curves_path
         else:
             dgcv_logging.get_logger("Producer").error("No producer model has been defined")
             return None
@@ -308,9 +308,9 @@ class Producer:
             Producer directory
         """
         if self.is_dynawo_model():
-            return self._producer_model
+            return self._producer_model_path
         else:
-            return self._producer_curves
+            return self._producer_curves_path
 
     def get_reference_path(self) -> Path:
         """Get the Reference directory.
@@ -320,7 +320,7 @@ class Producer:
         Path
             Reference directory
         """
-        return self._reference_curves
+        return self._reference_curves_path
 
     def set_zone(self, zone: int) -> None:
         """Set the zone to test.
@@ -338,7 +338,7 @@ class Producer:
             sanity_checks.check_well_formed_xml(self.get_producer_dyd())
             sanity_checks.check_well_formed_xml(self.get_producer_par())
             sanity_checks.check_curves_files(
-                self._producer_model, self._reference_curves, self.get_sim_type_str()
+                self._producer_model_path, self._reference_curves_path, self.get_sim_type_str()
             )
             self.__init_model()
 
@@ -372,7 +372,7 @@ class Producer:
         """
         return self._is_user_curves
 
-    def has_reference_curves(self) -> bool:
+    def has_reference_curves_path(self) -> bool:
         """Check if there are reference curves directory.
 
         Returns
@@ -380,7 +380,7 @@ class Producer:
         bool
             True if has a reference curves directory, False otherwise
         """
-        return self._has_reference_curves
+        return self._has_reference_curves_path
 
     def get_sim_type_str(self) -> str:
         """Gets a string according to the type of validation executed.
@@ -447,7 +447,7 @@ class Producer:
         pattern_par = re.compile(r".*.[pP][aA][rR]")
         return self.__get_file_by_pattern(pattern_par)
 
-    def get_producer_curves(self) -> Path:
+    def get_producer_curves_path(self) -> Path:
         """Gets the Producer Curves Directory.
 
         Returns
@@ -455,9 +455,9 @@ class Producer:
         Path
             Path to the Producer Curves Directory
         """
-        return self._producer_curves.resolve()
+        return self._producer_curves_path.resolve()
 
-    def get_reference_curves(self) -> Path:
+    def get_reference_curves_path(self) -> Path:
         """Gets the Reference Curves Directory.
 
         Returns
@@ -465,7 +465,7 @@ class Producer:
         Path
             Path to the Reference Curves Directory
         """
-        return self._reference_curves.resolve()
+        return self._reference_curves_path.resolve()
 
     def set_generators(self, generators: list) -> None:
         """Gets the Producer model generators.

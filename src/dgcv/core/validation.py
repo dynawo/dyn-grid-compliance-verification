@@ -35,17 +35,17 @@ from dgcv.report.LatexReportException import LatexReportException
 
 def _open_document(file: Path):
     if os.name == "nt":
-        dgcv_logging.get_logger("ModelValidation").info(f"Opening the report: {file}")
+        dgcv_logging.get_logger("Validation").info(f"Opening the report: {file}")
         subprocess.run(["start", file], shell=True)
     else:
         if shutil.which("open") and os.environ.get("DISPLAY"):
-            dgcv_logging.get_logger("ModelValidation").info(f"Opening the report: {file}")
+            dgcv_logging.get_logger("Validation").info(f"Opening the report: {file}")
             subprocess.run(["open", file], check=True)
         else:
-            dgcv_logging.get_logger("ModelValidation").info(f"Report saved in: {file}")
+            dgcv_logging.get_logger("Validation").info(f"Report saved in: {file}")
 
 
-class ModelValidation:
+class Validation:
     """Validation of producer inputs.
     There are two types of validations, electrical performance and model validation.
     Additionally, the electrical performance differs between the synchronous generator-type
@@ -75,7 +75,7 @@ class ModelValidation:
             validation_pcs.add(parameters.get_selected_pcs())
 
         if parameters.get_sim_type() == ELECTRIC_PERFORMANCE_SM:
-            dgcv_logging.get_logger("ModelValidation").info(
+            dgcv_logging.get_logger("Validation").info(
                 "Electric Performance Verification for Synchronous Machines"
             )
             self.__get_validation_pcs(
@@ -83,7 +83,7 @@ class ModelValidation:
             )
 
         elif parameters.get_sim_type() == ELECTRIC_PERFORMANCE_PPM:
-            dgcv_logging.get_logger("ModelValidation").info(
+            dgcv_logging.get_logger("Validation").info(
                 "Electric Performance Verification for Power Park Modules"
             )
             self.__get_validation_pcs(
@@ -91,7 +91,7 @@ class ModelValidation:
             )
 
         elif parameters.get_sim_type() == ELECTRIC_PERFORMANCE_BESS:
-            dgcv_logging.get_logger("ModelValidation").info(
+            dgcv_logging.get_logger("Validation").info(
                 "Electric Performance Verification for Storage"
             )
             self.__get_validation_pcs(
@@ -99,13 +99,13 @@ class ModelValidation:
             )
 
         elif parameters.get_sim_type() == MODEL_VALIDATION_PPM:
-            dgcv_logging.get_logger("ModelValidation").info(
+            dgcv_logging.get_logger("Validation").info(
                 "DGCV Model Validation for Power Park Modules"
             )
             self.__get_validation_pcs(validation_pcs, "model_ppm_validation_pcs", "model/PPM")
 
         elif parameters.get_sim_type() == MODEL_VALIDATION_BESS:
-            dgcv_logging.get_logger("ModelValidation").info("DGCV Model Validation for Storage")
+            dgcv_logging.get_logger("Validation").info("DGCV Model Validation for Storage")
             self.__get_validation_pcs(validation_pcs, "model_bess_validation_pcs", "model/BESS")
 
         self._validation_pcs = validation_pcs
@@ -151,7 +151,7 @@ class ModelValidation:
     def __create_report(self, summary_list: list, report_results: dict) -> None:
         """Create the full report."""
         sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone"))
-        dgcv_logging.get_logger("ModelValidation").debug(f"Sorted summary {sorted_summary_list}")
+        dgcv_logging.get_logger("Validation").debug(f"Sorted summary {sorted_summary_list}")
         try:
             report.create_pdf(
                 sorted_summary_list,
@@ -161,9 +161,9 @@ class ModelValidation:
             )
         except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
             if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-                dgcv_logging.get_logger("ModelValidation").exception(f"Aborted execution. {e}")
+                dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
             else:
-                dgcv_logging.get_logger("ModelValidation").error(f"Aborted execution. {e}")
+                dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
             exit(1)
 
         for pcs_results in report_results.values():
@@ -211,7 +211,7 @@ class ModelValidation:
         for pcs in self._pcs_list:
             try:
                 if not pcs.is_valid():
-                    dgcv_logging.get_logger("ModelValidation").error(
+                    dgcv_logging.get_logger("Validation").error(
                         f"{pcs.get_name()} is not a valid PCS"
                     )
                     continue
@@ -226,9 +226,9 @@ class ModelValidation:
                 report_results[pcs.get_name()] = pcs_results
             except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
                 if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-                    dgcv_logging.get_logger("ModelValidation").exception(f"Aborted execution. {e}")
+                    dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
                 else:
-                    dgcv_logging.get_logger("ModelValidation").error(f"Aborted execution. {e}")
+                    dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
                 exit(1)
 
         # Create the pcs report

@@ -12,10 +12,7 @@ from pathlib import Path
 from lxml import etree
 
 from dgcv.configuration.cfg import config
-from dgcv.core.global_variables import (
-    ELECTRIC_PERFORMANCE_SM,
-    MODEL_VALIDATION_PPM,
-)
+from dgcv.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION_PPM
 from dgcv.dynawo.translator import dynawo_translator
 
 
@@ -180,9 +177,9 @@ def _add_model_validation_curves(
     curves_dict: dict,
 ) -> None:
     if zone == 3:
-        generator_variables = config.get_list("CurvesVariables", "ModelValidationZ3")
+        generator_variables = config.get_list("CurvesVariables", "ValidationZ3")
     elif zone == 1:
-        generator_variables = config.get_list("CurvesVariables", "ModelValidationZ1")
+        generator_variables = config.get_list("CurvesVariables", "ValidationZ1")
     else:
         generator_variables = []
     _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)

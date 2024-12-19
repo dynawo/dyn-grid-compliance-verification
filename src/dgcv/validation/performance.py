@@ -628,7 +628,7 @@ class PerformanceValidator(Validator):
         working_path: Path
             Working path.
         sim_output_path: str
-            Simulator output path.
+            ProducerCurves output path.
         event_params: dict
             Event parameters
         fs: float

@@ -9,13 +9,14 @@
 #
 from pathlib import Path
 
+import pandas as pd
+
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR
 from dgcv.core.validator import Disconnection_Model
 from dgcv.electrical.generator_variables import generator_variables
 from dgcv.model.producer import Producer
-import pandas as pd
 
 
 def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
@@ -24,7 +25,7 @@ def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
     return pcs_bm_name + CASE_SEPARATOR + oc_name
 
 
-class Simulator:
+class ProducerCurves:
     def __init__(
         self,
         parameters: Parameters,

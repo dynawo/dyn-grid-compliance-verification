@@ -13,9 +13,9 @@ from pathlib import Path
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION_PPM
-from dgcv.core.simulator import Simulator
-from dgcv.curves.manager import CurvesManager
-from dgcv.dynawo.simulator import DynawoSimulator
+from dgcv.core.producer_curves import ProducerCurves
+from dgcv.curves.curves import ImportedCurves
+from dgcv.dynawo.curves import DynawoCurves
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 from dgcv.model.compliance import Compliance
@@ -72,13 +72,13 @@ class Benchmark:
         stable_time = config.get_float("GridCode", "stable_time", 100.0)
         (
             op_names,
-            simulator,
+            producer_curves,
             reference_manager,
             validator,
         ) = self.__prepare_benchmark_validation(parameters, stable_time)
         self._op_cond_list = [
             OperatingCondition(
-                simulator,
+                producer_curves,
                 reference_manager,
                 validator,
                 parameters,
@@ -90,7 +90,7 @@ class Benchmark:
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, stable_time: float
-    ) -> tuple[list, Simulator, CurvesManager]:
+    ) -> tuple[list, ProducerCurves, ImportedCurves]:
         # Read Benchmark configurations and prepare current Benchmark work path.
         # Creates a specific folder by pcs
         if not (self._working_dir / self._pcs_name).is_dir():
@@ -115,7 +115,7 @@ class Benchmark:
                     config.get_config_dir() / self._templates_path / sim_type_path / self._pcs_name
                 )
 
-            simulator = DynawoSimulator(
+            producer_curves = DynawoCurves(
                 parameters,
                 self._pcs_name,
                 model_path,
@@ -125,9 +125,9 @@ class Benchmark:
                 stable_time,
             )
         elif producer.is_user_curves():
-            simulator = CurvesManager(parameters)
+            producer_curves = ImportedCurves(parameters)
 
-        reference_manager = CurvesManager(parameters)
+        reference_manager = ImportedCurves(parameters)
         ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
         if producer.get_sim_type() >= MODEL_VALIDATION_PPM:
@@ -143,7 +143,7 @@ class Benchmark:
             )
 
         # If it is not a pcs with multiple operating conditions, returns itself
-        return ops, simulator, reference_manager, validator
+        return ops, producer_curves, reference_manager, validator
 
     def __initialize_validation_by_benchmark(self) -> list:
         # Prepare the validation list by pcs.benchmark
