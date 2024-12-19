@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 from scipy.interpolate import PchipInterpolator
-from scipy.signal import bessel, filtfilt
 
 from dgcv.configuration.cfg import config
 
@@ -41,11 +40,14 @@ def resample(x, t, fs=1000):
     return t_r, np.interp(t_r, t, x)
 
 
-def lowpass_filter(x, cutoff=15, fs=1000):
+def lowpass_filter(x, cutoff=15, fs=1000, filter="bessel"):
     # The filter type should have minimal ringing, so bessel is preferred
-    # b, a = butter(5, cutoff, fs=fs, btype="low", analog=False)
-    b, a = bessel(2, cutoff, fs=fs, btype="low", analog=False)
-    return filtfilt(b, a, x)
+    # b, a = signal.butter(5, cutoff, fs=fs, btype="low", analog=False)
+    if filter == "bessel":
+        b, a = signal.bessel(2, cutoff, fs=fs, btype="low", analog=False)
+    if filter == "butter":
+        b, a = signal.butter(5, cutoff, fs=fs, btype="low", analog=False)
+    return signal.filtfilt(b, a, x)
 
 
 def ensure_rms_signals(curves, fs):
@@ -93,7 +95,7 @@ def resampling_signal(curves, fs=1000):
     return pd.DataFrame.from_dict(resampled_curve_dict, orient="columns")
 
 
-def lowpass_signal(curves, cutoff=15, fs=1000):
+def lowpass_signal(curves, cutoff=15, fs=1000, filter="bessel"):
     lowpass_curve_dict = {}
     for col in curves.columns:
         if "time" in col:
@@ -107,7 +109,7 @@ def lowpass_signal(curves, cutoff=15, fs=1000):
         ):
             c_filt = c
         else:
-            c_filt = lowpass_filter(c, cutoff, fs)
+            c_filt = lowpass_filter(c, cutoff, fs, filter)
             # For avoiding overflows in PChipInterpolator
             c_filt[abs(c_filt) < ZERO_THRESHOLD] = 0.0
 
