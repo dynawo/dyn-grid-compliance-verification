@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -142,6 +143,7 @@ def test_internal_lines():
     )
 
 
+@pytest.mark.skipif(shutil.which("dynawo.sh"), reason="Dynawo installed")
 def test_launchers():
     with pytest.raises(OSError) as pytest_wrapped_e:
         sanity_checks.check_launchers("dynawo.sh")
