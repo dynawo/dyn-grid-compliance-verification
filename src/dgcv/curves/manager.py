@@ -30,6 +30,12 @@ def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
     return gens
 
 
+def _get_config_value(config, section, option, default=0.0):
+    if config.has_option(section, option):
+        return float(config.get(section, option))
+    return default
+
+
 class CurvesManager(Simulator):
     def __init__(
         self,
@@ -48,25 +54,21 @@ class CurvesManager(Simulator):
         self.get_producer().set_generators(generators)
         return generators
 
-    def __obtain_files_curve(
+    def __get_curves_dataframe(
         self,
         working_oc_dir: Path,
         pcs_bm_name: str,
         oc_name: str,
-        curves: Path,
+        success: bool,
         is_reference: bool = False,
-    ):
-        # Copy base case and producers file
-        success = manage_files.copy_base_curves_files(
-            curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
-        )
+    ) -> tuple[bool, float, float, float, pd.DataFrame]:
         has_imported_curves = True
         if success:
             importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
             (
                 df_imported_curves,
-                curves_dict,
-                sim_t_event_end,
+                _,
+                _,
                 fs,
             ) = importer.get_curves_dataframe(self._producer.get_zone())
             if df_imported_curves.empty:
@@ -77,25 +79,19 @@ class CurvesManager(Simulator):
                 self._generators = self.__get_generators(df_imported_curves)
                 self._gens = _get_generators_ini(self._generators, df_imported_curves)
 
+            sim_t_event_start = _get_config_value(
+                importer.config, "Curves-Metadata", "sim_t_event_start"
+            )
+            fault_duration = _get_config_value(
+                importer.config, "Curves-Metadata", "fault_duration"
+            )
+            if fs == 0:
+                fs = _get_config_value(importer.config, "Curves-Metadata", "frequency_sampling")
+
             if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
                 self._is_field_measurements = bool(
                     importer.config.get("Curves-Metadata", "is_field_measurements")
                 )
-
-            if importer.config.has_option("Curves-Metadata", "sim_t_event_start"):
-                sim_t_event_start = float(
-                    importer.config.get("Curves-Metadata", "sim_t_event_start")
-                )
-            else:
-                sim_t_event_start = 0
-
-            if importer.config.has_option("Curves-Metadata", "fault_duration"):
-                fault_duration = float(importer.config.get("Curves-Metadata", "fault_duration"))
-            else:
-                fault_duration = 0
-
-            if importer.config.has_option("Curves-Metadata", "frequency_sampling") and fs == 0:
-                fs = float(importer.config.get("Curves-Metadata", "frequency_sampling"))
 
             generators_imax = {}
             for key in importer.config["Curves-Metadata"].keys():
@@ -113,6 +109,26 @@ class CurvesManager(Simulator):
             fs = 0
             self._generators_imax = {}
             df_imported_curves = pd.DataFrame()
+
+        return has_imported_curves, sim_t_event_start, fault_duration, fs, df_imported_curves
+
+    def __obtain_files_curve(
+        self,
+        working_oc_dir: Path,
+        pcs_bm_name: str,
+        oc_name: str,
+        curves: Path,
+        is_reference: bool = False,
+    ):
+        # Copy base case and producers file
+        success = manage_files.copy_base_curves_files(
+            curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
+        )
+        has_imported_curves, sim_t_event_start, fault_duration, fs, df_imported_curves = (
+            self.__get_curves_dataframe(
+                working_oc_dir, pcs_bm_name, oc_name, success, is_reference
+            )
+        )
 
         config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
         connect_event_to = config.get_value(config_section, "connect_event_to")

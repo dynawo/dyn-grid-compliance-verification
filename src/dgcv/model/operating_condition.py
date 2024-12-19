@@ -86,6 +86,8 @@ class OperatingCondition:
             reference_event_start_time, curves["reference"] = self._manager.obtain_reference_curve(
                 working_oc_dir, pcs_bm_name, self._name, self.__get_reference_curves()
             )
+        else:
+            curves["reference"] = pd.DataFrame()
 
         (
             jobs_output_dir,
