@@ -13,9 +13,8 @@ from pathlib import Path
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION_PPM
-from dgcv.core.producer_curves import ProducerCurves
-from dgcv.curves.curves import ImportedCurves
-from dgcv.dynawo.curves import DynawoCurves
+from dgcv.core.validator import Validator
+from dgcv.curves.manager import CurvesManager
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 from dgcv.model.compliance import Compliance
@@ -72,14 +71,12 @@ class Benchmark:
         stable_time = config.get_float("GridCode", "stable_time", 100.0)
         (
             op_names,
-            producer_curves,
-            reference_manager,
+            curves_manager,
             validator,
         ) = self.__prepare_benchmark_validation(parameters, stable_time)
         self._op_cond_list = [
             OperatingCondition(
-                producer_curves,
-                reference_manager,
+                curves_manager,
                 validator,
                 parameters,
                 pcs_name,
@@ -90,7 +87,7 @@ class Benchmark:
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, stable_time: float
-    ) -> tuple[list, ProducerCurves, ImportedCurves]:
+    ) -> tuple[list, CurvesManager, Validator]:
         # Read Benchmark configurations and prepare current Benchmark work path.
         # Creates a specific folder by pcs
         if not (self._working_dir / self._pcs_name).is_dir():
@@ -99,51 +96,34 @@ class Benchmark:
             manage_files.create_dir(self._working_dir / self._pcs_name / self._name)
 
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        producer = parameters.get_producer()
-        if producer.is_dynawo_model():
-            job_name = config.get_value(pcs_benchmark_name, "job_name")
-            rte_model = config.get_value(pcs_benchmark_name, "TSO_model")
-            omega_model = config.get_value(pcs_benchmark_name, "Omega_model")
+        curves_manager = CurvesManager(
+            parameters,
+            pcs_benchmark_name,
+            stable_time,
+            self._lib_path,
+            self._templates_path,
+            self._pcs_name,
+        )
 
-            file_path = Path(__file__).resolve().parent.parent
-            sim_type_path = producer.get_sim_type_str()
-            model_path = file_path / self._lib_path / "TSO_model" / rte_model
-            omega_path = file_path / self._lib_path / "Omega" / omega_model
-            pcs_path = file_path / self._templates_path / sim_type_path / self._pcs_name
-            if not pcs_path.exists():
-                pcs_path = (
-                    config.get_config_dir() / self._templates_path / sim_type_path / self._pcs_name
-                )
-
-            producer_curves = DynawoCurves(
-                parameters,
-                self._pcs_name,
-                model_path,
-                omega_path,
-                pcs_path,
-                job_name,
-                stable_time,
-            )
-        elif producer.is_user_curves():
-            producer_curves = ImportedCurves(parameters)
-
-        reference_manager = ImportedCurves(parameters)
         ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
-        if producer.get_sim_type() >= MODEL_VALIDATION_PPM:
+        if parameters.get_producer().get_sim_type() >= MODEL_VALIDATION_PPM:
             validator = ModelValidator(
                 pcs_benchmark_name,
                 parameters,
                 validations,
-                reference_manager.is_field_measurements(),
+                curves_manager.get_reference_curves().is_field_measurements(),
             )
         else:
             validator = PerformanceValidator(
-                parameters, stable_time, validations, reference_manager.is_field_measurements()
+                parameters,
+                stable_time,
+                validations,
+                curves_manager.get_reference_curves().is_field_measurements(),
             )
 
         # If it is not a pcs with multiple operating conditions, returns itself
-        return ops, producer_curves, reference_manager, validator
+        return ops, curves_manager, validator
 
     def __initialize_validation_by_benchmark(self) -> list:
         # Prepare the validation list by pcs.benchmark

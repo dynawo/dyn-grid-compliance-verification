@@ -14,11 +14,17 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.producer_curves import ProducerCurves, get_cfg_oc_name
+from dgcv.core.global_variables import CASE_SEPARATOR
 from dgcv.core.validator import Validator
-from dgcv.curves.curves import ImportedCurves
+from dgcv.curves.manager import CurvesManager
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
+
+
+def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
+    if pcs_bm_name == oc_name:
+        return oc_name
+    return pcs_bm_name + CASE_SEPARATOR + oc_name
 
 
 class OperatingCondition:
@@ -46,15 +52,13 @@ class OperatingCondition:
 
     def __init__(
         self,
-        producer_curves: ProducerCurves,
-        reference_curves: ImportedCurves,
+        curves_manager: CurvesManager,
         validator: Validator,
         parameters: Parameters,
         pcs_name: str,
         oc_name: str,
     ):
-        self._producer_curves = producer_curves
-        self._reference_curves = reference_curves
+        self._curves_manager = curves_manager
         self._validator = validator
         self._working_dir = parameters.get_working_dir()
         self._producer = parameters.get_producer()
@@ -84,10 +88,11 @@ class OperatingCondition:
         curves = dict()
         reference_event_start_time = None
         if self.__has_reference_curves():
-            reference_event_start_time, curves["reference"] = (
-                self._reference_curves.obtain_reference_curve(
-                    working_oc_dir, pcs_bm_name, self._name, self.__get_reference_curves_path()
-                )
+            (
+                reference_event_start_time,
+                curves["reference"],
+            ) = self._curves_manager.get_reference_curves().obtain_reference_curve(
+                working_oc_dir, pcs_bm_name, self._name, self.__get_reference_curves_path()
             )
         else:
             curves["reference"] = pd.DataFrame()
@@ -99,7 +104,7 @@ class OperatingCondition:
             success,
             has_simulated_curves,
             curves["calculated"],
-        ) = self._producer_curves.obtain_simulated_curve(
+        ) = self._curves_manager.get_producer_curves().obtain_simulated_curve(
             working_oc_dir,
             pcs_bm_name,
             bm_name,
@@ -129,16 +134,22 @@ class OperatingCondition:
 
         if self._validator.is_defined_cct():
             self._validator.set_time_cct(
-                self._producer_curves.get_time_cct(
+                self._curves_manager.get_producer_curves().get_time_cct(
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["duration_time"],
                 )
             )
-        self._validator.set_generators_imax(self._producer_curves.get_generators_imax())
-        self._validator.set_disconnection_model(self._producer_curves.get_disconnection_model())
+        self._validator.set_generators_imax(
+            self._curves_manager.get_producer_curves().get_generators_imax()
+        )
+        self._validator.set_disconnection_model(
+            self._curves_manager.get_producer_curves().get_disconnection_model()
+        )
         self._validator.set_setpoint_variation(
-            self._producer_curves.get_setpoint_variation(get_cfg_oc_name(pcs_bm_name, self._name))
+            self._curves_manager.get_producer_curves().get_setpoint_variation(
+                get_cfg_oc_name(pcs_bm_name, self._name)
+            )
         )
 
         results = self._validator.validate(
@@ -203,7 +214,7 @@ class OperatingCondition:
         working_path: Path
             Working path.
         jobs_output_dir: Path
-            ProducerCurves output path.
+            Simulator output path.
         event_params: dict
             Event parameters
         fs: float
@@ -235,7 +246,7 @@ class OperatingCondition:
         else:
             results = {"compliance": False, "curves": None}
 
-        results["udim"] = self._producer_curves.get_generator_u_dim()
+        results["udim"] = self._curves_manager.get_producer_curves().get_generator_u_dim()
         return success, results
 
     def has_required_curves(
@@ -257,7 +268,7 @@ class OperatingCondition:
         Path
             Working path.
         Path
-            ProducerCurves output path.
+            Simulator output path.
         dict
             Event parameters
         float

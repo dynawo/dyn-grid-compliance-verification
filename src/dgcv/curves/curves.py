@@ -13,9 +13,9 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.producer_curves import ProducerCurves, get_cfg_oc_name
 from dgcv.core.validator import Disconnection_Model
 from dgcv.curves.importer import CurvesImporter
+from dgcv.curves.producer import ProducerCurves, get_cfg_oc_name
 from dgcv.files import manage_files
 from dgcv.model.parameters import Gen_init, Gen_params
 

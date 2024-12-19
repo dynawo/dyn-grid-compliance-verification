@@ -1166,7 +1166,7 @@ class ModelValidator(Validator):
         working_path: Path
             Working path.
         sim_output_path: str
-            ProducerCurves output path (Not used in this validator).
+            Simulator output path (Not used in this validator).
         event_params: dict
             Event parameters
         fs: float
