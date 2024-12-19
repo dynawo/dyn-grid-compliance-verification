@@ -52,7 +52,7 @@ class FileVariables:
             return value
 
         if config.has_key("Dynawo", key):
-            value = self.__obtain_value(config.get_value("Dynawo", key))
+            return self.__obtain_value(config.get_value("Dynawo", key))
 
         return None
 
