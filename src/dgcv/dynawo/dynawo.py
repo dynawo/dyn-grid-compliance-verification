@@ -309,15 +309,41 @@ def _get_modulus(complex_list: list) -> list:
     return np.abs(complex_list).tolist()
 
 
+def _apply_sign_convention(
+    variable_translations: dict,
+    df_curves_imported: pd.DataFrame,
+    curves_translation: dict,
+    column: str,
+):
+    for translated_column in variable_translations[column]:
+        # Apply the tool sign convention to Dynawo curves
+        sign = variable_translations[translated_column]
+        curves_translation[translated_column] = np.multiply(
+            df_curves_imported[column], sign
+        ).tolist()
+
+
+def _translate_complex_columns(
+    variable_translations: dict,
+    df_curves_imported: pd.DataFrame,
+    curves_translation: dict,
+    column: str,
+    column_size: int,
+):
+    for translated_column in variable_translations[column]:
+        curves_translation[translated_column[:-2]] = _prepare_complex_column(
+            column[:-2],
+            column_size,
+            df_curves_imported,
+            translated_column[:-2],
+            variable_translations,
+        )
+
+
 def _translate_curves(
     variable_translations: dict, df_curves_imported: pd.DataFrame
 ) -> pd.DataFrame:
     column_size = len(df_curves_imported["time"])
-    cols = list(df_curves_imported.columns)
-    for i in cols:
-        if i[:7] == "Unnamed":
-            del df_curves_imported[i]
-
     # Some variables of the tool are modeled in a single parameter of the dynamic model,
     # to avoid conflicts the Dynawo output does not contain duplicate curves, so the tool
     # must manage duplicate curves to always have the expected number of curves.
@@ -327,23 +353,19 @@ def _translate_curves(
         if column in df_curves_imported.columns:
             if column.endswith("_im"):
                 continue
+
+            if column.endswith("_re"):
+                _translate_complex_columns(
+                    variable_translations,
+                    df_curves_imported,
+                    curves_translation,
+                    column,
+                    column_size,
+                )
             else:
-                if column.endswith("_re"):
-                    for translated_column in variable_translations[column]:
-                        curves_translation[translated_column[:-2]] = _prepare_complex_column(
-                            column[:-2],
-                            column_size,
-                            df_curves_imported,
-                            translated_column[:-2],
-                            variable_translations,
-                        )
-                else:
-                    for translated_column in variable_translations[column]:
-                        # Apply the tool sign convention to Dynawo curves
-                        sign = variable_translations[translated_column]
-                        curves_translation[translated_column] = np.multiply(
-                            df_curves_imported[column], sign
-                        ).tolist()
+                _apply_sign_convention(
+                    variable_translations, df_curves_imported, curves_translation, column
+                )
 
     _get_injected_current_curve(column_size, curves_translation)
     _get_network_frequency_curve(column_size, curves_translation)
@@ -370,6 +392,11 @@ def _create_curves(variable_translations: dict, input_file: Path) -> pd.DataFram
     """
     # Get curves file
     df_curves_imported = pd.read_csv(input_file, sep=";")
+    cols = list(df_curves_imported.columns)
+    for i in cols:
+        if i[:7] == "Unnamed":
+            del df_curves_imported[i]
+
     df_curves = _translate_curves(variable_translations, df_curves_imported)
     column_size = len(df_curves_imported["time"])
 
