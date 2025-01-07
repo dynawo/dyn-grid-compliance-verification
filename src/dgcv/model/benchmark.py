@@ -103,6 +103,7 @@ class Benchmark:
         validations = self.__initialize_validation_by_benchmark()
         if parameters.get_producer().get_sim_type() >= MODEL_VALIDATION_PPM:
             validator = ModelValidator(
+                curves_manager,
                 pcs_benchmark_name,
                 parameters,
                 validations,
@@ -110,6 +111,7 @@ class Benchmark:
             )
         else:
             validator = PerformanceValidator(
+                curves_manager,
                 parameters,
                 stable_time,
                 validations,
@@ -469,7 +471,6 @@ class Benchmark:
         fs: float,
         success: bool,
         has_simulated_curves: bool,
-        curves: dict,
     ):
         op_cond = OperatingCondition(
             self._parameters,
@@ -478,7 +479,6 @@ class Benchmark:
         )
 
         op_cond_success, results = op_cond.validate(
-            self._curves_manager,
             self._validator,
             pcs_benchmark_name,
             working_path,
@@ -487,7 +487,6 @@ class Benchmark:
             fs,
             success,
             has_simulated_curves,
-            curves,
         )
 
         # Statuses for the Summary Report
@@ -543,7 +542,6 @@ class Benchmark:
                 success,
                 has_simulated_curves,
                 has_curves,
-                curves,
             ) = self._curves_manager.has_required_curves(
                 self._validator.get_measurement_names(),
                 pcs_benchmark_name,
@@ -561,7 +559,6 @@ class Benchmark:
                     fs,
                     success,
                     has_simulated_curves,
-                    curves,
                 )
                 # If there is a correct simulation, the report must be created
                 success |= op_cond_success

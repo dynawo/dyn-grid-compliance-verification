@@ -16,7 +16,6 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.validator import Disconnection_Model
 from dgcv.curves.curves import ProducerCurves, get_cfg_oc_name
 from dgcv.dynawo import dynawo
 from dgcv.dynawo.dyd import DydFile
@@ -37,7 +36,14 @@ from dgcv.files import (
 from dgcv.files.manage_files import ModelFiles, ProducerFiles
 from dgcv.logging.logging import dgcv_logging
 from dgcv.logging.simulation_logger import SimulationLogger
-from dgcv.model.parameters import Gen_params, Load_init, Load_params, Pdr_params, Pimodel_params
+from dgcv.model.parameters import (
+    Disconnection_Model,
+    Gen_params,
+    Load_init,
+    Load_params,
+    Pdr_params,
+    Pimodel_params,
+)
 from dgcv.validation import common, sanity_checks
 
 
