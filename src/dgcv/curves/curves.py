@@ -14,8 +14,8 @@ import pandas as pd
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR
-from dgcv.core.validator import Disconnection_Model
 from dgcv.electrical.generator_variables import generator_variables
+from dgcv.model.parameters import Disconnection_Model
 from dgcv.model.producer import Producer
 
 

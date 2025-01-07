@@ -18,8 +18,10 @@ from dgcv.core.global_variables import (
     ELECTRIC_PERFORMANCE_SM,
     MODEL_VALIDATION_PPM,
 )
-from dgcv.core.validator import Stability, Validator
+from dgcv.core.validator import Validator
+from dgcv.curves.manager import CurvesManager
 from dgcv.logging.logging import dgcv_logging
+from dgcv.model.parameters import Stability
 from dgcv.validation import common, compliance_list
 
 
@@ -145,12 +147,13 @@ def _run_common_tests(
 class PerformanceValidator(Validator):
     def __init__(
         self,
+        curves_manager: CurvesManager,
         parameters: Parameters,
         stable_time: float,
         validations: list,
         is_field_measurements: bool,
     ):
-        super().__init__(validations, is_field_measurements)
+        super().__init__(curves_manager, validations, is_field_measurements)
         self._producer = parameters.get_producer()
         self._stable_time = stable_time
 
@@ -617,7 +620,6 @@ class PerformanceValidator(Validator):
         sim_output_path: str,
         event_params: dict,
         fs: float,
-        curves: dict,
     ) -> dict:
         """Electric Performance Verification.
 
@@ -639,13 +641,11 @@ class PerformanceValidator(Validator):
         dict
             Compliance results
         """
-        calculated_curves = curves["calculated"]
+        calculated_curves = self.get_calculated_curves()
         calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
-        if "reference" in curves and not curves["reference"].empty:
-            reference_curves = curves["reference"]
+        reference_curves = self.get_reference_curves()
+        if reference_curves is not None:
             reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
-        else:
-            reference_curves = None
 
         # Validations common to all Pcs
         (

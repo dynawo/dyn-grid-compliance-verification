@@ -17,6 +17,7 @@ import pandas as pd
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.validator import Validator
+from dgcv.curves.manager import CurvesManager
 from dgcv.logging.logging import dgcv_logging
 from dgcv.sigpro import signal_windows, sigpro
 from dgcv.validation import common, compliance_list, sanity_checks, threshold_variables
@@ -536,12 +537,13 @@ def _get_measurement_name(
 class ModelValidator(Validator):
     def __init__(
         self,
+        curves_manager: CurvesManager,
         pcs_bm_name: str,
         parameters: Parameters,
         validations: list,
         is_field_measurements: bool,
     ):
-        super().__init__(validations, is_field_measurements)
+        super().__init__(curves_manager, validations, is_field_measurements)
         self._pcs_bm_name = pcs_bm_name
         self._producer = parameters.get_producer()
 
@@ -1155,7 +1157,6 @@ class ModelValidator(Validator):
         sim_output_path: str,
         event_params: dict,
         fs: float,
-        curves: dict,
     ) -> dict:
         """Model Validation.
 
@@ -1182,13 +1183,11 @@ class ModelValidator(Validator):
         # if reference_curves is None:
         #     reference_curves = calculated_curves
 
-        csv_calculated_curves = curves["calculated"]
+        csv_calculated_curves = self.get_calculated_curves()
         csv_calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
-        if not curves["reference"].empty:
-            csv_reference_curves = curves["reference"]
+        csv_reference_curves = self.get_reference_curves()
+        if csv_reference_curves is not None:
             csv_reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
-        else:
-            csv_reference_curves = None
 
         t_com = config.get_float("GridCode", "t_com", 0.002)
         cutoff = config.get_float("GridCode", "cutoff", 15.0)

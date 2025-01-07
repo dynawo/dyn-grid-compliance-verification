@@ -13,11 +13,10 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.validator import Disconnection_Model
+from dgcv.curves.curves import ProducerCurves, get_cfg_oc_name
 from dgcv.curves.importer.importer import CurvesImporter
 from dgcv.files import manage_files
-from dgcv.curves.curves import ProducerCurves, get_cfg_oc_name
-from dgcv.model.parameters import Gen_init, Gen_params
+from dgcv.model.parameters import Disconnection_Model, Gen_init, Gen_params
 
 
 def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:

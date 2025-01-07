@@ -55,41 +55,23 @@ class OperatingCondition:
 
     def __validate(
         self,
-        curves_manager: CurvesManager,
         validator: Validator,
         pcs_bm_name: str,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         event_params: dict,
         fs: float,
-        curves: dict,
     ) -> dict:
 
-        if validator.is_defined_cct():
-            validator.set_time_cct(
-                curves_manager.get_producer_curves().get_time_cct(
-                    working_oc_dir,
-                    jobs_output_dir,
-                    event_params["duration_time"],
-                )
-            )
-        validator.set_generators_imax(curves_manager.get_producer_curves().get_generators_imax())
-        validator.set_disconnection_model(
-            curves_manager.get_producer_curves().get_disconnection_model()
+        validator.complete_parameters(
+            working_oc_dir, jobs_output_dir, event_params, get_cfg_oc_name(pcs_bm_name, self._name)
         )
-        validator.set_setpoint_variation(
-            curves_manager.get_producer_curves().get_setpoint_variation(
-                get_cfg_oc_name(pcs_bm_name, self._name)
-            )
-        )
-
         results = validator.validate(
             self._name,
             working_oc_dir,
             jobs_output_dir,
             event_params,
             fs,
-            curves,
         )
 
         # Operational point without defining its validations
@@ -104,7 +86,6 @@ class OperatingCondition:
 
     def validate(
         self,
-        curves_manager: CurvesManager,
         validator: Validator,
         pcs_bm_name: str,
         working_path: Path,
@@ -113,7 +94,6 @@ class OperatingCondition:
         fs: float,
         success: bool,
         has_simulated_curves: bool,
-        curves: dict,
     ) -> tuple[bool, dict]:
         """Validate the Benchmark.
 
@@ -146,19 +126,17 @@ class OperatingCondition:
         if has_simulated_curves:
             # Validate results
             results = self.__validate(
-                curves_manager,
                 validator,
                 pcs_bm_name,
                 working_path,
                 jobs_output_dir,
                 event_params,
                 fs,
-                curves,
             )
         else:
             results = {"compliance": False, "curves": None}
 
-        results["udim"] = curves_manager.get_producer_curves().get_generator_u_dim()
+        results["udim"] = validator.get_generator_u_dim()
         return success, results
 
     def get_name(self) -> str:

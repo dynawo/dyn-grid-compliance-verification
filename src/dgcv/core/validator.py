@@ -7,19 +7,18 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from collections import namedtuple
 from pathlib import Path
 
+from dgcv.curves.manager import CurvesManager
 from dgcv.validation import compliance_list
-
-Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
-Disconnection_Model = namedtuple(
-    "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
-)
+from dgcv.model.parameters import Disconnection_Model
 
 
 class Validator:
-    def __init__(self, validations: list, is_field_measurements: bool):
+    def __init__(
+        self, curves_manager: CurvesManager, validations: list, is_field_measurements: bool
+    ):
+        self._curves_manager = curves_manager
         self._time_cct = None
         self._generators_imax = {}
         self._disconnection_model = None
@@ -48,6 +47,26 @@ class Validator:
             2 if it is a model validation
         """
         return self._producer.get_sim_type()
+
+    def get_calculated_curves(self) -> dict:
+        """Get calculated curves.
+
+        Returns
+        -------
+        dict
+            Calculated curves.
+        """
+        return self._curves_manager.get_curves("calculated")
+
+    def get_reference_curves(self) -> dict:
+        """Get reference curves.
+
+        Returns
+        -------
+        dict
+            Reference curves.
+        """
+        return self._curves_manager.get_curves("reference")
 
     def is_defined_cct(self) -> bool:
         """Check if it is defined the validation Time_cct.
@@ -99,6 +118,28 @@ class Validator:
         """
         self._setpoint_variation = setpoint_variation
 
+    def get_generator_u_dim(self) -> float:
+        return self._curves_manager.get_generator_u_dim()
+
+    def complete_parameters(
+        self,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        event_params: dict,
+        cfg_oc_name: str,
+    ) -> None:
+        if self.is_defined_cct():
+            self.set_time_cct(
+                self._curves_manager.get_time_cct(
+                    working_oc_dir,
+                    jobs_output_dir,
+                    event_params["duration_time"],
+                )
+            )
+        self.set_generators_imax(self._curves_manager.get_generators_imax())
+        self.set_disconnection_model(self._curves_manager.get_disconnection_model())
+        self.set_setpoint_variation(self._curves_manager.get_setpoint_variation(cfg_oc_name))
+
     def validate(
         self,
         oc_name: str,
@@ -106,7 +147,6 @@ class Validator:
         sim_output_path: str,
         event_params: dict,
         fs: float,
-        curves: dict,
     ) -> dict:
         """Virtual method"""
         pass

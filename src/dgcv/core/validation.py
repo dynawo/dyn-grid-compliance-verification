@@ -209,27 +209,18 @@ class Validation:
         summary_list = []
         report_results = {}
         for pcs in self._pcs_list:
-            try:
-                if not pcs.is_valid():
-                    dgcv_logging.get_logger("Validation").error(
-                        f"{pcs.get_name()} is not a valid PCS"
-                    )
-                    continue
+            if not pcs.is_valid():
+                dgcv_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
+                continue
 
-                report_name, success, pcs_results = pcs.validate(
-                    summary_list,
-                )
-                pcs_results["pcs"] = pcs
-                pcs_results["sim_type"] = self._parameters.get_sim_type()
-                pcs_results["success"] = success
-                pcs_results["report_name"] = report_name
-                report_results[pcs.get_name()] = pcs_results
-            except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
-                if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-                    dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
-                else:
-                    dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
-                exit(1)
+            report_name, success, pcs_results = pcs.validate(
+                summary_list,
+            )
+            pcs_results["pcs"] = pcs
+            pcs_results["sim_type"] = self._parameters.get_sim_type()
+            pcs_results["success"] = success
+            pcs_results["report_name"] = report_name
+            report_results[pcs.get_name()] = pcs_results
 
         # Create the pcs report
         if not is_test_validation:
