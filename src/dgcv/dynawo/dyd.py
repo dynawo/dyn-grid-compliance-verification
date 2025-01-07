@@ -9,10 +9,10 @@
 #
 from pathlib import Path
 
+from dgcv.curves.curves import ProducerCurves
 from dgcv.dynawo.file_variables import FileVariables
 from dgcv.dynawo.translator import dynawo_translator
 from dgcv.files import replace_placeholders
-from dgcv.model.curves import ProducerCurves
 
 
 class DydFile(FileVariables):

@@ -1,6 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 from dgcv.configuration.cfg import config
+from dgcv.curves.curves import ProducerCurves
 from dgcv.electrical.generator_variables import generator_variables
-from dgcv.model.curves import ProducerCurves
 
 
 class FileVariables:

@@ -12,9 +12,9 @@ from pathlib import Path
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.curves.curves import ImportedCurves
+from dgcv.curves.curves import ProducerCurves
+from dgcv.curves.importer.curves import ImportedCurves
 from dgcv.dynawo.curves import DynawoCurves
-from dgcv.model.curves import ProducerCurves
 
 
 def get_producer(

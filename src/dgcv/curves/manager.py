@@ -5,7 +5,7 @@ import pandas as pd
 from dgcv.core.execution_parameters import Parameters
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
-from dgcv.model import curves_factory
+from dgcv.curves import curves_factory
 
 
 class CurvesManager:
