@@ -9,9 +9,9 @@
 #
 from pathlib import Path
 
-from dgcv.curves.producer import ProducerCurves
 from dgcv.dynawo.file_variables import FileVariables
 from dgcv.files import replace_placeholders
+from dgcv.model.curves import ProducerCurves
 from dgcv.model.parameters import Gen_init
 
 

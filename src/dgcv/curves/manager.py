@@ -3,10 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 from dgcv.core.execution_parameters import Parameters
-from dgcv.curves.curves import ImportedCurves
-from dgcv.curves.producer_factory import get_producer_curves
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
+from dgcv.model import curves_factory
 
 
 class CurvesManager:
@@ -23,10 +22,10 @@ class CurvesManager:
         self._producer = parameters.get_producer()
         self._pcs_name = pcs_name
 
-        self._producer_curves = get_producer_curves(
+        self._producer_curves = curves_factory.get_producer(
             parameters, pcs_benchmark_name, stable_time, lib_path, templates_path, pcs_name
         )
-        self._reference_curves = ImportedCurves(parameters)
+        self._reference_curves = curves_factory.get_reference(parameters)
 
     def __has_reference_curves(self) -> bool:
         return self._producer.has_reference_curves_path()

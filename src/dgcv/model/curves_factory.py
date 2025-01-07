@@ -1,19 +1,30 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+
 from pathlib import Path
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.curves.curves import ImportedCurves
 from dgcv.dynawo.curves import DynawoCurves
+from dgcv.model.curves import ProducerCurves
 
 
-def get_producer_curves(
+def get_producer(
     parameters: Parameters,
     pcs_benchmark_name: str,
     stable_time: float,
     lib_path: Path,
     templates_path: Path,
     pcs_name: str,
-):
+) -> ProducerCurves:
     producer = parameters.get_producer()
     if producer.is_dynawo_model():
         job_name = config.get_value(pcs_benchmark_name, "job_name")
@@ -41,3 +52,9 @@ def get_producer_curves(
         return ImportedCurves(parameters)
 
     raise ValueError("Unsupported producer curves")
+
+
+def get_reference(
+    parameters: Parameters,
+) -> ProducerCurves:
+    return ImportedCurves(parameters)

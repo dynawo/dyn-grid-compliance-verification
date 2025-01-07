@@ -1,6 +1,6 @@
 from dgcv.configuration.cfg import config
-from dgcv.curves.producer import ProducerCurves
 from dgcv.electrical.generator_variables import generator_variables
+from dgcv.model.curves import ProducerCurves
 
 
 class FileVariables:
