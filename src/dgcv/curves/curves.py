@@ -13,185 +13,122 @@ import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
+from dgcv.core.global_variables import CASE_SEPARATOR
 from dgcv.core.validator import Disconnection_Model
-from dgcv.curves.importer import CurvesImporter
-from dgcv.files import manage_files
-from dgcv.model.curves import ProducerCurves, get_cfg_oc_name
-from dgcv.model.parameters import Gen_init, Gen_params
+from dgcv.electrical.generator_variables import generator_variables
+from dgcv.model.producer import Producer
 
 
-def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
-    gens = list()
-    for generator in generators:
-        voltage = curves[generator.id + "_AVRSetpointPu"]
-        U0 = voltage.iloc[0]
-        gens.append(Gen_init(generator.id, 0, 0, U0, 0))
-
-    return gens
+def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
+    if pcs_bm_name == oc_name:
+        return oc_name
+    return pcs_bm_name + CASE_SEPARATOR + oc_name
 
 
-def _get_config_value(config, section, option, default=0.0):
-    if config.has_option(section, option):
-        return float(config.get(section, option))
-    return default
-
-
-class ImportedCurves(ProducerCurves):
+class ProducerCurves:
     def __init__(
         self,
         parameters: Parameters,
     ):
-        super().__init__(parameters)
-        self._is_field_measurements = False
+        self._producer = parameters.get_producer()
+        self._line_Xpu = 0.0
 
-    def __get_generators(self, curves: pd.DataFrame) -> list:
-        generators = list()
-        for key in curves.keys():
-            if key.endswith("_AVRSetpointPu"):
-                gen_id = key.replace("_AVRSetpointPu", "")
-                generators.append(Gen_params(gen_id, "", "", "", "", "", ""))
+    def obtain_value(self, value_definition: str) -> str:
+        """Calculate the final value from a definition.
 
-        self.get_producer().set_generators(generators)
-        return generators
+        Parameters
+        ----------
+        value_definition: str
+            Description of the required value
 
-    def __get_curves_dataframe(
-        self,
-        working_oc_dir: Path,
-        pcs_bm_name: str,
-        oc_name: str,
-        success: bool,
-        is_reference: bool = False,
-    ) -> tuple[bool, float, float, float, pd.DataFrame]:
-        has_imported_curves = True
-        if success:
-            importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
-            (
-                df_imported_curves,
-                _,
-                _,
-                fs,
-            ) = importer.get_curves_dataframe(self._producer.get_zone())
-            if df_imported_curves.empty:
-                success = False
-                has_imported_curves = False
+        Returns
+        -------
+        str
+            Final value.
+        """
+        if "*" in value_definition:
+            multiplier = float(value_definition.split("*")[0])
+            value = value_definition.split("*")[1]
+            if value in self.get_unit_characteristics():
+                return multiplier * self.get_unit_characteristics()[value]
+            else:
+                return 0.0
+        elif value_definition in self.get_unit_characteristics():
+            return self.get_unit_characteristics()[value_definition]
+        return value_definition
 
-            if not is_reference:
-                self._generators = self.__get_generators(df_imported_curves)
-                self._gens = _get_generators_ini(self._generators, df_imported_curves)
+    def get_unit_characteristics(self):
+        """Get a set of unit characteristics.
 
-            sim_t_event_start = _get_config_value(
-                importer.config, "Curves-Metadata", "sim_t_event_start"
-            )
-            fault_duration = _get_config_value(
-                importer.config, "Curves-Metadata", "fault_duration"
-            )
-            if fs == 0:
-                fs = _get_config_value(importer.config, "Curves-Metadata", "frequency_sampling")
-
-            if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
-                self._is_field_measurements = bool(
-                    importer.config.get("Curves-Metadata", "is_field_measurements")
-                )
-
-            generators_imax = {}
-            for key in importer.config["Curves-Metadata"].keys():
-                if key.endswith("_GEN_MaxInjectedCurrentPu"):
-                    generator_id = key.replace("_GEN_MaxInjectedCurrentPu", "")
-                    generators_imax[generator_id] = float(
-                        importer.config.get("Curves-Metadata", key)
-                    )
-            self._generators_imax = generators_imax
-
-        else:
-            has_imported_curves = False
-            sim_t_event_start = 0
-            fault_duration = 0
-            fs = 0
-            self._generators_imax = {}
-            df_imported_curves = pd.DataFrame()
-
-        return has_imported_curves, sim_t_event_start, fault_duration, fs, df_imported_curves
-
-    def __obtain_files_curve(
-        self,
-        working_oc_dir: Path,
-        pcs_bm_name: str,
-        oc_name: str,
-        curves: Path,
-        is_reference: bool = False,
-    ):
-        # Copy base case and producers file
-        success = manage_files.copy_base_curves_files(
-            curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
-        )
-        has_imported_curves, sim_t_event_start, fault_duration, fs, df_imported_curves = (
-            self.__get_curves_dataframe(
-                working_oc_dir, pcs_bm_name, oc_name, success, is_reference
-            )
-        )
-
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
-        connect_event_to = config.get_value(config_section, "connect_event_to")
-        if config.has_key(config_section, "setpoint_step_value"):
-            step_value = self.obtain_value(
-                str(config.get_value(config_section, "setpoint_step_value"))
-            )
-        else:
-            step_value = 0
-
-        event_params = {
-            "start_time": sim_t_event_start,
-            "duration_time": fault_duration,
-            "pre_value": 0.0,
-            "step_value": step_value,
-            "connect_to": connect_event_to,
+        Returns
+        -------
+        dict
+            set of unit characteristics.
+        """
+        return {
+            "Pmax": self.get_producer().p_max_pu,
+            "Qmax": self.get_producer().q_max_pu,
+            "Udim": self.get_generator_u_dim() / self.get_producer().u_nom,
+            "line_XPu": self._line_Xpu,
         }
 
-        return (
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-            df_imported_curves,
-        )
+    def get_producer(self) -> Producer:
+        """Get the producer parameters.
+
+        Returns
+        -------
+        Producer
+            Producer parameters.
+        """
+        return self._producer
+
+    def get_generator_u_dim(self) -> float:
+        """Get the Udim.
+
+        Returns
+        -------
+        float
+            Udim.
+        """
+        return generator_variables.get_generator_u_dim(self.get_producer().u_nom)
+
+    def get_setpoint_variation(self, pcs_bm_oc_name: str) -> float:
+        """Get the setpoint variation.
+
+        Parameters
+        ----------
+        pcs_bm_oc_name: str
+            PCS.Benchmark.Operating Condition name
+
+        Returns
+        -------
+        float
+            Setpoint variation.
+        """
+        if config.get_boolean(pcs_bm_oc_name, "hiz_fault") or config.get_boolean(
+            pcs_bm_oc_name, "bolted_fault"
+        ):
+            return 0.0
+
+        config_key = pcs_bm_oc_name + ".Event"
+        setpoint_variation = config.get_value(config_key, "setpoint_step_value")
+        if setpoint_variation:
+            return float(self.obtain_value(str(setpoint_variation)))
+
+        return 0.0
+
+    def get_generators_imax(self) -> dict:
+        """Virtual method"""
+        pass
 
     def obtain_reference_curve(
         self,
         working_oc_dir: Path,
         pcs_bm_name: str,
-        oc_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
-        """Read the reference curves.
-
-        Parameters
-        ----------
-        working_oc_dir: Path
-            Temporal working path
-        pcs_bm_name: str
-            PCS.Benchmark name
-        oc_name: str
-            Operating Condition name
-        curves: Path
-            Reference curves path
-
-        Returns
-        -------
-        float
-            Instant of time when the event is triggered
-        DataFrame
-           Curves imported from the file
-        """
-        (
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-            curves,
-        ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, curves, is_reference=True
-        )
-        return event_params["start_time"], curves
+        """Virtual method"""
+        pass
 
     def obtain_simulated_curve(
         self,
@@ -200,91 +137,19 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, float, bool, bool, pd.DataFrame]:
-        """Read the input curves to get the simulated curves.
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
+        """Virtual method"""
+        pass
 
-        Parameters
-        ----------
-        working_oc_dir: Path
-            Temporal working path
-        pcs_bm_name: str
-            PCS.Benchmark name
-        bm_name: str
-            Benchmark name
-        oc_name: str
-            Operating Condition name
-        reference_event_start_time: float
-            Instant of time when the event is triggered in reference curves
-
-        Returns
-        -------
-        str
-            Simulation output dir
-        float
-            Instant of time when the event is triggered
-        float
-            Fault duration in seconds
-        float
-            Frequency sampling
-        bool
-            True if simulation is success
-        bool
-            True if simulation calculated curves
-        DataFrame
-           Simulation calculated curves
-        """
-        (
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-            curves,
-        ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves_path()
-        )
-
-        return (
-            ".",
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-            curves,
-        )
+    def get_time_cct(
+        self,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        fault_duration: float,
+    ) -> float:
+        """Virtual method"""
+        pass
 
     def get_disconnection_model(self) -> Disconnection_Model:
-        """Get all equipment in the model that can be disconnected in the simulation.
-        When there is no model to simulate, it is not possible to detect the equipment
-        that has been disconnected.
-
-        Returns
-        -------
-        Disconnection_Model
-            Equipment that can be disconnected.
-        """
-        return Disconnection_Model(
-            None,
-            None,
-            [],
-            None,
-        )
-
-    def get_generators_imax(self) -> dict:
-        """Get maximum continuous current.
-
-        Returns
-        -------
-        dict
-            Get maximum continuous current by generator.
-        """
-        return self._generators_imax
-
-    def is_field_measurements(self) -> bool:
-        """Check if the reference curves are field measurements.
-
-        Returns
-        -------
-        bool
-            True if the reference signals are field measurements.
-        """
-        return self._is_field_measurements
+        """Virtual method"""
+        pass
