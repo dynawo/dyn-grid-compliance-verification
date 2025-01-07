@@ -14,7 +14,6 @@ from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR
 from dgcv.core.validator import Validator
-from dgcv.curves.manager import CurvesManager
 from dgcv.logging.logging import dgcv_logging
 
 
