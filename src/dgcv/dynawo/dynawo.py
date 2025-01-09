@@ -581,7 +581,7 @@ def run_base_dynawo(
     if not success:
         log = stderr
 
-    curves_calculated = None
+    curves_calculated = pd.DataFrame()
     if (dynawo_output_dir / "curves/curves.csv").exists() and success and save_file:
         # Create the expected curves
         curves_calculated = _create_curves(
