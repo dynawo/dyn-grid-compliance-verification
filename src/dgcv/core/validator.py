@@ -9,9 +9,11 @@
 #
 from pathlib import Path
 
+import pandas as pd
+
 from dgcv.curves.manager import CurvesManager
-from dgcv.validation import compliance_list
 from dgcv.model.parameters import Disconnection_Model
+from dgcv.validation import compliance_list
 
 
 class Validator:
@@ -25,6 +27,38 @@ class Validator:
         self._setpoint_variation = 0.0
         self._validations = validations
         self._is_field_measurements = is_field_measurements
+
+    def _get_calculated_curves(self) -> dict:
+        return self._curves_manager.get_curves("calculated")
+
+    def _get_reference_curves(self) -> dict:
+        return self._curves_manager.get_curves("reference")
+
+    def _get_calculated_curve_by_name(self, name: str) -> pd.DataFrame:
+        curves = self._curves_manager.get_curves("calculated")
+        if name not in curves.keys():
+            return None
+
+        return curves[name]
+
+    def _get_reference_curve_by_name(self, name: str) -> pd.DataFrame:
+        curves = self._curves_manager.get_curves("reference")
+        if name not in curves.keys():
+            return None
+
+        return curves[name]
+
+    def _get_exclusion_times(self) -> tuple[float, float, float, float]:
+        return self._curves_manager.get_exclusion_times()
+
+    def _get_curves_before_windows(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return self._curves_manager.get_curves_by_windows("before")
+
+    def _get_curves_during_windows(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return self._curves_manager.get_curves_by_windows("during")
+
+    def _get_curves_after_windows(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return self._curves_manager.get_curves_by_windows("after")
 
     def has_validations(self) -> bool:
         """Check if validator has defined validations.
@@ -47,26 +81,6 @@ class Validator:
             2 if it is a model validation
         """
         return self._producer.get_sim_type()
-
-    def get_calculated_curves(self) -> dict:
-        """Get calculated curves.
-
-        Returns
-        -------
-        dict
-            Calculated curves.
-        """
-        return self._curves_manager.get_curves("calculated")
-
-    def get_reference_curves(self) -> dict:
-        """Get reference curves.
-
-        Returns
-        -------
-        dict
-            Reference curves.
-        """
-        return self._curves_manager.get_curves("reference")
 
     def is_defined_cct(self) -> bool:
         """Check if it is defined the validation Time_cct.

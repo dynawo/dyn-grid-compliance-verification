@@ -9,7 +9,6 @@
 #
 from pathlib import Path
 
-import pandas as pd
 from lxml import etree
 
 from dgcv.core.execution_parameters import Parameters
@@ -64,86 +63,6 @@ def _check_timeline(timeline_file: Path, element_type: str) -> tuple[bool, list]
     return no_error, disconnection_list
 
 
-def _run_common_tests(
-    curves: pd.DataFrame,
-    stable_time: float,
-    is_ppm: bool,
-) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
-    bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
-    # Run stabilization test
-    steady_v, first_steady_pos_v = common.is_stable(
-        list(curves["time"]),
-        list(curves[bus_pdr_voltage]),
-        stable_time,
-    )
-
-    steady_p, first_steady_pos_p = common.is_stable(
-        list(curves["time"]),
-        list(curves["BusPDR_BUS_ActivePower"]),
-        stable_time,
-    )
-
-    steady_q, first_steady_pos_q = common.is_stable(
-        list(curves["time"]),
-        list(curves["BusPDR_BUS_ReactivePower"]),
-        stable_time,
-    )
-
-    if not is_ppm:
-        stable_theta = True
-        first_stable_pos_theta = len(curves["time"])
-        pass_pi = True
-        for key in curves.keys():
-            if not key.endswith("_InternalAngle"):
-                continue
-
-            gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
-                list(curves["time"]),
-                list(curves[key]),
-                stable_time,
-            )
-
-            # Check +- Pi
-            gen_pass_pi = common.theta_pi(
-                list(curves["time"]),
-                list(curves[key]),
-            )
-            stable_theta &= gen_stable_theta
-            if gen_first_stable_pos_theta < first_stable_pos_theta:
-                first_stable_pos_theta = gen_first_stable_pos_theta
-            pass_pi &= gen_pass_pi
-
-        if not stable_theta:
-            dgcv_logging.get_logger("Validation").warning("Theta has not reached stabilization")
-        if not pass_pi:
-            dgcv_logging.get_logger("Validation").warning(
-                "Theta has not met the success criterion"
-            )
-    else:
-        stable_theta = False
-        first_stable_pos_theta = 0
-        pass_pi = False
-
-    if not steady_p:
-        dgcv_logging.get_logger("Validation").warning("P has not reached steady state")
-    if not steady_q:
-        dgcv_logging.get_logger("Validation").warning("Q has not reached steady state")
-    if not steady_v:
-        dgcv_logging.get_logger("Validation").warning("V has not reached steady state")
-
-    return (
-        steady_p,
-        first_steady_pos_p,
-        steady_q,
-        first_steady_pos_q,
-        steady_v,
-        first_steady_pos_v,
-        stable_theta,
-        first_stable_pos_theta,
-        pass_pi,
-    )
-
-
 class PerformanceValidator(Validator):
     def __init__(
         self,
@@ -157,41 +76,120 @@ class PerformanceValidator(Validator):
         self._producer = parameters.get_producer()
         self._stable_time = stable_time
 
+    def __run_common_tests(
+        self,
+        stable_time: float,
+        is_ppm: bool,
+    ) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
+        bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
+        # Run stabilization test
+        steady_v, first_steady_pos_v = common.is_stable(
+            list(self._get_calculated_curve_by_name("time")),
+            list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+            stable_time,
+        )
+
+        steady_p, first_steady_pos_p = common.is_stable(
+            list(self._get_calculated_curve_by_name("time")),
+            list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+            stable_time,
+        )
+
+        steady_q, first_steady_pos_q = common.is_stable(
+            list(self._get_calculated_curve_by_name("time")),
+            list(self._get_calculated_curve_by_name("BusPDR_BUS_ReactivePower")),
+            stable_time,
+        )
+
+        if not is_ppm:
+            stable_theta = True
+            first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
+            pass_pi = True
+            for key in self._get_calculated_curves().keys():
+                if not key.endswith("_InternalAngle"):
+                    continue
+
+                gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
+                    list(self._get_calculated_curve_by_name("time")),
+                    list(self._get_calculated_curve_by_name(key)),
+                    stable_time,
+                )
+
+                # Check +- Pi
+                gen_pass_pi = common.theta_pi(
+                    list(self._get_calculated_curve_by_name("time")),
+                    list(self._get_calculated_curve_by_name(key)),
+                )
+                stable_theta &= gen_stable_theta
+                if gen_first_stable_pos_theta < first_stable_pos_theta:
+                    first_stable_pos_theta = gen_first_stable_pos_theta
+                pass_pi &= gen_pass_pi
+
+            if not stable_theta:
+                dgcv_logging.get_logger("Validation").warning(
+                    "Theta has not reached stabilization"
+                )
+            if not pass_pi:
+                dgcv_logging.get_logger("Validation").warning(
+                    "Theta has not met the success criterion"
+                )
+        else:
+            stable_theta = False
+            first_stable_pos_theta = 0
+            pass_pi = False
+
+        if not steady_p:
+            dgcv_logging.get_logger("Validation").warning("P has not reached steady state")
+        if not steady_q:
+            dgcv_logging.get_logger("Validation").warning("Q has not reached steady state")
+        if not steady_v:
+            dgcv_logging.get_logger("Validation").warning("V has not reached steady state")
+
+        return (
+            steady_p,
+            first_steady_pos_p,
+            steady_q,
+            first_steady_pos_q,
+            steady_v,
+            first_steady_pos_v,
+            stable_theta,
+            first_stable_pos_theta,
+            pass_pi,
+        )
+
     def __calculate_simple_times(
         self,
         compliance_values: dict,
-        curves: pd.DataFrame,
         t_event_start: float,
     ):
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         if compliance_list.contains_key(["time_5U"], self._validations):
             compliance_values["time_5u"] = common.get_txu_relative(
                 0.05,
-                list(curves["time"]),
-                list(curves[bus_pdr_voltage]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_10U"], self._validations):
             compliance_values["time_10u"] = common.get_txu_relative(
                 0.10,
-                list(curves["time"]),
-                list(curves[bus_pdr_voltage]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
             compliance_values["time_10pfloor"] = common.get_txpfloor(
                 0.1,
-                list(curves["time"]),
-                list(curves["BusPDR_BUS_ActivePower"]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
                 t_event_start,
             )
 
     def __calculate_composed_times(
         self,
         compliance_values: dict,
-        curves: pd.DataFrame,
         t_event_start: float,
     ) -> dict:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
@@ -200,8 +198,8 @@ class PerformanceValidator(Validator):
         ):
             compliance_values["time_5p"] = common.get_txp(
                 0.05,
-                list(curves["time"]),
-                list(curves["BusPDR_BUS_ActivePower"]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
                 t_event_start,
             )
 
@@ -210,64 +208,66 @@ class PerformanceValidator(Validator):
         ):
             compliance_values["time_10p"] = common.get_txp(
                 0.1,
-                list(curves["time"]),
-                list(curves["BusPDR_BUS_ActivePower"]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_5P_85U", "time_10P_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
                 0.85,
-                list(curves["time"]),
-                list(curves[bus_pdr_voltage]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
                 0.85,
-                list(curves["time"]),
-                list(curves[bus_pdr_voltage]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
                 t_event_start,
             )
             compliance_values["time_10pfloor"] = common.get_txpfloor(
                 0.1,
-                list(curves["time"]),
-                list(curves["BusPDR_BUS_ActivePower"]),
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
                 t_event_start,
             )
 
     def __calculate_times(
         self,
         compliance_values: dict,
-        curves: pd.DataFrame,
         t_event_start: float,
     ):
-        self.__calculate_simple_times(compliance_values, curves, t_event_start)
-        self.__calculate_composed_times(compliance_values, curves, t_event_start)
+        self.__calculate_simple_times(compliance_values, t_event_start)
+        self.__calculate_composed_times(compliance_values, t_event_start)
 
     def __calculate_avr(
         self,
         compliance_values: dict,
-        curves: pd.DataFrame,
         t_event_start: float,
     ):
         if compliance_list.contains_key(["AVR_5"], self._validations):
             AVR_5_crv = list()
             AVR_5_check = True
             AVR_5 = -1
-            filter_col = [col for col in curves if col.endswith("_GEN_MagnitudeControlledByAVRPu")]
+            filter_col = [
+                col
+                for col in self._get_calculated_curves()
+                if col.endswith("_GEN_MagnitudeControlledByAVRPu")
+            ]
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
                 avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
                 gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
-                    list(curves["time"]),
-                    list(curves[magnitude_controlled_by_avr]),
-                    list(curves[avr_setpoint]),
+                    list(self._get_calculated_curve_by_name("time")),
+                    list(self._get_calculated_curve_by_name(magnitude_controlled_by_avr)),
+                    list(self._get_calculated_curve_by_name(avr_setpoint)),
                     t_event_start,
                 )
-                AVR_5_crv.append(list(curves[avr_setpoint]))
+                AVR_5_crv.append(list(self._get_calculated_curve_by_name(avr_setpoint)))
                 AVR_5_check &= gen_AVR_5_check
                 if gen_AVR_5 != -1:
                     AVR_5 = gen_AVR_5
@@ -278,17 +278,20 @@ class PerformanceValidator(Validator):
     def __calculate_frequency(
         self,
         compliance_values: dict,
-        curves: pd.DataFrame,
     ):
         if compliance_list.contains_key(["freq_1"], self._validations):
             check_freq1 = True
             time_freq1 = -1
-            filter_col = [col for col in curves if col.endswith("_GEN_NetworkFrequencyPu")]
+            filter_col = [
+                col
+                for col in self._get_calculated_curves()
+                if col.endswith("_GEN_NetworkFrequencyPu")
+            ]
             for curve_name in filter_col:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
                     1 / 50,
-                    list(curves[curve_name]),
-                    list(curves["time"]),
+                    list(self._get_calculated_curve_by_name(curve_name)),
+                    list(self._get_calculated_curve_by_name("time")),
                 )
                 check_freq1 &= gen_check_freq1
                 if gen_time_freq1 != -1:
@@ -299,29 +302,32 @@ class PerformanceValidator(Validator):
     def __calculate_others(
         self,
         compliance_values: dict,
-        curves: pd.DataFrame,
         t_event_start: float,
     ):
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         compliance_values["is_invalid_test"] = common.is_invalid_test(
-            list(curves["time"]),
-            list(curves[bus_pdr_voltage]),
-            list(curves["BusPDR_BUS_ActivePower"]),
-            list(curves["BusPDR_BUS_ReactivePower"]),
+            list(self._get_calculated_curve_by_name("time")),
+            list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+            list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+            list(self._get_calculated_curve_by_name("BusPDR_BUS_ReactivePower")),
             t_event_start,
         )
 
         if compliance_list.contains_key(["static_diff"], self._validations):
             max_static_diff = 0
-            filter_col = [col for col in curves if col.endswith("_GEN_MagnitudeControlledByAVRPu")]
+            filter_col = [
+                col
+                for col in self._get_calculated_curves()
+                if col.endswith("_GEN_MagnitudeControlledByAVRPu")
+            ]
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
                 avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
 
                 static_diff = common.get_static_diff(
-                    list(curves[magnitude_controlled_by_avr]),
-                    list(curves[avr_setpoint]),
+                    list(self._get_calculated_curve_by_name(magnitude_controlled_by_avr)),
+                    list(self._get_calculated_curve_by_name(avr_setpoint)),
                 )
                 if max_static_diff < static_diff:
                     max_static_diff = static_diff
@@ -330,7 +336,11 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["imax_reac"], self._validations):
             imax_reac = -1
             imax_reac_check = True
-            filter_col = [col for col in curves if col.endswith("_GEN_InjectedCurrent")]
+            filter_col = [
+                col
+                for col in self._get_calculated_curves()
+                if col.endswith("_GEN_InjectedCurrent")
+            ]
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_InjectedCurrent", "")
                 injected_current = generator_id + "_GEN_" + "InjectedCurrent"
@@ -338,9 +348,9 @@ class PerformanceValidator(Validator):
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
                     self._generators_imax[generator_id],
-                    list(curves["time"]),
-                    list(curves[injected_current]),
-                    list(curves[injected_active_current]),
+                    list(self._get_calculated_curve_by_name("time")),
+                    list(self._get_calculated_curve_by_name(injected_current)),
+                    list(self._get_calculated_curve_by_name(injected_active_current)),
                 )
                 if not imax_gen_reac_check:
                     if imax_reac_check:
@@ -353,15 +363,14 @@ class PerformanceValidator(Validator):
 
     def __calculate(
         self,
-        curves: pd.DataFrame,
         t_event_start: float,
     ) -> dict:
         compliance_values = {}
 
-        self.__calculate_times(compliance_values, curves, t_event_start)
-        self.__calculate_avr(compliance_values, curves, t_event_start)
-        self.__calculate_frequency(compliance_values, curves)
-        self.__calculate_others(compliance_values, curves, t_event_start)
+        self.__calculate_times(compliance_values, t_event_start)
+        self.__calculate_avr(compliance_values, t_event_start)
+        self.__calculate_frequency(compliance_values)
+        self.__calculate_others(compliance_values, t_event_start)
 
         return compliance_values
 
@@ -641,12 +650,6 @@ class PerformanceValidator(Validator):
         dict
             Compliance results
         """
-        calculated_curves = self.get_calculated_curves()
-        calculated_curves.to_csv(working_path / "curves_calculated.csv", sep=";")
-        reference_curves = self.get_reference_curves()
-        if reference_curves is not None:
-            reference_curves.to_csv(working_path / "curves_reference.csv", sep=";")
-
         # Validations common to all Pcs
         (
             steady_p,
@@ -658,8 +661,7 @@ class PerformanceValidator(Validator):
             stable_theta,
             first_stable_pos_theta,
             pass_pi,
-        ) = _run_common_tests(
-            calculated_curves,
+        ) = self.__run_common_tests(
             self._stable_time,
             self.get_sim_type() == ELECTRIC_PERFORMANCE_PPM
             or self.get_sim_type() == MODEL_VALIDATION_PPM,
@@ -671,7 +673,6 @@ class PerformanceValidator(Validator):
 
         # Check operational point validations
         validation_values = self.__calculate(
-            calculated_curves,
             t_event,
         )
 
@@ -700,9 +701,9 @@ class PerformanceValidator(Validator):
                 [first_steady_pos_p, first_steady_pos_q, first_steady_pos_v]
             )
 
-        results["curves"] = calculated_curves
-        if reference_curves is not None:
-            results["reference_curves"] = reference_curves
+        results["curves"] = self._get_calculated_curves()
+        if not self._get_reference_curves().empty:
+            results["reference_curves"] = self._get_reference_curves()
 
         return results
 
