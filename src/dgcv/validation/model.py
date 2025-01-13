@@ -7,7 +7,6 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import math
 from pathlib import Path
 
 import numpy as np
@@ -596,12 +595,6 @@ class ModelValidator(Validator):
             results["calc_reaction_time"] = res_reaction_time
             results["ref_reaction_time"] = ref_reaction_time
             results["calc_reaction_target"] = {measurement_name: res_reaction_target}
-            if ref_reaction_time != 0.0:
-                results["reaction_time_error"] = (
-                    abs(res_reaction_time - ref_reaction_time) / ref_reaction_time
-                )
-            else:
-                results["reaction_time_error"] = "-"
 
         if compliance_list.contains_key(["rise_time"], self._validations):
             res_rise_time, res_rise_target = common.get_reached_time(
@@ -619,10 +612,6 @@ class ModelValidator(Validator):
             results["calc_rise_time"] = res_rise_time
             results["ref_rise_time"] = ref_rise_time
             results["calc_rise_target"] = {measurement_name: res_rise_target}
-            if ref_rise_time != 0.0:
-                results["rise_time_error"] = abs(res_rise_time - ref_rise_time) / ref_rise_time
-            else:
-                results["rise_time_error"] = "-"
 
         if compliance_list.contains_key(["response_time"], self._validations):
             res_response_time = common.get_response_time(
@@ -639,12 +628,6 @@ class ModelValidator(Validator):
             )
             results["calc_response_time"] = res_response_time
             results["ref_response_time"] = ref_response_time
-            if ref_response_time != 0.0:
-                results["response_time_error"] = (
-                    abs(res_response_time - ref_response_time) / ref_response_time
-                )
-            else:
-                results["response_time_error"] = "-"
 
         if compliance_list.contains_key(["settling_time"], self._validations):
             (
@@ -671,12 +654,6 @@ class ModelValidator(Validator):
             results["calc_settling_tube"] = {
                 measurement_name: [res_settling_min, res_settling_max]
             }
-            if ref_settling_time != 0.0:
-                results["settling_time_error"] = (
-                    abs(res_settling_time - ref_settling_time) / ref_settling_time
-                )
-            else:
-                results["settling_time_error"] = "-"
 
         if compliance_list.contains_key(["overshoot"], self._validations):
             res_overshoot = common.get_overshoot(
@@ -904,7 +881,6 @@ class ModelValidator(Validator):
     ) -> dict:
         return {
             "compliance": True,
-            "times_check": True,
             "sim_t_event_start": compliance_values["t_event_start"],
             "is_invalid_test": compliance_values["is_invalid_test"],
             "curves_error": compliance_values,
@@ -919,81 +895,69 @@ class ModelValidator(Validator):
             check_results["calc_reaction_target"] = compliance_values["calc_reaction_target"]
             check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
             check_results["ref_reaction_time"] = compliance_values["ref_reaction_time"]
+
             thr_reaction_time = config.get_float("GridCode", "thr_reaction_time", 0.10)
             check_results["reaction_time_thr"] = thr_reaction_time * 100
-            if compliance_values["reaction_time_error"] != "-":
-                check_results["reaction_time_error"] = (
-                    compliance_values["reaction_time_error"] * 100
+
+            check_results["reaction_time_error"], check_results["reaction_time_check"] = (
+                common.check_time(
+                    compliance_values["calc_reaction_time"],
+                    compliance_values["ref_reaction_time"],
+                    thr_reaction_time,
                 )
-                check_results["reaction_time_check"] = (
-                    compliance_values["reaction_time_error"] <= thr_reaction_time
-                )
-                check_results["times_check"] &= check_results["reaction_time_check"]
-                check_results["compliance"] &= check_results["reaction_time_check"]
-            else:
-                check_results["reaction_time_error"] = compliance_values["reaction_time_error"]
-                check_results["reaction_time_check"] = "N/A"
+            )
+
+            check_results["compliance"] &= check_results["reaction_time_check"]
 
         if compliance_list.contains_key(["rise_time"], self._validations):
             check_results["calc_rise_target"] = compliance_values["calc_rise_target"]
             check_results["calc_rise_time"] = compliance_values["calc_rise_time"]
             check_results["ref_rise_time"] = compliance_values["ref_rise_time"]
+
             thr_rise_time = config.get_float("GridCode", "thr_rise_time", 0.10)
             check_results["rise_time_thr"] = thr_rise_time * 100
-            if compliance_values["rise_time_error"] != "-":
-                check_results["rise_time_error"] = compliance_values["rise_time_error"] * 100
-                check_results["rise_time_check"] = (
-                    compliance_values["rise_time_error"] <= thr_rise_time
-                )
-                check_results["times_check"] &= check_results["rise_time_check"]
-                check_results["compliance"] &= check_results["rise_time_check"]
-            else:
-                check_results["rise_time_error"] = compliance_values["rise_time_error"]
-                check_results["rise_time_check"] = "N/A"
+
+            check_results["rise_time_error"], check_results["rise_time_check"] = common.check_time(
+                compliance_values["calc_rise_time"],
+                compliance_values["ref_rise_time"],
+                thr_rise_time,
+            )
+
+            check_results["compliance"] &= check_results["rise_time_check"]
 
         if compliance_list.contains_key(["settling_time"], self._validations):
             check_results["calc_settling_tube"] = compliance_values["calc_settling_tube"]
-            check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
             check_results["calc_ss_value"] = compliance_values["calc_ss_value"]
+            check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
             check_results["ref_settling_time"] = compliance_values["ref_settling_time"]
+
             thr_settling_time = config.get_float("GridCode", "thr_settling_time", 0.10)
             check_results["settling_time_thr"] = thr_settling_time * 100
-            if compliance_values["settling_time_error"] != "-":
-                check_results["settling_time_error"] = (
-                    compliance_values["settling_time_error"] * 100
+
+            check_results["settling_time_error"], check_results["settling_time_check"] = (
+                common.check_time(
+                    compliance_values["calc_settling_time"],
+                    compliance_values["ref_settling_time"],
+                    thr_settling_time,
                 )
-                check_results["settling_time_check"] = (
-                    compliance_values["settling_time_error"] <= thr_settling_time
-                )
-                check_results["times_check"] &= check_results["settling_time_check"]
-                check_results["compliance"] &= check_results["settling_time_check"]
-            else:
-                check_results["settling_time_error"] = compliance_values["settling_time_error"]
-                check_results["settling_time_check"] = "N/A"
+            )
+
+            check_results["compliance"] &= check_results["settling_time_check"]
 
         if compliance_list.contains_key(["overshoot"], self._validations):
-            calc_overshoot = compliance_values["calc_overshoot"]
-            ref_overshoot = compliance_values["ref_overshoot"]
+            check_results["calc_overshoot"] = compliance_values["calc_overshoot"]
+            check_results["ref_overshoot"] = compliance_values["ref_overshoot"]
+
             thr_overshoot = config.get_float("GridCode", "thr_overshoot", 0.15)
-            # Check if the overshoot values differ less than the relative threshold:
-            rtol = thr_overshoot  # e.g., 15% relative error (0.15 per unit)
-            atol = 0.01  # e.g, when magnitudes are below 0.01, switch to abs error
             check_results["overshoot_thr"] = thr_overshoot * 100
-            check_results["overshoot_check"] = math.isclose(
-                calc_overshoot,
-                ref_overshoot,
-                rel_tol=rtol,
-                abs_tol=atol,
+
+            check_results["overshoot_error"], check_results["overshoot_check"] = common.check_time(
+                compliance_values["calc_overshoot"],
+                compliance_values["ref_overshoot"],
+                thr_overshoot,
             )
-            # We only calculate the % error if math.isclose() used relative tolerance:
-            check_results["calc_overshoot"] = calc_overshoot
-            check_results["ref_overshoot"] = ref_overshoot
-            if rtol * max(abs(calc_overshoot), abs(ref_overshoot)) > atol and ref_overshoot != 0.0:
-                check_results["overshoot_error"] = 100 * (
-                    abs(calc_overshoot - ref_overshoot) / ref_overshoot
-                )
-            else:
-                check_results["overshoot_error"] = "-"
+
+            check_results["compliance"] &= check_results["overshoot_check"]
 
     def __check_ramp(
         self,
@@ -1007,7 +971,6 @@ class ModelValidator(Validator):
             check_results["ramp_time_check"] = (
                 compliance_values["ramp_time_lag"] <= thr_ramp_time_lag
             )
-            check_results["times_check"] &= check_results["ramp_time_check"]
             check_results["compliance"] &= check_results["ramp_time_check"]
 
         if compliance_list.contains_key(["ramp_error"], self._validations):
@@ -1015,7 +978,6 @@ class ModelValidator(Validator):
             thr_ramp_error = config.get_float("GridCode", "thr_ramp_error", 0.10)
             check_results["ramp_error_thr"] = thr_ramp_error * 100
             check_results["ramp_error_check"] = compliance_values["ramp_error"] <= thr_ramp_error
-            check_results["times_check"] &= check_results["ramp_error_check"]
             check_results["compliance"] &= check_results["ramp_error_check"]
 
     def __check_mae(
