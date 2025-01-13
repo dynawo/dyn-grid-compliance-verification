@@ -27,6 +27,7 @@ class CurvesManager:
         self._producer = parameters.get_producer()
         self._pcs_name = pcs_name
         self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
+        self._windows = {"calculated": dict(), "reference": dict()}
 
         self._producer_curves = curves_factory.get_producer(
             parameters, pcs_benchmark_name, stable_time, lib_path, templates_path, pcs_name
@@ -237,6 +238,9 @@ class CurvesManager:
             calculated_curves, reference_curves
         )
 
+        self._curves["calculated"] = calculated_curves
+        self._curves["reference"] = reference_curves
+
         t_integrator_tol = config.get_float("GridCode", "t_integrator_tol", 0.000001)
         if setpoint_tracking_controlled_magnitude:
             t_faultQS_excl = 0.0
@@ -246,36 +250,31 @@ class CurvesManager:
             t_clearQS_excl = config.get_float("GridCode", "t_clearQS_excl", 0.060)
 
         t_faultLP_excl = config.get_float("GridCode", "t_faultLP_excl", 0.050)
-        self._before_calculated, self._during_calculated, self._after_calculated = (
-            signal_windows.get(
-                calculated_curves,
-                signal_windows.calculate(
-                    list(calculated_curves["time"]),
-                    event_params["start_time"],
-                    event_params["duration_time"],
-                    t_integrator_tol,
-                    t_faultLP_excl,
-                    t_faultQS_excl,
-                    t_clearQS_excl,
-                ),
-            )
+        self._windows["calculated"] = signal_windows.calculate(
+            list(calculated_curves["time"]),
+            event_params["start_time"],
+            event_params["duration_time"],
+            t_integrator_tol,
+            t_faultLP_excl,
+            t_faultQS_excl,
+            t_clearQS_excl,
         )
-        sanity_checks.check_pre_stable(
-            list(self._before_calculated["time"]),
-            list(self._before_calculated["BusPDR_BUS_Voltage"]),
+        self._windows["reference"] = signal_windows.calculate(
+            list(reference_curves["time"]),
+            event_params["start_time"],
+            event_params["duration_time"],
+            t_integrator_tol,
+            t_faultLP_excl,
+            t_faultQS_excl,
+            t_clearQS_excl,
         )
 
-        self._before_reference, self._during_reference, self._after_reference = signal_windows.get(
-            reference_curves,
-            signal_windows.calculate(
-                list(reference_curves["time"]),
-                event_params["start_time"],
-                event_params["duration_time"],
-                t_integrator_tol,
-                t_faultLP_excl,
-                t_faultQS_excl,
-                t_clearQS_excl,
-            ),
+        before_calculated = signal_windows.get(
+            self.get_curves("calculated"), self._windows["calculated"]["before"]
+        )
+        sanity_checks.check_pre_stable(
+            list(before_calculated["time"]),
+            list(before_calculated["BusPDR_BUS_Voltage"]),
         )
 
         if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
@@ -302,13 +301,25 @@ class CurvesManager:
 
     def get_exclusion_times(self) -> tuple[float, float, float, float]:
         """Get the exclusion times."""
-        excl1_t0 = self._before_calculated["time"].iloc[-1]
-        if len(self._during_calculated["time"]):
-            excl1_t = self._during_calculated["time"].iloc[0]
-            excl2_t0 = self._during_calculated["time"].iloc[-1]
-            excl2_t = self._after_calculated["time"].iloc[0]
+        before_calculated = signal_windows.get(
+            self.get_curves("calculated"), self._windows["calculated"]["before"]
+        )
+        after_calculated = signal_windows.get(
+            self.get_curves("calculated"), self._windows["calculated"]["after"]
+        )
+        excl1_t0 = before_calculated["time"].iloc[-1]
+        if (
+            self._windows["calculated"]["during"].start
+            < self._windows["calculated"]["during"].stop
+        ):
+            during_calculated = signal_windows.get(
+                self.get_curves("calculated"), self._windows["calculated"]["during"]
+            )
+            excl1_t = during_calculated["time"].iloc[0]
+            excl2_t0 = during_calculated["time"].iloc[-1]
+            excl2_t = after_calculated["time"].iloc[0]
         else:
-            excl1_t = self._after_calculated["time"].iloc[0]
+            excl1_t = after_calculated["time"].iloc[0]
             excl2_t0 = 0.0
             excl2_t = 0.0
 
@@ -316,14 +327,9 @@ class CurvesManager:
 
     def get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Get the curves by windows."""
-        if windows == "before":
-            return self._before_calculated, self._before_reference
-        elif windows == "during":
-            return self._during_calculated, self._during_reference
-        elif windows == "after":
-            return self._after_calculated, self._after_reference
-
-        raise ValueError(f"Invalid windows: {windows}")
+        return signal_windows.get(
+            self.get_curves("calculated"), self._windows["calculated"][windows]
+        ), signal_windows.get(self.get_curves("reference"), self._windows["reference"][windows])
 
     def get_generator_u_dim(self) -> float:
         """Get the generator U dimension."""
