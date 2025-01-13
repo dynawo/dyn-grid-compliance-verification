@@ -479,7 +479,7 @@ def create_pdf(
 
     dgcv_logging.get_logger("PDFLatex").debug(proc.stderr.decode("utf-8"))
     if move_report(working_path, output_path, REPORT_NAME):
-        dgcv_logging.get_logger("PDFLatex").info(f"PDF done: {output_path / REPORT_NAME}")
+        dgcv_logging.get_logger("PDFLatex").info("PDF done.")
     else:
         dgcv_logging.get_logger("PDFLatex").error(
             f"An error occurred while generating the report, "
