@@ -13,6 +13,52 @@ import numpy as np
 
 from dgcv.configuration.cfg import config
 
+# when magnitudes are smaller than atol, switch to absolute error
+ATOL = 1.0e-6
+
+
+def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
+    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
+        return True
+    return False
+
+
+def check_time(
+    calculated_time: float, reference_time: float, rtol: float, atol: float = ATOL
+) -> tuple[float, bool]:
+    """Check if the calculated time is within the tolerances of the reference time.
+
+    Parameters
+    ----------
+    calculated_time: float
+        Calculated time
+    reference_time: float
+        Reference time
+    rtol: float
+        Relative tolerance
+    atol: float
+        Aboslute tolerance
+
+    Returns
+    -------
+    float
+        Relative error between the calculated and reference time
+    bool
+        True if the calculated time is within the tolerances of the reference time, False otherwise
+
+    """
+    # when magnitudes are smaller than atol, switch to absolute error
+    time_check = math.isclose(
+        calculated_time,
+        reference_time,
+        rel_tol=rtol,
+        abs_tol=atol,
+    )
+    if _show_error(calculated_time, reference_time, rtol, atol):
+        return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
+    else:
+        return "-", time_check
+
 
 def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_event: float):
     """Check if the results of a step-response test are completely flat (no response).
