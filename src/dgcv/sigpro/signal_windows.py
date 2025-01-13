@@ -81,19 +81,10 @@ def calculate(
     }
 
 
-def get(
-    curves: pd.DataFrame, event_windows: dict
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get(curves: pd.DataFrame, range: slice) -> pd.DataFrame:
     # Create the new curves file
-    before = dict()
-    during = dict()
-    after = dict()
-    before_range = event_windows["before"]
-    during_range = event_windows["during"]
-    after_range = event_windows["after"]
+    wcurves = dict()
     for key in curves:
-        before[key] = list(curves[key])[before_range]
-        during[key] = list(curves[key])[during_range]
-        after[key] = list(curves[key])[after_range]
+        wcurves[key] = list(curves[key])[range]
 
-    return pd.DataFrame(before), pd.DataFrame(during), pd.DataFrame(after)
+    return pd.DataFrame(wcurves)
