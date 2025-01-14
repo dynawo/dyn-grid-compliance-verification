@@ -35,14 +35,14 @@ class Validator:
         return self._curves_manager.get_curves("reference")
 
     def _get_calculated_curve_by_name(self, name: str) -> pd.DataFrame:
-        curves = self._curves_manager.get_curves("calculated")
+        curves = self._get_calculated_curves()
         if name not in curves.keys():
             return None
 
         return curves[name]
 
     def _get_reference_curve_by_name(self, name: str) -> pd.DataFrame:
-        curves = self._curves_manager.get_curves("reference")
+        curves = self._get_reference_curves()
         if name not in curves.keys():
             return None
 
@@ -51,14 +51,8 @@ class Validator:
     def _get_exclusion_times(self) -> tuple[float, float, float, float]:
         return self._curves_manager.get_exclusion_times()
 
-    def _get_curves_before_windows(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        return self._curves_manager.get_curves_by_windows("before")
-
-    def _get_curves_during_windows(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        return self._curves_manager.get_curves_by_windows("during")
-
-    def _get_curves_after_windows(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        return self._curves_manager.get_curves_by_windows("after")
+    def _get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return self._curves_manager.get_curves_by_windows(windows)
 
     def has_validations(self) -> bool:
         """Check if validator has defined validations.

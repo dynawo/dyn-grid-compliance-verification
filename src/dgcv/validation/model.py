@@ -833,9 +833,9 @@ class ModelValidator(Validator):
         if setpoint_variation == 0.0:
             step_magnitude = 1.0
         results = {
-            "before": _calculate_errors(self._get_curves_before_windows(), step_magnitude),
-            "during": _calculate_errors(self._get_curves_during_windows(), step_magnitude),
-            "after": _calculate_errors(self._get_curves_after_windows(), step_magnitude),
+            "before": _calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
+            "during": _calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
+            "after": _calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
             "is_invalid_test": common.is_invalid_test(
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
@@ -868,7 +868,7 @@ class ModelValidator(Validator):
         _calculate_curves_errors(zone, self._is_field_measurements, results)
         self.__calculate_mean_absolute_error(
             measurement_name,
-            self._get_curves_after_windows(),
+            self._get_curves_by_windows("after"),
             setpoint_variation,
             results,
         )
@@ -1129,7 +1129,7 @@ class ModelValidator(Validator):
             Compliance results
         """
 
-        self._curves_manager.prepare_curves(
+        self._curves_manager.apply_signal_processing(
             working_path,
             event_params,
             fs,

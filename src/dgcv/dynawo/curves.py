@@ -944,10 +944,31 @@ class DynawoCurves(ProducerCurves):
         return generators_imax
 
     def get_simulation_start(self) -> float:
+        """Get simulation start time.
+
+        Returns
+        -------
+        float
+            Simulation start time.
+        """
         return self._simulation_start
 
     def get_simulation_duration(self) -> float:
+        """Get simulation duration time.
+
+        Returns
+        -------
+        float
+            Simulation duration time.
+        """
         return self._simulation_stop - self._simulation_start
 
     def get_simulation_precision(self) -> float:
+        """Get simulation precision.
+
+        Returns
+        -------
+        float
+            Simulation precision.
+        """
         return self._simulation_precision
