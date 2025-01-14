@@ -37,7 +37,7 @@ class CurvesManager:
     def __has_reference_curves(self) -> bool:
         return self._producer.has_reference_curves_path()
 
-    def _get_reference_curves_path(self) -> Path:
+    def __get_reference_curves_path(self) -> Path:
         if not hasattr(self, "_reference_curves_path"):
             self._reference_curves_path = self._producer.get_reference_curves_path()
         return self._reference_curves_path
@@ -58,7 +58,7 @@ class CurvesManager:
                 reference_event_start_time,
                 self._curves["reference"],
             ) = self.get_reference_curves().obtain_reference_curve(
-                working_oc_dir, pcs_bm_name, oc_name, self._get_reference_curves_path()
+                working_oc_dir, pcs_bm_name, oc_name, self.__get_reference_curves_path()
             )
 
         (
@@ -85,7 +85,7 @@ class CurvesManager:
             has_simulated_curves,
         )
 
-    def _check_curves(
+    def __check_curves(
         self,
         measurement_names: list,
         curves: pd.DataFrame,
@@ -111,7 +111,7 @@ class CurvesManager:
                     )
         return has_curves
 
-    def _save_curves(self, working_oc_dir: Path):
+    def __save_curves(self, working_oc_dir: Path):
         if not self.get_curves("calculated").empty:
             self.get_curves("calculated").to_csv(working_oc_dir / "curves_calculated.csv", sep=";")
         if not self.get_curves("reference").empty:
@@ -128,10 +128,14 @@ class CurvesManager:
 
         Parameters
         ----------
+        measurement_names: list
+            Measurement names
         pcs_bm_name: str
             Composite name, pcs + Benchmark name
         bm_name: str
             Benchmark name
+        oc_name: str
+            Operating Condition name
 
         Returns
         -------
@@ -169,13 +173,13 @@ class CurvesManager:
         # If the tool has the model, it is assumed that the simulated curves are always available,
         #  if they are not available it is due to a failure in the simulation, this event is
         #  handled differently.
-        sim_curves = self._check_curves(
+        sim_curves = self.__check_curves(
             measurement_names,
             self.get_curves("calculated"),
             "producer",
             not self._producer.is_dynawo_model(),
         )
-        ref_curves = self._check_curves(
+        ref_curves = self.__check_curves(
             measurement_names,
             self.get_curves("reference"),
             "reference",
@@ -192,7 +196,7 @@ class CurvesManager:
             dgcv_logging.get_logger("Curves Manager").warning("Test without curves")
             has_curves = 3
 
-        self._save_curves(working_oc_dir)
+        self.__save_curves(working_oc_dir)
 
         return (
             working_oc_dir,
@@ -204,13 +208,26 @@ class CurvesManager:
             has_curves,
         )
 
-    def prepare_curves(
+    def apply_signal_processing(
         self,
         working_path: Path,
         event_params: dict,
         fs: float,
         setpoint_tracking_controlled_magnitude: bool,
     ):
+        """Apply signal processing.
+
+        Parameters
+        ----------
+        working_path: Path
+            Working path.
+        event_params: dict
+            Event parameters.
+        fs: float
+            Frequency sampling.
+        setpoint_tracking_controlled_magnitude: bool
+            Setpoint tracking controlled magnitude.
+        """
         # Activate this code to use the curve calculated as a reference curve,
         # only for debug cases without reference curves.
         # if reference_curves is None:
@@ -282,15 +299,38 @@ class CurvesManager:
             reference_curves.to_csv(working_path / "reference.csv", sep=";")
 
     def get_producer_curves(self) -> curves_factory.ProducerCurves:
-        """Get the producer curves."""
+        """Get the producer curves.
+
+        Returns
+        -------
+        curves_factory.ProducerCurves
+            Producer curves.
+        """
         return self._producer_curves
 
     def get_reference_curves(self) -> curves_factory.ProducerCurves:
-        """Get the reference curves."""
+        """Get the reference curves.
+
+        Returns
+        -------
+        curves_factory.ProducerCurves
+            Reference curves.
+        """
         return self._reference_curves
 
     def get_curves(self, curve: str) -> pd.DataFrame:
-        """Get the curves."""
+        """Get the curves.
+
+        Parameters
+        ----------
+        curve: str
+            calculated or reference curves.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with the selected curves.
+        """
         if curve not in self._curves:
             return pd.DataFrame()
 
@@ -300,7 +340,19 @@ class CurvesManager:
         return self._curves[curve]
 
     def get_exclusion_times(self) -> tuple[float, float, float, float]:
-        """Get the exclusion times."""
+        """Get the exclusion times.
+
+        Returns
+        -------
+        float
+            Exclusion time before the event is triggered.
+        float
+            Exclusion time after the event is triggered.
+        float
+            Exclusion time before the event is cleared, if the event is cleared.
+        float
+            Exclusion time after the event is cleared, if the event is cleared.
+        """
         before_calculated = signal_windows.get(
             self.get_curves("calculated"), self._windows["calculated"]["before"]
         )
@@ -326,13 +378,32 @@ class CurvesManager:
         return excl1_t0, excl1_t, excl2_t0, excl2_t
 
     def get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Get the curves by windows."""
+        """Get the curves by windows.
+
+        Parameters
+        ----------
+        windows: str
+            before, during or after window.
+
+        Returns
+        -------
+        pd.DataFrame
+            A dataframe with the selected window of calculated curves.
+        pd.DataFrame
+            A dataframe with the selected window of reference curves.
+        """
         return signal_windows.get(
             self.get_curves("calculated"), self._windows["calculated"][windows]
         ), signal_windows.get(self.get_curves("reference"), self._windows["reference"][windows])
 
     def get_generator_u_dim(self) -> float:
-        """Get the generator U dimension."""
+        """Get the generator Udim.
+
+        Returns
+        -------
+        float
+            Generator Udim.
+        """
         return self.get_producer_curves().get_generator_u_dim()
 
     def get_time_cct(
@@ -341,7 +412,22 @@ class CurvesManager:
         jobs_output_dir: Path,
         fault_duration: float,
     ) -> float:
-        """Get the time CCT."""
+        """Get the time CCT.
+
+        Parameters
+        ----------
+        working_oc_dir: Path
+            Working path.
+        jobs_output_dir: Path
+            Jobs output path.
+        fault_duration: float
+            Fault duration.
+
+        Returns
+        -------
+        float
+            Time CCT.
+        """
         return self.get_producer_curves().get_time_cct(
             working_oc_dir,
             jobs_output_dir,
@@ -349,10 +435,38 @@ class CurvesManager:
         )
 
     def get_generators_imax(self) -> dict:
+        """Get maximum continuous current.
+
+        Returns
+        -------
+        dict
+            Get maximum continuous current by generator.
+        """
         return self.get_producer_curves().get_generators_imax()
 
     def get_disconnection_model(self) -> Disconnection_Model:
+        """Get all equipment in the model that can be disconnected in the simulation.
+        When there is no model to simulate, it is not possible to detect the equipment
+        that has been disconnected.
+
+        Returns
+        -------
+        Disconnection_Model
+            Equipment that can be disconnected.
+        """
         return self.get_producer_curves().get_disconnection_model()
 
     def get_setpoint_variation(self, pcs_bm_oc_name: str) -> float:
+        """Get the setpoint variation.
+
+        Parameters
+        ----------
+        pcs_bm_oc_name: str
+            Composite name, pcs + Benchmark name + Operating Condition name.
+
+        Returns
+        -------
+        float
+            Setpoint variation.
+        """
         return self.get_producer_curves().get_setpoint_variation(pcs_bm_oc_name)

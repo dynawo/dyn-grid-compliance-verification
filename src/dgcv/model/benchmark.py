@@ -461,6 +461,17 @@ class Benchmark:
                 ]
             )
 
+    def __has_required_curves(
+        self,
+        measurement_names: list,
+        pcs_bm_name: str,
+        bm_name: str,
+        oc_name: str,
+    ) -> tuple[Path, Path, dict, float, bool, bool, int]:
+        return self._curves_manager.has_required_curves(
+            measurement_names, pcs_bm_name, bm_name, oc_name
+        )
+
     def __validate(
         self,
         op_name: str,
@@ -542,7 +553,7 @@ class Benchmark:
                 success,
                 has_simulated_curves,
                 has_curves,
-            ) = self._curves_manager.has_required_curves(
+            ) = self.__has_required_curves(
                 self._validator.get_measurement_names(),
                 pcs_benchmark_name,
                 self._name,
