@@ -127,6 +127,13 @@ class Validator:
         self._setpoint_variation = setpoint_variation
 
     def get_generator_u_dim(self) -> float:
+        """Get the generator Udim.
+
+        Returns
+        -------
+        float
+            Generator Udim.
+        """
         return self._curves_manager.get_generator_u_dim()
 
     def complete_parameters(
@@ -136,6 +143,19 @@ class Validator:
         event_params: dict,
         cfg_oc_name: str,
     ) -> None:
+        """Complete the parameters of the validation.
+
+        Parameters
+        ----------
+        working_oc_dir: Path
+            Working directory.
+        jobs_output_dir: Path
+            Jobs output directory.
+        event_params: dict
+            Event parameters.
+        cfg_oc_name: str
+            Composite name, pcs + Benchmark name + Operating Condition name.
+        """
         if self.is_defined_cct():
             self.set_time_cct(
                 self._curves_manager.get_time_cct(

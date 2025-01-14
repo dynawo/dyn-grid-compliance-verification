@@ -107,7 +107,7 @@ class Benchmark:
                 pcs_benchmark_name,
                 parameters,
                 validations,
-                curves_manager.get_reference_curves().is_field_measurements(),
+                curves_manager.is_field_measurements(),
             )
         else:
             validator = PerformanceValidator(
@@ -115,7 +115,7 @@ class Benchmark:
                 parameters,
                 stable_time,
                 validations,
-                curves_manager.get_reference_curves().is_field_measurements(),
+                curves_manager.is_field_measurements(),
             )
 
         # If it is not a pcs with multiple operating conditions, returns itself

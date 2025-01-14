@@ -29,10 +29,16 @@ class CurvesManager:
         self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._windows = {"calculated": dict(), "reference": dict()}
 
-        self._producer_curves = curves_factory.get_producer(
+        self._producer_curves_generator = curves_factory.get_producer(
             parameters, pcs_benchmark_name, stable_time, lib_path, templates_path, pcs_name
         )
-        self._reference_curves = curves_factory.get_reference(parameters)
+        self._reference_curves_generator = curves_factory.get_reference(parameters)
+
+    def __get_producer_curves_generator(self):
+        return self._producer_curves_generator
+
+    def __get_reference_curves_generator(self):
+        return self._reference_curves_generator
 
     def __has_reference_curves(self) -> bool:
         return self._producer.has_reference_curves_path()
@@ -57,7 +63,7 @@ class CurvesManager:
             (
                 reference_event_start_time,
                 self._curves["reference"],
-            ) = self.get_reference_curves().obtain_reference_curve(
+            ) = self.__get_reference_curves_generator().obtain_reference_curve(
                 working_oc_dir, pcs_bm_name, oc_name, self.__get_reference_curves_path()
             )
 
@@ -68,7 +74,7 @@ class CurvesManager:
             success,
             has_simulated_curves,
             self._curves["calculated"],
-        ) = self.get_producer_curves().obtain_simulated_curve(
+        ) = self.__get_producer_curves_generator().obtain_simulated_curve(
             working_oc_dir,
             pcs_bm_name,
             bm_name,
@@ -298,26 +304,6 @@ class CurvesManager:
             calculated_curves.to_csv(working_path / "signal.csv", sep=";")
             reference_curves.to_csv(working_path / "reference.csv", sep=";")
 
-    def get_producer_curves(self) -> curves_factory.ProducerCurves:
-        """Get the producer curves.
-
-        Returns
-        -------
-        curves_factory.ProducerCurves
-            Producer curves.
-        """
-        return self._producer_curves
-
-    def get_reference_curves(self) -> curves_factory.ProducerCurves:
-        """Get the reference curves.
-
-        Returns
-        -------
-        curves_factory.ProducerCurves
-            Reference curves.
-        """
-        return self._reference_curves
-
     def get_curves(self, curve: str) -> pd.DataFrame:
         """Get the curves.
 
@@ -404,7 +390,7 @@ class CurvesManager:
         float
             Generator Udim.
         """
-        return self.get_producer_curves().get_generator_u_dim()
+        return self.__get_producer_curves_generator().get_generator_u_dim()
 
     def get_time_cct(
         self,
@@ -428,7 +414,7 @@ class CurvesManager:
         float
             Time CCT.
         """
-        return self.get_producer_curves().get_time_cct(
+        return self.__get_producer_curves_generator().get_time_cct(
             working_oc_dir,
             jobs_output_dir,
             fault_duration,
@@ -442,7 +428,7 @@ class CurvesManager:
         dict
             Get maximum continuous current by generator.
         """
-        return self.get_producer_curves().get_generators_imax()
+        return self.__get_producer_curves_generator().get_generators_imax()
 
     def get_disconnection_model(self) -> Disconnection_Model:
         """Get all equipment in the model that can be disconnected in the simulation.
@@ -454,7 +440,7 @@ class CurvesManager:
         Disconnection_Model
             Equipment that can be disconnected.
         """
-        return self.get_producer_curves().get_disconnection_model()
+        return self.__get_producer_curves_generator().get_disconnection_model()
 
     def get_setpoint_variation(self, pcs_bm_oc_name: str) -> float:
         """Get the setpoint variation.
@@ -469,4 +455,14 @@ class CurvesManager:
         float
             Setpoint variation.
         """
-        return self.get_producer_curves().get_setpoint_variation(pcs_bm_oc_name)
+        return self.__get_producer_curves_generator().get_setpoint_variation(pcs_bm_oc_name)
+
+    def is_field_measurements(self) -> bool:
+        """Check if the reference curves are field measurements.
+
+        Returns
+        -------
+        bool
+            True if the reference signals are field measurements.
+        """
+        return self.__get_reference_curves_generator().is_field_measurements()

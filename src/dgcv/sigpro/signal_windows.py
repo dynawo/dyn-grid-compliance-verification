@@ -82,6 +82,20 @@ def calculate(
 
 
 def get(curves: pd.DataFrame, range: slice) -> pd.DataFrame:
+    """Obtain the curves in the given range from the input curves.
+
+    Parameters
+    ----------
+    curves: DataFrame
+        Curves to be windowed.
+    range: slice
+        Range to be extracted.
+
+    Returns
+    -------
+    DataFrame
+        Curves in the range.
+    """
     # Create the new curves file
     wcurves = dict()
     for key in curves:

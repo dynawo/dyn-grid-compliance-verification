@@ -25,6 +25,29 @@ def get_producer(
     templates_path: Path,
     pcs_name: str,
 ) -> ProducerCurves:
+    """Gets the producer curve generator.
+
+    Parameters
+    ----------
+    parameters: Parameters
+        Tool parameters
+    pcs_benchmark_name : str
+        Composite name, pcs + Benchmark name.
+    stable_time: float
+        Minimum duration required to consider stability reached (measured from the tail)
+    lib_path : Path
+        Path where the TSO models are saved within the package.
+    templates_path : Path
+        Path where the pcs templates are saved within the package
+    pcs_name : str
+        Pcs name.
+
+    Returns
+    -------
+    ProducerCurves
+        Object for obtaining the producer curves, these can be generated using the Dynawo
+        simulator, or they can be imported from files.
+    """
     producer = parameters.get_producer()
     if producer.is_dynawo_model():
         job_name = config.get_value(pcs_benchmark_name, "job_name")
@@ -56,5 +79,17 @@ def get_producer(
 
 def get_reference(
     parameters: Parameters,
-) -> ProducerCurves:
+) -> ImportedCurves:
+    """Gets the reference curve generator.
+
+    Parameters
+    ----------
+    parameters: Parameters
+        Tool parameters
+
+    Returns
+    -------
+    ProducerCurves
+        Object for obtaining reference curves, these must be imported from files.
+    """
     return ImportedCurves(parameters)
