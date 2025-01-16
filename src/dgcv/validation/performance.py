@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 from lxml import etree
 
+from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import (
     ELECTRIC_PERFORMANCE_PPM,
@@ -303,10 +304,11 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["freq_1"], self._validations):
             check_freq1 = True
             time_freq1 = -1
+            f_nom = config.get_float("Global", "f_nom", 50.0)
             filter_col = [col for col in curves if col.endswith("_GEN_NetworkFrequencyPu")]
             for curve_name in filter_col:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
-                    1 / 50,
+                    1 / f_nom,
                     list(curves[curve_name]),
                     list(curves["time"]),
                 )

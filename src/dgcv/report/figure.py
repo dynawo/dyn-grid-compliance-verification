@@ -277,29 +277,30 @@ def _plot_additional_curves(
         val_85 = results["time_85U"] + results["sim_t_event_start"]
         plt.axvline(x=val_85, color="0.8", linestyle="--")
 
+    f_nom = config.get_float("Global", "f_nom", 50.0)
     if "freq_1" in additional_curves:
-        plt.axhline(y=(50 + 1) / 50, color="#c44e52", linestyle="--")
-        if ymax < (50 + 1.5) / 50:
-            ymax = (50 + 1.5) / 50
-        plt.axhline(y=(50 - 1) / 50, color="#c44e52", linestyle="--")
-        if ymin > (50 - 1.5) / 50:
-            ymin = (50 - 1.5) / 50
+        plt.axhline(y=(f_nom + 1) / f_nom, color="#c44e52", linestyle="--")
+        if ymax and ymax < (f_nom + 1.5) / f_nom:
+            ymax = (f_nom + 1.5) / f_nom
+        plt.axhline(y=(f_nom - 1) / f_nom, color="#c44e52", linestyle="--")
+        if ymin and ymin > (f_nom - 1.5) / f_nom:
+            ymin = (f_nom - 1.5) / f_nom
 
     if "freq_200" in additional_curves:
-        plt.axhline(y=(50 + 0.2) / 50, color="#55a868", linestyle="--")
-        if ymax < (50 + 0.25) / 50:
-            ymax = (50 + 0.25) / 50
-        plt.axhline(y=(50 - 0.2) / 50, color="#55a868", linestyle="--")
-        if ymin > (50 - 0.25) / 50:
-            ymin = (50 - 0.25) / 50
+        plt.axhline(y=(f_nom + 0.2) / f_nom, color="#55a868", linestyle="--")
+        if ymax and ymax < (f_nom + 0.25) / f_nom:
+            ymax = (f_nom + 0.25) / f_nom
+        plt.axhline(y=(f_nom - 0.2) / f_nom, color="#55a868", linestyle="--")
+        if ymin and ymin > (f_nom - 0.25) / f_nom:
+            ymin = (f_nom - 0.25) / f_nom
 
     if "freq_250" in additional_curves:
-        plt.axhline(y=(50 + 0.250) / 50, color="#c44e52", linestyle="--")
-        if ymax < (50 + 0.3) / 50:
-            ymax = (50 + 0.3) / 50
-        plt.axhline(y=(50 - 0.250) / 50, color="#c44e52", linestyle="--")
-        if ymin > (50 - 0.3) / 50:
-            ymin = (50 - 0.3) / 50
+        plt.axhline(y=(f_nom + 0.250) / f_nom, color="#c44e52", linestyle="--")
+        if ymax and ymax < (f_nom + 0.3) / f_nom:
+            ymax = (f_nom + 0.3) / f_nom
+        plt.axhline(y=(f_nom - 0.250) / f_nom, color="#c44e52", linestyle="--")
+        if ymin and ymin > (f_nom - 0.3) / f_nom:
+            ymin = (f_nom - 0.3) / f_nom
 
     if "AVR5" in additional_curves:
         # Get the tube
