@@ -65,10 +65,46 @@ For the first run of the tool we will assume that:
 The tool currently has different entry points, at this point we will briefly 
 describe each entry point.
 
-### Electric performance verification (for Synchronous Machines):
+### RMS model validation:
 
-In this mode the tool runs an execution pipeline consisting in a set of pre-defined 
-tests for _Synchronous Machines_, those of _Fiches_ "I" in RTE's DTR.
+In this mode the tool runs a set of *Model Validation tests*. Some of these tests 
+resemble those of the *PCS* in the provisional operation notification (ION) stage 
+in the RTE's DTR, while some are different.
+
+``` 
+(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv validate -h
+usage: dgcv validate [-h] [-d] [-l LAUNCHER_DWO]
+                     [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
+                     [-o RESULTS_DIR] [-od]
+                     [reference_curves]
+
+positional arguments:
+  reference_curves      enter the path to the folder containing the reference
+                        curves for the Performance Checking Sheet (PCS)
+
+options:
+  -h, --help            show this help message and exit
+  -d, --debug           more debug messages
+  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
+                        enter the path to the Dynawo launcher
+  -m PRODUCER_MODEL, --producer_model PRODUCER_MODEL
+                        enter the path to the folder containing the
+                        producer_model files (DYD, PAR, INI)
+  -c PRODUCER_CURVES, --producer_curves PRODUCER_CURVES
+                        enter the path to the folder containing the curves for
+                        the Performance Checking Sheet (PCS)
+  -p PCS, --pcs PCS     enter one Performance Checking Sheet (PCS) to validate
+  -o RESULTS_DIR, --results_dir RESULTS_DIR
+                        enter the path to the results dir
+  -od, --only_dtr       validate using only the PCS defined in the DTR
+```
+
+### Electric performance verification:
+
+This command can be used with PPM, Stockage or with synchronous machines.
+In this mode the tool runs an execution pipeline consisting in a set of pre-defined
+tests, those of the *PCS* in the provisional operation notification (ION) stage in 
+the RTE's DTR.
 
 ``` 
 (dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv performance -h
@@ -99,96 +135,7 @@ the curves are used only for showing them on the graphs, along the simulated
 curves). Therefore, you must provide either a *PRODUCER_MODEL* or a
 *PRODUCER_CURVE* directory, or both.
 
-### Electric performance verification (for Power Park Modules):
-
-In this mode the tool runs an execution pipeline consisting of a set of pre-defined 
-tests for _Power Park Modules_, those of _Fiches_ "I" in RTE's DTR.
-
-``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv performance -h
-usage: dgcv performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
-                     [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m PRODUCER_MODEL, --producer_model PRODUCER_MODEL
-                        enter the path to the folder containing the
-                        producer_model files (DYD, PAR, INI)
-  -c PRODUCER_CURVES, --producer_curves PRODUCER_CURVES
-                        enter the path to the folder containing the curves for
-                        the Performance Checking Sheet (PCS)
-  -p PCS, --pcs PCS     enter one Performance Checking Sheet (PCS) to validate
-  -o RESULTS_DIR, --results_dir RESULTS_DIR
-                        enter the path to the results dir
-  -od, --only_dtr       validate using only the PCS defined in the DTR
-
-```
-
-Note that, in this mode, the tool can perform the electrical performance
-verification using either a user-provided dynawo **model** (running Dynawo
-simulations), or a set of user-provided **curves**, or both (in which case the
-curves are used only for showing them on the graphs, along the simulated
-curves). Therefore, you must provide either a *PRODUCER_MODEL* or a
-*PRODUCER_CURVE* directory, or both.
-
-### RMS model validation of PPMs:
-
-In this mode the tool runs an execution pipeline consisting in a set of pre-defined 
-tests for _Power Park Modules_, those of _Fiches_ "X" in RTE's DTR.
-
-``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv validate -h
-usage: dgcv validate [-h] [-d] [-l LAUNCHER_DWO]
-                     [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
-                     [-o RESULTS_DIR] [-od]
-                     [reference_curves]
-
-positional arguments:
-  reference_curves      enter the path to the folder containing the reference
-                        curves for the Performance Checking Sheet (PCS)
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m PRODUCER_MODEL, --producer_model PRODUCER_MODEL
-                        enter the path to the folder containing the
-                        producer_model files (DYD, PAR, INI)
-  -c PRODUCER_CURVES, --producer_curves PRODUCER_CURVES
-                        enter the path to the folder containing the curves for
-                        the Performance Checking Sheet (PCS)
-  -p PCS, --pcs PCS     enter one Performance Checking Sheet (PCS) to validate
-  -o RESULTS_DIR, --results_dir RESULTS_DIR
-                        enter the path to the results dir
-  -od, --only_dtr       validate using only the PCS defined in the DTR
-```
-
 ## Also available, but won’t be further discussed here
-
-### Model compilation of custom Dynawo assembled models:
-
-Note: compilation of internally-defined assembled models is invoked automatically
-
-``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile -h
-usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
-
-Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $DGCV_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
-                        XML file describing a custom Modelica model
-  -f, --force           force the recompilation of all Modelica models (the
-                        user's and the tool's own)
-```
 
 ### Generation of Producer Inputs:
 
@@ -211,6 +158,27 @@ options:
                         enter the desired topology to implement in the DYD file
   -v {performance_SM,performance_PPM,model}, --validation {performance_SM,performance_PPM,model}
                         enter the validation type
+```
+
+### Model compilation of custom Dynawo assembled models:
+
+Note: compilation of internally-defined assembled models is invoked automatically
+
+``` 
+(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile -h
+usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
+
+Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $DGCV_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
+
+options:
+  -h, --help            show this help message and exit
+  -d, --debug           more debug messages
+  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
+                        enter the path to the Dynawo launcher
+  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
+                        XML file describing a custom Modelica model
+  -f, --force           force the recompilation of all Modelica models (the
+                        user's and the tool's own)
 ```
 
 ### Curve Anonymizer:
@@ -498,8 +466,10 @@ dgcv$
 ├── templates
 │   ├── PCS
 │   │   ├── model
+│   │   │   ├── BESS
 │   │   │   └── PPM
 │   │   ├── performance
+│   │   │   ├── BESS
 │   │   │   ├── PPM
 │   │   │   └── SM
 │   │   └── README.md
@@ -507,8 +477,10 @@ dgcv$
 │   └── reports
 │       ├── fig_placeholder.pdf
 │       ├── model
+│       │   ├── BESS
 │       │   └── PPM
 │       ├── performance
+│       │   ├── BESS
 │       │   ├── PPM
 │       │   └── SM
 │       ├── README.md
