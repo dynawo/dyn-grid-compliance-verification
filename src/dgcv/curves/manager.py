@@ -264,32 +264,17 @@ class CurvesManager:
         self._curves["calculated"] = calculated_curves
         self._curves["reference"] = reference_curves
 
-        t_integrator_tol = config.get_float("GridCode", "t_integrator_tol", 0.000001)
-        if setpoint_tracking_controlled_magnitude:
-            t_faultQS_excl = 0.0
-            t_clearQS_excl = 0.0
-        else:
-            t_faultQS_excl = config.get_float("GridCode", "t_faultQS_excl", 0.020)
-            t_clearQS_excl = config.get_float("GridCode", "t_clearQS_excl", 0.060)
-
-        t_faultLP_excl = config.get_float("GridCode", "t_faultLP_excl", 0.050)
         self._windows["calculated"] = signal_windows.calculate(
             list(calculated_curves["time"]),
             event_params["start_time"],
             event_params["duration_time"],
-            t_integrator_tol,
-            t_faultLP_excl,
-            t_faultQS_excl,
-            t_clearQS_excl,
+            setpoint_tracking_controlled_magnitude,
         )
         self._windows["reference"] = signal_windows.calculate(
             list(reference_curves["time"]),
             event_params["start_time"],
             event_params["duration_time"],
-            t_integrator_tol,
-            t_faultLP_excl,
-            t_faultQS_excl,
-            t_clearQS_excl,
+            setpoint_tracking_controlled_magnitude,
         )
 
         before_calculated = signal_windows.get(

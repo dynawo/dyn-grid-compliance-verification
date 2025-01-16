@@ -472,7 +472,17 @@ Under the section called ``GridCode`` of the configuration file.
     Numerical tolerance for contemplating the fact that the t_fault, t_clear, and t_stepchange may
     actually be slightly different than configured, due to the dynawo integrator
 
-* ``t_faultLP_excl``
+* ``t_windowLPF_excl_start``
+
+    Exclusion windows (in seconds) at the beginning of each filtered window, to mitigate the boundary 
+    artifacts of LP filtering
+
+* ``t_windowLPF_excl_end``
+
+    Exclusion windows (in seconds) at the end of each filtered window, to mitigate the boundary 
+    artifacts of LP filtering
+
+* ``t_faultLPF_excl``
 
     Exclusion windows on transients when inserting the fault to mitigate the effect of LP filtering
     (in seconds)
