@@ -10,43 +10,47 @@
 import numpy as np
 import pandas as pd
 
+from dgcv.configuration.cfg import config
 from dgcv.validation import sanity_checks
 
 
-def calculate(
+def _get_exclusion_zones(
+    t_windowLPF_excl_start: float,
+    t_windowLPF_excl_end: float,
+    setpoint_tracking_controlled_magnitude: bool,
+) -> tuple:
+    t_integrator_tol = config.get_float("GridCode", "t_integrator_tol", 0.000001)
+    if setpoint_tracking_controlled_magnitude:
+        t_faultQS_excl = max(0.0, t_windowLPF_excl_start)
+        t_clearQS_excl = max(0.0, t_windowLPF_excl_start)
+    else:
+        t_faultQS_excl = max(
+            config.get_float("GridCode", "t_faultQS_excl", 0.020), t_windowLPF_excl_start
+        )
+        t_clearQS_excl = max(
+            config.get_float("GridCode", "t_clearQS_excl", 0.060), t_windowLPF_excl_start
+        )
+    t_faultLPF_excl = max(
+        config.get_float("GridCode", "t_faultLPF_excl", 0.050), t_windowLPF_excl_end
+    )
+
+    return t_integrator_tol, t_faultLPF_excl, t_faultQS_excl, t_clearQS_excl
+
+
+def _get_windows_times(
     time_values: list,
     t_fault: float,
     fault_duration: float,
-    t_integrator_tol: float,
-    t_faultLP_excl: float,
-    t_faultQS_excl: float,
-    t_clearQS_excl: float,
-) -> dict:
-    """Calculate the positions to the windows.
+    setpoint_tracking_controlled_magnitude: bool,
+) -> tuple[float, float, float, float, float, float]:
 
-    Parameters
-    ----------
-    time_values: list
-        list with all time values
-    t_fault: float
-        Start time of an event in the simulated curve
-    fault_duration: float
-        Duration of the event in the simulated curve
-    t_integrator_tol: float
-        Numerical integrator time tolerance
-    t_faultLP_excl: float
-        Exclusion windows on transients when inserting the fault to mitigate the effect
-        of LP filtering (in seconds)
-    t_faultQS_excl: float
-        Exclusion windows on transients on insertion of the fault (in seconds)
-    t_clearQS_excl: float
-        Exclusion windows on transients on elimination of the fault (in seconds)
-
-    Returns
-    -------
-    dict
-        Dictionary with the event windows
-    """
+    t_windowLPF_excl_start = config.get_float("GridCode", "t_windowLPF_excl_start", 0.020)
+    t_windowLPF_excl_end = config.get_float("GridCode", "t_windowLPF_excl_end", 0.020)
+    t_integrator_tol, t_faultLPF_excl, t_faultQS_excl, t_clearQS_excl = _get_exclusion_zones(
+        t_windowLPF_excl_start,
+        t_windowLPF_excl_end,
+        setpoint_tracking_controlled_magnitude,
+    )
 
     if fault_duration > time_values[-1]:
         fault_duration = 0.0
@@ -61,23 +65,70 @@ def calculate(
     pre_windows_len = 1.0
     sanity_checks.check_t_fault(time_values[0], t_fault, pre_windows_len)
 
-    t_init = t_fault - t_integrator_tol - t_faultLP_excl - pre_windows_len
-    if t_init < time_values[0]:
-        t_init = time_values[0]
+    t_w1_init = t_fault - t_integrator_tol - t_faultLPF_excl - pre_windows_len
+    if t_w1_init < time_values[0]:
+        t_w1_init = time_values[0]
+    t_w1_end = t_fault - t_integrator_tol - t_faultLPF_excl
 
-    w1_init_pos = np.searchsorted(time_values, t_init)
-    w1_end_pos = np.searchsorted(time_values, t_fault - t_integrator_tol - t_faultLP_excl)
+    t_w2_init = t_fault + t_integrator_tol + t_faultQS_excl
+    t_w2_end = t_clear - t_integrator_tol - t_windowLPF_excl_end
 
-    w2_init_pos = np.searchsorted(time_values, t_fault + t_integrator_tol + t_faultQS_excl)
-    w2_end_pos = np.searchsorted(time_values, t_clear - t_integrator_tol)
+    t_w3_init = t_clear + t_integrator_tol + t_clearQS_excl
+    t_w3_end = time_values[-1] - t_windowLPF_excl_end
 
-    w3_init_pos = np.searchsorted(time_values, t_clear + t_integrator_tol + t_clearQS_excl)
-    w3_end_pos = len(time_values)
+    return t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end
+
+
+def calculate(
+    time_values: list,
+    t_fault: float,
+    fault_duration: float,
+    setpoint_tracking_controlled_magnitude: bool,
+) -> dict:
+    """Calculate the positions to the windows.
+
+    Parameters
+    ----------
+    time_values: list
+        list with all time values
+    t_fault: float
+        Start time of an event in the simulated curve
+    fault_duration: float
+        Duration of the event in the simulated curve
+    t_integrator_tol: float
+        Numerical integrator time tolerance
+    setpoint_tracking_controlled_magnitude: bool
+        Setpoint tracking controlled magnitude.
+
+    Returns
+    -------
+    dict
+        Dictionary with the windows positions of the windows.
+    """
+
+    # Get the windows time values
+    t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end = _get_windows_times(
+        time_values, t_fault, fault_duration, setpoint_tracking_controlled_magnitude
+    )
+
+    w1_init_pos = np.searchsorted(time_values, t_w1_init)
+    w1_end_pos = np.searchsorted(time_values, t_w1_end)
+
+    w2_init_pos = np.searchsorted(time_values, t_w2_init)
+    w2_end_pos = np.searchsorted(time_values, t_w2_end)
+
+    w3_init_pos = np.searchsorted(time_values, t_w3_init)
+    w3_end_pos = np.searchsorted(time_values, t_w3_end)
 
     return {
         "before": slice(w1_init_pos, w1_end_pos - 1),
         "during": slice(w2_init_pos, w2_end_pos - 1),
         "after": slice(w3_init_pos, w3_end_pos - 1),
+        "times": {  # For debugging purposes
+            "before": (t_w1_init, t_w1_end),
+            "during": (t_w2_init, t_w2_end),
+            "after": (t_w3_init, t_w3_end),
+        },
     }
 
 
