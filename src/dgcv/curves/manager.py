@@ -123,6 +123,12 @@ class CurvesManager:
         if not self.get_curves("reference").empty:
             self.get_curves("reference").to_csv(working_oc_dir / "curves_reference.csv", sep=";")
 
+    def __get_signal_processing_windows(self, curve: str, windows: str) -> tuple[float, float]:
+        return self._windows[curve]["sigpro"][windows]
+
+    def __get_validation_windows(self, curve: str, windows: str) -> tuple[float, float]:
+        return self._windows[curve]["validate"][windows]
+
     def has_required_curves(
         self,
         measurement_names: list,
@@ -234,13 +240,14 @@ class CurvesManager:
         setpoint_tracking_controlled_magnitude: bool
             Setpoint tracking controlled magnitude.
         """
-        # Activate this code to use the curve calculated as a reference curve,
-        # only for debug cases without reference curves.
-        # if reference_curves is None:
-        #     reference_curves = calculated_curves
 
         csv_calculated_curves = self.get_curves("calculated")
         csv_reference_curves = self.get_curves("reference")
+
+        # Activate this code to use the curve calculated as a reference curve,
+        # only for debug cases without reference curves.
+        # if reference_curves is None:
+        #     csv_reference_curves = csv_calculated_curves
 
         t_com = config.get_float("GridCode", "t_com", 0.002)
         cutoff = config.get_float("GridCode", "cutoff", 15.0)
@@ -264,8 +271,9 @@ class CurvesManager:
         self._curves["calculated"] = calculated_curves
         self._curves["reference"] = reference_curves
 
+        calc_time_values = list(calculated_curves["time"])
         self._windows["calculated"] = signal_windows.calculate(
-            list(calculated_curves["time"]),
+            calc_time_values,
             event_params["start_time"],
             event_params["duration_time"],
             setpoint_tracking_controlled_magnitude,
@@ -277,9 +285,8 @@ class CurvesManager:
             setpoint_tracking_controlled_magnitude,
         )
 
-        before_calculated = signal_windows.get(
-            self.get_curves("calculated"), self._windows["calculated"]["before"]
-        )
+        t_from, t_to = self.__get_validation_windows("calculated", "before")
+        before_calculated = signal_windows.get(self.get_curves("calculated"), t_from, t_to)
         sanity_checks.check_pre_stable(
             list(before_calculated["time"]),
             list(before_calculated["BusPDR_BUS_Voltage"]),
@@ -324,25 +331,16 @@ class CurvesManager:
         float
             Exclusion time after the event is cleared, if the event is cleared.
         """
-        before_calculated = signal_windows.get(
-            self.get_curves("calculated"), self._windows["calculated"]["before"]
-        )
-        after_calculated = signal_windows.get(
-            self.get_curves("calculated"), self._windows["calculated"]["after"]
-        )
-        excl1_t0 = before_calculated["time"].iloc[-1]
-        if (
-            self._windows["calculated"]["during"].start
-            < self._windows["calculated"]["during"].stop
-        ):
-            during_calculated = signal_windows.get(
-                self.get_curves("calculated"), self._windows["calculated"]["during"]
-            )
-            excl1_t = during_calculated["time"].iloc[0]
-            excl2_t0 = during_calculated["time"].iloc[-1]
-            excl2_t = after_calculated["time"].iloc[0]
+        _, t_to_b = self.__get_validation_windows("calculated", "before")
+        t_from_a, _ = self.__get_validation_windows("calculated", "after")
+        t_from_d, t_to_d = self.__get_validation_windows("calculated", "during")
+        excl1_t0 = t_to_b
+        if t_from_d < t_to_d:
+            excl1_t = t_from_d
+            excl2_t0 = t_to_d
+            excl2_t = t_from_a
         else:
-            excl1_t = after_calculated["time"].iloc[0]
+            excl1_t = t_from_a
             excl2_t0 = 0.0
             excl2_t = 0.0
 
@@ -363,9 +361,11 @@ class CurvesManager:
         pd.DataFrame
             A dataframe with the selected window of reference curves.
         """
+        t_from_calc, t_to_calc = self.__get_validation_windows("calculated", windows)
+        t_from_ref, t_to_ref = self.__get_validation_windows("reference", windows)
         return signal_windows.get(
-            self.get_curves("calculated"), self._windows["calculated"][windows]
-        ), signal_windows.get(self.get_curves("reference"), self._windows["reference"][windows])
+            self.get_curves("calculated"), t_from_calc, t_to_calc
+        ), signal_windows.get(self.get_curves("reference"), t_from_ref, t_to_ref)
 
     def get_generator_u_dim(self) -> float:
         """Get the generator Udim.

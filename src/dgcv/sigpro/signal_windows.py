@@ -7,18 +7,32 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+from collections import namedtuple
+
 import numpy as np
 import pandas as pd
 
 from dgcv.configuration.cfg import config
 from dgcv.validation import sanity_checks
 
+Exclusion_zones = namedtuple(
+    "Exclusion_zones",
+    [
+        "t_windowLPF_excl_start",
+        "t_windowLPF_excl_end",
+        "t_integrator_tol",
+        "t_faultLPF_excl",
+        "t_faultQS_excl",
+        "t_clearQS_excl",
+    ],
+)
+
 
 def _get_exclusion_zones(
-    t_windowLPF_excl_start: float,
-    t_windowLPF_excl_end: float,
     setpoint_tracking_controlled_magnitude: bool,
-) -> tuple:
+) -> Exclusion_zones:
+    t_windowLPF_excl_start = config.get_float("GridCode", "t_windowLPF_excl_start", 0.020)
+    t_windowLPF_excl_end = config.get_float("GridCode", "t_windowLPF_excl_end", 0.020)
     t_integrator_tol = config.get_float("GridCode", "t_integrator_tol", 0.000001)
     if setpoint_tracking_controlled_magnitude:
         t_faultQS_excl = max(0.0, t_windowLPF_excl_start)
@@ -34,23 +48,22 @@ def _get_exclusion_zones(
         config.get_float("GridCode", "t_faultLPF_excl", 0.050), t_windowLPF_excl_end
     )
 
-    return t_integrator_tol, t_faultLPF_excl, t_faultQS_excl, t_clearQS_excl
+    return Exclusion_zones(
+        t_windowLPF_excl_start,
+        t_windowLPF_excl_start,
+        t_integrator_tol,
+        t_faultLPF_excl,
+        t_faultQS_excl,
+        t_clearQS_excl,
+    )
 
 
 def _get_windows_times(
     time_values: list,
     t_fault: float,
     fault_duration: float,
-    setpoint_tracking_controlled_magnitude: bool,
+    exclusion_zones: Exclusion_zones,
 ) -> tuple[float, float, float, float, float, float]:
-
-    t_windowLPF_excl_start = config.get_float("GridCode", "t_windowLPF_excl_start", 0.020)
-    t_windowLPF_excl_end = config.get_float("GridCode", "t_windowLPF_excl_end", 0.020)
-    t_integrator_tol, t_faultLPF_excl, t_faultQS_excl, t_clearQS_excl = _get_exclusion_zones(
-        t_windowLPF_excl_start,
-        t_windowLPF_excl_end,
-        setpoint_tracking_controlled_magnitude,
-    )
 
     if fault_duration > time_values[-1]:
         fault_duration = 0.0
@@ -65,16 +78,39 @@ def _get_windows_times(
     pre_windows_len = 1.0
     sanity_checks.check_t_fault(time_values[0], t_fault, pre_windows_len)
 
-    t_w1_init = t_fault - t_integrator_tol - t_faultLPF_excl - pre_windows_len
+    t_w1_end = t_fault - exclusion_zones.t_integrator_tol - exclusion_zones.t_faultLPF_excl
+    t_w1_init = t_w1_end - pre_windows_len
     if t_w1_init < time_values[0]:
         t_w1_init = time_values[0]
-    t_w1_end = t_fault - t_integrator_tol - t_faultLPF_excl
 
-    t_w2_init = t_fault + t_integrator_tol + t_faultQS_excl
-    t_w2_end = t_clear - t_integrator_tol - t_windowLPF_excl_end
+    t_w2_init = t_fault + exclusion_zones.t_integrator_tol + exclusion_zones.t_faultQS_excl
+    t_w2_end = t_clear - exclusion_zones.t_integrator_tol - exclusion_zones.t_windowLPF_excl_end
 
-    t_w3_init = t_clear + t_integrator_tol + t_clearQS_excl
-    t_w3_end = time_values[-1] - t_windowLPF_excl_end
+    t_w3_init = t_clear + exclusion_zones.t_integrator_tol + exclusion_zones.t_clearQS_excl
+    t_w3_end = time_values[-1] - exclusion_zones.t_windowLPF_excl_end
+
+    return t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end
+
+
+def _get_filter_windows_times(
+    time_values: list,
+    t_fault: float,
+    fault_duration: float,
+) -> tuple[float, float, float, float, float, float]:
+
+    if fault_duration > time_values[-1]:
+        fault_duration = 0.0
+
+    t_clear = t_fault + fault_duration
+
+    t_w1_init = time_values[0]
+    t_w1_end = t_fault
+
+    t_w2_init = t_fault
+    t_w2_end = t_clear
+
+    t_w3_init = t_clear
+    t_w3_end = time_values[-1]
 
     return t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end
 
@@ -106,50 +142,69 @@ def calculate(
         Dictionary with the windows positions of the windows.
     """
 
-    # Get the windows time values
-    t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end = _get_windows_times(
-        time_values, t_fault, fault_duration, setpoint_tracking_controlled_magnitude
+    exclusion_zones = _get_exclusion_zones(
+        setpoint_tracking_controlled_magnitude,
     )
 
-    w1_init_pos = np.searchsorted(time_values, t_w1_init)
-    w1_end_pos = np.searchsorted(time_values, t_w1_end)
+    # Get the windows time values
+    t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end = _get_windows_times(
+        time_values,
+        t_fault,
+        fault_duration,
+        exclusion_zones,
+    )
 
-    w2_init_pos = np.searchsorted(time_values, t_w2_init)
-    w2_end_pos = np.searchsorted(time_values, t_w2_end)
-
-    w3_init_pos = np.searchsorted(time_values, t_w3_init)
-    w3_end_pos = np.searchsorted(time_values, t_w3_end)
+    # Get the windows time values for the low-pass filter
+    tf_w1_init, tf_w1_end, tf_w2_init, tf_w2_end, tf_w3_init, tf_w3_end = (
+        _get_filter_windows_times(time_values, t_fault, fault_duration)
+    )
 
     return {
-        "before": slice(w1_init_pos, w1_end_pos - 1),
-        "during": slice(w2_init_pos, w2_end_pos - 1),
-        "after": slice(w3_init_pos, w3_end_pos - 1),
-        "times": {  # For debugging purposes
+        "validate": {
             "before": (t_w1_init, t_w1_end),
             "during": (t_w2_init, t_w2_end),
             "after": (t_w3_init, t_w3_end),
         },
+        "sigpro": {
+            "before": (tf_w1_init, tf_w1_end),
+            "during": (tf_w2_init, tf_w2_end),
+            "after": (tf_w3_init, tf_w3_end),
+        },
+        "exclusion-data": {  # Exclusion data for the windows for debugging purposes
+            "t_windowLPF_excl_start": exclusion_zones.t_windowLPF_excl_start,
+            "t_windowLPF_excl_end": exclusion_zones.t_windowLPF_excl_end,
+            "t_integrator_tol": exclusion_zones.t_integrator_tol,
+            "t_faultLPF_excl": exclusion_zones.t_faultLPF_excl,
+            "t_faultQS_excl": exclusion_zones.t_faultQS_excl,
+            "t_clearQS_excl": exclusion_zones.t_clearQS_excl,
+        },
     }
 
 
-def get(curves: pd.DataFrame, range: slice) -> pd.DataFrame:
+def get(curves: pd.DataFrame, t_from: float, t_to: float) -> pd.DataFrame:
     """Obtain the curves in the given range from the input curves.
 
     Parameters
     ----------
     curves: DataFrame
         Curves to be windowed.
-    range: slice
-        Range to be extracted.
+    t_from: float
+        Start time of the range
+    t_to: float
+        End time of the range
 
     Returns
     -------
     DataFrame
         Curves in the range.
     """
+    time_values = list(curves["time"])
+    w_init_pos = np.searchsorted(time_values, t_from)
+    w_end_pos = np.searchsorted(time_values, t_to)
+
     # Create the new curves file
     wcurves = dict()
     for key in curves:
-        wcurves[key] = list(curves[key])[range]
+        wcurves[key] = list(curves[key])[w_init_pos:w_end_pos]
 
     return pd.DataFrame(wcurves)
