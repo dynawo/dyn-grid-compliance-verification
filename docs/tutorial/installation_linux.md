@@ -2,7 +2,7 @@
 
 TUTORIAL
 
-INSTALLATION
+INSTALLATION LINUX
 
 (c) 2023&mdash;24 RTE  
 Developed by Grupo AIA
@@ -95,7 +95,7 @@ with its dependencies, will be placed in a *Python virtual environment* inside y
 1. Run the following command:
 
    ```bash
-   curl https://raw.githubusercontent.com/dynawo/dyn-grid-compliance-verification/main/install.sh | bash
+   curl https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.6.0/linux_install.sh | bash
    ```
 
    This will download the lastest version of the Python package,
