@@ -428,7 +428,7 @@ def get_AVR_x(
     bool
         True if the curve is within 5% of the target value, False otherwise
     int
-        Time in which the curve values are within 5% of the values of a target curve
+        Time in which the curve values are not within 5% of the values of a target curve
     """
     pos_t_event = 0
     while sim_t_event_end > time[pos_t_event]:
@@ -440,18 +440,14 @@ def get_AVR_x(
     time = time[pos_t_event:]
 
     pass_AVR_check = True
-
+    error_time = -1
     for i in range(len(curve)):
         if 0.05 < abs(curve[i] - target_values[i]) / target_values[i]:
             pass_AVR_check = False
+            error_time = time[i] - sim_t_event_end
             break
 
-    if not pass_AVR_check:
-        ret_time = time[i] - sim_t_event_end
-    else:
-        ret_time = -1
-
-    return pass_AVR_check, ret_time
+    return pass_AVR_check, error_time
 
 
 def check_frequency(threshold: float, frequency: list, time: list) -> tuple[bool, float]:
@@ -470,17 +466,18 @@ def check_frequency(threshold: float, frequency: list, time: list) -> tuple[bool
     -------
     bool
         True if the frequency is within the given threshold, False otherwise
-    int
-        time when the frequency is within the given threshold
+    float
+        time when the frequency is not within the given threshold
     """
-    pass_time = -1
+    error_time = -1
     pass_test = True
     for i in range(len(frequency)):
         if frequency[i] > (1.0 + threshold) or frequency[i] < (1.0 - threshold):
             pass_test = False
-            pass_time = time[i]
+            error_time = time[i]
+            break
 
-    return pass_test, pass_time
+    return pass_test, error_time
 
 
 def mean_error(signal: list, reference: list, step_magnitude: float) -> float:
