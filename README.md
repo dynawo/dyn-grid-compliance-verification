@@ -120,7 +120,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.5.2/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.6.0/linux_install.sh | bash
    ```
 
    This script will install the DGCV tool, together with a matching version of
@@ -184,7 +184,7 @@ all of its dependencies (NumPy, etc.) will get installed under a
 
 ### Installation
 
-1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.5.2/DGCV_win_Installer.exe).
+1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.6.0/DGCV_win_Installer.exe).
 
 
 2. Next, execute the downloaded installer:
