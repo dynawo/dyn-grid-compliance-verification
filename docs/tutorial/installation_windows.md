@@ -91,6 +91,7 @@ all of its dependencies (NumPy, etc.) will get installed under a
    Note that the MikTex installer allows you to select the configuration that you want to apply. 
    For the tool to work correctly, you must select the "Yes" or "Ask me first" option on the 
    following screen:
+   
    ![MikTex Installer Settings](pngs/miktex_settings.png "MikTex Installer Settings")
 
 
@@ -184,5 +185,5 @@ all of its dependencies (NumPy, etc.) will get installed under a
    ```console
    	dgcv compile
    ```
-      
+
    - This step ensures that all necessary files are generated and compiled for optimal performance.
