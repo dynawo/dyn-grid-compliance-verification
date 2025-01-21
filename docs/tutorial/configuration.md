@@ -15,11 +15,12 @@ Developed by Grupo AIA
 
 ## Table of Contents
 
-1. [Overview](#Overview)
-2. [PCS Structure](#PCS-Structure)
-3. [INI file Sections](#INI-file-Sections)
-4. [Task-oriented configuration examples](#Task-oriented-configuration-examples)
-
+1. [Overview](#overview)
+2. [Global Information](#global-information)
+3. [Model Validation](#model-validation)
+4. [Performance Verification](#performance-verification)
+5. [Modify a PCS](#modify-a-pcs)
+6. [Log level](#log-level)
 
 ## Overview
 
@@ -49,40 +50,11 @@ This document describes the configuration options relevant to an user. The confi
 organized into sections, where each section has its own configuration options.
 
 
-
-## PCS Structure
-
-Dynamic Grid Compliance Verification is structured as a series of independent tests, these tests correspond to
-the *PCS I** in the RTE's DTR document.
-
-Each DTR document *PCS* has been implemented using the following terminology:
-
-* PCS
-    * Benchmarks
-        * Operating Conditions
-
-A *PCS* is understood to be the set of tests and/or complaince criteria necessary to validate the
-producer's model.
-
-A *Benchmark* contains the invariant description of the RTE model that will be used in the
-simulation of its *PCS*. A *PCS* has one or more *Benchmarks*.
-
-Finally, an *Operating Condition* describes the initialization conditions and/or the event conditions
-of a *Benchmark*. A *Benchmark* has one or more *Operating Conditions*.
-
-
-
-## INI file Sections
-
-
-### Global information
-
+## Global Information
 
 In this section the global options are configured, global options are understood as those options
 that do not depend on the execution mode of the tool.
 The available options are:
-
-#### Basic Configuration
 
 * ``electric_performance_verification_pcs``
 
@@ -94,10 +66,20 @@ The available options are:
     Comma separated list  of *PCSs* that will be used in the **Performance Validation for
     non-synchronous park of generators**. Leave the parameter empty to use all *PCSs*.
 
-* ``model_validation_pcs``
+* ``electric_performance_bess_verification_pcs``
 
-    Comma separated list  of *PCSs* that will be used in the **RMS Model Validation**.
-    Leave the parameter empty to use all *PCSs*.
+    Comma separated list  of *PCSs* that will be used in the **Performance Validation for
+    non-synchronous park of storages**. Leave the parameter empty to use all *PCSs*.
+
+* ``model_ppm_validation_pcs``
+
+    Comma separated list  of *PCSs* that will be used in the **RMS Model Validation for
+    non-synchronous park of generators**. Leave the parameter empty to use all *PCSs*.
+
+* ``model_bess_validation_pcs``
+
+    Comma separated list  of *PCSs* that will be used in the **RMS Model Validation for
+    non-synchronous park of storages**. Leave the parameter empty to use all *PCSs*.
 
 * ``file_log_level``
 
@@ -108,412 +90,508 @@ The available options are:
     Console Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG).
 
 
-### Dynawo information
-
-Under the section called ``Dynawo`` are the general options used to configure the Dynawo
-simulation, regardless of the tool's execution mode.
-
-#### Basic Configuration
-
-* ``simulation_limit``
-
-    Simulation timeout for Dynawo in seconds.
-
-* ``f_nom``
-
-    Grid nominal frequency (fNom), for pu units.
-    These are constants defined by Dynawo in: Electrical/SystemBase.mo.
-    If you change them in Dynawo, make sure to change them here, too.
-
-* ``s_nref``
-
-    System-wide S base (SnRef), for pu units.
-    These are constants defined by Dynawo in: Electrical/SystemBase.mo.
-    If you change them in Dynawo, make sure to change them here, too.
-
-
-#### Advanced Configuration
-
-* ``simulation_start``
-
-    The start time of the simulation in seconds.
-
-    .. note::
-        Before modifying the instant of time in which the simulation starts, consider the *PCSs*
-        that will be executed to guarantee that the existing events occur within the period that
-        the simulation will be executed.
-
-* ``simulation_stop``
-
-    The end time of the simulation in seconds.
-
-    .. note::
-        The PCS_RTE-I7 has an event that occurs in the 30th second of the simulation, to guarantee
-        that the final result is stable, it is recommended to use a minimum duration of 60 seconds.
-
-### Modify the Benchmarks of a PCS
-
-
-It is possible to modify the list of *Benchmarks* the will be used in the validation of a
-*PCS*.
-
-#. Section
-    Create a new section in the configuration file called 'PCS-Benchmarks'.
-#. Key = Value
-    Assign as **Key** the name of the *PCS* and as **Value** a comma-separated list of the
-    *BenchMarks* that will be used.
-
-```
-    [PCS-Benchmarks]
-    PCS_RTE-I1 = Benchmark1,Benchmark2
+```ini
+[Global]
+#  # File Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG)
+#  file_log_level = INFO
+#  # Console Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG)
+#  console_log_level = INFO
+#  # List of SM pcs to be validated (If it's empty, all the SM pcs are validated)
+#  electric_performance_verification_pcs =
+#  # List of PPM pcs to be validated (If it's empty, all the PPM pcs are validated)
+#  electric_performance_ppm_verification_pcs =
+#  # List of BESS pcs to be validated (If it's empty, all the PPM pcs are validated)
+#  electric_performance_bess_verification_pcs =
+#  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
+#  model_ppm_validation_pcs =
+#  # List of BESS model pcs to be validated (If it's empty, all the model pcs are validated)
+#  model_bess_validation_pcs =
 ```
 
-The final report of the *PCS* contains the results of the *Benchmarks* implemented in the
-tool. If one of them is deleted in the configuration, the corresponding section of the report will
-be empty, while the new ones will not be reflected int he report.
+## Model Validation
 
-The input and output files of the Dynawo simulation for each configured *Benchmark* are stored
-in the results directory of the *PCS*.
-
-### Modify the Operating Conditions of a Benchmark
-
-It is possible to modify the list of *Operating Conditions* the will be used in the validation of a
-*Benchmark*.
-
-#. Section
-    Create a new section in the configuration file called 'PCS-OperatingConditions'.
-#. Key = Value
-    Assign as **Key** the name of the *PCS* and the name of the *Benchmark* separated by a point
-    and as **Value** a comma-separated list of the *Operating Conditions* that will be used.
+By default all PCS's are validated when a model validation is executed:
 
 ```
-    [PCS-OperatingConditions]
-    PCS_RTE-I1.Benchmark1 = OperatingCondition1,OperatingCondition2
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 11:01:28,689 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
+2025-01-21 11:01:28,780 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 11:01:31,522 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 11:01:33,908 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 11:01:36,426 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
+2025-01-21 11:01:46,092 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
+2025-01-21 11:01:55,916 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 11:01:58,520 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
+2025-01-21 11:02:07,251 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
+2025-01-21 11:02:09,523 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
+2025-01-21 11:02:11,498 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
+2025-01-21 11:02:11,532 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWT4BCurrentSource2015 control mode will be changed
+2025-01-21 11:02:13,699 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
+2025-01-21 11:02:15,869 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 11:02:18,224 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 11:02:20,849 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: AReactance
+2025-01-21 11:02:20,894 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWPP4BCurrentSource2015 control mode will be changed
+2025-01-21 11:02:23,405 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: BReactance
+2025-01-21 11:02:23,450 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWPP4BCurrentSource2015 control mode will be changed
+2025-01-21 11:02:25,869 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Dec40
+2025-01-21 11:02:28,580 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Inc40
+2025-01-21 11:02:31,331 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Inc10
+2025-01-21 11:02:33,765 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Dec20
+2025-01-21 11:02:36,221 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 11:02:40,185 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageDip, OPER. COND.: Qzero
+2025-01-21 11:02:43,611 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMax
+2025-01-21 11:02:46,746 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMin
+2025-01-21 11:02:50,264 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-21 11:02:51,340 |                    DGCV.Dynawo |    WARNING |                 curves.py:  899 | Simulation Fails, logs in ../Results/Model/WindIEC2015/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
+2025-01-21 11:03:22,537 |                  DGCV.PDFLatex |    WARNING |                 figure.py:  590 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
+2025-01-21 11:04:02,456 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 11:04 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: IEC2015Dynawo***
+***Reference: IEC2015ReferenceCurves***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3      Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR10     Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3Qmin  Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientHiZTc800        Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientHiZTc500        Compliant
+PCS_RTE-I16z1ThreePhaseFault          PermanentBolted          Compliant
+PCS_RTE-I16z1ThreePhaseFault          PermanentHiZ             Compliant
+PCS_RTE-I16z1SetPointStep             Active                   Non-compliant
+PCS_RTE-I16z1SetPointStep             Reactive                 Compliant
+PCS_RTE-I16z1SetPointStep             Voltage                  Non-compliant
+PCS_RTE-I16z1GridFreqRamp             W500mHz250ms             Non-compliant
+PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
+PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
+PCS_RTE-I16z3USetPointStep            AReactance               Non-compliant
+PCS_RTE-I16z3USetPointStep            BReactance               Non-compliant
+PCS_RTE-I16z3PSetPointStep            Dec40                    Compliant
+PCS_RTE-I16z3PSetPointStep            Inc40                    Compliant
+PCS_RTE-I16z3QSetPointStep            Inc10                    Compliant
+PCS_RTE-I16z3QSetPointStep            Dec20                    Non-compliant
+PCS_RTE-I16z3ThreePhaseFault          TransientBolted          Compliant
+PCS_RTE-I16z3GridVoltageDip           Qzero                    Compliant
+PCS_RTE-I16z3GridVoltageSwell         QMax                     Compliant
+PCS_RTE-I16z3GridVoltageSwell         QMin                     Compliant
+PCS_RTE-I16z3Islanding                DeltaP10DeltaQ4          Failed simulation
+
+
+2025-01-21 11:04:08,770 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 11:04:29,676 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
-The final report of the *PCS* contains the results of the *Operating Conditions* implemented in the
-tool. If one of them is deleted in the configuration, the corresponding section of the report will
-be empty, while the new ones will not be reflected int he report.
+The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
+file. Below is the previous example after modifying the parameter `model_ppm_validation_pcs`:
 
-The input and output files of the Dynawo simulation for each configured *Operating Condition* are
-stored in the results directory of the *PCS*.
-
-### Modify the initial condition of a Test
-
-In the case of modifying the initial conditions of a test of a *PCS*, it is necessary to
-identify the name of the *Benchmark* (if the *PCS* only has one, its name is 'Benchmarks'),
-and the name of the *Operating Condition* (if the *Benchmark* only has one should be ignored).
-
-#. Section
-    Create a new section in the configuration file called
-    '`PCS`.`Benchmarks`.`OperatingCondition`.Model',where `PCS` is the name of the *PCS*,
-    `Benchmarks` is the name of the *Benchmark* and `OperatingCondition` is the name of
-    the *Operating Condition*.
-
-The options that allow defining the initial condition of a test are:
-
-* ``pdr_P``
-    Defines the initial active flow at the PDR point of the model
-* ``pdr_Q``
-    Defines the initial reactive flow at the PDR point of the model
-* ``pdr_U``
-    Defines the initial voltage at the PDR point of the model
-
-```
-    [PCS_RTE-I1.Benchmarks1.OperatingCondition1.Model]
-    pdr_P = 0.5*Pmax
-    pdr_Q = 0.0
-    pdr_U = Udim
-
-    [PCS_RTE-I1.Benchmarks1.OperatingCondition2.Model]
-    pdr_P = 0.5*Pmax
-    pdr_Q = Qmax
-    pdr_U = Udim
+```ini
+#  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
+#  model_ppm_validation_pcs =
+model_ppm_validation_pcs = PCS_RTE-I16z1
 ```
 
+It can be observed in the output of the tool that only the selected PCS's have been validated.
 
-## Task-oriented configuration examples
-
-In this section we show how to carry out some typical configurations.
-
-
-### Configuring the KPI thresholds used for validation
-
-#### Basic Configuration
-
-##### For voltage dip tests
-
-The following thresholds apply for errors between simulation and reference signals.
-Exclusion windows on transients on insertion (20 ms) and elimination of the fault
-(60 ms) can be applied. For type 3 wind turbines, the producer can request a broader
-exclusion (it is recognized that the behavior of the Crow bar is difficult to represent
-with standard models). In no case will they exceed 140 ms when the fault is inserted
-or 500 ms when the fault is cleared (see IEC 61400-27-2).
-When the reference signals are simulation results, the maximum permissible errors
-in pu (base Sn and In) are as follows:
-
-| window | MXE (P)| ME (P)| MAE (P)| MXE (Q)| ME  (Q)| MAE  (Q)| MXE (I<sub>p</sub>)| ME (I<sub>p</sub>)| MAE (I<sub>p</sub>)| MXE (I<sub>q</sub>)| ME  (I<sub>q</sub>)| MAE (I<sub>q</sub>)|
-|--------|------|------|------|------|------|------|------|------|------|------|------|-------|
-| Before | 0.05 | 0.02 | 0.03 | 0.05 | 0.02 | 0.03 | 0.05 | 0.02 | 0.03 | 0.05 | 0.02 | 0.03  |
-| During | 0.08 | 0.05 | 0.07 | 0.08 | 0.05 | 0.07 | 0.08 | 0.05 | 0.07 | 0.08 | 0.05 | 0.07  |
-| After  | 0.05 | 0.02 | 0.03 | 0.05 | 0.02 | 0.03 | 0.05 | 0.02 | 0.03 | 0.05 | 0.02 | 0.03  |
-
-Below are the parameters that allow you to modify the mentioned thresholds:
-
-* ``thr_P_mxe_before``, ``thr_P_mxe_during``, ``thr_P_mxe_after``
-
-    Maximum value allowed for the active power maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_P_me_before``, ``thr_P_me_during``, ``thr_P_me_after``
-
-    Maximum value allowed for the active power mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_P_mae_before``, ``thr_P_mae_during``, ``thr_P_mae_after``
-
-    Maximum value allowed for the active power mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Q_mxe_before``, ``thr_Q_mxe_during``, ``thr_Q_mxe_after``
-
-    Maximum value allowed for the reactive power maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Q_me_before``, ``thr_Q_me_during``, ``thr_Q_me_after``
-
-    Maximum value allowed for the reactive power mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Q_mae_before``, ``thr_Q_mae_during``, ``thr_Q_mae_after``
-
-    Maximum value allowed for the reactive power mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Ip_mxe_before``, ``thr_Ip_mxe_during``, ``thr_Ip_mxe_after``
-
-    Maximum value allowed for the active current maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Ip_me_before``, ``thr_Ip_me_during``, ``thr_Ip_me_after``
-
-    Maximum value allowed for the active current mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Ip_mae_before``, ``thr_Ip_mae_during``, ``thr_Ip_mae_after``
-
-    Maximum value allowed for the active current mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Iq_mxe_before``, ``thr_Iq_mxe_during``, ``thr_Iq_mxe_after``
-
-    Maximum value allowed for the reactive current maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Iq_me_before``, ``thr_Iq_me_during``, ``thr_Iq_me_after``
-
-    Maximum value allowed for the reactive current mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Iq_mae_before``, ``thr_Iq_mae_during``, ``thr_Iq_mae_after``
-
-    Maximum value allowed for the reactive current mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-
-When the reference signals are test results, the maximum permissible errors in pu
-(base Sn and In) are as follows:
-
-| window | MXE (P)| ME (P)| MAE (P)| MXE (Q)| ME  (Q)| MAE  (Q)| MXE (I<sub>p</sub>)| ME (I<sub>p</sub>)| MAE (I<sub>p</sub>)| MXE (I<sub>q</sub>)| ME  (I<sub>q</sub>)| MAE  (I<sub>q</sub>)|
-|--------|------|------|------|------|------|------|------|------|------|------|------|------|
-| Before | 0.08 | 0.04 | 0.07 | 0.08 | 0.04 | 0.07 | 0.08 | 0.04 | 0.07 | 0.08 | 0.04 | 0.07 |
-| During | 0.10 | 0.05 | 0.08 | 0.10 | 0.05 | 0.08 | 0.10 | 0.05 | 0.08 | 0.10 | 0.05 | 0.08 |
-| After  | 0.08 | 0.04 | 0.07 | 0.08 | 0.04 | 0.07 | 0.08 | 0.04 | 0.07 | 0.08 | 0.04 | 0.07 |
-
-Below are the parameters that allow you to modify the mentioned thresholds:
-
-* ``thr_FT_P_mxe_before``, ``thr_FT_P_mxe_during``, ``thr_FT_P_mxe_after``
-
-    Maximum value allowed for the active power maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_P_me_before``, ``thr_FT_P_me_during``, ``thr_FT_P_me_after``
-
-    Maximum value allowed for the active power mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_P_mae_before``, ``thr_FT_P_mae_during``, ``thr_FT_P_mae_after``
-
-    Maximum value allowed for the active power mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Q_mxe_before``, ``thr_FT_Q_mxe_during``, ``thr_FT_Q_mxe_after``
-
-    Maximum value allowed for the reactive power maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Q_me_before``, ``thr_FT_Q_me_during``, ``thr_FT_Q_me_after``
-
-    Maximum value allowed for the reactive power mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Q_mae_before``, ``thr_FT_Q_mae_during``, ``thr_FT_Q_mae_after``
-
-    Maximum value allowed for the reactive power mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Ip_mxe_before``, ``thr_FT_Ip_mxe_during``, ``thr_FT_Ip_mxe_after``
-
-    Maximum value allowed for the active current maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Ip_me_before``, ``thr_FT_Ip_me_during``, ``thr_FT_Ip_me_after``
-
-    Maximum value allowed for the active current mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Ip_mae_before``, ``thr_FT_Ip_mae_during``, ``thr_FT_Ip_mae_after``
-
-    Maximum value allowed for the active current mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Iq_mxe_before``, ``thr_FT_Iq_mxe_during``, ``thr_FT_Iq_mxe_after``
-
-    Maximum value allowed for the reactive current maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Iq_me_before``, ``thr_FT_Iq_me_during``, ``thr_FT_Iq_me_after``
-
-    Maximum value allowed for the reactive current mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Iq_mae_before``, ``thr_FT_Iq_mae_during``, ``thr_FT_Iq_mae_after``
-
-    Maximum value allowed for the reactive current mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-
-##### For setpoint monitoring tests
-
-Regardless of the nature of the reference signal, the maximum permissible errors on the
-quantity tracked in pu (base setpoint variation level) are as follow:
-
-| window | MXE  | ME   | MAE  |
-|--------|------|------|------|
-| Before | 0.05 | 0.02 | 0.03 |
-| During | 0.08 | 0.05 | 0.07 |
-| After  | 0.05 | 0.02 | 0.03 |
-
-Below are the parameters that allow you to modify the mentioned thresholds:
-
-* ``thr_reftrack_mxe_before``, ``thr_reftrack_mxe_during``, ``thr_reftrack_mxe_after``
-
-    Maximum value allowed for the maximum error (MXE) between the simulation monitored signal and
-    the reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_reftrack_me_before``, ``thr_reftrack_me_during``, ``thr_reftrack_me_after``
-
-    Maximum value allowed for the mean error (ME) between the simulation monitored signal and
-    the reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_reftrack_mae_before``, ``thr_reftrack_mae_during``, ``thr_reftrack_mae_after``
-
-    Maximum value allowed for the mean absolute error (ME) between the simulation monitored signal and
-    the reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-
-### Configuring the aspect of graphs in the reports
-
-#### Advanced Configuration
-
-One of the things you may want to tweak is the temporal range of the plots, in
-order to show more (or less) of the signal on the graph. For instance, in cases
-where you want to "zoom in" on the part of the figure where you are more
-interested in. In this section we will show to control the yrange and xrange of
-these plots.
-
-Let us start with the xrange, i.e. the temporal range. The start of this xrange is
-calculated by requiring that the total time window shows the window [`t_event`, `t_SS`]
-_and_ a little bit of the curve before the event. This "little bit" is calculated as
-being a percentage of `t_SS` - `t_event`, via the parameter `graph_preevent_trange_pct`
-(default is 15%).  
-
-The tool internally calculates the instant of time `t_SS` at which all curves can be
-considered "flat" (for the purposes of plotting). This is done by applying two
-tolerances, one relative (graph_rel_tol) and the other absolute (graph_abs_tol), to
-check when the signal values do not differ from the last value in the curve. This check
-for proximity is done in the style of Python's `isclose()` function from the math
-module, in which the absolute tolerance is used to prevent problems when the numeric
-values are very close to zero.  The relative tolerance is a value that applies for all
-types of curves, but the absolute tolerance is scaled depending on the type of test,
-because it should depend on the typical scale of the interesting features in the plot:
-for step-change tests (a.k.a. "reference-tracking" tests), the scale of interest is the
-magnitude of the step. Therefore the absolute tolerance `graph_abs_tol` is calculated by
-multiplying the base configured value by the magnitude of the step in each type of
-test. For tests that are not of the step-change type, the reference scale is assumed to
-be 1pu.
-
-To configure these tolerances:
-   * Set `graph_rel_tol` and `graph_abs_tol` in the Global section of the configuration INI file.
-   * If you also want to affect the absolute tolerance for reference-tracking tests,
-     then you would have to override the internal definitions of the parameter
-     `reference_step_size` within a specific section for each test. This entails peeking
-     at the source code (`templates/PCS/model_validation/PCS_*`,
-     `templates/PCS/performance/*/PCS_*`), to see how it is defined and under which
-     section. Then you would write an overriding value in your user configuration. For
-     instance, as in the example below.
-  
 ```
-   [PCS_RTE-I16z1.SetPointStep.Reactive]
-   reference_step_size = 0.05*Qmax
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 11:20:13,429 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
+2025-01-21 11:20:13,440 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 11:20:15,918 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 11:20:18,734 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 11:20:21,327 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
+2025-01-21 11:20:30,859 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
+2025-01-21 11:20:41,049 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 11:20:43,603 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
+2025-01-21 11:20:51,859 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
+2025-01-21 11:20:54,021 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
+2025-01-21 11:20:56,105 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
+2025-01-21 11:20:56,117 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWT4BCurrentSource2015 control mode will be changed
+2025-01-21 11:20:58,279 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
+2025-01-21 11:21:00,421 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 11:21:03,066 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 11:21:31,562 |                  DGCV.PDFLatex |    WARNING |                 figure.py:  590 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
+2025-01-21 11:21:39,383 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 11:21 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: IEC2015Dynawo***
+***Reference: IEC2015ReferenceCurves***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3      Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR10     Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3Qmin  Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientHiZTc800        Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientHiZTc500        Compliant
+PCS_RTE-I16z1ThreePhaseFault          PermanentBolted          Compliant
+PCS_RTE-I16z1ThreePhaseFault          PermanentHiZ             Compliant
+PCS_RTE-I16z1SetPointStep             Active                   Non-compliant
+PCS_RTE-I16z1SetPointStep             Reactive                 Compliant
+PCS_RTE-I16z1SetPointStep             Voltage                  Non-compliant
+PCS_RTE-I16z1GridFreqRamp             W500mHz250ms             Non-compliant
+PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
+PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
+
+
+2025-01-21 11:21:41,698 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 11:21:57,007 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
+```
+
+## Performance Verification
+
+As in model validation, by default all PCS are validated when a performance verification is executed:
+
+```
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
+2025-01-21 10:34:31,341 |                DGCV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
+2025-01-21 10:34:31,387 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2025-01-21 10:34:31,751 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2025-01-21 10:34:32,059 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
+2025-01-21 10:34:32,344 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 10:34:37,033 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
+2025-01-21 10:34:37,720 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
+2025-01-21 10:34:47,406 |                DGCV.Validation |    WARNING |            performance.py:  142 | P has not reached steady state
+2025-01-21 10:34:47,476 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
+2025-01-21 10:34:48,064 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2025-01-21 10:34:48,335 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-21 10:35:03,191 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 10:35 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: SingleAuxI***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I2   USetPointStep            AReactance               Non-compliant
+PCS_RTE-I2   USetPointStep            BReactance               Non-compliant
+PCS_RTE-I3   LineTrip                 2BReactance              Compliant
+PCS_RTE-I4   ThreePhaseFault          TransientBolted          Compliant
+PCS_RTE-I6   GridVoltageDip           Qzero                    Compliant
+PCS_RTE-I7   GridVoltageSwell         QMax                     Non-compliant
+PCS_RTE-I7   GridVoltageSwell         QMin                     Compliant
+PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
+PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
+
+
+2025-01-21 10:35:12,217 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 10:35:12,378 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
+```
+
+The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
+file. Below is the previous example after modifying the parameter `electric_performance_verification_pcs`:
+
+```ini
+#  # List of SM pcs to be validated (If it's empty, all the SM pcs are validated)
+#  electric_performance_verification_pcs =
+electric_performance_verification_pcs = PCS_RTE-I2,PCS_RTE-I4,PCS_RTE-I8
+```
+
+It can be observed in the output of the tool that only the selected PCS's have been validated.
+
+```
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
+2025-01-21 10:52:30,704 |                DGCV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
+2025-01-21 10:52:30,717 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2025-01-21 10:52:30,940 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2025-01-21 10:52:31,157 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 10:52:35,279 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2025-01-21 10:52:39,255 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 10:52 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: SingleAuxI***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I2   USetPointStep            AReactance               Non-compliant
+PCS_RTE-I2   USetPointStep            BReactance               Non-compliant
+PCS_RTE-I4   ThreePhaseFault          TransientBolted          Compliant
+PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
+
+
+2025-01-21 10:52:42,402 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 10:52:42,426 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
+```
+
+## Modify a PCS
+
+PCS editing is only available for advanced users. The user can switch from *basic* to *advanced*
+user or vice versa by overwriting the config.ini file with one of the following files:
+
+* **config.ini_BASIC**: configuration file for *basic* users.
+* **config.ini_ADVANCED**: configuration file for *advanced* users.
+
+```
+(dgcv_venv) user@dynawo:~/.config$ tree dgcv
+dgcv$
+├── config.ini
+├── config.ini_ADVANCED
+├── config.ini_BASIC
+```
+
+The ``config.ini_BASIC`` and ``config.ini_ADVANCED`` files do not contain the configuration parameters 
+modified in the ``config.ini`` file, so it is recommended that the user rename the file to ``config.ini.old`` 
+and modify any parameters that are desired to be kept in the new file.
+
+```
+(dgcv_venv) user@dynawo:~/.config$ mv config.ini config.ini.old
+(dgcv_venv) user@dynawo:~/.config$ cp config.ini_ADVANCED config.ini
+(dgcv_venv) user@dynawo:~/.config$ tree dgcv
+dgcv$
+├── config.ini
+├── config.ini.old
+├── config.ini_ADVANCED
+├── config.ini_BASIC
+```
+
+The new file contains PCS configuration examples:
+
+```ini
+#  ## Example of a PCS config file
+#  ##    (PCS_RTE-I2 for electrical performance)
+#  ##    (PCS_RTE-I16z1 for model validation)
+
+#  ## # Benchmark list by PCS
+#  ## [PCS-Benchmarks]
+#  ## PCS_RTE-I2 = USetPointStep
+#  ## PCS_RTE-I3 = LineTrip
+#  ## PCS_RTE-I4 = ThreePhaseFault
+#  ## PCS_RTE-I5 = ThreePhaseFault
+#  ## PCS_RTE-I6 = GridVoltageDip
+#  ## PCS_RTE-I7 = GridVoltageSwell
+#  ## PCS_RTE-I8 = LoadShedDisturbance
+#  ## PCS_RTE-I10 = Islanding
+#  ## PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
+#  ## PCS_RTE-I16z3 = USetPointStep,PSetPointStep,QSetPointStep,ThreePhaseFault,GridVoltageDip,GridVoltageSwell,Islanding
+
+#  ## # Operating conditions list by PCS-Benchmark
+#  ## [PCS-OperatingConditions]
+#  ## PCS_RTE-I2.USetPointStep = AReactance,BReactance
+#  ## PCS_RTE-I3.LineTrip = 2BReactance
+#  ## PCS_RTE-I4.ThreePhaseFault = TransientBolted
+#  ## PCS_RTE-I5.ThreePhaseFault = TransientBolted
+#  ## PCS_RTE-I6.GridVoltageDip = Qzero
+#  ## PCS_RTE-I7.GridVoltageSwell = QMax,QMin
+#  ## PCS_RTE-I10.Islanding = DeltaP10DeltaQ4
+#  ## PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ
+#  ## PCS_RTE-I16z1.SetPointStep = Active,Reactive,Voltage
+#  ## PCS_RTE-I16z1.GridFreqRamp = W500mHz250ms
+#  ## PCS_RTE-I16z1.GridVoltageStep = Rise,Drop
+#  ## PCS_RTE-I16z3.USetPointStep = AReactance,BReactance
+#  ## PCS_RTE-I16z3.PSetPointStep = Dec40,Inc40
+#  ## PCS_RTE-I16z3.QSetPointStep = Dec20,Inc10
+#  ## PCS_RTE-I16z3.ThreePhaseFault = TransientBolted
+#  ## PCS_RTE-I16z3.GridVoltageDip = Qzero
+#  ## PCS_RTE-I16z3.GridVoltageSwell = QMax,QMin
+#  ## PCS_RTE-I16z3.Islanding = DeltaP10DeltaQ4
+```
+
+Taking as a starting point the last example of model validation, where only the PCS **PCS_RTE-I16z1** 
+was validated, the benchmarks to be validated will be modified, as well as some Operating conditions.
+
+First, the settings are recovered from the *config.ini* file if the file has been overwritten:
+
+```ini
+#  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
+#  model_ppm_validation_pcs =
+model_ppm_validation_pcs = PCS_RTE-I16z1
+```
+
+Below, only the benchmarks called *ThreePhaseFault* and *GridVoltageStep* are validated::
+
+```ini
+#  ## # Benchmark list by PCS
+#  ## [PCS-Benchmarks]
+[PCS-Benchmarks]
+#  ## PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ
+PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,PermanentBolted
+```
+
+And finally, the *ThreePhaseFault* benchmark does not want to validate the operating conditions called *HiZ*:
+
+```ini
+#  ## # Operating conditions list by PCS-Benchmark
+#  ## [PCS-OperatingConditions]
+[PCS-OperatingConditions]
+#  ## PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
+PCS_RTE-I16z1 = ThreePhaseFault,GridVoltageStep
+```
+
+The result of running the tool only has the PCS, benchmarks and operating conditions configured.
+
+```
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 12:00:08,479 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
+2025-01-21 12:00:08,513 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 12:00:13,667 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 12:00:16,338 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 12:00:19,777 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 12:00:22,939 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 12:00:25,543 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 12:00:51,997 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 12:00 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: IEC2015Dynawo***
+***Reference: IEC2015ReferenceCurves***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3      Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR10     Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3Qmin  Compliant
+PCS_RTE-I16z1ThreePhaseFault          PermanentBolted          Compliant
+PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
+PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
+
+
+2025-01-21 12:00:55,848 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 12:00:57,018 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
 
-Once the `t_SS` value is calculated, the end of the xrange is calculated by adding a
-small extra window that is a percentage of the [`t_event`, `t_SS`] window. This is
-configured by the parameter `graph_postevent_trange_pct` (default is 20%).
+## Log Level
 
-Finally, remember that the xrange is first calculated separately for each signal but the
-final value that is used for all figures is the *widest* one of all plotted figures.
+This section explains how to modify the configuration file to change the log level displayed 
+by the tool. By default, the tool is configured to inform the user of the processes that are 
+performed during execution. Next, the configuration file will be edited to display on screen 
+the debugging messages that are generated when running the tool:
 
-As for the **yrange**, things are different: each figure gets its yrange calculated
-individually. When the variations of the signal are large enough, the yrange is left to
-be set automatically by the graphing library (matplotlib). Else, the yrange gets
-calculated in order to avoid the autorange to zoom in excessively.  This avoids showing
-irrelevant variations as if they were important, when it's really an almost flat
-curve. The threshold at which we switch off the autorange is controlled by the parameter
-`graph_minvariation_yrange_pct` (default is 2%). If the net variation of the signal,
-that is, max(curve) - min(curve), is smaller than the `graph_minvariation_yrange_pct` of
-its *midpoint value* (that is, (max(curve) + min(curve))/2), then the autorange is not
-used, and instead we explicitly calculate the yrange:
+```ini
+[Global]
+#  # File Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG)
+#  file_log_level = INFO
+#  # Console Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG)
+#  console_log_level = INFO
+console_log_level = DEBUG
+#  # List of SM pcs to be validated (If it's empty, all the SM pcs are validated)
+#  electric_performance_verification_pcs =
+#  # List of PPM pcs to be validated (If it's empty, all the PPM pcs are validated)
+#  electric_performance_ppm_verification_pcs =
+#  # List of BESS pcs to be validated (If it's empty, all the PPM pcs are validated)
+#  electric_performance_bess_verification_pcs =
+#  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
+#  model_ppm_validation_pcs =
+#  # List of BESS model pcs to be validated (If it's empty, all the model pcs are validated)
+#  model_bess_validation_pcs =
+```
 
-   * we set ymin to: min(curve) - variation * `graph_bottommargin_yrange_pct`
-   * we set ymax to: max(curve) + variation * `graph_topmargin_yrange_pct`
+Running the above example with the `console_log_level = DEBUG` parameter:
 
+```
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 12:03:17,911 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPNumcc was compiled
+2025-01-21 12:03:17,911 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | TransformerTapChanger was compiled
+2025-01-21 12:03:17,911 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPOmega was compiled
+2025-01-21 12:03:17,912 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | SynchronousMachineI8SM was compiled
+2025-01-21 12:03:17,915 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
+2025-01-21 12:03:17,916 |                       DGCV.PCS |      DEBUG |                    pcs.py:   62 | PCS Path /home/user/dgcv_repo/dgcv_venv/lib/python3.10/site-packages/dgcv/templates/PCS/model/PPM/PCS_RTE-I16z1/PCSDescription.ini
+2025-01-21 12:03:17,917 |                       DGCV.PCS |      DEBUG |                    pcs.py:   71 | User PCS Path None
+2025-01-21 12:03:17,926 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 12:03:17,954 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:17,954 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=3.0
+2025-01-21 12:03:17,954 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:17,955 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
+2025-01-21 12:03:17,955 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:17,955 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:17,956 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:17,956 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:17,956 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
+2025-01-21 12:03:25,379 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 12:03:25,392 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:25,393 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:25,393 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:25,393 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
+2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:25,395 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
+2025-01-21 12:03:33,913 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=3.0
+2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
+2025-01-21 12:03:33,931 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:33,931 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:33,931 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:33,932 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:33,932 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
+2025-01-21 12:03:42,638 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 12:03:42,654 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
+2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:42,656 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:42,657 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:42,657 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:42,657 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=9999.0
+2025-01-21 12:03:50,924 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=0.5*Pmax
+2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
+2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=0.95*Udim
+2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
+2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
+2025-01-21 12:03:50,936 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=0.1
+2025-01-21 12:03:59,228 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=0.5*Pmax
+2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmax
+2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=1.05*Udim
+2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
+2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
+2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=-0.1
+2025-01-21 12:04:07,244 |                DGCV.Validation |      DEBUG |             validation.py:  154 | Sorted summary [Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR3', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR10', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR3Qmin', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='PermanentBolted', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='GridVoltageStep', operating_condition='Rise', compliance=<Compliance.NonCompliant: 2>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='GridVoltageStep', operating_condition='Drop', compliance=<Compliance.NonCompliant: 2>, report_name='report.RTE-I16z1.tex')]
+2025-01-21 12:04:07,245 |                  DGCV.PDFLatex |      DEBUG |                 report.py:   78 | PCS: PCS_RTE-I16z1 User LaTeX path:/home/dgcv/.config/dgcv/templates/reports/model/PPM/PCS_RTE-I16z1
+2025-01-21 12:04:07,245 |                  DGCV.PDFLatex |      DEBUG |                 report.py:   82 | PCS: PCS_RTE-I16z1 Tool LaTeX path:/home/dgcv/dgcv_repo/src/dgcv/templates/reports/model/PPM/PCS_RTE-I16z1
+2025-01-21 12:04:07,260 |                  DGCV.PDFLatex |      DEBUG |                 report.py:  387 | Root LaTeX path:/home/dgcv/dgcv_repo/src/dgcv/templates/reports
+2025-01-21 12:04:24,230 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 12:04 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: IEC2015Dynawo***
+***Reference: IEC2015ReferenceCurves***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3      Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR10     Compliant
+PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3Qmin  Compliant
+PCS_RTE-I16z1ThreePhaseFault          PermanentBolted          Compliant
+PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
+PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
+
+
+2025-01-21 12:04:26,442 |                  DGCV.PDFLatex |      DEBUG |                 report.py:  480 | 
+2025-01-21 12:04:26,443 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 12:04:40,093 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
+```
