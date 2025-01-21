@@ -24,15 +24,12 @@ Developed by Grupo AIA
 
 ## Overview
 
-Dynamic Grid Compliance Verification is configured via a `config.ini` file, written in the well-known INI
-format (of the [`Python flavor`](https://docs.python.org/3/library/configparser.html)). The location of 
+Dynamic Grid Compliance Verification is configured via a **config.ini** file, written in the well-known INI
+format (of the [Python flavor](https://docs.python.org/3/library/configparser.html)). The location of 
 this file follows the customary standard of each platform for application data:
 
 * Under Linux: ``$HOME/.config/dgcv/``
 * Under Windows: ``%APPDATA%\Local\dgcv\``
-
-Besides the ``config.ini`` file, there is a subfolder named ``ddb``, which will contain all compiled
-preassembled Modelica models defined by the user.
 
 The supplied INI file contains basic configuration options. They appear all commented out,
 and with the default values. This way it is much easier for the user to configure anything,
@@ -41,7 +38,7 @@ to set a configuration, he duplicates the line in order to preserve the informat
 default value, as a reminder. For the case of specific definitions of particular PCSs/Benchmarks/OCs,
 the config.ini file also includes one generic example at the bottom.
 
-Besides the ``config.ini`` file, there are two files named ``config.ini_BASIC`` and ``config.ini_ADVANCED``.
+Besides the **config.ini** file, there are two files named **config.ini_BASIC** and **config.ini_ADVANCED**.
 These files contain configuration parameters distinguishing between basic and advanced users. If the
 user wishes, he can switch between basic and advanced user by overwriting the config.ini file with
 the corresponding configuration file.
@@ -56,36 +53,36 @@ In this section the global options are configured, global options are understood
 that do not depend on the execution mode of the tool.
 The available options are:
 
-* ``electric_performance_verification_pcs``
+* **electric_performance_verification_pcs**
 
     Comma separated list of *PCSs* that will be used in the **Performance Validation for
     synchronous production units**. Leave the parameter empty to use all *PCSs*.
 
-* ``electric_performance_ppm_verification_pcs``
+* **electric_performance_ppm_verification_pcs**
 
     Comma separated list  of *PCSs* that will be used in the **Performance Validation for
     non-synchronous park of generators**. Leave the parameter empty to use all *PCSs*.
 
-* ``electric_performance_bess_verification_pcs``
+* **electric_performance_bess_verification_pcs**
 
     Comma separated list  of *PCSs* that will be used in the **Performance Validation for
     non-synchronous park of storages**. Leave the parameter empty to use all *PCSs*.
 
-* ``model_ppm_validation_pcs``
+* **model_ppm_validation_pcs**
 
     Comma separated list  of *PCSs* that will be used in the **RMS Model Validation for
     non-synchronous park of generators**. Leave the parameter empty to use all *PCSs*.
 
-* ``model_bess_validation_pcs``
+* **model_bess_validation_pcs**
 
     Comma separated list  of *PCSs* that will be used in the **RMS Model Validation for
     non-synchronous park of storages**. Leave the parameter empty to use all *PCSs*.
 
-* ``file_log_level``
+* **file_log_level**
 
     File Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG).
 
-* ``console_log_level``
+* **console_log_level**
 
     Console Log level (CRITICAL,FATAL,ERROR,WARNING,INFO,DEBUG).
 
@@ -187,7 +184,7 @@ PCS_RTE-I16z3Islanding                DeltaP10DeltaQ4          Failed simulation
 ```
 
 The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
-file. Below is the previous example after modifying the parameter `model_ppm_validation_pcs`:
+file. Below is the previous example after modifying the parameter **model_ppm_validation_pcs**:
 
 ```ini
 #  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
@@ -290,7 +287,7 @@ PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
 ```
 
 The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
-file. Below is the previous example after modifying the parameter `electric_performance_verification_pcs`:
+file. Below is the previous example after modifying the parameter **electric_performance_verification_pcs**:
 
 ```ini
 #  # List of SM pcs to be validated (If it's empty, all the SM pcs are validated)
@@ -344,8 +341,8 @@ dgcv$
 ├── config.ini_BASIC
 ```
 
-The ``config.ini_BASIC`` and ``config.ini_ADVANCED`` files do not contain the configuration parameters 
-modified in the ``config.ini`` file, so it is recommended that the user rename the file to ``config.ini.old`` 
+The **config.ini_BASIC** and **config.ini_ADVANCED** files do not contain the configuration parameters 
+modified in the **config.ini** file, so it is recommended that the user rename the file to **config.ini.old** 
 and modify any parameters that are desired to be kept in the new file.
 
 ```
@@ -497,7 +494,7 @@ console_log_level = DEBUG
 #  model_bess_validation_pcs =
 ```
 
-Running the above example with the `console_log_level = DEBUG` parameter:
+Running the above example with the **console_log_level = DEBUG** parameter:
 
 ```
 (dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
