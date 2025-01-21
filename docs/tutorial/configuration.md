@@ -341,7 +341,7 @@ dgcv$
 ├── config.ini_BASIC
 ```
 
-The **config.ini_BASIC** and **config.ini_ADVANCED** files do not contain the configuration parameters 
+<span style="background-color: #ffcc11;">WARNING:</span> The **config.ini_BASIC** and **config.ini_ADVANCED** files do not contain the configuration parameters 
 modified in the **config.ini** file, so it is recommended that the user rename the file to **config.ini.old** 
 and modify any parameters that are desired to be kept in the new file.
 
@@ -464,7 +464,7 @@ PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 2025-01-21 12:00:57,018 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
-The **modify_pcs.md** tutorial explains how to modify the parameters that define a PCS, 
+<span style="background-color: #4976ba;">INFO:</span> The **modify_pcs.md** tutorial explains how to modify the parameters that define a PCS, 
 Benchmark and/or Operating condition.
 
 
