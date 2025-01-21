@@ -127,7 +127,7 @@ The tool contemplates two types of verifications:
 - **Model validation**: defines the maximum deviation allowed between the curves calculated by
     Dynawo and the reference curves provided by the user. The maximum allowed thresholds are 
     defined in the tool configuration file.
-    ```
+    ```ini
     [GridCode]
     thr_P_mxe_before = 0.05
     thr_P_mxe_during = 0.08
@@ -147,7 +147,7 @@ can modify them if desired by editing the user configuration file (`config.ini`)
 `~/.config/dgcv` dir. In this file the user has all the configuration options available for the 
 tool, as well as their default values.
 
-```
+```ini
 [GridCode]
 # thr_P_mxe_before = 0.05
 # thr_P_mxe_during = 0.08
@@ -162,11 +162,11 @@ tool, as well as their default values.
 
 **Previous example after modify the `thr_P_mxe_during` threshold:** 
 
-```
+```ini
 [GridCode]
-thr_P_mxe_during = 0.002
-
 # thr_P_mxe_before = 0.05
+# thr_P_mxe_during = 0.08
+thr_P_mxe_during = 0.002
 # thr_P_mxe_after = 0.05
 # thr_P_me_before = 0.02
 # thr_P_me_during = 0.05
@@ -214,7 +214,7 @@ The operating conditions of each included PCS are declared in the tool's configu
 at the ned of the user configuration file, an example is shown how the operating conditions are
 configured.
 
-```
+```ini
 ## [PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3]
 ## # Report filename, if the report is split into multiple files, one by OC 
 ## report_name = report.ThreePhaseFault.TransientBoltedSCR3.tex
@@ -240,10 +240,11 @@ modified, as well as the parameters that will vary, must be added to the user co
 The operating condition section of the example, and the value of Q in the PDR node are defined
 to use _Qmin_ instead of its default value (0). 
 
-```
+```ini
 [PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800]
 ## # Operating conditions
 ## # PDR Node
+## # pdr_Q = 0
 pdr_Q = Qmin
 ```
 
@@ -285,53 +286,87 @@ Steps to expand an existing PCS with new operating conditions:
 1. Configuration:
    - Copy the configuration of an existing operating conditions in the PCS to the user 
         configuration file.
-     ```
-        [PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800]
-        report_name = report.ThreePhaseFault.TransientHiZTc800.tex
-        pdr_P = Pmax
-        pdr_Q = 0
-        pdr_U = Udim
-        # Fault duration time until the line is disconnected (s)
-        HTB1_fault_t = 0.800
-        HTB2_fault_t = 0.800
-        HTB3_fault_t = 0.800
+     ```ini
+        [PCS_RTE-I16z1.GridVoltageStep.Rise]
+        # Operating Condition LateX filename
+        report_name = report.GridVoltageStep.Rise.tex
+        # Tolerance for reference tracking tests should be adapted to the magnitude of the step change
+        reference_step_size = 0.1
+        # Is this a bolted fault OC?
+        bolted_fault = false
+        # Is this a hiz fault OC?
+        hiz_fault = false
+        # OperatingCondition type
+        setpoint_change_test_type = Others
+
+        [PCS_RTE-I16z1.GridVoltageStep.Rise.Model]
+        # Reactance of the line connected to the PDR point
+        #line_XPu =
         # SCR stands for Short Circuit Ratio
-        SCR = 3
-        # Voltage dip
-        dip = 0.5*Udim
+        SCR = 10
+        # PDR point
+        pdr_P = 0.5*Pmax
+        pdr_Q = Qmin
+        pdr_U = 0.95*Udim
+        # Infinite Bus configuration
+        # To configure time parameters, the following convention is used:
+        # * 'delta_t_': indicates how long the network remains in a certain state, this value will be
+        #                added to the time in which the event is triggered.
+        # * otherwise: the value of this variable will be used in the tool without prior treatments.
+        # TSO Model configuration
+
+        [PCS_RTE-I16z1.GridVoltageStep.Rise.Event]
+        # Event connected to setpoint magnitude
+        connect_event_to = AVRSetpointPu
+        # Instant of time at which the event or fault starts
+        # Variable sim_t_event_start is called simply sim_t_event in the DTR
+        sim_t_event_start = 30
+        # Duration of the event or fault
+        #fault_duration =
+        # Event setpoint step value
+        #  This test presents a voltage drop in the TSO model when the event occurs, the
+        #  step field of the event is used to represent it
+        setpoint_step_value = 0.1
      ```
    - Change the name of the operating conditions, it is advisable to put a name that describes
         the purpose of the ner conditions.
-     ```
-        In this example the parameter pdr_Q will be modified from 0 to Qmin, so it is proposed
-        to modify the name from TransientHiZTc800 to TransientHiZTc800Qmin
+     ```ini
+        # In this example the parameter pdr_Q will be modified from Qmin to 0, so it is proposed
+        # to modify the name from Rise to RiseQ0
      
-        [PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800Qmin]
+        [PCS_RTE-I16z1.GridVoltageStep.RiseQ0]
+        ...
+        [PCS_RTE-I16z1.GridVoltageStep.RiseQ0.Model]
+        ...
+        [PCS_RTE-I16z1.GridVoltageStep.RiseQ0.Event]
         ...
      ```
    - Copy and add the name of the new operating conditions to the corresponding benchmark
-     ```
+     ```ini
         [PCS-OperatingConditions]
-        PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,
-                                   TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ,
-                                   TransientHiZTc800Qmin
+        # PCS_RTE-I16z1.GridVoltageStep = Rise,Drop
+        PCS_RTE-I16z1.GridVoltageStep = Rise,Drop,RiseQ0
+
 
      ```
    - Finally, edit the parameters you want to modify     
-     ```
-        [PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800Qmin]
-        report_name = report.ThreePhaseFault.TransientHiZTc800Qmin.tex
-        pdr_P = Pmax
-        pdr_Q = Qmin
-        pdr_U = Udim
-        # Fault duration time until the line is disconnected (s)
-        HTB1_fault_t = 0.800
-        HTB2_fault_t = 0.800
-        HTB3_fault_t = 0.800
+     ```ini
+        [PCS_RTE-I16z1.GridVoltageStep.RiseQ0.Model]
+        # Reactance of the line connected to the PDR point
+        #line_XPu =
         # SCR stands for Short Circuit Ratio
-        SCR = 3
-        # Voltage dip
-        dip = 0.5*Udim
+        SCR = 10
+        # PDR point
+        pdr_P = 0.5*Pmax
+        # pdr_Q = Qmin
+        pdr_Q = 0
+        pdr_U = 0.95*Udim
+        # Infinite Bus configuration
+        # To configure time parameters, the following convention is used:
+        # * 'delta_t_': indicates how long the network remains in a certain state, this value will be
+        #                added to the time in which the event is triggered.
+        # * otherwise: the value of this variable will be used in the tool without prior treatments.
+        # TSO Model configuration
      ```
 2. Report: Modify or expand the latex report template to include the simulation results wtih 
 the new operating conditions. 
