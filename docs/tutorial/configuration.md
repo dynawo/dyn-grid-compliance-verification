@@ -467,6 +467,9 @@ PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 2025-01-21 12:00:57,018 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
+The **modify_pcs.md** tutorial explains how to modify the parameters that define a PCS, 
+Benchmark and/or Operating condition.
+
 
 ## Log Level
 
