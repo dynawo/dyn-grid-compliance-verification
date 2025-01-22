@@ -330,10 +330,10 @@ Steps to expand an existing PCS with new operating conditions:
      ```
    - Change the name of the operating conditions, it is advisable to put a name that describes
         the purpose of the ner conditions.
+
+        In this example the parameter **pdr_Q** will be modified from *Qmin* to *0*, so it is 
+        proposed to modify the name from **Rise** to **RiseQ0**
      ```ini
-        # In this example the parameter pdr_Q will be modified from Qmin to 0, so it is proposed
-        # to modify the name from Rise to RiseQ0
-     
         [PCS_RTE-I16z1.GridVoltageStep.RiseQ0]
         ...
         [PCS_RTE-I16z1.GridVoltageStep.RiseQ0.Model]
@@ -346,27 +346,15 @@ Steps to expand an existing PCS with new operating conditions:
         [PCS-OperatingConditions]
         # PCS_RTE-I16z1.GridVoltageStep = Rise,Drop
         PCS_RTE-I16z1.GridVoltageStep = Rise,Drop,RiseQ0
-
-
      ```
    - Finally, edit the parameters you want to modify     
      ```ini
         [PCS_RTE-I16z1.GridVoltageStep.RiseQ0.Model]
-        # Reactance of the line connected to the PDR point
-        #line_XPu =
-        # SCR stands for Short Circuit Ratio
-        SCR = 10
         # PDR point
         pdr_P = 0.5*Pmax
         # pdr_Q = Qmin
         pdr_Q = 0
         pdr_U = 0.95*Udim
-        # Infinite Bus configuration
-        # To configure time parameters, the following convention is used:
-        # * 'delta_t_': indicates how long the network remains in a certain state, this value will be
-        #                added to the time in which the event is triggered.
-        # * otherwise: the value of this variable will be used in the tool without prior treatments.
-        # TSO Model configuration
      ```
 2. Report: Modify or expand the latex report template to include the simulation results wtih 
 the new operating conditions. 
