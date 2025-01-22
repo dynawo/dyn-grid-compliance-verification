@@ -93,6 +93,27 @@ def _user_models():
         or not (config.get_config_dir() / "user_models" / "dictionary").is_dir()
     ):
         manage_files.create_dir(config.get_config_dir() / "user_models" / "dictionary")
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Bus.ini"
+    )
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Line.ini"
+    )
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Load.ini"
+    )
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Power_Park.ini"
+    )
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Storage.ini"
+    )
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Synch_Gen.ini"
+    )
+    manage_files.create_empty_file(
+        config.get_config_dir() / "user_models" / "dictionary" / "Transformer.ini"
+    )
 
 
 def _is_valid_config_file(config_file: Path) -> bool:

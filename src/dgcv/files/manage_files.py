@@ -105,6 +105,17 @@ def create_dir(path: Path, clean_first: bool = True, all: bool = False) -> None:
         path.chmod(0o777)
 
 
+def create_empty_file(empty_file: Path) -> None:
+    """Create an empty file if not exists.
+
+    Parameters
+    ----------
+    empty_file: Path
+        File to create
+    """
+    empty_file.touch()
+
+
 def remove_dir(path: Path) -> None:
     """Delete a directory and its contents.
 
