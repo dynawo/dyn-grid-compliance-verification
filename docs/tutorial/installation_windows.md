@@ -18,7 +18,8 @@ Developed by Grupo AIA
 1. [Overview](#Overview)
 2. [Install Dynawo](#Install-Dynawo)
 3. [System Requirements](#System-Requirements)
-4. [Install the tool](#Install-the-tool)
+4. [Installation](#Installation)
+5. [Build and install (for developers)](#build-and-install-for-developers)
 
 ## Overview
 

@@ -14,15 +14,19 @@ Developed by Grupo AIA
 #### Table of Contents
 
 1. [First run](#first-run)
+   1. [Assumptions](#assumptions)
+   2. [Executables](#executables)
 2. [Configuration](#configuration)
+   1. [The structure of the `~/.config/dgcv` dir](#the-structure-of-the-configdgcv-dir)
 3. [Results directory](#results-directory)
-4. [Running with debug on](#running-with-debug-on)
-5. [The Producer files](#the-producer-files)
-6. [The Reference curves](#the-reference-curves)
-7. [The Producer curves](#the-producer-curves)
-8. [Inputs template](#inputs-template)
-9. [Log file and console messages](#log-file-and-console-messages)
-
+   1. [The structure of results](#the-structure-of-results)
+   2. [The structure of a *PCS* output](#the-structure-of-a-pcs-output)
+   3. [The structure of results with debug on](#the-structure-of-results-with-debug-on)
+4. [Trouble Shooting](#trouble-shooting)
+   1. [Error compiling a dynamic model](#error-compiling-a-dynamic-model)
+   2. [Failed Simulation](#failed-simulation)
+5. [Extra](#extra)
+   1. [Also available, but won’t be further discussed here](#also-available-but-wont-be-further-discussed-here)
 --------------------------------------------------------------------------------
 
 # First run
@@ -134,77 +138,6 @@ simulations), or a set of user-provided **curves**, or both (in which case
 the curves are used only for showing them on the graphs, along the simulated
 curves). Therefore, you must provide either a *PRODUCER_MODEL* or a
 *PRODUCER_CURVE* directory, or both.
-
-## Also available, but won’t be further discussed here
-
-### Generation of Producer Inputs:
-
-It’s an interactive helper tool to aid the user in constructing the 
-DYD/PAR/INI files for input to the tool. For now, there is the generate 
-option:
-
-``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv generate -h
-usage: dgcv generate [-h] [-d] [-l LAUNCHER_DWO] -o RESULTS_DIR -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i} -v {performance_SM,performance_PPM,model}
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -o RESULTS_DIR, --results_dir RESULTS_DIR
-                        enter the path to the results dir
-  -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i}, --topology {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i}
-                        enter the desired topology to implement in the DYD file
-  -v {performance_SM,performance_PPM,model}, --validation {performance_SM,performance_PPM,model}
-                        enter the validation type
-```
-
-### Model compilation of custom Dynawo assembled models:
-
-Note: compilation of internally-defined assembled models is invoked automatically
-
-``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile -h
-usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
-
-Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $DGCV_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
-                        XML file describing a custom Modelica model
-  -f, --force           force the recompilation of all Modelica models (the
-                        user's and the tool's own)
-```
-
-### Curve Anonymizer:
-
-In this mode the tool generates a set of curves with generic names from 
-the input curves to which a noise signal is added.
-
-```
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv anonymize -h
-usage: dgcv anonymize [-h] [-d] [-c PRODUCER_CURVES] [-o RESULTS_DIR]
-	                      [-n NOISESTD] [-f FREQUENCY]
-	
-optional arguments:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -c PRODUCER_CURVES, --producer_curves PRODUCER_CURVES
-	                        enter the path to the folder containing the curves for
-	                        the Performance Checking Sheet (PCS)
-  -o RESULTS_DIR, --results_dir RESULTS_DIR
-                        enter the path to the results dir
-  -n NOISESTD, --noisestd NOISESTD
-                        enter the standard deviation used to to anonymize the
-                        curves (recommended value: [0.01, 0.1])
-  -f FREQUENCY, --frequency FREQUENCY
-                        enter the frequency used for the lowpass filter
-```
 
 ## Firsts test
 
@@ -443,20 +376,24 @@ dgcv$
 ├── config.ini_BASIC
 ├── ddb
 │   ├── compile.log
-│   ├── dgcv.log
+│   ├── dynawo.version
 │   ├── SPNumcc
+│   ├── SPNumcc.desc.xml
 │   ├── SPNumcc.mo
 │   ├── SPNumcc.so
 │   ├── SPOmega
+│   ├── SPOmega.desc.xml
 │   ├── SPOmega.extvar
 │   ├── SPOmega.mo
 │   ├── SPOmega.so
 │   ├── SynchronousMachineI8SM
+│   ├── SynchronousMachineI8SM.desc.xml
 │   ├── SynchronousMachineI8SM.extvar
 │   ├── SynchronousMachineI8SM_INIT.mo
 │   ├── SynchronousMachineI8SM.mo
 │   ├── SynchronousMachineI8SM.so
 │   ├── TransformerTapChanger
+│   ├── TransformerTapChanger.desc.xml
 │   ├── TransformerTapChanger.extvar
 │   ├── TransformerTapChanger_INIT.mo
 │   ├── TransformerTapChanger.mo
@@ -710,7 +647,7 @@ Or, if desired, it is possible to validate a *PCS* only
 2024-02-05 15:26:16,310 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
 ```
 
-# Running with debug on
+## The structure of results with debug on
 
 This section explains the output files generated by the tool when 
 a verification is executed in debug mode.
@@ -749,342 +686,174 @@ Results_debug/PCS_RTE-I4
 * successfully, while the *bisection_last_failure* directory 
 * corresponds to the last simulation that failed.
 
-# The Producer files
 
-## “TSO’s side vs. the Producer’s side”
+# Trouble shooting
 
-The network model used in the tool for dynamic simulation is divided 
-into 2 parts, on one hand there are the files that model the simplified 
-network of the producer, and on the other hand it corresponds to a 
-simplified model of the TSO electrical network, the TSO model is defined 
-in the PCS specifications.
+## Error compiling a dynamic model
 
-Each PCS defines a **network model on the TSO side**, all models 
-generated for the tool have been generated following the DTR 
-specifications. To facilitate the implementation of the models, two 
-decisions have been made in their design. First of all, all models 
-implement the connection node (PDR node), as a dynamic model of a Bus, 
-this facilitates the connection between the TSO model and that of the 
-Producer, the producer only has to create in its network model a 
-connection between a device of your model with the BusPDR. On the 
-other hand, it has been decided to extract the OmegaRef modeling to 
-its own set of DYD-PAR files, this eliminates duplication since there 
-is no dynamic OmegaRef model that can be coupled to any dynamic 
-generator model.
+The tool allows the user to create new dynamic models to use in Dynawo simulation. 
+The procedure for using your own dynamic models is as follows:
 
-The producer's network model is a simplified representation of the 
-producer's electrical network, this includes from the generating unit/s, 
-with their corresponding auxiliary loads if they exist, and/or 
-transformers, until reaching the BusPDR, a connection point that It is 
-modeled on the TSO model. One point to keep in mind is that 
-**the producer-side network** must be modeled using one of the standard 
-topologies accepted by the tool.
-
-## The 8 standard topologies
-
-A requirement to be able to validate a producer network model is that 
-when simulating the different PCS that make up the tool, it is 
-guaranteed that the simulation starts at a stable point, without 
-oscillations that come from the model and may affect the final result. 
-In turn, each PCS has a defined TSO model designed specifically for its 
-validation, this implies that the initialization of the models from one 
-PCS to another is different and must be calculated individually for 
-each validation. For this reason, 8 standard topologies have been 
-defined that allow obtaining an equivalent model of the producer's 
-network model to use as input to the tool.
-
-### S
-
-This is the simplest topology, it consists of a dynamic model of a 
-synchronous generator connected to one side of a transformer, which is 
-connected to the BusPDR from the opposite side.
-
-### S + i
-
-This topology is similar to the *S* topology, but instead of connecting 
-the transformer directly to the PDR bus, there is an internal line 
-between both elements. This line simplifies the entire network that may 
-exist between the synchronous generator transformer and the connection 
-to the TSO network (Internal network).
-
-![Single](../manual/source/usage/figs_topologies/s.png)
-
-### S + Aux
-
-This topology allows the auxiliary loads of the synchronous generator 
-to be modeled in the most simplified model. The auxiliary load is 
-connected to its own transformer, and both transformers, that of the 
-auxiliary load and that of the synchronous generator, are connected to 
-the PDR bus.
-
-### S + Aux + i
-
-This topology is based on the *S + Aux* topology, adding a new internal 
-bus model, where the transformers of the model are connected. In this 
-model the internal network modeled by a line connects the internal bus 
-with the BusPDR
-
-![SingleAux](../manual/source/usage/figs_topologies/saux.png)
-
-
-### M
-
-This topology allows creating a model with multiple generators, where 
-each generator is connected to one side of its own transformer, and an 
-internal bus is connected to the other end of the transformer. From the 
-internal bus there is a connection to a general transformer which is 
-connected to the BusPDR. (Each generator that is modeled is an equivalent 
-model of all the generators present in the real model that belong to the 
-same family of generators).
-
-### M + i
-
-This topology is similar to the *M* topology, but instead of connecting 
-the general transformer directly to the PDR bus, there is an internal 
-line between both elements. This line simplifies the entire network that 
-may exist between the synchronous generator transformer and the 
-connection to the TSO network (Internal network). (Each generator that 
-is modeled is an equivalent model of all the generators present in the 
-real model that belong to the same family of generators).
-
-![Multiple](../manual/source/usage/figs_topologies/m.png)
-
-### M + Aux
-
-This topology allows the *M* topology to be extended to include the 
-auxiliary loads of the generators. These are modeled as a single 
-auxiliary load connected to one side of its own transformer, which is 
-connected to the internal bus on the opposite side. (Each generator that 
-is modeled is an equivalent model of all the generators present in the 
-real model that belong to the same family of generators).
-
-### M + Aux + i
-
-This topology is based on the *M + Aux* topology, but instead of 
-connecting the general transformer directly to the PDR bus, there is an 
-internal line between both elements. This line simplifies the entire 
-network that may exist between the synchronous generator transformer 
-and the connection to the TSO network (Internal network). (Each generator 
-that is modeled is an equivalent model of all the generators present in 
-the real model that belong to the same family of generators).
-
-![MultipleAux](../manual/source/usage/figs_topologies/maux.png)
-
-## Supported Dynawo model
-
-Due to the complexity of Dynawo, and the number of dynamic models it has, 
-a system has had to be designed in the tool to allow any model to be used. 
-The system adopted by the tool consists of a **master dictionary** that 
-allows translation from one of the variables declared in the tool to the 
-equivalent variable for the selected dynamic model. The master dictionary 
-is saved in *INI* files structured in sections, where the title of each 
-section corresponds to the name of a Dynawo dynamic model, and in each 
-key-value line the relationship between *a tool variable (key)* and 
-*a dynamic model variable (value)*.
+* Locate the files that define the dynamic model in the **user_models** directory 
+within the user configuration directory
 
 ```
-[GeneratorSynchronousFourWindingsTGov1SexsPss2a]
-ActivePower0Pu = generator_P0Pu
-ReactivePower0Pu = generator_Q0Pu
-Voltage0Pu = generator_U0Pu
+dgcv$
+├── config.ini
+...
+└── user_models
+│   ├── NewDynamicModel.xml
+│   ├── NewDynamicModel.mo
+    └── dictionary
+```
+
+* Run the `dgcv compile` command to compile the dynamic models
+
+```
+(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile
+2025-01-23 12:33:51,929 |                    DGCV.Dynawo |       INFO |                 dynawo.py:   51 | Precompile NewDynamicModel.xml
+2025-01-23 12:33:51,929 |                    DGCV.Dynawo |       INFO |                 dynawo.py:   88 | cd /home/dgcv/dgcv_repo/src/dgcv/model_lib/modelica_models && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --generate-preassembled --model-list NewDynamicModel.xml --non-recursive-modelica-models-dir . --output-dir /home/dgcv/.config/dgcv/ddb && cd /home/dgcv/.config/dgcv/ddb && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --dump-model --model-file NewDynamicModel.so --output-file NewDynamicModel.desc.xml
+2025-01-23 12:34:50,475 |                    DGCV.Dynawo |       INFO |                 dynawo.py:  143 | Compilation of NewDynamicModel succeeded
+```
+
+If the tool finishes successfully, the new compiled model should appear in the ddb directory 
+within the user configuration directory:
+
+```
+dgcv$
+├── config.ini
+...
+├── ddb
+│   ├── NewDynamicModel.desc.xml
+│   ├── NewDynamicModel.extvar
+│   ├── NewDynamicModel.mo
+│   ├── NewDynamicModel.so
 ...
 ```
 
-It is understood that a Dynawo dynamic model is supported by the tool when 
-its definition exists in the tool's master dictionary.
+If, on the other hand, an error has occurred when compiling the dynamic model, the tool saves 
+all the output generated by the Dynawo simulator in a log file. The file is called 
+**compile.log** and is located in the same directory as the compiled models.
 
-# The Reference curves
+```
+dgcv$
+├── config.ini
+...
+├── ddb
+│   ├── compile.log
+...
+```
 
-## the directory structure
+## Failed Simulation
 
-Reference curves are a set of files organized in a directory structure such 
-as the one shown in this example:
+If the final report of the tool shows this result in one or more PCS's, it indicates that 
+one of these problems has occurred:
+
+* Dynawo has not been able to perform the requested simulation
+
+* Dynawo has exceeded the maximum timeout established in the simulation of the model
+
+The user can check the reason for the error in the *dgcv.log* file left by the tool in the **log** 
+directory inside the user configuration directory.
+
+```
+dgcv$
+├── config.ini
+...
+├── log
+│   ├── dgcv.log
+...
+```
+
+In cases where the simulation has exceeded the maximum configured timeout, a message similar to the 
+following will be displayed:
+
+```
+2025-01-23 14:19:14,567 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-23 14:24:14,627 |                    DGCV.Dynawo |    WARNING |                 dynawo.py:  184 | Execution terminated due to timeout
+2025-01-23 14:24:14,668 |                    DGCV.Dynawo |    WARNING |                 curves.py:  899 | Execution terminated due to timeout
+```
+
+In cases where Dynawo has not been able to perform the requested simulation, a message similar to the 
+following will be displayed, the message indicates where the log file generated by the Dynawo simulator 
+is located:
+
+```
+2025-01-23 13:03:55,089 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-23 13:03:56,192 |                    DGCV.Dynawo |    WARNING |                 curves.py:  899 | Simulation Fails, logs in IEC2015/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
+```
+
+
+# Extra
+
+## Also available, but won’t be further discussed here
+
+### Generation of Producer Inputs:
+
+It’s an interactive helper tool to aid the user in constructing the 
+DYD/PAR/INI files for input to the tool. For now, there is the generate 
+option:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree ReferenceCurves
-ReferenceCurves
-├── CurvesFiles.ini
-├── PCS.BenchMark1.OperatingCondition1.csv
-├── PCS.BenchMark1.OperatingCondition1.dict
-├── PCS.BenchMark1.OperatingCondition2.csv
-├── PCS.BenchMark1.OperatingCondition2.dict
-├── PCS.BenchMark2.OperatingCondition1.csv
-└── PCS.BenchMark2.OperatingCondition1.dict
+(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv generate -h
+usage: dgcv generate [-h] [-d] [-l LAUNCHER_DWO] -o RESULTS_DIR -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i} -v {performance_SM,performance_PPM,model}
+
+options:
+  -h, --help            show this help message and exit
+  -d, --debug           more debug messages
+  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
+                        enter the path to the Dynawo launcher
+  -o RESULTS_DIR, --results_dir RESULTS_DIR
+                        enter the path to the results dir
+  -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i}, --topology {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i}
+                        enter the desired topology to implement in the DYD file
+  -v {performance_SM,performance_PPM,model}, --validation {performance_SM,performance_PPM,model}
+                        enter the validation type
 ```
 
-This example shows how the reference curves must be structured. Each operating 
-condition has its own set of reference curve files, each consisting of 2 files: 
-the reference signals file (in the image in CSV format), and a DICT file.
+### Model compilation of custom Dynawo assembled models:
 
-Reference signals are normally of EMT-type, obtained either from real field tests 
-or from an EMT simulator. But they could also be RMS signals, obtained from a phasor 
-simulation tool. For this reason, the tool can import reference signal in the 
-following formats:
-
-* COMTRADE:
-  All versions of the COMTRADE standard up to version C37.111-2013 are admissible. 
-  The signals can be provided either as a single file in the SBB format, or as a 
-  pair of files in DAT+CFG formats (the two files must in this case have the same 
-  name and differ only by their extension).
-
-* EUROSTAG:
-  Only the EXP ASCII format is supported.
-
-* CSV:
-  The column separator must be ";". A "time" column is required, although it does not 
-  need to be the first column (see the DICT file below).
-
-## DICT file
- It is mandatory to provide a companion *DICT* file, regardless of the format of 
- the reference signal file. This file provides two types of information that are 
- otherwise impossible to guess: 
- * The correspondence between the columns of the file and the quantities expected in the PCSs. 
- * Certain simulation parameters used to obtain the curves (depending on the PCS).
-
-```
-[Curves-Metadata]
-# True when the reference curves are field measurements
-is_field_measurements =
-# Instant of time at which the event or fault starts
-# Variable sim_t_event_start is called simply sim_t_event in the DTR
-sim_t_event_start =
-# Duration of the event or fault
-fault_duration =
-# Frequency sampling of the reference curves
-frequency_sampling =
-
-[Curves-Dictionary]
-time = 
-BusPDR_BUS_ActivePower =
-BusPDR_BUS_ReactivePower =
-BusPDR_BUS_ActiveCurrent =
-BusPDR_BUS_ReactiveCurrent =
-BusPDR_BUS_Voltage =
-NetworkFrequencyPu =
-# Replace "[XFMR_ID]" with the transformer id associating to the Wind Turbine or PV Array
-[XFMR_ID]_XFMR_Tap =
-# Replace "[WT_ID]" with the Wind Turbine id or PV Array id
-[WT_ID]_GEN_InjectedActiveCurrent =
-[WT_ID]_GEN_InjectedReactiveCurrent =
-[WT_ID]_GEN_AVRSetpointPu =
-[WT_ID]_GEN_MagnitudeControlledByAVRPu =
-[WT_ID]_GEN_InjectedCurrent =
-# To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
-# and the suffixes _a, _b and _c must be added as in the following example:
-#    BusPDR_BUS_Voltage_a =
-#    BusPDR_BUS_Voltage_b =
-#    BusPDR_BUS_Voltage_c =
-```
-
-# The Producer curves
-
-## the directory structure
-
-Producer curves are a set of files organized in a directory 
-structure similar to reference curves, as seen in this example:
+Note: compilation of internally-defined assembled models is invoked automatically
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree ProducerCurves
-ProducerCurves
-├── CurvesFiles.ini
-├── PCS.BenchMark1.OperatingCondition1.csv
-├── PCS.BenchMark1.OperatingCondition1.dict
-├── PCS.BenchMark1.OperatingCondition2.csv
-├── PCS.BenchMark1.OperatingCondition2.dict
-├── PCS.BenchMark2.OperatingCondition1.csv
-├── PCS.BenchMark2.OperatingCondition1.dict
-└── Producer.ini
-```
-The main difference is in the need to include the Producer.ini file 
-in the directory, this file is essential to inform the tool of the model 
-data that cannot be inferred from the curve files.
+(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile -h
+usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
 
-For a description of the rest of the files go to 
-[The Reference curves](#the-reference-curves) section.
+Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $DGCV_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
 
-# Inputs template
-
-To try to make it easier for the producer to generate the tool inputs, each 
-verification command can be executed in a way that generates all the files necessary 
-for the simulation of the model. The argument mentioned is ```dgcv generate```. 
-When executing one of the verification commands using this argument, the files 
-necessary to model the producer network (DYD, PAR) are obtained in the indicated 
-path, an INI file with the parameters required by the tool that cannot be acquired 
-from the model, and the entire structure to provide the tool with the curves for 
-each PCS.
-
-```
-(dgcv_venv) user@dynawo:~$ tree SM
-SM
-├── Producer.dyd
-├── Producer.ini
-├── Producer.par
-└── ReferenceCurves
-    ├── CurvesFiles.ini
-  	├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-  	├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
-  	├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
-  	├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
-  	├── PCS_RTE-I16z1.GridVoltageStep.Rise.csv
-  	├── PCS_RTE-I16z1.GridVoltageStep.Rise.dict
-  	├── PCS_RTE-I16z1.SetPointStep.Active.csv
-  	├── PCS_RTE-I16z1.SetPointStep.Active.dict
-  	├── PCS_RTE-I16z1.SetPointStep.Reactive.csv
-  	├── PCS_RTE-I16z1.SetPointStep.Reactive.dict
-  	├── PCS_RTE-I16z1.SetPointStep.Voltage.csv
-  	├── PCS_RTE-I16z1.SetPointStep.Voltage.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.PermanentBolted.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.PermanentBolted.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZ.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZ.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Qmin.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Qmin.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500.dict
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
-  	├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
-  	├── PCS_RTE-I16z3.GridVoltageDip.Qzero.csv
-    ├── PCS_RTE-I16z3.GridVoltageDip.Qzero.dict
-  	├── PCS_RTE-I16z3.GridVoltageSwell.QMax.csv
-  	├── PCS_RTE-I16z3.GridVoltageSwell.QMax.dict
-  	├── PCS_RTE-I16z3.GridVoltageSwell.QMin.csv
-  	├── PCS_RTE-I16z3.GridVoltageSwell.QMin.dict
-  	├── PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4.csv
-  	├── PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4.dict
-  	├── PCS_RTE-I16z3.PSetPointStep.Dec40.csv
-  	├── PCS_RTE-I16z3.PSetPointStep.Dec40.dict
-  	├── PCS_RTE-I16z3.PSetPointStep.Inc40.csv
-  	├── PCS_RTE-I16z3.PSetPointStep.Inc40.dict
-  	├── PCS_RTE-I16z3.QSetPointStep.Dec20.csv
-  	├── PCS_RTE-I16z3.QSetPointStep.Dec20.dict
-  	├── PCS_RTE-I16z3.QSetPointStep.Inc10.csv
-  	├── PCS_RTE-I16z3.QSetPointStep.Inc10.dict
-  	├── PCS_RTE-I16z3.ThreePhaseFault.TransientBolted.csv
-  	├── PCS_RTE-I16z3.ThreePhaseFault.TransientBolted.dict
-  	├── PCS_RTE-I16z3.USetPointStep.AReactance.csv
-  	├── PCS_RTE-I16z3.USetPointStep.AReactance.dict
-  	├── PCS_RTE-I16z3.USetPointStep.BReactance.csv
-  	└── PCS_RTE-I16z3.USetPointStep.BReactance.dict
+options:
+  -h, --help            show this help message and exit
+  -d, --debug           more debug messages
+  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
+                        enter the path to the Dynawo launcher
+  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
+                        XML file describing a custom Modelica model
+  -f, --force           force the recompilation of all Modelica models (the
+                        user's and the tool's own)
 ```
 
-All files provided are templates, so the user must modify all of them to 
-populate their network data in the producer model files, and/or with the 
-curve data provided if they wish to use the curve files in the inputs of 
-the tool. In the case of curves, in addition to modifying the .DICT files 
-provided by the tool, you must provide an additional file with the desired 
-curves, the name of this file must be the same as the name of the DICT file, 
-but with the extension that corresponds according to the type of curves provided.
+### Curve Anonymizer:
 
-# Log file and console messages
+In this mode the tool generates a set of curves with generic names from 
+the input curves to which a noise signal is added.
 
-The tool has 2 ways to show the logs of its execution, in the console and in 
-a file. Special emphasis must be placed on the location of the log files, since 
-the file with the logs obtained when compiling new models for Dynawo is saved 
-in the same path where the compiled models are saved `./config/dgcv/ddb /dgcv.log`, 
-while the logs obtained from validating a model, whether electrical performance 
-or model validation, are saved together with the results of the tool with the 
-name `dgcv.log`.
+```
+(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv anonymize -h
+usage: dgcv anonymize [-h] [-d] [-c PRODUCER_CURVES] [-o RESULTS_DIR]
+	                      [-n NOISESTD] [-f FREQUENCY]
+	
+optional arguments:
+  -h, --help            show this help message and exit
+  -d, --debug           more debug messages
+  -c PRODUCER_CURVES, --producer_curves PRODUCER_CURVES
+	                        enter the path to the folder containing the curves for
+	                        the Performance Checking Sheet (PCS)
+  -o RESULTS_DIR, --results_dir RESULTS_DIR
+                        enter the path to the results dir
+  -n NOISESTD, --noisestd NOISESTD
+                        enter the standard deviation used to to anonymize the
+                        curves (recommended value: [0.01, 0.1])
+  -f FREQUENCY, --frequency FREQUENCY
+                        enter the frequency used for the lowpass filter
+```
+
