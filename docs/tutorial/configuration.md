@@ -43,7 +43,9 @@ These files contain configuration parameters distinguishing between basic and ad
 user wishes, he can switch between basic and advanced user by overwriting the config.ini file with
 the corresponding configuration file.
 
-
+The tool has another configuration file usually called *Producer.ini*, this file is used to define the 
+particular configuration of a case used as input for the tool. For a more detailed description, 
+please review the tutorial called **preparing_inputs.md**.
 
 This document describes the configuration options relevant to an user. The configuration file is
 organized into sections, where each section has its own configuration options.
