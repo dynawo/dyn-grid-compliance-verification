@@ -2,18 +2,16 @@
 
 TUTORIAL
 
-CONFIGURATION
+HOW TO CONFIGURE DGCV
 
-(c) 2023&mdash;24 RTE  
+(c) 2023&mdash;25 RTE  
 Developed by Grupo AIA
 
 ===========================
 
 --------------------------------------------------------------------------------
 
-# Dynamic Grid Compliance Verification Configuration
-
-## Table of Contents
+#### Table of Contents
 
 1. [Overview](#overview)
 2. [Global Information](#global-information)
