@@ -2,18 +2,16 @@
 
 TUTORIAL
 
-LINUX INSTALLATION
+HOW TO INSTALL ON LINUX SO
 
-(c) 2023&mdash;24 RTE  
+(c) 2023&mdash;25 RTE  
 Developed by Grupo AIA
 
 ===========================
 
 --------------------------------------------------------------------------------
 
-# Installing Dynamic Grid Compliance Verification
-
-## Table of Contents
+#### Table of Contents
 
 1. [Overview](#Overview)
 2. [Install Dynawo](#Install-Dynawo)
