@@ -2,7 +2,7 @@
 
 TUTORIAL
 
-LINUX INSTALLATION
+CONFIGURATION
 
 (c) 2023&mdash;24 RTE  
 Developed by Grupo AIA
@@ -11,16 +11,16 @@ Developed by Grupo AIA
 
 --------------------------------------------------------------------------------
 
-# Installing Dynamic Grid Compliance Verification
+# Dynamic Grid Compliance Verification Configuration
 
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Global Information](#global-information)
-3. [Model Validation](#model-validation)
-4. [Performance Verification](#performance-verification)
-5. [Modify a PCS](#modify-a-pcs)
-6. [Log level](#log-level)
+3. [Enabling/Disabling which tests are run](#enablingdisabling-which-tests-are-run)
+3.1 [Enabling/disabling whole PCS](#enablingdisabling-whole-pcs)
+3.2 [Enabling/disabling specific tests of a given PCS](#enablingdisabling-specific-tests-of-a-given-pcs)
+4. [Changing the Log Level](#changing-the-log-level)
 
 ## Overview
 
@@ -42,6 +42,8 @@ Besides the **config.ini** file, there are two files named **config.ini_BASIC** 
 These files contain configuration parameters distinguishing between basic and advanced users. If the
 user wishes, he can switch between basic and advanced user by overwriting the config.ini file with
 the corresponding configuration file.
+
+
 
 This document describes the configuration options relevant to an user. The configuration file is
 organized into sections, where each section has its own configuration options.
@@ -105,10 +107,13 @@ The available options are:
 #  model_bess_validation_pcs =
 ```
 
-## Model Validation
+## Enabling/Disabling which tests are run
 
-By default all PCS's are validated when a model validation is executed:
+### Enabling/disabling whole PCS
 
+By default all PCS's are validated when the tool is executed:
+
+Model validation example:
 ```
 (dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
 2025-01-21 11:01:28,689 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
@@ -183,8 +188,49 @@ PCS_RTE-I16z3Islanding                DeltaP10DeltaQ4          Failed simulation
 2025-01-21 11:04:29,676 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
+Performance verification example:
+```
+(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
+2025-01-21 10:34:31,341 |                DGCV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
+2025-01-21 10:34:31,387 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2025-01-21 10:34:31,751 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2025-01-21 10:34:32,059 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
+2025-01-21 10:34:32,344 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 10:34:37,033 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
+2025-01-21 10:34:37,720 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
+2025-01-21 10:34:47,406 |                DGCV.Validation |    WARNING |            performance.py:  142 | P has not reached steady state
+2025-01-21 10:34:47,476 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
+2025-01-21 10:34:48,064 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2025-01-21 10:34:48,335 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-21 10:35:03,191 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+Summary Report
+==============
+
+***Run on 2025-01-21 10:35 CET***
+***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
+***Model: SingleAuxI***
+
+
+Pcs          Benchmark                Operating Condition      Overall Result
+-----------------------------------------------------------------------------
+PCS_RTE-I2   USetPointStep            AReactance               Non-compliant
+PCS_RTE-I2   USetPointStep            BReactance               Non-compliant
+PCS_RTE-I3   LineTrip                 2BReactance              Compliant
+PCS_RTE-I4   ThreePhaseFault          TransientBolted          Compliant
+PCS_RTE-I6   GridVoltageDip           Qzero                    Compliant
+PCS_RTE-I7   GridVoltageSwell         QMax                     Non-compliant
+PCS_RTE-I7   GridVoltageSwell         QMin                     Compliant
+PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
+PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
+
+
+2025-01-21 10:35:12,217 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 10:35:12,378 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
+```
+
 The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
-file. Below is the previous example after modifying the parameter **model_ppm_validation_pcs**:
+file. Below is the previous example after modifying the parameter **model_ppm_validation_pcs** for Model
+Validation:
 
 ```ini
 #  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
@@ -243,59 +289,14 @@ PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 2025-01-21 11:21:57,007 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
-## Performance Verification
-
-As in model validation, by default all PCS are validated when a performance verification is executed:
-
-```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
-2025-01-21 10:34:31,341 |                DGCV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
-2025-01-21 10:34:31,387 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2025-01-21 10:34:31,751 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2025-01-21 10:34:32,059 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
-2025-01-21 10:34:32,344 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2025-01-21 10:34:37,033 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
-2025-01-21 10:34:37,720 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
-2025-01-21 10:34:47,406 |                DGCV.Validation |    WARNING |            performance.py:  142 | P has not reached steady state
-2025-01-21 10:34:47,476 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
-2025-01-21 10:34:48,064 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2025-01-21 10:34:48,335 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2025-01-21 10:35:03,191 |                    DGCV.Report |       INFO |                 report.py:  353 | 
-Summary Report
-==============
-
-***Run on 2025-01-21 10:35 CET***
-***Dynawo version: 1.7.0 (rev:master-d2a92c7)***
-***Model: SingleAuxI***
-
-
-Pcs          Benchmark                Operating Condition      Overall Result
------------------------------------------------------------------------------
-PCS_RTE-I2   USetPointStep            AReactance               Non-compliant
-PCS_RTE-I2   USetPointStep            BReactance               Non-compliant
-PCS_RTE-I3   LineTrip                 2BReactance              Compliant
-PCS_RTE-I4   ThreePhaseFault          TransientBolted          Compliant
-PCS_RTE-I6   GridVoltageDip           Qzero                    Compliant
-PCS_RTE-I7   GridVoltageSwell         QMax                     Non-compliant
-PCS_RTE-I7   GridVoltageSwell         QMin                     Compliant
-PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
-PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
-
-
-2025-01-21 10:35:12,217 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 10:35:12,378 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
-```
-
-The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
-file. Below is the previous example after modifying the parameter **electric_performance_verification_pcs**:
+And the following example shows the result of modifying the 
+**electric_performance_verification_pcs** parameter for performance verification.
 
 ```ini
 #  # List of SM pcs to be validated (If it's empty, all the SM pcs are validated)
 #  electric_performance_verification_pcs =
 electric_performance_verification_pcs = PCS_RTE-I2,PCS_RTE-I4,PCS_RTE-I8
 ```
-
-It can be observed in the output of the tool that only the selected PCS's have been validated.
 
 ```
 (dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
@@ -325,7 +326,24 @@ PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
 2025-01-21 10:52:42,426 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
 ```
 
-## Modify a PCS
+### Enabling/disabling specific tests of a given PCS
+
+Each DTR document *PCS* has been implemented using the following terminology:
+
+* PCS
+    * Benchmarks
+        * Operating Conditions
+
+A *PCS* is understood to be the set of tests and/or complaince criteria necessary to validate the
+producer's model.
+
+A *Benchmark* contains the invariant description of the RTE model that will be used in the
+simulation of its *PCS*. A *PCS* has one or more *Benchmarks*.
+
+Finally, an *Operating Condition* describes the initialization conditions and/or the event conditions
+of a *Benchmark*. A *Benchmark* has one or more *Operating Conditions*.
+
+This section shows how to modify the configuration to enable/disable the benchmarks and/or OC of a PCS.
 
 PCS editing is only available for advanced users. The user can switch from *basic* to *advanced*
 user or vice versa by overwriting the config.ini file with one of the following files:
@@ -468,7 +486,7 @@ PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 Benchmark and/or Operating condition.
 
 
-## Log Level
+## Changing the Log Level
 
 This section explains how to modify the configuration file to change the log level displayed 
 by the tool. By default, the tool is configured to inform the user of the processes that are 
