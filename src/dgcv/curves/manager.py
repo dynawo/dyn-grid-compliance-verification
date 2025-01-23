@@ -239,7 +239,25 @@ class CurvesManager:
             Frequency sampling.
         setpoint_tracking_controlled_magnitude: bool
             Setpoint tracking controlled magnitude.
+
+        Method
+        ------
+        This class method centralizes the overall procedure for the signal processing of all
+        curves. It follows these steps (their order is important):
+            * When needed, convert the signal from EMT (abc) to RMS (positive sequence).
+            * First resampling: for ensuring a constant time-step (uses monotone interp.).
+              Note that each set of signals is interpolated to its own minimum observed step,
+              in order to preserve their original time-resolution.
+            * Windowing: calculate curve metadata about the validation windows specified by the
+              test and the exclusion zones at the boundaries of each of those windows.
+            * Filtering: apply a low-pass filter to the signal (normally performed separately
+              per window)
+            * Second resampling: for ensuring a common time-grid for both sets. Note this is
+              actually a _downsampling_ for most signals (since most signals are expected to
+              have a samplig rate higher than 2fc), therefore this step needs to be done
+              _after_ low-pass filtering, to ensure there's no aliasing.
         """
+        # TODO: refactor this function so that it really adheres to the Method described above.
 
         csv_calculated_curves = self.get_curves("calculated")
         csv_reference_curves = self.get_curves("reference")
@@ -255,15 +273,19 @@ class CurvesManager:
 
         resampling_fs = 1 / t_com
 
-        # First resampling: Ensure constant time step signal.
+        # First resampling: ensure a constant time-step signal
+        # TODO: preserve the finest time-resolution instead of using a fixed t_com here
         calculated_curves = sigpro.resampling_signal(csv_calculated_curves, resampling_fs)
-        calculated_curves = sigpro.lowpass_signal(calculated_curves, cutoff, resampling_fs)
+        # TODO: filtering should be done after the two resamplings and after windowing
+        calculated_curves = sigpro.filter_signal(calculated_curves, cutoff, resampling_fs)
 
         reference_curves = sigpro.ensure_rms_signals(csv_reference_curves, fs)
+        # TODO: preserve the finest time-resolution instead of using a fixed t_com here
         reference_curves = sigpro.resampling_signal(reference_curves, resampling_fs)
-        reference_curves = sigpro.lowpass_signal(reference_curves, cutoff, resampling_fs)
+        # TODO: filtering should be done after the two resamplings and after windowing
+        reference_curves = sigpro.filter_signal(reference_curves, cutoff, resampling_fs)
 
-        # Second resampling: Ensure same time grid for both signals.
+        # Second resampling: ensure both signals are on the same time grid (highest sampling rate)
         calculated_curves, reference_curves = sigpro.interpolate_same_time_grid(
             calculated_curves, reference_curves
         )

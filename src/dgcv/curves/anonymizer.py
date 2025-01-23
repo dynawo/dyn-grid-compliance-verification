@@ -164,7 +164,7 @@ def _apply_noise_to_curves(
             resampling_fs = 1 / t_com
             noise = lowpass_filter(
                 np.concat((noise_before, noise_during, noise_after)),
-                cutoff=frequency,
+                fc=frequency,
                 fs=resampling_fs,
             )
 

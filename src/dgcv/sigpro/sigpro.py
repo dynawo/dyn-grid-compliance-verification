@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 from scipy.interpolate import PchipInterpolator
-
+from dgcv.sigpro import lp_filters
 from dgcv.configuration.cfg import config
 
 # For avoiding overflows in PChipInterpolator
@@ -40,14 +40,56 @@ def resample(x, t, fs=1000):
     return t_r, np.interp(t_r, t, x)
 
 
-def lowpass_filter(x, cutoff=15, fs=1000, filter="bessel"):
-    # The filter type should have minimal ringing, so bessel is preferred
-    # b, a = signal.butter(5, cutoff, fs=fs, btype="low", analog=False)
-    if filter == "bessel":
-        b, a = signal.bessel(2, cutoff, fs=fs, btype="low", analog=False)
-    if filter == "butter":
-        b, a = signal.butter(5, cutoff, fs=fs, btype="low", analog=False)
-    return signal.filtfilt(b, a, x)
+def lowpass_filter(signal, fc=15, fs=1000, filter="critdamped", padding_method="gust"):
+    """
+    Applies a low-pass second-order filter to a 1-d signal.
+
+    Parameters:
+    signal: npt.ArrayLike
+        Input signal, a 1-d array is expected.
+    fc: float
+        Cutoff frequency of the filter in Hz.
+    fs: float
+        Sampling frequency in Hz.
+    filter: str
+        Name of the filter to use. One of: {critdamped, bessel, butter, cheby1}
+    padding_method: str
+        Method used to treat the signal boundaries in filtfilt. One of: {
+            "gust",
+            "odd_padding",
+            "even_padding",
+            "constant_padding",
+            "no_padding",
+        }
+
+    Returns:
+    output_signal: npt.ArrayLike
+        The filtered signal.
+    """
+
+    # Reminder of filter options: critdamped, bessel, butter, cheby1
+    if filter == "critdamped":
+        b, a = lp_filters.critically_damped_lpf(fc, fs)
+    elif filter == "bessel":
+        b, a = lp_filters.bessel_lpf(fc, fs)
+    elif filter == "butter":
+        b, a = lp_filters.butter_lpf(fc, fs)
+    elif filter == "cheby1":
+        b, a = lp_filters.cheby1_lpf(fc, fs)
+    else:
+        raise ValueError("Invalid filter selected")
+
+    # Valid methods for treating the signal boundaries when filtering:
+    if padding_method not in (
+        "gust",
+        "odd_padding",
+        "even_padding",
+        "constant_padding",
+        "no_padding",
+    ):
+        raise ValueError("Invalid padding method selected for filtfilt")
+
+    return lp_filters.apply_filtfilt(b, a, signal, padding_method)
 
 
 def ensure_rms_signals(curves, fs):
@@ -95,22 +137,30 @@ def resampling_signal(curves, fs=1000):
     return pd.DataFrame.from_dict(resampled_curve_dict, orient="columns")
 
 
-def lowpass_signal(curves, cutoff=15, fs=1000, filter="bessel"):
+def filter_signal(curves, cutoff=15, fs=1000, filter_name="critdamped"):
+    # This function applies a low-pass filter to the signal, with these options:
+    #   * filters each window separately (default) or the whole signal
+    #   * filtering can be disabled altogether via user config
+    #   * cutoff frequency f_c (default: IEC's 15 Hz)
+    #   * choice of filter (default: IEC's 2nd-order critically damped)
     lowpass_curve_dict = {}
     for col in curves.columns:
         if "time" in col:
             continue
 
-        # The low pass filter introduces noise to the curve so a constant curve is no longer
-        #  constant, introducing errors that were not there.
+        # Disable filtering altogether also when the signal is a (non-zero) constant because
+        # LP filters produce artifacts at boundaries, potentially introducing spurious errors.
+        # TODO: won't be necessary once we enable the exclusion windows needed by LP-filtering.
         c = curves[col]
-        if max(list(c)) == min(list(c)) or config.get_boolean(
-            "Debug", "disable_LP_filtering", False
+        if config.get_boolean("Debug", "disable_LP_filtering", False) or max(list(c)) == min(
+            list(c)
         ):
             c_filt = c
         else:
-            c_filt = lowpass_filter(c, cutoff, fs, filter)
-            # For avoiding overflows in PChipInterpolator
+            c_filt = lowpass_filter(c, cutoff, fs, filter_name)
+            # For avoiding overflows in PChipInterpolator (used in resampling later on)
+            # TODO: this won't be necessary anymore once we filter the signals *after* the two
+            # resamplings in CurvesManager.apply_signal_processing()
             c_filt[abs(c_filt) < ZERO_THRESHOLD] = 0.0
 
         lowpass_curve_dict[col] = c_filt
