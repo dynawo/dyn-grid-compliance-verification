@@ -18,8 +18,8 @@ Developed by Grupo AIA
 1. [Overview](#overview)
 2. [Global Information](#global-information)
 3. [Enabling/Disabling which tests are run](#enablingdisabling-which-tests-are-run)
-3.1 [Enabling/disabling whole PCS](#enablingdisabling-whole-pcs)
-3.2 [Enabling/disabling specific tests of a given PCS](#enablingdisabling-specific-tests-of-a-given-pcs)
+    1. [Enabling/disabling whole PCS](#enablingdisabling-whole-pcs)
+    2. [Enabling/disabling specific tests of a given PCS](#enablingdisabling-specific-tests-of-a-given-pcs)
 4. [Changing the Log Level](#changing-the-log-level)
 
 ## Overview
