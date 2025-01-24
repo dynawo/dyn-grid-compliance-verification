@@ -20,10 +20,7 @@ Developed by Grupo AIA
 2. [The Reference curves](#the-reference-curves)
    1. [The Reference curves structure](#the-producer-curves-structure)
    2. [DICT file](#dict-file)
-3. [Generating inputs](#generating-inputs)
-   1. [The structure of results](#the-structure-of-results)
-   2. [The structure of a *PCS* output](#the-structure-of-a-pcs-output)
-   3. [The structure of results with debug on](#the-structure-of-results-with-debug-on)
+3. [Generating inputs automatically](#generating-inputs-automatically)
 --------------------------------------------------------------------------------
 
 # The Producer files
@@ -161,6 +158,10 @@ Dynawo
 
 ### The Producer curves structure
 
+What we call "Producer curves" refers to curves that will be used *instead*
+of Dynawo-simulated curves. In other words, this are the curves that will be
+compared to the reference curves.
+
 Producer curves are a set of files organized in a directory 
 structure similar to reference curves, as seen in this example:
 
@@ -267,10 +268,10 @@ NetworkFrequencyPu =
 #    BusPDR_BUS_Voltage_c =
 ```
 
-# Generating inputs
+# Generating inputs automatically
 
-In order to facilitate the generation of inputs for the producer, the tool can be executed in 
-such a way that it generates all the files necessary for the simulation of the model.
+In order to facilitate the generation of inputs for the producer, the tool provides a helper that 
+guides the user throw the generation of all the files necessary for the simulation of the model.
 
 Below is the execution of the command to generate the inputs to perform a performance check 
 for synchronous generation units, the network to be modeled only has one generating unit, and 
