@@ -16,12 +16,13 @@ Developed by Grupo AIA
 1. [First run](#first-run)
    1. [Assumptions](#assumptions)
    2. [Executables](#executables)
-2. [Configuration](#configuration)
-   1. [The structure of the `~/.config/dgcv` dir](#the-structure-of-the-configdgcv-dir)
-3. [Results directory](#results-directory)
+   3. [First test](#firsts-test)
+1. [Results directory](#results-directory)
    1. [The structure of results](#the-structure-of-results)
    2. [The structure of a *PCS* output](#the-structure-of-a-pcs-output)
    3. [The structure of results with debug on](#the-structure-of-results-with-debug-on)
+3. [Configuration](#configuration)
+   1. [The structure of the `~/.config/dgcv` dir](#the-structure-of-the-configdgcv-dir)
 4. [Trouble Shooting](#trouble-shooting)
    1. [Error compiling a dynamic model](#error-compiling-a-dynamic-model)
    2. [Failed Simulation](#failed-simulation)
@@ -295,10 +296,6 @@ An example of the console output:
 (dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI
 2024-02-01 11:52:16,161 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
 2024-02-01 11:52:16,164 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:52:39,151 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile 4AWeccCurrentSource.xml
-2024-02-01 11:52:39,153 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list WT4AWeccCurrentSource.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:53:35,949 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile WT4BWeccCurrentSource.xml
-2024-02-01 11:53:35,950 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list WT4BWeccCurrentSource.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
 2024-02-01 11:54:32,140 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile TransformerTapChanger.xml
 2024-02-01 11:54:32,141 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list TransformerTapChanger.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
 2024-02-01 11:55:11,153 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
@@ -355,138 +352,6 @@ Each detailed report is divided into 4 sections:
 
 ![Compliance checks](pngs/compliance.png)
 
-
-
-# Configuration
-
-## The structure of the `~/.config/dgcv` dir
-
-A directory is created after the first run of the tool, it is designed 
-both to allow the user to modify the tool configuration 
-(`~/.config/dgcv/config.ini`) and to expand the dynamic models available 
-for simulation with Dynawo (`~/.config/dgcv/user_models`). 
-
-The `~/.config/dgcv/` directory is structured in:
-
-```
-(dgcv_venv) user@dynawo:~/.config$ tree dgcv
-dgcv$
-├── config.ini
-├── config.ini_ADVANCED
-├── config.ini_BASIC
-├── ddb
-│   ├── compile.log
-│   ├── dynawo.version
-│   ├── SPNumcc
-│   ├── SPNumcc.desc.xml
-│   ├── SPNumcc.mo
-│   ├── SPNumcc.so
-│   ├── SPOmega
-│   ├── SPOmega.desc.xml
-│   ├── SPOmega.extvar
-│   ├── SPOmega.mo
-│   ├── SPOmega.so
-│   ├── SynchronousMachineI8SM
-│   ├── SynchronousMachineI8SM.desc.xml
-│   ├── SynchronousMachineI8SM.extvar
-│   ├── SynchronousMachineI8SM_INIT.mo
-│   ├── SynchronousMachineI8SM.mo
-│   ├── SynchronousMachineI8SM.so
-│   ├── TransformerTapChanger
-│   ├── TransformerTapChanger.desc.xml
-│   ├── TransformerTapChanger.extvar
-│   ├── TransformerTapChanger_INIT.mo
-│   ├── TransformerTapChanger.mo
-│   └── TransformerTapChanger.so
-├── log
-│   └── dgcv.log
-├── templates
-│   ├── PCS
-│   │   ├── model
-│   │   │   ├── BESS
-│   │   │   └── PPM
-│   │   ├── performance
-│   │   │   ├── BESS
-│   │   │   ├── PPM
-│   │   │   └── SM
-│   │   └── README.md
-│   ├── README.md
-│   └── reports
-│       ├── fig_placeholder.pdf
-│       ├── model
-│       │   ├── BESS
-│       │   └── PPM
-│       ├── performance
-│       │   ├── BESS
-│       │   ├── PPM
-│       │   └── SM
-│       ├── README.md
-│       └── TSO_logo.pdf
-└── user_models
-    └── dictionary
-```
-
-* **config.ini**: 
-  File with the tool's user configuration. Setting up the tool is not part 
-  of this tutorial, so it will not be covered further.
-
-* **config.ini_ADVANCED and config.ini_BASIC**: 
-  This configuration files contain the default values for all configurable 
-  variables in the application. To apply basic settings, rename the 
-  config.ini_BASIC file to config.ini. If you prefer to use advanced settings, 
-  rename the config.ini_ADVANCED file to config.ini instead. The application 
-  will then load its configuration from the config.ini file according to the 
-  chosen settings.
-
-* **ddb**: 
-  In this path are the dynamic models compiled from the tool, the user's and 
-  the tool's own.
-
-* **templates**:
-  In this path are the user *PCSs* to validate by the tool.
-
-* **templates/PCS**:
-  This is where the user *PCSs* are defined. For the most part, they are
-  "ini" files consisting of key-value pairs.  There is also the special case of the
-  **TableInfiniteBus.txt** used in some PCSs, which defines the voltage and
-  frequency changes of an infinite bus, whose values are templatized using Jinja and
-  instantiated at run time.
-
-* **templates/reports**:
-  Contains the LaTeX templates for the reports corresponding to each *PCS* of the
-  user. The templating system is Jinja.
-
-* **user_models**: 
-  In this path are the user dynamic models to be compiled from the tool.
-
-* **user_models/dictionary**: 
-  Dynawo is a tool that makes a large number of dynamic models available 
-  to the user to represent an electrical network model, where each dynamic 
-  model has its own parameters and nomenclature. This causes the tool to 
-  need to have a mechanism that allows the translation of its own variables 
-  into the corresponding parameters of the selected dynamic model. In this 
-  way the user can inform the tool of the variable-parameter relationships 
-  for their dynamic models. The variable-parameter relationship is expected 
-  as an INI file with the following structure:
-  * **[Caption]**: 
-    As the first line, the name of the dynamic model is reported in square 
-    brackets.
-  * **key = value**: 
-    Next, a line is declared for each model variable. This line relates a 
-    tool variable such as *key* with a dynamic model parameter such as *value*.
-
-Example of the content of an INI file:
-```
-[Model1]
-ActivePower = model1_activepower
-ReactivePower = model1_reactivepower
-...
-
-[Model2]
-ActivePower = model2_activepower
-ReactivePower = model2_reactivepower
-...
-```
 
 
 # Results directory
@@ -685,6 +550,138 @@ Results_debug/PCS_RTE-I4
 * directory corresponds to the last simulation that completed 
 * successfully, while the *bisection_last_failure* directory 
 * corresponds to the last simulation that failed.
+
+
+# Configuration
+
+## The structure of the `~/.config/dgcv` dir
+
+A directory is created after the first run of the tool, it is designed 
+both to allow the user to modify the tool configuration 
+(`~/.config/dgcv/config.ini`) and to expand the dynamic models available 
+for simulation with Dynawo (`~/.config/dgcv/user_models`). 
+
+The `~/.config/dgcv/` directory is structured in:
+
+```
+(dgcv_venv) user@dynawo:~/.config$ tree dgcv
+dgcv$
+├── config.ini
+├── config.ini_ADVANCED
+├── config.ini_BASIC
+├── ddb
+│   ├── compile.log
+│   ├── dynawo.version
+│   ├── SPNumcc
+│   ├── SPNumcc.desc.xml
+│   ├── SPNumcc.mo
+│   ├── SPNumcc.so
+│   ├── SPOmega
+│   ├── SPOmega.desc.xml
+│   ├── SPOmega.extvar
+│   ├── SPOmega.mo
+│   ├── SPOmega.so
+│   ├── SynchronousMachineI8SM
+│   ├── SynchronousMachineI8SM.desc.xml
+│   ├── SynchronousMachineI8SM.extvar
+│   ├── SynchronousMachineI8SM_INIT.mo
+│   ├── SynchronousMachineI8SM.mo
+│   ├── SynchronousMachineI8SM.so
+│   ├── TransformerTapChanger
+│   ├── TransformerTapChanger.desc.xml
+│   ├── TransformerTapChanger.extvar
+│   ├── TransformerTapChanger_INIT.mo
+│   ├── TransformerTapChanger.mo
+│   └── TransformerTapChanger.so
+├── log
+│   └── dgcv.log
+├── templates
+│   ├── PCS
+│   │   ├── model
+│   │   │   ├── BESS
+│   │   │   └── PPM
+│   │   ├── performance
+│   │   │   ├── BESS
+│   │   │   ├── PPM
+│   │   │   └── SM
+│   │   └── README.md
+│   ├── README.md
+│   └── reports
+│       ├── fig_placeholder.pdf
+│       ├── model
+│       │   ├── BESS
+│       │   └── PPM
+│       ├── performance
+│       │   ├── BESS
+│       │   ├── PPM
+│       │   └── SM
+│       ├── README.md
+│       └── TSO_logo.pdf
+└── user_models
+    └── dictionary
+```
+
+* **config.ini**: 
+  File with the tool's user configuration. Setting up the tool is not part 
+  of this tutorial, so it will not be covered further.
+
+* **config.ini_ADVANCED and config.ini_BASIC**: 
+  This configuration files contain the default values for all configurable 
+  variables in the application. To apply basic settings, rename the 
+  config.ini_BASIC file to config.ini. If you prefer to use advanced settings, 
+  rename the config.ini_ADVANCED file to config.ini instead. The application 
+  will then load its configuration from the config.ini file according to the 
+  chosen settings.
+
+* **ddb**: 
+  In this path are the dynamic models compiled from the tool, the user's and 
+  the tool's own.
+
+* **templates**:
+  In this path are the user *PCSs* to validate by the tool.
+
+* **templates/PCS**:
+  This is where the user *PCSs* are defined. For the most part, they are
+  "ini" files consisting of key-value pairs.  There is also the special case of the
+  **TableInfiniteBus.txt** used in some PCSs, which defines the voltage and
+  frequency changes of an infinite bus, whose values are templatized using Jinja and
+  instantiated at run time.
+
+* **templates/reports**:
+  Contains the LaTeX templates for the reports corresponding to each *PCS* of the
+  user. The templating system is Jinja.
+
+* **user_models**: 
+  In this path are the user dynamic models to be compiled from the tool.
+
+* **user_models/dictionary**: 
+  Dynawo is a tool that makes a large number of dynamic models available 
+  to the user to represent an electrical network model, where each dynamic 
+  model has its own parameters and nomenclature. This causes the tool to 
+  need to have a mechanism that allows the translation of its own variables 
+  into the corresponding parameters of the selected dynamic model. In this 
+  way the user can inform the tool of the variable-parameter relationships 
+  for their dynamic models. The variable-parameter relationship is expected 
+  as an INI file with the following structure:
+  * **[Caption]**: 
+    As the first line, the name of the dynamic model is reported in square 
+    brackets.
+  * **key = value**: 
+    Next, a line is declared for each model variable. This line relates a 
+    tool variable such as *key* with a dynamic model parameter such as *value*.
+
+Example of the content of an INI file:
+```
+[Model1]
+ActivePower = model1_activepower
+ReactivePower = model1_reactivepower
+...
+
+[Model2]
+ActivePower = model2_activepower
+ReactivePower = model2_reactivepower
+...
+```
 
 
 # Trouble shooting
