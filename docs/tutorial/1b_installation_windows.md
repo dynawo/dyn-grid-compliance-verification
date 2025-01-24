@@ -26,6 +26,10 @@ Dynamic Grid Compliance Verification is developed in `Python` and requires
 automatically installed along with the tool.
 
 ## Install Dynawo
+
+**NOTE**: The windows installer (described in a section below) will install Dynawo and
+its requirements, so you may skip this section. It is only here for your information.
+
 The first requirement to use the tool is to have Dynawo installed on your computer. 
 To do so, follow the steps provided in the [official software repository](https://github.com/dynawo/dynawo) or 
 on the [official page](https://dynawo.github.io/install/).
@@ -49,6 +53,9 @@ dynawo.sh --version
 ```
 
 ## System Requirements
+
+**NOTE**: The windows installer (described in the next section) will install all of these
+system requirements, so you may skip this section. It is only here for your information.
 
 The requirements at the OS-level are rather minimal: one just needs a recent Windows
 distribution in which you should install a few packages, **LaTeX**, and **Python**. If
