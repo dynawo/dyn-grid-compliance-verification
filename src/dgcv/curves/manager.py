@@ -26,6 +26,7 @@ class CurvesManager:
         self._working_dir = parameters.get_working_dir()
         self._producer = parameters.get_producer()
         self._pcs_name = pcs_name
+        self._before_filters_curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._windows = {"calculated": dict(), "reference": dict()}
 
@@ -33,6 +34,19 @@ class CurvesManager:
             parameters, pcs_benchmark_name, stable_time, lib_path, templates_path, pcs_name
         )
         self._reference_curves_generator = curves_factory.get_reference(parameters)
+
+    def __copy_curves_to_before_filters(self):
+        self._before_filters_curves["calculated"] = self._curves["calculated"].copy()
+        self._before_filters_curves["reference"] = self._curves["reference"].copy()
+
+    def __get_before_filters_curves(self, curve: str) -> pd.DataFrame:
+        if curve not in self._before_filters_curves:
+            return pd.DataFrame()
+
+        if self._before_filters_curves[curve].empty:
+            return pd.DataFrame()
+
+        return self._before_filters_curves[curve]
 
     def __get_producer_curves_generator(self):
         return self._producer_curves_generator
@@ -81,6 +95,8 @@ class CurvesManager:
             oc_name,
             reference_event_start_time,
         )
+
+        self.__copy_curves_to_before_filters()
 
         return (
             working_oc_dir,
@@ -259,8 +275,8 @@ class CurvesManager:
         """
         # TODO: refactor this function so that it really adheres to the Method described above.
 
-        csv_calculated_curves = self.get_curves("calculated")
-        csv_reference_curves = self.get_curves("reference")
+        csv_calculated_curves = self.__get_before_filters_curves("calculated")
+        csv_reference_curves = self.__get_before_filters_curves("reference")
 
         # Activate this code to use the curve calculated as a reference curve,
         # only for debug cases without reference curves.
