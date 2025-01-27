@@ -148,9 +148,9 @@ def filter_signal(curves, cutoff=15, fs=1000, filter_name="critdamped"):
         if "time" in col:
             continue
 
-        # Disable filtering altogether also when the signal is a (non-zero) constant because
-        # LP filters produce artifacts at boundaries, potentially introducing spurious errors.
-        # TODO: won't be necessary once we enable the exclusion windows needed by LP-filtering.
+        # Disable filtering altogether when so configured, but also when the signal is a constant
+        # because LP filters produce artifacts, potentially affecting our sanity check for flat curves
+        # that takes place later on (at report building time).
         c = curves[col]
         if config.get_boolean("Debug", "disable_LP_filtering", False) or max(list(c)) == min(
             list(c)

@@ -276,22 +276,10 @@ class CurvesManager:
         # First resampling: ensure a constant time-step signal
         # TODO: preserve the finest time-resolution instead of using a fixed t_com here
         calculated_curves = sigpro.resampling_signal(csv_calculated_curves, resampling_fs)
-        # TODO: filtering should be done after the two resamplings and after windowing
-        calculated_curves = sigpro.filter_signal(calculated_curves, cutoff, resampling_fs)
 
         reference_curves = sigpro.ensure_rms_signals(csv_reference_curves, fs)
         # TODO: preserve the finest time-resolution instead of using a fixed t_com here
         reference_curves = sigpro.resampling_signal(reference_curves, resampling_fs)
-        # TODO: filtering should be done after the two resamplings and after windowing
-        reference_curves = sigpro.filter_signal(reference_curves, cutoff, resampling_fs)
-
-        # Second resampling: ensure both signals are on the same time grid (highest sampling rate)
-        calculated_curves, reference_curves = sigpro.interpolate_same_time_grid(
-            calculated_curves, reference_curves
-        )
-
-        self._curves["calculated"] = calculated_curves
-        self._curves["reference"] = reference_curves
 
         calc_time_values = list(calculated_curves["time"])
         self._windows["calculated"] = signal_windows.calculate(
@@ -307,6 +295,20 @@ class CurvesManager:
             setpoint_tracking_controlled_magnitude,
         )
 
+        # After their respective resampling and after windowing, we can apply the filters
+        calculated_curves = sigpro.filter_signal(calculated_curves, cutoff, resampling_fs)
+        reference_curves = sigpro.filter_signal(reference_curves, cutoff, resampling_fs)
+
+        # Second resampling: ensure both signals are on the same time grid
+        # Note it doesn't matter if this is a downsampling for any of the two sets, because the
+        # low-pass filter has already been applied (therefore, no aliasing is produced).
+        calculated_curves, reference_curves = sigpro.interpolate_same_time_grid(
+            calculated_curves, reference_curves
+        )
+        self._curves["calculated"] = calculated_curves
+        self._curves["reference"] = reference_curves
+
+        # Sanity check: the "pre" window should be in the steady-state
         t_from, t_to = self.__get_validation_windows("calculated", "before")
         before_calculated = signal_windows.get(self.get_curves("calculated"), t_from, t_to)
         sanity_checks.check_pre_stable(
