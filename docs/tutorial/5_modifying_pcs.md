@@ -132,6 +132,30 @@ configured.
 ## SCR = 3
 ```
 
+PCS_RTE-I16z1 - Transient fault:High-impedance fault ( V = 0.5U n, 800ms )
+
+Compliance checks on the curves, every 3 columns shown in the table show the errors for a 
+specific time range nof the curve, where the first 3 columns (called MXE, ME, and MAE) 
+correspond to the pre-event range, the next 3 columns to the range in which the event is happening,
+and the last 3 columns correspond to the post-event range:
+
+|      | MXE      | ME  | MAE      | MXE     | ME      | MAE      | MXE      | ME       | MAE      | Compl. |
+|------|----------|-----|----------|---------|---------|----------|----------|----------|----------|--------|
+| P    | 2.93e-05 | 0.0 | 1.53e-05 | 0.00246 | 0.0     | 0.000917 | 0.000178 | 0.000165 | 0.000165 | True   |
+| Q    | 4.89e-05 | 0.0 | 2.95e-05 | 0.00164 | 0.0     | 0.000108 | 0.000633 | 0.0      | 8.12e-05 | True   |
+| I re | 2.92e-05 | 0.0 | 1.74e-05 | 0.00219 | 0.0     | 0.00106  | 0.000155 | 0.000143 | 0.000143 | True   |
+| I im | 6.38e-05 | 0.0 | 3.65e-05 | 0.0111  | 0.00188 | 0.00191  | 0.000753 | 0.000135 | 0.000135 | True   |  
+
+In steady state after the event, the absolute average error must not exceed 1%:
+
+| Variable | MAE      | Final Error | Compliance |
+|----------|----------|-------------|------------|
+| V        | 7.05e-05 | 7.05e-05    | True       |
+| P        | 0.000172 | 0.000172    | True       |
+| Q        | 6.87e-05 | 6.87e-05    | True       |
+| I re     | 0.000142 | 0.000142    | True       |
+| I im     | 0.000134 | 0.000134    | True       |
+
 ## Changing the operating condition
 
 To modify the operating conditions for a PCS, the operating condition section that will be 
@@ -233,7 +257,7 @@ dgcv$
 
 ### Modifying the PCS configuration
 
-Steps to expand an existing PCS with new operating conditions:
+Steps to expand the configuration of an existing PCS with new operating conditions:
 
 - Copy the configuration of an existing operating condition in the PCS to the corresponding 
     user configuration file.
@@ -246,7 +270,7 @@ Steps to expand an existing PCS with new operating conditions:
   ```
 
   The content of an existing operating condition in the PCS is copied to the new file. It is recommended 
-  to copy an OC from the benchmark that you want to expand.
+  to copy an operating condition from the benchmark that you want to expand.
   ```ini
      [PCS_RTE-I16z1.GridVoltageStep.Rise]
      # Operating Condition LateX filename
@@ -288,7 +312,7 @@ Steps to expand an existing PCS with new operating conditions:
      setpoint_step_value = 0.1
   ```
 - Change the name of the operating conditions, it is advisable to put a name that describes
-     the purpose of the ner conditions.
+     the purpose of the new conditions.
      In this example the parameter **pdr_Q** will be modified from *Qmin* to *0*, so it is 
      proposed to modify the name from **Rise** to **RiseQ0**
   ```ini
@@ -317,6 +341,142 @@ Steps to expand an existing PCS with new operating conditions:
 
 ### Modifying the latex report template
 
-Modify or expand the latex report template to include the simulation results wtih 
-the new operating condition. 
+Steps to expand the latex report template to include the simulation results with 
+the new operating condition:
+
+- Copy the latex template of an existing operating condition in the PCS to the corresponding 
+    user configuration file.
+
+  Copy a latex template file to the **./templates/reports/model/PPM/PCS_RTE-I16z1** 
+  directory with the new operating condition name, since a new OC is to be added for the 
+  *model validation* of the *Power Plant Modules(PPM)* in the PCS called **PCS_RTE-I16z1**. 
+  It is recommended to copy an operating condition from the benchmark that you want to expand.
+  ```
+    (dgcv_venv) user@dynawo:~/.config$ cp /home/user/dgcv_repo/dgcv_venv/lib/python3.10/site-packages/dgcv/templates/reports/model/PPM/PCS_RTE-I16z1/report.GridVoltageStep.Rise.tex ./templates/reports/model/PPM/PCS_RTE-I16z1/report.GridVoltageStep.RiseQ0.tex
+  ```
+
+- Search the latex file for the placeholders that contain the name of the copied operating 
+    condition and replace it with the new name.
+
+    * linkPCSI16z1GridVoltageStepRise -> linkPCSI16z1GridVoltageStepRiseQ0
+    * rmPCSI16z1GridVoltageStepRise -> rmPCSI16z1GridVoltageStepRiseQ0
+    * thmPCSI16z1GridVoltageStepRise -> thmPCSI16z1GridVoltageStepRiseQ0
+    * etc.
+
+- Search the latex file for the placeholders that contain the name of the copied operating 
+    condition and replace it with the new name.
+
+- Change the title and description of the test
+
+  ```
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Voltage Step %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \renewcommand{\DTRPcs}{GridVoltageStep} % DTR pcs definition
+    \renewcommand{\DTRPcsLong}{Grid Voltage Step (Model Validation Zone 1)}
+    \renewcommand{\OCname}{RiseQ0}
+
+
+    \subsection{Step response to grid changes: V swell}
+
+    Checks for compliant behavior of the generating unit under a grid scenario where there
+    is a $10\%$ voltage step increase on AC source.
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_\text{max\_unite}$
+            \item $Q = Q_{min}$
+            \item $U = U_\text{dim}$
+            \item $SCR = 10$
+        \end{itemize}
+    \end{description}
+
+    \GridCircuitZone
+
+    \GridCurvesZone
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z1GridVoltageStepRiseQ0 }}
+
+    \subsubsection{Analysis of results}
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lccccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z1GridVoltageStepRiseQ0}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lcccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z1GridVoltageStepRiseQ0}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lccccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
+            \midrule
+            \BLOCK{for row in emPCSI16z1GridVoltageStepRiseQ0}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the step-response characteristic: \\
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \centering
+        \scriptsize
+        \begin{tabular}{lccccc}
+            \toprule
+            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
+            \midrule
+            \BLOCK{for row in temPCSI16z1GridVoltageStepRiseQ0}
+            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{minipage}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z1GridVoltageStepRiseQ0}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+```
+
 
