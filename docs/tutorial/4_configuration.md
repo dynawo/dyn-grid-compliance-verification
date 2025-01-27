@@ -18,7 +18,8 @@ Developed by Grupo AIA
 3. [Enabling/Disabling which tests are run](#enablingdisabling-which-tests-are-run)
     1. [Enabling/disabling whole PCS](#enablingdisabling-whole-pcs)
     2. [Enabling/disabling specific tests of a given PCS](#enablingdisabling-specific-tests-of-a-given-pcs)
-4. [Changing the Log Level](#changing-the-log-level)
+5. [Modifying KPIs](#modifying-kpis)
+6. [Changing the Log Level](#changing-the-log-level)
 
 ## Overview
 
@@ -484,6 +485,134 @@ PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 
 <span style="background-color: #4976ba;">INFO:</span> The **modify_pcs.md** tutorial explains how to modify the parameters that define a PCS, 
 Benchmark and/or Operating condition.
+
+
+## Modifying KPIs
+
+### Definition
+
+The tool contemplates two types of verifications:
+
+- **Performance verifications**: defines the state that a curve must have after a given period of 
+    time with respect to the event produced in the PCS. Each compliance check of the performance
+    verification is defined in the tool as a complete test, so modifying any test requires modifying
+    the source code of the tool. Some examples of defined performance verifications in the tool are:
+  - **T<sub>10p</sub> - T<sub>event</sub> < 5s**
+      - **T<sub>10p</sub>** is time at which the supplied power P stays inside the +/-10% "tube" centered on the final value of P.
+      - **T<sub>event</sub>** is time at which the event is triggered.
+  - **T<sub>5p</sub> - T<sub>event</sub> < 10s**
+      - **T<sub>5p</sub>** is time at which the supplied powerP stays inside the +/-5% "tube" centered on the final value of P.
+      - **T<sub>event</sub>** is time at which the event is triggered.
+  - **T<sub>10p</sub> - T<sub>85u</sub> < 5 sec**
+      - **T<sub>10p</sub>** is time at which the supplied power P stays inside the +/-10% "tube" centered on the final value of P.
+      - **T<sub>85u</sub>** is time at which the voltage at the PDR bus returns back above 0.85pu, regardless of any possible.
+  - **T<sub>10p</sub> - T<sub>clear</sub> < 5 sec**
+      - **T<sub>10p</sub>** is time at which the supplied power P stays inside the +/-10% "tube" centered on the final value of P.
+      - **T<sub>clear</sub>** is time at which the event is cleared.
+  
+  
+- **Model validation**: defines the maximum deviation allowed between the curves calculated by
+    Dynawo and the reference curves provided by the user. The maximum allowed thresholds are 
+    defined in the tool configuration file.
+    ```ini
+    [GridCode]
+    thr_P_mxe_before = 0.05
+    thr_P_mxe_during = 0.08
+    thr_P_mxe_after = 0.05
+    thr_P_me_before = 0.02
+    thr_P_me_during = 0.05
+    thr_P_me_after = 0.02
+    thr_P_mae_before = 0.03
+    thr_P_mae_during = 0.07
+    ...
+    ```
+
+### Changing the defaults values
+
+By having the model validation thresholds defined in the tool configuration file, the user
+can modify them if desired by editing the user configuration file (`config.ini`) located in the 
+`~/.config/dgcv` dir. In this file the user has all the configuration options available for the 
+tool, as well as their default values.
+
+```ini
+[GridCode]
+# thr_P_mxe_before = 0.05
+# thr_P_mxe_during = 0.08
+# thr_P_mxe_after = 0.05
+# thr_P_me_before = 0.02
+# thr_P_me_during = 0.05
+# thr_P_me_after = 0.02
+# thr_P_mae_before = 0.03
+# thr_P_mae_during = 0.07
+...
+```
+
+**Before modify the `thr_P_mxe_during` threshold:** 
+
+PCS_RTE-I16z1 - Transient fault:High-impedance fault ( V = 0.5U n, 800ms )
+
+Compliance checks on the curves, every 3 columns shown in the table show the errors for a 
+specific time range nof the curve, where the first 3 columns (called MXE, ME, and MAE) 
+correspond to the pre-event range, the next 3 columns to the range in which the event is happening,
+and the last 3 columns correspond to the post-event range:
+
+|      | MXE      | ME  | MAE      | MXE     | ME      | MAE      | MXE      | ME       | MAE      | Compl. |
+|------|----------|-----|----------|---------|---------|----------|----------|----------|----------|--------|
+| P    | 2.93e-05 | 0.0 | 1.53e-05 | 0.00246 | 0.0     | 0.000917 | 0.000178 | 0.000165 | 0.000165 | True   |
+| Q    | 4.89e-05 | 0.0 | 2.95e-05 | 0.00164 | 0.0     | 0.000108 | 0.000633 | 0.0      | 8.12e-05 | True   |
+| I re | 2.92e-05 | 0.0 | 1.74e-05 | 0.00219 | 0.0     | 0.00106  | 0.000155 | 0.000143 | 0.000143 | True   |
+| I im | 6.38e-05 | 0.0 | 3.65e-05 | 0.0111  | 0.00188 | 0.00191  | 0.000753 | 0.000135 | 0.000135 | True   |  
+
+In steady state after the event, the absolute average error must not exceed 1%:
+
+| Variable | MAE      | Final Error | Compliance |
+|----------|----------|-------------|------------|
+| V        | 7.05e-05 | 7.05e-05    | True       |
+| P        | 0.000172 | 0.000172    | True       |
+| Q        | 6.87e-05 | 6.87e-05    | True       |
+| I re     | 0.000142 | 0.000142    | True       |
+| I im     | 0.000134 | 0.000134    | True       |
+
+
+**After modify the `thr_P_mxe_during` threshold:** 
+
+```ini
+[GridCode]
+# thr_P_mxe_before = 0.05
+# thr_P_mxe_during = 0.08
+thr_P_mxe_during = 0.002
+# thr_P_mxe_after = 0.05
+# thr_P_me_before = 0.02
+# thr_P_me_during = 0.05
+# thr_P_me_after = 0.02
+# thr_P_mae_before = 0.03
+# thr_P_mae_during = 0.07
+...
+```
+
+PCS_RTE-I16z1 - Transient fault:High-impedance fault ( V = 0.5U n, 800ms )
+
+Compliance checks on the curves, every 3 columns shown in the table show the errors for a 
+specific time range nof the curve, where the first 3 columns (called MXE, ME, and MAE) 
+correspond to the pre-event range, the next 3 columns to the range in which the event is happening,
+and the last 3 columns correspond to the post-event range:
+
+|      | MXE      | ME  | MAE      | MXE                                     | ME      | MAE      | MXE      | ME       | MAE      | Compl.                                |
+|------|----------|-----|----------|-----------------------------------------|---------|----------|----------|----------|----------|---------------------------------------|
+| P    | 2.93e-05 | 0.0 | 1.53e-05 | <span style="color: red">0.00246</span> | 0.0     | 0.000917 | 0.000178 | 0.000165 | 0.000165 | <span style="color: red">False</span> |
+| Q    | 4.89e-05 | 0.0 | 2.95e-05 | 0.00164                                 | 0.0     | 0.000108 | 0.000633 | 0.0      | 8.12e-05 | True                                  |
+| I re | 2.92e-05 | 0.0 | 1.74e-05 | 0.00219                                 | 0.0     | 0.00106  | 0.000155 | 0.000143 | 0.000143 | True                                  |
+| I im | 6.38e-05 | 0.0 | 3.65e-05 | 0.0111                                  | 0.00188 | 0.00191  | 0.000753 | 0.000135 | 0.000135 | True                                  |  
+
+In steady state after the event, the absolute average error must not exceed 1%:
+
+| Variable | MAE      | Final Error | Compliance |
+|----------|----------|-------------|------------|
+| V        | 7.05e-05 | 7.05e-05    | True       |
+| P        | 0.000172 | 0.000172    | True       |
+| Q        | 6.87e-05 | 6.87e-05    | True       |
+| I re     | 0.000142 | 0.000142    | True       |
+| I im     | 0.000134 | 0.000134    | True       |
 
 
 ## Changing the Log Level
