@@ -19,6 +19,8 @@ Developed by Grupo AIA
     1. [Enabling/disabling whole PCS](#enablingdisabling-whole-pcs)
     2. [Enabling/disabling specific tests of a given PCS](#enablingdisabling-specific-tests-of-a-given-pcs)
 5. [Modifying KPIs](#modifying-kpis)
+    1. [Definition](#definition)
+    2. [Changing the defaults values](#changing-the-defaults-values)
 6. [Changing the Log Level](#changing-the-log-level)
 
 ## Overview
