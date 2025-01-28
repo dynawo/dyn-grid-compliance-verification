@@ -184,7 +184,14 @@ def lowpass_filter(signal, fc=15, fs=1000, filter="critdamped", padding_method="
     return lp_filters.apply_filtfilt(b, a, signal, padding_method)
 
 
-def filter_curves(curves, f_cutoff=15, filter_name="critdamped"):
+def get_time_positions(time_values, t_from, t_to):
+    w_init_pos = np.searchsorted(time_values, t_from)
+    w_end_pos = np.searchsorted(time_values, t_to)
+
+    return w_init_pos, w_end_pos
+
+
+def filter_curves(curves, windows, f_cutoff=15, filter_name="critdamped"):
     """
     This function applies a low-pass filter to a set of curves, with these options:
        * filters each window separately (default) or the whole signal
@@ -198,6 +205,7 @@ def filter_curves(curves, f_cutoff=15, filter_name="critdamped"):
 
     # Filter
     lowpass_curve_dict = {}
+    time_values = list(curves["time"])
     for col in curves.columns:
         if "time" in col:
             continue
@@ -211,8 +219,27 @@ def filter_curves(curves, f_cutoff=15, filter_name="critdamped"):
         ):
             c_filt = c
         else:
-            c_filt = lowpass_filter(c, f_cutoff, fs, filter_name)
             # For avoiding overflows in PChipInterpolator (used in the 2nd resampling later on)
+            if config.get_boolean("GridCode", "disable_window_filtering", False):
+                c_filt = lowpass_filter(c, f_cutoff, fs, filter_name)
+            else:
+                c_filt = c
+
+                t_from, t_to = windows["before"]
+                w_init, w_end = get_time_positions(time_values, t_from, t_to)
+                c_filt[w_init:w_end] = lowpass_filter(c[w_init:w_end], f_cutoff, fs, filter_name)
+
+                t_from, t_to = windows["during"]
+                if t_to > t_from:
+                    w_init, w_end = get_time_positions(time_values, t_from, t_to)
+                    c_filt[w_init:w_end] = lowpass_filter(
+                        c[w_init:w_end], f_cutoff, fs, filter_name
+                    )
+
+                t_from, t_to = windows["after"]
+                w_init, w_end = get_time_positions(time_values, t_from, t_to)
+                c_filt[w_init:w_end] = lowpass_filter(c[w_init:w_end], f_cutoff, fs, filter_name)
+
             # TODO: double-check if this is still necessary
             # c_filt[abs(c_filt) < ZERO_THRESHOLD] = 0.0
 

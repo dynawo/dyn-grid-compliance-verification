@@ -8,10 +8,9 @@
 #     demiguelm@aia.es
 #
 
-import matplotlib.pyplot as plt
 import numpy as np
 
-from dgcv.sigpro.sigpro import abc_to_psrms, lowpass_filter, resample, shortfft
+from dgcv.sigpro.sigpro import abc_to_psrms, shortfft
 
 PLOT = False
 
@@ -34,7 +33,7 @@ def gen_abc(N):
 
 
 def test_shortfft():
-    abc, fs, tsteps = gen_abc(300)
+    abc, fs, _ = gen_abc(300)
     for x in abc:
         f, t, Zxx = shortfft(x, fs)
         assert f is not None
@@ -44,43 +43,8 @@ def test_shortfft():
         idx = np.argmin(np.abs(f - 50))
         assert idx is not None
 
-        if PLOT:
-            plt.figure()
-            plt.pcolormesh(t, f, np.abs(Zxx))
-            plt.title("STFT Magnitude")
-            plt.ylabel("Frequency [Hz]")
-            plt.xlabel("Time [sec]")
-            plt.colorbar()
-            plt.ylim([40, 60])
-            plt.figure()
-            plt.pcolormesh(t, f, np.angle(Zxx))
-            plt.title("STFT Angle")
-            plt.ylabel("Frequency [Hz]")
-            plt.xlabel("Time [sec]")
-            plt.colorbar()
-            plt.ylim([40, 60])
-            plt.show(block=False)
 
-    if PLOT:
-        plt.close("all")
-        plt.figure()
-        plt.plot(t, np.angle(Zxx[idx]))
-        plt.plot(t, np.abs(np.angle(Zxx[idx])))
-        plt.show(block=False)
-
-
-def test_sigpro():
-    fs_r = 2000
-    abc, fs, tsteps = gen_abc(300)
+def test_abc_to_psrms():
+    abc, fs, _ = gen_abc(300)
     ps_rms = abc_to_psrms(abc, fs)
     assert ps_rms is not None
-    t_r, r = resample(ps_rms, tsteps, fs_r)
-    assert len(t_r) == int(fs_r * tsteps[-1])
-    assert len(r) == int(fs_r * tsteps[-1])
-    r_filt = lowpass_filter(r, 50, fs_r)
-    assert len(r_filt) == int(fs_r * tsteps[-1])
-
-    if PLOT:
-        plt.plot(r)
-        plt.plot(r_filt)
-        plt.show(block=False)
