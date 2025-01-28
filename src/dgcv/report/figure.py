@@ -487,8 +487,6 @@ def _save_plot(
     ymin: float,
     ymax: float,
 ) -> None:
-    plt.clf()
-    plt.figure()
 
     # Plot later the reference curves
     if time_reference is not None and curves_reference is not None:
@@ -651,6 +649,9 @@ def create_plot(
     #       1- Calculated curves
     #       2- Reference curves
     #       3- Additional curves (limits, setpoints, etc.)
+
+    plt.clf()
+    plt.figure()
 
     # Cut curves
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
