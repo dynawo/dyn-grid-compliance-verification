@@ -627,7 +627,8 @@ def maximum_error_position(time: list, signal: list, reference: list) -> tuple[f
     """
     if len(signal) != len(reference):
         raise ValueError(
-            f"signal and reference values have different length: {len(signal)} != {len(reference)}."
+            "signal and reference values have different length: "
+            f"{len(signal)} != {len(reference)}."
         )
 
     total_values = len(signal)
