@@ -775,21 +775,20 @@ def get_reached_time(
     while sim_t_event_start > time[pos_t_event] and pos_t_event < len(time) - 1:
         pos_t_event += 1
 
+    stable_value = curve[pos_t_event - 1]
+
+    difference_val = curve[-1] - stable_value
+    objective_value = stable_value + percentage * difference_val
+
     # Cut list values
     time = time[pos_t_event:]
     curve = curve[pos_t_event:]
 
     pos = 0
-    if curve[-1] > curve[0]:
-        difference_val = curve[-1] - curve[0]
-        objective_value = curve[0] + percentage * difference_val
-
+    if difference_val > 0:
         while pos < len(curve) and curve[pos] < objective_value:
             pos += 1
     else:
-        difference_val = curve[0] - curve[-1]
-        objective_value = curve[0] - percentage * difference_val
-
         while pos < len(curve) and curve[pos] > objective_value:
             pos += 1
 
