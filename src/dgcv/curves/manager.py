@@ -13,6 +13,24 @@ from dgcv.sigpro import signal_windows, sigpro
 from dgcv.validation import sanity_checks
 
 
+def _fix_after_windows(
+    calculated_windows: pd.DataFrame, reference_windows: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    c_t_from, c_t_to = calculated_windows["validate"]["after"]
+    r_t_from, r_t_to = reference_windows["validate"]["after"]
+    validate_t_to = min(c_t_to, r_t_to)
+    calculated_windows["validate"]["after"] = (c_t_from, validate_t_to)
+    reference_windows["validate"]["after"] = (r_t_from, validate_t_to)
+
+    c_t_from, c_t_to = calculated_windows["sigpro"]["after"]
+    r_t_from, r_t_to = reference_windows["sigpro"]["after"]
+    sigpro_t_to = min(c_t_to, r_t_to)
+    calculated_windows["sigpro"]["after"] = (c_t_from, sigpro_t_to)
+    reference_windows["sigpro"]["after"] = (r_t_from, sigpro_t_to)
+
+    return calculated_windows, reference_windows
+
+
 class CurvesManager:
     def __init__(
         self,
@@ -295,13 +313,13 @@ class CurvesManager:
         reference_curves = sigpro.resample_to_fixed_step(reference_curves)
 
         calc_time_values = list(calculated_curves["time"])
-        self._windows["calculated"] = signal_windows.calculate(
+        calculated_windows = signal_windows.calculate(
             calc_time_values,
             event_params["start_time"],
             event_params["duration_time"],
             setpoint_tracking_controlled_magnitude,
         )
-        self._windows["reference"] = signal_windows.calculate(
+        reference_windows = signal_windows.calculate(
             list(reference_curves["time"]),
             event_params["start_time"],
             event_params["duration_time"],
@@ -309,8 +327,12 @@ class CurvesManager:
         )
 
         # After their respective resampling and after windowing, we can apply the filters
-        calculated_curves = sigpro.filter_curves(calculated_curves, f_cutoff)
-        reference_curves = sigpro.filter_curves(reference_curves, f_cutoff)
+        calculated_curves = sigpro.filter_curves(
+            calculated_curves, calculated_windows["sigpro"], f_cutoff
+        )
+        reference_curves = sigpro.filter_curves(
+            reference_curves, reference_windows["sigpro"], f_cutoff
+        )
 
         # Second resampling: ensure both signals are on the same time grid
         # Note it doesn't matter if this is a downsampling for any of the two sets, because the
@@ -318,8 +340,17 @@ class CurvesManager:
         calculated_curves, reference_curves = sigpro.resample_to_common_tgrid(
             calculated_curves, reference_curves
         )
+
+        # In the second resampling the curves are trimmed to ensure that both sets start and end
+        # at the same time, which means that the final time of the after windows must be corrected.
+        calculated_windows, reference_windows = _fix_after_windows(
+            calculated_windows, reference_windows
+        )
+
         self._curves["calculated"] = calculated_curves
         self._curves["reference"] = reference_curves
+        self._windows["calculated"] = calculated_windows
+        self._windows["reference"] = reference_windows
 
         # Sanity check: the "pre" window should be in the steady-state
         t_from, t_to = self.__get_validation_windows("calculated", "before")

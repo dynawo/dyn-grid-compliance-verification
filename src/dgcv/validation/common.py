@@ -626,7 +626,9 @@ def maximum_error_position(time: list, signal: list, reference: list) -> tuple[f
         Signal value in the maximum error
     """
     if len(signal) != len(reference):
-        raise ValueError("signal and reference values have different length")
+        raise ValueError(
+            f"signal and reference values have different length: {len(signal)} != {len(reference)}."
+        )
 
     total_values = len(signal)
     if total_values == 0:
@@ -666,8 +668,8 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
         pos_t_event += 1
 
     # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    time = time[pos_t_event:]
+    curve = curve[pos_t_event:]
 
     # Get the tube
     mean_val = curve[-1]
@@ -773,8 +775,8 @@ def get_reached_time(
         pos_t_event += 1
 
     # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    time = time[pos_t_event:]
+    curve = curve[pos_t_event:]
 
     pos = 0
     if curve[-1] > curve[0]:
