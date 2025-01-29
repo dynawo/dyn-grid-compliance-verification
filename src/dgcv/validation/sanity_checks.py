@@ -18,34 +18,32 @@ from dgcv.configuration.cfg import config
 from dgcv.dynawo.translator import dynawo_translator
 from dgcv.files.producer_curves import create_producer_curves
 from dgcv.logging.logging import dgcv_logging
-from dgcv.model.parameters import Line_params, Load_params, Xfmr_params
+from dgcv.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params
 from dgcv.validation import common
 
 
 def _check_topology_s(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if len(generators) != 1 or len(transformers) != 1:
-        has_error |= True
 
-    if (
+    expected_elements = len(generators) == 1 and len(transformers) == 1
+    unexpected_elements = (
         auxiliary_load is not None
         or auxiliary_transformer is not None
         or transformer is not None
         or internal_line is not None
-    ):
-        has_error |= True
+    )
+    valid_elements = _is_valid_generator(generators[0].id) and _is_valid_stepup_xfmr(
+        transformers, generators
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    has_error |= not (_is_valid_generator(generators[0].id))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'S' topology expects the following models:\n"
             "  - A generator with id:\n"
@@ -59,25 +57,28 @@ def _check_topology_s(
 
 
 def _check_topology_si(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if len(generators) != 1 or len(transformers) != 1 or internal_line is None:
-        has_error |= True
 
-    if auxiliary_load is not None or auxiliary_transformer is not None or transformer is not None:
-        has_error |= True
+    expected_elements = (
+        len(generators) == 1 and len(transformers) == 1 and internal_line is not None
+    )
+    unexpected_elements = (
+        auxiliary_load is not None or auxiliary_transformer is not None or transformer is not None
+    )
+    valid_elements = (
+        _is_valid_generator(generators[0].id)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_internal_line(internal_line)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    has_error |= not (_is_valid_generator(generators[0].id))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (internal_line.id == "IntNetwork_Line")
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'S+i' topology expects the following models:\n"
             "  - A generator with id:\n"
@@ -93,31 +94,30 @@ def _check_topology_si(
 
 
 def _check_topology_saux(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if (
-        len(generators) != 1
-        or len(transformers) != 1
-        or auxiliary_load is None
-        or auxiliary_transformer is None
-    ):
-        has_error |= True
 
-    if transformer is not None or internal_line is not None:
-        has_error |= True
+    expected_elements = (
+        len(generators) == 1
+        and len(transformers) == 1
+        and auxiliary_load is not None
+        and auxiliary_transformer is not None
+    )
+    unexpected_elements = transformer is not None or internal_line is not None
+    valid_elements = (
+        _is_valid_generator(generators[0].id)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_auxiliary_load(auxiliary_load)
+        and _is_valid_auxiliary_transformer(auxiliary_transformer)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    has_error |= not (_is_valid_generator(generators[0].id))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (auxiliary_load.id == "Aux_Load")
-    has_error |= not (_is_valid_auxiliary_transformer(auxiliary_transformer))
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'S+Aux' topology expects the following models:\n"
             "  - A generator with id:\n"
@@ -127,40 +127,39 @@ def _check_topology_saux(
             "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the PDR "
             "bus\n"
-            "  - An auxiliary load with id 'auxiliary_load'\n"
-            "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
+            "  - An auxiliary load with id 'Aux_Load'\n"
+            "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
             "load and the PDR bus\n"
         )
 
 
 def _check_topology_sauxi(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if (
-        len(generators) != 1
-        or len(transformers) != 1
-        or auxiliary_load is None
-        or auxiliary_transformer is None
-        or internal_line is None
-    ):
-        has_error |= True
 
-    if transformer is not None:
-        has_error |= True
+    expected_elements = (
+        len(generators) == 1
+        and len(transformers) == 1
+        and auxiliary_load is not None
+        and auxiliary_transformer is not None
+        and internal_line is not None
+    )
+    unexpected_elements = transformer is not None
+    valid_elements = (
+        _is_valid_generator(generators[0].id)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_auxiliary_load(auxiliary_load)
+        and _is_valid_auxiliary_transformer(auxiliary_transformer)
+        and _is_valid_internal_line(internal_line)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    has_error |= not (_is_valid_generator(generators[0].id))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (auxiliary_load.id == "Aux_Load")
-    has_error |= not (_is_valid_auxiliary_transformer(auxiliary_transformer))
-    has_error |= not (internal_line.id == "IntNetwork_Line")
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'S+Aux+i' topology expects the following models:\n"
             "  - A generator with id:\n"
@@ -170,8 +169,8 @@ def _check_topology_sauxi(
             "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the "
             "internal bus\n"
-            "  - An auxiliary load with id 'auxiliary_load'\n"
-            "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
+            "  - An auxiliary load with id 'Aux_Load'\n"
+            "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
             "load and the internal bus\n"
             "  - An internal line with id 'IntNetwork_Line' connected between the transformer and "
             "the PDR bus\n"
@@ -179,30 +178,28 @@ def _check_topology_sauxi(
 
 
 def _check_topology_m(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if len(generators) < 2 or len(transformers) < 2 or transformer is None:
-        has_error |= True
 
-    if (
+    expected_elements = len(generators) > 1 and len(transformers) > 1 and transformer is not None
+    unexpected_elements = (
         auxiliary_load is not None
         or auxiliary_transformer is not None
         or internal_line is not None
-    ):
-        has_error |= True
+    )
+    valid_elements = (
+        _is_valid_generators(generators)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_transformer(transformer)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    for generator in generators:
-        has_error |= not (_is_valid_generator(generator.id, False))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (_is_valid_transformer(transformer))
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'M' topology expects the following models:\n"
             "  - Two or more generators, their ids start with:\n"
@@ -217,32 +214,30 @@ def _check_topology_m(
 
 
 def _check_topology_mi(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if (
-        len(generators) < 2
-        or len(transformers) < 2
-        or transformer is None
-        or internal_line is None
-    ):
-        has_error |= True
 
-    if auxiliary_load is not None or auxiliary_transformer is not None:
-        has_error |= True
+    expected_elements = (
+        len(generators) > 1
+        and len(transformers) > 1
+        and transformer is not None
+        and internal_line is not None
+    )
+    unexpected_elements = auxiliary_load is not None or auxiliary_transformer is not None
+    valid_elements = (
+        _is_valid_generators(generators)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_transformer(transformer)
+        and _is_valid_internal_line(internal_line)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    for generator in generators:
-        has_error |= not (_is_valid_generator(generator.id, False))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (_is_valid_transformer(transformer))
-    has_error |= not (internal_line.id == "IntNetwork_Line")
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'M+i' topology expects the following models:\n"
             "  - Two or more generators, their ids start with:\n"
@@ -259,34 +254,32 @@ def _check_topology_mi(
 
 
 def _check_topology_maux(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if (
-        len(generators) < 2
-        or len(transformers) < 2
-        or auxiliary_load is None
-        or auxiliary_transformer is None
-        or transformer is None
-    ):
-        has_error |= True
 
-    if internal_line is not None:
-        has_error |= True
+    expected_elements = (
+        len(generators) > 1
+        and len(transformers) > 1
+        and transformer is not None
+        and auxiliary_load is not None
+        and auxiliary_transformer is not None
+    )
+    unexpected_elements = internal_line is not None
+    valid_elements = (
+        _is_valid_generators(generators)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_transformer(transformer)
+        and _is_valid_auxiliary_load(auxiliary_load)
+        and _is_valid_auxiliary_transformer(auxiliary_transformer)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    for generator in generators:
-        has_error |= not (_is_valid_generator(generator.id, False))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (auxiliary_load.id == "Aux_Load")
-    has_error |= not (_is_valid_auxiliary_transformer(auxiliary_transformer))
-    has_error |= not (_is_valid_transformer(transformer))
-
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'M+Aux' topology expects the following models:\n"
             "  - Two or more generators, their ids start with:\n"
@@ -295,8 +288,8 @@ def _check_topology_maux(
             "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
-            "  - An auxiliary load with id 'auxiliary_load'\n"
-            "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
+            "  - An auxiliary load with id 'Aux_Load'\n"
+            "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
             "load and the internal bus\n"
             "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
             "PDR bus\n"
@@ -304,33 +297,34 @@ def _check_topology_maux(
 
 
 def _check_topology_mauxi(
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,
     internal_line: Line_params,
 ) -> None:
-    has_error = False
-    if (
-        len(generators) < 2
-        or len(transformers) < 2
-        or auxiliary_load is None
-        or auxiliary_transformer is None
-        or transformer is None
-        or internal_line is None
-    ):
-        has_error |= True
 
-    for generator in generators:
-        has_error |= not (_is_valid_generator(generator.id, False))
-    has_error |= not (_is_valid_stepup_xfmr(transformers, generators))
-    has_error |= not (auxiliary_load.id == "Aux_Load")
-    has_error |= not (_is_valid_auxiliary_transformer(auxiliary_transformer))
-    has_error |= not (_is_valid_transformer(transformer))
-    has_error |= not (internal_line.id == "IntNetwork_Line")
+    expected_elements = (
+        len(generators) > 1
+        and len(transformers) > 1
+        and transformer is not None
+        and auxiliary_load is not None
+        and auxiliary_transformer is not None
+        and internal_line is not None
+    )
+    unexpected_elements = False
+    valid_elements = (
+        _is_valid_generators(generators)
+        and _is_valid_stepup_xfmr(transformers, generators)
+        and _is_valid_transformer(transformer)
+        and _is_valid_auxiliary_load(auxiliary_load)
+        and _is_valid_auxiliary_transformer(auxiliary_transformer)
+        and _is_valid_internal_line(internal_line)
+    )
+    valid_topology = expected_elements and not unexpected_elements and valid_elements
 
-    if has_error:
+    if not valid_topology:
         raise ValueError(
             "The 'M+Aux+i' topology expects the following models:\n"
             "  - Two or more generators, their ids start with:\n"
@@ -339,8 +333,8 @@ def _check_topology_mauxi(
             "      * 'Bess' if a storage or a park of storages is modeled\n"
             "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
             "connected between a generator and the internal bus\n"
-            "  - An auxiliary load with id 'auxiliary_load'\n"
-            "  - A transformer with id 'auxiliary_transformer' connected between the auxiliary "
+            "  - An auxiliary load with id 'Aux_Load'\n"
+            "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
             "load and the internal bus\n"
             "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
             "internal line\n"
@@ -349,7 +343,15 @@ def _check_topology_mauxi(
         )
 
 
-def _is_valid_generator(gen_id, add_sm=True) -> None:
+def _is_valid_generators(generators) -> bool:
+    for generator in generators:
+        if not _is_valid_generator(generator.id, False):
+            return False
+
+    return True
+
+
+def _is_valid_generator(gen_id, add_sm=True) -> bool:
     # The generator id may contain numbered suffixes, for this reason it must be checked if the
     #  substring exists in the identifier
     gen_types = ["Wind_Turbine", "PV_Array", "Bess"]
@@ -360,23 +362,33 @@ def _is_valid_generator(gen_id, add_sm=True) -> None:
     return False
 
 
-def _is_valid_stepup_xfmr(transformers: list, generators: list) -> None:
+def _is_valid_stepup_xfmr(transformers: list[Xfmr_params], generators: list) -> bool:
     ids = [
         stepup_xfmr.id for stepup_xfmr in transformers if stepup_xfmr.id.startswith("StepUp_Xfmr")
     ]
-    if len(generators) == len(ids):
-        return True
-    return False
+    return len(generators) == len(ids)
 
 
-def _is_valid_auxiliary_transformer(auxiliary_transformer: Xfmr_params) -> None:
+def _is_valid_auxiliary_transformer(auxiliary_transformer: Xfmr_params) -> bool:
     if auxiliary_transformer is not None and auxiliary_transformer.id == "AuxLoad_Xfmr":
         return True
     return False
 
 
-def _is_valid_transformer(transformer: Xfmr_params) -> None:
+def _is_valid_transformer(transformer: Xfmr_params) -> bool:
     if transformer is not None and transformer.id == "Main_Xfmr":
+        return True
+    return False
+
+
+def _is_valid_auxiliary_load(auxiliary_load: Load_params) -> bool:
+    if auxiliary_load is not None and auxiliary_load.id == "Aux_Load":
+        return True
+    return False
+
+
+def _is_valid_internal_line(internal_line: Line_params) -> bool:
+    if internal_line is not None and internal_line.id == "IntNetwork_Line":
         return True
     return False
 
@@ -578,8 +590,8 @@ def check_simulation_duration(time: float) -> None:
 
 def check_topology(
     topology: str,
-    generators: list,
-    transformers: list,
+    generators: list[Gen_params],
+    transformers: list[Xfmr_params],
     auxiliary_load: Load_params,
     auxiliary_transformer: Xfmr_params,
     transformer: Xfmr_params,

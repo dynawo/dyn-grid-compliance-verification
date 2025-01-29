@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+
+import pytest
+
 from dgcv.model import parameters
 from dgcv.validation import sanity_checks
 
@@ -32,6 +44,29 @@ def test_check_topology_s():
         transformer,
         internal_line,
     )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "S+i",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'S+i' topology expects the following models:\n"
+        "  - A generator with id:\n"
+        "      * 'Synch_Gen' if a synchronous generator is modeled\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the "
+        "internal line\n"
+        "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
+        "and the PDR bus\n"
+    )
 
 
 def test_check_topology_si():
@@ -65,6 +100,27 @@ def test_check_topology_si():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "S",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'S' topology expects the following models:\n"
+        "  - A generator with id:\n"
+        "      * 'Synch_Gen' if a synchronous generator is modeled\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the PDR "
+        "bus\n"
     )
 
 
@@ -101,6 +157,32 @@ def test_check_topology_saux():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "S+Aux+i",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'S+Aux+i' topology expects the following models:\n"
+        "  - A generator with id:\n"
+        "      * 'Synch_Gen' if a synchronous generator is modeled\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the "
+        "internal bus\n"
+        "  - An auxiliary load with id 'Aux_Load'\n"
+        "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
+        "load and the internal bus\n"
+        "  - An internal line with id 'IntNetwork_Line' connected between the transformer and "
+        "the PDR bus\n"
     )
 
 
@@ -139,6 +221,30 @@ def test_check_topology_sauxi():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "S+Aux",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'S+Aux' topology expects the following models:\n"
+        "  - A generator with id:\n"
+        "      * 'Synch_Gen' if a synchronous generator is modeled\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer with id 'StepUp_Xfmr' connected between the generator and the PDR "
+        "bus\n"
+        "  - An auxiliary load with id 'Aux_Load'\n"
+        "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
+        "load and the PDR bus\n"
     )
 
 
@@ -185,6 +291,30 @@ def test_check_topology_m():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "M+i",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'M+i' topology expects the following models:\n"
+        "  - Two or more generators, their ids start with:\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
+        "connected between a generator and the internal bus\n"
+        "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
+        "internal line\n"
+        "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
+        "with id 'transformer' and the PDR bus\n"
     )
 
 
@@ -233,6 +363,28 @@ def test_check_topology_mi():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "M",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'M' topology expects the following models:\n"
+        "  - Two or more generators, their ids start with:\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
+        "connected between a generator and the internal bus\n"
+        "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
+        "PDR bus\n"
     )
 
 
@@ -283,6 +435,33 @@ def test_check_topology_maux():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "M+Aux+i",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'M+Aux+i' topology expects the following models:\n"
+        "  - Two or more generators, their ids start with:\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
+        "connected between a generator and the internal bus\n"
+        "  - An auxiliary load with id 'Aux_Load'\n"
+        "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
+        "load and the internal bus\n"
+        "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
+        "internal line\n"
+        "  - An internal line with id 'IntNetwork_Line' connected between the transformer "
+        "with id 'transformer' and the PDR bus\n"
     )
 
 
@@ -335,4 +514,29 @@ def test_check_topology_mauxi():
         auxiliary_transformer,
         transformer,
         internal_line,
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        sanity_checks.check_topology(
+            "M+Aux",
+            generators,
+            transformers,
+            auxiliary_load,
+            auxiliary_transformer,
+            transformer,
+            internal_line,
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.value.args[0] == (
+        "The 'M+Aux' topology expects the following models:\n"
+        "  - Two or more generators, their ids start with:\n"
+        "      * 'Wind_Turbine' if a wind turbine or a wind turbine farm is modeled\n"
+        "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
+        "      * 'Bess' if a storage or a park of storages is modeled\n"
+        "  - A transformer for each generator, its id starts with 'StepUp_Xfmr' and it is "
+        "connected between a generator and the internal bus\n"
+        "  - An auxiliary load with id 'Aux_Load'\n"
+        "  - A transformer with id 'AuxLoad_Xfmr' connected between the auxiliary "
+        "load and the internal bus\n"
+        "  - A transformer with id 'Main_Xfmr' connected between the internal bus and the "
+        "PDR bus\n"
     )
