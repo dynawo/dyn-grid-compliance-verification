@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from dgcv.curves.importer import CurvesImporter
+from dgcv.curves.importer.importer import CurvesImporter
 
 
 def _get_resources_path():

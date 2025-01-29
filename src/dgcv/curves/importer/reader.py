@@ -189,12 +189,12 @@ class CsvReader(CurvesReader):
         if remove_file:
             file.unlink()
 
-    def read(self, data: pd.Dataframe):
+    def read(self, data: pd.DataFrame):
         """Read and import the data from the file.
 
         Parameters
         ----------
-        data: Dataframe
+        data: DataFrame
             Dataframe with all the curves data
         """
         self._time_values = data[self._time_name]
