@@ -33,9 +33,9 @@ variable/parameter names used by each specific model to the tool's generic names
 is located in the ``src/dgcv/dynawo/dictionary`` of the tool.
 
 To add support for a new Dynawo model in the Dynamic Grid Compliance Verification Tool, it is necessary
-to modify the ``ini`` file corresponding to the type of equipment to which it belongs (``bus.ini,
-control_modes.ini, generator.ini, line.ini, load.ini, power_park.ini, transformer.ini``) and link
-the keywords used in the Tool with the corresponding Dynawo parameter of the model.
+to modify the ``ini`` file corresponding to the type of equipment to which it belongs (``Bus.ini,
+Control_Modes.ini, Line.ini, Load.ini, Power_Park.ini, Storage.ini, Synch_Gen.ini, Transformer.ini``) 
+and link the keywords used in the Tool with the corresponding Dynawo parameter of the model.
 
 
 Bus
@@ -56,8 +56,8 @@ The Tool uses the following keywords to define the dynamic model:
     Bus frequency in per unit. It is required in Model Validation.
 
 
-Generator
-^^^^^^^^^
+Synchronous Generator
+^^^^^^^^^^^^^^^^^^^^^
 The Tool uses the following keywords to define the dynamic model:
 
 * ``'ActivePower0Pu'``
@@ -78,18 +78,18 @@ The Tool uses the following keywords to define the dynamic model:
 
 * ``'RotorSpeedPu'``
     Angular frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Synchronous Machine Electrical Performance.
+    *DYNModelOmegaRef* and/or for Electrical Performance Verification.
 
 * ``'NetworkFrequencyPu'``
     Reference frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Synchronous Machine Electrical Performance and Model Validation.
+    *DYNModelOmegaRef* and/or for Electrical Performance Verification and Model Validation.
 
 * ``'NetworkFrequencyValue'``
     Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
     *InfiniteBus*.
 
 * ``'InternalAngle'``
-    Internal angle in rad. It is required for Synchronous Machine Electrical Performance.
+    Internal angle in rad. It is required for Electrical Performance Verification.
 
 * ``'AVRSetpointPu'``
     Control voltage in per unit. It is required.
@@ -98,20 +98,20 @@ The Tool uses the following keywords to define the dynamic model:
     Magnitude voltage amplitude in per unit. It is required.
 
 * ``'InjectedActiveCurrent'``
-    Injected active current in per unit. It is required for Power Park Electrical Performance and
+    Injected active current in per unit. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedReactiveCurrent'``
-    Injected reactive current in per unit. It is required for Power Park Electrical Performance and
+    Injected reactive current in per unit. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedCurrent'``
     Injected current in per unit, the tool calculates it from 'InjectedActiveCurrent' and
-    'InjectedReactiveCurrent'. It is required for Power Park Electrical Performance and
+    'InjectedReactiveCurrent'. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedCurrentMax'``
-    Maximum current amplitude in per unit. It is required for Power Park Electrical Performance.
+    Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
 
 * ``'ActivePowerSetpointPu'``
     Active power set-point in per unit. It is required Model Validation.
@@ -142,18 +142,18 @@ The Tool uses the following keywords to define the dynamic model:
 
 * ``'RotorSpeedPu'``
     Angular frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Synchronous Machine Electrical Performance.
+    *DYNModelOmegaRef* and/or for Electrical Performance Verification.
 
 * ``'NetworkFrequencyPu'``
     Reference frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Synchronous Machine Electrical Performance and Model Validation.
+    *DYNModelOmegaRef* and/or for Electrical Performance Verification and Model Validation.
 
 * ``'NetworkFrequencyValue'``
     Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
     *InfiniteBus*.
 
 * ``'InternalAngle'``
-    Internal angle in rad. It is required for Synchronous Machine Electrical Performance.
+    Internal angle in rad. It is required for Electrical Performance Verification.
 
 * ``'AVRSetpointPu'``
     Control voltage in per unit. It is required.
@@ -162,20 +162,20 @@ The Tool uses the following keywords to define the dynamic model:
     Magnitude voltage amplitude in per unit. It is required.
 
 * ``'InjectedActiveCurrent'``
-    Injected active current in per unit. It is required for Power Park Electrical Performance and
+    Injected active current in per unit. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedReactiveCurrent'``
-    Injected reactive current in per unit. It is required for Power Park Electrical Performance and
+    Injected reactive current in per unit. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedCurrent'``
     Injected current in per unit, the tool calculates it from 'InjectedActiveCurrent' and
-    'InjectedReactiveCurrent'. It is required for Power Park Electrical Performance and
+    'InjectedReactiveCurrent'. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedCurrentMax'``
-    Maximum current amplitude in per unit. It is required for Power Park Electrical Performance.
+    Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
 
 * ``'ActivePowerSetpointPu'``
     Active power set-point in per unit. It is required Model Validation.
@@ -187,34 +187,109 @@ WECC Family
 """""""""""
 
 * ``'RefFlag'``
-    RefFlag Plant level: reactive power (False) or voltage control (True). Only in WECC Plant models.
+    RefFlag Plant level: reactive power (False) or voltage control (True). Only in Plant models.
 
 * ``'VCompFlag'``
     VCompFlag Plant level (if RefFlag is True): Reactive droop (False) or line drop compensation
-    (True). Only in WECC Plant models.
+    (True). Only in Plant models.
 
 * ``'VFlag'``
-    VFlag Voltage control flag: voltage control (False) or Q control (True). Only in WECC models.
+    VFlag Voltage control flag: voltage control (False) or Q control (True).
 
 * ``'QFlag'``
-    Q control flag: const. pf or Q ctrl (False) or voltage/Q (True). Only in WECC models.
+    Q control flag: const. pf or Q ctrl (False) or voltage/Q (True).
 
 * ``'PFlag'``
-    Power reference flag: const. Pref (False) or consider generator speed (True). Only in WECC models.
+    Power reference flag: const. Pref (False) or consider generator speed (True).
 
 * ``'PfFlag'``
-    Power factor flag: Q control (False) or pf control(True). Only in WECC models.
+    Power factor flag: Q control (False) or pf control(True).
 
 IEC Family
 """"""""""
 
 * ``'MwpqMode'``
     Control mode: reactive power reference (0), power factor reference (1), UQ static (2),
-    voltage control (3). Only in IEC Plant models.
+    voltage control (3). Only in Plant models.
 
 * ``'MqG'``
     MqG QControl: Voltage control (0), reactive power control (1), open loop recative power (2),
-    power factor control (3), open loop power factor control (4). Only in IEC models.
+    power factor control (3), open loop power factor control (4).
+
+
+Storage
+^^^^^^^
+The Tool uses the following keywords to define the dynamic model:
+
+* ``'ActivePower0Pu'``
+    Start value of active power at terminal in per unit. It is required for initialization.
+
+* ``'ReactivePower0Pu'``
+    Start value of reactive power at terminal in per unit. It is required for initialization.
+
+* ``'Voltage0Pu'``
+    Start value of voltage amplitude at terminal in per unit. It is required for initialization.
+
+* ``'Phase0'``
+    Start value of voltage angle at terminal in per unit. It is required for initialization.
+
+* ``'NetworkFrequencyPu'``
+    Reference frequency in per unit. It is required when OmegaRef model is
+    *DYNModelOmegaRef* and/or for Electrical Performance Verification and Model Validation.
+
+* ``'NetworkFrequencyValue'``
+    Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
+    *InfiniteBus*.
+
+* ``'AVRSetpointPu'``
+    Control voltage in per unit. It is required.
+
+* ``'MagnitudeControlledByAVRPu'``
+    Magnitude voltage amplitude in per unit. It is required.
+
+* ``'InjectedActiveCurrent'``
+    Injected active current in per unit. It is required for Electrical Performance Verification and
+    Model Validation.
+
+* ``'InjectedReactiveCurrent'``
+    Injected reactive current in per unit. It is required for Electrical Performance Verification and
+    Model Validation.
+
+* ``'InjectedCurrent'``
+    Injected current in per unit, the tool calculates it from 'InjectedActiveCurrent' and
+    'InjectedReactiveCurrent'. It is required for Electrical Performance Verification and
+    Model Validation.
+
+* ``'InjectedCurrentMax'``
+    Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
+
+* ``'ActivePowerSetpointPu'``
+    Active power set-point in per unit. It is required Model Validation.
+
+* ``'ReactivePowerSetpointPu'``
+    Reactive power set-point in per unit. It is required Model Validation.
+
+WECC Family
+"""""""""""
+
+* ``'RefFlag'``
+    RefFlag Plant level: reactive power (False) or voltage control (True). Only in Plant models.
+
+* ``'VCompFlag'``
+    VCompFlag Plant level (if RefFlag is True): Reactive droop (False) or line drop compensation
+    (True). Only in Plant models.
+
+* ``'VFlag'``
+    VFlag Voltage control flag: voltage control (False) or Q control (True).
+
+* ``'QFlag'``
+    Q control flag: const. pf or Q ctrl (False) or voltage/Q (True).
+
+* ``'PFlag'``
+    Power reference flag: const. Pref (False) or consider generator speed (True).
+
+* ``'PfFlag'``
+    Power factor flag: Q control (False) or pf control(True).
 
 Line
 ^^^^

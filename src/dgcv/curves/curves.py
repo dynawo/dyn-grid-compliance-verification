@@ -9,11 +9,13 @@
 #
 from pathlib import Path
 
+import pandas as pd
+
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import CASE_SEPARATOR
-from dgcv.core.validator import Disconnection_Model
 from dgcv.electrical.generator_variables import generator_variables
+from dgcv.model.parameters import Disconnection_Model
 from dgcv.model.producer import Producer
 
 
@@ -23,7 +25,7 @@ def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
     return pcs_bm_name + CASE_SEPARATOR + oc_name
 
 
-class Simulator:
+class ProducerCurves:
     def __init__(
         self,
         parameters: Parameters,
@@ -124,7 +126,7 @@ class Simulator:
         working_oc_dir: Path,
         pcs_bm_name: str,
         curves: Path,
-    ) -> float:
+    ) -> tuple[float, pd.DataFrame]:
         """Virtual method"""
         pass
 
@@ -135,7 +137,7 @@ class Simulator:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool]:
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
         """Virtual method"""
         pass
 

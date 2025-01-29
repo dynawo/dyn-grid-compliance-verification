@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from dgcv.curves.reader import get_curves_reader
+from dgcv.curves.importer.reader import get_curves_reader
 
 
 class CurvesImporter:
