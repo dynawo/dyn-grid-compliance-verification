@@ -24,14 +24,12 @@ from dgcv.model.producer import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dgcv.validation import sanity_checks
 
 
-def _compile_dynawo_models(dwo_launcher: Path, dynawo_model: str, force: bool) -> int:
+def _compile_dynawo_models(dwo_launcher: Path, dynawo_model: str, force: bool) -> None:
     prepare_tool.precompile(dwo_launcher, dynawo_model, force=force)
-    return 0
 
 
-def _generate_input(dwo_launcher: Path, target: Path, topology: str, validation: str) -> int:
+def _generate_input(dwo_launcher: Path, target: Path, topology: str, validation: str) -> None:
     create_input_template(dwo_launcher, target, topology, validation)
-    return 0
 
 
 def _performance_verification(
@@ -385,21 +383,22 @@ def _execute_compile(
     else:
         dynawo_model = args.dynawo_model
 
-    r = _compile_dynawo_models(dwo_launcher, dynawo_model, args.force)
-    if r != 0:
-        p.print_help()
+    _compile_dynawo_models(dwo_launcher, dynawo_model, args.force)
 
 
 def _execute_generate(
     p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
 ) -> None:
+    if args.output_dir is None or args.topology is None or args.validation is None:
+        p.error("Missing arguments.\nTry 'dgcv generate -h' for more information.")
+        p.print_help()
+        return
+
     output_dir = Path(args.output_dir)
     topology = args.topology
     validation = args.validation
 
-    r = _generate_input(dwo_launcher, output_dir, topology, validation)
-    if r != 0:
-        p.print_help()
+    _generate_input(dwo_launcher, output_dir, topology, validation)
 
 
 def _execute_performance(
