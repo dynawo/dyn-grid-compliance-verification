@@ -30,16 +30,17 @@ class Parameters:
         Producer Model directory
     producer_curves_path: Path
         Producer curves directory
+    reference_curves_path: Path
+        Reference curves directory
     selected_pcs: str
         Individual PCS to validate
     output_dir: Path
         User output directory
     only_dtr: bool
         option to validate a model using only the PCS defined in the DTR
-    sim_type: int
-        0 if it is an electrical performance for Synchronous Machine Model
-        1 if it is an electrical performance for Power Park Module Model
-        2 if it is a model validation
+    verification_type: int
+        0 if it is an electrical performance verification
+        1 if it is a model validation
     """
 
     def __init__(
@@ -51,7 +52,7 @@ class Parameters:
         selected_pcs: str,
         output_dir: Path,
         only_dtr: bool,
-        sim_type: int,
+        verification_type: int,
     ):
         # Inputs parameters
         self._launcher_dwo = launcher_dwo
@@ -61,7 +62,7 @@ class Parameters:
 
         # Read producer inputs
         self._producer = Producer(
-            producer_model, producer_curves_path, reference_curves_path, sim_type
+            producer_model, producer_curves_path, reference_curves_path, verification_type
         )
 
         tmp_path = config.get_value("Global", "temporal_path")
@@ -73,7 +74,8 @@ class Parameters:
         current_time = time.time()
         for execution_path in working_dir.iterdir():
             modification_time = execution_path.stat().st_mtime
-            if (current_time - modification_time) // (24 * 3600) >= 1:
+            # Delete old directories (24h)
+            if current_time - modification_time >= 24 * 3600:
                 shutil.rmtree(execution_path)
 
         self._working_dir = working_dir / Path(str(uuid.uuid4()))
@@ -130,9 +132,11 @@ class Parameters:
 
     def get_sim_type(self) -> int:
         """Get the executed validation type:
-            * 0 if it is electrical performance for Synchronous Machine Model
-            * 1 if it is electrical performance for Power Park Module Model
-            * 10 if it is model validation
+            * 0 if it is an electrical performance for Synchronous Machine Model
+            * 1 if it is an electrical performance for Power Park Module Model
+            * 2 if it is an electrical performance for Storage Model
+            * 10 if it is a model validation for Power Park Module Model
+            * 11 if it is a model validation for Storage Model
 
         Returns
         -------
@@ -151,6 +155,26 @@ class Parameters:
         """
         return self._only_dtr
 
+    def is_dynawo_model_valid(self) -> bool:
+        """Checks if the Dynawo model is valid.
+
+        Returns
+        -------
+        bool
+            True if the Dynawo model is valid, False otherwise
+        """
+        return self._producer.is_dynawo_model()
+
+    def is_user_curves_valid(self) -> bool:
+        """Checks if the user curves are valid.
+
+        Returns
+        -------
+        bool
+            True if the user curves are valid, False otherwise
+        """
+        return self._producer.is_user_curves()
+
     def is_valid(self) -> bool:
         """Checks if the execution of the tool is valid,
         for this the tool must have the dynamic model of the user or, failing that, the
@@ -161,9 +185,19 @@ class Parameters:
         bool
             True if it is a valid execution, False otherwise
         """
-        return self._producer.is_dynawo_model() or self._producer.is_user_curves()
+        return self.is_dynawo_model_valid() or self.is_user_curves_valid()
 
-    def is_complete(self):
+    def has_reference_curves_path(self) -> bool:
+        """Check if there are reference curves directory.
+
+        Returns
+        -------
+        bool
+            True if has a reference curves directory, False otherwise
+        """
+        return self._producer.has_reference_curves_path()
+
+    def is_complete(self) -> bool:
         """Checks if the execution of the tool is complete,
         for this the tool must have the dynamic model of the user and the curves file.
 
@@ -172,4 +206,4 @@ class Parameters:
         bool
             True if it is a complete execution, False otherwise
         """
-        return self.is_valid() and self._producer.has_reference_curves_path()
+        return self.is_valid() and self.has_reference_curves_path()
