@@ -23,6 +23,21 @@ ModelFiles = namedtuple("ModelFiles", ["model_path", "omega_path", "pcs_path", "
 ProducerFiles = namedtuple("ProducerFiles", ["producer_dyd", "producer_par"])
 
 
+def _copy_files(
+    path: Path,
+    target_path: Path,
+):
+    pattern = re.compile(r".*")
+    exclude_pattern1 = re.compile(r".*__init__.py")
+    exclude_pattern2 = re.compile(r".*__pycache__*")
+    for file in path.iterdir():
+        matching = pattern.match(str(file))
+        matching1 = exclude_pattern1.match(str(file))
+        matching2 = exclude_pattern2.match(str(file))
+        if matching and not matching1 and not matching2:
+            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
+
+
 def create_config_file(config_file: Path, target_file: Path) -> None:
     """Create a commented config file in target from the input config file.
 
@@ -88,6 +103,17 @@ def create_dir(path: Path, clean_first: bool = True, all: bool = False) -> None:
     path.mkdir(parents=True)
     if all:
         path.chmod(0o777)
+
+
+def create_empty_file(empty_file: Path) -> None:
+    """Create an empty file if not exists.
+
+    Parameters
+    ----------
+    empty_file: Path
+        File to create
+    """
+    empty_file.touch()
 
 
 def remove_dir(path: Path) -> None:
@@ -202,23 +228,13 @@ def copy_base_case_files(
     target_path: Path
         Target path
     """
+
+    _copy_files(model_files.model_path, target_path)
+    _copy_files(model_files.omega_path, target_path)
+
     pattern = re.compile(r".*")
     exclude_pattern1 = re.compile(r".*__init__.py")
     exclude_pattern2 = re.compile(r".*__pycache__*")
-    for file in model_files.model_path.iterdir():
-        matching = pattern.match(str(file))
-        matching1 = exclude_pattern1.match(str(file))
-        matching2 = exclude_pattern2.match(str(file))
-        if matching and not matching1 and not matching2:
-            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
-
-    for file in model_files.omega_path.iterdir():
-        matching = pattern.match(str(file))
-        matching1 = exclude_pattern1.match(str(file))
-        matching2 = exclude_pattern2.match(str(file))
-        if matching and not matching1 and not matching2:
-            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
-
     exclude_pattern3 = re.compile(r".*.[iI][nN][iI]$")
     exclude_pattern4 = re.compile(r".*.[cC][rR][vV]$")
     for file in model_files.pcs_path.iterdir():

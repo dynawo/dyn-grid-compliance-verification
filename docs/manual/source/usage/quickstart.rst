@@ -19,10 +19,10 @@ RMS Model Validation
 --------------------
 
 In this mode the tool runs a set of *Model Validation tests*. Some of these tests resemble those
-of the *PCS* in the provisional operation notification (ION) stage in the RTE's DTR for Power Park
-Modules, while some are different. Of course, here one is validating the model, not the
-electric performance; therefore, it is mandatory to provide *reference curves* as well as a model
-or producer curves. You would use the command `dgcv validate`
+of the *PCS* in the provisional operation notification (ION) stage in the RTE's DTR, while some 
+are different. Of course, here one is validating the model, not the electric performance; 
+therefore, it is mandatory to provide *reference curves* as well as a model or producer curves. 
+You would use the command `dgcv validate`
 
 Run the command with option ``--help`` (or ``-h``) to get a quick overview of the
 inputs you need to provide:
@@ -41,7 +41,7 @@ inputs you need to provide:
 Electric Performance Verification
 ---------------------------------
 
-This command can be used with PPM or with synchronous machines.
+This command can be used with PPM, Stockage or with synchronous machines.
 In this mode the tool runs an execution pipeline consisting in a set of pre-defined tests, those
 of the *PCS* in the provisional operation notification (ION) stage in the RTE's DTR. You would
 use the command `dgcv performance`

@@ -13,6 +13,52 @@ import numpy as np
 
 from dgcv.configuration.cfg import config
 
+# when magnitudes are smaller than atol, switch to absolute error
+ATOL = 1.0e-6
+
+
+def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
+    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
+        return True
+    return False
+
+
+def check_time(
+    calculated_time: float, reference_time: float, rtol: float, atol: float = ATOL
+) -> tuple[float, bool]:
+    """Check if the calculated time is within the tolerances of the reference time.
+
+    Parameters
+    ----------
+    calculated_time: float
+        Calculated time
+    reference_time: float
+        Reference time
+    rtol: float
+        Relative tolerance
+    atol: float
+        Aboslute tolerance
+
+    Returns
+    -------
+    float
+        Relative error between the calculated and reference time
+    bool
+        True if the calculated time is within the tolerances of the reference time, False otherwise
+
+    """
+    # when magnitudes are smaller than atol, switch to absolute error
+    time_check = math.isclose(
+        calculated_time,
+        reference_time,
+        rel_tol=rtol,
+        abs_tol=atol,
+    )
+    if _show_error(calculated_time, reference_time, rtol, atol):
+        return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
+    else:
+        return "-", time_check
+
 
 def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_event: float):
     """Check if the results of a step-response test are completely flat (no response).
@@ -577,7 +623,10 @@ def maximum_error_position(time: list, signal: list, reference: list) -> tuple[f
         Signal value in the maximum error
     """
     if len(signal) != len(reference):
-        raise ValueError("signal and reference values have different length")
+        raise ValueError(
+            "signal and reference values have different length: "
+            f"{len(signal)} != {len(reference)}."
+        )
 
     total_values = len(signal)
     if total_values == 0:
@@ -617,8 +666,8 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
         pos_t_event += 1
 
     # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    time = time[pos_t_event:]
+    curve = curve[pos_t_event:]
 
     # Get the tube
     mean_val = curve[-1]
@@ -723,21 +772,20 @@ def get_reached_time(
     while sim_t_event_start > time[pos_t_event] and pos_t_event < len(time) - 1:
         pos_t_event += 1
 
+    stable_value = curve[pos_t_event - 1]
+
+    difference_val = curve[-1] - stable_value
+    objective_value = stable_value + percentage * difference_val
+
     # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    time = time[pos_t_event:]
+    curve = curve[pos_t_event:]
 
     pos = 0
-    if curve[-1] > curve[0]:
-        difference_val = curve[-1] - curve[0]
-        objective_value = curve[0] + percentage * difference_val
-
+    if difference_val > 0:
         while pos < len(curve) and curve[pos] < objective_value:
             pos += 1
     else:
-        difference_val = curve[0] - curve[-1]
-        objective_value = curve[0] - percentage * difference_val
-
         while pos < len(curve) and curve[pos] > objective_value:
             pos += 1
 

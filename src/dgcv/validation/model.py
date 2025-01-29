@@ -7,8 +7,6 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import logging
-import math
 from pathlib import Path
 
 import numpy as np
@@ -17,10 +15,9 @@ import pandas as pd
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.validator import Validator
-from dgcv.files import manage_files
+from dgcv.curves.manager import CurvesManager
 from dgcv.logging.logging import dgcv_logging
-from dgcv.sigpro import signal_windows, sigpro
-from dgcv.validation import common, compliance_list, sanity_checks, threshold_variables
+from dgcv.validation import common, compliance_list, threshold_variables
 
 
 def _get_ss_tolerance(setpoint_variation: float) -> float:
@@ -444,8 +441,7 @@ def _calculate_curves_errors(
 
 
 def _calculate_errors(
-    calculated_curves: pd.DataFrame,
-    reference_curves: pd.DataFrame,
+    curves: tuple[pd.DataFrame, pd.DataFrame],
     step_magnitude: float,
 ) -> dict:
     measurement_names = [
@@ -456,6 +452,8 @@ def _calculate_errors(
         "BusPDR_BUS_Voltage",
         "NetworkFrequencyPu",
     ]
+    calculated_curves = curves[0]
+    reference_curves = curves[1]
     results = {}
     if len(calculated_curves["time"]) == 0:
         return results
@@ -537,37 +535,40 @@ def _get_measurement_name(
 class ModelValidator(Validator):
     def __init__(
         self,
+        curves_manager: CurvesManager,
         pcs_bm_name: str,
         parameters: Parameters,
         validations: list,
         is_field_measurements: bool,
     ):
-        super().__init__(validations, is_field_measurements)
+        super().__init__(curves_manager, validations, is_field_measurements)
         self._pcs_bm_name = pcs_bm_name
         self._producer = parameters.get_producer()
 
     def __active_power_recovery_error(
         self,
-        calculated_curves: pd.DataFrame,
-        reference_curves: pd.DataFrame,
         start_event: float,
+        duration_event: float,
         results: dict,
     ):
         if not compliance_list.contains_key(["active_power_recovery"], self._validations):
             return
 
+        # In order to perform the calculation we must have as a starting point in time
+        # an instant of time within the fault.
+        start_reached_time = start_event + duration_event / 3
         measurement_name = "BusPDR_BUS_ActivePower"
         t_P90_calc, _ = common.get_reached_time(
             0.9,
-            list(calculated_curves["time"]),
-            list(calculated_curves[measurement_name]),
-            start_event,
+            list(self._get_calculated_curve_by_name(("time"))),
+            list(self._get_calculated_curve_by_name((measurement_name))),
+            start_reached_time,
         )
         t_P90_ref, _ = common.get_reached_time(
             0.9,
-            list(reference_curves["time"]),
-            list(reference_curves[measurement_name]),
-            start_event,
+            list(self._get_reference_curve_by_name(("time"))),
+            list(self._get_reference_curve_by_name((measurement_name))),
+            start_reached_time,
         )
 
         results["t_P90_ref"] = t_P90_ref
@@ -576,8 +577,6 @@ class ModelValidator(Validator):
     def __compare_event_times(
         self,
         measurement_name: str,
-        calculated_curves: pd.DataFrame,
-        reference_curves: pd.DataFrame,
         start_event: float,
         setpoint_variation: float,
         results: dict,
@@ -587,68 +586,52 @@ class ModelValidator(Validator):
         if compliance_list.contains_key(["reaction_time"], self._validations):
             res_reaction_time, res_reaction_target = common.get_reached_time(
                 0.1,
-                list(calculated_curves["time"]),
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
             ref_reaction_time, ref_reaction_target = common.get_reached_time(
                 0.1,
-                list(reference_curves["time"]),
-                list(reference_curves[measurement_name]),
+                list(self._get_reference_curve_by_name(("time"))),
+                list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
             )
             results["calc_reaction_time"] = res_reaction_time
             results["ref_reaction_time"] = ref_reaction_time
             results["calc_reaction_target"] = {measurement_name: res_reaction_target}
-            if ref_reaction_time != 0.0:
-                results["reaction_time_error"] = (
-                    abs(res_reaction_time - ref_reaction_time) / ref_reaction_time
-                )
-            else:
-                results["reaction_time_error"] = "-"
 
         if compliance_list.contains_key(["rise_time"], self._validations):
             res_rise_time, res_rise_target = common.get_reached_time(
                 0.9,
-                list(calculated_curves["time"]),
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
             ref_rise_time, ref_rise_target = common.get_reached_time(
                 0.9,
-                list(reference_curves["time"]),
-                list(reference_curves[measurement_name]),
+                list(self._get_reference_curve_by_name(("time"))),
+                list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
             )
             results["calc_rise_time"] = res_rise_time
             results["ref_rise_time"] = ref_rise_time
             results["calc_rise_target"] = {measurement_name: res_rise_target}
-            if ref_rise_time != 0.0:
-                results["rise_time_error"] = abs(res_rise_time - ref_rise_time) / ref_rise_time
-            else:
-                results["rise_time_error"] = "-"
 
         if compliance_list.contains_key(["response_time"], self._validations):
             res_response_time = common.get_response_time(
                 _get_ss_tolerance(setpoint_variation),
-                list(calculated_curves["time"]),
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
             ref_response_time = common.get_response_time(
                 _get_ss_tolerance(setpoint_variation),
-                list(reference_curves["time"]),
-                list(reference_curves[measurement_name]),
+                list(self._get_reference_curve_by_name(("time"))),
+                list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
             )
             results["calc_response_time"] = res_response_time
             results["ref_response_time"] = ref_response_time
-            if ref_response_time != 0.0:
-                results["response_time_error"] = (
-                    abs(res_response_time - ref_response_time) / ref_response_time
-                )
-            else:
-                results["response_time_error"] = "-"
 
         if compliance_list.contains_key(["settling_time"], self._validations):
             (
@@ -659,14 +642,14 @@ class ModelValidator(Validator):
                 calc_ss_value,
             ) = common.get_settling_time(
                 _get_ss_tolerance(setpoint_variation),
-                list(calculated_curves["time"]),
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
             ref_settling_time, _, _, _, _ = common.get_settling_time(
                 _get_ss_tolerance(setpoint_variation),
-                list(reference_curves["time"]),
-                list(reference_curves[measurement_name]),
+                list(self._get_reference_curve_by_name(("time"))),
+                list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
             )
             results["calc_settling_time"] = res_settling_time
@@ -675,19 +658,13 @@ class ModelValidator(Validator):
             results["calc_settling_tube"] = {
                 measurement_name: [res_settling_min, res_settling_max]
             }
-            if ref_settling_time != 0.0:
-                results["settling_time_error"] = (
-                    abs(res_settling_time - ref_settling_time) / ref_settling_time
-                )
-            else:
-                results["settling_time_error"] = "-"
 
         if compliance_list.contains_key(["overshoot"], self._validations):
             res_overshoot = common.get_overshoot(
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name((measurement_name))),
             )
             ref_overshoot = common.get_overshoot(
-                list(reference_curves[measurement_name]),
+                list(self._get_reference_curve_by_name((measurement_name))),
             )
             results["calc_overshoot"] = res_overshoot
             results["ref_overshoot"] = ref_overshoot
@@ -695,7 +672,6 @@ class ModelValidator(Validator):
     def __compare_ideal_ramp(
         self,
         measurement_name: str,
-        calculated_curves: pd.DataFrame,
         t_event_start: float,
         t_event_duration: float,
         freq0: float,
@@ -705,8 +681,8 @@ class ModelValidator(Validator):
 
         if compliance_list.contains_key(["ramp_time_lag"], self._validations):
             ramp_time_lag = common.get_time_lag(
-                list(calculated_curves["time"]),
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name((measurement_name))),
                 t_event_start,
                 t_event_duration,
             )
@@ -716,8 +692,8 @@ class ModelValidator(Validator):
         # ramp variables from tableinfinitebus.txt
         if compliance_list.contains_key(["ramp_error"], self._validations):
             ramp_error = common.get_value_error(
-                list(calculated_curves["time"]),
-                list(calculated_curves[measurement_name]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name((measurement_name))),
                 t_event_start,
                 t_event_duration,
                 freq0,
@@ -729,11 +705,13 @@ class ModelValidator(Validator):
     def __calculate_mean_absolute_error(
         self,
         measurement_name: str,
-        calculated_curves: pd.DataFrame,
-        reference_curves: pd.DataFrame,
+        curves: tuple[pd.DataFrame, pd.DataFrame],
         setpoint_variation: float,
         results: dict,
     ) -> None:
+        calculated_curves = curves[0]
+        reference_curves = curves[1]
+
         _, ref_settlin_t_pos, _, _, _ = common.get_settling_time(
             _get_ss_tolerance(setpoint_variation),
             list(reference_curves["time"]),
@@ -848,8 +826,6 @@ class ModelValidator(Validator):
     def __calculate(
         self,
         zone: int,
-        calculated_curves: tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame],
-        reference_curves: tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame],
         start_event: float,
         duration_event: float,
         freq0: float,
@@ -861,37 +837,33 @@ class ModelValidator(Validator):
         if setpoint_variation == 0.0:
             step_magnitude = 1.0
         results = {
-            "before": _calculate_errors(calculated_curves[0], reference_curves[0], step_magnitude),
-            "during": _calculate_errors(calculated_curves[1], reference_curves[1], step_magnitude),
-            "after": _calculate_errors(calculated_curves[2], reference_curves[2], step_magnitude),
+            "before": _calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
+            "during": _calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
+            "after": _calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
             "is_invalid_test": common.is_invalid_test(
-                list(calculated_curves[3]["time"]),
-                list(calculated_curves[3]["BusPDR_BUS_Voltage"]),
-                list(calculated_curves[3]["BusPDR_BUS_ActivePower"]),
-                list(calculated_curves[3]["BusPDR_BUS_ReactivePower"]),
+                list(self._get_calculated_curve_by_name(("time"))),
+                list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
+                list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
+                list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
                 start_event,
             ),
         }
 
         self.__active_power_recovery_error(
-            calculated_curves[3],
-            reference_curves[3],
             start_event,
+            duration_event,
             results,
         )
 
         measurement_name = _get_measurement_name(modified_setpoint)
         self.__compare_event_times(
             measurement_name,
-            calculated_curves[3],
-            reference_curves[3],
             start_event,
             setpoint_variation,
             results,
         )
         self.__compare_ideal_ramp(
             measurement_name,
-            calculated_curves[3],
             start_event,
             duration_event,
             freq0,
@@ -901,107 +873,102 @@ class ModelValidator(Validator):
         _calculate_curves_errors(zone, self._is_field_measurements, results)
         self.__calculate_mean_absolute_error(
             measurement_name,
-            calculated_curves[2],
-            reference_curves[2],
+            self._get_curves_by_windows("after"),
             setpoint_variation,
             results,
         )
 
         return results
 
-    def __check(
+    def __create_results(
         self,
         compliance_values: dict,
-        modified_setpoint: str,
     ) -> dict:
-        check_results = {
+        return {
             "compliance": True,
-            "times_check": True,
             "sim_t_event_start": compliance_values["t_event_start"],
             "is_invalid_test": compliance_values["is_invalid_test"],
             "curves_error": compliance_values,
         }
 
+    def __check_times(
+        self,
+        check_results: dict,
+        compliance_values: dict,
+    ):
         if compliance_list.contains_key(["reaction_time"], self._validations):
             check_results["calc_reaction_target"] = compliance_values["calc_reaction_target"]
             check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
             check_results["ref_reaction_time"] = compliance_values["ref_reaction_time"]
+
             thr_reaction_time = config.get_float("GridCode", "thr_reaction_time", 0.10)
             check_results["reaction_time_thr"] = thr_reaction_time * 100
-            if compliance_values["reaction_time_error"] != "-":
-                check_results["reaction_time_error"] = (
-                    compliance_values["reaction_time_error"] * 100
+
+            check_results["reaction_time_error"], check_results["reaction_time_check"] = (
+                common.check_time(
+                    compliance_values["calc_reaction_time"],
+                    compliance_values["ref_reaction_time"],
+                    thr_reaction_time,
                 )
-                check_results["reaction_time_check"] = (
-                    compliance_values["reaction_time_error"] <= thr_reaction_time
-                )
-                check_results["times_check"] &= check_results["reaction_time_check"]
-                check_results["compliance"] &= check_results["reaction_time_check"]
-            else:
-                check_results["reaction_time_error"] = compliance_values["reaction_time_error"]
-                check_results["reaction_time_check"] = "N/A"
+            )
+
+            check_results["compliance"] &= check_results["reaction_time_check"]
 
         if compliance_list.contains_key(["rise_time"], self._validations):
             check_results["calc_rise_target"] = compliance_values["calc_rise_target"]
             check_results["calc_rise_time"] = compliance_values["calc_rise_time"]
             check_results["ref_rise_time"] = compliance_values["ref_rise_time"]
+
             thr_rise_time = config.get_float("GridCode", "thr_rise_time", 0.10)
             check_results["rise_time_thr"] = thr_rise_time * 100
-            if compliance_values["rise_time_error"] != "-":
-                check_results["rise_time_error"] = compliance_values["rise_time_error"] * 100
-                check_results["rise_time_check"] = (
-                    compliance_values["rise_time_error"] <= thr_rise_time
-                )
-                check_results["times_check"] &= check_results["rise_time_check"]
-                check_results["compliance"] &= check_results["rise_time_check"]
-            else:
-                check_results["rise_time_error"] = compliance_values["rise_time_error"]
-                check_results["rise_time_check"] = "N/A"
+
+            check_results["rise_time_error"], check_results["rise_time_check"] = common.check_time(
+                compliance_values["calc_rise_time"],
+                compliance_values["ref_rise_time"],
+                thr_rise_time,
+            )
+
+            check_results["compliance"] &= check_results["rise_time_check"]
 
         if compliance_list.contains_key(["settling_time"], self._validations):
             check_results["calc_settling_tube"] = compliance_values["calc_settling_tube"]
-            check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
             check_results["calc_ss_value"] = compliance_values["calc_ss_value"]
+            check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
             check_results["ref_settling_time"] = compliance_values["ref_settling_time"]
+
             thr_settling_time = config.get_float("GridCode", "thr_settling_time", 0.10)
             check_results["settling_time_thr"] = thr_settling_time * 100
-            if compliance_values["settling_time_error"] != "-":
-                check_results["settling_time_error"] = (
-                    compliance_values["settling_time_error"] * 100
+
+            check_results["settling_time_error"], check_results["settling_time_check"] = (
+                common.check_time(
+                    compliance_values["calc_settling_time"],
+                    compliance_values["ref_settling_time"],
+                    thr_settling_time,
                 )
-                check_results["settling_time_check"] = (
-                    compliance_values["settling_time_error"] <= thr_settling_time
-                )
-                check_results["times_check"] &= check_results["settling_time_check"]
-                check_results["compliance"] &= check_results["settling_time_check"]
-            else:
-                check_results["settling_time_error"] = compliance_values["settling_time_error"]
-                check_results["settling_time_check"] = "N/A"
+            )
+
+            check_results["compliance"] &= check_results["settling_time_check"]
 
         if compliance_list.contains_key(["overshoot"], self._validations):
-            calc_overshoot = compliance_values["calc_overshoot"]
-            ref_overshoot = compliance_values["ref_overshoot"]
-            thr_overshoot = config.get_float("GridCode", "thr_overshoot", 0.15)
-            # Check if the overshoot values differ less than the relative threshold:
-            rtol = thr_overshoot  # e.g., 15% relative error (0.15 per unit)
-            atol = 0.01  # e.g, when magnitudes are below 0.01, switch to abs error
-            check_results["overshoot_thr"] = thr_overshoot * 100
-            check_results["overshoot_check"] = math.isclose(
-                calc_overshoot,
-                ref_overshoot,
-                rel_tol=rtol,
-                abs_tol=atol,
-            )
-            # We only calculate the % error if math.isclose() used relative tolerance:
-            check_results["calc_overshoot"] = calc_overshoot
-            check_results["ref_overshoot"] = ref_overshoot
-            if rtol * max(abs(calc_overshoot), abs(ref_overshoot)) > atol and ref_overshoot != 0.0:
-                check_results["overshoot_error"] = 100 * (
-                    abs(calc_overshoot - ref_overshoot) / ref_overshoot
-                )
-            else:
-                check_results["overshoot_error"] = "-"
+            check_results["calc_overshoot"] = compliance_values["calc_overshoot"]
+            check_results["ref_overshoot"] = compliance_values["ref_overshoot"]
 
+            thr_overshoot = config.get_float("GridCode", "thr_overshoot", 0.15)
+            check_results["overshoot_thr"] = thr_overshoot * 100
+
+            check_results["overshoot_error"], check_results["overshoot_check"] = common.check_time(
+                compliance_values["calc_overshoot"],
+                compliance_values["ref_overshoot"],
+                thr_overshoot,
+            )
+
+            check_results["compliance"] &= check_results["overshoot_check"]
+
+    def __check_ramp(
+        self,
+        check_results: dict,
+        compliance_values: dict,
+    ):
         if compliance_list.contains_key(["ramp_time_lag"], self._validations):
             check_results["ramp_time_lag"] = compliance_values["ramp_time_lag"] * 100
             thr_ramp_time_lag = config.get_float("GridCode", "thr_ramp_time_lag", 0.10)
@@ -1009,7 +976,6 @@ class ModelValidator(Validator):
             check_results["ramp_time_check"] = (
                 compliance_values["ramp_time_lag"] <= thr_ramp_time_lag
             )
-            check_results["times_check"] &= check_results["ramp_time_check"]
             check_results["compliance"] &= check_results["ramp_time_check"]
 
         if compliance_list.contains_key(["ramp_error"], self._validations):
@@ -1017,9 +983,13 @@ class ModelValidator(Validator):
             thr_ramp_error = config.get_float("GridCode", "thr_ramp_error", 0.10)
             check_results["ramp_error_thr"] = thr_ramp_error * 100
             check_results["ramp_error_check"] = compliance_values["ramp_error"] <= thr_ramp_error
-            check_results["times_check"] &= check_results["ramp_error_check"]
             check_results["compliance"] &= check_results["ramp_error_check"]
 
+    def __check_mae(
+        self,
+        check_results: dict,
+        compliance_values: dict,
+    ):
         thr_final_ss_mae = config.get_float("GridCode", "thr_final_ss_mae", 0.01)
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
             check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
@@ -1065,6 +1035,17 @@ class ModelValidator(Validator):
                 compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
             )
             check_results["compliance"] &= check_results["mae_reactive_current_1P_check"]
+
+    def __check(
+        self,
+        compliance_values: dict,
+        modified_setpoint: str,
+    ) -> dict:
+        check_results = self.__create_results(compliance_values)
+
+        self.__check_times(check_results, compliance_values)
+        self.__check_ramp(check_results, compliance_values)
+        self.__check_mae(check_results, compliance_values)
 
         _save_measurement_errors(compliance_values, "voltage", check_results)
 
@@ -1119,7 +1100,11 @@ class ModelValidator(Validator):
             check_results["t_P90_error"] = compliance_values["t_P90_error"]
             t_P90_threshold = min(compliance_values["t_P90_ref"] * 0.1, 100 / 1000)
             check_results["t_P90_threshold"] = t_P90_threshold
-            check_results["t_P90_check"] = compliance_values["t_P90_error"] < t_P90_threshold
+            check_results["t_P90_check"] = (
+                compliance_values["t_P90_error"] < t_P90_threshold
+                if (compliance_values["t_P90_ref"] > 0)
+                else True
+            )
             check_results["compliance"] &= check_results["t_P90_check"]
 
         return check_results
@@ -1152,79 +1137,15 @@ class ModelValidator(Validator):
         dict
             Compliance results
         """
-        # Activate this code to use the curve calculated as a reference curve,
-        # only for debug cases without reference curves.
-        # if reference_curves is None:
-        #     reference_curves = calculated_curves
 
-        csv_calculated_curves = manage_files.read_curves(working_path / "curves_calculated.csv")
-        if (working_path / "curves_reference.csv").is_file():
-            csv_reference_curves = manage_files.read_curves(working_path / "curves_reference.csv")
-        else:
-            csv_reference_curves = None
-
-        t_com = config.get_float("GridCode", "t_com", 0.002)
-        cutoff = config.get_float("GridCode", "cutoff", 15.0)
-        sanity_checks.check_sampling_interval(t_com, cutoff)
-
-        resampling_fs = 1 / t_com
-
-        # First resampling: Ensure constant time step signal.
-        calculated_curves = sigpro.resampling_signal(csv_calculated_curves, resampling_fs)
-        calculated_curves = sigpro.lowpass_signal(calculated_curves, cutoff, resampling_fs)
-
-        reference_curves = sigpro.ensure_rms_signals(csv_reference_curves, fs)
-        reference_curves = sigpro.resampling_signal(reference_curves, resampling_fs)
-        reference_curves = sigpro.lowpass_signal(reference_curves, cutoff, resampling_fs)
-
-        # Second resampling: Ensure same time grid for both signals.
-        calculated_curves, reference_curves = sigpro.interpolate_same_time_grid(
-            calculated_curves, reference_curves
-        )
-
-        t_integrator_tol = config.get_float("GridCode", "t_integrator_tol", 0.000001)
-        if compliance_list.contains_key(
-            ["setpoint_tracking_controlled_magnitude"], self._validations
-        ):
-            t_faultQS_excl = 0.0
-            t_clearQS_excl = 0.0
-        else:
-            t_faultQS_excl = config.get_float("GridCode", "t_faultQS_excl", 0.020)
-            t_clearQS_excl = config.get_float("GridCode", "t_clearQS_excl", 0.060)
-
-        t_faultLP_excl = config.get_float("GridCode", "t_faultLP_excl", 0.050)
-        before_calculated, during_calculated, after_calculated = signal_windows.get(
-            calculated_curves,
-            signal_windows.calculate(
-                list(calculated_curves["time"]),
-                event_params["start_time"],
-                event_params["duration_time"],
-                t_integrator_tol,
-                t_faultLP_excl,
-                t_faultQS_excl,
-                t_clearQS_excl,
+        self._curves_manager.apply_signal_processing(
+            working_path,
+            event_params,
+            fs,
+            compliance_list.contains_key(
+                ["setpoint_tracking_controlled_magnitude"], self._validations
             ),
         )
-        sanity_checks.check_pre_stable(
-            list(before_calculated["time"]), list(before_calculated["BusPDR_BUS_Voltage"])
-        )
-
-        before_reference, during_reference, after_reference = signal_windows.get(
-            reference_curves,
-            signal_windows.calculate(
-                list(reference_curves["time"]),
-                event_params["start_time"],
-                event_params["duration_time"],
-                t_integrator_tol,
-                t_faultLP_excl,
-                t_faultQS_excl,
-                t_clearQS_excl,
-            ),
-        )
-
-        if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-            calculated_curves.to_csv(working_path / "signal.csv", sep=";")
-            reference_curves.to_csv(working_path / "reference.csv", sep=";")
 
         freq0 = 1.0
         freq_peak = 0.0
@@ -1233,8 +1154,6 @@ class ModelValidator(Validator):
 
         model_results = self.__calculate(
             self._producer.get_zone(),
-            (before_calculated, during_calculated, after_calculated, calculated_curves),
-            (before_reference, during_reference, after_reference, reference_curves),
             event_params["start_time"],
             event_params["duration_time"],
             freq0,
@@ -1251,23 +1170,19 @@ class ModelValidator(Validator):
         if not compliance_list.contains_key(
             ["setpoint_tracking_controlled_magnitude"], self._validations
         ):
-            excl1_t0 = before_calculated["time"].iloc[-1]
-            if len(during_calculated["time"]):
-                excl1_t = during_calculated["time"].iloc[0]
-                excl2_t0 = during_calculated["time"].iloc[-1]
-                excl2_t = after_calculated["time"].iloc[0]
+            excl1_t0, excl1_t, excl2_t0, excl2_t = self._get_exclusion_times()
+            if excl2_t0 == 0.0 and excl2_t == 0.0:
+                results["excl1_t0"] = excl1_t0
+                results["excl1_t"] = excl1_t
+            else:
                 results["excl1_t0"] = excl1_t0
                 results["excl1_t"] = excl1_t
                 results["excl2_t0"] = excl2_t0
                 results["excl2_t"] = excl2_t
-            else:
-                excl1_t = after_calculated["time"].iloc[0]
-                results["excl1_t0"] = excl1_t0
-                results["excl1_t"] = excl1_t
 
-        results["curves"] = calculated_curves
-        if reference_curves is not None:
-            results["reference_curves"] = reference_curves
+        results["curves"] = self._get_calculated_curves()
+        if not self._get_reference_curves().empty:
+            results["reference_curves"] = self._get_reference_curves()
 
         return results
 
