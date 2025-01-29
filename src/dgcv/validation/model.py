@@ -548,23 +548,27 @@ class ModelValidator(Validator):
     def __active_power_recovery_error(
         self,
         start_event: float,
+        duration_event: float,
         results: dict,
     ):
         if not compliance_list.contains_key(["active_power_recovery"], self._validations):
             return
 
+        # In order to perform the calculation we must have as a starting point in time
+        # an instant of time within the fault.
+        start_reached_time = start_event + duration_event / 3
         measurement_name = "BusPDR_BUS_ActivePower"
         t_P90_calc, _ = common.get_reached_time(
             0.9,
             list(self._get_calculated_curve_by_name(("time"))),
             list(self._get_calculated_curve_by_name((measurement_name))),
-            start_event,
+            start_reached_time,
         )
         t_P90_ref, _ = common.get_reached_time(
             0.9,
             list(self._get_reference_curve_by_name(("time"))),
             list(self._get_reference_curve_by_name((measurement_name))),
-            start_event,
+            start_reached_time,
         )
 
         results["t_P90_ref"] = t_P90_ref
@@ -847,6 +851,7 @@ class ModelValidator(Validator):
 
         self.__active_power_recovery_error(
             start_event,
+            duration_event,
             results,
         )
 
@@ -1095,7 +1100,11 @@ class ModelValidator(Validator):
             check_results["t_P90_error"] = compliance_values["t_P90_error"]
             t_P90_threshold = min(compliance_values["t_P90_ref"] * 0.1, 100 / 1000)
             check_results["t_P90_threshold"] = t_P90_threshold
-            check_results["t_P90_check"] = compliance_values["t_P90_error"] < t_P90_threshold
+            check_results["t_P90_check"] = (
+                compliance_values["t_P90_error"] < t_P90_threshold
+                if (compliance_values["t_P90_ref"] > 0)
+                else True
+            )
             check_results["compliance"] &= check_results["t_P90_check"]
 
         return check_results
