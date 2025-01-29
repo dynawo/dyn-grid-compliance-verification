@@ -20,6 +20,14 @@
       <dyn:curves inputFile="TSOModel.crv" exportMode="CSV"/>
       <dyn:logs>
         <dyn:appender tag="" file="dynawo.log" lvlFilter="INFO"/>
+        <!-- Uncomment for debugging purposes
+        <dyn:appender tag="NETWORK" file="network.log" lvlFilter="DEBUG"/>
+        <dyn:appender tag="MODELER" file="modeler.log" lvlFilter="DEBUG"/>
+        <dyn:appender tag="COMPILE" file="compile.log" lvlFilter="DEBUG"/>
+        <dyn:appender tag="PARAMETERS" file="param.log" lvlFilter="DEBUG"/>
+        <dyn:appender tag="VARIABLES" file="variables.log" lvlFilter="DEBUG"/>
+        <dyn:appender tag="EQUATIONS" file="equations.log" lvlFilter="DEBUG"/>
+        -->
       </dyn:logs>
     </dyn:outputs>
   </dyn:job>

@@ -6,6 +6,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from jinja2 import Template
 
+from dgcv.configuration.cfg import config
+
 
 def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
     if curve_name == "BusPDR_BUS_ActivePower":
@@ -121,17 +123,18 @@ def _additional_traces(fig, additional_curves, time, curve, results):
         val_85 = results["time_85U"] + results["sim_t_event_start"]
         fig.add_vline(x=val_85, opacity=0.8, line_color="#000000", line_dash="dash")
 
+    f_nom = config.get_float("Global", "f_nom", 50.0)
     if "freq_1" in additional_curves:
-        fig.add_hline(y=(50 + 1) / 50, line_color="#c44e52", line_dash="dash")
-        fig.add_hline(y=(50 - 1) / 50, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom + 1) / f_nom, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom - 1) / f_nom, line_color="#c44e52", line_dash="dash")
 
     if "freq_200" in additional_curves:
-        fig.add_hline(y=(50 + 0.2) / 50, line_color="#55a868", line_dash="dash")
-        fig.add_hline(y=(50 - 0.2) / 50, line_color="#55a868", line_dash="dash")
+        fig.add_hline(y=(f_nom + 0.2) / f_nom, line_color="#55a868", line_dash="dash")
+        fig.add_hline(y=(f_nom - 0.2) / f_nom, line_color="#55a868", line_dash="dash")
 
     if "freq_250" in additional_curves:
-        fig.add_hline(y=(50 + 0.250) / 50, line_color="#c44e52", line_dash="dash")
-        fig.add_hline(y=(50 - 0.250) / 50, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom + 0.250) / f_nom, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom - 0.250) / f_nom, line_color="#c44e52", line_dash="dash")
 
     if "AVR5" in additional_curves:
         # Get the tube
