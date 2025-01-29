@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from dgcv.core.execution_parameters import Parameters
 from dgcv.curves.manager import CurvesManager
 from dgcv.model.parameters import Disconnection_Model
 from dgcv.validation import compliance_list
@@ -18,7 +19,11 @@ from dgcv.validation import compliance_list
 
 class Validator:
     def __init__(
-        self, curves_manager: CurvesManager, validations: list, is_field_measurements: bool
+        self,
+        curves_manager: CurvesManager,
+        parameters: Parameters,
+        validations: list,
+        is_field_measurements: bool,
     ):
         self._curves_manager = curves_manager
         self._time_cct = None
@@ -27,6 +32,7 @@ class Validator:
         self._setpoint_variation = 0.0
         self._validations = validations
         self._is_field_measurements = is_field_measurements
+        self._producer = parameters.get_producer()
 
     def _get_calculated_curves(self) -> dict:
         return self._curves_manager.get_curves("calculated")

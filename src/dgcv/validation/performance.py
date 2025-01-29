@@ -24,6 +24,9 @@ from dgcv.logging.logging import dgcv_logging
 from dgcv.model.parameters import Stability
 from dgcv.validation import common, compliance_list
 
+GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
+LOAD_DISCONNECT_MSG = "LOAD : disconnecting"
+
 
 def _check_compliance(
     results: dict,
@@ -38,6 +41,12 @@ def _check_compliance(
         results["compliance"] &= results[results_name + "_check"]
 
 
+def is_disconnection_event(event, element_type):
+    return (event.get("message") == GENERATOR_DISCONNECT_MSG and element_type == "gen") or (
+        event.get("message") == LOAD_DISCONNECT_MSG and element_type == "load"
+    )
+
+
 def _check_timeline(timeline_file: Path, element_type: str) -> tuple[bool, list]:
     no_error = True
     # Load timeline file
@@ -48,17 +57,11 @@ def _check_timeline(timeline_file: Path, element_type: str) -> tuple[bool, list]
     ns = etree.QName(root).namespace
     disconnection_list = []
     for timeline_event in root.iter("{%s}event" % ns):
-        if timeline_event.get("message") == "GENERATOR : disconnecting" and element_type == "gen":
+        if is_disconnection_event(timeline_event, element_type):
             no_error = False
             disconnection_list.append(timeline_event.get("modelName"))
             dgcv_logging.get_logger("Validation").debug(
-                "Timeline disconnection. Model: " + timeline_event.get("modelName")
-            )
-        if timeline_event.get("message") == "LOAD : disconnecting" and element_type == "load":
-            no_error = False
-            disconnection_list.append(timeline_event.get("modelName"))
-            dgcv_logging.get_logger("Validation").debug(
-                "Timeline disconnection. Model: " + timeline_event.get("modelName")
+                f"Timeline disconnection. Model: {timeline_event.get('modelName')}"
             )
 
     return no_error, disconnection_list
@@ -73,8 +76,9 @@ class PerformanceValidator(Validator):
         validations: list,
         is_field_measurements: bool,
     ):
-        super().__init__(curves_manager, validations, is_field_measurements)
-        self._producer = parameters.get_producer()
+        super(PerformanceValidator, self).__init__(
+            curves_manager, parameters, validations, is_field_measurements
+        )
         self._stable_time = stable_time
 
     def __run_common_tests(
@@ -102,42 +106,13 @@ class PerformanceValidator(Validator):
             stable_time,
         )
 
+        stable_theta = False
+        first_stable_pos_theta = 0
+        pass_pi = False
         if not is_ppm:
-            stable_theta = True
-            first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
-            pass_pi = True
-            for key in self._get_calculated_curves().keys():
-                if not key.endswith("_InternalAngle"):
-                    continue
-
-                gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
-                    list(self._get_calculated_curve_by_name("time")),
-                    list(self._get_calculated_curve_by_name(key)),
-                    stable_time,
-                )
-
-                # Check +- Pi
-                gen_pass_pi = common.theta_pi(
-                    list(self._get_calculated_curve_by_name("time")),
-                    list(self._get_calculated_curve_by_name(key)),
-                )
-                stable_theta &= gen_stable_theta
-                if gen_first_stable_pos_theta < first_stable_pos_theta:
-                    first_stable_pos_theta = gen_first_stable_pos_theta
-                pass_pi &= gen_pass_pi
-
-            if not stable_theta:
-                dgcv_logging.get_logger("Validation").warning(
-                    "Theta has not reached stabilization"
-                )
-            if not pass_pi:
-                dgcv_logging.get_logger("Validation").warning(
-                    "Theta has not met the success criterion"
-                )
-        else:
-            stable_theta = False
-            first_stable_pos_theta = 0
-            pass_pi = False
+            stable_theta, first_stable_pos_theta, pass_pi = self._check_theta_stability(
+                stable_time
+            )
 
         if not steady_p:
             dgcv_logging.get_logger("Validation").warning("P has not reached steady state")
@@ -157,6 +132,40 @@ class PerformanceValidator(Validator):
             first_stable_pos_theta,
             pass_pi,
         )
+
+    def _check_theta_stability(self, stable_time: float) -> tuple[bool, int, bool]:
+        stable_theta = True
+        first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
+        pass_pi = True
+        internal_angle_keys = [
+            key for key in self._get_calculated_curves().keys() if key.endswith("_InternalAngle")
+        ]
+        for key in internal_angle_keys:
+
+            gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name(key)),
+                stable_time,
+            )
+
+            # Check +- Pi
+            gen_pass_pi = common.theta_pi(
+                list(self._get_calculated_curve_by_name("time")),
+                list(self._get_calculated_curve_by_name(key)),
+            )
+            stable_theta &= gen_stable_theta
+            if gen_first_stable_pos_theta < first_stable_pos_theta:
+                first_stable_pos_theta = gen_first_stable_pos_theta
+            pass_pi &= gen_pass_pi
+
+        if not stable_theta:
+            dgcv_logging.get_logger("Validation").warning("Theta has not reached stabilization")
+        if not pass_pi:
+            dgcv_logging.get_logger("Validation").warning(
+                "Theta has not met the success criterion"
+            )
+
+        return stable_theta, first_stable_pos_theta, pass_pi
 
     def __calculate_simple_times(
         self,
@@ -244,6 +253,9 @@ class PerformanceValidator(Validator):
         self.__calculate_simple_times(compliance_values, t_event_start)
         self.__calculate_composed_times(compliance_values, t_event_start)
 
+    def __get_filtered_columns(self, suffix: str) -> list:
+        return [col for col in self._get_calculated_curves() if col.endswith(suffix)]
+
     def __calculate_avr(
         self,
         compliance_values: dict,
@@ -253,11 +265,7 @@ class PerformanceValidator(Validator):
             AVR_5_crv = list()
             AVR_5_check = True
             AVR_5 = -1
-            filter_col = [
-                col
-                for col in self._get_calculated_curves()
-                if col.endswith("_GEN_MagnitudeControlledByAVRPu")
-            ]
+            filter_col = self.__get_filtered_columns("_GEN_MagnitudeControlledByAVRPu")
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
@@ -284,11 +292,7 @@ class PerformanceValidator(Validator):
             check_freq1 = True
             time_freq1 = -1
             f_nom = config.get_float("Global", "f_nom", 50.0)
-            filter_col = [
-                col
-                for col in self._get_calculated_curves()
-                if col.endswith("_GEN_NetworkFrequencyPu")
-            ]
+            filter_col = self.__get_filtered_columns("_GEN_NetworkFrequencyPu")
             for curve_name in filter_col:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
                     1 / f_nom,
@@ -338,11 +342,7 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["imax_reac"], self._validations):
             imax_reac = -1
             imax_reac_check = True
-            filter_col = [
-                col
-                for col in self._get_calculated_curves()
-                if col.endswith("_GEN_InjectedCurrent")
-            ]
+            filter_col = self.__get_filtered_columns("_GEN_InjectedCurrent")
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_InjectedCurrent", "")
                 injected_current = generator_id + "_GEN_" + "InjectedCurrent"
@@ -381,11 +381,16 @@ class PerformanceValidator(Validator):
         t_event_start: float,
         compliance_values: dict,
     ) -> dict:
+        # Dictionary to store the results of the validation
         results = {
+            # Start time of the event
             "sim_t_event_start": t_event_start,
+            # Overall compliance status
             "compliance": True,
+            # Indicates if the test is invalid
             "is_invalid_test": compliance_values["is_invalid_test"],
         }
+        # Add critical clearing time if available
         if self._time_cct is not None:
             results["time_cct"] = self._time_cct
 
@@ -514,7 +519,7 @@ class PerformanceValidator(Validator):
         self.__check_simple_times(results, t_event_start, t_event_end, compliance_values)
         self.__check_composed_times(results, t_event_start, t_event_end, compliance_values)
 
-    def __check_diconnections(
+    def __check_disconnections(
         self,
         results: dict,
         simulation_path: Path,
@@ -619,7 +624,7 @@ class PerformanceValidator(Validator):
         results = self.__create_results(t_event_start, compliance_values)
 
         self.__check_times(results, t_event_start, t_event_end, compliance_values)
-        self.__check_diconnections(results, simulation_path, has_dynamic_model)
+        self.__check_disconnections(results, simulation_path, has_dynamic_model)
         self.__check_others(results, is_stable, is_ppm, compliance_values)
 
         return results
@@ -650,7 +655,45 @@ class PerformanceValidator(Validator):
         Returns
         -------
         dict
-            Compliance results
+            Dictionary containing the compliance results, including:
+            {
+                'sim_t_event_start': float,  # Start time of the event
+                'compliance': bool,  # Overall compliance status
+                'is_invalid_test': bool,  # Indicates if the test is invalid
+                'time_cct': float,  # Critical clearing time (if available)
+                'first_steady_pos': int,  # Position of the first steady state
+                'curves': dict,  # Calculated curves from the simulation
+                'reference_curves': DataFrame,  # Reference curves (if available)
+                'time_5U': float,  # Time for 5% voltage deviation (if applicable)
+                'time_10U': float,  # Time for 10% voltage deviation (if applicable)
+                'time_5P': float,  # Time for 5% active power deviation (if applicable)
+                'time_10P': float,  # Time for 10% active power deviation (if applicable)
+                'time_5P_clear': float,  # Time for 5% active power deviation after clearing
+                    (if applicable)
+                'time_10P_clear': float,  # Time for 10% active power deviation after clearing
+                    (if applicable)
+                'time_5P_85U': float,  # Time for 5% active power deviation at 85% voltage
+                    (if applicable)
+                'time_10P_85U': float,  # Time for 10% active power deviation at 85% voltage
+                    (if applicable)
+                'time_10Pfloor_85U': float,  # Time for 10% active power floor deviation at 85%
+                    voltage (if applicable)
+                'time_10Pfloor_clear': float,  # Time for 10% active power floor deviation after
+                    clearing (if applicable)
+                'time_85U_10P': float,  # Time for 85% voltage deviation at 10% active power
+                    (if applicable)
+                'no_disconnection_gen': bool,  # No generator disconnection (if applicable)
+                'no_disconnection_load': bool,  # No load disconnection (if applicable)
+                'static_diff': float,  # Static difference (if applicable)
+                'stabilized': bool,  # Stabilization status (if applicable)
+                'imax_reac': float,  # Maximum reactive current (if applicable)
+                'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
+                'AVR_5_check': bool,  # AVR 5% check status (if applicable)
+                'AVR_5': float,  # AVR 5% value (if applicable)
+                'AVR_5_crvs': list,  # AVR 5% curves (if applicable)
+                'freq1': float,  # Frequency deviation (if applicable)
+                'freq1_check': bool,  # Frequency deviation check status (if applicable)
+            }
         """
         # Validations common to all Pcs
         (
@@ -714,8 +757,12 @@ class PerformanceValidator(Validator):
 
         Returns
         -------
-        list
-            Required curves for the validation
+        list of str
+            A list containing the names of the required curves for the validation.
+            These curves are:
+            - "BusPDR_BUS_ActivePower": The active power of the bus.
+            - "BusPDR_BUS_ReactivePower": The reactive power of the bus.
+            - "BusPDR_BUS_Voltage": The voltage of the bus.
         """
         return [
             "BusPDR_BUS_ActivePower",

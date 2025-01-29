@@ -541,9 +541,8 @@ class ModelValidator(Validator):
         validations: list,
         is_field_measurements: bool,
     ):
-        super().__init__(curves_manager, validations, is_field_measurements)
+        super().__init__(curves_manager, parameters, validations, is_field_measurements)
         self._pcs_bm_name = pcs_bm_name
-        self._producer = parameters.get_producer()
 
     def __active_power_recovery_error(
         self,
