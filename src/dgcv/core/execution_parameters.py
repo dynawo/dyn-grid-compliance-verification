@@ -28,7 +28,7 @@ class Parameters:
         Dynawo launcher
     producer_model: Path
         Producer Model directory
-    producer_curves: Path
+    producer_curves_path: Path
         Producer curves directory
     selected_pcs: str
         Individual PCS to validate
@@ -46,8 +46,8 @@ class Parameters:
         self,
         launcher_dwo: Path,
         producer_model: Path,
-        producer_curves: Path,
-        reference_curves: Path,
+        producer_curves_path: Path,
+        reference_curves_path: Path,
         selected_pcs: str,
         output_dir: Path,
         only_dtr: bool,
@@ -60,7 +60,9 @@ class Parameters:
         self._only_dtr = only_dtr
 
         # Read producer inputs
-        self._producer = Producer(producer_model, producer_curves, reference_curves, sim_type)
+        self._producer = Producer(
+            producer_model, producer_curves_path, reference_curves_path, sim_type
+        )
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
@@ -170,4 +172,4 @@ class Parameters:
         bool
             True if it is a complete execution, False otherwise
         """
-        return self.is_valid() and self._producer.has_reference_curves()
+        return self.is_valid() and self._producer.has_reference_curves_path()

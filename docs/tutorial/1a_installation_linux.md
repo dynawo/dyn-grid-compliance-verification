@@ -2,23 +2,22 @@
 
 TUTORIAL
 
-INSTALLATION
+HOW TO INSTALL ON LINUX SO
 
-(c) 2023&mdash;24 RTE  
+(c) 2023&mdash;25 RTE  
 Developed by Grupo AIA
 
 ===========================
 
 --------------------------------------------------------------------------------
 
-# Installing Dynamic Grid Compliance Verification
-
-## Table of Contents
+#### Table of Contents
 
 1. [Overview](#Overview)
 2. [Install Dynawo](#Install-Dynawo)
 3. [System Requirements](#System-Requirements)
-4. [Install the tool](#Install-the-tool)
+4. [Installation](#Installation)
+5. [Build and install (for developers)](#build-and-install-for-developers)
 
 ## Overview
 
@@ -95,7 +94,7 @@ with its dependencies, will be placed in a *Python virtual environment* inside y
 1. Run the following command:
 
    ```bash
-   curl https://raw.githubusercontent.com/dynawo/dyn-grid-compliance-verification/main/install.sh | bash
+   curl https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.6.0/linux_install.sh | bash
    ```
 
    This will download the lastest version of the Python package,

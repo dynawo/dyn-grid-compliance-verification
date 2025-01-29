@@ -6,6 +6,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from jinja2 import Template
 
+from dgcv.configuration.cfg import config
+
 
 def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
     if curve_name == "BusPDR_BUS_ActivePower":
@@ -64,7 +66,7 @@ def _get_curve_names(
     return curve_names
 
 
-def _additional_traces(fig, additional_curves, time, curve, results):
+def _additional_active_traces(fig, additional_curves, time, curve, results):
     last_val = curve.iloc[-1]
     if "10P" in additional_curves:
         if abs(last_val) <= 1:
@@ -115,21 +117,24 @@ def _additional_traces(fig, additional_curves, time, curve, results):
 
         fig.add_hline(y=mean_val_min, line_color="#c44e52", line_dash="dash")
 
+
+def _additional_traces(fig, additional_curves, time, curve, results):
     if "85U" in additional_curves:
         val_85 = results["time_85U"] + results["sim_t_event_start"]
         fig.add_vline(x=val_85, opacity=0.8, line_color="#000000", line_dash="dash")
 
+    f_nom = config.get_float("Global", "f_nom", 50.0)
     if "freq_1" in additional_curves:
-        fig.add_hline(y=(50 + 1) / 50, line_color="#c44e52", line_dash="dash")
-        fig.add_hline(y=(50 - 1) / 50, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom + 1) / f_nom, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom - 1) / f_nom, line_color="#c44e52", line_dash="dash")
 
     if "freq_200" in additional_curves:
-        fig.add_hline(y=(50 + 0.2) / 50, line_color="#55a868", line_dash="dash")
-        fig.add_hline(y=(50 - 0.2) / 50, line_color="#55a868", line_dash="dash")
+        fig.add_hline(y=(f_nom + 0.2) / f_nom, line_color="#55a868", line_dash="dash")
+        fig.add_hline(y=(f_nom - 0.2) / f_nom, line_color="#55a868", line_dash="dash")
 
     if "freq_250" in additional_curves:
-        fig.add_hline(y=(50 + 0.250) / 50, line_color="#c44e52", line_dash="dash")
-        fig.add_hline(y=(50 - 0.250) / 50, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom + 0.250) / f_nom, line_color="#c44e52", line_dash="dash")
+        fig.add_hline(y=(f_nom - 0.250) / f_nom, line_color="#c44e52", line_dash="dash")
 
     if "AVR5" in additional_curves:
         # Get the tube
@@ -354,6 +359,13 @@ def _plotly_figures(
 ):
     _exclusion_windows(fig, results)
 
+    _additional_active_traces(
+        fig,
+        additional_curves,
+        calculated_curves["time"],
+        calculated_curves[curve_name],
+        results,
+    )
     _additional_traces(
         fig,
         additional_curves,
@@ -437,10 +449,14 @@ def plotly_figures(
 
 def plotly_all_curves(
     plotted_curves: list,
-    calculated_curves: pd.DataFrame,
-    reference_curves: pd.DataFrame,
     results: dict,
 ) -> list:
+
+    calculated_curves = results["curves"]
+    if "reference_curves" in results:
+        reference_curves = results["reference_curves"]
+    else:
+        reference_curves = None
 
     figures = list()
     for curve_name in calculated_curves:
