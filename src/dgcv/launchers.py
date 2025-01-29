@@ -48,7 +48,7 @@ def _performance_verification(
         user_pcs,
         output_dir,
         only_dtr,
-        sim_type=ELECTRIC_PERFORMANCE,
+        verification_type=ELECTRIC_PERFORMANCE,
     )
 
     if ep.is_valid():
@@ -79,7 +79,7 @@ def _model_validation(
         user_pcs,
         output_dir,
         only_dtr,
-        sim_type=MODEL_VALIDATION,
+        verification_type=MODEL_VALIDATION,
     )
 
     if not ep.is_complete():

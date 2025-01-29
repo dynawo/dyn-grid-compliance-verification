@@ -9,46 +9,44 @@ from dgcv.dynawo.prepare_tool import precompile
 from dgcv.files import manage_files
 from dgcv.logging.logging import dgcv_logging
 
-DGCV_SECTION = "DGCV"
-DGCV_TYPE_KEY = "type"
-DGCV_VERSION_KEY = "version"
-DGCV_VERSION = "1.0.0.RC"
+DGCV_CONFIG_SECTION = "DGCV"
+DGCV_CONFIG_TYPE_KEY = "type"
+DGCV_CONFIG_VERSION_KEY = "version"
+DGCV_TOOL_VERSION = "1.0.0.RC"
 
 
 def _template_cmd_config(template: str, cmd: str):
+    config_dir = config.get_config_dir()
+    template_dir = config_dir / "templates" / template / cmd
     if (
-        not (config.get_config_dir() / "templates").is_dir()
-        or not (config.get_config_dir() / "templates" / template).is_dir()
-        or not (config.get_config_dir() / "templates" / template / cmd).is_dir()
+        not (config_dir / "templates").is_dir()
+        or not (config_dir / "templates" / template).is_dir()
+        or not template_dir.is_dir()
     ):
-        manage_files.create_dir(config.get_config_dir() / "templates" / template / cmd)
+        manage_files.create_dir(template_dir)
 
 
 def _template_config(template: str):
-    _template_cmd_config(template, "model")
-    _template_cmd_config(f"{template}/model", "BESS")
-    _template_cmd_config(f"{template}/model", "PPM")
-    _template_cmd_config(template, "performance")
-    _template_cmd_config(f"{template}/performance", "BESS")
-    _template_cmd_config(f"{template}/performance", "PPM")
-    _template_cmd_config(f"{template}/performance", "SM")
+    subdirs = ["model", "performance"]
+    models = ["BESS", "PPM", "SM"]
+    for subdir in subdirs:
+        _template_cmd_config(template, subdir)
+        for model in models:
+            _template_cmd_config(f"{template}/{subdir}", model)
 
 
 def _templates_config(tool_path: Path):
-    _template_config("PCS")
-    _template_config("reports")
-    _dummysamples_config(tool_path, "PCS")
-    _dummysamples_config(tool_path, "reports")
+    templates = ["PCS", "reports"]
+    for template in templates:
+        _template_config(template)
+        _dummysamples_config(tool_path, template)
 
     shutil.copy(tool_path / "templates" / "README.md", config.get_config_dir() / "templates")
-    shutil.copy(
-        tool_path / "templates" / "PCS" / "README.md",
-        config.get_config_dir() / "templates" / "PCS",
-    )
-    shutil.copy(
-        tool_path / "templates" / "reports" / "README.md",
-        config.get_config_dir() / "templates" / "reports",
-    )
+    for template in templates:
+        shutil.copy(
+            tool_path / "templates" / template / "README.md",
+            config.get_config_dir() / "templates" / template,
+        )
     shutil.copy(
         tool_path / "templates" / "reports" / "TSO_logo.pdf",
         config.get_config_dir() / "templates" / "reports",
@@ -60,31 +58,21 @@ def _templates_config(tool_path: Path):
 
 
 def _dummysamples_config(tool_path: Path, source: str):
-    shutil.copytree(
-        tool_path / "templates" / source / "performance" / "SM" / ".DummySample",
-        config.get_config_dir() / "templates" / source / "performance" / "SM" / ".DummySample",
-        dirs_exist_ok=True,
-    )
-    shutil.copytree(
-        tool_path / "templates" / source / "performance" / "PPM" / ".DummySample",
-        config.get_config_dir() / "templates" / source / "performance" / "PPM" / ".DummySample",
-        dirs_exist_ok=True,
-    )
-    shutil.copytree(
-        tool_path / "templates" / source / "performance" / "BESS" / ".DummySample",
-        config.get_config_dir() / "templates" / source / "performance" / "BESS" / ".DummySample",
-        dirs_exist_ok=True,
-    )
-    shutil.copytree(
-        tool_path / "templates" / source / "model" / "PPM" / ".DummySample",
-        config.get_config_dir() / "templates" / source / "model" / "PPM" / ".DummySample",
-        dirs_exist_ok=True,
-    )
-    shutil.copytree(
-        tool_path / "templates" / source / "model" / "BESS" / ".DummySample",
-        config.get_config_dir() / "templates" / source / "model" / "BESS" / ".DummySample",
-        dirs_exist_ok=True,
-    )
+    categories = ["performance", "model"]
+    models = ["SM", "PPM", "BESS"]
+    for category in categories:
+        for model in models:
+            src = tool_path / "templates" / source / category / model / ".DummySample"
+            dest = (
+                config.get_config_dir() / "templates" / source / category / model / ".DummySample"
+            )
+            if src.exists():
+                try:
+                    shutil.copytree(src, dest, dirs_exist_ok=True)
+                except Exception as e:
+                    dgcv_logging.get_logger("Initialization").error(
+                        f"Failed to copy {src} to {dest}: {e}"
+                    )
 
 
 def _user_models():
@@ -93,27 +81,20 @@ def _user_models():
         or not (config.get_config_dir() / "user_models" / "dictionary").is_dir()
     ):
         manage_files.create_dir(config.get_config_dir() / "user_models" / "dictionary")
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Bus.ini"
-    )
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Line.ini"
-    )
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Load.ini"
-    )
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Power_Park.ini"
-    )
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Storage.ini"
-    )
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Synch_Gen.ini"
-    )
-    manage_files.create_empty_file(
-        config.get_config_dir() / "user_models" / "dictionary" / "Transformer.ini"
-    )
+
+    files = [
+        "Bus.ini",
+        "Line.ini",
+        "Load.ini",
+        "Power_Park.ini",
+        "Storage.ini",
+        "Synch_Gen.ini",
+        "Transformer.ini",
+    ]
+    for file in files:
+        manage_files.create_empty_file(
+            config.get_config_dir() / "user_models" / "dictionary" / file
+        )
 
 
 def _is_valid_config_file(config_file: Path) -> bool:
@@ -122,10 +103,10 @@ def _is_valid_config_file(config_file: Path) -> bool:
 
     config = configparser.ConfigParser()
     config.read(config_file)
-    if not config.has_option(DGCV_SECTION, DGCV_VERSION_KEY):
+    if not config.has_option(DGCV_CONFIG_SECTION, DGCV_CONFIG_VERSION_KEY):
         return False
 
-    if config.get(DGCV_SECTION, DGCV_VERSION_KEY) != DGCV_VERSION:
+    if config.get(DGCV_CONFIG_SECTION, DGCV_CONFIG_VERSION_KEY) != DGCV_TOOL_VERSION:
         return False
 
     return True
@@ -149,7 +130,7 @@ def _get_section_by_line(line: str) -> str:
     return line.replace("[", "").replace("]", "").strip()
 
 
-def _get_key_value_by_line(line: str) -> str:
+def _get_key_value_by_line(line: str) -> tuple[str, str]:
     key, value = line.split("=")
     return (key.replace("#  ", "").strip(), value.strip())
 
@@ -170,8 +151,8 @@ def _check_config_file(tool_config_file: Path, user_config_file: Path):
 
     for parameter in deprecated_parameters:
         dgcv_logging.get_logger("Initialization").warning(
-            f"Deprecated: section {parameter['section']} key {parameter['key']} value "
-            f"{parameter['value']}"
+            f"Deprecated in {user_config_file.name}: section {parameter['section']} "
+            f"key {parameter['key']} value {parameter['value']}"
         )
 
     files = [
@@ -182,9 +163,9 @@ def _check_config_file(tool_config_file: Path, user_config_file: Path):
     user_config_file.rename(config.get_config_dir() / f"config.ini.OLD.{id}")
 
     if (
-        not user_config.has_section(DGCV_SECTION)
-        or not user_config.has_option(DGCV_SECTION, DGCV_TYPE_KEY)
-        or user_config.get(DGCV_SECTION, DGCV_TYPE_KEY) == "basic"
+        not user_config.has_section(DGCV_CONFIG_SECTION)
+        or not user_config.has_option(DGCV_CONFIG_SECTION, DGCV_CONFIG_TYPE_KEY)
+        or user_config.get(DGCV_CONFIG_SECTION, DGCV_CONFIG_TYPE_KEY) == "basic"
     ):
         config_file = config.get_config_dir() / "config.ini_BASIC"
     else:
@@ -202,11 +183,7 @@ def _check_config_file(tool_config_file: Path, user_config_file: Path):
                         output_file.write(f"{key} = {user_config.get(section, key)}\n")
 
 
-def init(launcher_dwo: Path, debug: bool) -> None:
-    # Tool installation path
-    tool_path = Path(__file__).resolve().parent.parent
-
-    # User config path
+def _setup_user_config():
     if not config.get_config_dir().is_dir():
         manage_files.create_dir(config.get_config_dir())
 
@@ -232,10 +209,13 @@ def init(launcher_dwo: Path, debug: bool) -> None:
                 config.get_config_dir() / "config.ini",
             )
 
+
+def _setup_templates_and_models(tool_path: Path):
     _templates_config(tool_path)
     _user_models()
 
-    # Initialize logger
+
+def _initialize_logger(debug: bool):
     log_dir = config.get_config_dir() / "log"
     if not log_dir.is_dir():
         manage_files.create_dir(log_dir)
@@ -243,12 +223,14 @@ def init(launcher_dwo: Path, debug: bool) -> None:
     file_log_level = config.get_value("Global", "file_log_level")
     file_formatter = config.get_value("Global", "file_formatter")
     file_max_bytes = config.get_int("Global", "file_log_max_bytes", 50 * 1024 * 1024)
-    if debug:
-        file_log_level = "DEBUG"
+
     console_log_level = config.get_value("Global", "console_log_level")
     console_formatter = config.get_value("Global", "console_formatter")
+
     if debug:
+        file_log_level = "DEBUG"
         console_log_level = "DEBUG"
+
     dgcv_logging.init_handlers(
         file_log_level,
         file_formatter,
@@ -257,6 +239,24 @@ def init(launcher_dwo: Path, debug: bool) -> None:
         console_formatter,
         log_dir,
     )
+
+
+def init(launcher_dwo: Path, debug: bool) -> None:
+    """
+    Initialize the DGCV tool by setting up the user configuration path.
+
+    Parameters
+    ----------
+    launcher_dwo: Path
+        Path to the Dynawo launcher.
+    debug: bool
+        Flag to enable debug mode.
+    """
+
+    tool_path = Path(__file__).resolve().parent.parent
+    _setup_user_config()
+    _setup_templates_and_models(tool_path)
+    _initialize_logger(debug)
 
     # Precompiled modelica models
     if launcher_dwo:
