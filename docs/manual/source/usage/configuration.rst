@@ -77,10 +77,20 @@ Basic Configuration
     Comma separated list  of *PCSs* that will be used in the **Performance Validation for
     non-synchronous park of generators**. Leave the parameter empty to use all *PCSs*.
 
-* ``model_validation_pcs``
+* ``electric_performance_bess_verification_pcs``
 
-    Comma separated list  of *PCSs* that will be used in the **RMS Model Validation**.
-    Leave the parameter empty to use all *PCSs*.
+    Comma separated list  of *PCSs* that will be used in the **Performance Validation for
+    non-synchronous park of storages**. Leave the parameter empty to use all *PCSs*.
+
+* ``model_ppm_validation_pcs``
+
+    Comma separated list  of *PCSs* that will be used in the **RMS Model Validation for
+    non-synchronous park of generators**. Leave the parameter empty to use all *PCSs*.
+
+* ``model_bess_validation_pcs``
+
+    Comma separated list  of *PCSs* that will be used in the **RMS Model Validation for
+    non-synchronous park of storages**. Leave the parameter empty to use all *PCSs*.
 
 * ``file_log_level``
 

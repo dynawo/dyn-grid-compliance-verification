@@ -193,11 +193,16 @@ class Config:
             A list of keys of a section that start with a given prefix, empty otherwise
         """
         if self._user_config.has_section(section):
-            return self._user_config.options(section)
-        elif self._pcs_config.has_section(section):
-            return self._pcs_config.options(section)
-        elif self._default_config.has_section(section):
-            return self._default_config.options(section)
+            options = self._user_config.options(section)
+            if options:
+                return options
+        if self._pcs_config.has_section(section):
+            options = self._pcs_config.options(section)
+            if options:
+                return options
+        if self._default_config.has_section(section):
+            options = self._default_config.options(section)
+            return options
         return []
 
 

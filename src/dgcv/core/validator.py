@@ -7,25 +7,52 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from collections import namedtuple
 from pathlib import Path
 
-from dgcv.validation import compliance_list
+import pandas as pd
 
-Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
-Disconnection_Model = namedtuple(
-    "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
-)
+from dgcv.curves.manager import CurvesManager
+from dgcv.model.parameters import Disconnection_Model
+from dgcv.validation import compliance_list
 
 
 class Validator:
-    def __init__(self, validations: list, is_field_measurements: bool):
+    def __init__(
+        self, curves_manager: CurvesManager, validations: list, is_field_measurements: bool
+    ):
+        self._curves_manager = curves_manager
         self._time_cct = None
         self._generators_imax = {}
         self._disconnection_model = None
         self._setpoint_variation = 0.0
         self._validations = validations
         self._is_field_measurements = is_field_measurements
+
+    def _get_calculated_curves(self) -> dict:
+        return self._curves_manager.get_curves("calculated")
+
+    def _get_reference_curves(self) -> dict:
+        return self._curves_manager.get_curves("reference")
+
+    def _get_calculated_curve_by_name(self, name: str) -> pd.DataFrame:
+        curves = self._get_calculated_curves()
+        if name not in curves.keys():
+            return None
+
+        return curves[name]
+
+    def _get_reference_curve_by_name(self, name: str) -> pd.DataFrame:
+        curves = self._get_reference_curves()
+        if name not in curves.keys():
+            return None
+
+        return curves[name]
+
+    def _get_exclusion_times(self) -> tuple[float, float, float, float]:
+        return self._curves_manager.get_exclusion_times()
+
+    def _get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return self._curves_manager.get_curves_by_windows(windows)
 
     def has_validations(self) -> bool:
         """Check if validator has defined validations.
@@ -98,6 +125,48 @@ class Validator:
             Setpoint variation.
         """
         self._setpoint_variation = setpoint_variation
+
+    def get_generator_u_dim(self) -> float:
+        """Get the generator Udim.
+
+        Returns
+        -------
+        float
+            Generator Udim.
+        """
+        return self._curves_manager.get_generator_u_dim()
+
+    def complete_parameters(
+        self,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        event_params: dict,
+        cfg_oc_name: str,
+    ) -> None:
+        """Complete the parameters of the validation.
+
+        Parameters
+        ----------
+        working_oc_dir: Path
+            Working directory.
+        jobs_output_dir: Path
+            Jobs output directory.
+        event_params: dict
+            Event parameters.
+        cfg_oc_name: str
+            Composite name, pcs + Benchmark name + Operating Condition name.
+        """
+        if self.is_defined_cct():
+            self.set_time_cct(
+                self._curves_manager.get_time_cct(
+                    working_oc_dir,
+                    jobs_output_dir,
+                    event_params["duration_time"],
+                )
+            )
+        self.set_generators_imax(self._curves_manager.get_generators_imax())
+        self.set_disconnection_model(self._curves_manager.get_disconnection_model())
+        self.set_setpoint_variation(self._curves_manager.get_setpoint_variation(cfg_oc_name))
 
     def validate(
         self,
