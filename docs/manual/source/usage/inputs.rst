@@ -93,8 +93,28 @@ Currently supported models:
     * Bus
         Default bus model (just an electric node)
 * Synchronous generators:
+    * GeneratorSynchronousFourWindingsGoverPropVRPropInt
+        Machine with four windings, a proportional governor on mechanical power and a
+        proportional integral excitation voltage regulator
+    * GeneratorSynchronousFourWindingsProportionalRegulations
+        Machine with four windings, a proportional governor on mechanical power and a
+        proportional excitation voltage regulator
+    * GeneratorSynchronousFourWindingsTGov1Sexs
+        Machine with four windings and standard IEEE regulations - TGov1, SEXS
     * GeneratorSynchronousFourWindingsTGov1SexsPss2a
         Machine with four windings and standard IEEE regulations - TGov1, SEXS and PSS2A
+    * GeneratorSynchronousFourWindingsVRKundur
+        Machine with four windings, fixed mechanical power and a Kundur proportional voltage
+        regulator with no power system stabilizer
+    * GeneratorSynchronousFourWindingsVRKundurPssKundur
+        Machine with four windings, fixed mechanical power and a Kundur proportional voltage
+        regulator with a power system stabilizer
+    * GeneratorSynchronousThreeWindingsGoverPropVRPropInt
+        Machine with three windings, a proportional governor on mechanical power and a
+        proportional integral excitation voltage regulator
+    * GeneratorSynchronousThreeWindingsProportionalRegulations
+        Machine with three windings, a proportional governor on mechanical power and a
+        proportional excitation voltage regulator
     * SynchronousMachineI8SM
         Ad-hoc machine model for the I8 PCS
 * WECC Wind models:
@@ -134,6 +154,11 @@ Currently supported models:
     * IECWT4BCurrentSource2020
         Wind Turbine Type 4B model from IEC 61400-27-1:2020 standard : measurement, PLL, protection,
         PControl, QControl, limiters, electrical, generator and mechanical modules
+* WECC Storage models:
+    * BESScbWeccCurrentSource
+        WECC Storage model
+    * BESScbWeccCurrentSourceNoPlantControl
+        WECC Storage model without the plant controller
 * Lines:
     * Line
         AC power line - PI model
