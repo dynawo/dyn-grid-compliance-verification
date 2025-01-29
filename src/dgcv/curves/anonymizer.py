@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from dgcv.configuration.cfg import config
-from dgcv.curves.importer import CurvesImporter
+from dgcv.curves.importer.importer import CurvesImporter
 from dgcv.sigpro.sigpro import lowpass_filter
 
 NOISE_DAMPING = 100
@@ -164,7 +164,7 @@ def _apply_noise_to_curves(
             resampling_fs = 1 / t_com
             noise = lowpass_filter(
                 np.concat((noise_before, noise_during, noise_after)),
-                cutoff=frequency,
+                fc=frequency,
                 fs=resampling_fs,
             )
 

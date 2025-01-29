@@ -16,7 +16,7 @@ from pathlib import Path
 from dgcv.core import initialization
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.input_template import create_input_template
-from dgcv.core.model_validation import ModelValidation
+from dgcv.core.validation import Validation
 from dgcv.curves import anonymizer
 from dgcv.dynawo import prepare_tool
 from dgcv.logging.logging import dgcv_logging
@@ -54,7 +54,7 @@ def _performance_verification(
     )
 
     if ep.is_valid():
-        md = ModelValidation(
+        md = Validation(
             ep,
         )
         md.validate()
@@ -87,7 +87,7 @@ def _model_validation(
     if not ep.is_complete():
         return -1
 
-    md = ModelValidation(
+    md = Validation(
         ep,
     )
     md.validate()
@@ -320,10 +320,7 @@ def _subcomands_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def dgcv() -> None:
-    p = _subcomands_parser()
-    args = p.parse_args()
-
+def _get_dwo_launcher_name(p: argparse.ArgumentParser, args: argparse.Namespace) -> str:
     dwo_launcher_name = None
     if "dwo_launcher" in args:
         dwo_launcher_name = args.dwo_launcher
@@ -341,146 +338,185 @@ def dgcv() -> None:
             )
             p.print_help()
 
-    if args.command is None:
-        p.error("Please provide an additional command.")
+    return dwo_launcher_name
+
+
+def _get_dwo_launcher(args: argparse.Namespace, dwo_launcher_name: str) -> Path:
+    dwo_launcher = Path(shutil.which(dwo_launcher_name)).resolve()
+    _check_launchers(dwo_launcher)
+    initialization.init(dwo_launcher, args.debug)
+
+    return dwo_launcher
+
+
+def _execute_anonymize(
+    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+    if args.producer_curves is None and args.results_path is None:
+        p.error(
+            "Missing arguments.\nFor the anonymize command, the producer_curves or the "
+            "results_path argument is required."
+        )
         p.print_help()
 
-    if args.command != "anonymize":
-        dwo_launcher = Path(shutil.which(dwo_launcher_name)).resolve()
-        _check_launchers(dwo_launcher)
-        initialization.init(dwo_launcher, args.debug)
+    if args.producer_curves is not None:
+        producer_curves = Path(args.producer_curves)
+    else:
+        producer_curves = None
 
-    if args.command == "validate":
-        user_pcs = args.pcs
-        if (
-            args.producer_model is None and args.producer_curves is None
-        ) or args.reference_curves is None:
-            producer_model = None
-            producer_curves = None
-            reference_curves = None
-            output_dir = None
-        else:
-            if args.producer_model is None:
-                producer_model = None
-                producer_curves = Path(args.producer_curves)
-                output_dir = (
-                    producer_curves.parent / "Results"
-                    if args.output_dir is None
-                    else Path(args.output_dir)
-                )
-            elif args.producer_curves is None:
-                producer_model = Path(args.producer_model)
-                producer_curves = None
-                output_dir = (
-                    producer_model.parent / "Results"
-                    if args.output_dir is None
-                    else Path(args.output_dir)
-                )
-            reference_curves = Path(args.reference_curves)
+    if args.results_path is not None:
+        results_path = Path(args.results_path)
+    else:
+        results_path = None
 
-        if (not producer_model and not producer_curves) or not reference_curves:
-            p.error("Missing arguments.\nTry 'dgcv validate -h' for more information.")
-            p.print_help()
-            return
-
-        r = _model_validation(
-            dwo_launcher,
-            output_dir,
-            producer_model,
-            producer_curves,
-            reference_curves,
-            user_pcs,
-            args.only_dtr,
-        )
-        if r != 0:
-            p.error(
-                "It is not possible to find the producer model or the producer curves "
-                "to validate. You MUST provide both."
-            )
-            p.print_help()
-
-    elif args.command == "generate":
+    if args.output_dir is None:
+        output_dir = Path(producer_curves.parent / "Anonymize_Results")
+    else:
         output_dir = Path(args.output_dir)
-        topology = args.topology
-        validation = args.validation
 
-        r = _generate_input(dwo_launcher, output_dir, topology, validation)
-        if r != 0:
-            p.print_help()
+    anonymizer.anonymize(output_dir, args.noisestd, args.frequency, results_path, producer_curves)
 
-    elif args.command == "compile":
-        if args.dynawo_model is None:
-            dynawo_model = None
-        else:
-            dynawo_model = args.dynawo_model
 
-        r = _compile_dynawo_models(dwo_launcher, dynawo_model, args.force)
-        if r != 0:
-            p.print_help()
+def _execute_compile(
+    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+    if args.dynawo_model is None:
+        dynawo_model = None
+    else:
+        dynawo_model = args.dynawo_model
 
-    elif args.command == "performance":
-        user_pcs = args.pcs
+    r = _compile_dynawo_models(dwo_launcher, dynawo_model, args.force)
+    if r != 0:
+        p.print_help()
+
+
+def _execute_generate(
+    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+    output_dir = Path(args.output_dir)
+    topology = args.topology
+    validation = args.validation
+
+    r = _generate_input(dwo_launcher, output_dir, topology, validation)
+    if r != 0:
+        p.print_help()
+
+
+def _execute_performance(
+    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+    user_pcs = args.pcs
+    if args.producer_model is None:
+        producer_model = None
+    else:
+        producer_model = Path(args.producer_model)
+        output_dir = (
+            producer_model.parent / "Results" if args.output_dir is None else Path(args.output_dir)
+        )
+    if args.producer_curves is None:
+        producer_curves = None
+    else:
+        producer_curves = Path(args.producer_curves)
+        output_dir = (
+            producer_curves.parent / "Results"
+            if args.output_dir is None
+            else Path(args.output_dir)
+        )
+
+    if not producer_model and not producer_curves:
+        p.error("Missing arguments.\nTry 'dgcv performance -h' for more information.")
+        p.print_help()
+        return
+
+    r = _performance_verification(
+        dwo_launcher,
+        output_dir,
+        producer_model,
+        producer_curves,
+        user_pcs,
+        args.only_dtr,
+    )
+    if r != 0:
+        p.error("It is not possible to find the producer model or the producer curves to validate")
+        p.print_help()
+
+
+def _execute_validate(
+    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+    user_pcs = args.pcs
+    if (
+        args.producer_model is None and args.producer_curves is None
+    ) or args.reference_curves is None:
+        producer_model = None
+        producer_curves = None
+        reference_curves = None
+        output_dir = None
+    else:
         if args.producer_model is None:
             producer_model = None
-        else:
-            producer_model = Path(args.producer_model)
-            output_dir = (
-                producer_model.parent / "Results"
-                if args.output_dir is None
-                else Path(args.output_dir)
-            )
-        if args.producer_curves is None:
-            producer_curves = None
-        else:
             producer_curves = Path(args.producer_curves)
             output_dir = (
                 producer_curves.parent / "Results"
                 if args.output_dir is None
                 else Path(args.output_dir)
             )
-
-        if not producer_model and not producer_curves:
-            p.error("Missing arguments.\nTry 'dgcv performance -h' for more information.")
-            p.print_help()
-            return
-
-        r = _performance_verification(
-            dwo_launcher,
-            output_dir,
-            producer_model,
-            producer_curves,
-            user_pcs,
-            args.only_dtr,
-        )
-        if r != 0:
-            p.error(
-                "It is not possible to find the producer model or the producer curves to validate"
+        elif args.producer_curves is None:
+            producer_model = Path(args.producer_model)
+            producer_curves = None
+            output_dir = (
+                producer_model.parent / "Results"
+                if args.output_dir is None
+                else Path(args.output_dir)
             )
-            p.print_help()
+        reference_curves = Path(args.reference_curves)
+
+    if (not producer_model and not producer_curves) or not reference_curves:
+        p.error("Missing arguments.\nTry 'dgcv validate -h' for more information.")
+        p.print_help()
+        return
+
+    r = _model_validation(
+        dwo_launcher,
+        output_dir,
+        producer_model,
+        producer_curves,
+        reference_curves,
+        user_pcs,
+        args.only_dtr,
+    )
+    if r != 0:
+        p.error(
+            "It is not possible to find the producer model or the producer curves "
+            "to validate. You MUST provide both."
+        )
+        p.print_help()
+
+
+def dgcv() -> None:
+    p = _subcomands_parser()
+    args = p.parse_args()
+
+    dwo_launcher_name = _get_dwo_launcher_name(p, args)
+
+    if args.command is None:
+        p.error("Please provide an additional command.")
+        p.print_help()
+
+    if args.command != "anonymize":
+        dwo_launcher = _get_dwo_launcher(args, dwo_launcher_name)
+
+    if args.command == "validate":
+        _execute_validate(p, args, dwo_launcher)
+
+    elif args.command == "generate":
+        _execute_generate(p, args, dwo_launcher)
+
+    elif args.command == "compile":
+        _execute_compile(p, args, dwo_launcher)
+
+    elif args.command == "performance":
+        _execute_performance(p, args, dwo_launcher)
 
     elif args.command == "anonymize":
-        if args.producer_curves is None and args.results_path is None:
-            p.error(
-                "Missing arguments.\nFor the anonymize command, the producer_curves or the "
-                "results_path argument is required."
-            )
-            p.print_help()
-
-        if args.producer_curves is not None:
-            producer_curves = Path(args.producer_curves)
-        else:
-            producer_curves = None
-
-        if args.results_path is not None:
-            results_path = Path(args.results_path)
-        else:
-            results_path = None
-
-        if args.output_dir is None:
-            output_dir = Path(producer_curves.parent / "Anonymize_Results")
-        else:
-            output_dir = Path(args.output_dir)
-
-        anonymizer.anonymize(
-            output_dir, args.noisestd, args.frequency, results_path, producer_curves
-        )
+        _execute_anonymize(p, args, dwo_launcher)
