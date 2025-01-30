@@ -43,7 +43,7 @@ class Validator:
     def _get_calculated_curve_by_name(self, name: str) -> pd.DataFrame:
         curves = self._get_calculated_curves()
         if name not in curves.keys():
-            return None
+            return pd.DataFrame()
 
         return curves[name]
 
@@ -68,7 +68,7 @@ class Validator:
         bool
             True if the validator has validations.
         """
-        return self._validations
+        return bool(self._validations)
 
     def get_sim_type(self) -> int:
         """Gets the type of validation executed.
@@ -182,9 +182,34 @@ class Validator:
         event_params: dict,
         fs: float,
     ) -> dict:
-        """Virtual method"""
+        """Validate the simulation results.
+
+        Parameters
+        ----------
+        oc_name: str
+            Operating condition name.
+        working_path: Path
+            Working path.
+        sim_output_path: str
+            Simulator output path.
+        event_params: dict
+            Event parameters
+        fs: float
+            Frequency sampling.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the compliance results.
+        """
         pass
 
     def get_measurement_names(self) -> list:
-        """Virtual method"""
+        """Get the list of required curves for the validation
+
+        Returns
+        -------
+        list
+            Required curves for the validation
+        """
         pass
