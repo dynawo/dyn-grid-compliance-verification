@@ -772,15 +772,17 @@ def extract_defined_value(value_definition: str, parameter: str, base_value: flo
         The value of the operation defined with the given base value
     """
     multiplier = 1
-    value = value_definition
-    if value is None:
+    if value_definition is None:
         raise ValueError(f"{parameter} parameter not defined.")
 
-    if "*" in value:
-        multiplier = float(value_definition.split("*")[0])
-        value = value_definition.split("*")[1]
+    if "*" in value_definition:
+        parts = value_definition.split("*")
+        multiplier = float(parts[0])
+        value = parts[1]
+    else:
+        value = value_definition
 
-    if parameter in value.lower():
+    if parameter.lower() in value.lower():
         value = base_value
 
     return float(value) * multiplier
