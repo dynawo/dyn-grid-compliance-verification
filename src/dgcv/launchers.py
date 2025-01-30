@@ -347,9 +347,7 @@ def _get_dwo_launcher(args: argparse.Namespace, dwo_launcher_name: str) -> Path:
     return dwo_launcher
 
 
-def _execute_anonymize(
-    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+def _execute_anonymize(p: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     if args.producer_curves is None and args.results_path is None:
         p.error(
             "Missing arguments.\nFor the anonymize command, the producer_curves or the "
@@ -518,4 +516,4 @@ def dgcv() -> None:
         _execute_performance(p, args, dwo_launcher)
 
     elif args.command == "anonymize":
-        _execute_anonymize(p, args, dwo_launcher)
+        _execute_anonymize(p, args)
