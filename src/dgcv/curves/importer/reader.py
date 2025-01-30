@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import array
+from abc import abstractmethod
 from pathlib import Path
 from typing import TextIO
 
 import pandas as pd
 from comtrade import Comtrade
+
+
+UNLIMITED_COLUMNS = -1
 
 
 def get_curves_reader(path: Path, filename: str, time_name: str) -> CurvesReader:
@@ -30,11 +34,16 @@ def get_curves_reader(path: Path, filename: str, time_name: str) -> CurvesReader
     Exception
         Not supported type
     """
-    if any(path.glob(filename + ".[eE][xX][pP]")):
+    exp_files = list(path.glob(filename + ".[eE][xX][pP]"))
+    csv_files = list(path.glob(filename + ".[cC][sS][vV]"))
+    cff_files = list(path.glob(filename + ".[cC][fF][fF]"))
+    dat_files = list(path.glob(filename + ".[dD][aA][tT]"))
+
+    if exp_files:
         reader = EurostagReader(path, filename, time_name)
-    elif any(path.glob(filename + ".[cC][sS][vV]")):
+    elif csv_files:
         reader = CsvReader(path, filename, time_name)
-    elif any(path.glob(filename + ".[cC][fF][fF]")) or any(path.glob(filename + ".[dD][aA][tT]")):
+    elif cff_files or dat_files:
         reader = ComtradeReader(path, filename, time_name)
     else:
         raise IOError(f"Not supported data: {filename}")
@@ -42,7 +51,9 @@ def get_curves_reader(path: Path, filename: str, time_name: str) -> CurvesReader
     return reader
 
 
-def read_sep_values(line: str, sep: str, expected: int = -1, default: str = "") -> list:
+def read_sep_values(
+    line: str, sep: str, expected: int = UNLIMITED_COLUMNS, default: str = ""
+) -> list:
     """Split a line in several columns.
 
     Parameters
@@ -50,10 +61,10 @@ def read_sep_values(line: str, sep: str, expected: int = -1, default: str = "") 
     line: str
         Line to split
     sep: str
-        Saparator string/character
+        Separator string/character
     expected: int
         Expected number of columns
-    default
+    default: str
         Default text if column do not exists
 
     Returns
@@ -61,11 +72,10 @@ def read_sep_values(line: str, sep: str, expected: int = -1, default: str = "") 
     list
         A list of values
     """
-    values = tuple(map(lambda cell: cell.strip(), line.split(sep)))
-    if expected == -1 or len(values == expected):
-        return values
-
-    return [values[i] if i < len(values) else default for i in range(expected)]
+    values = list(map(str.strip, line.split(sep)))
+    if expected != UNLIMITED_COLUMNS and len(values) > expected:
+        values = values[:expected]
+    return values
 
 
 class CurvesReader:
@@ -150,25 +160,40 @@ class CurvesReader:
         """
         return self._frequency_sampling
 
-    def load(self, remove_file=True) -> None:
-        """Virtual method, parse file contents"""
+    @abstractmethod
+    def load(self, remove_file: bool = True) -> None:
+        """Parse file contents
+
+        Parameters
+        ----------
+        remove_file: bool, optional
+            Whether to remove the file after reading. Default is True.
+        """
         pass
 
 
 class ComtradeReader(CurvesReader):
-    def load(self, remove_file=True):
-        """Load a COMTRADE file."""
+    def load(self, remove_file: bool = True) -> None:
+        """Load a COMTRADE file.
+
+        Parameters
+        ----------
+        remove_file: bool, optional
+            Whether to remove the file after reading. Default is True.
+        """
         rec = Comtrade()
-        if any(self._path.glob(self._filename + ".[cC][fF][gG]")):
-            cfg_file = next(self._path.glob(self._filename + ".[cC][fF][gG]"))
+        cfg_files = list(self._path.glob(self._filename + ".[cC][fF][gG]"))
+        if cfg_files:
+            cfg_file = next(cfg_files)
             dat_file = next(self._path.glob(self._filename + ".[dD][aA][tT]"))
             rec.load(cfg_file.as_posix(), dat_file.as_posix())
             if remove_file:
                 cfg_file.unlink()
                 dat_file.unlink()
 
-        if any(self._path.glob(self._filename + ".[cC][fF][fF]")):
-            cff_file = next(self._path.glob(self._filename + ".[cC][fF][fF]"))
+        cff_files = list(self._path.glob(self._filename + ".[cC][fF][fF]"))
+        if cff_files:
+            cff_file = next(cff_files)
             rec.load(cff_file.as_posix())
             if remove_file:
                 cff_file.unlink()
@@ -176,20 +201,13 @@ class ComtradeReader(CurvesReader):
         self._analog_channel_ids = rec.analog_channel_ids
         self._time_values = rec.time
         self._analog_values = rec.analog
-        self._frequency_sampling = rec._cfg.sample_rates[-1][0]
+        self._frequency_sampling = rec.cfg().sample_rates[-1][0]
         self._trigger_time = rec.trigger_time
 
 
 class CsvReader(CurvesReader):
-    def load(self, remove_file=True):
-        """Load a CSV file."""
-        file = next(self._path.glob(self._filename + ".[cC][sS][vV]"))
-        data = pd.read_csv(file.as_posix(), sep=";")
-        self.read(data)
-        if remove_file:
-            file.unlink()
 
-    def read(self, data: pd.DataFrame):
+    def __read(self, data: pd.DataFrame) -> None:
         """Read and import the data from the file.
 
         Parameters
@@ -209,17 +227,24 @@ class CsvReader(CurvesReader):
             self._analog_channel_ids[idx] = column_name
             self._analog_values[idx] = value_data[column_name]
 
+    def load(self, remove_file: bool = True) -> None:
+        """Load a CSV file.
 
-class EurostagReader(CurvesReader):
-    def load(self, remove_file=True):
-        """Load an EUROSTAG file."""
-        file = next(self._path.glob(self._filename + ".[eE][xX][pP]"))
-        with open(file.as_posix(), "r") as data:
-            self.read(data)
+        Parameters
+        ----------
+        remove_file: bool, optional
+            Whether to remove the file after reading. Default is True.
+        """
+        file = next(self._path.glob(self._filename + ".[cC][sS][vV]"))
+        data = pd.read_csv(file.as_posix(), sep=";")
+        self.__read(data)
         if remove_file:
             file.unlink()
 
-    def read(self, data: TextIO):
+
+class EurostagReader(CurvesReader):
+
+    def __read(self, data: TextIO) -> None:
         """Read and import the data from the file.
 
         Parameters
@@ -231,7 +256,7 @@ class EurostagReader(CurvesReader):
         line = data.readline()
         packed = read_sep_values(line, " ")
         self._analog_count = int(packed[len(packed) - 2])
-        self._time_values = array.array("f", [0]) * self._analog_count
+        self._time_values = array.array("f", [0] * self._analog_count)
 
         # Variable lines
         line = data.readline()
@@ -256,7 +281,7 @@ class EurostagReader(CurvesReader):
         # Preallocate analog values
         self._analog_values = [None] * self._column_count
         for i in range(self._column_count):
-            self._analog_values[i] = array.array("f", [0]) * self._analog_count
+            self._analog_values[i] = array.array("f", [0] * self._analog_count)
 
         # Column values lines
         for idx in range(self._analog_count):
@@ -273,3 +298,17 @@ class EurostagReader(CurvesReader):
                 else:
                     self._analog_values[column_idx][idx] = float(value)
                     column_idx = column_idx + 1
+
+    def load(self, remove_file: bool = True) -> None:
+        """Load an EUROSTAG file.
+
+        Parameters
+        ----------
+        remove_file: bool, optional
+            Whether to remove the file after reading. Default is True.
+        """
+        file = next(self._path.glob(self._filename + ".[eE][xX][pP]"))
+        with open(file.as_posix(), "r") as data:
+            self.__read(data)
+        if remove_file:
+            file.unlink()
