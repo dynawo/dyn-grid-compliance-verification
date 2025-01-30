@@ -1134,7 +1134,48 @@ class ModelValidator(Validator):
         Returns
         -------
         dict
-            Compliance results
+            Dictionary containing the compliance results, including:
+            {
+                'compliance': bool, overall compliance result.
+                'sim_t_event_start': float, simulation event start time.
+                'is_invalid_test': bool, indicates if the test is invalid.
+                'curves_error': dict, detailed error metrics for each curve.
+                'curves': pd.DataFrame, calculated curves.
+                'reference_curves': pd.DataFrame, reference curves (if available).
+                'calc_reaction_time': float, calculated reaction time.
+                'ref_reaction_time': float, reference reaction time.
+                'calc_rise_time': float, calculated rise time.
+                'ref_rise_time': float, reference rise time.
+                'calc_response_time': float, calculated response time.
+                'ref_response_time': float, reference response time.
+                'calc_settling_time': float, calculated settling time.
+                'ref_settling_time': float, reference settling time.
+                'calc_overshoot': float, calculated overshoot.
+                'ref_overshoot': float, reference overshoot.
+                'ramp_time_lag': float, ramp time lag.
+                'ramp_error': float, ramp error.
+                'mae_voltage_1P': float, mean absolute error for voltage.
+                'ss_error_voltage_1P': float, steady-state error for voltage.
+                'mae_active_power_1P': float, mean absolute error for active power.
+                'ss_error_active_power_1P': float, steady-state error for active power.
+                'mae_reactive_power_1P': float, mean absolute error for reactive power.
+                'ss_error_reactive_power_1P': float, steady-state error for reactive power.
+                'mae_active_current_1P': float, mean absolute error for active current.
+                'ss_error_active_current_1P': float, steady-state error for active current.
+                'mae_reactive_current_1P': float, mean absolute error for reactive current.
+                'ss_error_reactive_current_1P': float, steady-state error for reactive current.
+                'setpoint_tracking_controlled_magnitude_name': str, name of the controlled
+                    magnitude.
+                'setpoint_tracking_active_power_name': str, name of the active power setpoint.
+                'setpoint_tracking_reactive_power_name': str, name of the reactive power setpoint.
+                't_P90_error': float, error in reaching 90% of the active power recovery.
+                't_P90_threshold': float, threshold for the t_P90 error.
+                't_P90_check': bool, compliance check for t_P90 error.
+                'excl1_t0': float, exclusion time start 1.
+                'excl1_t': float, exclusion time duration 1.
+                'excl2_t0': float, exclusion time start 2.
+                'excl2_t': float, exclusion time duration 2.
+            }
         """
 
         self._curves_manager.apply_signal_processing(
@@ -1190,8 +1231,15 @@ class ModelValidator(Validator):
 
         Returns
         -------
-        list
-            Required curves for the validation
+        list of str
+            A list containing the names of the required curves for the validation.
+            These curves are:
+            - "BusPDR_BUS_ActivePower": The active power of the bus.
+            - "BusPDR_BUS_ReactivePower": The reactive power of the bus.
+            - "BusPDR_BUS_ActiveCurrent": The active current of the bus.
+            - "BusPDR_BUS_ReactiveCurrent": The reactive current of the bus.
+            - "BusPDR_BUS_Voltage": The voltage of the bus.
+            - "NetworkFrequencyPu": The network frequency.
         """
         if self._producer.get_zone() == 3:
             return [
