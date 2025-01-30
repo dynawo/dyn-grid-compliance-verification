@@ -57,8 +57,5 @@ class TableFile(FileVariables):
 
         self.complete_parameters(variables_dict, event_params)
 
-        # Modify dyd to add calculated variables
-        replace_placeholders.table_file(
-            working_oc_dir,
-            variables_dict,
-        )
+        # Replace placeholders in the TableInfiniteBus file with the calculated variables
+        replace_placeholders.table_file(working_oc_dir, variables_dict)
