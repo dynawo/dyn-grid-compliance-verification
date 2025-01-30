@@ -184,7 +184,7 @@ class ComtradeReader(CurvesReader):
         rec = Comtrade()
         cfg_files = list(self._path.glob(self._filename + ".[cC][fF][gG]"))
         if cfg_files:
-            cfg_file = next(cfg_files)
+            cfg_file = cfg_files[0]
             dat_file = next(self._path.glob(self._filename + ".[dD][aA][tT]"))
             rec.load(cfg_file.as_posix(), dat_file.as_posix())
             if remove_file:
@@ -193,7 +193,7 @@ class ComtradeReader(CurvesReader):
 
         cff_files = list(self._path.glob(self._filename + ".[cC][fF][fF]"))
         if cff_files:
-            cff_file = next(cff_files)
+            cff_file = cff_files[0]
             rec.load(cff_file.as_posix())
             if remove_file:
                 cff_file.unlink()
@@ -201,7 +201,7 @@ class ComtradeReader(CurvesReader):
         self._analog_channel_ids = rec.analog_channel_ids
         self._time_values = rec.time
         self._analog_values = rec.analog
-        self._frequency_sampling = rec.cfg().sample_rates[-1][0]
+        self._frequency_sampling = rec.cfg.sample_rates[-1][0]
         self._trigger_time = rec.trigger_time
 
 
