@@ -370,7 +370,7 @@ class CurvesManager:
         Parameters
         ----------
         curve: str
-            calculated or reference curves.
+            The type of curves to retrieve. It can be either "calculated" or "reference".
 
         Returns
         -------
@@ -441,7 +441,7 @@ class CurvesManager:
         Returns
         -------
         float
-            Generator Udim.
+            The nominal voltage of the generator.
         """
         return self.__get_producer_curves_generator().get_generator_u_dim()
 
@@ -451,21 +451,21 @@ class CurvesManager:
         jobs_output_dir: Path,
         fault_duration: float,
     ) -> float:
-        """Get the time CCT.
+        """Calculate the critical clearing time (CCT) for a fault.
 
         Parameters
         ----------
         working_oc_dir: Path
-            Working path.
+            Temporal working path
         jobs_output_dir: Path
-            Jobs output path.
+            Simulation output dir
         fault_duration: float
-            Fault duration.
+            Fault duration in seconds
 
         Returns
         -------
         float
-            Time CCT.
+            The critical clearing time (CCT) for the fault.
         """
         return self.__get_producer_curves_generator().get_time_cct(
             working_oc_dir,
@@ -506,7 +506,7 @@ class CurvesManager:
         Returns
         -------
         float
-            Setpoint variation.
+            The variation in the setpoint for the given pcs_bm_oc_name.
         """
         return self.__get_producer_curves_generator().get_setpoint_variation(pcs_bm_oc_name)
 
@@ -516,6 +516,6 @@ class CurvesManager:
         Returns
         -------
         bool
-            True if the reference signals are field measurements.
+            True if the reference signals are field measurements, False otherwise.
         """
         return self.__get_reference_curves_generator().is_field_measurements()

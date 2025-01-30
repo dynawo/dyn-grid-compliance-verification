@@ -1,5 +1,6 @@
 import configparser
 import os
+import re
 import shutil
 import statistics
 from pathlib import Path
@@ -14,7 +15,7 @@ NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
 
 
-def _get_files(path, extensions):
+def _get_files(path: Path, extensions: list) -> list:
     """Get all files in a directory with specified extensions."""
     all_files = []
     for ext in extensions:
@@ -22,13 +23,15 @@ def _get_files(path, extensions):
     return all_files
 
 
-def _create_directory_if_not_exists(directory: Path):
+def _create_directory_if_not_exists(directory: Path) -> None:
     """Create the directory if it does not exist."""
     directory.mkdir(parents=True, exist_ok=True)
 
 
-def _copy_files_from_pipeline(results: Path, target_folder: Path):
-    """Copy the 'curves_calculated.csv' and 'dgcv.log' files from results to target_folder."""
+def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
+    """Copy the 'curves_calculated.csv' and 'dgcv.log' files from results to
+    target_folder and rename them to 'pcs.benchmark.operatingcondition.csv' and
+    'pcs.benchmark.operatingcondition.log'."""
     for file in results.rglob("curves_calculated.csv"):
         relative_path = file.relative_to(results).parent
         target_name = ".".join(str(relative_path).split(os.sep)) + ".csv"
@@ -40,7 +43,7 @@ def _copy_files_from_pipeline(results: Path, target_folder: Path):
         shutil.copy(file, target_folder / target_name)
 
 
-def _create_curves_files_ini_if_not_exists(curves_folder: Path):
+def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
     curves_files = curves_folder / "CurvesFiles.ini"
     if curves_files.exists():
         return
@@ -49,7 +52,8 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path):
     for curves_file in _get_files(
         curves_folder, ["*.[eE][xX][pP]", "*.[cC][sS][vV]", "*.[cC][fF][fF]", "*.[dD][aA][tT]"]
     ):
-        curves_files_content[curves_file.stem] = f"{curves_file.stem}.{curves_file.suffix.lower()}"
+        # Suffix includes the dot
+        curves_files_content[curves_file.stem] = f"{curves_file.stem}{curves_file.suffix.lower()}"
 
     for curves_log in _get_files(curves_folder, ["*.log"]):
         if curves_log not in curves_files_content:
@@ -74,7 +78,7 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path):
         )
 
 
-def _create_dict_file_if_not_exists(csv_file: Path, metadata: dict):
+def _create_dict_file_if_not_exists(csv_file: Path, metadata: dict) -> None:
     """Create a corresponding .dict file for each .csv file if it doesn't exist."""
     dict_file = csv_file.with_suffix(".dict")
     if dict_file.exists():
@@ -111,7 +115,7 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: dict):
                 dict_f.write(f"{header} = {header}\n")
 
 
-def _extract_metadata_from_log(log_file: Path, metadata: dict):
+def _extract_metadata_from_log(log_file: Path, metadata: dict) -> None:
     """Extract and print the sim_t_event_start parameter from the log file."""
     metadata[log_file.stem] = {}
     metadata[log_file.stem]["is_field_measurements"] = False
@@ -128,7 +132,7 @@ def _extract_metadata_from_log(log_file: Path, metadata: dict):
 
 def _apply_noise_to_curves(
     df_imported_curve, noisestd: float, frequency: float, event_time: float, event_duration: float
-):
+) -> None:
     """Apply noise to the curve data. Reduced noise before the event, and after the event, full
     noise in the event."""
 
@@ -163,13 +167,13 @@ def _apply_noise_to_curves(
             t_com = config.get_float("GridCode", "t_com", 0.002)
             resampling_fs = 1 / t_com
             noise = lowpass_filter(
-                np.concat((noise_before, noise_during, noise_after)),
+                np.concatenate((noise_before, noise_during, noise_after)),
                 fc=frequency,
                 fs=resampling_fs,
             )
 
             # Apply the noise
-            df_imported_curve[column] = [a + b for a, b in zip(list_col, noise)]
+            df_imported_curve[column] = np.add(list_col, noise)
 
 
 def _process_curves(
@@ -177,7 +181,7 @@ def _process_curves(
     output_folder: Path,
     noisestd: float,
     frequency: float,
-):
+) -> None:
     """Process the curves in the curves folder and apply noise according to event time."""
     for curves_path in _get_files(
         curves_folder, ["*.[eE][xX][pP]", "*.[cC][sS][vV]", "*.[cC][fF][fF]", "*.[dD][aA][tT]"]
@@ -193,7 +197,7 @@ def _process_curves(
         if importer.config.has_section("Curves-Dictionary"):
             df_imported_curve, _, _, _ = importer.get_curves_dataframe(zone=0, remove_file=False)
 
-            if noisestd is not None and event_time is not None:
+            if noisestd is not None:
                 # Apply noise to the curve based on event time
                 _apply_noise_to_curves(
                     df_imported_curve, noisestd, frequency, event_time, fault_duration
@@ -206,7 +210,7 @@ def _process_curves(
                 filedata = file.read()
 
             for item in importer.config.items("Curves-Dictionary"):
-                filedata = filedata.replace(item[1], item[0])
+                filedata = re.sub(r"\b{}\b".format(re.escape(item[1])), item[0], filedata)
 
             with open(output_folder / f"{curves_path.stem}.dict", "w") as file:
                 file.write(filedata)
@@ -218,7 +222,7 @@ def anonymize(
     frequency: float,
     results: Path = None,
     curves_folder: Path = None,
-):
+) -> None:
     """Creates a set of anonymized curves from the input set of curves.
 
     Parameters
@@ -235,11 +239,11 @@ def anonymize(
         Path of a set of curves
     """
 
-    # In order to copy the pipeline output curves
+    # If no curves_folder is provided, use the output_folder to store the pipeline output curves
     if curves_folder is None:
         curves_folder = output_folder
 
-    # Create curves_folder if it doesn't exist
+    # Create output_folder if it doesn't exist
     _create_directory_if_not_exists(output_folder)
 
     # If results is provided, copy the necessary files

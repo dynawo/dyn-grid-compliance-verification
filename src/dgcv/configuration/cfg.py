@@ -55,7 +55,7 @@ class Config:
         Returns
         -------
         bool
-            True if exists the given key and section, False in otherwise
+            True if exists the given key and section, False otherwise
         """
         return (
             self._user_config.has_option(section, key)
@@ -81,7 +81,7 @@ class Config:
         Returns
         -------
         Optional[str]
-            A string if exists the given key and section, None in otherwise
+            A string if exists the given key and section, None otherwise
         """
         if self._user_config.has_option(section, key):
             return self._user_config.get(section, key)
@@ -106,7 +106,7 @@ class Config:
         Returns
         -------
         int
-            A integer if exists the given key and section, default in otherwise
+            An integer if exists the given key and section, default otherwise
         """
         value = self.get_value(section, key)
         if value is not None:
@@ -128,7 +128,7 @@ class Config:
         Returns
         -------
         float
-            A float if exists the given key and section, default in otherwise
+            A float if exists the given key and section, default otherwise
         """
         value = self.get_value(section, key)
         if value is not None:
@@ -150,7 +150,7 @@ class Config:
         Returns
         -------
         bool
-            A boolean if exists the given key and section, False in otherwise
+            A boolean if exists the given key and section, False otherwise
         """
         value = self.get_value(section, key)
         if value is not None:
@@ -170,7 +170,7 @@ class Config:
         Returns
         -------
         bool
-            A list if exists the given key and section, empty list in otherwise
+            A list if exists the given key and section, empty list otherwise
         """
         value = self.get_value(section, key)
         if value is not None and value != "":
@@ -189,7 +189,7 @@ class Config:
 
         Returns
         -------
-        bool
+        list
             A list of keys of a section that start with a given prefix, empty otherwise
         """
         if self._user_config.has_section(section):

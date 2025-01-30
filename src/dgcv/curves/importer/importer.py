@@ -53,21 +53,53 @@ class CurvesImporter:
         if remove_working_dict:
             dict_file.unlink()
 
+    def __get_curves_dict(self, zone: int) -> dict:
+        curves_dict = {
+            value: key for key, value in self._default_curves.items("Curves-Dictionary")
+        }
+        if zone == 1:
+            curves_dict.update(
+                {
+                    value: key
+                    for key, value in self._default_curves.items("Curves-Dictionary-Zone1")
+                }
+            )
+        elif zone == 3:
+            curves_dict.update(
+                {
+                    value: key
+                    for key, value in self._default_curves.items("Curves-Dictionary-Zone3")
+                }
+            )
+        curves_dict.update(
+            {value: key for key, value in self._curves_cfg.items("Curves-Dictionary")}
+        )
+        return curves_dict
+
     @property
     def config(self) -> configparser.ConfigParser:
         """Get the curves configuration file.
 
         Returns
         -------
-        Path
+        configparser.ConfigParser
             Defined configuration Curves.
         """
         return self._curves_cfg
 
     def get_curves_dataframe(
-        self, zone, remove_file=True
+        self, zone: int, remove_file: bool = True
     ) -> tuple[pd.DataFrame, dict, float, float]:
         """Import a curve file and return its relevant data.
+
+        Parameters
+        ----------
+        zone: int
+            If it is running the Model Validation:
+            * 1: Zone1 (the individual generating unit)
+            * 3: Zone3 (the whole plant)
+        remove_file: bool, optional
+            Whether to remove the file after reading. Default is True.
 
         Returns
         -------
@@ -83,28 +115,7 @@ class CurvesImporter:
 
         """
 
-        if zone == 1:
-            curves_dict = (
-                {value: key for key, value in self._default_curves.items("Curves-Dictionary")}
-                | {
-                    value: key
-                    for key, value in self._default_curves.items("Curves-Dictionary-Zone1")
-                }
-                | {value: key for key, value in self._curves_cfg.items("Curves-Dictionary")}
-            )
-        elif zone == 3:
-            curves_dict = (
-                {value: key for key, value in self._default_curves.items("Curves-Dictionary")}
-                | {
-                    value: key
-                    for key, value in self._default_curves.items("Curves-Dictionary-Zone3")
-                }
-                | {value: key for key, value in self._curves_cfg.items("Curves-Dictionary")}
-            )
-        else:
-            curves_dict = {
-                value: key for key, value in self._default_curves.items("Curves-Dictionary")
-            } | {value: key for key, value in self._curves_cfg.items("Curves-Dictionary")}
+        curves_dict = self.__get_curves_dict(zone)
         df_dict = {}
         if self._curves_cfg.has_option("Curves-Dictionary", "time"):
             time_name = self._curves_cfg.get("Curves-Dictionary", "time")

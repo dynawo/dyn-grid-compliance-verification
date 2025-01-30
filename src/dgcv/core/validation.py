@@ -76,25 +76,25 @@ class Validation:
 
         if parameters.get_sim_type() == ELECTRIC_PERFORMANCE_SM:
             dgcv_logging.get_logger("Validation").info(
-                "Electric Performance Verification for Synchronous Machines"
+                "DGCV Electric Performance Verification for Synchronous Machines"
             )
-            self.__get_validation_pcs(
+            self.__populate_validation_pcs(
                 validation_pcs, "electric_performance_verification_pcs", "performance/SM"
             )
 
         elif parameters.get_sim_type() == ELECTRIC_PERFORMANCE_PPM:
             dgcv_logging.get_logger("Validation").info(
-                "Electric Performance Verification for Power Park Modules"
+                "DGCV Electric Performance Verification for Power Park Modules"
             )
-            self.__get_validation_pcs(
+            self.__populate_validation_pcs(
                 validation_pcs, "electric_performance_ppm_verification_pcs", "performance/PPM"
             )
 
         elif parameters.get_sim_type() == ELECTRIC_PERFORMANCE_BESS:
             dgcv_logging.get_logger("Validation").info(
-                "Electric Performance Verification for Storage"
+                "DGCV Electric Performance Verification for Storage"
             )
-            self.__get_validation_pcs(
+            self.__populate_validation_pcs(
                 validation_pcs, "electric_performance_bess_verification_pcs", "performance/BESS"
             )
 
@@ -102,11 +102,13 @@ class Validation:
             dgcv_logging.get_logger("Validation").info(
                 "DGCV Model Validation for Power Park Modules"
             )
-            self.__get_validation_pcs(validation_pcs, "model_ppm_validation_pcs", "model/PPM")
+            self.__populate_validation_pcs(validation_pcs, "model_ppm_validation_pcs", "model/PPM")
 
         elif parameters.get_sim_type() == MODEL_VALIDATION_BESS:
             dgcv_logging.get_logger("Validation").info("DGCV Model Validation for Storage")
-            self.__get_validation_pcs(validation_pcs, "model_bess_validation_pcs", "model/BESS")
+            self.__populate_validation_pcs(
+                validation_pcs, "model_bess_validation_pcs", "model/BESS"
+            )
 
         self._validation_pcs = validation_pcs
 
@@ -114,7 +116,7 @@ class Validation:
         pcs_list = [Pcs(pcs_name, parameters) for pcs_name in self._validation_pcs]
         self._pcs_list = sorted(pcs_list, key=attrgetter("_id", "_zone"))
 
-    def __get_validation_pcs(
+    def __populate_validation_pcs(
         self, validation_pcs: set, validation_key: str, validation_path: str
     ) -> None:
         tool_path = Path(__file__).resolve().parent.parent
@@ -164,7 +166,7 @@ class Validation:
                 dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
             else:
                 dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
-            exit(1)
+            sys.exit(1)
 
         for pcs_results in report_results.values():
             pcs = pcs_results["pcs"]
@@ -209,18 +211,27 @@ class Validation:
         summary_list = []
         report_results = {}
         for pcs in self._pcs_list:
-            if not pcs.is_valid():
-                dgcv_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
-                continue
+            try:
+                if not pcs.is_valid():
+                    dgcv_logging.get_logger("Validation").error(
+                        f"{pcs.get_name()} is not a valid PCS"
+                    )
+                    continue
 
-            report_name, success, pcs_results = pcs.validate(
-                summary_list,
-            )
-            pcs_results["pcs"] = pcs
-            pcs_results["sim_type"] = self._parameters.get_sim_type()
-            pcs_results["success"] = success
-            pcs_results["report_name"] = report_name
-            report_results[pcs.get_name()] = pcs_results
+                report_name, success, pcs_results = pcs.validate(
+                    summary_list,
+                )
+                pcs_results["pcs"] = pcs
+                pcs_results["sim_type"] = self._parameters.get_sim_type()
+                pcs_results["success"] = success
+                pcs_results["report_name"] = report_name
+                report_results[pcs.get_name()] = pcs_results
+            except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
+                if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
+                    dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
+                else:
+                    dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
+                sys.exit(1)
 
         # Create the pcs report
         if not is_test_validation:
@@ -232,12 +243,19 @@ class Validation:
                 self._parameters.get_output_dir(),
             )
 
-            _open_document(
+            report_file = (
                 self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
             )
+            if report_file.exists():
+                _open_document(report_file)
+            else:
+                dgcv_logging.get_logger("Validation").warning(
+                    f"Report file does not exist: {report_file}"
+                )
 
-        # Remove temporal files
-        if dgcv_logging.getEffectiveLevel() != logging.DEBUG or is_test_validation:
-            manage_files.remove_dir(self._parameters.get_working_dir())
+        compliance_list = list(map(operator.attrgetter("compliance"), summary_list))
+        if dgcv_logging.getEffectiveLevel() == logging.DEBUG and not is_test_validation:
+            return compliance_list
 
-        return list(map(operator.attrgetter("compliance"), summary_list))
+        manage_files.remove_dir(self._parameters.get_working_dir())
+        return compliance_list

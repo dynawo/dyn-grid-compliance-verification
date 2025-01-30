@@ -24,14 +24,12 @@ from dgcv.model.producer import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dgcv.validation import sanity_checks
 
 
-def _compile_dynawo_models(dwo_launcher: Path, dynawo_model: str, force: bool) -> int:
+def _compile_dynawo_models(dwo_launcher: Path, dynawo_model: str, force: bool) -> None:
     prepare_tool.precompile(dwo_launcher, dynawo_model, force=force)
-    return 0
 
 
-def _generate_input(dwo_launcher: Path, target: Path, topology: str, validation: str) -> int:
+def _generate_input(dwo_launcher: Path, target: Path, topology: str, validation: str) -> None:
     create_input_template(dwo_launcher, target, topology, validation)
-    return 0
 
 
 def _performance_verification(
@@ -50,7 +48,7 @@ def _performance_verification(
         user_pcs,
         output_dir,
         only_dtr,
-        sim_type=ELECTRIC_PERFORMANCE,
+        verification_type=ELECTRIC_PERFORMANCE,
     )
 
     if ep.is_valid():
@@ -81,7 +79,7 @@ def _model_validation(
         user_pcs,
         output_dir,
         only_dtr,
-        sim_type=MODEL_VALIDATION,
+        verification_type=MODEL_VALIDATION,
     )
 
     if not ep.is_complete():
@@ -349,9 +347,7 @@ def _get_dwo_launcher(args: argparse.Namespace, dwo_launcher_name: str) -> Path:
     return dwo_launcher
 
 
-def _execute_anonymize(
-    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+def _execute_anonymize(p: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     if args.producer_curves is None and args.results_path is None:
         p.error(
             "Missing arguments.\nFor the anonymize command, the producer_curves or the "
@@ -385,21 +381,22 @@ def _execute_compile(
     else:
         dynawo_model = args.dynawo_model
 
-    r = _compile_dynawo_models(dwo_launcher, dynawo_model, args.force)
-    if r != 0:
-        p.print_help()
+    _compile_dynawo_models(dwo_launcher, dynawo_model, args.force)
 
 
 def _execute_generate(
     p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
 ) -> None:
+    if args.output_dir is None or args.topology is None or args.validation is None:
+        p.error("Missing arguments.\nTry 'dgcv generate -h' for more information.")
+        p.print_help()
+        return
+
     output_dir = Path(args.output_dir)
     topology = args.topology
     validation = args.validation
 
-    r = _generate_input(dwo_launcher, output_dir, topology, validation)
-    if r != 0:
-        p.print_help()
+    _generate_input(dwo_launcher, output_dir, topology, validation)
 
 
 def _execute_performance(
@@ -519,4 +516,4 @@ def dgcv() -> None:
         _execute_performance(p, args, dwo_launcher)
 
     elif args.command == "anonymize":
-        _execute_anonymize(p, args, dwo_launcher)
+        _execute_anonymize(p, args)

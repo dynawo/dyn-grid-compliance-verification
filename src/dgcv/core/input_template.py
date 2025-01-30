@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+
 from pathlib import Path
 
 from dgcv.configuration.cfg import config
@@ -13,7 +23,7 @@ def _copy_input_templates(target: Path, template: str) -> None:
     input_templates_path = config.get_value("Global", "input_templates_path")
     if template == "performance_SM":
         manage_files.copy_path(Path(input_templates_path) / "performance/SM", target)
-    elif template == "performance_PPM" or template == "performance_BESS":
+    elif template in ["performance_PPM", "performance_BESS"]:
         manage_files.copy_path(Path(input_templates_path) / "performance/PPM", target)
     elif template.startswith("model"):
         manage_files.copy_path(Path(input_templates_path) / "model", target)
@@ -23,41 +33,34 @@ def _create_dyd_template(target: Path, topology: str, template: str) -> None:
     dgcv_logging.get_logger("Create input files").info(f"Creating the input DYD file in {target}.")
     create_producer_dyd_file(target, topology, template)
     input(
-        "Edit the Producer.dyd file is necessary to complete each equipment in the "
-        "model with a dynamic model. Press Enter when finishing editing."
+        "Edit Producer.dyd to complete each equipment with a dynamic model. Press Enter when done."
     )
     while not check_dynamic_models(target, template):
         input(
-            "Edit the Producer.dyd file is necessary to complete each equipment in the "
-            "model with a dynamic model. Press Enter when finishing editing."
+            "Edit Producer.dyd is necessary to complete each equipment  with a dynamic model."
+            "Press Enter when done."
         )
 
 
 def _create_par_template(launcher_dwo: Path, target: Path, topology: str, template: str) -> None:
     dgcv_logging.get_logger("Create input files").info(f"Creating the input PAR file in {target}.")
     create_producer_par_file(launcher_dwo, target, template)
-    input(
-        "Edit the Producer.par file is necessary to complete each parameter with a "
-        "value. Press Enter when finishing editing."
-    )
+    input("Edit Producer.par to complete each parameter with a value. Press Enter when done.")
     while not check_parameters(target, template):
         input(
-            "Edit the Producer.par file is necessary to complete each parameter with a "
-            "value. Press Enter when finishing editing."
+            "Edit Producer.par is necessary to complete each parameter with a value."
+            "Press Enter when done."
         )
 
 
 def _create_ini_template(target: Path, topology: str, template: str) -> None:
     dgcv_logging.get_logger("Create input files").info(f"Creating the input INI file in {target}.")
     create_producer_ini_file(target, topology, template)
-    input(
-        "Edit the Producer.ini file is necessary to complete each parameter with a "
-        "value. Press Enter when finishing editing."
-    )
+    input("Edit Producer.ini to complete each parameter with a value. Press Enter when done.")
     while not check_ini_parameters(target, template):
         input(
-            "Edit the Producer.ini file is necessary to complete each parameter with a "
-            "value. Press Enter when finishing editing."
+            "Edit Producer.ini is necessary to complete each parameter with a value."
+            "Press Enter when done."
         )
 
 
@@ -68,13 +71,13 @@ def _create_curves_template(target: Path, topology: str, template: str) -> None:
     )
     create_producer_curves(target, ref_target, template)
     input(
-        "Edit the CurvesFiles.ini file is necessary to complete each parameter with a "
-        "curves file. Press Enter when finishing editing."
+        "Edit CurvesFiles.ini to complete each parameter with a curves file. Press Enter when "
+        "done."
     )
     while not check_curves(ref_target):
         input(
-            "Edit the CurvesFiles.ini file is necessary to complete each parameter with a "
-            "curves file. Press Enter when finishing editing."
+            "Edit CurvesFiles.ini is necessary to complete each parameter with a curves file."
+            "Press Enter when done."
         )
 
 
