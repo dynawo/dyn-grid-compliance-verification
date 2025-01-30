@@ -89,7 +89,7 @@ def get_reference(
 
     Returns
     -------
-    ProducerCurves
+    ImportedCurves
         Object for obtaining reference curves, these must be imported from files.
     """
     return ImportedCurves(parameters)
