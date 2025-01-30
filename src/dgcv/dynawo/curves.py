@@ -723,7 +723,7 @@ class DynawoCurves(ProducerCurves):
         jobs_output_dir: Path,
         fault_duration: float,
     ) -> float:
-        """Find by bisection the maximum time fault.
+        """Find by bisection the critical clearing time (CCT) for a fault.
 
         Parameters
         ----------
@@ -737,7 +737,7 @@ class DynawoCurves(ProducerCurves):
         Returns
         -------
         float
-            Maximum time fault
+            The critical clearing time (CCT) for the fault.
         """
 
         # The range to work is defined from the configured time to the
@@ -931,12 +931,12 @@ class DynawoCurves(ProducerCurves):
         )
 
     def get_generators_imax(self) -> dict:
-        """Get maximum continuous current.
+        """Get the maximum current (Imax) for each generator.
 
         Returns
         -------
         dict
-            Get maximum continuous current by generator.
+            Maximum continuous current by generator.
         """
         generators_imax = {}
         for generator in self.get_producer().generators:
