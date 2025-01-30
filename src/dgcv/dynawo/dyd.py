@@ -29,7 +29,7 @@ class DydFile(FileVariables):
         )
 
     def complete_file(self, working_oc_dir: Path, event_params: dict) -> None:
-        """Replace the file placeholders with the corresponding values.
+        """Complete the DYD file by replacing the placeholders with the corresponding values.
 
         Parameters
         ----------
@@ -40,7 +40,7 @@ class DydFile(FileVariables):
         """
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.dyd")
 
-        if event_params["connect_to"]:
+        if event_params.get("connect_to"):
             connect_event_to = dynawo_translator.get_dynawo_variable(
                 self._dynawo_curves.get_producer().generators[0].lib, event_params["connect_to"]
             )
@@ -50,4 +50,6 @@ class DydFile(FileVariables):
         self.complete_parameters(variables_dict, event_params)
 
         # Modify dyd to add calculated variables
+        # This includes replacing placeholders in the DYD file with the actual values
+        # from the variables_dict, such as generator_id and connection_event.
         replace_placeholders.dyd_file(working_oc_dir, "TSOModel.dyd", variables_dict)

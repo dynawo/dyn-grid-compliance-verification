@@ -2,36 +2,27 @@ import configparser
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
+from typing import Optional
+
+from dgcv.model.parameters import Gen_params
 
 # TODO: remove generator types ("WTG", "WT", "Photovoltaics", etc. ==> we'll need
 #       entries in the master dictionary).
 #       The same goes for generator families ("IEC", "Wecc").
 #
-
-
-def get_generator_family_level(generator):
-    family = ""
-    level = ""
-    if "Wecc" in generator.lib:
-        family = "WECC"
-        if "WTG" in generator.lib:
-            level = "Plant"
-        elif "WT" in generator.lib:
-            level = "Turbine"
-        elif "Photovoltaics" in generator.lib:
-            level = "Plant"
-        elif "BESS" in generator.lib:
-            level = "Plant"
-            if "NoPlantControl" in generator.lib:
-                level = "Turbine"
-    elif "IEC" in generator.lib:
-        family = "IEC"
-        if "IECWPP" in generator.lib:
-            level = "Plant"
-        elif "IECWT" in generator.lib:
-            level = "Turbine"
-    return family, level
+FAMILY_LEVEL_MAP = {
+    "Wecc": {
+        "family": "WECC",
+        "types": {
+            "WTG": "Plant",
+            "WT": "Turbine",
+            "Photovoltaics": "Plant",
+            "BESS": "Plant",
+            "NoPlantControl": "Turbine",
+        },
+    },
+    "IEC": {"family": "IEC", "types": {"IECWPP": "Plant", "IECWT": "Turbine"}},
+}
 
 
 def _load_dictionary(filename: str, variables: configparser.ConfigParser):
@@ -49,7 +40,7 @@ def _load_dictionary(filename: str, variables: configparser.ConfigParser):
         variables.read(config_dir / filename)
 
 
-def _is_valid_control_mode_paremeters(generator_parameters: dict, valid_parameters: dict):
+def _is_valid_control_mode_parameters(generator_parameters: dict, valid_parameters: dict):
     for parameter_name in valid_parameters.keys():
         if (
             parameter_name not in generator_parameters
@@ -59,6 +50,32 @@ def _is_valid_control_mode_paremeters(generator_parameters: dict, valid_paramete
             return False
 
     return True
+
+
+def get_generator_family_level(generator: Gen_params) -> tuple[str, str]:
+    """ "Get the family and level of a generator.
+
+    Parameters
+    ----------
+    generator: Gen_params
+        Generator parameters
+
+    Returns
+    -------
+    str
+        Generator family
+    str
+        generator level
+    """
+
+    for key, value in FAMILY_LEVEL_MAP.items():
+        if key in generator.lib:
+            family = value["family"]
+            for type_key, level in value["types"].items():
+                if type_key in generator.lib:
+                    return family, level
+            return family, ""
+    return "", ""
 
 
 @dataclass(frozen=True)
@@ -74,7 +91,9 @@ class Translator:
     _transformer: configparser.ConfigParser
     _control_modes: configparser.ConfigParser
 
-    def _get_control_modes_by_generator(self, generator, generator_control_mode) -> list:
+    def _get_control_modes_by_generator(
+        self, generator: Gen_params, generator_control_mode: str
+    ) -> list:
         """Get a list of valid control modes by generator and control mode name.
 
         Returns
@@ -89,7 +108,7 @@ class Translator:
         else:
             return list()
 
-    def _get_control_mode_parameters(self, control_mode):
+    def _get_control_mode_parameters(self, control_mode: str) -> dict:
         parameters = self._control_modes.options(control_mode)
         valid_parameters = {}
         for parameter in parameters:
@@ -97,7 +116,7 @@ class Translator:
 
         return valid_parameters
 
-    def get_dynawo_variable(self, lib: str, name: str) -> Union[str, None]:
+    def get_dynawo_variable(self, lib: str, name: str) -> Optional[str]:
         """Get the Dynawo variable name for a tool variable name.
 
         Parameters
@@ -131,7 +150,7 @@ class Translator:
 
         return None
 
-    def get_curve_variable(self, id: str, lib: str, name: str) -> Union[str, None]:
+    def get_curve_variable(self, id: str, lib: str, name: str) -> Optional[str]:
         """Get the Dynawo curve name for a equipment.
 
         Parameters
@@ -245,7 +264,7 @@ class Translator:
         return self._get_control_mode_parameters(control_mode)
 
     def is_valid_control_mode(
-        self, generator, generator_control_mode: str, generator_parameters: dict
+        self, generator: Gen_params, generator_control_mode: str, generator_parameters: dict
     ) -> bool:
 
         valid_control_modes = self._get_control_modes_by_generator(
@@ -253,7 +272,7 @@ class Translator:
         )
         for control_mode in valid_control_modes:
             valid_parameters = self._get_control_mode_parameters(control_mode)
-            if _is_valid_control_mode_paremeters(generator_parameters, valid_parameters):
+            if _is_valid_control_mode_parameters(generator_parameters, valid_parameters):
                 return True
 
         return False
