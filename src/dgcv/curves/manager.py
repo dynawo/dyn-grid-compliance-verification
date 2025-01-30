@@ -370,7 +370,7 @@ class CurvesManager:
         Parameters
         ----------
         curve: str
-            calculated or reference curves.
+            The type of curves to retrieve. It can be either "calculated" or "reference".
 
         Returns
         -------
@@ -441,7 +441,7 @@ class CurvesManager:
         Returns
         -------
         float
-            Generator Udim.
+            The nominal voltage of the generator.
         """
         return self.__get_producer_curves_generator().get_generator_u_dim()
 
@@ -506,7 +506,7 @@ class CurvesManager:
         Returns
         -------
         float
-            Setpoint variation.
+            The variation in the setpoint for the given pcs_bm_oc_name.
         """
         return self.__get_producer_curves_generator().get_setpoint_variation(pcs_bm_oc_name)
 
@@ -516,6 +516,6 @@ class CurvesManager:
         Returns
         -------
         bool
-            True if the reference signals are field measurements.
+            True if the reference signals are field measurements, False otherwise.
         """
         return self.__get_reference_curves_generator().is_field_measurements()
