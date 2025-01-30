@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from dgcv.core.execution_parameters import Parameters
 from dgcv.curves.manager import CurvesManager
 from dgcv.model.parameters import Disconnection_Model
 from dgcv.validation import compliance_list
@@ -18,7 +19,11 @@ from dgcv.validation import compliance_list
 
 class Validator:
     def __init__(
-        self, curves_manager: CurvesManager, validations: list, is_field_measurements: bool
+        self,
+        curves_manager: CurvesManager,
+        parameters: Parameters,
+        validations: list,
+        is_field_measurements: bool,
     ):
         self._curves_manager = curves_manager
         self._time_cct = None
@@ -27,6 +32,7 @@ class Validator:
         self._setpoint_variation = 0.0
         self._validations = validations
         self._is_field_measurements = is_field_measurements
+        self._producer = parameters.get_producer()
 
     def _get_calculated_curves(self) -> dict:
         return self._curves_manager.get_curves("calculated")
@@ -37,7 +43,7 @@ class Validator:
     def _get_calculated_curve_by_name(self, name: str) -> pd.DataFrame:
         curves = self._get_calculated_curves()
         if name not in curves.keys():
-            return None
+            return pd.DataFrame()
 
         return curves[name]
 
@@ -62,7 +68,7 @@ class Validator:
         bool
             True if the validator has validations.
         """
-        return self._validations
+        return bool(self._validations)
 
     def get_sim_type(self) -> int:
         """Gets the type of validation executed.
@@ -176,9 +182,34 @@ class Validator:
         event_params: dict,
         fs: float,
     ) -> dict:
-        """Virtual method"""
+        """Validate the simulation results.
+
+        Parameters
+        ----------
+        oc_name: str
+            Operating condition name.
+        working_path: Path
+            Working path.
+        sim_output_path: str
+            Simulator output path.
+        event_params: dict
+            Event parameters
+        fs: float
+            Frequency sampling.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the compliance results.
+        """
         pass
 
     def get_measurement_names(self) -> list:
-        """Virtual method"""
+        """Get the list of required curves for the validation
+
+        Returns
+        -------
+        list
+            Required curves for the validation
+        """
         pass

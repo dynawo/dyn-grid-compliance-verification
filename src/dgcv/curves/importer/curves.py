@@ -161,7 +161,7 @@ class ImportedCurves(ProducerCurves):
         oc_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
-        """Read the reference curves.
+        """Obtain the reference curves.
 
         Parameters
         ----------
@@ -269,12 +269,12 @@ class ImportedCurves(ProducerCurves):
         )
 
     def get_generators_imax(self) -> dict:
-        """Get maximum continuous current.
+        """Get the maximum current (Imax) for each generator.
 
         Returns
         -------
         dict
-            Get maximum continuous current by generator.
+            Maximum continuous current by generator.
         """
         return self._generators_imax
 
