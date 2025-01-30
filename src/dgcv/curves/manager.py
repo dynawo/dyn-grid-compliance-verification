@@ -451,21 +451,21 @@ class CurvesManager:
         jobs_output_dir: Path,
         fault_duration: float,
     ) -> float:
-        """Get the time CCT.
+        """Calculate the critical clearing time (CCT) for a fault.
 
         Parameters
         ----------
         working_oc_dir: Path
-            Working path.
+            Temporal working path
         jobs_output_dir: Path
-            Jobs output path.
+            Simulation output dir
         fault_duration: float
-            Fault duration.
+            Fault duration in seconds
 
         Returns
         -------
         float
-            Time CCT.
+            The critical clearing time (CCT) for the fault.
         """
         return self.__get_producer_curves_generator().get_time_cct(
             working_oc_dir,
