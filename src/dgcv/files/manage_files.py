@@ -303,6 +303,7 @@ def copy_base_curves_files(
     if not curves_dir.exists():
         return False
 
+    file_copied = False
     try:
         if (curves_dir / "CurvesFiles.ini").exists():
             shutil.copy(curves_dir / "CurvesFiles.ini", target_path)
@@ -310,16 +311,16 @@ def copy_base_curves_files(
             curves_cfg = configparser.ConfigParser()
             curves_cfg.read(curves_dir / "CurvesFiles.ini")
 
-            if not curves_cfg.has_option("Curves-Files", prefix_name):
-                return False
+            if curves_cfg.has_option("Curves-Files", prefix_name):
+                curves_filename = curves_cfg.get("Curves-Files", prefix_name)
+                curves_file = curves_dir / curves_filename
+                if curves_file.exists():
+                    shutil.copy(
+                        curves_file, target_path / (prefix_name + curves_file.suffix.lower())
+                    )
+                    file_copied = True
 
-            curves_filename = curves_cfg.get("Curves-Files", prefix_name)
-            curves_file = curves_dir / curves_filename
-            if not curves_file.exists():
-                return False
-
-            shutil.copy(curves_file, target_path / (prefix_name + curves_file.suffix.lower()))
-        else:
+        if not file_copied:
             for file in curves_dir.glob(prefix_name + ".*"):
                 shutil.copy(file, target_path / (prefix_name + file.suffix.lower()))
 

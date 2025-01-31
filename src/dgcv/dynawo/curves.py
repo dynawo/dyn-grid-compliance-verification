@@ -123,7 +123,7 @@ class DynawoCurves(ProducerCurves):
         file_formatter = config.get_value("Global", "file_formatter")
         file_max_bytes = config.get_int("Global", "file_log_max_bytes", 50 * 1024 * 1024)
         if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-            file_log_level = "DEBUG"
+            file_log_level = logging.DEBUG
         self._logger.init_handlers(
             file_log_level,
             file_formatter,
@@ -154,7 +154,7 @@ class DynawoCurves(ProducerCurves):
         reference_event_start_time: float,
     ) -> dict:
 
-        self.__log("Model definition:")
+        self.__log(f"Model definition for '{get_cfg_oc_name(pcs_bm_name, oc_name)}':")
 
         # Read the load parameters in the TSO network, if exists
         self._rte_loads = model_parameters.get_pcs_load_params(
@@ -178,16 +178,10 @@ class DynawoCurves(ProducerCurves):
                 line_xpu,
             )
 
-            # In order to implement the fault of the PCS_RTE-I4, the line with
+            # In order to implement the fault in a line, the line with
             #  the fault is divided into two lines in series, but for calculation
             #  purposes it must be taken into account as a single line.
-
-            # TODO: Fix this in a more elegant way
-            if (
-                "PCS_RTE-I4.ThreePhaseFault" in pcs_bm_name
-                or "PCS_RTE-I5.ThreePhaseFault" in pcs_bm_name
-                or "PCS_RTE-I16z3.ThreePhaseFault" in pcs_bm_name
-            ):
+            if self.__is_specific_fault(pcs_bm_name):
                 line = rte_lines[0]
                 lines = [line, line, line, line]
             else:
@@ -234,12 +228,15 @@ class DynawoCurves(ProducerCurves):
         )
         self._gens = gens
 
-        self.__log("Event definition:")
+        self.__log(f"Event definition for '{get_cfg_oc_name(pcs_bm_name, oc_name)}':")
         event_params = self.__get_event_parameters(
             pcs_bm_name,
             oc_name,
         )
-        if reference_event_start_time and event_params["start_time"] != reference_event_start_time:
+        if (
+            reference_event_start_time is not None
+            and event_params["start_time"] != reference_event_start_time
+        ):
             dgcv_logging.get_logger("ProducerCurves").warning(
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
@@ -299,6 +296,14 @@ class DynawoCurves(ProducerCurves):
             control_mode,
         )
         return event_params
+
+    def __is_specific_fault(self, pcs_bm_name: str) -> bool:
+        specific_faults = [
+            "PCS_RTE-I4.ThreePhaseFault",
+            "PCS_RTE-I5.ThreePhaseFault",
+            "PCS_RTE-I16z3.ThreePhaseFault",
+        ]
+        return any(fault in pcs_bm_name for fault in specific_faults)
 
     def __get_event_parameters(
         self,
@@ -401,7 +406,8 @@ class DynawoCurves(ProducerCurves):
             line_xpu = 0
             line_rpu = 0
 
-        self._line_Xpu = line_xpu
+        self.complete_unit_characteristics(line_xpu)
+
         return (
             line_rpu,
             line_xpu,
@@ -419,24 +425,24 @@ class DynawoCurves(ProducerCurves):
         self.__log(f"\tpdr_U={pdr_u}")
 
         ini_pdr_p = model_parameters.extract_defined_value(
-            pdr_p, "pmax", self.get_producer().p_max_pu * -1
+            pdr_p, "Pmax", self.get_producer().p_max_pu * -1
         )
 
         if "Qmin" in pdr_q:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "qmin", self.get_producer().q_min_pu
+                pdr_q, "Qmin", self.get_producer().q_min_pu
             )
         elif "Qmax" in pdr_q:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "qmax", self.get_producer().q_max_pu
+                pdr_q, "Qmax", self.get_producer().q_max_pu
             )
         else:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "pmax", self.get_producer().p_max_pu * -1
+                pdr_q, "Pmax", self.get_producer().p_max_pu * -1
             )
 
         ini_pdr_u = (
-            model_parameters.extract_defined_value(pdr_u, "udim", u_dim)
+            model_parameters.extract_defined_value(pdr_u, "Udim", u_dim)
             / self.get_producer().u_nom
         )
         return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q))
@@ -452,42 +458,22 @@ class DynawoCurves(ProducerCurves):
         return model_parameters.get_grid_load(self._init_loads)
 
     def __complete_loads(self, config_section: str, u_dim: float) -> list:
+        def __get_value(param, default_key, default_value):
+            try:
+                return float(param)
+            except ValueError:
+                cfg_value = config.get_value(config_section, param)
+                self.__log(f"\t{param}={cfg_value}")
+                return model_parameters.extract_defined_value(
+                    cfg_value, default_key, default_value
+                )
+
         loads = []
         for load in self._rte_loads:
-            try:
-                p = float(load.P)
-            except ValueError:
-                p_cfg = config.get_value(config_section, load.P)
-                self.__log(f"\t{load.P}={p_cfg}")
-                p = model_parameters.extract_defined_value(
-                    p_cfg, "pmax", self.get_producer().p_max_pu
-                )
-
-            try:
-                q = float(load.Q)
-            except ValueError:
-                q_cfg = config.get_value(config_section, load.Q)
-                self.__log(f"\t{load.Q}={q_cfg}")
-                q = model_parameters.extract_defined_value(
-                    q_cfg, "pmax", self.get_producer().p_max_pu
-                )
-
-            try:
-                u = float(load.U)
-            except ValueError:
-                u_cfg = config.get_value(config_section, load.U)
-                self.__log(f"\t{load.U}={u_cfg}")
-                u = (
-                    model_parameters.extract_defined_value(u_cfg, "udim", u_dim)
-                    / self.get_producer().u_nom
-                )
-
-            try:
-                uphase = float(load.UPhase)
-            except ValueError:
-                uphase_cfg = config.get_value(config_section, load.UPhase)
-                self.__log(f"\t{load.UPhase}={uphase_cfg}")
-                uphase = model_parameters.extract_defined_value(uphase_cfg, "NA", 1.0)
+            p = __get_value(load.P, "pmax", self.get_producer().p_max_pu)
+            q = __get_value(load.Q, "pmax", self.get_producer().p_max_pu)
+            u = __get_value(load.U, "udim", u_dim) / self.get_producer().u_nom
+            uphase = __get_value(load.UPhase, "NA", 1.0)
 
             loads.append(Load_init(load.id, "", p, q, u, uphase))
 
@@ -500,7 +486,7 @@ class DynawoCurves(ProducerCurves):
         fault_duration: float,
         fault_xpu: float,
         fault_rpu: float,
-    ) -> bool:
+    ) -> None:
         if self.get_producer().get_zone() != 1:
             return
 
@@ -517,7 +503,7 @@ class DynawoCurves(ProducerCurves):
         output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
-    ):
+    ) -> tuple[bool, str, bool, pd.DataFrame]:
         # Run Dynawo
         success, log, has_error, curves_calculated = dynawo.run_base_dynawo(
             self._launcher_dwo,
@@ -550,10 +536,12 @@ class DynawoCurves(ProducerCurves):
 
         max_val = 1
         min_val = 0.000001
-        fault_xpu = round(((max_val + min_val) / 2), 4)
-        run_dynawo = True
-        last_fault_xpu = fault_xpu
-        while run_dynawo:
+        incomplete_bisection = True
+        last_fault_xpu = 0
+        working_oc_dirs_to_remove = []
+        while incomplete_bisection:
+            fault_xpu = round(((max_val + min_val) / 2), 4)
+
             now = datetime.now()
             working_oc_dir_fault = manage_files.clone_as_subdirectory(
                 working_oc_dir, "fault_time_execution_" + now.strftime("%Y%m%d%H%M%S%f")
@@ -573,8 +561,8 @@ class DynawoCurves(ProducerCurves):
 
             (
                 success,
-                log,
-                has_dynawo_curves,
+                _,
+                _,
                 curves_calculated,
             ) = self.__execute_dynawo(
                 output_dir,
@@ -598,7 +586,7 @@ class DynawoCurves(ProducerCurves):
                 last_fault_xpu = fault_xpu
 
             if dgcv_logging.getEffectiveLevel() != logging.DEBUG:
-                manage_files.remove_dir(working_oc_dir_fault)
+                working_oc_dirs_to_remove.append(working_oc_dir_fault)
             else:
                 if success:
                     manage_files.rename_dir(
@@ -614,12 +602,16 @@ class DynawoCurves(ProducerCurves):
             elif voltage_dip == -1:
                 max_val = fault_xpu
             else:
-                run_dynawo = False
+                incomplete_bisection = False
 
-            fault_xpu = round(((max_val + min_val) / 2), 4)
-            if round(max_val - min_val, 4) <= 0.0001:
-                run_dynawo = False
+            if self.__is_bisection_complete(max_val, min_val):
+                incomplete_bisection = False
 
+        # Remove all bisection directories
+        for dir_to_remove in working_oc_dirs_to_remove:
+            manage_files.remove_dir(dir_to_remove)
+
+        # Recover the last successful fault values
         if fault_r_factor == 0.0:
             last_fault_rpu = 0
         else:
@@ -717,6 +709,23 @@ class DynawoCurves(ProducerCurves):
 
         return steady_state
 
+    def __is_bisection_complete(self, max_val: float, min_val: float) -> bool:
+        """Check if the bisection method is complete.
+
+        Parameters
+        ----------
+        max_val: float
+            Maximum value in the bisection method.
+        min_val: float
+            Minimum value in the bisection method.
+
+        Returns
+        -------
+        bool
+            True if the bisection method is complete, False otherwise.
+        """
+        return round(max_val - min_val, 4) <= 0.0001
+
     def get_time_cct(
         self,
         working_oc_dir: Path,
@@ -765,6 +774,7 @@ class DynawoCurves(ProducerCurves):
         time = round(((max_val + min_val) / 2), 4)
         counter = 0
         find = False
+        working_oc_dirs_to_remove = []
         while not find:
             dgcv_logging.get_logger("Operating Condition").debug(
                 "Attempt " + str(counter) + " to find clear time. Used fault time: " + str(time)
@@ -786,7 +796,7 @@ class DynawoCurves(ProducerCurves):
                 max_val = time
 
             if dgcv_logging.getEffectiveLevel() != logging.DEBUG:
-                manage_files.remove_dir(working_oc_dir_fault)
+                working_oc_dirs_to_remove.append(working_oc_dir_fault)
             else:
                 if steady_state:
                     manage_files.rename_dir(
@@ -799,10 +809,14 @@ class DynawoCurves(ProducerCurves):
 
             time = round(((max_val + min_val) / 2), 4)
 
-            if round(max_val - min_val, 4) <= 0.0001:
+            if self.__is_bisection_complete(max_val, min_val):
                 find = True
 
             counter += 1
+
+        # Remove all bisection directories
+        for dir_to_remove in working_oc_dirs_to_remove:
+            manage_files.remove_dir(dir_to_remove)
 
         return time
 

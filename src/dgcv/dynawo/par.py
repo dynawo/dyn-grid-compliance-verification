@@ -65,10 +65,10 @@ class ParFile(FileVariables):
         variables_dict["line_XPu"] = line_xpu
         variables_dict["line_RPu"] = line_rpu
 
-        variables_dict["infiniteBus_U0Pu"] = rte_gen.U0
+        variables_dict["infiniteBus_U0Pu"] = rte_gen.U0  # Intentional use of rte_gen.U0
         variables_dict["gen_P0Pu"] = rte_gen.P0
         variables_dict["gen_Q0Pu"] = rte_gen.Q0
-        variables_dict["gen_U0Pu"] = rte_gen.U0
+        variables_dict["gen_U0Pu"] = rte_gen.U0  # Intentional use of rte_gen.U0
         variables_dict["gen_UPhase0"] = rte_gen.UPhase0
 
         variables_dict["event_start"] = event_params["start_time"]
@@ -78,9 +78,5 @@ class ParFile(FileVariables):
 
         self.complete_parameters(variables_dict, event_params)
 
-        # Modify par to add calculated variables
-        replace_placeholders.par_file(
-            working_oc_dir,
-            "TSOModel.par",
-            variables_dict,
-        )
+        # Replace placeholders in the PAR file with the calculated variables
+        replace_placeholders.par_file(working_oc_dir, "TSOModel.par", variables_dict)

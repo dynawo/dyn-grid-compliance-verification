@@ -88,10 +88,21 @@ class ProducerCurves:
         # Return the value from unit characteristics or the value definition itself if not found
         return unit_characteristics.get(value_definition, value_definition)
 
+    def complete_unit_characteristics(self, line_Xpu: float) -> None:
+        """Complete the parameters used as unit characteristics.
+
+        Parameters
+        ----------
+        line_Xpu: float
+            Line reactance in per unit.
+        """
+        self._line_Xpu = line_Xpu
+
     def get_unit_characteristics(self) -> dict[str, float]:
         """Get a set of unit characteristics.
 
         Returns
+        -------
         dict[str, float]
             set of unit characteristics.
         """
