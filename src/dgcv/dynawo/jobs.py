@@ -50,5 +50,5 @@ class JobsFile(FileVariables):
 
         self.complete_parameters(variables_dict, event_params)
 
-        # Replace placeholders in job file
+        # Replace placeholders in JOBS file
         replace_placeholders.jobs_file(working_oc_dir, "TSOModel.jobs", variables_dict)
