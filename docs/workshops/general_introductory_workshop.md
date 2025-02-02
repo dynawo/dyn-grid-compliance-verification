@@ -10,8 +10,8 @@
 
 
 ## General presentation (RTE, ~15 min)
-- Context
-- Motivation. Target users & use cases.
+- Context: new requirements in the DTR.
+- Motivation (open models, transparency, automation). Target users & use cases.
 - Brief roadmap.
 
 
@@ -33,7 +33,7 @@
     * Copy an example into a chosen working directory
     * User inputs: explain what the DYD/PAR/INI files are and show a brief inspection of their content
     * Run the tool, explain briefly what the console output means
-    * Results: inspect the results directory (tree structure and its contents), show the PDF Reports
+    * Results: inspect the results directory (tree structure and its contents), show the PDF Reports & HTML curves.
 
 - [10 min] Preparing the inputs:
     * Explain how "dgcv generate" works
@@ -41,7 +41,7 @@
     * But jump into an already-prepared example to finish the example (no time for a live demo)
 
 - [10 min] Configuration:
-    * Explain briefly the structure and sections of config.ini
+    * Explain briefly the structure and sections of config.ini  (only the BASIC config options)
     * Show an example: change something in the ini and show what happens
         1. Enabling/disabling certain tests and re-run
         2. Changing the value of a certain KPI threshold and see the different results
