@@ -393,7 +393,7 @@ Next, the configuration is modified to validate only the benchmarks called *Thre
 PCS_RTE-I16z1 = ThreePhaseFault,GridVoltageStep
 ```
 
-And finally, the *ThreePhaseFault* benchmark does not want to validate the operating conditions called *HiZ*:
+And finally, the *ThreePhaseFault* benchmark is modified to not validate *HiZ* type operating conditions:
 
 ```ini
 ## # List of Operating conditions contained in each PCS-Benchmark
