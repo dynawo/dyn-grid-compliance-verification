@@ -27,7 +27,10 @@ Developed by Grupo AIA
    1. [Error compiling a dynamic model](#error-compiling-a-dynamic-model)
    2. [Failed Simulation](#failed-simulation)
 5. [Extra](#extra)
-   1. [Also available, but won’t be further discussed here](#also-available-but-wont-be-further-discussed-here)
+   1. [Generation of Producer Inputs](#generation-of-producer-inputs)
+   2. [Model compilation of custom Dynawo assembled models](#model-compilation-of-custom-dynawo-assembled-models)
+   3. [Curves Anonymizer](#curve-anonymizer)
+
 --------------------------------------------------------------------------------
 
 # First run
@@ -394,13 +397,12 @@ Results
         └── PCS_RTE-I7.GridVoltageSwell.QMin.html
 ```
 
-* **Reportsfolder**: 
-  * **report.pdf**: 
-    Complete verification report of the supplied model, the report consists of 
-    a summary with the results of the *PCS* carried out, as well as the individual 
-    reports of each *PCS*.
-  * **HTML folder**: 
-    Individual HTML figures of each simulated *PCS* and scenario.
+* **Reports/report.pdf**: 
+  Complete verification report of the supplied model, the report consists of 
+  a summary with the results of the *PCS* carried out, as well as the individual 
+  reports of each *PCS*.
+* **Reports/HTML folder**: 
+  Individual HTML figures of each simulated *PCS* and scenario.
 * **PCS_\* Directories**: 
   A directory with the output of each simulated *PCS*.
 
@@ -784,9 +786,7 @@ is located:
 
 # Extra
 
-## Also available, but won’t be further discussed here
-
-### Generation of Producer Inputs:
+## Generation of Producer Inputs
 
 It’s an interactive helper tool to aid the user in constructing the 
 DYD/PAR/INI files for input to the tool. For now, there is the generate 
@@ -809,7 +809,7 @@ options:
                         enter the validation type
 ```
 
-### Model compilation of custom Dynawo assembled models:
+## Model compilation of custom Dynawo assembled models
 
 Note: compilation of internally-defined assembled models is invoked automatically
 
@@ -830,7 +830,7 @@ options:
                         user's and the tool's own)
 ```
 
-### Curve Anonymizer:
+## Curves Anonymizer
 
 In this mode the tool generates a set of curves with generic names from 
 the input curves to which a noise signal is added.
