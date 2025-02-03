@@ -41,12 +41,15 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
+# --------------------------------------------------------------------------------------------------------
 RELEASE_TAG="v0.7.0"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
-DYNAWO_CHECKSUM="8c07f6d17c1d40c20b104490fea34d333740ecda"
-###TODO: RESTORE THIS LINE WHEN GONE PUBLIC
+DYNAWO_CHECKSUM="31dc1d6fdf974ddf1a8350af39804bfc1b4c78e7"
 #DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
+# DEBUG: when testing which Dynawo version to use for the release, comment out the previous line and use these instead:
 DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/$DYNAWO_ZIP_FILE"
+DYNAWO_CHECKSUM="31dc1d6fdf974ddf1a8350af39804bfc1b4c78e7"
+# --------------------------------------------------------------------------------------------------------
 # The configurable section ends here, you shouldn't need to edit the rest.
 
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
@@ -129,7 +132,7 @@ exec 2>&1      # stderr redirected to stdout
 ######################################################################
 # Step 0: make sure that we have everything we need before we start.
 ######################################################################
-for needed_command in curl unzip git; do
+for needed_command in curl unzip gcc g++ cmake pdflatex latexmk git; do
     if ! which "$needed_command" > /dev/null; then
 	color_err_msg "ERROR: $needed_command command not found (sudo apt install $needed_command?)"
 	exit 1
@@ -161,14 +164,24 @@ color_msg_nnl "Downloading Dynawo from the dgcv repository (~ 150 MB)... "
 cd "$INSTALL_DIR"
 curl -O -L --fail "$DYNAWO_ZIP_URL"
 CHECKSUM=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
-###TODO: REMOVE THIS LINE WHEN GONE PUBLIC
-CHECKSUM=$DYNAWO_CHECKSUM
 if [ "$CHECKSUM" != "$DYNAWO_CHECKSUM" ]; then
     color_err_msg "ERROR: Dynawo ZIP shasum does not match (got $CHECKSUM, expected $DYNAWO_CHECKSUM)"
     exit 1
 fi
 unzip -q "$DYNAWO_ZIP_FILE" && rm "$DYNAWO_ZIP_FILE" 
 color_msg "Dynawo downloaded & installed OK."
+
+# This is a TEMPORARY FIX, needed until the Dynawo team releases Nightly binaries compiled under
+# more recent Ubuntu/Debian versions. As of February 2025, the releases are compiled under previous
+# versions, which use gcc 10/11, and as a consequence they include a Boost library header that is
+# incompatible with newer Linux versions, which use gcc 12 or higher. Since it's a very simple fix,
+# we do it here (if we detect it's necessary):
+GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
+if [ "$GNU_MAJOR" -gt 11 ]; then
+   echo "Patching header file thread_data.hpp..."
+   BOOSTLIB_PTHREAD_HEADERFILE=./dynawo/include/boost/thread/pthread/thread_data.hpp
+   sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOSTLIB_PTHREAD_HEADERFILE"
+fi
 
 
 
