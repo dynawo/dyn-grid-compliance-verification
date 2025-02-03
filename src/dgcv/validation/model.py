@@ -1207,18 +1207,16 @@ class ModelValidator(Validator):
             event_params["connect_to"],
         )
 
-        if not compliance_list.contains_key(
-            ["setpoint_tracking_controlled_magnitude"], self._validations
-        ):
-            excl1_t0, excl1_t, excl2_t0, excl2_t = self._get_exclusion_times()
-            if excl2_t0 == 0.0 and excl2_t == 0.0:
-                results["excl1_t0"] = excl1_t0
-                results["excl1_t"] = excl1_t
-            else:
-                results["excl1_t0"] = excl1_t0
-                results["excl1_t"] = excl1_t
-                results["excl2_t0"] = excl2_t0
-                results["excl2_t"] = excl2_t
+        # Show always the exclusion windows used in the validation
+        excl1_t0, excl1_t, excl2_t0, excl2_t = self._get_exclusion_times()
+        if excl2_t0 == 0.0 and excl2_t == 0.0:
+            results["excl1_t0"] = excl1_t0
+            results["excl1_t"] = excl1_t
+        else:
+            results["excl1_t0"] = excl1_t0
+            results["excl1_t"] = excl1_t
+            results["excl2_t0"] = excl2_t0
+            results["excl2_t"] = excl2_t
 
         results["curves"] = self._get_calculated_curves()
         if not self._get_reference_curves().empty:
