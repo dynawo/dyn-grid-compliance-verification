@@ -57,8 +57,9 @@ inside the user's `$HOME` directory, under a *Python virtual environment*.
 Windows
 ^^^^^^^
 
-**NOTE**: The windows installer (described in the next section) will install all of these
-system requirements, so you may skip this section. It is only here for your information.
+.. note::
+    The windows installer (described in the next section) will install all of these
+    system requirements, so you may skip this section. It is only here for your information.
 
 The requirements at the OS-level are rather minimal: one just needs a recent Windows
 distribution in which you should install a few packages, **LaTeX**, and **Python**. If
