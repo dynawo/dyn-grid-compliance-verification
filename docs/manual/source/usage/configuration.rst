@@ -154,9 +154,9 @@ It is possible to modify the list of *Benchmarks* the will be used in the valida
 *PCS*.
 
 #. Section
-    Create a new section in the configuration file called 'PCS-Benchmarks'.
+    Uncomment the 'PCS-Benchmarks' section in the configuration file.
 #. Key = Value
-    Assign as **Key** the name of the *PCS* and as **Value** a comma-separated list of the
+    Uncomment the desired *PCS* and assign as **Value** a comma-separated list of the
     *BenchMarks* that will be used.
 
 .. code-block::
@@ -178,10 +178,10 @@ It is possible to modify the list of *Operating Conditions* the will be used in 
 *Benchmark*.
 
 #. Section
-    Create a new section in the configuration file called 'PCS-OperatingConditions'.
+    Uncomment the 'PCS-OperatingConditions' section in the configuration file.
 #. Key = Value
-    Assign as **Key** the name of the *PCS* and the name of the *Benchmark* separated by a point
-    and as **Value** a comma-separated list of the *Operating Conditions* that will be used.
+    Uncomment the desired *PCS.Benchmark* and assign as **Value** a comma-separated list of the 
+    *Operating Conditions* that will be used.
 
 .. code-block::
 
