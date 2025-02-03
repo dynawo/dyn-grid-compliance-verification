@@ -499,6 +499,10 @@ Under the section called ``GridCode`` of the configuration file.
     Current RTE PCS I16 specifies 60 ms
     In no case will exceed 500ms (see IEC 61400-27-2 Ed. 1.0 July 2020)
 
+* ``disable_window_filtering``
+
+    Disable window filtering of signals, filtering is performed for the whole signal
+
 * ``stable_time``
 
     Minimum time required to consider a simulation as stable

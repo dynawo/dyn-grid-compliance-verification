@@ -41,9 +41,9 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
-RELEASE_TAG="v0.5.2"
-DYNAWO_ZIP_FILE="Dynawo_omc_v1.7.0.zip"
-DYNAWO_CHECKSUM="69bec858b6b245ce4bf0b2cd38b2ac8f271c17bb"
+RELEASE_TAG="v0.7.0"
+DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
+DYNAWO_CHECKSUM="8c07f6d17c1d40c20b104490fea34d333740ecda"
 ###TODO: RESTORE THIS LINE WHEN GONE PUBLIC
 #DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
 DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/$DYNAWO_ZIP_FILE"

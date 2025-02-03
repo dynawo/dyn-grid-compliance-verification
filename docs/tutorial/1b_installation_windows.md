@@ -81,7 +81,7 @@ all of its dependencies (NumPy, etc.) will get installed under a
 
 ## Installation
 
-1. Download the [`DGCV's Windows Installer`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.6.0/DGCV_win_Installer.exe).
+1. Download the [`DGCV's Windows Installer`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/DGCV_win_Installer.exe).
 
 
 2. Next, execute the downloaded installer:
