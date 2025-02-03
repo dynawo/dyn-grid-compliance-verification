@@ -394,12 +394,13 @@ Results
         └── PCS_RTE-I7.GridVoltageSwell.QMin.html
 ```
 
-* **Reports\report.pdf**: 
-  Complete verification report of the supplied model, the report consists of 
-  a summary with the results of the *PCS* carried out, as well as the individual 
-  reports of each *PCS*.
-* **Reports\HTML folder**: 
-  Individual HTML figures of each simulated *PCS* and scenario.
+* **Reportsfolder**: 
+  * **report.pdf**: 
+    Complete verification report of the supplied model, the report consists of 
+    a summary with the results of the *PCS* carried out, as well as the individual 
+    reports of each *PCS*.
+  * **HTML folder**: 
+    Individual HTML figures of each simulated *PCS* and scenario.
 * **PCS_\* Directories**: 
   A directory with the output of each simulated *PCS*.
 
