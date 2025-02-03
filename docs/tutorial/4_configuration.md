@@ -348,106 +348,59 @@ of a *Benchmark*. A *Benchmark* has one or more *Operating Conditions*.
 
 This section shows how to modify the configuration to enable/disable the benchmarks and/or OC of a PCS.
 
-PCS editing is only available for advanced users. The user can switch from *basic* to *advanced*
-user or vice versa by overwriting the config.ini file with one of the following files:
-
-* **config.ini_BASIC**: configuration file for *basic* users.
-* **config.ini_ADVANCED**: configuration file for *advanced* users.
-
-```
-(dgcv_venv) user@dynawo:~/.config$ tree dgcv
-dgcv$
-├── config.ini
-├── config.ini_ADVANCED
-├── config.ini_BASIC
-```
-
-<span style="background-color: #ffcc11;">WARNING:</span> The **config.ini_BASIC** and **config.ini_ADVANCED** files do not contain the configuration parameters 
-modified in the **config.ini** file, so it is recommended that the user rename the file to **config.ini.old** 
-and modify any parameters that are desired to be kept in the new file.
-
-```
-(dgcv_venv) user@dynawo:~/.config$ mv config.ini config.ini.old
-(dgcv_venv) user@dynawo:~/.config$ cp config.ini_ADVANCED config.ini
-(dgcv_venv) user@dynawo:~/.config$ tree dgcv
-dgcv$
-├── config.ini
-├── config.ini.old
-├── config.ini_ADVANCED
-├── config.ini_BASIC
-```
-
-The new file contains PCS configuration examples:
+The **config.ini** file contains the list of *Benchmarks* and *Operating Conditions* validated 
+by default in the tool:
 
 ```ini
-#  ## Example of a PCS config file
-#  ##    (PCS_RTE-I2 for electrical performance)
-#  ##    (PCS_RTE-I16z1 for model validation)
+## # List of Benchmarks contained in each Performance Checking Sheet (PCS)
+## # For PCS's having multiple benchmarks, you can enable/disable them by listing them explicitly.
+## [PCS-Benchmarks]
+## PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
+## PCS_RTE-I16z3 = USetPointStep,PSetPointStep,QSetPointStep,ThreePhaseFault,GridVoltageDip,GridVoltageSwell,Islanding
 
-#  ## # Benchmark list by PCS
-#  ## [PCS-Benchmarks]
-#  ## PCS_RTE-I2 = USetPointStep
-#  ## PCS_RTE-I3 = LineTrip
-#  ## PCS_RTE-I4 = ThreePhaseFault
-#  ## PCS_RTE-I5 = ThreePhaseFault
-#  ## PCS_RTE-I6 = GridVoltageDip
-#  ## PCS_RTE-I7 = GridVoltageSwell
-#  ## PCS_RTE-I8 = LoadShedDisturbance
-#  ## PCS_RTE-I10 = Islanding
-#  ## PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
-#  ## PCS_RTE-I16z3 = USetPointStep,PSetPointStep,QSetPointStep,ThreePhaseFault,GridVoltageDip,GridVoltageSwell,Islanding
-
-#  ## # Operating conditions list by PCS-Benchmark
-#  ## [PCS-OperatingConditions]
-#  ## PCS_RTE-I2.USetPointStep = AReactance,BReactance
-#  ## PCS_RTE-I3.LineTrip = 2BReactance
-#  ## PCS_RTE-I4.ThreePhaseFault = TransientBolted
-#  ## PCS_RTE-I5.ThreePhaseFault = TransientBolted
-#  ## PCS_RTE-I6.GridVoltageDip = Qzero
-#  ## PCS_RTE-I7.GridVoltageSwell = QMax,QMin
-#  ## PCS_RTE-I10.Islanding = DeltaP10DeltaQ4
-#  ## PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ
-#  ## PCS_RTE-I16z1.SetPointStep = Active,Reactive,Voltage
-#  ## PCS_RTE-I16z1.GridFreqRamp = W500mHz250ms
-#  ## PCS_RTE-I16z1.GridVoltageStep = Rise,Drop
-#  ## PCS_RTE-I16z3.USetPointStep = AReactance,BReactance
-#  ## PCS_RTE-I16z3.PSetPointStep = Dec40,Inc40
-#  ## PCS_RTE-I16z3.QSetPointStep = Dec20,Inc10
-#  ## PCS_RTE-I16z3.ThreePhaseFault = TransientBolted
-#  ## PCS_RTE-I16z3.GridVoltageDip = Qzero
-#  ## PCS_RTE-I16z3.GridVoltageSwell = QMax,QMin
-#  ## PCS_RTE-I16z3.Islanding = DeltaP10DeltaQ4
+## # List of Operating conditions contained in each PCS-Benchmark
+## # For Benchmark's having multiple operating conditions, you can enable/disable them by listing them explicitly.
+## [PCS-OperatingConditions]
+## PCS_RTE-I2.USetPointStep = AReactance,BReactance
+## PCS_RTE-I3.LineTrip = 2BReactance
+## PCS_RTE-I4.ThreePhaseFault = TransientBolted
+## PCS_RTE-I5.ThreePhaseFault = TransientBolted
+## PCS_RTE-I6.GridVoltageDip = Qzero
+## PCS_RTE-I7.GridVoltageSwell = QMax,QMin
+## PCS_RTE-I10.Islanding = DeltaP10DeltaQ4
+## PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ
+## PCS_RTE-I16z1.SetPointStep = Active,Reactive,Voltage
+## PCS_RTE-I16z1.GridFreqRamp = W500mHz250ms
+## PCS_RTE-I16z1.GridVoltageStep = Rise,Drop
+## PCS_RTE-I16z3.USetPointStep = AReactance,BReactance
+## PCS_RTE-I16z3.PSetPointStep = Dec40,Inc40
+## PCS_RTE-I16z3.QSetPointStep = Dec20,Inc10
+## PCS_RTE-I16z3.ThreePhaseFault = TransientBolted
+## PCS_RTE-I16z3.GridVoltageDip = Qzero
+## PCS_RTE-I16z3.GridVoltageSwell = QMax,QMin
+## PCS_RTE-I16z3.Islanding = DeltaP10DeltaQ4
 ```
 
 Taking as a starting point the last example of model validation, where only the PCS **PCS_RTE-I16z1** 
-was validated, the benchmarks to be validated will be modified, as well as some Operating conditions.
-
-First, the settings are recovered from the *config.ini* file if the file has been overwritten:
-
-```ini
-#  # List of PPM model pcs to be validated (If it's empty, all the model pcs are validated)
-#  model_ppm_validation_pcs =
-model_ppm_validation_pcs = PCS_RTE-I16z1
-```
-
-Below, only the benchmarks called *ThreePhaseFault* and *GridVoltageStep* are validated::
+was validated, the benchmarks to be validated will be modified, as well as some operating conditions.
+Next, the configuration is modified to validate only the benchmarks called *ThreePhaseFault* and *GridVoltageStep*:
 
 ```ini
-#  ## # Benchmark list by PCS
-#  ## [PCS-Benchmarks]
-[PCS-Benchmarks]
-#  ## PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ
-PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,PermanentBolted
+## # List of Benchmarks contained in each Performance Checking Sheet (PCS)
+## # For PCS's having multiple benchmarks, you can enable/disable them by listing them explicitly.
+## [PCS-Benchmarks]
+## PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
+PCS_RTE-I16z1 = ThreePhaseFault,GridVoltageStep
 ```
 
 And finally, the *ThreePhaseFault* benchmark does not want to validate the operating conditions called *HiZ*:
 
 ```ini
-#  ## # Operating conditions list by PCS-Benchmark
-#  ## [PCS-OperatingConditions]
-[PCS-OperatingConditions]
-#  ## PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
-PCS_RTE-I16z1 = ThreePhaseFault,GridVoltageStep
+## # List of Operating conditions contained in each PCS-Benchmark
+## # For Benchmark's having multiple operating conditions, you can enable/disable them by listing them explicitly.
+## [PCS-OperatingConditions]
+## PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,TransientHiZTc800,TransientHiZTc500,PermanentBolted,PermanentHiZ
+PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,TransientBoltedSCR3Qmin,PermanentBolted
 ```
 
 The result of running the tool only has the PCS, benchmarks and operating conditions configured.
