@@ -14,10 +14,6 @@
 ;			if(MSVC)
 ;				set(LIBRARY_DIR bin)
 ;			endif()
-;		- Edit the file dynawo.cmd adding the lines:
-;			if /I "%~1"=="dump-model" (
-;	      for /f "tokens=1,* delims= " %%a in ("%*") do set DUMP_MODEL_ARGS=%%b
-;				%DYNAWO_INSTALL_DIR%"sbin\dumpModel.exe !DUMP_MODEL_ARGS!
 
 [Setup]
 AppName=Dynamic Grid Compliance Verification
