@@ -51,7 +51,7 @@ StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_BuildTools.ex
 StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dgcv_venv"; WorkingDir: "{app}"; Flags: runhidden
 
 ; Install build module for Python
-StatusMsg: "Installing Python build module..."; Filename: "{app}\dgcv_venv\Scripts\pip.exe"; Parameters: "install --upgrade pip build"; Flags: runhidden
+StatusMsg: "Installing Python build module..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
 
 ; Compile the project using build
 StatusMsg: "Compiling the project..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
