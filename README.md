@@ -3,15 +3,17 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dgcv.github.io/index.html)
 
-A tool for automating the verification of dynamic grid compliance requirements for
-solar, wind, and storage farms (Power Park Modules - PPM) as well as synchronous machines (SM), including:
+A tool for automating the verification of dynamic grid compliance requirements
+for solar, wind, and storage farms (Power Park Modules - PPM) as well as
+synchronous machines (SM), including:
 
   * validation of RMS models (a.k.a. _"phasor models"_) for PPM
   * verification of electric performance requirements for both PPM and SM
 
-The tool is pre-configured to use the tests required by the French connection network code (i.e.,
-those of RTE's [DTR](https://www.services-rte.com/files/live//sites/services-rte/files/documentsLibrary/20240729_DTR_5867_fr) Fiches "I"), but it can be easily configured and extended to run
-other tests.
+The tool is pre-configured to use the tests required by the French connection
+network code (i.e., those of RTE's
+[DTR](https://www.services-rte.com/files/live//sites/services-rte/files/documentsLibrary/20240729_DTR_5867_fr)
+Fiches "I"), but it can be easily configured and extended to run other tests.
 
 
 (c) 2023&mdash;24 RTE  
@@ -35,25 +37,25 @@ Developed by Grupo AIA
 
 # Overview
 
-The **Dynamic Grid Compliance Verification** tool (DGCV for short) is designed to automate
-most tasks related to the validation of RMS models, in the context of compliance
-requirements for new generation facilities. It contemplates **model validation**
-properly speaking (i.e., _"does the model and its parameterization match the
-actual behavior?"_), as well as **electric performance** requirements testing
-(i.e., _"does the behavior, either measured or simulated, pass the grid code
-requirements for connection?"_).
+The **Dynamic Grid Compliance Verification** tool (DGCV for short) is designed
+to automate most tasks related to the validation of RMS models, in the context
+of compliance requirements for new generation facilities. It contemplates
+**model validation** properly speaking (i.e., _"does the model and its
+parameterization match the actual behavior?"_), as well as **electric
+performance** requirements testing (i.e., _"does the behavior, either measured
+or simulated, pass the grid code requirements for connection?"_).
 
-The tool is built with **Python**. Internally it is structured as a series of independent
-tests, each producing its own report in PDF. These tests correspond to the
-_Fiches I*_ in RTE's DTR document. To be specific, they contain the following
-tests:
+The tool is built with **Python**. Internally it is structured as a series of
+independent tests, each producing its own report in PDF. These tests correspond
+to the _Fiches I*_ in RTE's DTR document. To be specific, they contain the
+following tests:
 
 * **Electric Performance tests (Synchronous Machines)**: Fiches I2 (except
   stability margin calculations), I3, I4, I6, I7, I8, and I10.
 * **Electric Performance tests (Power Park Modules)**: Fiches I2, I5, I6, I7, and I10.
 * **RMS Model Validation tests (Power Park Modules)**: Fiche I16, structured into:
-    - **Zone 1** (converter-level): Fault Ride-Through, Setpoint steps, Grid Frequency ramps, and Grid
-      Voltage step.
+    - **Zone 1** (converter-level): Fault Ride-Through, Setpoint steps, Grid
+      Frequency ramps, and Grid Voltage step.
     - **Zone 3** (plant-level): Voltage Regulation behavior (like I2), Fault
       Ride-Through (like I5), Voltage-dip Ride-Through (like I6), Voltage-swell
       Ride-Through (like I7), and Islanding (like I10).
@@ -61,12 +63,12 @@ tests:
 Correspondingly, the results directory is structured along these lines.
 
 Usually, the inputs are simply three files: the **DYD** and **PAR** files
-corresponding to the [Dyna&omega;o](https://github.com/dynawo/dynawo) model on the producer's side (i.e., everything
-"left" of the connection point, the PDR bus), and an **INI** file containing the
-parameters and metadata that cannot be provided in the DYD/PAR
-files. See the available examples in the `examples` directory, at the top level
-of the git repository.  For more information about these files, consult the
-[User Manual](docs/manual).
+corresponding to the [Dyna&omega;o](https://github.com/dynawo/dynawo) model on
+the producer's side (i.e., everything "left" of the connection point, the PDR
+bus), and an **INI** file containing the parameters and metadata that cannot be
+provided in the DYD/PAR files. See the available examples in the `examples`
+directory, at the top level of the git repository.  For more information about
+these files, consult the [User Manual](docs/manual).
 
 Additionally, in the case of _Model Validation_, the user must also provide the
 **reference curves** for each test, against which the simulated curves will be
@@ -75,8 +77,9 @@ the format.  For more information about these files, consult the [User
 Manual](docs/manual).
 
 In the case of _Electric Performance_ testing, the user has also the option of
-providing test curves, either to be used _instead of_ Dyna&omega;o simulations, or to
-be used along Dyna&omega;o simulations (just for plotting both and comparing them).
+providing test curves, either to be used _instead of_ Dyna&omega;o simulations,
+or to be used along Dyna&omega;o simulations (just for plotting both and
+comparing them).
 
 # DGCV installation
 
@@ -85,23 +88,22 @@ be used along Dyna&omega;o simulations (just for plotting both and comparing the
 ### System requirements
 
 The requirements at the OS-level are rather minimal: one just needs a recent
-Linux distribution in which you should install
-Dyna&omega;o's requirements,
-**LaTeX**, and **Python**. If you do not have any strong preference, we would
+Linux distribution in which you should install Dyna&omega;o's requirements, plus
+**LaTeX** and **Python**. If you do not have any strong preference, we would
 recommend Debian 12 or higher, as well as Ubuntu 22.04 LTS or higher.
 
 To be more specific, we explicitly list here the packages to be installed,
 assuming a Debian/Ubuntu system:
 
-* Install the following required packages:
+* Install the following packages, required by Dyna&omega;o:
   ```bash
   apt install curl unzip gcc g++ cmake
   ```
 
-* Install `make` and these LaTeX packages:
+* Install these LaTeX packages:
   ```bash
-   apt install make texlive-base texlive-latex-base texlive-latex-extra \
-               texlive-latex-recommended texlive-science texlive-lang-french latexmk
+   apt install texlive-base texlive-latex-base texlive-latex-recommended \
+               texlive-latex-extra texlive-science texlive-lang-french latexmk
   ```
 
 * Install a basic Python installation (version 3.9 or higher), containing at
@@ -110,8 +112,14 @@ assuming a Debian/Ubuntu system:
    apt install python3-minimal python3-pip python3-venv
    ```
 
-Note that the tool itself is also a Python package. However, this package and
-all of its dependencies (NumPy, etc.) will get installed at the user-level, i.e.,
+* Install git (the current installer relies on building the Python package from
+  sources):
+   ```bash
+   apt install git
+   ```
+
+Note that the tool itself is a Python package. However, this package and all of
+its dependencies (NumPy, etc.) will get installed at the user-level, i.e.,
 inside the user's `$HOME` directory, under a _Python virtual environment_.
 
 
@@ -151,44 +159,19 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    
 The dgcv application is now ready to use.
 
+
+
 ## Windows installation
-
-### System requirements
-
-**NOTE**: The windows installer (described in the next section) will install all of these
-system requirements, so you may skip this section. It is only here for your information.
-
-The requirements at the OS-level are rather minimal: one just needs a recent Windows
-distribution in which you should install a few packages, **LaTeX**, and **Python**. If
-you do not have any strong preference, we would recommend Windows 10 or higher. 
-
-To be more specific, we explicitly list here the packages to be installed:
-
-* Install Dynawo (v1.7.0 or later) and its required packages:
-   Dynawo is a simulation platform required by this tool. Follow the steps outlined in the official Dynawo installation guide at [Dynawo Installation Guide](https://dynawo.github.io/install/).
-   - **Nightly Version**: Download the **Nightly version** of Dynawo from the repository to ensure you have the latest features and updates.
-   - During installation, you will also need the following tools:
-     - **CMake**: CMake is used to configure the build process for Dynawo. Download it from [cmake.org](https://cmake.org/download/).
-     - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from [here](https://visualstudio.microsoft.com/vs/older-downloads/). During the installation, select the "Desktop development with C++" workload.
-
-* Install these LaTeX packages:
-   LaTeX is used for document processing. You can choose between two LaTeX distributions:
-   - **MiKTeX**: Download it from [MiKTeX Download](https://miktex.org/download).
-   - **TeX Live**: Download it from [TeX Live Download](https://www.tug.org/texlive/).
-
-* Install a basic Python installation (version 3.9 or higher), containing at least `pip` and the `venv` module:
-   - Go to the [official Python website](https://www.python.org/downloads/).
-   - Download the latest version of Python 3 (ensure that you select the option to add Python to the system PATH during installation).
-   - To verify the installation, open a terminal and run:
-
-Note that the tool itself is also a Python package. However, this package and
-all of its dependencies (NumPy, etc.) will get installed under a 
-*Python virtual environment*.
 
 ### Installation
 
-1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/DGCV_win_Installer.exe).
+> [!NOTE]  
+> The Windows installer described here will install not only the DGCV tool, but
+> also all of the other requirements for you. Read the next section if you are
+> interested in the details of what is installed in the Operating System
+> (Dynawo, C++ compiler, Python, LaTeX).
 
+1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/DGCV_win_Installer.exe).
 
 2. Next, execute the downloaded installer:
 
@@ -205,10 +188,12 @@ all of its dependencies (NumPy, etc.) will get installed under a
     ![MikTex Installer Settings](./docs/manual/source/usage/figs_installation/miktex_settings.png)
 
 
-3. Next, you must activate the virtual environment that has just been created by double-clicking on the DGCV.bat file that has been created on the desktop.
+3. Next, you must activate the virtual environment that has just been created by
+   double-clicking on the DGCV.bat file that has been created on the desktop.
 
-    This action will open a new Command Prompt with the virtual environment activated where the tool can be used.
-    To finish using the tool, you only need to close the Command Prompt.
+   This action will open a new Command Prompt with the virtual environment
+   activated where the tool can be used.  To finish using the tool, you only
+   need to close the Command Prompt.
 
 4. The tool is used via a single command `dgcv` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
@@ -226,6 +211,57 @@ all of its dependencies (NumPy, etc.) will get installed under a
    user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
    
 The dgcv application is now ready to use.
+
+
+### System requirements (for manual installs)
+
+> [!NOTE]  
+> The Windows installer (described in the previous section) will install all of
+> these system requirements for you. This is only here for your information, in
+> case you would rather install any of these components yourself. After you have
+> installed all this, you should still use the Windows installer to install the
+> DGCV tool (it will skip installing any of these OS requirements if they are
+> already installed).
+
+The requirements of the DGCV tool at the OS-level are rather minimal: one just
+needs a recent Windows distribution in which you should install **Dyna&omega;o**
+(and its requirements), **LaTeX**, and **Python**. If you do not have any strong
+preference, we would recommend Windows 10 or higher.
+
+To be more specific, we explicitly list here the packages to be installed:
+
+* Install Dyna&omega;o (v1.7.0 or later) and its required packages: Dyna&omega;o
+  is a simulation platform required by this tool. Follow the steps outlined in
+  the official Dyna&omega;o installation guide at [Dynawo Installation
+  Guide](https://dynawo.github.io/install/).
+   - **Nightly Version**: Download the **Nightly version** of Dynawo from the
+     repository to ensure you have the latest features and updates.
+   - During installation, you will also need the following tools:
+     - **CMake**: CMake is used to configure the build process for
+       Dynawo. Download it from [cmake.org](https://cmake.org/download/).
+     - **Build Tools for Visual Studio 2019**: the Visual Studio compiler is
+       required to compile custom Modelica models in Dynawo. You can download
+       the free **Community Edition** of these tools from
+       [here](https://visualstudio.microsoft.com/vs/older-downloads/). During
+       the installation, select only the _"Desktop development with C++"_
+       workload.
+
+* Install LaTeX. You can choose between these two LaTeX distributions:
+   - **MiKTeX**: Download it from [MiKTeX Download](https://miktex.org/download).
+   - **TeX Live**: Download it from [TeX Live Download](https://www.tug.org/texlive/).
+
+* Install a basic Python installation (version 3.9 or higher), containing at
+  least `pip` and the `venv` module:
+   - Go to the [official Python website](https://www.python.org/downloads/).
+   - Download the latest version of Python 3 (ensure that you select the option
+     to add Python to the system PATH during installation).
+
+Note that the DGCV tool itself is a Python package. However, this package and
+all of its dependencies (NumPy, etc.) will get installed under a *Python virtual
+environment*.
+
+
+
 
 # Quick start
 
@@ -306,10 +342,10 @@ options:
 ```
 
 Note that, in this mode, the tool can perform the electrical performance
-verification using either a user-provided dyna&omega;o **model** (running Dyna&omega;o
-simulations), or a set of user-provided **curves**, or both (in which case the
-curves are used only for showing them on the graphs, along the simulated
-curves). Therefore you must provide either a `PRODUCER_MODEL` or a
+verification using either a user-provided Dyna&omega;o **model** (running
+Dyna&omega;o simulations), or a set of user-provided **curves**, or both (in
+which case the curves are used only for showing them on the graphs, along the
+simulated curves). Therefore you must provide either a `PRODUCER_MODEL` or a
 `PRODUCER_CURVE` directory, or both.
 
 The options and the required format of INI and curves files are documented in
