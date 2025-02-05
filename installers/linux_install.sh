@@ -44,11 +44,11 @@ set -o errexit -o pipefail
 # --------------------------------------------------------------------------------------------------------
 RELEASE_TAG="v0.7.0"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
-DYNAWO_CHECKSUM="31dc1d6fdf974ddf1a8350af39804bfc1b4c78e7"
-#DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
+DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
+DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
 # DEBUG: when testing which Dynawo version to use for the release, comment out the previous line and use these instead:
-DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/$DYNAWO_ZIP_FILE"
-DYNAWO_CHECKSUM="31dc1d6fdf974ddf1a8350af39804bfc1b4c78e7"
+#DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/$DYNAWO_ZIP_FILE"
+#DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
 # --------------------------------------------------------------------------------------------------------
 # The configurable section ends here, you shouldn't need to edit the rest.
 
