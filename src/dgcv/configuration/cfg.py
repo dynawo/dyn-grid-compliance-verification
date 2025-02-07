@@ -22,6 +22,11 @@ class Config:
     _user_config: configparser.ConfigParser
     _pcs_config: configparser.ConfigParser
 
+    def __get_valid_value(self, value: str) -> str:
+        if value is None or value == "":
+            return None
+        return value
+
     def load_pcs_config(self, pcs_path: str) -> None:
         """Load the pcs CFG file.
 
@@ -83,13 +88,14 @@ class Config:
         Optional[str]
             A string if exists the given key and section, None otherwise
         """
+        value = None
         if self._user_config.has_option(section, key):
-            return self._user_config.get(section, key)
-        elif self._pcs_config.has_option(section, key):
-            return self._pcs_config.get(section, key)
-        elif self._default_config.has_option(section, key):
-            return self._default_config.get(section, key)
-        return None
+            value = self._user_config.get(section, key)
+        if not self.__get_valid_value(value) and self._pcs_config.has_option(section, key):
+            value = self._pcs_config.get(section, key)
+        if not self.__get_valid_value(value) and self._default_config.has_option(section, key):
+            value = self._default_config.get(section, key)
+        return self.__get_valid_value(value)
 
     def get_int(self, section: str, key: str, default: int) -> int:
         """Gets an integer for a given key and section.
@@ -173,7 +179,7 @@ class Config:
             A list if exists the given key and section, empty list otherwise
         """
         value = self.get_value(section, key)
-        if value is not None and value != "":
+        if value is not None:
             return value.split(",")
         return []
 
