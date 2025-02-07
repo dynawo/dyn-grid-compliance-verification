@@ -159,4 +159,10 @@
     <par type="DOUBLE" name="load_U0Pu" value="1.0086"/>
     <par type="DOUBLE" name="load_UPhase0" value="0.4334"/>
   </set>
+  <set id="IntNetwork_Line">
+    <par type="DOUBLE" name="line_RPu" value="0.0004"/>
+    <par type="DOUBLE" name="line_XPu" value="0.004"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
 </parametersSet>
