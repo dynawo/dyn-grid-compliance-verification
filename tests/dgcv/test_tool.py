@@ -58,7 +58,7 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_sm_model():
     compliance = _execute_tool(
-        "../../examples/Performance/GeneratorSynchronousFourWindingsTGov1SexsPss2a/SingleAux/Dynawo",
+        "../../examples/Performance/SingleAux/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo",
         None,
         None,
     )
@@ -76,7 +76,9 @@ def test_perf_sm_model():
 
 
 def test_perf_sm_curves():
-    compliance = _execute_tool(None, "../../examples/Performance/ProducerCurves/SM/", None)
+    compliance = _execute_tool(
+        None, "../../examples/Performance/ProducerCurves/GeneratorSynchronous/", None
+    )
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -93,8 +95,8 @@ def test_perf_sm_curves():
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_sm_complete():
     compliance = _execute_tool(
-        "../../examples/Performance/GeneratorSynchronousFourWindingsTGov1SexsPss2a/SingleAuxI/Dynawo",
-        "../../examples/Performance/ProducerCurves/SM",
+        "../../examples/Performance/SingleAuxI/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo",
+        "../../examples/Performance/ProducerCurves/GeneratorSynchronous",
         None,
     )
     assert [
@@ -112,7 +114,7 @@ def test_perf_sm_complete():
 
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_ppm_model():
-    compliance = _execute_tool("../../examples/Performance/WECCB/SingleAux/Dynawo", None, None)
+    compliance = _execute_tool("../../examples/Performance/SingleAux/WECCB/Dynawo", None, None)
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -125,7 +127,7 @@ def test_perf_ppm_model():
 
 
 def test_perf_ppm_curves():
-    compliance = _execute_tool(None, "../../examples/Performance/ProducerCurves/PPM", None)
+    compliance = _execute_tool(None, "../../examples/Performance/ProducerCurves/Wind", None)
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -140,8 +142,8 @@ def test_perf_ppm_curves():
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_ppm_complete():
     compliance = _execute_tool(
-        "../../examples/Performance/IECB2020/SingleAux/Dynawo",
-        "../../examples/Performance/ProducerCurves/PPM",
+        "../../examples/Performance/SingleAux/IECB2020/Dynawo",
+        "../../examples/Performance/ProducerCurves/Wind",
         None,
     )
     assert [
