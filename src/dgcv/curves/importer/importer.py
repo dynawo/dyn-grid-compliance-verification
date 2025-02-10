@@ -55,13 +55,16 @@ class CurvesImporter:
 
     def __get_curves_dict(self, zone: int) -> dict:
         curves_dict = {
-            value: key for key, value in self._default_curves.items("Curves-Dictionary")
+            value: key
+            for key, value in self._default_curves.items("Curves-Dictionary")
+            if value != ""
         }
         if zone == 1:
             curves_dict.update(
                 {
                     value: key
                     for key, value in self._default_curves.items("Curves-Dictionary-Zone1")
+                    if value != ""
                 }
             )
         elif zone == 3:
@@ -69,10 +72,15 @@ class CurvesImporter:
                 {
                     value: key
                     for key, value in self._default_curves.items("Curves-Dictionary-Zone3")
+                    if value != ""
                 }
             )
         curves_dict.update(
-            {value: key for key, value in self._curves_cfg.items("Curves-Dictionary")}
+            {
+                value: key
+                for key, value in self._curves_cfg.items("Curves-Dictionary")
+                if value != ""
+            }
         )
         return curves_dict
 
@@ -117,12 +125,17 @@ class CurvesImporter:
 
         curves_dict = self.__get_curves_dict(zone)
         df_dict = {}
-        if self._curves_cfg.has_option("Curves-Dictionary", "time"):
-            time_name = self._curves_cfg.get("Curves-Dictionary", "time")
-        elif self._default_curves.has_option("Curves-Dictionary", "time"):
+        section = "Curves-Dictionary"
+        time_name = None
+        if self._curves_cfg.has_section(section) and self._curves_cfg.has_option(section, "time"):
+            time_name = self._curves_cfg.get(section, "time")
+
+        if (
+            not time_name
+            and self._default_curves.has_section(section)
+            and self._default_curves.has_option(section, "time")
+        ):
             time_name = self._default_curves.get("Curves-Dictionary", "time")
-        else:
-            time_name = None
 
         curves_reader = get_curves_reader(self._path, self._filename, time_name)
         curves_reader.load(remove_file)
