@@ -25,16 +25,12 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         config._default_config.set("Dynawo", "simulation_limit", "120")
         only_dtr = True
         if producer_model_path:
-            if "SM" in producer_model_path:
-                sim_type = 0
-            elif "PPM" in producer_model_path:
+            if "Performance" in producer_model_path:
                 sim_type = 0
             else:
                 sim_type = 1
         else:
-            if "SM" in producer_curves_path:
-                sim_type = 0
-            elif "PPM" in producer_curves_path:
+            if "Performance" in producer_curves_path:
                 sim_type = 0
             else:
                 sim_type = 1
@@ -61,7 +57,11 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
 
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_sm_model():
-    compliance = _execute_tool("../../examples/SM/Dynawo/SingleAux", None, None)
+    compliance = _execute_tool(
+        "../../examples/Performance/GeneratorSynchronousFourWindingsTGov1SexsPss2a/SingleAux/Dynawo",
+        None,
+        None,
+    )
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -76,7 +76,7 @@ def test_perf_sm_model():
 
 
 def test_perf_sm_curves():
-    compliance = _execute_tool(None, "../../examples/SM/ProducerCurves/", None)
+    compliance = _execute_tool(None, "../../examples/Performance/ProducerCurves/SM/", None)
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -93,7 +93,9 @@ def test_perf_sm_curves():
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_sm_complete():
     compliance = _execute_tool(
-        "../../examples/SM/Dynawo/SingleAuxI", "../../examples/SM/ProducerCurves/", None
+        "../../examples/Performance/GeneratorSynchronousFourWindingsTGov1SexsPss2a/SingleAuxI/Dynawo",
+        "../../examples/Performance/ProducerCurves/SM",
+        None,
     )
     assert [
         Compliance.NonCompliant,
@@ -110,7 +112,7 @@ def test_perf_sm_complete():
 
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_ppm_model():
-    compliance = _execute_tool("../../examples/PPM/Dynawo/SingleAux/WECC", None, None)
+    compliance = _execute_tool("../../examples/Performance/WECCB/SingleAux/Dynawo", None, None)
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -123,7 +125,7 @@ def test_perf_ppm_model():
 
 
 def test_perf_ppm_curves():
-    compliance = _execute_tool(None, "../../examples/PPM/ProducerCurves/", None)
+    compliance = _execute_tool(None, "../../examples/Performance/ProducerCurves/PPM", None)
     assert [
         Compliance.NonCompliant,
         Compliance.NonCompliant,
@@ -138,8 +140,8 @@ def test_perf_ppm_curves():
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_perf_ppm_complete():
     compliance = _execute_tool(
-        "../../examples/PPM/Dynawo/SingleAux/IEC2020",
-        "../../examples/PPM/ProducerCurves/",
+        "../../examples/Performance/IECB2020/SingleAux/Dynawo",
+        "../../examples/Performance/ProducerCurves/PPM",
         None,
     )
     assert [
@@ -154,11 +156,46 @@ def test_perf_ppm_complete():
 
 
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
-def test_model_validation_wecc_model():
+def test_model_validation_wecca_model():
     compliance = _execute_tool(
-        "../../examples/Model/Wind/WECC/Dynawo",
+        "../../examples/Model/Wind/WECCA/Dynawo",
         None,
-        "../../examples/Model/Wind/WECC/ReferenceCurves",
+        "../../examples/Model/Wind/WECCA/ReferenceCurves",
+    )
+    assert [
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.FailedSimulation,
+    ] == compliance
+
+
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_weccb_model():
+    compliance = _execute_tool(
+        "../../examples/Model/Wind/WECCB/Dynawo",
+        None,
+        "../../examples/Model/Wind/WECCB/ReferenceCurves",
     )
     assert [
         Compliance.Compliant,
@@ -189,11 +226,11 @@ def test_model_validation_wecc_model():
 
 
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
-def test_model_validation_iec2015_model():
+def test_model_validation_ieca2015_model():
     compliance = _execute_tool(
-        "../../examples/Model/Wind/IEC2015/Dynawo",
+        "../../examples/Model/Wind/IECA2015/Dynawo",
         None,
-        "../../examples/Model/Wind/IEC2015/ReferenceCurves",
+        "../../examples/Model/Wind/IECA2015/ReferenceCurves",
     )
     assert [
         Compliance.Compliant,
@@ -224,11 +261,81 @@ def test_model_validation_iec2015_model():
 
 
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
-def test_model_validation_iec2020_model():
+def test_model_validation_iecb2015_model():
     compliance = _execute_tool(
-        "../../examples/Model/Wind/IEC2020/Dynawo",
+        "../../examples/Model/Wind/IECB2015/Dynawo",
         None,
-        "../../examples/Model/Wind/IEC2020/ReferenceCurves",
+        "../../examples/Model/Wind/IECB2015/ReferenceCurves",
+    )
+    assert [
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.FailedSimulation,
+    ] == compliance
+
+
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_ieca2020_model():
+    compliance = _execute_tool(
+        "../../examples/Model/Wind/IECA2020/Dynawo",
+        None,
+        "../../examples/Model/Wind/IECA2020/ReferenceCurves",
+    )
+    assert [
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
+        Compliance.FailedSimulation,
+    ] == compliance
+
+
+@pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
+def test_model_validation_iecb2020_model():
+    compliance = _execute_tool(
+        "../../examples/Model/Wind/IECB2020/Dynawo",
+        None,
+        "../../examples/Model/Wind/IECB2020/ReferenceCurves",
     )
     assert [
         Compliance.Compliant,
@@ -261,8 +368,8 @@ def test_model_validation_iec2020_model():
 def test_model_validation_wecc_curves():
     compliance = _execute_tool(
         None,
-        "../../examples/Model/Wind/WECC/ProducerCurves",
-        "../../examples/Model/Wind/WECC/ReferenceCurves",
+        "../../examples/Model/Wind/WECCB/ProducerCurves",
+        "../../examples/Model/Wind/WECCB/ReferenceCurves",
     )
     assert [
         Compliance.Compliant,
@@ -295,8 +402,8 @@ def test_model_validation_wecc_curves():
 def test_model_validation_iec2015_curves():
     compliance = _execute_tool(
         None,
-        "../../examples/Model/Wind/IEC2015/ProducerCurves",
-        "../../examples/Model/Wind/IEC2015/ReferenceCurves",
+        "../../examples/Model/Wind/IECB2015/ProducerCurves",
+        "../../examples/Model/Wind/IECB2015/ReferenceCurves",
     )
     assert [
         Compliance.Compliant,
@@ -329,8 +436,8 @@ def test_model_validation_iec2015_curves():
 def test_model_validation_iec2020_curves():
     compliance = _execute_tool(
         None,
-        "../../examples/Model/Wind/IEC2020/ProducerCurves",
-        "../../examples/Model/Wind/IEC2020/ReferenceCurves",
+        "../../examples/Model/Wind/IECB2020/ProducerCurves",
+        "../../examples/Model/Wind/IECB2020/ReferenceCurves",
     )
     assert [
         Compliance.Compliant,
@@ -363,7 +470,7 @@ def test_model_validation_iec2020_curves():
 @pytest.mark.skipif(not shutil.which("dynawo.sh"), reason="Dynawo not installed")
 def test_model_validation_partial_reference():
     compliance = _execute_tool(
-        "../../examples/Model/Wind/WECC/Dynawo",
+        "../../examples/Model/Wind/WECCB/Dynawo",
         None,
         "../resources/partial_reference_curves",
     )
