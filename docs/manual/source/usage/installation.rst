@@ -138,6 +138,15 @@ Windows
 
 __ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/DGCV_win_Installer.exe
 
+   In order to install the application, it is essential that the user has administrator rights. 
+   If the user is an administrator, there are no problems in unblocking the executable:
+   
+    .. image:: figs_installation/admin.png
+    :width: 70%
+    :alt: Unblocking Executable
+    :align: center
+
+
 #. Next, execute the downloaded installer:
 
    This executable will install the DGCV tool, together with a matching version of Dynawo,

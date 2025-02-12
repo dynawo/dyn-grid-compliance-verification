@@ -112,6 +112,9 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: dict) -> None:
         with open(csv_file, "r") as csv_f:
             headers = csv_f.readline().strip().split(";")
             for header in headers:
+                if not header:
+                    continue
+
                 dict_f.write(f"{header} = {header}\n")
 
 

@@ -26,9 +26,6 @@ class GeneratorVariables:
         htb1_p_max = config.get_float("GridCode", "HTB1_p_max", 0.0)
         htb2_p_max = config.get_float("GridCode", "HTB2_p_max", 0.0)
         htb3_p_max = config.get_float("GridCode", "HTB3_p_max", 0.0)
-        u_dim_90 = config.get_float("GridCode", "Udim_90kV", 0.0)
-        u_dim_225 = config.get_float("GridCode", "Udim_225kV", 0.0)
-        u_dim_400 = config.get_float("GridCode", "Udim_400kV", 0.0)
 
         self._x_dtr_switcher = {
             "htb1": {
@@ -48,11 +45,6 @@ class GeneratorVariables:
             "htb1": htb1_p_max,
             "htb2": htb2_p_max,
             "htb3": htb3_p_max,
-        }
-        self._u_dim_switcher = {
-            "htb1": u_dim_90,
-            "htb2": u_dim_225,
-            "htb3": u_dim_400,
         }
 
     def __get_generator_type(self, u_nom: float) -> str:
@@ -86,7 +78,7 @@ class GeneratorVariables:
         else:
             x_dtr = x_dtr_tuple[1]
 
-        return x_dtr, self._u_dim_switcher.get(generator_type, lambda: "Invalid Type")
+        return x_dtr, self.get_generator_u_dim(u_nom)
 
     def get_generator_type(self, u_nom: float) -> str:
         """Gets the generator type by its nominal voltage.
@@ -117,7 +109,11 @@ class GeneratorVariables:
             Generator sizing voltage (Udim)
         """
         generator_type = self.__get_generator_type(u_nom)
-        return self._u_dim_switcher.get(generator_type, lambda: "Invalid Type")
+        if generator_type == "Invalid UNom":
+            return "Invalid Type"
+
+        udim_name = f"Udim_{int(u_nom)}kV"
+        return config.get_float("GridCode", udim_name, 0.0)
 
     def calculate_line_xpu(
         self, line_xtype: str, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float
