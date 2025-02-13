@@ -350,9 +350,8 @@ def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> 
 
     if "RefFlag" in control_mode_parameters:
         if control_mode_parameters["RefFlag"].lower() == "true":
-            par = parset.find(
-                f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VCompFlag')}']"
-            )
+            VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
+            par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
             if par is not None and par.get("value").lower() == "false":
                 return True
 
