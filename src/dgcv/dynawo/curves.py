@@ -152,10 +152,7 @@ class DynawoCurves(ProducerCurves):
 
         return 0.0
 
-    def __adjust_event_value(self, event_params: dict, pdr: Pdr_params) -> None:
-        if pdr.Q == 0:
-            return
-
+    def __adjust_event_value(self, event_params: dict) -> None:
         generator = self.get_producer().generators[0]
         event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
 
@@ -271,7 +268,7 @@ class DynawoCurves(ProducerCurves):
             control_mode,
         )
         if recalculate_uref:
-            self.__adjust_event_value(event_params, pdr)
+            self.__adjust_event_value(event_params)
 
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
         jobs_file.complete_file(working_oc_dir, self._solver_id, self._solver_lib, event_params)
