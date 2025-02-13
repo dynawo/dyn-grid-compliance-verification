@@ -76,6 +76,12 @@ class DynawoCurves(ProducerCurves):
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
         sanity_checks.check_simulation_duration(self.get_simulation_duration())
 
+        self._solver_lib = config.get_value("Dynawo", "solver_lib")
+        if self._solver_lib is None:
+            self._solver_lib = "dynawo_SolverIDA"
+        self._solver_id = self._solver_lib.replace("dynawo_Solver", "")
+        sanity_checks.check_solver(self._solver_id, self._solver_lib)
+
         logging.setLoggerClass(SimulationLogger)
         self._logger = logging.getLogger("ProducerCurves")
 
@@ -268,7 +274,7 @@ class DynawoCurves(ProducerCurves):
             self.__adjust_event_value(event_params, pdr)
 
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
-        jobs_file.complete_file(working_oc_dir, event_params)
+        jobs_file.complete_file(working_oc_dir, self._solver_id, self._solver_lib, event_params)
 
         par_file = ParFile(self, pcs_bm_name, oc_name)
         par_file.complete_file(working_oc_dir, line_rpu, line_xpu, rte_gen, event_params)
