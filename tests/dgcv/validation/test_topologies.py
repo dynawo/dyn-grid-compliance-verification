@@ -24,6 +24,7 @@ def test_check_topology_s():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         )
     ]
     transformers = [
@@ -79,6 +80,7 @@ def test_check_topology_si():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         )
     ]
     transformers = [
@@ -134,6 +136,7 @@ def test_check_topology_saux():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         )
     ]
     transformers = [
@@ -196,6 +199,7 @@ def test_check_topology_sauxi():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         )
     ]
     transformers = [
@@ -258,6 +262,7 @@ def test_check_topology_m():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
@@ -267,6 +272,7 @@ def test_check_topology_m():
             par_id="",
             P=0.12,
             Q=0.025,
+            VoltageDrop=None,
         ),
     ]
     transformers = [
@@ -328,6 +334,7 @@ def test_check_topology_mi():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
@@ -337,6 +344,7 @@ def test_check_topology_mi():
             par_id="",
             P=0.12,
             Q=0.025,
+            VoltageDrop=None,
         ),
     ]
     transformers = [
@@ -398,6 +406,7 @@ def test_check_topology_maux():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
@@ -407,6 +416,7 @@ def test_check_topology_maux():
             par_id="",
             P=0.12,
             Q=0.025,
+            VoltageDrop=None,
         ),
     ]
     transformers = [
@@ -475,6 +485,7 @@ def test_check_topology_mauxi():
             par_id="",
             P=0.1,
             Q=0.05,
+            VoltageDrop=None,
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
@@ -484,6 +495,7 @@ def test_check_topology_mauxi():
             par_id="",
             P=0.12,
             Q=0.025,
+            VoltageDrop=None,
         ),
     ]
     transformers = [

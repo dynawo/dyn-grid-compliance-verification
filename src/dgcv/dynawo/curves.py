@@ -146,6 +146,13 @@ class DynawoCurves(ProducerCurves):
 
         return 0.0
 
+    def __adjust_event_value(self, event_params: dict, pdr: Pdr_params) -> None:
+        if pdr.Q == 0:
+            return
+
+        generator = self.get_producer().generators[0]
+        event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
+
     def __complete_model(
         self,
         working_oc_dir: Path,
@@ -247,7 +254,7 @@ class DynawoCurves(ProducerCurves):
         # Modify producer par to add generator init values
         section = get_cfg_oc_name(pcs_bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
-        model_parameters.adjust_producer_init(
+        recalculate_uref = model_parameters.adjust_producer_init(
             working_oc_dir,
             self.get_producer().get_producer_par(),
             self.get_producer().generators,
@@ -257,6 +264,8 @@ class DynawoCurves(ProducerCurves):
             pdr,
             control_mode,
         )
+        if recalculate_uref:
+            self.__adjust_event_value(event_params, pdr)
 
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
         jobs_file.complete_file(working_oc_dir, event_params)
@@ -445,7 +454,7 @@ class DynawoCurves(ProducerCurves):
             model_parameters.extract_defined_value(pdr_u, "Udim", u_dim)
             / self.get_producer().u_nom
         )
-        return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q))
+        return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def __get_grid_load(
         self,
