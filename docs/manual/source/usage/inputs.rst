@@ -163,6 +163,8 @@ Currently supported models:
     * Line
         AC power line - PI model
 * Loads:
+    * LoadAlphaBeta
+        Load with voltage-dependent active and reactive power (alpha-beta model)
     * LoadPQ
         Load with constant reactive/active power
 * Transformers:
@@ -339,7 +341,7 @@ tool will check that the edited file is correct, notifying the user if there are
               <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
               <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerTapChanger']-->
               <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
-              <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ']-->
+              <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
             </dyn:dynamicModelsArchitecture>
 
 The next file that the tool will work on is the **PAR** file, generating all the parameters needed
