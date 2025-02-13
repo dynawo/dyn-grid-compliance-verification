@@ -588,6 +588,23 @@ def check_simulation_duration(time: float) -> None:
         )
 
 
+def check_solver(id: str, lib: str):
+    """Check if a solver allowed by the tool has been configured.
+
+    Parameters
+    ----------
+    id: str
+        Solver id.
+    lib: str
+        Solver library.
+    """
+    if lib not in ["dynawo_SolverIDA", "dynawo_SolverSIM"]:
+        raise ValueError("The solver library is not available.")
+
+    if id not in lib:
+        raise ValueError("The solver id is incorrect.")
+
+
 def check_topology(
     topology: str,
     generators: list[Gen_params],
