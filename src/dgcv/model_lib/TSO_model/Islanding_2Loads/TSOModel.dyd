@@ -2,8 +2,8 @@
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!-- Benchmark Case -->
   <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
-  <dyn:blackBoxModel id="Main_load" lib="LoadPQ" parFile="TSOModel.par" parId="Main_Load"/>
-  <dyn:blackBoxModel id="Secondary_load" lib="LoadPQ" parFile="TSOModel.par" parId="Secondary_Load"/>
+  <dyn:blackBoxModel id="Main_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Main_Load"/>
+  <dyn:blackBoxModel id="Secondary_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Secondary_Load"/>
   <dyn:blackBoxModel id="DISCONNECT_LOAD" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLoad"/>
   <dyn:connect id1="Main_load" var1="load_terminal" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Secondary_load" var1="load_terminal" id2="BusPDR" var2="bus_terminal"/>
