@@ -320,7 +320,7 @@ models to use instead of the placeholders that the tool has set are indicated:
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerTapChanger']-->
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
-  <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ']-->
+  <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
 ```
 
@@ -339,7 +339,7 @@ In this step we are going to modify the file to leave it like the following exam
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerTapChanger']-->
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
-  <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ']-->
+  <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
 ```
 
