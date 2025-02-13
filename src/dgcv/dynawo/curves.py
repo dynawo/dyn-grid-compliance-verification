@@ -76,6 +76,12 @@ class DynawoCurves(ProducerCurves):
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
         sanity_checks.check_simulation_duration(self.get_simulation_duration())
 
+        self._solver_lib = config.get_value("Dynawo", "solver_lib")
+        if self._solver_lib is None:
+            self._solver_lib = "dynawo_SolverIDA"
+        self._solver_id = self._solver_lib.replace("dynawo_Solver", "")
+        sanity_checks.check_solver(self._solver_id, self._solver_lib)
+
         logging.setLoggerClass(SimulationLogger)
         self._logger = logging.getLogger("ProducerCurves")
 
@@ -145,6 +151,10 @@ class DynawoCurves(ProducerCurves):
             return gen.U0
 
         return 0.0
+
+    def __adjust_event_value(self, event_params: dict) -> None:
+        generator = self.get_producer().generators[0]
+        event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
 
     def __complete_model(
         self,
@@ -247,7 +257,7 @@ class DynawoCurves(ProducerCurves):
         # Modify producer par to add generator init values
         section = get_cfg_oc_name(pcs_bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
-        model_parameters.adjust_producer_init(
+        recalculate_uref = model_parameters.adjust_producer_init(
             working_oc_dir,
             self.get_producer().get_producer_par(),
             self.get_producer().generators,
@@ -257,9 +267,11 @@ class DynawoCurves(ProducerCurves):
             pdr,
             control_mode,
         )
+        if recalculate_uref:
+            self.__adjust_event_value(event_params)
 
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
-        jobs_file.complete_file(working_oc_dir, event_params)
+        jobs_file.complete_file(working_oc_dir, self._solver_id, self._solver_lib, event_params)
 
         par_file = ParFile(self, pcs_bm_name, oc_name)
         par_file.complete_file(working_oc_dir, line_rpu, line_xpu, rte_gen, event_params)
@@ -445,7 +457,7 @@ class DynawoCurves(ProducerCurves):
             model_parameters.extract_defined_value(pdr_u, "Udim", u_dim)
             / self.get_producer().u_nom
         )
-        return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q))
+        return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def __get_grid_load(
         self,
