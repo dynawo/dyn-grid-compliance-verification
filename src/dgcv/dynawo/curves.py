@@ -21,6 +21,7 @@ from dgcv.dynawo import dynawo
 from dgcv.dynawo.dyd import DydFile
 from dgcv.dynawo.jobs import JobsFile
 from dgcv.dynawo.par import ParFile
+from dgcv.dynawo.solvers import SolversFile
 from dgcv.dynawo.table import TableFile
 from dgcv.dynawo.translator import dynawo_translator
 from dgcv.electrical.generator_variables import generator_variables
@@ -281,6 +282,9 @@ class DynawoCurves(ProducerCurves):
 
         table_file = TableFile(self, pcs_bm_name, oc_name)
         table_file.complete_file(working_oc_dir, rte_gen, event_params)
+
+        solvers_file = SolversFile(self, pcs_bm_name, oc_name)
+        solvers_file.complete_file(working_oc_dir)
 
         omega_file.complete_omega(
             working_oc_dir,

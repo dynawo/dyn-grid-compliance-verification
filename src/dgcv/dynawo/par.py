@@ -79,4 +79,4 @@ class ParFile(FileVariables):
         self.complete_parameters(variables_dict, event_params)
 
         # Replace placeholders in the PAR file with the calculated variables
-        replace_placeholders.par_file(working_oc_dir, "TSOModel.par", variables_dict)
+        replace_placeholders.dump_file(working_oc_dir, "TSOModel.par", variables_dict)
