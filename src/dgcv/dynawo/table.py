@@ -57,5 +57,8 @@ class TableFile(FileVariables):
 
         self.complete_parameters(variables_dict, event_params)
 
+        if not (working_oc_dir / "TableInfiniteBus.txt").exists():
+            return
+
         # Replace placeholders in the TableInfiniteBus file with the calculated variables
-        replace_placeholders.table_file(working_oc_dir, variables_dict)
+        replace_placeholders.dump_file(working_oc_dir, "TableInfiniteBus.txt", variables_dict)

@@ -35,82 +35,21 @@ def get_all_variables(path: Path, template_file: str) -> dict:
     return dict.fromkeys(variables, 0)
 
 
-def jobs_file(
+def dump_file(
     path: Path,
     filename: str,
     stream_dict: dict,
 ) -> None:
-    """Replace JOBS file placeholders with values.
+    """Replace file placeholders with values.
 
     Parameters
     ----------
     path: Path
-        Path where the JOBS file is stored
+        Path where the  file is stored
     filename: str
-        JOBS filename
+        filename
     stream_dict: dict
-        Dictionary with all variables in the JOBS file
-    """
-
-    template = _get_template(path, filename)
-    template.stream(stream_dict).dump(str(path / filename))
-
-
-def table_file(
-    path: Path,
-    stream_dict: dict,
-) -> None:
-    """Replace TableInfiniteBus file placeholders with values.
-
-    Parameters
-    ----------
-    path: Path
-        Path where the TableInfiniteBus file is stored
-    stream_dict: dict
-        Dictionary with all variables in the TableInfiniteBus file
-    """
-    if not (path / "TableInfiniteBus.txt").exists():
-        return
-
-    template = _get_template(path, "TableInfiniteBus.txt")
-    template.stream(stream_dict).dump(str(path / "TableInfiniteBus.txt"))
-
-
-def dyd_file(
-    path: Path,
-    filename: str,
-    stream_dict: dict,
-):
-    """Replace DYD file placeholders with values.
-
-    Parameters
-    ----------
-    path: Path
-        Path where the DYD file is stored
-    filename: str
-        DYD filename
-    stream_dict: dict
-        Dictionary with all variables in the DYD file
-    """
-    template = _get_template(path, filename)
-    template.stream(stream_dict).dump(str(path / filename))
-
-
-def par_file(
-    path: Path,
-    filename: str,
-    stream_dict: dict,
-):
-    """Replace PAR file placeholders with values.
-
-    Parameters
-    ----------
-    path: Path
-        Path where the PAR file is stored
-    filename: str
-        PAR filename
-    stream_dict: dict
-        Dictionary with all variables in the PAR file
+        Dictionary with all variables in the file
     """
 
     template = _get_template(path, filename)
