@@ -17,6 +17,7 @@
     <par type="DOUBLE" name="kReduceStep" value="{{sim_kReduceStep}}"/>
     <par type="INT" name="maxNewtonTry" value="{{sim_maxNewtonTry}}"/>
     <par type="STRING" name="linearSolverName" value="{{sim_linearSolverName}}"/>
+    <par type="DOUBLE" name="fnormtol" value="{{sim_fnormtol}}"/>
     <par type="DOUBLE" name="minimalAcceptableStep" value="{{sim_minimalAcceptableStep}}"/>
   </set>
 </parametersSet>
