@@ -52,4 +52,4 @@ class DydFile(FileVariables):
         # Modify dyd to add calculated variables
         # This includes replacing placeholders in the DYD file with the actual values
         # from the variables_dict, such as generator_id and connection_event.
-        replace_placeholders.dyd_file(working_oc_dir, "TSOModel.dyd", variables_dict)
+        replace_placeholders.dump_file(working_oc_dir, "TSOModel.dyd", variables_dict)

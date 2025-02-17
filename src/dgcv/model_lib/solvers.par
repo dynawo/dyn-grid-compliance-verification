@@ -2,21 +2,21 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- IDA order 2 solver -->
   <set id="IDA">
-    <par type="INT" name="order" value="2"/>
-    <par type="DOUBLE" name="initStep" value="1e-9"/>
-    <par type="DOUBLE" name="minStep" value="1e-9"/>
-    <par type="DOUBLE" name="maxStep" value="1"/>
-    <par type="DOUBLE" name="absAccuracy" value="1e-6"/>
-    <par type="DOUBLE" name="relAccuracy" value="1e-6"/>
-    <par type="DOUBLE" name="minimalAcceptableStep" value="1e-10"/>
+    <par type="INT" name="order" value="{{ida_order}}"/>
+    <par type="DOUBLE" name="initStep" value="{{ida_initStep}}"/>
+    <par type="DOUBLE" name="minStep" value="{{ida_minStep}}"/>
+    <par type="DOUBLE" name="maxStep" value="{{ida_maxStep}}"/>
+    <par type="DOUBLE" name="absAccuracy" value="{{ida_absAccuracy}}"/>
+    <par type="DOUBLE" name="relAccuracy" value="{{ida_relAccuracy}}"/>
+    <par type="DOUBLE" name="minimalAcceptableStep" value="{{ida_minimalAcceptableStep}}"/>
   </set>
   <!-- SIM solver -->
   <set id="SIM">
-    <par type="DOUBLE" name="hMin" value="0.001"/>
-    <par type="DOUBLE" name="hMax" value="0.01"/>
-    <par type="DOUBLE" name="kReduceStep" value="0.5"/>
-    <par type="INT" name="maxNewtonTry" value="10"/>
-    <par type="STRING" name="linearSolverName" value="KLU"/>
-    <par type="DOUBLE" name="minimalAcceptableStep" value="1e-4"/>
+    <par type="DOUBLE" name="hMin" value="{{sim_hMin}}"/>
+    <par type="DOUBLE" name="hMax" value="{{sim_hMax}}"/>
+    <par type="DOUBLE" name="kReduceStep" value="{{sim_kReduceStep}}"/>
+    <par type="INT" name="maxNewtonTry" value="{{sim_maxNewtonTry}}"/>
+    <par type="STRING" name="linearSolverName" value="{{sim_linearSolverName}}"/>
+    <par type="DOUBLE" name="minimalAcceptableStep" value="{{sim_minimalAcceptableStep}}"/>
   </set>
 </parametersSet>
