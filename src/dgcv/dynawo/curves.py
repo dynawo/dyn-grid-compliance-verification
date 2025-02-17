@@ -514,12 +514,134 @@ class DynawoCurves(ProducerCurves):
             fault_rpu,
         )
 
+    def __simulate(
+        self,
+        output_dir: Path,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+    ) -> tuple[bool, bool, pd.DataFrame]:
+
+        # Run Base Mode
+        (
+            success,
+            log,
+            curves_calculated,
+        ) = self.__execute_dynawo(
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+        )
+
+        if not success:
+            dgcv_logging.get_logger("Dynawo").warning(log)
+            dgcv_logging.get_logger("Dynawo").warning("Retry by modifying the minimum time step")
+
+            # Modifying the minimum time step
+            minimal_time_step = "minStep"
+            factor = 1 / 10
+            if self._solver_id == "SIM":
+                minimal_time_step = "hMin"
+            replace_placeholders.modify_par_file(
+                working_oc_dir,
+                "solvers.par",
+                minimal_time_step,
+                factor,
+            )
+            (
+                success,
+                log,
+                curves_calculated,
+            ) = self.__execute_dynawo(
+                output_dir,
+                working_oc_dir,
+                jobs_output_dir,
+            )
+
+        if not success:
+            dgcv_logging.get_logger("Dynawo").warning(log)
+            dgcv_logging.get_logger("Dynawo").warning("Retry by modifying the required accuracy")
+
+            # Modifying the required accuracy
+            factor = 10
+            if self._solver_id == "IDA":
+                accuracy = "relAccuracy"
+                replace_placeholders.modify_par_file(
+                    working_oc_dir,
+                    "solvers.par",
+                    accuracy,
+                    factor,
+                )
+                accuracy = "absAccuracy"
+                replace_placeholders.modify_par_file(
+                    working_oc_dir,
+                    "solvers.par",
+                    accuracy,
+                    factor,
+                )
+            else:
+                accuracy = "fnormtol"
+                replace_placeholders.modify_par_file(
+                    working_oc_dir,
+                    "solvers.par",
+                    accuracy,
+                    factor,
+                )
+
+            (
+                success,
+                log,
+                curves_calculated,
+            ) = self.__execute_dynawo(
+                output_dir,
+                working_oc_dir,
+                jobs_output_dir,
+            )
+
+        if not success:
+            dgcv_logging.get_logger("Dynawo").warning(log)
+            dgcv_logging.get_logger("Dynawo").warning("Retry by changing the solver type")
+
+            # Changing the solver type
+            if self._solver_id == "SIM":
+                replace_placeholders.modify_jobs_file(
+                    working_oc_dir,
+                    "TSOModel.jobs",
+                    "IDA",
+                    "dynawo_SolverIDA",
+                )
+            else:
+                replace_placeholders.modify_jobs_file(
+                    working_oc_dir,
+                    "TSOModel.jobs",
+                    "SIM",
+                    "dynawo_SolverSIM",
+                )
+            (
+                success,
+                log,
+                curves_calculated,
+            ) = self.__execute_dynawo(
+                output_dir,
+                working_oc_dir,
+                jobs_output_dir,
+            )
+
+        if not success:
+            dgcv_logging.get_logger("Dynawo").warning(log)
+
+        # Check if there is a curves file
+        has_dynawo_curves = False
+        if (working_oc_dir / jobs_output_dir / "curves/curves.csv").exists() and success:
+            has_dynawo_curves = True
+
+        return success, has_dynawo_curves, curves_calculated
+
     def __execute_dynawo(
         self,
         output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
-    ) -> tuple[bool, str, bool, pd.DataFrame]:
+    ) -> tuple[bool, str, pd.DataFrame]:
         # Run Dynawo
         success, log, has_error, curves_calculated = dynawo.run_base_dynawo(
             self._launcher_dwo,
@@ -532,12 +654,7 @@ class DynawoCurves(ProducerCurves):
             log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
             log = f"Simulation Fails, logs in {str(log_file)}"
 
-        # Check if there is a curves file
-        has_dynawo_curves = False
-        if (working_oc_dir / jobs_output_dir / "curves/curves.csv").exists() and success:
-            has_dynawo_curves = True
-
-        return success, log, has_dynawo_curves, curves_calculated
+        return success, log, curves_calculated
 
     def __get_hiz_fault(
         self,
@@ -577,7 +694,6 @@ class DynawoCurves(ProducerCurves):
 
             (
                 success,
-                _,
                 _,
                 curves_calculated,
             ) = self.__execute_dynawo(
@@ -916,17 +1032,13 @@ class DynawoCurves(ProducerCurves):
 
             (
                 success,
-                log,
                 has_dynawo_curves,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__simulate(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
             )
-
-            if not success:
-                dgcv_logging.get_logger("Dynawo").warning(log)
 
         except ValueError:
             success = False

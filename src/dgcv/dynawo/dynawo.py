@@ -163,7 +163,7 @@ def _run_dynawo(
     inputs_path: Path,
 ) -> tuple[bool, str]:
     tic = time.time()
-    simulation_limit = config.get_float("Dynawo", "simulation_limit", 300.0)
+    simulation_limit = config.get_float("Dynawo", "simulation_limit", 60.0)
 
     proc = subprocess.Popen(
         [
@@ -181,7 +181,6 @@ def _run_dynawo(
         toc = time.time()
 
     if proc.poll() is None:
-        dgcv_logging.get_logger("Dynawo").warning("Execution terminated due to timeout")
         stderr = "Execution terminated due to timeout"
         ret_value = False
         if os.name == "nt":
