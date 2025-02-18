@@ -163,6 +163,16 @@ class CurvesManager:
     def __get_validation_windows(self, curve: str, windows: str) -> tuple[float, float]:
         return self._windows[curve]["validate"][windows]
 
+    def get_solver(self) -> dict:
+        """Get the solver.
+
+        Returns
+        -------
+        dict
+            Solver parameters.
+        """
+        return self.__get_producer_curves_generator().get_solver()
+
     def has_required_curves(
         self,
         measurement_names: list,

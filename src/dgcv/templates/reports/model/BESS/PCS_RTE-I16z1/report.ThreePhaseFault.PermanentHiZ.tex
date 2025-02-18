@@ -24,6 +24,21 @@
         \end{itemize}
     \end{description}
 
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Parameter} & \textbf{value} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultPermanentHiZ}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
     \GridCurvesZone
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z1ThreePhaseFaultPermanentHiZ }}

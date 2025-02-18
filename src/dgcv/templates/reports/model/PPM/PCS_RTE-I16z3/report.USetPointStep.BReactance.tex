@@ -13,6 +13,21 @@
 
     \GridCircuitZthree
 
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Parameter} & \textbf{value} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z3USetPointStepBReactance}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
     \GridCurvesZthree
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z3USetPointStepBReactance }}

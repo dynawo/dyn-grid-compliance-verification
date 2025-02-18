@@ -31,6 +31,7 @@ from dgcv.report.tables import (
     compliance,
     results,
     signal_error,
+    solver,
     steady_state_error,
     summary,
     thresholds,
@@ -120,6 +121,7 @@ def _pcs_replace(
         latex_link = f"\\href{{run:{html_link}}}{{html figures}}"
         subst_dict = subst_dict | {"link" + operating_condition_: latex_link}
 
+        solver_map = solver.create_map(oc_results)
         results_map = results.create_map(oc_results)
         compliance_map = compliance.create_map(oc_results)
         thresholds_map = thresholds.create_map(oc_results, producer.is_dynawo_model())
@@ -128,6 +130,7 @@ def _pcs_replace(
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
+        subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
         subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
         subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
         subst_dict = subst_dict | {"thm" + operating_condition_: thresholds_map}

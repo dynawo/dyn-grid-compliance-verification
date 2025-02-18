@@ -22,7 +22,7 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         assert (testpath / reference_curves_path).exists()
 
     try:
-        config._default_config.set("Dynawo", "simulation_limit", "120")
+        config._default_config.set("Dynawo", "simulation_limit", "30")
         only_dtr = True
         if producer_model_path:
             if "Performance" in producer_model_path:
