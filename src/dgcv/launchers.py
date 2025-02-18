@@ -39,6 +39,7 @@ def _performance_verification(
     producer_curves: Path,
     user_pcs: str,
     only_dtr: bool,
+    testing: bool,
 ) -> int:
     ep = Parameters(
         dwo_launcher,
@@ -55,6 +56,7 @@ def _performance_verification(
         md = Validation(
             ep,
         )
+        md.set_testing(testing)
         md.validate()
     else:
         return -1
@@ -70,6 +72,7 @@ def _model_validation(
     reference_curves: Path,
     user_pcs: str,
     only_dtr: bool,
+    testing: bool,
 ) -> int:
     ep = Parameters(
         dwo_launcher,
@@ -88,6 +91,7 @@ def _model_validation(
     md = Validation(
         ep,
     )
+    md.set_testing(testing)
     md.validate()
     return 0
 
@@ -98,6 +102,10 @@ def _check_launchers(dwo_launcher: str) -> None:
     except OSError as e:
         dgcv_logging.get_logger("Sanity Checks").error(e)
         exit(1)
+
+
+def _add_testing_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
+    parser.add_argument("--testing", action="store_true", help=argparse.SUPPRESS, default=False)
 
 
 def _add_launcher_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
@@ -269,6 +277,7 @@ def _subcomands_parser() -> argparse.ArgumentParser:
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
+    _add_testing_argument(validate)
 
     performance = subparsers.add_parser(
         "performance",
@@ -283,6 +292,7 @@ def _subcomands_parser() -> argparse.ArgumentParser:
     _add_output_argument(performance)
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)
+    _add_testing_argument(performance)
 
     generate = subparsers.add_parser(
         "generate",
@@ -432,6 +442,7 @@ def _execute_performance(
         producer_curves,
         user_pcs,
         args.only_dtr,
+        args.testing,
     )
     if r != 0:
         p.error("It is not possible to find the producer model or the producer curves to validate")
@@ -481,6 +492,7 @@ def _execute_validate(
         reference_curves,
         user_pcs,
         args.only_dtr,
+        args.testing,
     )
     if r != 0:
         p.error(

@@ -154,6 +154,16 @@ class ImportedCurves(ProducerCurves):
             df_imported_curves,
         )
 
+    def get_solver(self) -> dict:
+        """There is no solver in this curve format.
+
+        Returns
+        -------
+        dict
+            Solver parameters.
+        """
+        return dict()
+
     def obtain_reference_curve(
         self,
         working_oc_dir: Path,

@@ -33,7 +33,10 @@ from dgcv.report import report
 from dgcv.report.LatexReportException import LatexReportException
 
 
-def _open_document(file: Path):
+def _open_document(file: Path, is_testing: bool) -> None:
+    if is_testing:
+        return
+
     if os.name == "nt":
         dgcv_logging.get_logger("Validation").info(f"Opening the report: {file}")
         subprocess.run(["start", file], shell=True)
@@ -115,6 +118,9 @@ class Validation:
         # Prepare the environment to execute the tool
         pcs_list = [Pcs(pcs_name, parameters) for pcs_name in self._validation_pcs]
         self._pcs_list = sorted(pcs_list, key=attrgetter("_id", "_zone"))
+
+        # Flag to avoid opening the report in the tests
+        self._is_testing = False
 
     def __populate_validation_pcs(
         self, validation_pcs: set, validation_key: str, validation_path: str
@@ -247,7 +253,7 @@ class Validation:
                 self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
             )
             if report_file.exists():
-                _open_document(report_file)
+                _open_document(report_file, self._is_testing)
             else:
                 dgcv_logging.get_logger("Validation").warning(
                     f"Report file does not exist: {report_file}"
@@ -259,3 +265,6 @@ class Validation:
 
         manage_files.remove_dir(self._parameters.get_working_dir())
         return compliance_list
+
+    def set_testing(self, testing: bool):
+        self._is_testing = testing

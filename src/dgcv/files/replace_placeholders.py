@@ -95,7 +95,7 @@ def modify_par_file(
     path: Path,
     filename: str,
     parameter_name: str,
-    factor: float,
+    value: float,
 ) -> None:
     """Modify the value of a parameter in the PAR file.
 
@@ -107,16 +107,15 @@ def modify_par_file(
         PAR filename
     parameter_name: str
         Parameter name to modify
-    factor: float
-        Factor to multiply the parameter value
+    value: float
+        New value
     """
     par_tree = etree.parse(path / filename, etree.XMLParser(remove_blank_text=True))
     par_root = par_tree.getroot()
     ns = etree.QName(par_root).namespace
     par_file_parameter = par_root.find(f".//{{{ns}}}par[@name='{parameter_name}']")
     if par_file_parameter is not None:
-        value = float(par_file_parameter.get("value"))
-        par_file_parameter.set("value", str(value * factor))
+        par_file_parameter.set("value", str(value))
 
     par_tree.write(
         path / filename,

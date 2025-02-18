@@ -571,6 +571,7 @@ class Benchmark:
                     success,
                     has_simulated_curves,
                 )
+                results["solver"] = self._curves_manager.get_solver()
                 # If there is a correct simulation, the report must be created
                 success |= op_cond_success
             elif has_curves == 1:

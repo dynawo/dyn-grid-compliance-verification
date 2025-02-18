@@ -81,6 +81,14 @@ class DynawoCurves(ProducerCurves):
         if self._solver_lib is None:
             self._solver_lib = "dynawo_SolverIDA"
         self._solver_id = self._solver_lib.replace("dynawo_Solver", "")
+
+        if self._solver_id == "IDA":
+            self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-9)
+            self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
+            self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-6)
+        else:
+            self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 0.001)
+            self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
         sanity_checks.check_solver(self._solver_id, self._solver_lib)
 
         logging.setLoggerClass(SimulationLogger)
@@ -537,16 +545,21 @@ class DynawoCurves(ProducerCurves):
             dgcv_logging.get_logger("Dynawo").warning("Retry by modifying the minimum time step")
 
             # Modifying the minimum time step
-            minimal_time_step = "minStep"
-            factor = 1 / 10
-            if self._solver_id == "SIM":
-                minimal_time_step = "hMin"
-            replace_placeholders.modify_par_file(
-                working_oc_dir,
-                "solvers.par",
-                minimal_time_step,
-                factor,
-            )
+            self._minimum_time_step /= 10.0
+            if self._solver_id == "IDA":
+                replace_placeholders.modify_par_file(
+                    working_oc_dir,
+                    "solvers.par",
+                    "minStep",
+                    self._minimum_time_step,
+                )
+            else:
+                replace_placeholders.modify_par_file(
+                    working_oc_dir,
+                    "solvers.par",
+                    "hMin",
+                    self._minimum_time_step,
+                )
             (
                 success,
                 log,
@@ -562,29 +575,27 @@ class DynawoCurves(ProducerCurves):
             dgcv_logging.get_logger("Dynawo").warning("Retry by modifying the required accuracy")
 
             # Modifying the required accuracy
-            factor = 10
+            self._relAccuracy *= 10.0
+            self._absAccuracy *= 10.0
             if self._solver_id == "IDA":
-                accuracy = "relAccuracy"
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
                     "solvers.par",
-                    accuracy,
-                    factor,
+                    "relAccuracy",
+                    self._relAccuracy,
                 )
-                accuracy = "absAccuracy"
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
                     "solvers.par",
-                    accuracy,
-                    factor,
+                    "absAccuracy",
+                    self._absAccuracy,
                 )
             else:
-                accuracy = "fnormtol"
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
                     "solvers.par",
-                    accuracy,
-                    factor,
+                    "fnormtol",
+                    self._absAccuracy,
                 )
 
             (
@@ -603,19 +614,24 @@ class DynawoCurves(ProducerCurves):
 
             # Changing the solver type
             if self._solver_id == "SIM":
-                replace_placeholders.modify_jobs_file(
-                    working_oc_dir,
-                    "TSOModel.jobs",
-                    "IDA",
-                    "dynawo_SolverIDA",
-                )
+                self._solver_id = "IDA"
+                self._solver_lib = "dynawo_SolverIDA"
+                # Restore default values
+                self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-9)
+                self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
+                self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-6)
             else:
-                replace_placeholders.modify_jobs_file(
-                    working_oc_dir,
-                    "TSOModel.jobs",
-                    "SIM",
-                    "dynawo_SolverSIM",
-                )
+                self._solver_id = "SIM"
+                self._solver_lib = "dynawo_SolverSIM"
+                # Restore default values
+                self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 0.001)
+                self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
+            replace_placeholders.modify_jobs_file(
+                working_oc_dir,
+                "TSOModel.jobs",
+                self._solver_id,
+                self._solver_lib,
+            )
             (
                 success,
                 log,
@@ -624,6 +640,7 @@ class DynawoCurves(ProducerCurves):
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
+                show_log_file=True,
             )
 
         if not success:
@@ -641,6 +658,7 @@ class DynawoCurves(ProducerCurves):
         output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
+        show_log_file: bool = False,
     ) -> tuple[bool, str, pd.DataFrame]:
         # Run Dynawo
         success, log, has_error, curves_calculated = dynawo.run_base_dynawo(
@@ -650,7 +668,7 @@ class DynawoCurves(ProducerCurves):
             working_oc_dir,
             jobs_output_dir,
         )
-        if has_error:
+        if has_error and show_log_file:
             log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
             log = f"Simulation Fails, logs in {str(log_file)}"
 
@@ -857,6 +875,36 @@ class DynawoCurves(ProducerCurves):
             True if the bisection method is complete, False otherwise.
         """
         return round(max_val - min_val, 4) <= 0.0001
+
+    def get_solver(self) -> dict:
+        solver_parameters = {
+            "lib": self._solver_lib,
+            "parId": self._solver_id,
+        }
+        if self._solver_id == "IDA":
+            solver_parameters["order"] = config.get_int("Dynawo", "ida_order", 2)
+            solver_parameters["initStep"] = config.get_float("Dynawo", "ida_initStep", 1e-9)
+            solver_parameters["minStep"] = self._minimum_time_step
+            solver_parameters["maxStep"] = config.get_float("Dynawo", "ida_maxStep", 1.0)
+            solver_parameters["absAccuracy"] = self._absAccuracy
+            solver_parameters["relAccuracy"] = self._relAccuracy
+            solver_parameters["minimalAcceptableStep"] = config.get_float(
+                "Dynawo", "ida_minimalAcceptableStep", 1e-6
+            )
+        else:
+            solver_parameters["hMin"] = self._minimum_time_step
+            solver_parameters["hMax"] = config.get_float("Dynawo", "sim_hMax", 0.01)
+            solver_parameters["kReduceStep"] = config.get_float("Dynawo", "sim_kReduceStep", 0.5)
+            solver_parameters["maxNewtonTry"] = config.get_int("Dynawo", "sim_maxNewtonTry", 10)
+            solver_parameters["linearSolverName"] = config.get_value(
+                "Dynawo", "sim_linearSolverName"
+            )
+            solver_parameters["fnormtol"] = self._absAccuracy
+            solver_parameters["minimalAcceptableStep"] = config.get_float(
+                "Dynawo", "sim_minimalAcceptableStep", 1e-6
+            )
+
+        return solver_parameters
 
     def get_time_cct(
         self,
