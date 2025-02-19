@@ -161,10 +161,14 @@ def _run_dynawo(
     launcher_dwo: Path,
     jobs_filename: str,
     inputs_path: Path,
+    simulation_limit: float = None,
 ) -> tuple[bool, str]:
-    tic = time.time()
-    simulation_limit = config.get_float("Dynawo", "simulation_limit", 300.0)
 
+    if simulation_limit is None:
+        simulation_limit = config.get_float("Dynawo", "simulation_limit", 90.0)
+    dgcv_logging.get_logger("Dynawo").debug(f"Simulation limit: {simulation_limit}")
+
+    tic = time.time()
     proc = subprocess.Popen(
         [
             launcher_dwo,
@@ -181,7 +185,6 @@ def _run_dynawo(
         toc = time.time()
 
     if proc.poll() is None:
-        dgcv_logging.get_logger("Dynawo").warning("Execution terminated due to timeout")
         stderr = "Execution terminated due to timeout"
         ret_value = False
         if os.name == "nt":
@@ -202,7 +205,7 @@ def _run_dynawo(
         else:
             ret_value = False
 
-    return ret_value, stderr
+    return ret_value, stderr, toc - tic
 
 
 def _create_complex_zero_array(shape: int) -> np.ndarray:
@@ -540,7 +543,8 @@ def run_base_dynawo(
     inputs_path: Path,
     output_path: Path,
     save_file: bool = True,
-) -> tuple[bool, float, str, bool]:
+    simulation_limit: float = None,
+) -> tuple[bool, float, str, bool, float]:
     """Run a Dynamic Simulation with Dynawo.
 
     Parameters
@@ -568,9 +572,12 @@ def run_base_dynawo(
         Error in timeline
     DataFrame
         A DataFrame with the transformed curves
-
+    float
+        Time taken for the simulation
     """
-    success, stderr = _run_dynawo(launcher_dwo, jobs_filename, inputs_path)
+    success, stderr, sim_time = _run_dynawo(
+        launcher_dwo, jobs_filename, inputs_path, simulation_limit
+    )
     dynawo_output_dir = inputs_path / output_path
 
     log = None
@@ -589,7 +596,7 @@ def run_base_dynawo(
             dynawo_output_dir / "curves/curves.csv",
         )
 
-    return success, log, has_error, curves_calculated
+    return success, log, has_error, curves_calculated, sim_time
 
 
 def check_voltage_dip(
