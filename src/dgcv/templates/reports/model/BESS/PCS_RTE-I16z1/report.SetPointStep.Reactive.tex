@@ -14,6 +14,21 @@
 
     \GridCircuitZone
 
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z1SetPointStepReactive}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
     \GridCurvesZone
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z1SetPointStepReactive }}

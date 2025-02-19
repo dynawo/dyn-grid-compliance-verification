@@ -166,6 +166,17 @@ class ProducerCurves:
         return float(self.obtain_value(str(setpoint_variation)))
 
     @abstractmethod
+    def get_solver(self) -> dict:
+        """Get the solver.
+
+        Returns
+        -------
+        dict
+            Solver parameters.
+        """
+        pass
+
+    @abstractmethod
     def get_generators_imax(self) -> dict:
         """Get the maximum current (Imax) for each generator.
 

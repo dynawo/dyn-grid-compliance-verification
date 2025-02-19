@@ -1,88 +1,74 @@
-launcher=$1;
+#!/bin/bash
+#
 
-usage() {
-   echo -e "Usage: `basename $0` [OPTIONS]\tFull testing
-   
-   where OPTIONS can be one of the following:
-      --launcher (-l)     Dynawo launcher (default: dynawo.sh)
-      --input (-i)        Producer model and curves, and reference curves path (default: ./examples)
-      --output (-o)       Output path (default: ./Results)
-      --topology (-t)     Selected topology (default: SingleAux)
-      
-   available topologies:
-      * Single
-      * SingleI
-      * SingleAux
-      * SingleAuxI
-   " 
+# For saner programming:
+set -o nounset -o noclobber
+set -o errexit -o pipefail
+
+# Some useful functions
+GREEN="\\033[1;32m"
+NC="\\033[0m"
+color_msg()
+{
+    echo -e "$(date '+%Y-%m-%d %H:%M%S'): $1"  # to the log file, no color, timestamped
+    echo -e "${GREEN}$1${NC}" >&6              # to the console, in color
 }
 
 launch_test() {
-   rm -rf $results/*
+   declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a" "IECB2015" "IECB2020" "WECCB")
+   declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
 
-   # SM performance validation
-   echo "dgcv performance -l $launcher -m $models/SM/Dynawo/$topology -o $results/SM/model"
-   dgcv performance -l $launcher -m $models/SM/Dynawo/$topology -o $results/SM/model
-   echo "dgcv performance -l $launcher -c $models/SM/ProducerCurves -o $results/SM/curves"
-   dgcv performance -l $launcher -c $models/SM/ProducerCurves -o $results/SM/curves
-   echo "dgcv performance -l $launcher -m $models/SM/Dynawo/$topology -c $models/SM/ProducerCurves -o $results/SM/mixed"
-   dgcv performance -l $launcher -m $models/SM/Dynawo/$topology -c $models/SM/ProducerCurves -o $results/SM/mixed
+   # performance validation
+   for topology in "${topologies[@]}"
+   do
+      for model in "${models[@]}"
+      do
+         start=$(date +%s)
+         color_msg "dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model"
+         dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model --testing
+         end=$(date +%s)
+         color_msg "Verificate: $topology - $model Elapsed Time: $(($end-$start)) seconds"
+      done
+   done
 
-   echo "dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/WECC -o $results/PPM/modelwecc"
-   dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/WECC -o $results/PPM/modelwecc
-   echo "dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/IEC -o $results/PPM/modeliec"
-   dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/IEC2020 -o $results/PPM/modeliec
-   echo "dgcv performance -l $launcher -c $models/PPM/ProducerCurves -o $results/PPM/curves"
-   dgcv performance -l $launcher -c $models/PPM/ProducerCurves -o $results/PPM/curves
-   echo "dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/WECC -c $models/PPM/ProducerCurves -o $results/PPM/mixedwecc"
-   dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/WECC -c $models/PPM/ProducerCurves -o $results/PPM/mixedwecc
-   echo "dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/IEC -c $models/PPM/ProducerCurves -o $results/PPM/mixediec"
-   dgcv performance -l $launcher -m $models/PPM/Dynawo/$topology/IEC2020 -c $models/PPM/ProducerCurves -o $results/PPM/mixediec
+   declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
+   declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
+   declare -a bess_models=("WECC")
 
    # Model validation
-   echo "dgcv validate -l $launcher -m $models/Model/Wind/WECC/Dynawo $models/Model/Wind/WECC/ReferenceCurves -o $results/WindWecc/model"
-   dgcv validate -l $launcher -m $models/Model/Wind/WECC/Dynawo $models/Model/Wind/WECC/ReferenceCurves -o $results/WindWecc/model
-   echo "dgcv validate -l $launcher -c $models/Model/Wind/WECC/ProducerCurves $models/Model/Wind/WECC/ReferenceCurves -o $results/WindWecc/curves"
-   dgcv validate -l $launcher -c $models/Model/Wind/WECC/ProducerCurves $models/Model/Wind/WECC/ReferenceCurves -o $results/WindWecc/curves
-   echo "dgcv validate -l $launcher -c $models/Model/Wind/WECC/ProducerCurves $models/Model/Wind/IEC2020/ReferenceCurves -o $results/WindWecc/mixed"
-   dgcv validate -l $launcher -c $models/Model/Wind/WECC/ProducerCurves $models/Model/Wind/IEC2020/ReferenceCurves -o $results/WindWecc/mixed
-   echo "dgcv validate -l $launcher -m $models/Model/Wind/IEC2020/Dynawo $models/Model/Wind/IEC2020/ReferenceCurves -o $results/WindIec2020/model"
-   dgcv validate -l $launcher -m $models/Model/Wind/IEC2020/Dynawo $models/Model/Wind/IEC2020/ReferenceCurves -o $results/WindIec2020/model
-   echo "dgcv validate -l $launcher -c $models/Model/Wind/IEC2020/ProducerCurves $models/Model/Wind/IEC2020/ReferenceCurves -o $results/WindIec2020/curves"
-   dgcv validate -l $launcher -c $models/Model/Wind/IEC2020/ProducerCurves $models/Model/Wind/IEC2020/ReferenceCurves -o $results/WindIec2020/curves
-   echo "dgcv validate -l $launcher -c $models/Model/Wind/IEC2020/ProducerCurves $models/Model/Wind/WECC/ReferenceCurves -o $results/WindIec2020/mixed"
-   dgcv validate -l $launcher -c $models/Model/Wind/IEC2020/ProducerCurves $models/Model/Wind/WECC/ReferenceCurves -o $results/WindIec2020/mixed
-   echo "dgcv validate -l $launcher -m $models/Model/Wind/IEC2015/Dynawo $models/Model/Wind/IEC2015/ReferenceCurves -o $results/WindIec2015/model"
-   dgcv validate -l $launcher -m $models/Model/Wind/IEC2015/Dynawo $models/Model/Wind/IEC2015/ReferenceCurves -o $results/WindIec2015/model
-   echo "dgcv validate -l $launcher -c $models/Model/Wind/IEC2015/ProducerCurves $models/Model/Wind/IEC2015/ReferenceCurves -o $results/WindIec2015/curves"
-   dgcv validate -l $launcher -c $models/Model/Wind/IEC2015/ProducerCurves $models/Model/Wind/IEC2015/ReferenceCurves -o $results/WindIec2015/curves
-   echo "dgcv validate -l $launcher -c $models/Model/Wind/IEC2015/ProducerCurves $models/Model/Wind/WECC/ReferenceCurves -o $results/WindIec2015/mixed"
-   dgcv validate -l $launcher -c $models/Model/Wind/IEC2015/ProducerCurves $models/Model/Wind/WECC/ReferenceCurves -o $results/WindIec2015/mixed
+   for bess_model in "${bess_models[@]}"
+   do
+      start=$(date +%s)
+      color_msg "dgcv validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model"
+      dgcv validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model --testing
+      end=$(date +%s)
+      color_msg "Validate: $bess_model Elapsed Time: $(($end-$start)) seconds"
+   done
+
+   for photo_model in "${photo_models[@]}"
+   do
+      start=$(date +%s)
+      color_msg "dgcv validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model"
+      dgcv validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model --testing
+      end=$(date +%s)
+      color_msg "Validate: $photo_model Elapsed Time: $(($end-$start)) seconds"
+   done
+
+   for wind_model in "${wind_models[@]}"
+   do
+      start=$(date +%s)
+      color_msg "dgcv validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model"
+      dgcv validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model --testing
+      end=$(date +%s)
+      color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
+   done
+
 }
 
 launcher="dynawo.sh"
-models="./examples"
-topology="SingleAux"
-results="./Results"
 
 while (($#)); do
    case "$1" in
-      --launcher|-l)
-         launcher=$2
-         shift 2
-         ;;
-      --input|-i)
-         models=$2
-         shift 2
-         ;;     
-      --output|-o)
-         results=$2
-         shift 2
-         ;;     
-      --topology|-t)
-         topology=$2
-         shift 2
-         ;;   
       --help|-h)
          usage
          exit 0
@@ -94,5 +80,19 @@ while (($#)); do
          ;;  
    esac
 done
+
+rm -rf ../Results
+mkdir ../Results
+DATETIME=$(date '+%Y%m%d_%H%M%S')
+LOG=../Results/test_tool_$DATETIME.log
+
+# Set up redirections to the log file
+exec 6>&1      # Link file descriptor #6 with stdout. Saves stdout.
+exec >"$LOG"   # stdout redirected to the log file
+exec 7>&2      # Link file descriptor #7 with stderr. Saves stderr.
+exec 2>&1      # stderr redirected to stdout
+# Reminder of how to restore stderr and stdout in case you need it elsewhere in the script:
+#exec 1>&6 6>&-    # Restore stdout and close fd 6
+#exec 2>&7 7>&-    # Restore stderr and close fd 7
 
 launch_test

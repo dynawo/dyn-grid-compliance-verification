@@ -56,6 +56,75 @@ def dump_file(
     template.stream(stream_dict).dump(str(path / filename))
 
 
+def modify_jobs_file(
+    path: Path,
+    filename: str,
+    solver_id: str,
+    solver_lib: str,
+) -> None:
+    """Modify the value of a parameter in the PAR file.
+
+    Parameters
+    ----------
+    path: Path
+        Path where the PAR file is stored
+    filename: str
+        PAR filename
+    solver_id: str
+        Solver ID
+    solver_lib: str
+        Solver library
+    """
+    jobs_tree = etree.parse(path / filename, etree.XMLParser(remove_blank_text=True))
+    jobs_root = jobs_tree.getroot()
+    ns = etree.QName(jobs_root).namespace
+    solver = jobs_root.find(f".//{{{ns}}}solver")
+    if solver is not None:
+        solver.set("parId", solver_id)
+        solver.set("lib", solver_lib)
+
+    jobs_tree.write(
+        path / filename,
+        pretty_print=True,
+        xml_declaration='<?xml version="1.0" encoding="UTF-8"?>',
+        encoding="UTF-8",
+    )
+
+
+def modify_par_file(
+    path: Path,
+    filename: str,
+    parameter_name: str,
+    value: float,
+) -> None:
+    """Modify the value of a parameter in the PAR file.
+
+    Parameters
+    ----------
+    path: Path
+        Path where the PAR file is stored
+    filename: str
+        PAR filename
+    parameter_name: str
+        Parameter name to modify
+    value: float
+        New value
+    """
+    par_tree = etree.parse(path / filename, etree.XMLParser(remove_blank_text=True))
+    par_root = par_tree.getroot()
+    ns = etree.QName(par_root).namespace
+    par_file_parameter = par_root.find(f".//{{{ns}}}par[@name='{parameter_name}']")
+    if par_file_parameter is not None:
+        par_file_parameter.set("value", str(value))
+
+    par_tree.write(
+        path / filename,
+        pretty_print=True,
+        xml_declaration='<?xml version="1.0" encoding="UTF-8"?>',
+        encoding="UTF-8",
+    )
+
+
 def fault_par_file(
     path: Path,
     filename: str,

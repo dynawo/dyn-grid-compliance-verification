@@ -26,6 +26,21 @@
     \end{itemize}
 
 
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI4ThreePhaseFaultTransientBolted}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
     \subsubsection{Simulation}
     As required by the DTR PCS \DTRPcs, the figures below show the
     following magnitudes:

@@ -25,9 +25,24 @@
         \end{itemize}
     \end{description}
 
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSIz1Benchmark1OperatingCondition1}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
     \GridCurvesDummy
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3GridVoltageDipQzero }}
+    Go to  {{ linkPCSIz1Benchmark1OperatingCondition1 }}
 
     \subsubsection{Analysis of results}
     \begin{center}
