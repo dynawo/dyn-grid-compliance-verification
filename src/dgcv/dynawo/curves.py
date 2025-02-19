@@ -77,22 +77,25 @@ class DynawoCurves(ProducerCurves):
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
         sanity_checks.check_simulation_duration(self.get_simulation_duration())
 
+        self._sim_time = config.get_float("Dynawo", "simulation_limit", 90.0)
+
+        logging.setLoggerClass(SimulationLogger)
+        self._logger = logging.getLogger("ProducerCurves")
+
+    def __reset_solver(self):
         self._solver_lib = config.get_value("Dynawo", "solver_lib")
         if self._solver_lib is None:
             self._solver_lib = "dynawo_SolverIDA"
         self._solver_id = self._solver_lib.replace("dynawo_Solver", "")
 
         if self._solver_id == "IDA":
-            self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-9)
+            self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-6)
             self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
-            self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-6)
+            self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-4)
         else:
-            self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 0.001)
+            self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 1e-6)
             self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
         sanity_checks.check_solver(self._solver_id, self._solver_lib)
-
-        logging.setLoggerClass(SimulationLogger)
-        self._logger = logging.getLogger("ProducerCurves")
 
     def __log(self, message: str):
         self._logger.info(message)
@@ -569,6 +572,8 @@ class DynawoCurves(ProducerCurves):
                 working_oc_dir,
                 jobs_output_dir,
             )
+        else:
+            dgcv_logging.get_logger("Dynawo").debug("Simulation successful")
 
         if not success:
             dgcv_logging.get_logger("Dynawo").warning(log)
@@ -607,6 +612,8 @@ class DynawoCurves(ProducerCurves):
                 working_oc_dir,
                 jobs_output_dir,
             )
+        else:
+            dgcv_logging.get_logger("Dynawo").debug("Simulation successful")
 
         if not success:
             dgcv_logging.get_logger("Dynawo").warning(log)
@@ -642,9 +649,13 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
                 show_log_file=True,
             )
+        else:
+            dgcv_logging.get_logger("Dynawo").debug("Simulation successful")
 
         if not success:
             dgcv_logging.get_logger("Dynawo").warning(log)
+        else:
+            dgcv_logging.get_logger("Dynawo").debug("Simulation successful")
 
         # Check if there is a curves file
         has_dynawo_curves = False
@@ -661,7 +672,7 @@ class DynawoCurves(ProducerCurves):
         show_log_file: bool = False,
     ) -> tuple[bool, str, pd.DataFrame]:
         # Run Dynawo
-        success, log, has_error, curves_calculated = dynawo.run_base_dynawo(
+        success, log, has_error, curves_calculated, sim_time = dynawo.run_base_dynawo(
             self._launcher_dwo,
             "TSOModel",
             self._curves_dict,
@@ -671,6 +682,8 @@ class DynawoCurves(ProducerCurves):
         if has_error and show_log_file:
             log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
             log = f"Simulation Fails, logs in {str(log_file)}"
+        if success:
+            self._sim_time = sim_time
 
         return success, log, curves_calculated
 
@@ -797,20 +810,24 @@ class DynawoCurves(ProducerCurves):
         working_oc_dir_attempt: Path,
         jobs_output_dir: Path,
         fault_duration: float,
-    ) -> float:
+    ) -> tuple[float, float]:
         # For a given fault duration time, it is checked if the
         #  simulation is stable, if it is, the time is doubled
         #  until an unstable simulation is achieved.
+        min_val = fault_duration
         max_val = fault_duration * 2
 
+        dgcv_logging.get_logger("ProducerCurves").debug(f"Max time CCT in {max_val}")
         while self.__run_time_cct(
             working_oc_dir_attempt,
             jobs_output_dir,
             max_val,
         ):
-            max_val *= 2
+            min_val = max_val
+            max_val *= 1.5
+            dgcv_logging.get_logger("ProducerCurves").debug(f"Max time CCT in {max_val}")
 
-        return max_val
+        return min_val, max_val
 
     def __run_time_cct(
         self,
@@ -824,13 +841,14 @@ class DynawoCurves(ProducerCurves):
         )
 
         # Run Dynawo
-        ret_val, _, _, _ = dynawo.run_base_dynawo(
+        ret_val, _, _, _, _ = dynawo.run_base_dynawo(
             self._launcher_dwo,
             "TSOModel",
             self._curves_dict,
             working_oc_dir_attempt,
             jobs_output_dir,
             save_file=False,
+            simulation_limit=self._sim_time + 10,
         )
 
         # If the simulation fails returns
@@ -878,30 +896,69 @@ class DynawoCurves(ProducerCurves):
 
     def get_solver(self) -> dict:
         solver_parameters = {
-            "lib": self._solver_lib,
-            "parId": self._solver_id,
+            "lib": (self._solver_lib, config.get_value("Dynawo", "solver_lib")),
+            "parId": (
+                self._solver_id,
+                config.get_value("Dynawo", "solver_lib").replace("dynawo_Solver", ""),
+            ),
         }
         if self._solver_id == "IDA":
-            solver_parameters["order"] = config.get_int("Dynawo", "ida_order", 2)
-            solver_parameters["initStep"] = config.get_float("Dynawo", "ida_initStep", 1e-9)
-            solver_parameters["minStep"] = self._minimum_time_step
-            solver_parameters["maxStep"] = config.get_float("Dynawo", "ida_maxStep", 1.0)
-            solver_parameters["absAccuracy"] = self._absAccuracy
-            solver_parameters["relAccuracy"] = self._relAccuracy
-            solver_parameters["minimalAcceptableStep"] = config.get_float(
-                "Dynawo", "ida_minimalAcceptableStep", 1e-6
+            solver_parameters["order"] = (
+                config.get_int("Dynawo", "ida_order", 2),
+                config.get_int("Dynawo", "ida_order", 2),
+            )
+            solver_parameters["initStep"] = (
+                config.get_float("Dynawo", "ida_initStep", 1e-9),
+                config.get_float("Dynawo", "ida_initStep", 1e-6),
+            )
+            solver_parameters["minStep"] = (
+                self._minimum_time_step,
+                config.get_float("Dynawo", "ida_minStep", 1e-6),
+            )
+            solver_parameters["maxStep"] = (
+                config.get_float("Dynawo", "ida_maxStep", 1.0),
+                config.get_float("Dynawo", "ida_maxStep", 1.0),
+            )
+            solver_parameters["absAccuracy"] = (
+                self._absAccuracy,
+                config.get_float("Dynawo", "ida_absAccuracy", 1e-6),
+            )
+            solver_parameters["relAccuracy"] = (
+                self._relAccuracy,
+                config.get_float("Dynawo", "ida_relAccuracy", 1e-4),
+            )
+            solver_parameters["minimalAcceptableStep"] = (
+                config.get_float("Dynawo", "ida_minimalAcceptableStep", 1e-6),
+                config.get_float("Dynawo", "ida_minimalAcceptableStep", 1e-6),
             )
         else:
-            solver_parameters["hMin"] = self._minimum_time_step
-            solver_parameters["hMax"] = config.get_float("Dynawo", "sim_hMax", 0.01)
-            solver_parameters["kReduceStep"] = config.get_float("Dynawo", "sim_kReduceStep", 0.5)
-            solver_parameters["maxNewtonTry"] = config.get_int("Dynawo", "sim_maxNewtonTry", 10)
-            solver_parameters["linearSolverName"] = config.get_value(
-                "Dynawo", "sim_linearSolverName"
+            solver_parameters["hMin"] = (
+                self._minimum_time_step,
+                config.get_float("Dynawo", "sim_hMin", 0.01),
             )
-            solver_parameters["fnormtol"] = self._absAccuracy
-            solver_parameters["minimalAcceptableStep"] = config.get_float(
-                "Dynawo", "sim_minimalAcceptableStep", 1e-6
+            solver_parameters["hMax"] = (
+                config.get_float("Dynawo", "sim_hMax", 0.01),
+                config.get_float("Dynawo", "sim_hMax", 0.01),
+            )
+            solver_parameters["kReduceStep"] = (
+                config.get_float("Dynawo", "sim_kReduceStep", 0.5),
+                config.get_float("Dynawo", "sim_kReduceStep", 0.5),
+            )
+            solver_parameters["maxNewtonTry"] = (
+                config.get_int("Dynawo", "sim_maxNewtonTry", 10),
+                config.get_int("Dynawo", "sim_maxNewtonTry", 10),
+            )
+            solver_parameters["linearSolverName"] = (
+                config.get_value("Dynawo", "sim_linearSolverName"),
+                config.get_value("Dynawo", "sim_linearSolverName"),
+            )
+            solver_parameters["fnormtol"] = (
+                self._absAccuracy,
+                config.get_float("Dynawo", "sim_fnormtol", 0.01),
+            )
+            solver_parameters["minimalAcceptableStep"] = (
+                config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
+                config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
             )
 
         return solver_parameters
@@ -931,11 +988,10 @@ class DynawoCurves(ProducerCurves):
 
         # The range to work is defined from the configured time to the
         #  fault duration to a value where the simulation is not stable.
-        min_val = fault_duration
         working_oc_dir_fault = manage_files.clone_as_subdirectory(
             working_oc_dir, "fault_time_execution_max"
         )
-        max_val = self.__get_max_duration(
+        min_val, max_val = self.__get_max_duration(
             working_oc_dir_fault,
             jobs_output_dir,
             fault_duration,
@@ -964,6 +1020,7 @@ class DynawoCurves(ProducerCurves):
             working_oc_dir_fault = manage_files.clone_as_subdirectory(
                 working_oc_dir, "fault_time_execution_" + now.strftime("%Y%m%d%H%M%S%f")
             )
+            dgcv_logging.get_logger("ProducerCurves").debug(f"Run time CCT in {time}")
             steady_state = self.__run_time_cct(
                 working_oc_dir_fault,
                 jobs_output_dir,
@@ -1038,6 +1095,8 @@ class DynawoCurves(ProducerCurves):
         DataFrame
            Simulation calculated curves
         """
+
+        self.__reset_solver()
 
         # Prepare environment to validate it,
         #  prepare in a specific folder all dynawo inputs
