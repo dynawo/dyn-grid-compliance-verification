@@ -308,7 +308,7 @@ def copy_base_curves_files(
         if (curves_dir / "CurvesFiles.ini").exists():
             shutil.copy(curves_dir / "CurvesFiles.ini", target_path)
 
-            curves_cfg = configparser.ConfigParser()
+            curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
             curves_cfg.read(curves_dir / "CurvesFiles.ini")
 
             if curves_cfg.has_option("Curves-Files", prefix_name):

@@ -33,7 +33,7 @@ def _check_ini_parameters(target: Path) -> bool:
     with open(target / "Producer.ini", "r") as f:
         producer_ini_txt = "[" + default_section + "]\n" + f.read()
 
-    producer_config = configparser.ConfigParser()
+    producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     producer_config.read_string(producer_ini_txt)
 
     success = True
