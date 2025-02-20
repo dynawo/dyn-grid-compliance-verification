@@ -279,21 +279,21 @@ class Translator:
 
 
 def _get_instance() -> Translator:
-    bus = configparser.ConfigParser()
+    bus = configparser.ConfigParser(inline_comment_prefixes=("#",))
     bus.optionxform = str
-    synchronous_machine = configparser.ConfigParser()
+    synchronous_machine = configparser.ConfigParser(inline_comment_prefixes=("#",))
     synchronous_machine.optionxform = str
-    power_park = configparser.ConfigParser()
+    power_park = configparser.ConfigParser(inline_comment_prefixes=("#",))
     power_park.optionxform = str
-    storage = configparser.ConfigParser()
+    storage = configparser.ConfigParser(inline_comment_prefixes=("#",))
     storage.optionxform = str
-    line = configparser.ConfigParser()
+    line = configparser.ConfigParser(inline_comment_prefixes=("#",))
     line.optionxform = str
-    load = configparser.ConfigParser()
+    load = configparser.ConfigParser(inline_comment_prefixes=("#",))
     load.optionxform = str
-    transformer = configparser.ConfigParser()
+    transformer = configparser.ConfigParser(inline_comment_prefixes=("#",))
     transformer.optionxform = str
-    control_modes = configparser.ConfigParser()
+    control_modes = configparser.ConfigParser(inline_comment_prefixes=("#",))
     control_modes.optionxform = str
     _load_dictionary("Bus.ini", bus)
     _load_dictionary("Synch_Gen.ini", synchronous_machine)
