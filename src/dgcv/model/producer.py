@@ -84,12 +84,12 @@ class Producer:
         #  │     ├─── Producer.par
         #  │     └─── Producer.ini
         #  └─── Zone1
-        #        ├─── ProducerA.dyd
-        #        ├─── ProducerA.par
-        #        ├─── ProducerA.ini
-        #        ├─── ProducerB.dyd
-        #        ├─── ProducerB.par
-        #        └─── ProducerB.ini
+        #        ├─── Producer_G1.dyd
+        #        ├─── Producer_G1.par
+        #        ├─── Producer_G1.ini
+        #        ├─── Producer_G2.dyd
+        #        ├─── Producer_G2.par
+        #        └─── Producer_G2.ini
 
         # TODO: (M-topologies) Check that we only have one set of curves for each test in
         #           Zone3 at most
@@ -105,10 +105,10 @@ class Producer:
         #  ReferenceCurves
         #  ├── CurvesFiles.ini
         #  ...
-        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerA.csv
-        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerA.dict
-        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerB.csv
-        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerB.dict
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.Producer_G1.csv
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.Producer_G1.dict
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.Producer_G2.csv
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.Producer_G2.dict
         #  ...
         #  ├── PCS_RTE-I16z3.PSetPointStep.Dec40.csv
         #  ├── PCS_RTE-I16z3.PSetPointStep.Dec40.dict
