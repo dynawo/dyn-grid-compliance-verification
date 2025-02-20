@@ -482,6 +482,9 @@ def create_producer_dyd_file(
         validation_type = VALIDATION_PPM
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
+        # TODO: (M-topologies) First create the DYD file for Zone3
+        # TODO: (M-topologies) Then create a DYD file for Zone1 by generator in the DYD
+        #       file of Zone3
         _create_producer_dyd_file(target / "Zone1", "S", validation_type)
         _create_producer_dyd_file(target / "Zone3", topology, validation_type)
 
