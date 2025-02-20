@@ -117,7 +117,8 @@ class Validation:
         self._validation_pcs = validation_pcs
 
         # Prepare the environment to execute the tool
-        # TODO: (M-topologies) Repeated PCS must distinguish which is their model using the DYD file name
+        # TODO: (M-topologies) Repeated PCS must distinguish which is their model using the
+        #       DYD file name
         pcs_list = [Pcs(pcs_name, parameters) for pcs_name in self._validation_pcs]
         self._pcs_list = sorted(pcs_list, key=attrgetter("_id", "_zone"))
 
