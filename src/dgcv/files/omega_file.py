@@ -97,7 +97,6 @@ def complete_omega(
     dyd_file: str,
     par_file: str,
     generators: list,
-    zone: int,
 ) -> None:
     """Replace DYD/PAR Omega files placeholders with values.
 
@@ -111,10 +110,6 @@ def complete_omega(
         PAR filename
     generators: list
         Variable where the step is connected
-    zone: int
-        If it is running the Model Validation:
-        * 1: Zone1 (the individual generating unit)
-        * 3: Zone3 (the whole plant)
     """
     dyd_tree = etree.parse(path / dyd_file, etree.XMLParser(remove_blank_text=True))
     dyd_root = dyd_tree.getroot()

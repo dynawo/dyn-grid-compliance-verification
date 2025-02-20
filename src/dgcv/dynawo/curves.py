@@ -302,7 +302,6 @@ class DynawoCurves(ProducerCurves):
             "Omega.dyd",
             "Omega.par",
             self.get_producer().generators,
-            self.get_producer().get_zone(),
         )
 
         xmfrs = self.get_producer().stepup_xfmrs.copy()
