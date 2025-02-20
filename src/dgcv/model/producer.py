@@ -70,6 +70,47 @@ class Producer:
         self._is_user_curves = self._producer_curves_path is not None
         self._has_reference_curves_path = self._reference_curves_path is not None
 
+        # TODO: (M-topologies) Check if the Zone3 has only a DYD file
+        # TODO: (M-topologies) Check the number of DYD files in Zone1 is equal to the number
+        #           of generators in Zone3
+        # TODO: (M-topologies) Check that each DYD file has a PAR file and an INI file with
+        #           the same name
+        # TODO: (M-topologies) Need 2 new variables, the number of DYD files in Zone1 and
+        #           the current DYD file
+        #  Expected input example:
+        #  Dynawo
+        #  ├─── Zone3
+        #  │     ├─── Producer.dyd
+        #  │     ├─── Producer.par
+        #  │     └─── Producer.ini
+        #  └─── Zone1
+        #        ├─── ProducerA.dyd
+        #        ├─── ProducerA.par
+        #        ├─── ProducerA.ini
+        #        ├─── ProducerB.dyd
+        #        ├─── ProducerB.par
+        #        └─── ProducerB.ini
+
+        # TODO: (M-topologies) Check that we only have one set of curves for each test in Zone3 at most
+        # TODO: (M-topologies) Check that we only have one set of curves for each Zone1 test and DYD
+        #           file at most
+        # TODO: (M-topologies) By default the tool will search for the curve using a compound name:
+        #           PCS.benchmark.OC.DYDfilename
+        # TODO: (M-topologies) As a second option, it will search for the compound name:
+        #           PCS.benchmark.OC
+        # TODO: (M-topologies) This logic is only used if the user does not inform the file name specifically.
+        #  Expected input example:
+        #  ReferenceCurves
+        #  ├── CurvesFiles.ini
+        #  ...
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerA.csv
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerA.dict
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerB.csv
+        #  ├── PCS_RTE-I16z1.SetPointStep.Voltage.ProducerB.dict
+        #  ...
+        #  ├── PCS_RTE-I16z3.PSetPointStep.Dec40.csv
+        #  ├── PCS_RTE-I16z3.PSetPointStep.Dec40.dict
+        #  ...
         if verification_type == ELECTRIC_PERFORMANCE:
             self.__set_electric_performance_type()
         elif verification_type == MODEL_VALIDATION:
