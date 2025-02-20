@@ -17,7 +17,7 @@ import pandas as pd
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.curves.curves import ProducerCurves, get_cfg_oc_name
-from dgcv.dynawo import dynawo
+from dgcv.dynawo import crv, dynawo
 from dgcv.dynawo.dyd import DydFile
 from dgcv.dynawo.jobs import JobsFile
 from dgcv.dynawo.par import ParFile
@@ -28,7 +28,6 @@ from dgcv.electrical.generator_variables import generator_variables
 from dgcv.electrical.initialization_calcs import init_calcs
 from dgcv.electrical.pimodel_parameters import line_pimodel
 from dgcv.files import (
-    dynawo_curves_file,
     manage_files,
     model_parameters,
     omega_file,
@@ -310,7 +309,7 @@ class DynawoCurves(ProducerCurves):
         if self.get_producer().ppm_xfmr:
             xmfrs.append(self.get_producer().ppm_xfmr)
 
-        self._curves_dict = dynawo_curves_file.create_curves_file(
+        self._curves_dict = crv.create_curves_file(
             working_oc_dir,
             "TSOModel.crv",
             self.get_producer().get_connected_to_pdr(),
