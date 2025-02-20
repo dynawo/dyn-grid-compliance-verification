@@ -90,10 +90,16 @@ class DynawoCurves(ProducerCurves):
 
         if self._solver_id == "IDA":
             self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-6)
+            self._minimal_acceptable_step = config.get_float(
+                "Dynawo", "ida_minimalAcceptableStep", 1e-6
+            )
             self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
             self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-4)
         else:
             self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 1e-6)
+            self._minimal_acceptable_step = config.get_float(
+                "Dynawo", "sim_minimalAcceptableStep", 1e-6
+            )
             self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
         sanity_checks.check_solver(self._solver_id, self._solver_lib)
 
@@ -549,6 +555,7 @@ class DynawoCurves(ProducerCurves):
 
             # Modifying the minimum time step
             self._minimum_time_step /= 10.0
+            self._minimal_acceptable_step /= 10.0
             if self._solver_id == "IDA":
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
@@ -563,6 +570,12 @@ class DynawoCurves(ProducerCurves):
                     "hMin",
                     self._minimum_time_step,
                 )
+            replace_placeholders.modify_par_file(
+                working_oc_dir,
+                "solvers.par",
+                "minimalAcceptableStep",
+                self._minimal_acceptable_step,
+            )
             (
                 success,
                 log,
@@ -624,14 +637,20 @@ class DynawoCurves(ProducerCurves):
                 self._solver_id = "IDA"
                 self._solver_lib = "dynawo_SolverIDA"
                 # Restore default values
-                self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-9)
+                self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-6)
+                self._minimal_acceptable_step = config.get_float(
+                    "Dynawo", "ida_minimalAcceptableStep", 1e-6
+                )
                 self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
-                self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-6)
+                self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-4)
             else:
                 self._solver_id = "SIM"
                 self._solver_lib = "dynawo_SolverSIM"
                 # Restore default values
-                self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 0.001)
+                self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 1e-6)
+                self._minimal_acceptable_step = config.get_float(
+                    "Dynawo", "sim_minimalAcceptableStep", 1e-6
+                )
                 self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
             replace_placeholders.modify_jobs_file(
                 working_oc_dir,
@@ -928,7 +947,7 @@ class DynawoCurves(ProducerCurves):
                 config.get_float("Dynawo", "ida_relAccuracy", 1e-4),
             )
             solver_parameters["minimalAcceptableStep"] = (
-                config.get_float("Dynawo", "ida_minimalAcceptableStep", 1e-6),
+                self._minimal_acceptable_step,
                 config.get_float("Dynawo", "ida_minimalAcceptableStep", 1e-6),
             )
         else:
@@ -957,7 +976,7 @@ class DynawoCurves(ProducerCurves):
                 config.get_float("Dynawo", "sim_fnormtol", 0.01),
             )
             solver_parameters["minimalAcceptableStep"] = (
-                config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
+                self._minimal_acceptable_step,
                 config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
             )
 
