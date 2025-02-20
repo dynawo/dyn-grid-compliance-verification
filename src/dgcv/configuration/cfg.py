@@ -218,11 +218,11 @@ def _get_instance() -> Config:
     else:
         config_dir = Path.home() / ".config/dgcv"
 
-    default_config = configparser.ConfigParser()
+    default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     default_config.optionxform = str
-    user_config = configparser.ConfigParser()
+    user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     user_config.optionxform = str
-    pcs_config = configparser.ConfigParser()
+    pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     pcs_config.optionxform = str
 
     default_config.read(Path(__file__).resolve().parent / "defaultConfig.ini")

@@ -190,7 +190,7 @@ def _process_curves(
         curves_folder, ["*.[eE][xX][pP]", "*.[cC][sS][vV]", "*.[cC][fF][fF]", "*.[dD][aA][tT]"]
     ):
         dict_file = curves_path.parent / f"{curves_path.stem}.dict"
-        curves_cfg = configparser.ConfigParser()
+        curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
         curves_cfg.optionxform = str
         curves_cfg.read(dict_file)
         event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
