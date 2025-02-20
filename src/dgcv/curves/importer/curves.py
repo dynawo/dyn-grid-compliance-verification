@@ -120,6 +120,7 @@ class ImportedCurves(ProducerCurves):
         is_reference: bool = False,
     ):
         # Copy base case and producers file
+        # TODO: In Zone1 copy the curves file for the current model
         success = manage_files.copy_base_curves_files(
             curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
         )
