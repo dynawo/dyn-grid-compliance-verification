@@ -33,7 +33,7 @@ class CurvesImporter:
         self._path = path
         self._filename = filename
 
-        self._default_curves = configparser.ConfigParser()
+        self._default_curves = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._default_curves.optionxform = str
         if (path / "CurvesFiles.ini").exists():
             self._default_curves.read(path / "CurvesFiles.ini")
@@ -47,7 +47,7 @@ class CurvesImporter:
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), filename + ".dict")
 
         dict_file = files[0]
-        self._curves_cfg = configparser.ConfigParser()
+        self._curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._curves_cfg.optionxform = str
         self._curves_cfg.read(dict_file)
         if remove_working_dict:

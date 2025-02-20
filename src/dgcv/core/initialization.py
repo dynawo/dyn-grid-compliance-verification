@@ -111,7 +111,7 @@ def _is_valid_config_file(config_file: Path) -> bool:
     if not config_file.is_file():
         return False
 
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     config.read(config_file)
     if not config.has_option(DGCV_CONFIG_SECTION, DGCV_CONFIG_VERSION_KEY):
         return False
@@ -146,9 +146,9 @@ def _get_key_value_by_line(line: str) -> tuple[str, str]:
 
 
 def _check_config_file(tool_config_file: Path, user_config_file: Path):
-    tool_config = configparser.ConfigParser()
+    tool_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     tool_config.read(tool_config_file)
-    user_config = configparser.ConfigParser()
+    user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     user_config.read(user_config_file)
 
     deprecated_parameters = []

@@ -199,7 +199,7 @@ def _check_curves(target: Path) -> bool:
         False if there are empty values in the PAR file
     """
 
-    producer_config = configparser.ConfigParser()
+    producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     producer_config.read(target / "CurvesFiles.ini")
 
     all_declared = True
@@ -364,7 +364,7 @@ def check_curves(target: Path) -> bool:
         False if there are empty values in the PAR file
     """
 
-    producer_config = configparser.ConfigParser()
+    producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     producer_config.read(target / "CurvesFiles.ini")
 
     all_declared = True
