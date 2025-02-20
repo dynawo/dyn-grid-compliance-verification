@@ -91,14 +91,16 @@ class Producer:
         #        ├─── ProducerB.par
         #        └─── ProducerB.ini
 
-        # TODO: (M-topologies) Check that we only have one set of curves for each test in Zone3 at most
-        # TODO: (M-topologies) Check that we only have one set of curves for each Zone1 test and DYD
-        #           file at most
+        # TODO: (M-topologies) Check that we only have one set of curves for each test in
+        #           Zone3 at most
+        # TODO: (M-topologies) Check that we only have one set of curves for each Zone1 test and
+        #           DYD file at most
         # TODO: (M-topologies) By default the tool will search for the curve using a compound name:
         #           PCS.benchmark.OC.DYDfilename
         # TODO: (M-topologies) As a second option, it will search for the compound name:
         #           PCS.benchmark.OC
-        # TODO: (M-topologies) This logic is only used if the user does not inform the file name specifically.
+        # TODO: (M-topologies) This logic is only used if the user does not inform the file name
+        #           specifically.
         #  Expected input example:
         #  ReferenceCurves
         #  ├── CurvesFiles.ini
