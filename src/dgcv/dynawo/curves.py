@@ -695,6 +695,8 @@ class DynawoCurves(ProducerCurves):
             self._curves_dict,
             working_oc_dir,
             jobs_output_dir,
+            self.get_producer().s_nom,
+            self._s_nref,
         )
         if has_error and show_log_file:
             log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
@@ -864,6 +866,8 @@ class DynawoCurves(ProducerCurves):
             self._curves_dict,
             working_oc_dir_attempt,
             jobs_output_dir,
+            self.get_producer().s_nom,
+            self._s_nref,
             save_file=False,
             simulation_limit=self._sim_time + 10,
         )

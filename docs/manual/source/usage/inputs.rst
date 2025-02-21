@@ -385,7 +385,8 @@ the user if there are any errors in it.
             # u_nom is the nominal voltage in the PDR Bus (in kV)
             # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
             u_nom =
-            # s_nom is the nominal apparent power of the generator unit (in MVA)
+            # s_nom is the nominal apparent power of all generating units (in MVA)
+            # This is the value that will be used for the base conversion in the PDR bus active/reactive power
             s_nom =
             # q_max is the maximum reactive power of the generator unit (in MVar)
             q_max =
