@@ -281,7 +281,7 @@ def _get_pdr_voltage(df_curves: pd.DataFrame) -> list:
         return pdr_voltage.tolist()
 
 
-def _get_pdr_current(df_curves: pd.DataFrame, column_size: int, snom: float, snref: float) -> list:
+def _get_pdr_current(df_curves: pd.DataFrame, column_size: int) -> list:
     current_columns_regex = re.compile(".*_TE_.*_Current$")
     current_columns_list = list(filter(current_columns_regex.match, df_curves.columns))
     if len(current_columns_list) == 0:
@@ -295,20 +295,27 @@ def _get_pdr_current(df_curves: pd.DataFrame, column_size: int, snom: float, snr
             list(df_curves[current_column]),
         )
 
-    # Calculate the current in the base SNom
-    pdr_current = pdr_current_base_snref * snref / snom
-
-    return pdr_current.tolist()
+    return pdr_current_base_snref.tolist()
 
 
-def _get_pdr_active_power(pdr_voltage: list, pdr_current: list) -> list:
+def _get_pdr_active_power(pdr_voltage: list, pdr_current: list, snom: float, snref: float) -> list:
     # Apply the tool's sign convention
-    return (np.real(pdr_voltage * np.conjugate(pdr_current)) * -1).tolist()
+    pdr_active_power_base_snref = np.real(pdr_voltage * np.conjugate(pdr_current)) * -1
+    # Calculate the active power in the base SNom
+    pdr_active_power = pdr_active_power_base_snref * snref / snom
+
+    return pdr_active_power.tolist()
 
 
-def _get_pdr_reactive_power(pdr_voltage: list, pdr_current: list) -> list:
+def _get_pdr_reactive_power(
+    pdr_voltage: list, pdr_current: list, snom: float, snref: float
+) -> list:
     # Apply the tool's sign convention
-    return (np.imag(pdr_voltage * np.conjugate(pdr_current)) * -1).tolist()
+    pdr_reactive_power_base_snref = np.imag(pdr_voltage * np.conjugate(pdr_current)) * -1
+    # Calculate the active power in the base SNom
+    pdr_reactive_power = pdr_reactive_power_base_snref * snref / snom
+
+    return pdr_reactive_power.tolist()
 
 
 def _get_modulus(complex_list: list) -> list:
@@ -412,9 +419,9 @@ def _create_curves(
     del df_curves["BusPDR_BUS_Voltage"]
     pdr_voltage = _get_pdr_voltage(df_curves)
     pdr_voltage_modulus = _get_modulus(pdr_voltage)
-    pdr_current = _get_pdr_current(df_curves, column_size, snom, snref)
-    pdr_active_power = _get_pdr_active_power(pdr_voltage, pdr_current)
-    pdr_reactive_power = _get_pdr_reactive_power(pdr_voltage, pdr_current)
+    pdr_current = _get_pdr_current(df_curves, column_size)
+    pdr_active_power = _get_pdr_active_power(pdr_voltage, pdr_current, snom, snref)
+    pdr_reactive_power = _get_pdr_reactive_power(pdr_voltage, pdr_current, snom, snref)
 
     # Create the new curves file
     curves_dict = dict()
