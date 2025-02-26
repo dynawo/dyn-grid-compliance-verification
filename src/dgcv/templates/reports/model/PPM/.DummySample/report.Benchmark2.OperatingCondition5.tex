@@ -3,7 +3,7 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     \renewcommand{\DTRPcs}{Benchmark2} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{Benchmark 2 (Model Validation Zone 1)}
+    \renewcommand{\DTRPcsLong}{Benchmark 2}
     \renewcommand{\OCname}{OperatingCondition5}
 
 
@@ -13,6 +13,16 @@
     is a $5\%$ step increase in the setpoint of the primary voltage control.
 
     \GridCircuitDummy
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_\text{max\_unite}$
+            \item $Q = 0$
+            \item $U = U_\text{dim}$
+            \item $SCR = 3$
+        \end{itemize}
+    \end{description}
 
     \subsubsection{Simulation parameters}
 

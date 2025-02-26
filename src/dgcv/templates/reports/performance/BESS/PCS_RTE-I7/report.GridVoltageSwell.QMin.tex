@@ -1,6 +1,6 @@
     \subsection{Overview of DTR PCS \DTRPcs{} ($Q_\text{PDR} = Q_\text{min}$)}
 
-    Checks for compliant behavior of the PPM under a grid scenario where
+    Checks for compliant behavior of the BESS under a grid scenario where
     there is a severe overvoltage at the PDR bus (which simulates the
     effect of clearing a fault nearby in the network).
 
@@ -57,12 +57,11 @@
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item  $P = P_{max\_unite}$
+            \item $P = P_{max\_unite}$
             \item $Q = Q_{min}$
             \item $U = U_{dim}$
         \end{itemize}
     \end{description}
-
 
     \subsubsection{Simulation parameters}
 
@@ -89,10 +88,10 @@
         the controllable Infinite Bus on TSO side).
         \item Active power supplied at the connection point (obtained from
         the controllable Infinite Bus on TSO side).
-        \item The injected active and reactive currents. All PPM
+        \item The injected active and reactive currents. All BESS
         units are plotted on the same graph.
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
-        All PPM units are plotted on the same graph.
+        All BESS units are plotted on the same graph.
     \end{itemize}
 
     \subsubsection{Simulation results}
@@ -114,7 +113,7 @@
             \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I7.GridVoltageSwell.QMin}
             \begin{minipage}[t]{0.8\textwidth}
                 \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
-                The gray dotted line show the AVR setpoint. All PPM units are plotted on the same
+                The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
                 graph.
             \end{minipage}
         \end{minipage}
@@ -144,7 +143,7 @@
         \centering
         \includegraphics[width=\textwidth]{fig_I_PCS_RTE-I7.GridVoltageSwell.QMin}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Injected active (light blue line) and reactive (violet line) currents. All PPM
+            \small Injected active (light blue line) and reactive (violet line) currents. All BESS
             units are plotted on the same graph.
         \end{minipage}
     \end{minipage}
