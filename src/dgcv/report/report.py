@@ -18,7 +18,15 @@ from jinja2 import Environment, FileSystemLoader
 
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
-from dgcv.core.global_variables import CASE_SEPARATOR, REPORT_NAME
+from dgcv.core.global_variables import (
+    CASE_SEPARATOR,
+    ELECTRIC_PERFORMANCE_BESS,
+    ELECTRIC_PERFORMANCE_PPM,
+    ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION_BESS,
+    MODEL_VALIDATION_PPM,
+    REPORT_NAME,
+)
 from dgcv.dynawo import dynawo
 from dgcv.files.manage_files import copy_latex_files, move_report
 from dgcv.logging.logging import dgcv_logging
@@ -37,6 +45,17 @@ from dgcv.report.tables import (
     thresholds,
 )
 from dgcv.templates.reports.create_figures import create_figures
+
+
+def _get_model_type(sim_type: int) -> str:
+    if sim_type == ELECTRIC_PERFORMANCE_SM:
+        return "Synchronous Machines"
+
+    elif sim_type == ELECTRIC_PERFORMANCE_PPM or sim_type == MODEL_VALIDATION_PPM:
+        return "Power Park Modules"
+
+    elif sim_type == ELECTRIC_PERFORMANCE_BESS or sim_type == MODEL_VALIDATION_BESS:
+        return "Battery Energy Storage Systems"
 
 
 def _create_reports(
@@ -431,6 +450,7 @@ def create_pdf(
             "summary_description": summary_description.replace("_", "\_"),
             "summaryReport": summary_map,
             "reports": reports,
+            "modeltype": _get_model_type(producer.get_sim_type()),
         }
     ).dump(str(working_path / REPORT_NAME))
 

@@ -79,7 +79,7 @@ benchmarks.
    ```
     [DummySample]
     # Report name
-    report_name = report_ISM.tex
+    report_name = report_I.tex
    ```
 
 From this point follow the steps indicated to modify a PCS. 
