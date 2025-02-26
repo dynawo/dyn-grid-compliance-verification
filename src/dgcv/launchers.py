@@ -197,7 +197,8 @@ def _add_validation_argument(parser: argparse.ArgumentParser, required: bool = F
         "-v",
         "--validation",
         required=required,
-        help="choice of processs, performance verification (SM or PPM) vs. RMS model validation",
+        help="choice of processs, performance verification (SM, PPM or BESS) "
+        "vs. RMS model validation (PPM or BESS)",
         choices=["performance_SM", "performance_PPM", "model_PPM", "model_BESS"],
         default=None,
     )
