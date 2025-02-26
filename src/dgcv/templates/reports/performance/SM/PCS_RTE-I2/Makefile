@@ -1,7 +1,7 @@
 # This makefile is for compiling the report template and the TikZ figure, but
 # the code does not use it. It's useful for editing purposes.
 
-PCS=I2SM
+PCS=I2
 PCS_NAME=RTE-I2SM
 DOC=report_$(PCS)
 TIKZFIG=circuit_$(PCS)
