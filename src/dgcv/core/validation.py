@@ -161,7 +161,7 @@ class Validation:
 
     def __create_report(self, summary_list: list, report_results: dict) -> None:
         """Create the full report."""
-        sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone"))
+        sorted_summary_list = sorted(summary_list, key=attrgetter("producer_dyd", "id", "zone"))
         dgcv_logging.get_logger("Validation").debug(f"Sorted summary {sorted_summary_list}")
         try:
             report.create_pdf(
