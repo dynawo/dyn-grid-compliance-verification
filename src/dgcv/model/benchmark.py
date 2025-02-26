@@ -25,7 +25,16 @@ from dgcv.validation.performance import PerformanceValidator
 
 Summary = namedtuple(
     "Summary",
-    ["producer_dyd", "id", "zone", "pcs", "benchmark", "operating_condition", "compliance", "report_name"],
+    [
+        "producer_dyd",
+        "id",
+        "zone",
+        "pcs",
+        "benchmark",
+        "operating_condition",
+        "compliance",
+        "report_name",
+    ],
 )
 
 
