@@ -26,7 +26,7 @@ from dgcv.validation.performance import PerformanceValidator
 Summary = namedtuple(
     "Summary",
     [
-        "producer_dyd",
+        "producer_file",
         "id",
         "zone",
         "pcs",
@@ -594,11 +594,15 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
 
             results["summary"] = compliance
-            producer_dyd_file = self._parameters.get_producer().get_producer_dyd().name
-            results["producer"] = producer_dyd_file
+            if self._parameters.get_producer().is_dynawo_model():
+                producer_file = self._parameters.get_producer().get_producer_dyd().name
+            else:
+                producer_file = self._parameters.get_producer().get_producer_curves_path().name
+
+            results["producer"] = producer_file
             summary_list.append(
                 Summary(
-                    producer_dyd_file,
+                    producer_file,
                     int(self._pcs_id),
                     int(self._pcs_zone),
                     self._pcs_name,
