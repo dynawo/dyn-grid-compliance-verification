@@ -25,7 +25,7 @@ from dgcv.validation.performance import PerformanceValidator
 
 Summary = namedtuple(
     "Summary",
-    ["id", "zone", "pcs", "benchmark", "operating_condition", "compliance", "report_name"],
+    ["producer_dyd", "id", "zone", "pcs", "benchmark", "operating_condition", "compliance", "report_name"],
 )
 
 
@@ -585,8 +585,11 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
 
             results["summary"] = compliance
+            producer_dyd_file = self._parameters.get_producer().get_producer_dyd().name
+            results["producer"] = producer_dyd_file
             summary_list.append(
                 Summary(
+                    producer_dyd_file,
                     int(self._pcs_id),
                     int(self._pcs_zone),
                     self._pcs_name,
