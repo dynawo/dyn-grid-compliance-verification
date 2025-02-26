@@ -3,7 +3,7 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     \renewcommand{\DTRPcs}{SetPointStep} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{SetPoint Step (Model Validation Zone 1)}
+    \renewcommand{\DTRPcsLong}{SetPoint Step}
     \renewcommand{\OCname}{Reactive}
 
 
@@ -13,6 +13,16 @@
     is a $5\%$ step decrease in the setpoint of the reactive flow control.
 
     \GridCircuitZone
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_\text{max\_unite}$
+            \item $Q = 0$
+            \item $U = U_\text{dim}$
+            \item $SCR = 3$
+        \end{itemize}
+    \end{description}
 
     \subsubsection{Simulation parameters}
 
