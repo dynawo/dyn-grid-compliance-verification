@@ -3,7 +3,7 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     \renewcommand{\DTRPcs}{GridFreqRamp} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{Grid Frequency Ramp (Model Validation Zone 1)}
+    \renewcommand{\DTRPcsLong}{Grid Frequency Ramp}
     \renewcommand{\OCname}{W500mHz250ms}
 
 
@@ -13,6 +13,16 @@
     is a frequency ramp from +500mHz to 2Hz/s on the AC source.
 
     \GridCircuitZone
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_\text{max\_unite}$
+            \item $Q = 0$
+            \item $U = U_\text{dim}$
+            \item $SCR = 3$
+        \end{itemize}
+    \end{description}
 
     \subsubsection{Simulation parameters}
 

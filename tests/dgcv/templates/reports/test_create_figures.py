@@ -8,7 +8,7 @@ def test_pcs_name():
         create_figures.ELECTRIC_PERFORMANCE_PPM,
         create_figures.MODEL_VALIDATION_PPM,
     ]
-    expected_ouputs = ["RTE-I2SM", "RTE-I5PPM", "RTE-I16z1"]
+    expected_ouputs = ["RTE-I2SM", "RTE-I5", "RTE-I16z1"]
     for pcs_name, simulation_type, expected_ouput in zip(
         pcs_names, simulation_types, expected_ouputs
     ):

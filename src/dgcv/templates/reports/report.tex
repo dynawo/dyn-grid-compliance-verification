@@ -70,7 +70,7 @@
 %% The document starts here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{DGCV Report}
+\title{DGCV Report \\[1ex] \large for {{modeltype}}}
 \author{RTE}
 \date{
     \vspace{0.5cm}
@@ -92,12 +92,12 @@
     {{summary_description}}
 
     \begin{center}
-        \begin{tabular}{cccc}
+        \begin{tabular}{ccccc}
             \toprule
-            Pcs & Benchmark & Operating Condition & Overall Result \\
+            Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
             \midrule
             \BLOCK{for row in summaryReport}
-            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} \\
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
