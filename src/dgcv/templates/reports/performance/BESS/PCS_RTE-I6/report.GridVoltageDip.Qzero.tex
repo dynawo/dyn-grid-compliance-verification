@@ -1,6 +1,6 @@
     \subsection{Overview of DTR PCS \DTRPcs}
 
-    Checks for compliant behavior of the PPM under a grid scenario where there is a
+    Checks for compliant behavior of the BESS under a grid scenario where there is a
     severe drop of voltage at the PDR bus (which simulates the effect of a fault
     nearby in the network).
 
@@ -38,7 +38,7 @@
     Chapter 5, Article 5.1.1, Section 3. See the reminder in the document
     \code{Summary\_data\_from\_the\_DTR.md}.)
 
-    For PPMs of classes B, C, and Offshore (under 110 kV in this last case):
+    For BESSs of classes B, C:
     \begin{center}
         \begin{tabular}{lc}
             \toprule
@@ -54,7 +54,7 @@
         \end{tabular}
     \end{center}
 
-    For PPMs of class D and Offshore systems at 110 kV and above:
+    For BESSs of class D:
     \begin{center}
         \begin{tabular}{lc}
             \toprule
@@ -105,7 +105,7 @@
         \item Active power supplied at the connection point (obtained from
         the controllable Infinite Bus on TSO side).
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
-        All PPM units are plotted on the same graph.
+        All BESS units are plotted on the same graph.
     \end{itemize}
 
     \subsubsection{Simulation results}
@@ -128,7 +128,7 @@
         \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I6.GridVoltageDip.Qzero}
         \begin{minipage}[t]{0.8\textwidth}
             \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
-            The gray dotted line show the AVR setpoint. All PPM units are plotted on the same
+            The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
             graph.
         \end{minipage}
     \end{minipage}

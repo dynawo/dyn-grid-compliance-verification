@@ -1,9 +1,9 @@
     \subsection{Overview of DTR PCS \DTRPcs}
 
-    Checks for compliant behavior of the PPM under an \emph{islanding} event grid
-    scenario, i.e., the network has been split in such a way that the PPM is left as
+    Checks for compliant behavior of the BESS under an \emph{islanding} event grid
+    scenario, i.e., the network has been split in such a way that the BESS is left as
     the only generating plant that should sustain the frequency of its
-    subnetwork. The PPM should maintain the stability until the restoration process
+    subnetwork. The BESS should maintain the stability until the restoration process
     re-synchronizes this subnetwork to the bulk transmission network.
 
     The grid model and its operational point is as in the following schematic:
@@ -64,7 +64,7 @@
         \item Network frequency: \code{generator\_omegaRefPu} (of the
         fictitious Synchronous Condenser unit).
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
-        All PPM units are plotted on the same graph.
+        All BESS units are plotted on the same graph.
     \end{itemize}
 
     \subsubsection{Simulation results}
@@ -86,7 +86,7 @@
             \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4}
             \begin{minipage}[t]{0.8\textwidth}
                 \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
-                The gray dotted line show the AVR setpoint. All PPM units are plotted on the same
+                The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
                 graph.
             \end{minipage}
         \end{minipage}

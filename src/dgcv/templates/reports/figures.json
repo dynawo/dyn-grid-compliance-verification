@@ -63,7 +63,7 @@
 	"fig_W_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.pdf",
 	"fig_WRef_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.pdf"
   ],
-  "RTE-I2PPM": [
+  "RTE-I2": [
 	"fig_P_PCS_RTE-I2.USetPointStep.AReactance.pdf",
 	"fig_P_PCS_RTE-I2.USetPointStep.BReactance.pdf",
 	"fig_Q_PCS_RTE-I2.USetPointStep.AReactance.pdf",
@@ -73,7 +73,7 @@
 	"fig_V_PCS_RTE-I2.USetPointStep.AReactance.pdf",
 	"fig_V_PCS_RTE-I2.USetPointStep.BReactance.pdf"
   ],
-  "RTE-I5PPM": [
+  "RTE-I5": [
 	"fig_P_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
 	"fig_Q_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
 	"fig_Ustator_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
@@ -81,13 +81,13 @@
 	"fig_I_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
 	"fig_Tap_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf"
   ],
-  "RTE-I6PPM": [
+  "RTE-I6": [
 	"fig_P_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
 	"fig_Q_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
 	"fig_Ustator_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
 	"fig_V_PCS_RTE-I6.GridVoltageDip.Qzero.pdf"
   ],
-  "RTE-I7PPM": [
+  "RTE-I7": [
 	"fig_P_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
 	"fig_P_PCS_RTE-I7.GridVoltageSwell.QMin.pdf",
 	"fig_Q_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
@@ -99,7 +99,7 @@
 	"fig_I_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
 	"fig_I_PCS_RTE-I7.GridVoltageSwell.QMin.pdf"
   ],
-  "RTE-I10PPM": [
+  "RTE-I10": [
 	"fig_P_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.pdf",
 	"fig_Q_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.pdf",
 	"fig_Ustator_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.pdf",

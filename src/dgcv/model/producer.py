@@ -435,7 +435,7 @@ class Producer:
             'performance/PPM' if it is an electrical performance for a Power Park Module Model
             'performance/BESS' if it is an electrical performance for a Storage Model
             'model/PPM' if it is a model validation for a Power Park Module Model
-            'model/PPM' if it is a model validation for a Storage Model
+            'model/BESS' if it is a model validation for a Storage Model
         """
         if self._sim_type == ELECTRIC_PERFORMANCE_SM:
             return "performance/SM"

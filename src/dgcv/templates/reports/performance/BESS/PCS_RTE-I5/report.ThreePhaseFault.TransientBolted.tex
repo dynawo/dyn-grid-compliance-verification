@@ -1,8 +1,8 @@
     \subsection{Overview of DTR PCS \DTRPcs}
 
-    Checks for compliant behavior of the PPM under a grid scenario where there
+    Checks for compliant behavior of the BESS under a grid scenario where there
     is a symmetric three-phase fault at one of the four transmission lines
-    (at a 1\% distance from the PDR). The PPM should remain connected and
+    (at a 1\% distance from the PDR). The BESS should remain connected and
     be able to supply the necessary reactive injection.
 
     The grid model and its operational point is as in the following schematic:
@@ -69,11 +69,11 @@
         over all lines on TSO side.
         \item Active power supplied at the connection point: sum of active power
         over all lines on TSO side.
-        \item The injected active and reactive currents. All PPM
+        \item The injected active and reactive currents. All BESS
         units are plotted on the same graph.
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
-        All PPM units are plotted on the same graph.
-        \item The PPM's main transformer tap ratio. if it is a transformer with an
+        All BESS units are plotted on the same graph.
+        \item The BESS's main transformer tap ratio. if it is a transformer with an
         automatic tap changer.
     \end{itemize}
 
@@ -97,7 +97,7 @@
         \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
         \begin{minipage}[t]{0.8\textwidth}
             \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
-            The gray dotted line show the AVR setpoint. All PPM units are plotted on the same
+            The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
             graph.
         \end{minipage}
     \end{minipage}
@@ -129,7 +129,7 @@
         \centering
         \includegraphics[width=\textwidth]{fig_I_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Injected active (light blue line) and reactive (violet line) currents. All PPM
+            \small Injected active (light blue line) and reactive (violet line) currents. All BESS
             units are plotted on the same graph.
         \end{minipage}
     \end{minipage}
@@ -138,7 +138,7 @@
         \centering
         \includegraphics[width=\textwidth]{fig_Tap_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
         \begin{minipage}[t]{0.8\textwidth}
-            \small The PPM's main transformer tap ratio (if it is a transformer with an
+            \small The BESS's main transformer tap ratio (if it is a transformer with an
             automatic tap changer).
         \end{minipage}
     \end{minipage}
