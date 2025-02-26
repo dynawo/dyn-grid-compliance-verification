@@ -1,8 +1,8 @@
 # This makefile is for compiling the report template and the TikZ figure, but
 # the code does not use it. It's useful for editing purposes.
 
-PCS=I7PPM
-PCS_NAME=RTE-I7PPM
+PCS=I7
+PCS_NAME=RTE-I7
 DOC=report_$(PCS)
 TIKZFIG=circuit_$(PCS)
 LATEX_OPTS=-shell-escape -halt-on-error
