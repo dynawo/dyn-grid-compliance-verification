@@ -19,6 +19,7 @@ from pathlib import Path
 from dgcv.configuration.cfg import config
 from dgcv.core.execution_parameters import Parameters
 from dgcv.core.global_variables import (
+    CASE_SEPARATOR,
     ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
@@ -31,6 +32,13 @@ from dgcv.logging.logging import dgcv_logging
 from dgcv.model.pcs import Pcs
 from dgcv.report import report
 from dgcv.report.LatexReportException import LatexReportException
+
+
+def _aborted_execution(e: Exception) -> None:
+    if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
+        dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
+    else:
+        dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
 
 
 def _open_document(file: Path, is_testing: bool) -> None:
@@ -170,12 +178,15 @@ class Validation:
                 self._parameters,
                 Path(self._path_latex_files),
             )
-        except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
-            if dgcv_logging.getEffectiveLevel() == logging.DEBUG:
-                dgcv_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
-            else:
-                dgcv_logging.get_logger("Validation").error(f"Aborted execution. {e}")
-            sys.exit(1)
+        except LatexReportException as e:
+            dgcv_logging.get_logger("PDFLatex").error(
+                f"An error occurred while generating the report, "
+                f"look for the {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log file "
+                f"under {self._parameters.get_output_dir()/'Reports'}"
+            )
+            _aborted_execution(e)
+        except (FileNotFoundError, IOError, ValueError) as e:
+            _aborted_execution(e)
 
         for pcs_results in report_results.values():
             pcs = pcs_results["pcs"]
@@ -245,12 +256,6 @@ class Validation:
         # Create the pcs report
         if not is_test_validation:
             self.__create_report(summary_list, report_results)
-
-            manage_files.copy_output_files(
-                "Reports",
-                self._parameters.get_working_dir(),
-                self._parameters.get_output_dir(),
-            )
 
             report_file = (
                 self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
