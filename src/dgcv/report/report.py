@@ -32,7 +32,8 @@ from dgcv.files.manage_files import copy_latex_files, move_report
 from dgcv.logging.logging import dgcv_logging
 from dgcv.model.compliance import Compliance
 from dgcv.model.producer import Producer
-from dgcv.report import LatexReportException, figure, html
+from dgcv.report import figure, html
+from dgcv.report.LatexReportException import LatexReportException
 from dgcv.report.tables import (
     active_power_recovery,
     characteristics_response,
@@ -504,8 +505,4 @@ def create_pdf(
     if move_report(working_path, output_path, REPORT_NAME):
         dgcv_logging.get_logger("PDFLatex").info("PDF done.")
     else:
-        dgcv_logging.get_logger("PDFLatex").error(
-            f"An error occurred while generating the report, "
-            f"log in {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log"
-        )
         raise LatexReportException("PDFLatex Error.")
