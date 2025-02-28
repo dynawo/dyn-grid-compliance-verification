@@ -13,6 +13,7 @@ def create_map(summary_list: list) -> list:
     for i in summary_list:
         summary_map.append(
             [
+                f"{i.producer_file}".replace("_", "\_").strip(),
                 f"{i.pcs}".replace("_", "\_").strip(),
                 f"{i.benchmark}".strip(),
                 f"{i.operating_condition}".strip(),

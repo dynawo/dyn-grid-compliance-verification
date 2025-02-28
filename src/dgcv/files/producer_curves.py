@@ -304,6 +304,7 @@ def _get_model_templates(
 ):
     xfmrs = _get_xmfrs_models(model_path, "Zone3")
     z3_gen_ppms = _get_generator_models(model_path, template, "Zone3")
+    # TODO: (M-topologies) Copy the zone1 curves files by each zone1 model and modify them
     z1_gen_ppms = _get_generator_models(model_path, template, "Zone1")
 
     producer_curves_txt = _get_model_file_template()
