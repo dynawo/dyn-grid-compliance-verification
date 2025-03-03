@@ -48,6 +48,18 @@ from dgcv.report.tables import (
 from dgcv.templates.reports.create_figures import create_figures
 
 
+def _get_verification_type(sim_type: int) -> str:
+    if (
+        sim_type == ELECTRIC_PERFORMANCE_SM
+        or sim_type == ELECTRIC_PERFORMANCE_PPM
+        or sim_type == ELECTRIC_PERFORMANCE_BESS
+    ):
+        return "Electrical Performance Verification"
+
+    elif sim_type == MODEL_VALIDATION_PPM or sim_type == MODEL_VALIDATION_BESS:
+        return "Model Validation"
+
+
 def _get_model_type(sim_type: int) -> str:
     if sim_type == ELECTRIC_PERFORMANCE_SM:
         return "Synchronous Machines"
@@ -446,6 +458,7 @@ def create_pdf(
             "summary_description": summary_description.replace("_", "\_"),
             "summaryReport": summary_map,
             "reports": reports,
+            "verificationtype": _get_verification_type(producer.get_sim_type()),
             "modeltype": _get_model_type(producer.get_sim_type()),
         }
     ).dump(str(working_path / REPORT_NAME))
