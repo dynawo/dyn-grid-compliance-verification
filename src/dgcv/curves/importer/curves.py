@@ -48,7 +48,7 @@ class ImportedCurves(ProducerCurves):
         for key in curves.keys():
             if key.endswith("_AVRSetpointPu"):
                 gen_id = key.replace("_AVRSetpointPu", "")
-                generators.append(Gen_params(gen_id, "", "", "", "", "", "", ""))
+                generators.append(Gen_params(gen_id, "", "", "", "", "", "", "", False))
 
         self.get_producer().set_generators(generators)
         return generators

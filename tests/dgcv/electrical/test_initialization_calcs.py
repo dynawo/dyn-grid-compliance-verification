@@ -23,7 +23,15 @@ def test_initialization():
 
 def _initialize_topo_s():
     gen = parameters.Gen_params(
-        id=None, lib=None, par_id=None, connectedXmfr=None, P=1, Q=1, IMax=None, VoltageDrop=None
+        id=None,
+        lib=None,
+        par_id=None,
+        connectedXmfr=None,
+        P=1,
+        Q=1,
+        IMax=None,
+        VoltageDrop=None,
+        UseVoltageDrop=False,
     )
     gen_xfmr = parameters.Xfmr_params(
         id=None, lib=None, par_id=None, R=0.0003, X=0.0268, G=0.0, B=0.0, rTfo=0.9574
@@ -69,7 +77,15 @@ def _initialize_topo_s():
 
 def _initialize_topo_s_i():
     gen = parameters.Gen_params(
-        id=None, lib=None, par_id=None, connectedXmfr=None, P=1, Q=1, IMax=None, VoltageDrop=None
+        id=None,
+        lib=None,
+        par_id=None,
+        connectedXmfr=None,
+        P=1,
+        Q=1,
+        IMax=None,
+        VoltageDrop=None,
+        UseVoltageDrop=False,
     )
     gen_xfmr = parameters.Xfmr_params(
         id=None, lib=None, par_id=None, R=0.0003, X=0.0268, G=0.0, B=0.0, rTfo=0.9574
