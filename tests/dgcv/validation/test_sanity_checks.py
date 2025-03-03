@@ -85,6 +85,7 @@ def test_generators():
         P=0.1,
         Q=0.05,
         VoltageDrop=None,
+        UseVoltageDrop=False,
     )
     ppm = parameters.Gen_params(
         id=None,
@@ -95,6 +96,7 @@ def test_generators():
         P=0.1,
         Q=0.05,
         VoltageDrop=None,
+        UseVoltageDrop=False,
     )
     bess = parameters.Gen_params(
         id=None,
@@ -105,6 +107,7 @@ def test_generators():
         P=0.1,
         Q=0.05,
         VoltageDrop=None,
+        UseVoltageDrop=False,
     )
     sm_models, ppm_models, bess_models = sanity_checks.check_generators([sm])
     assert sm_models == 1
