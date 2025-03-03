@@ -171,7 +171,8 @@ class DynawoCurves(ProducerCurves):
 
     def __adjust_event_value(self, event_params: dict) -> None:
         generator = self.get_producer().generators[0]
-        event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
+        if generator.UseVoltageDrop:
+            event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
 
     def __complete_model(
         self,
@@ -274,7 +275,7 @@ class DynawoCurves(ProducerCurves):
         # Modify producer par to add generator init values
         section = get_cfg_oc_name(pcs_bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
-        recalculate_uref = model_parameters.adjust_producer_init(
+        model_parameters.adjust_producer_init(
             working_oc_dir,
             self.get_producer().get_producer_par(),
             self.get_producer().generators,
@@ -284,8 +285,7 @@ class DynawoCurves(ProducerCurves):
             pdr,
             control_mode,
         )
-        if recalculate_uref:
-            self.__adjust_event_value(event_params)
+        self.__adjust_event_value(event_params)
 
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
         jobs_file.complete_file(working_oc_dir, self._solver_id, self._solver_lib, event_params)
@@ -695,6 +695,7 @@ class DynawoCurves(ProducerCurves):
             self._curves_dict,
             working_oc_dir,
             jobs_output_dir,
+            self.get_producer().generators,
             self.get_producer().s_nom,
             self._s_nref,
         )
@@ -866,6 +867,7 @@ class DynawoCurves(ProducerCurves):
             self._curves_dict,
             working_oc_dir_attempt,
             jobs_output_dir,
+            self.get_producer().generators,
             self.get_producer().s_nom,
             self._s_nref,
             save_file=False,

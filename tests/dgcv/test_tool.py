@@ -182,7 +182,7 @@ def test_model_validation_wecca_model():
         Compliance.NonCompliant,
         Compliance.NonCompliant,
         Compliance.NonCompliant,
-        Compliance.Compliant,
+        Compliance.NonCompliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,

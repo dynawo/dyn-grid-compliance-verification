@@ -139,6 +139,25 @@ def _add_generators_curves(
         for variable in generator_variables:
             dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, variable)
             if not dynawo_variable:
+                # Check needed as long as there are Dynawo models that do not have
+                # a variable that corresponds to U + lambda * Q. In these models,
+                # the U and Q curves are needed to be able to perform the calculation
+                # in the tool.
+                if variable == "MagnitudeControlledByAVRPu":
+                    variable = "MagnitudeControlledByAVRUPu"
+                    dynawo_variable = dynawo_translator.get_dynawo_variable(
+                        generator.lib, variable
+                    )
+                    _add_curve_to_file(
+                        curves_root, generator.id, variable, "GEN", dynawo_variable, curves_dict
+                    )
+                    variable = "MagnitudeControlledByAVRQPu"
+                    dynawo_variable = dynawo_translator.get_dynawo_variable(
+                        generator.lib, variable
+                    )
+                    _add_curve_to_file(
+                        curves_root, generator.id, variable, "GEN", dynawo_variable, curves_dict
+                    )
                 continue
 
             if _is_composed_setpoint(generator.lib, variable, dynawo_variable, control_mode):

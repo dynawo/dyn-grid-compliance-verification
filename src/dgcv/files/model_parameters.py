@@ -111,7 +111,9 @@ def _append_generator(
     else:
         VoltageDrop = 0.0
 
-    generators.append(Gen_params(gen_id, lib, connectedXmfr, imax, par_id, P, Q, VoltageDrop))
+    generators.append(
+        Gen_params(gen_id, lib, connectedXmfr, imax, par_id, P, Q, VoltageDrop, False)
+    )
 
 
 def _get_line_values(
@@ -319,7 +321,7 @@ def _adjust_generator(
     generator_u0pu: float,
     generator_uphase0: float,
     generator_control_mode: str,
-) -> bool:
+) -> None:
     """Modify the Producer generator to add the init values.
     MODEL_DEPENDENT_CODE
     """
@@ -340,25 +342,23 @@ def _adjust_generator(
     phase0 = dynawo_translator.get_dynawo_variable(generator.lib, "Phase0")
     _set_parameter(parset, ns, phase0, generator_uphase0)
 
-    return _set_control_mode(generator, parset, ns, generator_control_mode)
+    _set_control_mode(generator, parset, ns, generator_control_mode)
 
 
-def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> bool:
+def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> None:
     if "MwpqMode" in control_mode_parameters:
         if control_mode_parameters["MwpqMode"] == "3":
-            return True
+            generator.UseVoltageDrop = True
 
     if "RefFlag" in control_mode_parameters:
         if control_mode_parameters["RefFlag"].lower() == "true":
             VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
             par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
             if par is not None and par.get("value").lower() == "false":
-                return True
-
-    return False
+                generator.UseVoltageDrop = True
 
 
-def _set_control_mode(generator, parset, ns, generator_control_mode) -> bool:
+def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
     if generator_control_mode == "USetpoint" or generator_control_mode == "QSetpoint":
         # Get the generator control mode parameters from the producer PAR file.
         control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
@@ -367,35 +367,38 @@ def _set_control_mode(generator, parset, ns, generator_control_mode) -> bool:
         )
         # If the generator has not control mode parameters return.
         if not control_mode_parameters:
-            return False
+            return
 
         # Check if the configured control mode is valid
         if dynawo_translator.is_valid_control_mode(
             generator, generator_control_mode, control_mode_parameters
         ):
-            return _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters)
+            _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters)
 
-        dgcv_logging.get_logger("Model Parameters").warning(
-            f"{generator.lib} control mode will be changed"
-        )
-        default_control_mode_parameters = _get_default_control_mode_parameters(
-            generator, generator_control_mode
-        )
-        dgcv_logging.get_logger("Model Parameters").debug(
-            f"Default Control Mode: {control_mode_parameters} for {generator_control_mode}"
-        )
-        if dynawo_translator.is_valid_control_mode(
-            generator, generator_control_mode, default_control_mode_parameters
-        ):
-            _set_control_mode_parameters(generator, parset, ns, default_control_mode_parameters)
-            return _recalculate_voltage_ref(generator, parset, ns, default_control_mode_parameters)
         else:
-            dgcv_logging.get_logger("Model Parameters").error(
-                f"{generator.lib} executed with wrong control mode"
+            dgcv_logging.get_logger("Model Parameters").warning(
+                f"{generator.lib} control mode will be changed"
             )
-            raise ValueError(f"{generator.lib} executed with wrong control mode")
+            default_control_mode_parameters = _get_default_control_mode_parameters(
+                generator, generator_control_mode
+            )
+            dgcv_logging.get_logger("Model Parameters").debug(
+                f"Default Control Mode: {control_mode_parameters} for {generator_control_mode}"
+            )
+            if dynawo_translator.is_valid_control_mode(
+                generator, generator_control_mode, default_control_mode_parameters
+            ):
+                _set_control_mode_parameters(
+                    generator, parset, ns, default_control_mode_parameters
+                )
+                _recalculate_voltage_ref(generator, parset, ns, default_control_mode_parameters)
+            else:
+                dgcv_logging.get_logger("Model Parameters").error(
+                    f"{generator.lib} executed with wrong control mode"
+                )
+                raise ValueError(f"{generator.lib} executed with wrong control mode")
 
-    return False
+    return
 
 
 def _get_control_mode_parameters(generator, parset, ns) -> dict:
@@ -827,7 +830,7 @@ def adjust_producer_init(
     aux_load: Load_init,
     pdr: Pdr_params,
     generator_control_mode: str,
-) -> bool:
+) -> None:
     """Modify the Producer PAR file to add the init values.
 
     Parameters
@@ -848,16 +851,10 @@ def adjust_producer_init(
         Initial values for the transformer on the PDR side
     generator_control_mode: str
         Control mode
-
-    Returns
-    -------
-    bool
-        True if the voltage reference must be recalculated
     """
 
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
-    recalculate = False
 
     for generator, xfmr, gen in zip(generators, xfmrs, gens):
         _adjust_transformer(
@@ -869,7 +866,7 @@ def adjust_producer_init(
             gen.UPhase0,
             pdr,
         )
-        recalculate_uref = _adjust_generator(
+        _adjust_generator(
             producer_par_root,
             generator,
             gen.P0,
@@ -878,8 +875,6 @@ def adjust_producer_init(
             gen.UPhase0,
             generator_control_mode,
         )
-        if recalculate_uref:
-            recalculate = True
 
     if aux_load:
         _adjust_load(
@@ -892,4 +887,3 @@ def adjust_producer_init(
         )
 
     producer_par_tree.write(path / producer_par.name, pretty_print=True)
-    return recalculate
