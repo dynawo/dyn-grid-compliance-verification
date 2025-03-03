@@ -80,7 +80,7 @@
     <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="0.5"/>
 
     <!-- BaseWT4 -->
-    <par type="DOUBLE" name="photovoltaics_SNom" value="100"/>
+    <par type="DOUBLE" name="photovoltaics_SNom" value="90"/>
     <par type="DOUBLE" name="photovoltaics_RPu" value="0.0004"/>
     <par type="DOUBLE" name="photovoltaics_XPu" value="0.0015"/>
     <par type="DOUBLE" name="photovoltaics_VDLIp11" value="1.1"/>
@@ -107,7 +107,7 @@
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="100"/>
+    <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_R" value="0.0273"/>
     <par type="DOUBLE" name="transformer_X" value="2.4446"/>
     <par type="DOUBLE" name="transformer_B" value="0"/>

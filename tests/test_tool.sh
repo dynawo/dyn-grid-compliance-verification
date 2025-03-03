@@ -15,22 +15,7 @@ color_msg()
 }
 
 launch_test() {
-   declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a" "IECB2015" "IECB2020" "WECCB")
-   declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
-
-   # performance validation
-   for topology in "${topologies[@]}"
-   do
-      for model in "${models[@]}"
-      do
-         start=$(date +%s)
-         color_msg "dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model"
-         dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model --testing
-         end=$(date +%s)
-         color_msg "Verificate: $topology - $model Elapsed Time: $(($end-$start)) seconds"
-      done
-   done
-
+   launch_start=$(date +%s)
    declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
    declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
    declare -a bess_models=("WECC")
@@ -63,6 +48,24 @@ launch_test() {
       color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
    done
 
+   declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a" "IECB2015" "IECB2020" "WECCB")
+   declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
+
+   # performance validation
+   for topology in "${topologies[@]}"
+   do
+      for model in "${models[@]}"
+      do
+         start=$(date +%s)
+         color_msg "dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model"
+         dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model --testing
+         end=$(date +%s)
+         color_msg "Verificate: $topology - $model Elapsed Time: $(($end-$start)) seconds"
+      done
+   done
+
+   launch_end=$(date +%s)
+   color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
 }
 
 launcher="dynawo.sh"
