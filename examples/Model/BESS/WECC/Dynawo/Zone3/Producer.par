@@ -84,7 +84,7 @@
     <par type="DOUBLE" name="BESScb_OmegaMinPu" value="0.5"/>
 
     <!-- BaseWT4 -->
-    <par type="DOUBLE" name="BESScb_SNom" value="100"/>
+    <par type="DOUBLE" name="BESScb_SNom" value="90"/>
     <par type="DOUBLE" name="BESScb_RPu" value="0.0004"/>
     <par type="DOUBLE" name="BESScb_XPu" value="1e-6"/>
     <par type="DOUBLE" name="BESScb_VDLIp11" value="1.1"/>
@@ -111,7 +111,7 @@
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="100"/>
+    <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_R" value="0.0273"/>
     <par type="DOUBLE" name="transformer_X" value="2.4446"/>
     <par type="DOUBLE" name="transformer_B" value="0"/>

@@ -3,7 +3,7 @@
   <!-- Synchronous machine external parameters -->
   <set id="Wind_Turbine">
     <!-- Nominal -->
-    <par type="DOUBLE" name="WT_SNom" value="100"/>
+    <par type="DOUBLE" name="WT_SNom" value="90"/>
     <par type="DOUBLE" name="WT_tS" value="0.001"/>
     <!-- Electrical -->
     <par type="DOUBLE" name="WT_BesPu" value="0"/>
@@ -118,7 +118,7 @@
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="100"/>
+    <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_R" value="0.0273"/>
     <par type="DOUBLE" name="transformer_X" value="2.4446"/>
     <par type="DOUBLE" name="transformer_B" value="0"/>
