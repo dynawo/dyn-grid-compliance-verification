@@ -146,18 +146,13 @@ def clone_as_subdirectory(source_path: Path, name: str) -> Path:
     created_path = source_path / name
     create_dir(created_path)
 
-    shutil.copytree(
-        source_path,
-        created_path,
-        dirs_exist_ok=True,
-    )
+    exclude_pattern = re.compile(r".*.[cC][sS][vV]$")
+    for file in source_path.iterdir():
+        matching = exclude_pattern.match(str(file))
+        if matching or file.is_dir():
+            continue
+        shutil.copy(file, created_path / file.name)
 
-    for path in created_path.iterdir():
-        if path.is_dir():
-            remove_dir(created_path / path)
-
-    (created_path / "curves_final.csv").unlink(missing_ok=True)
-    (created_path / "curves_final2.csv").unlink(missing_ok=True)
     return created_path
 
 
