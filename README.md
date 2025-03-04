@@ -128,7 +128,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/linux_install.sh | bash
    ```
 
    This script will install the DGCV tool, together with a matching version of
@@ -171,7 +171,7 @@ The dgcv application is now ready to use.
 > interested in the details of what is installed in the Operating System
 > (Dynawo, C++ compiler, Python, LaTeX).
 
-1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/DGCV_win_Installer.exe).
+1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/DGCV_win_Installer.exe).
 
    In order to install the application, it is essential that the user has administrator rights. If the user is an administrator, there are no problems in unblocking the executable:
    
