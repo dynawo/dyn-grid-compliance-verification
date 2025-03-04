@@ -29,7 +29,7 @@ build-backend = "setuptools.build_meta"
 [project]
 # Metadata:
 name = "dgcv"
-version = "0.7.0"
+version = "0.8.0"
 description = "A tool for automating the verification of dynamic grid compliance requirements for solar, wind, and storage farms, including RMS model validation."
 authors = [
     {name="Guiu Oms", email="omsg@aia.es"},

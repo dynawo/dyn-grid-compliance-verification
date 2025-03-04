@@ -42,7 +42,7 @@ set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
 # --------------------------------------------------------------------------------------------------------
-RELEASE_TAG="v0.7.0"
+RELEASE_TAG="v0.8.0"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
 DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"

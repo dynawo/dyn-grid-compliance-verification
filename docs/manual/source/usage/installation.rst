@@ -100,7 +100,7 @@ Linux
 
     .. code-block:: console
 
-       curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/linux_install.sh | bash
+       curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/linux_install.sh | bash
 
    This script will install the DGCV tool, together with a matching version of Dynawo,
    under your current directory in $PWD/dgcv.  It will do so by cloning the latest
@@ -136,7 +136,7 @@ Windows
 
 #. Download the `DGCV's Windows Installer`__.
 
-__ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/DGCV_win_Installer.exe
+__ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/DGCV_win_Installer.exe
 
    In order to install the application, it is essential that the user has administrator rights. 
    If the user is an administrator, there are no problems in unblocking the executable:
