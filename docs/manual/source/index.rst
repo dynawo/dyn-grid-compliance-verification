@@ -1,8 +1,8 @@
 ================================================================
-Welcome to Dynamic Grid Compliance Verification's documentation!
+Welcome to Dynamic grid Compliance Verification's documentation!
 ================================================================
 
-The **Dynamic Grid Compliance Verification** tool (DGCV for short) is designed to automate
+The **Dynamic grid Compliance Verification** tool (dycov for short) is designed to automate
 most tasks related to the validation of RMS models, in the context of compliance
 requirements for new generation facilities. It contemplates **model validation**
 properly speaking (i.e., *"does the model and its parameterization match the
@@ -53,7 +53,7 @@ and comparing them).
 Get Started
 ===========
 
-These sections cover the basics of getting started with Dynamic Grid Compliance Verification.
+These sections cover the basics of getting started with Dynamic grid Compliance Verification.
 
 .. toctree::
    :maxdepth: 3
@@ -64,17 +64,17 @@ These sections cover the basics of getting started with Dynamic Grid Compliance 
 
 .. _user-guides:
 
-Using Dynamic Grid Compliance Verification
+Using Dynamic grid Compliance Verification
 ==========================================
 
-These sections cover various topics in using Dynamic Grid Compliance Verification for various
-use-case. They are comprehensive guide to using Dynamic Grid Compliance Verification in many contexts and assume
-more knowledge of Dynamic Grid Compliance Verification. If you are new to Dynamic Grid Compliance Verification, we recommend
+These sections cover various topics in using Dynamic grid Compliance Verification for various
+use-case. They are comprehensive guide to using Dynamic grid Compliance Verification in many contexts and assume
+more knowledge of Dynamic grid Compliance Verification. If you are new to Dynamic grid Compliance Verification, we recommend
 starting with :ref:`get-started`.
 
 .. toctree::
    :maxdepth: 3
-   :caption: Using Dynamic Grid Compliance Verification
+   :caption: Using Dynamic grid Compliance Verification
 
    usage/validations
    usage/inputs

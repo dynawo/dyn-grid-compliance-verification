@@ -1,4 +1,4 @@
-Dynamic grid compliance verification tool authors:
+Dynamic grid Compliance Verification tool authors:
 
 Carmen CARDOZO
 Marcos DE MIGUEL CRUZ

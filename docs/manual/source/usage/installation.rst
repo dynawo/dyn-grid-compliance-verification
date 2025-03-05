@@ -1,13 +1,13 @@
 ===============================================
-Installing Dynamic Grid Compliance Verification
+Installing Dynamic grid Compliance Verification
 ===============================================
 
 Overview
 --------
 
-Dynamic Grid Compliance Verification is written in `Python`__ and supports **Python
+Dynamic grid Compliance Verification is written in `Python`__ and supports **Python
 3.9+**. It builds upon the shoulders of many third-party libraries such as `lxml`__ and
-`Jinja`__, which are installed when Dynamic Grid Compliance Verification is installed
+`Jinja`__, which are installed when Dynamic grid Compliance Verification is installed
 
 __ https://docs.python-guide.org/
 __ https://lxml.de/
@@ -102,8 +102,8 @@ Linux
 
        curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/linux_install.sh | bash
 
-   This script will install the DGCV tool, together with a matching version of Dynawo,
-   under your current directory in $PWD/dgcv.  It will do so by cloning the latest
+   This script will install the DyCoV tool, together with a matching version of Dynawo,
+   under your current directory in $PWD/dycov.  It will do so by cloning the latest
    stable release and building & installing the application (and all of its
    dependencies, such as NumPy, etc.) under a Python virtual environment.
 
@@ -111,19 +111,19 @@ Linux
 
     .. code-block:: console
 
-       source $PWD/dgcv/activate_dgcv
+       source $PWD/dycov/activate_dycov
 
-#. The tool is used via a single command dgcv having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
+#. The tool is used via a single command dycov having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
 
     .. code-block:: console
 
-       dgcv -h
+       dycov -h
 
 #. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
 
     .. code-block:: console
 
-	dgcv compile
+	dycov compile
 
  
 .. note::
@@ -134,9 +134,9 @@ Linux
 Windows
 ^^^^^^^
 
-#. Download the `DGCV's Windows Installer`__.
+#. Download the `DyCoV's Windows Installer`__.
 
-__ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/DGCV_win_Installer.exe
+__ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/DyCoV_win_Installer.exe
 
    In order to install the application, it is essential that the user has administrator rights. 
    If the user is an administrator, there are no problems in unblocking the executable:
@@ -149,8 +149,8 @@ __ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/
 
 #. Next, execute the downloaded installer:
 
-   This executable will install the DGCV tool, together with a matching version of Dynawo,
-   under the selected directory (default installation path: `c:/dgcv`).  It will do this 
+   This executable will install the DyCoV tool, together with a matching version of Dynawo,
+   under the selected directory (default installation path: `c:/dycov`).  It will do this 
    by copying the latest stable version and compiling and installing the application (and 
    all its dependencies, such as NumPy, etc.) into a Python virtual environment. The 
    installer will also install any third-party applications required for the proper 
@@ -166,22 +166,22 @@ __ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/
     :align: center
 
 
-#. Next, you must activate the virtual environment that has just been created by double-clicking on the DGCV.bat file that has been created on the desktop.
+#. Next, you must activate the virtual environment that has just been created by double-clicking on the DyCoV.bat file that has been created on the desktop.
 
     This action will open a new Command Prompt with the virtual environment activated where the tool can be used.
     To finish using the tool, you only need to close the Command Prompt.
 
-#. The tool is used via a single command dgcv having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
+#. The tool is used via a single command dycov having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
 
     .. code-block:: console
 
-       dgcv -h
+       dycov -h
 
 #. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
 
     .. code-block:: console
 
-	dgcv compile
+	dycov compile
 
 .. note::
     The installer will perform a basic installation of the **MiKTeX** distribution. The 

@@ -2,7 +2,7 @@
 Configuration
 =============
 
-Dynamic Grid Compliance Verification has multiple configuration files, written in the
+Dynamic grid Compliance Verification has multiple configuration files, written in the
 well-known INI format (of the `Python flavor`__). This guide introduces the
 configuration parameters defined in each file. These configuration files are
 grouped into 3 types, in order to set the overriding priority of settings. The
@@ -10,7 +10,7 @@ priority defined in the tool configuration is:
 
 1. User Configuration
 2. :ref:`PCS Configuration <pcsconf>`
-3. :ref:`Dynamic Grid Compliance Verification Configuration <toolconf>`
+3. :ref:`Dynamic grid Compliance Verification Configuration <toolconf>`
 
 
 .. _pcsconf:
@@ -20,7 +20,7 @@ PCS Configuration
 
 This section explains the particular configuration of a *PCS*. Each
 implemented *PCS* must have its own configuration PCSDescription.ini file, which is located in
-the ``src/dgcv/templates/PCS/`` directory of the tool.
+the ``src/dycov/templates/PCS/`` directory of the tool.
 These configuration files should only be edited by developers, and only if there is
 any update of the DTR compliance document concerning the *PCS*.
 
@@ -42,7 +42,7 @@ Under the section called ``PCS-OperatingConditions`` (required).
 
 Under the section called ``Performance-Validations`` the tests that must be passed to validate a
 *PCS* are defined. Each configuration parameter in this section corresponds to a Performance
-Validation test implemented in Dynamic Grid Compliance Verification. To configure the tests that will be used to
+Validation test implemented in Dynamic grid Compliance Verification. To configure the tests that will be used to
 validate the *PCS*, the list of its *Benchmarks* or *Operating Conditions* that must pass a
 test must be added to the corresponding parameter.
 
@@ -112,7 +112,7 @@ test must be added to the corresponding parameter.
 
 Under the section called ``Model-Validations`` the tests that must be passed to validate a
 *PCS* are defined. Each configuration parameter in this section corresponds to a Model
-Validation test implemented in Dynamic Grid Compliance Verification. To configure the tests that will be used to
+Validation test implemented in Dynamic grid Compliance Verification. To configure the tests that will be used to
 validate the *PCS*, the list of its *Benchmarks* or *Operating Conditions* that must pass a
 test must be added to the corresponding parameter.
 
@@ -374,14 +374,14 @@ the event variables of each *Operating Conditions*.
 
 .. _toolconf:
 
-Dynamic Grid Compliance Verification Configuration
+Dynamic grid Compliance Verification Configuration
 --------------------------------------------------
 
-This section explains the global configuration of the *Dynamic Grid Compliance Verification Tool*.
+This section explains the global configuration of the *Dynamic grid Compliance Verification Tool*.
 This configuration file should only be edited by developers, and only if in any
 update of the DTR compliance document, the global conditions of any implemented
-*PCS* is modified. The *Dynamic Grid Compliance Verification* configuration file is located
-in the ``src/dgcv/configuration`` directory of the tool, with the
+*PCS* is modified. The *Dynamic grid Compliance Verification* configuration file is located
+in the ``src/dycov/configuration`` directory of the tool, with the
 name ``defaultConfig.ini``.
 
 Under the section called ``Global`` of the configuration file.
