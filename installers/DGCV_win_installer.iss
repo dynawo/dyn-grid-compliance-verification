@@ -152,7 +152,7 @@ var
   fileName : string;
   lines : TArrayOfString;
 begin
-  fileName := ExpandConstant('{userdesktop}\DyCoV.bat');
+  fileName := ExpandConstant('{commondesktop}\DyCoV.bat');
   SetArrayLength(lines, 1);
   lines[0] := ExpandConstant('start cmd /k "{app}\dycov_venv\Scripts\activate && cd /d {app}"');
   Result := SaveStringsToFile(filename,lines,true);
