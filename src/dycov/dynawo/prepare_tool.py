@@ -24,9 +24,9 @@ def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
 
     if different_versions:
         option = input(
-            f"WARNING: you are going to run the dycov tool using a Dynawo version ({dynawo_version}"
-            f")\nthat does not coincide with the version you used in previous runs "
-            f"({compiled_version}).\nIf you go ahead, all your preassembled models will be "
+            f"WARNING: you are going to run the dycov tool using a Dynawo version "
+            f"({dynawo_version})\nthat does not coincide with the version you used in previous "
+            f"runs ({compiled_version}).\nIf you go ahead, all your preassembled models will be "
             f"recompiled. Do you want to abort now? ([Y]/n)"
         )
         if option in ("Y", "y", "yes", "Yes", "YES", ""):
