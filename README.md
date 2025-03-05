@@ -1,7 +1,7 @@
-# dgcv &mdash; a Dynamic Grid Compliance Verification tool
+# DyCoV &mdash; a Dynamic grid Compliance Verification tool
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dgcv.github.io/index.html)
+[![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dycov.github.io/index.html)
 
 A tool for automating the verification of dynamic grid compliance requirements
 for solar, wind, and storage farms (Power Park Modules - PPM) as well as
@@ -24,7 +24,7 @@ Developed by Grupo AIA
 #### Table of Contents
 
 1. [Overview](#overview)
-2. [DGCV Installation](#dgcv-installation)
+2. [DyCoV Installation](#dycov-installation)
 3. [Quick start](#quick-start)
 4. [Running examples](#running-examples)
 5. [Configuration](#configuration)
@@ -37,7 +37,7 @@ Developed by Grupo AIA
 
 # Overview
 
-The **Dynamic Grid Compliance Verification** tool (DGCV for short) is designed
+The **Dynamic grid Compliance Verification** tool (DyCoV for short) is designed
 to automate most tasks related to the validation of RMS models, in the context
 of compliance requirements for new generation facilities. It contemplates
 **model validation** properly speaking (i.e., _"does the model and its
@@ -81,7 +81,7 @@ providing test curves, either to be used _instead of_ Dyna&omega;o simulations,
 or to be used along Dyna&omega;o simulations (just for plotting both and
 comparing them).
 
-# DGCV installation
+# DyCoV installation
 
 ## Linux installation
 
@@ -131,33 +131,33 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/linux_install.sh | bash
    ```
 
-   This script will install the DGCV tool, together with a matching version of
-   Dyna&omega;o, under your current directory in `$PWD/dgcv`.  It will do so by
+   This script will install the DyCoV tool, together with a matching version of
+   Dyna&omega;o, under your current directory in `$PWD/dycov`.  It will do so by
    cloning the latest stable release and building & installing the application
    (and all of its dependencies, such as NumPy, etc.) under a Python virtual
    environment.
 
 2. Next, you must activate the virtual environment that has just been created: 
    ```bash
-   source $PWD/dgcv/activate_dgcv
+   source $PWD/dycov/activate_dycov
    ```
 
-3. The tool is used via a single command `dgcv` having several subcommands. Quickly
+3. The tool is used via a single command `dycov` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
    you all available subcommands:
    ```bash
-   dgcv -h
+   dycov -h
    ```
 
 4. Upon the first use, the tool will automatically compile the Modelica models
    internally defined by the tool. You can also run this command explicitly, as follows:
    ```bash
-   dgcv compile
+   dycov compile
    ```
    (Note: this command is also used to compile any new Modelica models custom-defined by the
    user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
    
-The dgcv application is now ready to use.
+The DyCoV application is now ready to use.
 
 
 
@@ -166,12 +166,12 @@ The dgcv application is now ready to use.
 ### Installation
 
 > [!NOTE]  
-> The Windows installer described here will install not only the DGCV tool, but
+> The Windows installer described here will install not only the DyCoV tool, but
 > also all of the other requirements for you. Read the next section if you are
 > interested in the details of what is installed in the Operating System
 > (Dynawo, C++ compiler, Python, LaTeX).
 
-1. Download the [DGCV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/DGCV_win_Installer.exe).
+1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.0/DyCoV_win_Installer.exe).
 
    In order to install the application, it is essential that the user has administrator rights. If the user is an administrator, there are no problems in unblocking the executable:
    
@@ -179,8 +179,8 @@ The dgcv application is now ready to use.
 
 2. Next, execute the downloaded installer:
 
-   This executable will install the DGCV tool, together with a matching version of Dynawo,
-   under the selected directory (default installation path: `c:/dgcv`).  It will do this 
+   This executable will install the DyCoV tool, together with a matching version of Dynawo,
+   under the selected directory (default installation path: `c:/dycov`).  It will do this 
    by copying the latest stable version and compiling and installing the application (and 
    all its dependencies, such as NumPy, etc.) into a Python virtual environment. The 
    installer will also install any third-party applications required for the proper 
@@ -193,28 +193,28 @@ The dgcv application is now ready to use.
 
 
 3. Next, you must activate the virtual environment that has just been created by
-   double-clicking on the DGCV.bat file that has been created on the desktop.
+   double-clicking on the DyCoV.bat file that has been created on the desktop.
 
    This action will open a new Command Prompt with the virtual environment
    activated where the tool can be used.  To finish using the tool, you only
    need to close the Command Prompt.
 
-4. The tool is used via a single command `dgcv` having several subcommands. Quickly
+4. The tool is used via a single command `dycov` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
    you all available subcommands:
    ```winbatch
-   dgcv -h
+   dycov -h
    ```
 
 5. Upon the first use, the tool will automatically compile the Modelica models
    internally defined by the tool. You can also run this command explicitly, as follows:
    ```winbatch
-   dgcv compile
+   dycov compile
    ```
    (Note: this command is also used to compile any new Modelica models custom-defined by the
    user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
    
-The dgcv application is now ready to use.
+The DyCoV application is now ready to use.
 
 
 ### System requirements (for manual installs)
@@ -224,10 +224,10 @@ The dgcv application is now ready to use.
 > these system requirements for you. This is only here for your information, in
 > case you would rather install any of these components yourself. After you have
 > installed all this, you should still use the Windows installer to install the
-> DGCV tool (it will skip installing any of these OS requirements if they are
+> DyCoV tool (it will skip installing any of these OS requirements if they are
 > already installed).
 
-The requirements of the DGCV tool at the OS-level are rather minimal: one just
+The requirements of the DyCoV tool at the OS-level are rather minimal: one just
 needs a recent Windows distribution in which you should install **Dyna&omega;o**
 (and its requirements), **LaTeX**, and **Python**. If you do not have any strong
 preference, we would recommend Windows 10 or higher.
@@ -260,7 +260,7 @@ To be more specific, we explicitly list here the packages to be installed:
    - Download the latest version of Python 3 (ensure that you select the option
      to add Python to the system PATH during installation).
 
-Note that the DGCV tool itself is a Python package. However, this package and
+Note that the DyCoV tool itself is a Python package. However, this package and
 all of its dependencies (NumPy, etc.) will get installed under a *Python virtual
 environment*.
 
@@ -271,8 +271,8 @@ environment*.
 
 The tool currently has different entry points, depending on what you want to use
 it for:
-* For **RMS model** validation: `dgcv validate`
-* For **electric performance** verification: `dgcv performance`
+* For **RMS model** validation: `dycov validate`
+* For **electric performance** verification: `dycov performance`
 
 
 
@@ -287,7 +287,7 @@ mandatory to provide _reference curves_ as well as a model or producer curves.
 Run the command with option `--help` (or `-h`) to get a quick overview of the
 inputs you need to provide:
 ```
-usage: dgcv validate [-h] [-d] [-l LAUNCHER_DWO]
+usage: dycov validate [-h] [-d] [-l LAUNCHER_DWO]
                      [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
                      [-o RESULTS_DIR] [-od]
                      [reference_curves]
@@ -319,13 +319,13 @@ options:
 
 In this mode the tool runs an execution pipeline consisting in a set of
 pre-defined tests, those of _Fiches_ "I" in RTE's DTR. You would use the command
-`dgcv performance` for _Synchronous Machines_ and for
+`dycov performance` for _Synchronous Machines_ and for
 _Power Park Modules_ (i.e. Wind and PV farms).
 
 Run the command with option `--help` (or `-h`) to get a quick overview of the
 inputs you need to provide:
 ```
-usage: dgcv performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
+usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
                     [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
 options:
@@ -369,7 +369,7 @@ examples.
 ## Model Validation Example:
 
 ```
-dgcv validate $PWD/dgcv/examples/Model/Wind/IEC2015/ReferenceCurves -m $PWD/dgcv/examples/Model/Wind/IEC2015/Dynawo
+dycov validate $PWD/dycov/examples/Model/Wind/IEC2015/ReferenceCurves -m $PWD/dycov/examples/Model/Wind/IEC2015/Dynawo
 ```
 
 Upon execution, the screen output should be similar to the
@@ -380,37 +380,37 @@ also preserved inside this directory, so that they can be inspected and re-run
 for deeper analysis, if desired.
 
 ```
-2024-10-11 11:27:51,765 |           DGCV.ModelValidation |       INFO |       model_validation.py:   92 | DGCV Model Validation
-2024-10-11 11:27:51,798 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2024-10-11 11:27:56,324 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2024-10-11 11:27:59,540 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2024-10-11 11:28:02,960 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
-2024-10-11 11:28:17,388 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
-2024-10-11 11:28:33,459 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2024-10-11 11:28:37,575 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
-2024-10-11 11:28:50,476 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
-2024-10-11 11:28:54,294 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
-2024-10-11 11:28:57,550 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
-2024-10-11 11:28:57,601 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWT4BCurrentSource2015 control mode will be changed
-2024-10-11 11:29:01,219 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
-2024-10-11 11:29:04,795 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2024-10-11 11:29:08,083 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2024-10-11 11:29:11,629 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: AReactance
-2024-10-11 11:29:11,694 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWPP4BCurrentSource2015 control mode will be changed
-2024-10-11 11:29:15,820 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: BReactance
-2024-10-11 11:29:15,871 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWPP4BCurrentSource2015 control mode will be changed
-2024-10-11 11:29:19,563 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Dec40
-2024-10-11 11:29:23,539 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Inc40
-2024-10-11 11:29:27,268 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Inc10
-2024-10-11 11:29:30,366 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Dec20
-2024-10-11 11:29:33,440 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.ThreePhaseFault, OPER. COND.: TransientBolted
-2024-10-11 11:29:40,400 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageDip, OPER. COND.: Qzero
-2024-10-11 11:29:46,410 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMax
-2024-10-11 11:29:51,451 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMin
-2024-10-11 11:29:56,347 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-10-11 11:29:58,116 |                    DGCV.Dynawo |    WARNING |              simulator.py:  892 | Simulation Fails, logs in Results/Model/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
-2024-10-11 11:30:47,926 |                  DGCV.PDFLatex |    WARNING |                 figure.py:  507 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
-2024-10-11 11:31:46,592 |                    DGCV.Report |       INFO |                 report.py:  273 | 
+2024-10-11 11:27:51,765 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   92 | DyCoV Model Validation
+2024-10-11 11:27:51,798 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2024-10-11 11:27:56,324 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2024-10-11 11:27:59,540 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2024-10-11 11:28:02,960 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
+2024-10-11 11:28:17,388 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
+2024-10-11 11:28:33,459 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2024-10-11 11:28:37,575 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
+2024-10-11 11:28:50,476 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
+2024-10-11 11:28:54,294 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
+2024-10-11 11:28:57,550 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
+2024-10-11 11:28:57,601 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWT4BCurrentSource2015 control mode will be changed
+2024-10-11 11:29:01,219 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
+2024-10-11 11:29:04,795 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2024-10-11 11:29:08,083 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2024-10-11 11:29:11,629 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: AReactance
+2024-10-11 11:29:11,694 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWPP4BCurrentSource2015 control mode will be changed
+2024-10-11 11:29:15,820 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: BReactance
+2024-10-11 11:29:15,871 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWPP4BCurrentSource2015 control mode will be changed
+2024-10-11 11:29:19,563 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Dec40
+2024-10-11 11:29:23,539 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Inc40
+2024-10-11 11:29:27,268 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Inc10
+2024-10-11 11:29:30,366 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Dec20
+2024-10-11 11:29:33,440 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.ThreePhaseFault, OPER. COND.: TransientBolted
+2024-10-11 11:29:40,400 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageDip, OPER. COND.: Qzero
+2024-10-11 11:29:46,410 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMax
+2024-10-11 11:29:51,451 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMin
+2024-10-11 11:29:56,347 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2024-10-11 11:29:58,116 |                    DyCoV.Dynawo |    WARNING |              simulator.py:  892 | Simulation Fails, logs in Results/Model/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
+2024-10-11 11:30:47,926 |                  DyCoV.PDFLatex |    WARNING |                 figure.py:  507 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
+2024-10-11 11:31:46,592 |                    DyCoV.Report |       INFO |                 report.py:  273 | 
 Summary Report
 ==============
 
@@ -448,15 +448,15 @@ PCS_RTE-I16z3GridVoltageSwell         QMin                     Compliant
 PCS_RTE-I16z3Islanding                DeltaP10DeltaQ4          Failed simulation
 
 
-2024-10-11 11:32:17,921 |                  DGCV.PDFLatex |       INFO |                 report.py:  414 | PDF done: /tmp/DGCV_Results_debian/0b738550-9d10-4ead-bfc5-e03cc2bcaee5/Reports/report.tex
-2024-10-11 11:32:36,547 |           DGCV.ModelValidation |       INFO |       model_validation.py:   40 | Opening the report: Results/Model/Reports/report.pdf
+2024-10-11 11:32:17,921 |                  DyCoV.PDFLatex |       INFO |                 report.py:  414 | PDF done: /tmp/DyCoV_Results_debian/0b738550-9d10-4ead-bfc5-e03cc2bcaee5/Reports/report.tex
+2024-10-11 11:32:36,547 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   40 | Opening the report: Results/Model/Reports/report.pdf
 Opening in existing browser session.
 ```
 
 ## Electrical Performance Example:
 
 ```
-dgcv performance -m $PWD/dgcv/examples/SM/Dynawo/SingleAux
+dycov performance -m $PWD/dycov/examples/SM/Dynawo/SingleAux
 ```
 
 Upon execution, the screen output should be similar to the
@@ -467,17 +467,17 @@ also preserved inside this directory, so that they can be inspected and re-run
 for deeper analysis, if desired.
 
 ```
-2024-10-11 11:34:29,199 |           DGCV.ModelValidation |       INFO |       model_validation.py:   76 | Electric Performance Verification for Synchronous Machines
-2024-10-11 11:34:29,232 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2024-10-11 11:34:29,766 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2024-10-11 11:34:30,215 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
-2024-10-11 11:34:30,828 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2024-10-11 11:34:41,351 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
-2024-10-11 11:34:42,511 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
-2024-10-11 11:34:43,523 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
-2024-10-11 11:34:44,482 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2024-10-11 11:34:44,925 |       DGCV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-10-11 11:34:57,351 |                    DGCV.Report |       INFO |                 report.py:  273 | 
+2024-10-11 11:34:29,199 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   76 | Electric Performance Verification for Synchronous Machines
+2024-10-11 11:34:29,232 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2024-10-11 11:34:29,766 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2024-10-11 11:34:30,215 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
+2024-10-11 11:34:30,828 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2024-10-11 11:34:41,351 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
+2024-10-11 11:34:42,511 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
+2024-10-11 11:34:43,523 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
+2024-10-11 11:34:44,482 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2024-10-11 11:34:44,925 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2024-10-11 11:34:57,351 |                    DyCoV.Report |       INFO |                 report.py:  273 | 
 Summary Report
 ==============
 
@@ -499,8 +499,8 @@ PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
 PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
 
 
-2024-10-11 11:35:08,635 |                  DGCV.PDFLatex |       INFO |                 report.py:  414 | PDF done: /tmp/DGCV_Results_debian/e66c17ee-caff-4ef1-ae1f-eba5592092bb/Reports/report.tex
-2024-10-11 11:35:08,797 |           DGCV.ModelValidation |       INFO |       model_validation.py:   40 | Opening the report: Results/Performance/Reports/report.pdf
+2024-10-11 11:35:08,635 |                  DyCoV.PDFLatex |       INFO |                 report.py:  414 | PDF done: /tmp/DyCoV_Results_debian/e66c17ee-caff-4ef1-ae1f-eba5592092bb/Reports/report.tex
+2024-10-11 11:35:08,797 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   40 | Opening the report: Results/Performance/Reports/report.pdf
 Opening in existing browser session.
 ```
 
@@ -513,8 +513,8 @@ format (of the [Python
 flavor](https://docs.python.org/3/library/configparser.html)). The location of
 this file follows the customary standard of each platform for application data:
 
-* Under Linux: `$HOME/.config/dgcv/`
-* Under Windows: `%APPDATA%\Local\dgcv`
+* Under Linux: `$HOME/.config/dycov/`
+* Under Windows: `%APPDATA%\Local\dycov`
 
 Besides the `config.ini` file, there is a subfolder named `ddb`, which will
 contain all compiled preassembled Modelica models (see next section).
@@ -531,7 +531,7 @@ consult the [User Manual](docs/manual).
 
 The tool uses some _preassembled_ Modelica models defined internally, and the
 user may also define additional ones of his own. They should be compiled by
-using the supplied script, `dgcv compile`.
+using the supplied script, `dycov compile`.
 
 As mentioned above, all compiled models (both the tool's and the user's) will be
 saved under the tool's config directory, in the `ddb` subfolder. All of the
@@ -549,7 +549,7 @@ option.
 Run the command with option --help (or -h) to get a quick overview of the inputs
 you need to provide:
 ```
-usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
+usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
 
 options:
   -h, --help            show this help message and exit
@@ -570,36 +570,36 @@ options:
 
 1. Clone the repository via: 
    ```bash
-   git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    ```
-   (you may of course use any name for the top-level directory, here `"dgcv_repo"`.)
+   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
    
 2. Get into the repository and run the shell script named `build_and_install.sh`.
    This builds the Python package, creates a Python virtual environment under
-   the subdirectory `dgcv_venv`, and installs the package into it (together with
+   the subdirectory `dycov_venv`, and installs the package into it (together with
    all the necessary library dependencies, such as NumPy, etc.).
 
 3. Next, you must activate the virtual environment that has just been created: 
    ```bash
-   source dgcv_venv/bin/activate
+   source dycov_venv/bin/activate
    ```
 
-4. The tool is used via a single command `dgcv` having several subcommands. Quickly
+4. The tool is used via a single command `dycov` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
    you all available subcommands:
    ```bash
-   dgcv -h
+   dycov -h
    ```
 
 5. Upon the first use, the tool will automatically compile the Modelica models
    internally defined by the tool. You can also run this command explicitly, as follows:
    ```bash
-   dgcv compile
+   dycov compile
    ```
    (Note: this command is also used to compile any new Modelica models custom-defined by the
    user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
    
-The dgcv application is now ready to use.
+The DyCoV application is now ready to use.
 
 ## Build and install on Windows
 
@@ -609,9 +609,9 @@ The dgcv application is now ready to use.
    - Enter the following URL to clone the repository:
          
    ```winbatch
-     git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+     git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    ```
-   (you may of course use any name for the top-level directory, here `"dgcv_repo"`.)
+   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
 
    - Choose a local directory where you want to save the repository and click **Clone**.
 
@@ -621,16 +621,16 @@ The dgcv application is now ready to use.
    - Navigate to the root folder of the cloned repository using the `cd` command:
          
    ```winbatch
-     cd dgcv_repo
+     cd dycov_repo
    ```
 
    - Create a new virtual environment with:
          
    ```winbatch
-     python.exe -m venv dgcv_venv
+     python.exe -m venv dycov_venv
    ```
      
-   - This will create a directory `dgcv_venv` in your repository folder.
+   - This will create a directory `dycov_venv` in your repository folder.
    
 3. Build the Package
    The next step is to compile the package into a distributable format:
@@ -645,16 +645,16 @@ The dgcv application is now ready to use.
    Now that the virtual environment is created, activate it to use the isolated environment:
        
    ```winbatch
-   	dgcv_venv\Scripts\activate
+   	dycov_venv\Scripts\activate
    ```
    
-   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dgcv_venv)` at the beginning of the prompt).
+   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dycov_venv)` at the beginning of the prompt).
 
 5. Install the Package
    Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
        
    ```winbatch
-   	python.exe -m pip install dist\dgcv....whl
+   	python.exe -m pip install dist\dycov....whl
    ```
    
    - This will install the package into your active virtual environment.
@@ -663,7 +663,7 @@ The dgcv application is now ready to use.
    After installation, verify that the tool was installed correctly by running the following command:
        
    ```winbatch
-   	dgcv -h
+   	dycov -h
    ```
    
    - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
@@ -672,19 +672,19 @@ The dgcv application is now ready to use.
    Before running the tool for the first time, it's recommended to compile the tool's resources:
        
    ```winbatch
-   	dgcv compile
+   	dycov compile
    ```
    
    - This step ensures that all necessary files are generated and compiled for optimal performance.
 
-The dgcv application is now ready to use.
+The DyCoV application is now ready to use.
 
 Finally, if you want to further _develop_ the source code of this tool, consult
 the [Developer Manual](docs/manual_dev).
 
 # Roadmap
 
-Below are the major development axis identified for dgcv in the next few months with associated contents. It is important to notice that the development content may be subject to change due to unforeseen complexity in implementing features or priority changes.
+Below are the major development axis identified for DyCoV in the next few months with associated contents. It is important to notice that the development content may be subject to change due to unforeseen complexity in implementing features or priority changes.
 
 ## Axis 1 - Models support
 

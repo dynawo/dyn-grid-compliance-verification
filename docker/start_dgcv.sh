@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-# start_dgcv.sh: the entrypoint for the Dynamic Grid Compliance Verification tool
+# start_dycov.sh: the entrypoint for the Dynamic grid Compliance Verification tool
 # Docker container. It creates the user:group specified when launching
 # the container, and then execs a shell as such user.
 #
@@ -18,15 +18,15 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail 
 
 # First create the specified user and group
-groupadd --gid "$DGCV_GID" "$DGCV_GROUP"
-echo "CREATED group $DGCV_GROUP"
-useradd --create-home --home "/home/$DGCV_USER" --uid "$DGCV_UID" --gid "$DGCV_GID" \
-        --shell /bin/bash --no-log-init "$DGCV_USER"
-echo "CREATED user $DGCV_USER"
+groupadd --gid "$dycov_GID" "$dycov_GROUP"
+echo "CREATED group $dycov_GROUP"
+useradd --create-home --home "/home/$dycov_USER" --uid "$dycov_UID" --gid "$dycov_GID" \
+        --shell /bin/bash --no-log-init "$dycov_USER"
+echo "CREATED user $dycov_USER"
 
 
 # Leave the user in an interactive shell
-echo -e "\nNow running the Dynamic Grid Compliance Verification tool under the docker container 'dgcv'"
+echo -e "\nNow running the Dynamic grid Compliance Verification tool under the docker container 'dycov'"
 echo -e "To quit the container, just type exit at the command prompt.\n"
-exec su - "$DGCV_USER"
+exec su - "$dycov_USER"
 

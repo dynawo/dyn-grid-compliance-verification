@@ -20,9 +20,9 @@ $ZIP = "Dynawo_omc_V1.4.0.zip"
 If (Test-Path -Path "build.log" ) {
 	Remove-Item "build.log"
 }
-docker build -t dgcv:latest -t dgcv:"$TAG" `
-	--build-arg DGCV_PKG="$PKG" `
-	--build-arg DGCV_EXAMPLES="$EXAMPLES" `
+docker build -t dycov:latest -t dycov:"$TAG" `
+	--build-arg dycov_PKG="$PKG" `
+	--build-arg dycov_EXAMPLES="$EXAMPLES" `
 	--build-arg DWO_ZIP="$ZIP" .
 
 # Clean up

@@ -2,7 +2,7 @@
 Adding a new dynamic model
 ==========================
 
-Dynamic Grid Compliance Verification is a tool  designed to carry out several tests related to
+Dynamic grid Compliance Verification is a tool  designed to carry out several tests related to
 RTE's grid code requirements on new generating plants that want to connect to the grid. It
 implements the tests defined in RTE's DTR document, the so called "PCSs" of type "I" (I2, I3,
 etc.).  These PCSs include compliance tests for both electric performance requirements as well as
@@ -26,13 +26,13 @@ The two subsections below describe these additions, and how they should be prepa
 Dynawo Models "Master Dictionary"
 ---------------------------------
 
-Anytime the DGCV tool needs to read/modify a variable or a parameter in the PAR or CRV Dynawo files,
+Anytime the DyCoV tool needs to read/modify a variable or a parameter in the PAR or CRV Dynawo files,
 it needs to know the precise name of that variable/parameter *for the particular Dynawo model in
 question*.  Therefore, the tool needs to maintain an internal dictionary that maps the
 variable/parameter names used by each specific model to the tool's generic names. This dictionary
-is located in the ``src/dgcv/dynawo/dictionary`` of the tool.
+is located in the ``src/dycov/dynawo/dictionary`` of the tool.
 
-To add support for a new Dynawo model in the Dynamic Grid Compliance Verification Tool, it is necessary
+To add support for a new Dynawo model in the Dynamic grid Compliance Verification Tool, it is necessary
 to modify the ``ini`` file corresponding to the type of equipment to which it belongs (``Bus.ini,
 Control_Modes.ini, Line.ini, Load.ini, Power_Park.ini, Storage.ini, Synch_Gen.ini, Transformer.ini``) 
 and link the keywords used in the Tool with the corresponding Dynawo parameter of the model.

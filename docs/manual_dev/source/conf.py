@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# dgcv documentation build configuration file, created by
+# DyCoV documentation build configuration file, created by
 # sphinx-quickstart on Wed Sep 27 10:06:26 2023.
 #
 # This file is execfile()d with the current directory set to its
@@ -20,7 +20,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../../dgcv_venv/lib/python3.9/site-packages/"))
+sys.path.insert(0, os.path.abspath("../../../dycov_venv/lib/python3.9/site-packages/"))
 
 
 # -- General configuration ------------------------------------------------
@@ -55,7 +55,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "Dynamic grid compliance verification"
+project = "Dynamic grid Compliance Verification"
 copyright = "RTE (developed by Grupo AIA)"
 author = "Marcos de Miguel and Jose Luis Marín"
 
@@ -132,7 +132,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "dgcvdoc"
+htmlhelp_basename = "dycovdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -158,8 +158,8 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        "dgcv-dev.tex",
-        "Dynamic Grid Compliance Verification Advanced Documentation",
+        "dycov-dev.tex",
+        "Dynamic grid Compliance Verification Advanced Documentation",
         "Grupo AIA / RTE",
         "manual",
     ),
@@ -173,8 +173,8 @@ latex_documents = [
 man_pages = [
     (
         master_doc,
-        "dgcv-dev",
-        "Dynamic Grid Compliance Verification Advanced Documentation",
+        "dycov-dev",
+        "Dynamic grid Compliance Verification Advanced Documentation",
         [author],
         1,
     )
@@ -189,10 +189,10 @@ man_pages = [
 texinfo_documents = [
     (
         master_doc,
-        "dgcv-dev",
-        "Dynamic Grid Compliance Verification Documentation",
+        "dycov-dev",
+        "Dynamic grid Compliance Verification Documentation",
         author,
-        "dgcv",
+        "dycov",
         "One line description of project.",
         "Miscellaneous",
     ),

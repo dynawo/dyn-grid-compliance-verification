@@ -36,7 +36,7 @@
     * Results: inspect the results directory (tree structure and its contents), show the PDF Reports & HTML curves.
 
 - [10 min] Preparing the inputs:
-    * Explain how "dgcv generate" works
+    * Explain how "dycov generate" works
     * Emphasize the DICT files necessary for the reference curves
     * But jump into an already-prepared example to finish the example (no time for a live demo)
 
