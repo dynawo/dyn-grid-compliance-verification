@@ -2,7 +2,7 @@
 Validation Tests
 ================
 
-The Dynamic Grid Compliance Verification tool can actually perform two very different types
+The Dynamic grid Compliance Verification tool can actually perform two very different types
 of validation tests:
 
 (a) Validation of *RMS model adequacy*, recently included in RTE's DTR as

@@ -13,17 +13,17 @@ def generate_help_files():
     output_path = Path(__file__).parent / "source" / "usage" / "helps"
     output_path.mkdir(parents=True, exist_ok=True)
 
-    with open(output_path / "dgcv.rst", "w") as file:
+    with open(output_path / "dycov.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
-            ["dgcv", "--help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            ["dycov", "--help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
         write_output(file, output.stdout)
 
     with open(output_path / "anonymize.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
-            ["dgcv", "anonymize", "--help"],
+            ["dycov", "anonymize", "--help"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -33,7 +33,7 @@ def generate_help_files():
     with open(output_path / "compile.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
-            ["dgcv", "compile", "--help"],
+            ["dycov", "compile", "--help"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -43,7 +43,7 @@ def generate_help_files():
     with open(output_path / "generate.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
-            ["dgcv", "generate", "--help"],
+            ["dycov", "generate", "--help"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -53,7 +53,7 @@ def generate_help_files():
     with open(output_path / "performance.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
-            ["dgcv", "performance", "--help"],
+            ["dycov", "performance", "--help"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -63,7 +63,7 @@ def generate_help_files():
     with open(output_path / "validate.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
-            ["dgcv", "validate", "--help"],
+            ["dycov", "validate", "--help"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

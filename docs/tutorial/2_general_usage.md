@@ -22,7 +22,7 @@ Developed by Grupo AIA
    2. [The structure of a *PCS* output](#the-structure-of-a-pcs-output)
    3. [The structure of results when running with in debug mode (-d)](#the-structure-of-results-when-running-with-in-debug-mode--d)
 3. [Configuration](#configuration)
-   1. [The structure of the `~/.config/dgcv` dir](#the-structure-of-the-configdgcv-dir)
+   1. [The structure of the `~/.config/dycov` dir](#the-structure-of-the-configdycov-dir)
 4. [Trouble Shooting](#trouble-shooting)
    1. [Error compiling a dynamic model](#error-compiling-a-dynamic-model)
    2. [Failed Simulation](#failed-simulation)
@@ -47,9 +47,9 @@ For the first run of the tool we will assume that:
   1.7.0 (rev:master-311b916)
   ``` 
 
-* DGCV (dgcv) Tool already installed
+* DyCoV (DyCoV) Tool already installed
   ```
-  user@dynawo:~/work/repo_dgcv$ git status
+  user@dynawo:~/work/repo_dycov$ git status
   On branch main
   Your branch is up to date with 'origin/main'.
 
@@ -58,14 +58,14 @@ For the first run of the tool we will assume that:
 
 * Python venv activated
   ```
-  user@dynawo:~/work/repo_dgcv$ source dgcv_venv/bin/activate
-  (dgcv_venv) user@dynawo:~/work/repo_dgcv$
+  user@dynawo:~/work/repo_dycov$ source dycov_venv/bin/activate
+  (dycov_venv) user@dynawo:~/work/repo_dycov$
   ``` 
 
-* Fresh start, there is no `~/.config/dgcv` created yet
+* Fresh start, there is no `~/.config/dycov` created yet
   ```
-  user@dynawo:~/work/repo_dgcv$ ls -al ~/.config/dgcv
-  ls: cannot access '/home/user/.config/dgcv': No such file or directory
+  user@dynawo:~/work/repo_dycov$ ls -al ~/.config/dycov
+  ls: cannot access '/home/user/.config/dycov': No such file or directory
   ``` 
 
 ## Executables
@@ -80,8 +80,8 @@ resemble those of the *PCS* in the provisional operation notification (ION) stag
 in the RTE's DTR, while some are different.
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv validate -h
-usage: dgcv validate [-h] [-d] [-l LAUNCHER_DWO]
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov validate -h
+usage: dycov validate [-h] [-d] [-l LAUNCHER_DWO]
                      [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
                      [-o RESULTS_DIR] [-od]
                      [reference_curves]
@@ -115,8 +115,8 @@ tests, those of the *PCS* in the provisional operation notification (ION) stage 
 the RTE's DTR.
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv performance -h
-usage: dgcv performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov performance -h
+usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
                     [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
 options:
@@ -147,10 +147,10 @@ curves). Therefore, you must provide either a *PRODUCER_MODEL* or a
 
 The easiest way to start using the tool is to copy one or more of the available examples.
 ``` 
-(dgcv_venv) user@dynawo:~$ mkdir work/MyTests/
-(dgcv_venv) user@dynawo:~$ cd work
-(dgcv_venv) user@dynawo:~/work$ cp -a ~/work/repo_dgcv/examples/SM/Dynawo/* MyTests
-(dgcv_venv) user@dynawo:~/work$ tree MyTests
+(dycov_venv) user@dynawo:~$ mkdir work/MyTests/
+(dycov_venv) user@dynawo:~$ cd work
+(dycov_venv) user@dynawo:~/work$ cp -a ~/work/repo_dycov/examples/SM/Dynawo/* MyTests
+(dycov_venv) user@dynawo:~/work$ tree MyTests
 MyTests
 ├── Single
 │   ├── Producer.dyd
@@ -171,11 +171,11 @@ MyTests
 ```
 
 Each entry point to the tool has parameters to customize its execution, below 
-are the parameters for the `dgcv performance` executable:
+are the parameters for the `dycov performance` executable:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv performance -h
-usage: dgcv performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL] [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov performance -h
+usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL] [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
 options:
   -h, --help            show this help message and exit
@@ -233,20 +233,20 @@ options:
   It allows yo to run the pipeline validating only the PCS defined in the DTR.
 
   
-Note: Regarding the `dgcv performance` executable it has exactly the same 
-parameters described, while for the `dgcv validate` executable the parameters 
+Note: Regarding the `dycov performance` executable it has exactly the same 
+parameters described, while for the `dycov validate` executable the parameters 
 **--producer_model** and **--producer_curves** are mandatory, for this reason 
 they become positional arguments.
 
 
 
-The parameters of the executable `dgcv compile` are:
+The parameters of the executable `dycov compile` are:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile -h
-usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov compile -h
+usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
 
-Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $DGCV_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
+Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $dycov_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
 
 options:
   -h, --help            show this help message and exit
@@ -291,37 +291,37 @@ And run one of the copied examples:
   opened with the summary of the execution and all the individual reports 
   of the tests carried out.
 
-Note: console output also goes into the logfile, *dgcv.log*.
+Note: console output also goes into the logfile, *dycov.log*.
 
 An example of the console output:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI
-2024-02-01 11:52:16,161 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
-2024-02-01 11:52:16,164 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:54:32,140 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile TransformerTapChanger.xml
-2024-02-01 11:54:32,141 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list TransformerTapChanger.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:55:11,153 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
-2024-02-01 11:55:11,154 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SynchronousMachineI8SM.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:56:06,142 |            DGCV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointNumcc.xml
-2024-02-01 11:56:06,143 |            DGCV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dgcv/src/dgcv/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointNumcc.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dgcv/ddb
-2024-02-01 11:56:27,637 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2024-02-01 11:56:40,688 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-01 11:56:40,744 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-02-01 11:56:45,994 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-01 11:56:46,001 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
-2024-02-01 11:56:52,288 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-01 11:56:52,294 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2024-02-01 11:56:52,562 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2024-02-01 11:56:59,087 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-01 11:56:59,108 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
-2024-02-01 11:57:04,844 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-01 11:57:04,850 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
-2024-02-01 11:57:10,363 |        DGCV.Validation | WARNING |       performance.py:119 | P has not reached steady state
-2024-02-01 11:57:10,440 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
-2024-02-01 11:57:17,621 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-01 11:57:17,652 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2024-02-01 11:57:23,223 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI
+2024-02-01 11:52:16,161 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
+2024-02-01 11:52:16,164 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
+2024-02-01 11:54:32,140 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile TransformerTapChanger.xml
+2024-02-01 11:54:32,141 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list TransformerTapChanger.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
+2024-02-01 11:55:11,153 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
+2024-02-01 11:55:11,154 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SynchronousMachineI8SM.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
+2024-02-01 11:56:06,142 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointNumcc.xml
+2024-02-01 11:56:06,143 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointNumcc.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
+2024-02-01 11:56:27,637 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2024-02-01 11:56:40,688 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-01 11:56:40,744 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2024-02-01 11:56:45,994 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-01 11:56:46,001 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
+2024-02-01 11:56:52,288 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-01 11:56:52,294 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2024-02-01 11:56:52,562 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2024-02-01 11:56:59,087 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-01 11:56:59,108 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
+2024-02-01 11:57:04,844 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-01 11:57:04,850 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
+2024-02-01 11:57:10,363 |        DyCoV.Validation | WARNING |       performance.py:119 | P has not reached steady state
+2024-02-01 11:57:10,440 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
+2024-02-01 11:57:17,621 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-01 11:57:17,652 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2024-02-01 11:57:23,223 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 ```
 
 The final report is made up of:
@@ -367,7 +367,7 @@ the results are saved.
 The *Results* directory is structured in:
 
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree Results -L 3
+(dycov_venv) user@dynawo:~/work/MyTests$ tree Results -L 3
 Results
 ├── PCS_RTE-I10
 │   └── Islanding
@@ -422,7 +422,7 @@ execute each *operating condition* individually with the Dynawo simulator.
 The *operating condition* directory is structured in:
 
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
+(dycov_venv) user@dynawo:~/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
 PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
 ├── curves_calculated.csv
 ├── curves_reference.csv
@@ -451,7 +451,7 @@ PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
   model. It is only available if the Dynawo simulator finishes successfully.
 * **curves_reference.csv**: 
   File with the reference curves obtained from user input for validating 
-  the producer's model. It is only available as output of the `dgcv validate` 
+  the producer's model. It is only available as output of the `dycov validate` 
   command.
 * **outputs**: 
   Directory with the output generated by the dynamic simulation of the model 
@@ -487,32 +487,32 @@ verification, an alternative route is indicated for the results of the
 new execution.
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI/Results_H6_5
-2024-02-05 15:13:48,978 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2024-02-05 15:14:04,376 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-05 15:14:04,425 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-02-05 15:14:10,579 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-05 15:14:10,599 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
-2024-02-05 15:14:17,239 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-05 15:14:17,260 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2024-02-05 15:14:17,572 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2024-02-05 15:14:24,072 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-05 15:14:24,092 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
-2024-02-05 15:14:30,557 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-05 15:14:30,563 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
-2024-02-05 15:14:36,391 |        DGCV.Validation | WARNING |       performance.py:119 | P has not reached steady state
-2024-02-05 15:14:36,489 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
-2024-02-05 15:14:43,436 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
-2024-02-05 15:14:43,471 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2024-02-05 15:14:49,367 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5
+2024-02-05 15:13:48,978 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2024-02-05 15:14:04,376 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-05 15:14:04,425 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2024-02-05 15:14:10,579 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-05 15:14:10,599 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
+2024-02-05 15:14:17,239 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-05 15:14:17,260 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2024-02-05 15:14:17,572 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2024-02-05 15:14:24,072 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-05 15:14:24,092 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
+2024-02-05 15:14:30,557 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-05 15:14:30,563 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
+2024-02-05 15:14:36,391 |        DyCoV.Validation | WARNING |       performance.py:119 | P has not reached steady state
+2024-02-05 15:14:36,489 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
+2024-02-05 15:14:43,436 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
+2024-02-05 15:14:43,471 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2024-02-05 15:14:49,367 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 ```
 
 Or, if desired, it is possible to validate a *PCS* only
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI/Results_H6_5 -p PCS_RTE-I10
-2024-02-05 15:26:10,407 | DGCV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-02-05 15:26:16,310 |          DGCV.PDFLatex |    INFO |            report.py:180 | PDF Done
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5 -p PCS_RTE-I10
+2024-02-05 15:26:10,407 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2024-02-05 15:26:16,310 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 ```
 
 ## The structure of results when running with in debug mode (-d)
@@ -527,7 +527,7 @@ file.
 The changes that apply to the *PCS* output directory:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree Results_debug/PCS_RTE-I4 -L 3
+(dycov_venv) user@dynawo:~/work/MyTests$ tree Results_debug/PCS_RTE-I4 -L 3
 Results_debug/PCS_RTE-I4
 └── ThreePhaseFault
     └── TransientBolted
@@ -557,18 +557,18 @@ Results_debug/PCS_RTE-I4
 
 # Configuration
 
-## The structure of the `~/.config/dgcv` dir
+## The structure of the `~/.config/dycov` dir
 
 A directory is created after the first run of the tool, it is designed 
 both to allow the user to modify the tool configuration 
-(`~/.config/dgcv/config.ini`) and to expand the dynamic models available 
-for simulation with Dynawo (`~/.config/dgcv/user_models`). 
+(`~/.config/dycov/config.ini`) and to expand the dynamic models available 
+for simulation with Dynawo (`~/.config/dycov/user_models`). 
 
-The `~/.config/dgcv/` directory is structured in:
+The `~/.config/dycov/` directory is structured in:
 
 ```
-(dgcv_venv) user@dynawo:~/.config$ tree dgcv
-dgcv$
+(dycov_venv) user@dynawo:~/.config$ tree dycov
+dycov$
 ├── config.ini
 ├── config.ini_ADVANCED
 ├── config.ini_BASIC
@@ -597,7 +597,7 @@ dgcv$
 │   ├── TransformerTapChanger.mo
 │   └── TransformerTapChanger.so
 ├── log
-│   └── dgcv.log
+│   └── dycov.log
 ├── templates
 │   ├── PCS
 │   │   ├── model
@@ -698,7 +698,7 @@ The procedure for using your own dynamic models is as follows:
 within the user configuration directory
 
 ```
-dgcv$
+dycov$
 ├── config.ini
 ...
 └── user_models
@@ -707,20 +707,20 @@ dgcv$
     └── dictionary
 ```
 
-* Run the `dgcv compile` command to compile the dynamic models
+* Run the `dycov compile` command to compile the dynamic models
 
 ```
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile
-2025-01-23 12:33:51,929 |                    DGCV.Dynawo |       INFO |                 dynawo.py:   51 | Precompile NewDynamicModel.xml
-2025-01-23 12:33:51,929 |                    DGCV.Dynawo |       INFO |                 dynawo.py:   88 | cd /home/dgcv/dgcv_repo/src/dgcv/model_lib/modelica_models && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --generate-preassembled --model-list NewDynamicModel.xml --non-recursive-modelica-models-dir . --output-dir /home/dgcv/.config/dgcv/ddb && cd /home/dgcv/.config/dgcv/ddb && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --dump-model --model-file NewDynamicModel.so --output-file NewDynamicModel.desc.xml
-2025-01-23 12:34:50,475 |                    DGCV.Dynawo |       INFO |                 dynawo.py:  143 | Compilation of NewDynamicModel succeeded
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov compile
+2025-01-23 12:33:51,929 |                    DyCoV.Dynawo |       INFO |                 dynawo.py:   51 | Precompile NewDynamicModel.xml
+2025-01-23 12:33:51,929 |                    DyCoV.Dynawo |       INFO |                 dynawo.py:   88 | cd /home/dycov/dycov_repo/src/dycov/model_lib/modelica_models && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --generate-preassembled --model-list NewDynamicModel.xml --non-recursive-modelica-models-dir . --output-dir /home/dycov/.config/dycov/ddb && cd /home/dycov/.config/dycov/ddb && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --dump-model --model-file NewDynamicModel.so --output-file NewDynamicModel.desc.xml
+2025-01-23 12:34:50,475 |                    DyCoV.Dynawo |       INFO |                 dynawo.py:  143 | Compilation of NewDynamicModel succeeded
 ```
 
 If the tool finishes successfully, the new compiled model should appear in the ddb directory 
 within the user configuration directory:
 
 ```
-dgcv$
+dycov$
 ├── config.ini
 ...
 ├── ddb
@@ -736,7 +736,7 @@ all the output generated by the Dynawo simulator in a log file. The file is call
 **compile.log** and is located in the same directory as the compiled models.
 
 ```
-dgcv$
+dycov$
 ├── config.ini
 ...
 ├── ddb
@@ -753,15 +753,15 @@ one of these problems has occurred:
 
 * Dynawo has exceeded the maximum timeout established in the simulation of the model
 
-The user can check the reason for the error in the *dgcv.log* file left by the tool in the **log** 
+The user can check the reason for the error in the *dycov.log* file left by the tool in the **log** 
 directory inside the user configuration directory.
 
 ```
-dgcv$
+dycov$
 ├── config.ini
 ...
 ├── log
-│   ├── dgcv.log
+│   ├── dycov.log
 ...
 ```
 
@@ -769,9 +769,9 @@ In cases where the simulation has exceeded the maximum configured timeout, a mes
 following will be displayed:
 
 ```
-2025-01-23 14:19:14,567 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2025-01-23 14:24:14,627 |                    DGCV.Dynawo |    WARNING |                 dynawo.py:  184 | Execution terminated due to timeout
-2025-01-23 14:24:14,668 |                    DGCV.Dynawo |    WARNING |                 curves.py:  899 | Execution terminated due to timeout
+2025-01-23 14:19:14,567 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-23 14:24:14,627 |                    DyCoV.Dynawo |    WARNING |                 dynawo.py:  184 | Execution terminated due to timeout
+2025-01-23 14:24:14,668 |                    DyCoV.Dynawo |    WARNING |                 curves.py:  899 | Execution terminated due to timeout
 ```
 
 In cases where Dynawo has not been able to perform the requested simulation, a message similar to the 
@@ -779,8 +779,8 @@ following will be displayed, the message indicates where the log file generated 
 is located:
 
 ```
-2025-01-23 13:03:55,089 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2025-01-23 13:03:56,192 |                    DGCV.Dynawo |    WARNING |                 curves.py:  899 | Simulation Fails, logs in IEC2015/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
+2025-01-23 13:03:55,089 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-23 13:03:56,192 |                    DyCoV.Dynawo |    WARNING |                 curves.py:  899 | Simulation Fails, logs in IEC2015/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
 ```
 
 
@@ -793,8 +793,8 @@ DYD/PAR/INI files for input to the tool. For now, there is the generate
 option:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv generate -h
-usage: dgcv generate [-h] [-d] [-l LAUNCHER_DWO] -o RESULTS_DIR -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i} -v {performance_SM,performance_PPM,model}
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov generate -h
+usage: dycov generate [-h] [-d] [-l LAUNCHER_DWO] -o RESULTS_DIR -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i} -v {performance_SM,performance_PPM,model}
 
 options:
   -h, --help            show this help message and exit
@@ -814,10 +814,10 @@ options:
 Note: compilation of internally-defined assembled models is invoked automatically
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv compile -h
-usage: dgcv compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov compile -h
+usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
 
-Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $DGCV_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
+Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $dycov_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
 
 options:
   -h, --help            show this help message and exit
@@ -836,8 +836,8 @@ In this mode the tool generates a set of curves with generic names from
 the input curves to which a noise signal is added.
 
 ```
-(dgcv_venv) user@dynawo:~/work/repo_dgcv$ dgcv anonymize -h
-usage: dgcv anonymize [-h] [-d] [-c PRODUCER_CURVES] [-o RESULTS_DIR]
+(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov anonymize -h
+usage: dycov anonymize [-h] [-d] [-c PRODUCER_CURVES] [-o RESULTS_DIR]
 	                      [-n NOISESTD] [-f FREQUENCY]
 	
 optional arguments:
