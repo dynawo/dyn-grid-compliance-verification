@@ -1,6 +1,6 @@
 # Automatically publish a Python package to PyPI using GitHub Actions 
 
-**Note**: We keep this instructions here in order to save this knowlage, but do not intend (for now) to publish the dgcv tool in Pypi, because it is not a library but an application and it needs other non-python applications (Dynawo and Latex).
+**Note**: We keep this instructions here in order to save this knowlage, but do not intend (for now) to publish the DyCoV tool in Pypi, because it is not a library but an application and it needs other non-python applications (Dynawo and Latex).
 
 ### Steps to configure automatic publishing to PyPI when you push a new commit to GitHub.
 

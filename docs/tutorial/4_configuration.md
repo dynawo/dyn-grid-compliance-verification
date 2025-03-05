@@ -2,7 +2,7 @@
 
 TUTORIAL
 
-HOW TO CONFIGURE DGCV
+HOW TO CONFIGURE DyCoV
 
 (c) 2023&mdash;25 RTE  
 Developed by Grupo AIA
@@ -25,12 +25,12 @@ Developed by Grupo AIA
 
 ## Overview
 
-Dynamic Grid Compliance Verification is configured via a **config.ini** file, written in the well-known INI
+Dynamic grid Compliance Verification is configured via a **config.ini** file, written in the well-known INI
 format (of the [Python flavor](https://docs.python.org/3/library/configparser.html)). The location of 
 this file follows the customary standard of each platform for application data:
 
-* Under Linux: ``$HOME/.config/dgcv/``
-* Under Windows: ``%APPDATA%\Local\dgcv\``
+* Under Linux: ``$HOME/.config/dycov/``
+* Under Windows: ``%APPDATA%\Local\dycov\``
 
 The supplied INI file contains basic configuration options. They appear all commented out,
 and with the default values. This way it is much easier for the user to configure anything,
@@ -118,38 +118,38 @@ By default all PCS's are validated when the tool is executed:
 
 Model validation example:
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
-2025-01-21 11:01:28,689 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
-2025-01-21 11:01:28,780 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2025-01-21 11:01:31,522 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2025-01-21 11:01:33,908 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2025-01-21 11:01:36,426 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
-2025-01-21 11:01:46,092 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
-2025-01-21 11:01:55,916 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2025-01-21 11:01:58,520 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
-2025-01-21 11:02:07,251 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
-2025-01-21 11:02:09,523 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
-2025-01-21 11:02:11,498 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
-2025-01-21 11:02:11,532 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWT4BCurrentSource2015 control mode will be changed
-2025-01-21 11:02:13,699 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
-2025-01-21 11:02:15,869 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2025-01-21 11:02:18,224 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2025-01-21 11:02:20,849 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: AReactance
-2025-01-21 11:02:20,894 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWPP4BCurrentSource2015 control mode will be changed
-2025-01-21 11:02:23,405 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: BReactance
-2025-01-21 11:02:23,450 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWPP4BCurrentSource2015 control mode will be changed
-2025-01-21 11:02:25,869 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Dec40
-2025-01-21 11:02:28,580 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Inc40
-2025-01-21 11:02:31,331 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Inc10
-2025-01-21 11:02:33,765 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Dec20
-2025-01-21 11:02:36,221 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.ThreePhaseFault, OPER. COND.: TransientBolted
-2025-01-21 11:02:40,185 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageDip, OPER. COND.: Qzero
-2025-01-21 11:02:43,611 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMax
-2025-01-21 11:02:46,746 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMin
-2025-01-21 11:02:50,264 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2025-01-21 11:02:51,340 |                    DGCV.Dynawo |    WARNING |                 curves.py:  899 | Simulation Fails, logs in ../Results/Model/WindIEC2015/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
-2025-01-21 11:03:22,537 |                  DGCV.PDFLatex |    WARNING |                 figure.py:  590 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
-2025-01-21 11:04:02,456 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 11:01:28,689 |                DyCoV.Validation |       INFO |             validation.py:  102 | DyCoV Model Validation for Power Park Modules
+2025-01-21 11:01:28,780 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 11:01:31,522 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 11:01:33,908 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 11:01:36,426 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
+2025-01-21 11:01:46,092 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
+2025-01-21 11:01:55,916 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 11:01:58,520 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
+2025-01-21 11:02:07,251 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
+2025-01-21 11:02:09,523 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
+2025-01-21 11:02:11,498 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
+2025-01-21 11:02:11,532 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWT4BCurrentSource2015 control mode will be changed
+2025-01-21 11:02:13,699 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
+2025-01-21 11:02:15,869 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 11:02:18,224 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 11:02:20,849 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: AReactance
+2025-01-21 11:02:20,894 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWPP4BCurrentSource2015 control mode will be changed
+2025-01-21 11:02:23,405 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: BReactance
+2025-01-21 11:02:23,450 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWPP4BCurrentSource2015 control mode will be changed
+2025-01-21 11:02:25,869 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Dec40
+2025-01-21 11:02:28,580 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Inc40
+2025-01-21 11:02:31,331 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Inc10
+2025-01-21 11:02:33,765 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Dec20
+2025-01-21 11:02:36,221 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 11:02:40,185 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageDip, OPER. COND.: Qzero
+2025-01-21 11:02:43,611 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMax
+2025-01-21 11:02:46,746 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMin
+2025-01-21 11:02:50,264 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-21 11:02:51,340 |                    DyCoV.Dynawo |    WARNING |                 curves.py:  899 | Simulation Fails, logs in ../Results/Model/WindIEC2015/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
+2025-01-21 11:03:22,537 |                  DyCoV.PDFLatex |    WARNING |                 figure.py:  590 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
+2025-01-21 11:04:02,456 |                    DyCoV.Report |       INFO |                 report.py:  353 | 
 Summary Report
 ==============
 
@@ -187,25 +187,25 @@ PCS_RTE-I16z3GridVoltageSwell         QMin                     Compliant
 PCS_RTE-I16z3Islanding                DeltaP10DeltaQ4          Failed simulation
 
 
-2025-01-21 11:04:08,770 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 11:04:29,676 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
+2025-01-21 11:04:08,770 |                  DyCoV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 11:04:29,676 |                DyCoV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
 Performance verification example:
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
-2025-01-21 10:34:31,341 |                DGCV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
-2025-01-21 10:34:31,387 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2025-01-21 10:34:31,751 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2025-01-21 10:34:32,059 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
-2025-01-21 10:34:32,344 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2025-01-21 10:34:37,033 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
-2025-01-21 10:34:37,720 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
-2025-01-21 10:34:47,406 |                DGCV.Validation |    WARNING |            performance.py:  142 | P has not reached steady state
-2025-01-21 10:34:47,476 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
-2025-01-21 10:34:48,064 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2025-01-21 10:34:48,335 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2025-01-21 10:35:03,191 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI
+2025-01-21 10:34:31,341 |                DyCoV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
+2025-01-21 10:34:31,387 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2025-01-21 10:34:31,751 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2025-01-21 10:34:32,059 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
+2025-01-21 10:34:32,344 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 10:34:37,033 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
+2025-01-21 10:34:37,720 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
+2025-01-21 10:34:47,406 |                DyCoV.Validation |    WARNING |            performance.py:  142 | P has not reached steady state
+2025-01-21 10:34:47,476 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
+2025-01-21 10:34:48,064 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2025-01-21 10:34:48,335 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
+2025-01-21 10:35:03,191 |                    DyCoV.Report |       INFO |                 report.py:  353 | 
 Summary Report
 ==============
 
@@ -227,8 +227,8 @@ PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
 PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
 
 
-2025-01-21 10:35:12,217 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 10:35:12,378 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
+2025-01-21 10:35:12,217 |                  DyCoV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 10:35:12,378 |                DyCoV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
 ```
 
 The user can define which PCS's he wants to validate when running the tool by modifying the configuration 
@@ -244,24 +244,24 @@ model_ppm_validation_pcs = PCS_RTE-I16z1
 It can be observed in the output of the tool that only the selected PCS's have been validated.
 
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
-2025-01-21 11:20:13,429 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
-2025-01-21 11:20:13,440 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2025-01-21 11:20:15,918 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2025-01-21 11:20:18,734 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2025-01-21 11:20:21,327 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
-2025-01-21 11:20:30,859 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
-2025-01-21 11:20:41,049 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2025-01-21 11:20:43,603 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
-2025-01-21 11:20:51,859 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
-2025-01-21 11:20:54,021 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
-2025-01-21 11:20:56,105 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
-2025-01-21 11:20:56,117 |                    DGCV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWT4BCurrentSource2015 control mode will be changed
-2025-01-21 11:20:58,279 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
-2025-01-21 11:21:00,421 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2025-01-21 11:21:03,066 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2025-01-21 11:21:31,562 |                  DGCV.PDFLatex |    WARNING |                 figure.py:  590 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
-2025-01-21 11:21:39,383 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 11:20:13,429 |                DyCoV.Validation |       INFO |             validation.py:  102 | DyCoV Model Validation for Power Park Modules
+2025-01-21 11:20:13,440 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 11:20:15,918 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 11:20:18,734 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 11:20:21,327 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
+2025-01-21 11:20:30,859 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
+2025-01-21 11:20:41,049 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 11:20:43,603 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
+2025-01-21 11:20:51,859 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
+2025-01-21 11:20:54,021 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
+2025-01-21 11:20:56,105 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
+2025-01-21 11:20:56,117 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  352 | IECWT4BCurrentSource2015 control mode will be changed
+2025-01-21 11:20:58,279 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
+2025-01-21 11:21:00,421 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 11:21:03,066 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 11:21:31,562 |                  DyCoV.PDFLatex |    WARNING |                 figure.py:  590 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
+2025-01-21 11:21:39,383 |                    DyCoV.Report |       INFO |                 report.py:  353 | 
 Summary Report
 ==============
 
@@ -288,8 +288,8 @@ PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
 PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 
 
-2025-01-21 11:21:41,698 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 11:21:57,007 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
+2025-01-21 11:21:41,698 |                  DyCoV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 11:21:57,007 |                DyCoV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
 And the following example shows the result of modifying the 
@@ -302,13 +302,13 @@ electric_performance_verification_pcs = PCS_RTE-I2,PCS_RTE-I4,PCS_RTE-I8
 ```
 
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv performance -m SingleAuxI -o SingleAuxI
-2025-01-21 10:52:30,704 |                DGCV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
-2025-01-21 10:52:30,717 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2025-01-21 10:52:30,940 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2025-01-21 10:52:31,157 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2025-01-21 10:52:35,279 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2025-01-21 10:52:39,255 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI
+2025-01-21 10:52:30,704 |                DyCoV.Validation |       INFO |             validation.py:   78 | Electric Performance Verification for Synchronous Machines
+2025-01-21 10:52:30,717 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
+2025-01-21 10:52:30,940 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
+2025-01-21 10:52:31,157 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
+2025-01-21 10:52:35,279 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
+2025-01-21 10:52:39,255 |                    DyCoV.Report |       INFO |                 report.py:  353 | 
 Summary Report
 ==============
 
@@ -325,8 +325,8 @@ PCS_RTE-I4   ThreePhaseFault          TransientBolted          Compliant
 PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
 
 
-2025-01-21 10:52:42,402 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 10:52:42,426 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
+2025-01-21 10:52:42,402 |                  DyCoV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 10:52:42,426 |                DyCoV.Validation |       INFO |             validation.py:   42 | Opening the report: SingleAuxI/Reports/report.pdf
 ```
 
 ### Enabling/disabling specific tests of a given PCS
@@ -406,15 +406,15 @@ PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10,Transie
 The result of running the tool only has the PCS, benchmarks and operating conditions configured.
 
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
-2025-01-21 12:00:08,479 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
-2025-01-21 12:00:08,513 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2025-01-21 12:00:13,667 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2025-01-21 12:00:16,338 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2025-01-21 12:00:19,777 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2025-01-21 12:00:22,939 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2025-01-21 12:00:25,543 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2025-01-21 12:00:51,997 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 12:00:08,479 |                DyCoV.Validation |       INFO |             validation.py:  102 | DyCoV Model Validation for Power Park Modules
+2025-01-21 12:00:08,513 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 12:00:13,667 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 12:00:16,338 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 12:00:19,777 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 12:00:22,939 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 12:00:25,543 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 12:00:51,997 |                    DyCoV.Report |       INFO |                 report.py:  353 | 
 Summary Report
 ==============
 
@@ -434,8 +434,8 @@ PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
 PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 
 
-2025-01-21 12:00:55,848 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 12:00:57,018 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
+2025-01-21 12:00:55,848 |                  DyCoV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 12:00:57,018 |                DyCoV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```
 
 <span style="background-color: #4976ba;">INFO:</span> The **modify_pcs.md** tutorial explains how to modify the parameters that define a PCS, 
@@ -486,7 +486,7 @@ The tool contemplates two types of verifications:
 
 By having the model validation thresholds defined in the tool configuration file, the user
 can modify them if desired by editing the user configuration file (`config.ini`) located in the 
-`~/.config/dgcv` dir. In this file the user has all the configuration options available for the 
+`~/.config/dycov` dir. In this file the user has all the configuration options available for the 
 tool, as well as their default values.
 
 ```ini
@@ -599,81 +599,81 @@ console_log_level = DEBUG
 Running the above example with the **console_log_level = DEBUG** parameter:
 
 ```
-(dgcv_venv) user@dynawo:~/work/MyTests$ dgcv validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
-2025-01-21 12:03:17,911 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPNumcc was compiled
-2025-01-21 12:03:17,911 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | TransformerTapChanger was compiled
-2025-01-21 12:03:17,911 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPOmega was compiled
-2025-01-21 12:03:17,912 |                    DGCV.Dynawo |      DEBUG |                 dynawo.py:   48 | SynchronousMachineI8SM was compiled
-2025-01-21 12:03:17,915 |                DGCV.Validation |       INFO |             validation.py:  102 | DGCV Model Validation for Power Park Modules
-2025-01-21 12:03:17,916 |                       DGCV.PCS |      DEBUG |                    pcs.py:   62 | PCS Path /home/user/dgcv_repo/dgcv_venv/lib/python3.10/site-packages/dgcv/templates/PCS/model/PPM/PCS_RTE-I16z1/PCSDescription.ini
-2025-01-21 12:03:17,917 |                       DGCV.PCS |      DEBUG |                    pcs.py:   71 | User PCS Path None
-2025-01-21 12:03:17,926 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2025-01-21 12:03:17,954 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
-2025-01-21 12:03:17,954 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=3.0
-2025-01-21 12:03:17,954 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
-2025-01-21 12:03:17,955 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
-2025-01-21 12:03:17,955 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
-2025-01-21 12:03:17,955 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:17,956 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
-2025-01-21 12:03:17,956 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
-2025-01-21 12:03:17,956 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
-2025-01-21 12:03:25,379 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2025-01-21 12:03:25,392 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
-2025-01-21 12:03:25,393 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
-2025-01-21 12:03:25,393 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
-2025-01-21 12:03:25,393 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
-2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
-2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
-2025-01-21 12:03:25,394 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
-2025-01-21 12:03:25,395 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
-2025-01-21 12:03:33,913 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
-2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=3.0
-2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
-2025-01-21 12:03:33,930 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
-2025-01-21 12:03:33,931 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
-2025-01-21 12:03:33,931 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:33,931 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
-2025-01-21 12:03:33,932 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
-2025-01-21 12:03:33,932 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
-2025-01-21 12:03:42,638 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2025-01-21 12:03:42,654 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
-2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
-2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
-2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
-2025-01-21 12:03:42,655 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
-2025-01-21 12:03:42,656 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:42,657 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
-2025-01-21 12:03:42,657 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
-2025-01-21 12:03:42,657 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=9999.0
-2025-01-21 12:03:50,924 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
-2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
-2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=0.5*Pmax
-2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
-2025-01-21 12:03:50,934 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=0.95*Udim
-2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
-2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
-2025-01-21 12:03:50,935 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
-2025-01-21 12:03:50,936 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=0.1
-2025-01-21 12:03:59,228 |                 DGCV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
-2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
-2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=0.5*Pmax
-2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmax
-2025-01-21 12:03:59,238 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=1.05*Udim
-2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
-2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
-2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
-2025-01-21 12:03:59,239 |            DGCV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=-0.1
-2025-01-21 12:04:07,244 |                DGCV.Validation |      DEBUG |             validation.py:  154 | Sorted summary [Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR3', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR10', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR3Qmin', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='PermanentBolted', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='GridVoltageStep', operating_condition='Rise', compliance=<Compliance.NonCompliant: 2>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='GridVoltageStep', operating_condition='Drop', compliance=<Compliance.NonCompliant: 2>, report_name='report.RTE-I16z1.tex')]
-2025-01-21 12:04:07,245 |                  DGCV.PDFLatex |      DEBUG |                 report.py:   78 | PCS: PCS_RTE-I16z1 User LaTeX path:/home/dgcv/.config/dgcv/templates/reports/model/PPM/PCS_RTE-I16z1
-2025-01-21 12:04:07,245 |                  DGCV.PDFLatex |      DEBUG |                 report.py:   82 | PCS: PCS_RTE-I16z1 Tool LaTeX path:/home/dgcv/dgcv_repo/src/dgcv/templates/reports/model/PPM/PCS_RTE-I16z1
-2025-01-21 12:04:07,260 |                  DGCV.PDFLatex |      DEBUG |                 report.py:  387 | Root LaTeX path:/home/dgcv/dgcv_repo/src/dgcv/templates/reports
-2025-01-21 12:04:24,230 |                    DGCV.Report |       INFO |                 report.py:  353 | 
+(dycov_venv) user@dynawo:~/work/MyTests$ dycov validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
+2025-01-21 12:03:17,911 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPNumcc was compiled
+2025-01-21 12:03:17,911 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | TransformerTapChanger was compiled
+2025-01-21 12:03:17,911 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPOmega was compiled
+2025-01-21 12:03:17,912 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | SynchronousMachineI8SM was compiled
+2025-01-21 12:03:17,915 |                DyCoV.Validation |       INFO |             validation.py:  102 | DyCoV Model Validation for Power Park Modules
+2025-01-21 12:03:17,916 |                       DyCoV.PCS |      DEBUG |                    pcs.py:   62 | PCS Path /home/user/dycov_repo/dycov_venv/lib/python3.10/site-packages/dycov/templates/PCS/model/PPM/PCS_RTE-I16z1/PCSDescription.ini
+2025-01-21 12:03:17,917 |                       DyCoV.PCS |      DEBUG |                    pcs.py:   71 | User PCS Path None
+2025-01-21 12:03:17,926 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2025-01-21 12:03:17,954 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:17,954 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=3.0
+2025-01-21 12:03:17,954 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:17,955 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
+2025-01-21 12:03:17,955 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:17,955 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:17,956 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:17,956 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:17,956 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
+2025-01-21 12:03:25,379 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2025-01-21 12:03:25,392 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:25,393 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:25,393 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:25,393 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
+2025-01-21 12:03:25,394 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:25,394 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:25,394 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:25,394 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:25,395 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
+2025-01-21 12:03:33,913 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2025-01-21 12:03:33,930 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:33,930 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=3.0
+2025-01-21 12:03:33,930 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:33,930 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
+2025-01-21 12:03:33,931 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:33,931 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:33,931 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:33,932 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:33,932 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.15
+2025-01-21 12:03:42,638 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2025-01-21 12:03:42,654 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:42,655 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:42,655 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=Pmax
+2025-01-21 12:03:42,655 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=0
+2025-01-21 12:03:42,655 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=Udim
+2025-01-21 12:03:42,656 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:42,657 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to=None
+2025-01-21 12:03:42,657 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:42,657 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=9999.0
+2025-01-21 12:03:50,924 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=0.5*Pmax
+2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
+2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=0.95*Udim
+2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
+2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
+2025-01-21 12:03:50,936 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=0.1
+2025-01-21 12:03:59,228 |                 DyCoV.Benchmark |       INFO |              benchmark.py:  545 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Model definition:
+2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       SCR=10.0
+2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_P=0.5*Pmax
+2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmax
+2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=1.05*Udim
+2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
+2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
+2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
+2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
+2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=-0.1
+2025-01-21 12:04:07,244 |                DyCoV.Validation |      DEBUG |             validation.py:  154 | Sorted summary [Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR3', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR10', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='TransientBoltedSCR3Qmin', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='ThreePhaseFault', operating_condition='PermanentBolted', compliance=<Compliance.Compliant: 1>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='GridVoltageStep', operating_condition='Rise', compliance=<Compliance.NonCompliant: 2>, report_name='report.RTE-I16z1.tex'), Summary(id=16, zone=1, pcs='PCS_RTE-I16z1', benchmark='GridVoltageStep', operating_condition='Drop', compliance=<Compliance.NonCompliant: 2>, report_name='report.RTE-I16z1.tex')]
+2025-01-21 12:04:07,245 |                  DyCoV.PDFLatex |      DEBUG |                 report.py:   78 | PCS: PCS_RTE-I16z1 User LaTeX path:/home/dycov/.config/dycov/templates/reports/model/PPM/PCS_RTE-I16z1
+2025-01-21 12:04:07,245 |                  DyCoV.PDFLatex |      DEBUG |                 report.py:   82 | PCS: PCS_RTE-I16z1 Tool LaTeX path:/home/dycov/dycov_repo/src/dycov/templates/reports/model/PPM/PCS_RTE-I16z1
+2025-01-21 12:04:07,260 |                  DyCoV.PDFLatex |      DEBUG |                 report.py:  387 | Root LaTeX path:/home/dycov/dycov_repo/src/dycov/templates/reports
+2025-01-21 12:04:24,230 |                    DyCoV.Report |       INFO |                 report.py:  353 | 
 Summary Report
 ==============
 
@@ -693,7 +693,7 @@ PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
 PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
 
 
-2025-01-21 12:04:26,442 |                  DGCV.PDFLatex |      DEBUG |                 report.py:  480 | 
-2025-01-21 12:04:26,443 |                  DGCV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
-2025-01-21 12:04:40,093 |                DGCV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
+2025-01-21 12:04:26,442 |                  DyCoV.PDFLatex |      DEBUG |                 report.py:  480 | 
+2025-01-21 12:04:26,443 |                  DyCoV.PDFLatex |       INFO |                 report.py:  482 | PDF done.
+2025-01-21 12:04:40,093 |                DyCoV.Validation |       INFO |             validation.py:   42 | Opening the report: IEC2015/Reports/report.pdf
 ```

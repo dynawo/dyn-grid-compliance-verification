@@ -5,7 +5,7 @@ if [ "$#" -ne 2 ]; then
     echo "usage: $0 <results_directory_input> <rename_directory_output>"
     echo ""
     echo "positional arguments:"
-    echo "  results_directory_input     enter the output path of the DGCV Tool"
+    echo "  results_directory_input     enter the output path of the dycov Tool"
     echo "  rename_directory_output     enter the path to the reference curves"
     exit 1
 fi
