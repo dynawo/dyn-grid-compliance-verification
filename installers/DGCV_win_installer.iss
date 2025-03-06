@@ -32,7 +32,7 @@ Name: "{app}\dynawo"; Permissions: users-readexec
 
 [Files]
 ; Add project files
-Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,examples,tests"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,examples,tests,docs"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Manuals in the root directory
 Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 
