@@ -52,20 +52,14 @@ StatusMsg: "Installing the project examples..."; Filename: "tar.exe"; Parameters
 ; Create a virtual environment
 StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dycov_venv"; WorkingDir: "{app}"; Flags: runhidden
 
-; Activate the virtual environment
-StatusMsg: "Activating virtual environment..."; Filename: "{app}\dycov_venv\Scripts\activate.bat"; Parameters: ""; WorkingDir: "{app}"; Flags: runhidden
-
 ; Install build module for Python
-StatusMsg: "Installing Python build module..."; Filename: "python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
+StatusMsg: "Installing Python build module..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
 
 ; Compile the project using build
-StatusMsg: "Compiling the project..."; Filename: "python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
+StatusMsg: "Compiling the project..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
 
 ; Install the built package in the virtual environment
-StatusMsg: "Installing project package in virtual environment..."; Filename: "python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
-
-; Deactivate the virtual environment
-StatusMsg: "Deactivating virtual environment..."; Filename: "{app}\dycov_venv\Scripts\deactivate.bat"; Parameters: ""; WorkingDir: "{app}"; Flags: runhidden
+StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
