@@ -35,8 +35,6 @@ Name: "{app}\dynawo"; Permissions: users-readexec
 Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,examples,tests"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Manuals in the root directory
 Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
-; Add Dynawo files in the root directory
-Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
 ; Install Python if not found
@@ -50,6 +48,9 @@ StatusMsg: "Installing CMake..."; Filename: "msiexec"; Parameters: "/i {tmp}\cma
 
 ; Install VS2019 if not found
 StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_BuildTools.exe"; Parameters: "--wait --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.VC.ASAN --add Microsoft.VisualStudio.Component.VC.CMake.Project --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041"; Check: not IsVSInstalled
+
+; Install Dynawo 
+StatusMsg: "Installing Dynawo..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\Dynawo_omc_v1.8.0_win.tgz -C {app}"; Flags: runhidden;
 
 ; Create a virtual environment
 StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dycov_venv"; WorkingDir: "{app}"; Flags: runhidden
@@ -178,6 +179,7 @@ begin
     DownloadPage.Clear;
     // Use AddEx to specify a username and password
     DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/examples.tgz', 'examples.tgz', '');
+    DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/Dynawo_omc_v1.8.0_win.tgz', 'Dynawo_omc_v1.8.0_win.tgz', '');
     if not IsCMakeInstalled then 
       DownloadPage.Add('https://github.com/Kitware/CMake/releases/download/v{#CMakeVersion}/cmake-{#CMakeVersion}-windows-x86_64.msi', 'cmake-{#CMakeVersion}-windows-x86_64.msi', '');
     if not IsMikTeXInstalled then 
