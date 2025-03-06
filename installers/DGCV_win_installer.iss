@@ -24,15 +24,9 @@ Compression=lzma
 SolidCompression=yes
 AlwaysRestart=yes
 
-[Dirs]
-Name: "{app}"; Permissions: users-readexec
-Name: "{app}\dycov_repo"; Permissions: users-readexec
-Name: "{app}\manual"; Permissions: users-readexec
-Name: "{app}\dynawo"; Permissions: users-readexec
-
 [Files]
 ; Add project files
-Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,examples,tests,docs"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,attic,docker,docs,examples,installers,tests,tools"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Manuals in the root directory
 Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -52,20 +46,26 @@ StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_BuildTools.ex
 ; Install Dynawo 
 StatusMsg: "Installing Dynawo..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\Dynawo_omc_v1.8.0_win.tgz -C {app}"; Flags: runhidden;
 
+; Install the project examples
+StatusMsg: "Installing the project examples..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\examples.tgz -C {app}"; Flags: runhidden;
+
 ; Create a virtual environment
 StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dycov_venv"; WorkingDir: "{app}"; Flags: runhidden
 
+; Activate the virtual environment
+StatusMsg: "Activating virtual environment..."; Filename: "{app}\dycov_venv\Scripts\activate.bat"; Parameters: ""; WorkingDir: "{app}"; Flags: runhidden
+
 ; Install build module for Python
-StatusMsg: "Installing Python build module..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
+StatusMsg: "Installing Python build module..."; Filename: "python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
 
 ; Compile the project using build
-StatusMsg: "Compiling the project..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
+StatusMsg: "Compiling the project..."; Filename: "python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
 
 ; Install the built package in the virtual environment
-StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
+StatusMsg: "Installing project package in virtual environment..."; Filename: "python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
 
-; Install the project examples
-StatusMsg: "Installing the project examples..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\examples.tgz -C {app}"; Flags: runhidden;
+; Deactivate the virtual environment
+StatusMsg: "Deactivating virtual environment..."; Filename: "{app}\dycov_venv\Scripts\deactivate.bat"; Parameters: ""; WorkingDir: "{app}"; Flags: runhidden
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
