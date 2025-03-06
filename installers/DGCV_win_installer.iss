@@ -1,7 +1,7 @@
 [CustomMessages]
 #define PythonVersion "11"
 #define PythonSubVersion "6"
-#define DyCoVVersion "0.8.0"
+#define DyCoVVersion "0.8.1"
 #define CMakeVersion "3.31.1"
 #define MiktexVersion "24.1"
 #define SourceDir "SOURCE DIRECTORY"
@@ -24,15 +24,19 @@ Compression=lzma
 SolidCompression=yes
 AlwaysRestart=yes
 
+[Dirs]
+Name: "{app}"; Permissions: users-readexec
+Name: "{app}\dycov_repo"; Permissions: users-readexec
+Name: "{app}\manual"; Permissions: users-readexec
+Name: "{app}\dynawo"; Permissions: users-readexec
+
 [Files]
 ; Add project files
-Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Add examples files
-Source: "{#SourceDir}\dycov_repo\examples\*"; Excludes: ".git"; DestDir: "{app}\examples\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,examples,tests"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Manuals in the root directory
-Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Dynawo files in the root directory
-Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
 ; Install Python if not found
@@ -58,6 +62,9 @@ StatusMsg: "Compiling the project..."; Filename: "{app}\dycov_venv\Scripts\pytho
 
 ; Install the built package in the virtual environment
 StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
+
+; Install the project examples
+StatusMsg: "Installing the project examples..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\examples.tgz -C {app}"; Flags: runhidden;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
@@ -170,6 +177,7 @@ begin
   if CurPageID = wpReady then begin
     DownloadPage.Clear;
     // Use AddEx to specify a username and password
+    DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/examples.tgz', 'examples.tgz', '');
     if not IsCMakeInstalled then 
       DownloadPage.Add('https://github.com/Kitware/CMake/releases/download/v{#CMakeVersion}/cmake-{#CMakeVersion}-windows-x86_64.msi', 'cmake-{#CMakeVersion}-windows-x86_64.msi', '');
     if not IsMikTeXInstalled then 
