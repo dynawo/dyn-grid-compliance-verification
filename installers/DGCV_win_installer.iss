@@ -23,6 +23,7 @@ OutputBaseFilename=DyCoV_win_Installer
 Compression=lzma
 SolidCompression=yes
 AlwaysRestart=yes
+SetupLogging=yes
 
 [Files]
 ; Add project files
@@ -66,7 +67,7 @@ Type: filesandordirs; Name: "{app}"
 Type: files; Name: "{commondesktop}\DyCoV.bat"
 
 [Registry]
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"; Check: NeedsAddPath('{app}')
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"; Check: NeedsAddPath(ExpandConstant('{app}'))
 
 [Code]
 const
