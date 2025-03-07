@@ -325,7 +325,7 @@ class Benchmark:
         if pcs_benchmark_name in fig_Ire:
             tests = []
             self._figures_description.append(
-                ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ire(pu)"]
+                ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
             )
 
     def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -333,7 +333,7 @@ class Benchmark:
         if pcs_benchmark_name in fig_Iim:
             tests = []
             self._figures_description.append(
-                ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iim(pu)"]
+                ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
             )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
