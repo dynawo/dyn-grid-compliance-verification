@@ -63,10 +63,10 @@ StatusMsg: "Installing project package in virtual environment..."; Filename: "{a
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
-Type: files; Name: "{userdesktop}\DyCoV.bat"
+Type: files; Name: "{commondesktop}\DyCoV.bat"
 
 [Registry]
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"; Check: NeedsAddPath('{app}')
 
 [Code]
 const
@@ -155,9 +155,11 @@ var
   lines : TArrayOfString;
 begin
   fileName := ExpandConstant('{commondesktop}\DyCoV.bat');
-  SetArrayLength(lines, 1);
-  lines[0] := ExpandConstant('start cmd /k "{app}\dycov_venv\Scripts\activate && cd /d {app}"');
-  Result := SaveStringsToFile(filename,lines,true);
+  if not FileExists(fileName) then begin
+    SetArrayLength(lines, 1);
+    lines[0] := ExpandConstant('start cmd /k "{app}\dycov_venv\Scripts\activate && cd /d {app}"');
+    Result := SaveStringsToFile(filename,lines,true);
+  end;
 end;
 
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
@@ -199,6 +201,22 @@ begin
     end;
   end else
     Result := True;
+end;
+
+function NeedsAddPath(Param: string): boolean;
+var
+  OrigPath: string;
+begin
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path', OrigPath)
+  then begin
+    Result := True;
+    exit;
+  end;
+  { look for the path with leading and trailing semicolon }
+  { Pos() returns 0 if not found }
+  Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
 end;
 
 procedure InitializeWizard;
