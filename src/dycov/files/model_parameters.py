@@ -300,7 +300,9 @@ def _adjust_transformer(
     sign, active_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ActivePower0")
     _set_parameter(parset, ns, active_power0, sign, generator_p0pu)
 
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ReactivePower0")
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(
+        transformer.lib, "ReactivePower0"
+    )
     _set_parameter(parset, ns, reactive_power0, sign, generator_q0pu)
 
     sign = 1
@@ -334,7 +336,9 @@ def _adjust_generator(
     sign, active_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ActivePower0Pu")
     _set_parameter(parset, ns, active_power0, sign, generator_p0pu)
 
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ReactivePower0Pu")
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(
+        generator.lib, "ReactivePower0Pu"
+    )
     _set_parameter(parset, ns, reactive_power0, sign, generator_q0pu)
 
     sign = 1
@@ -414,15 +418,13 @@ def _get_control_mode_parameters(generator, parset, ns) -> dict:
 
 def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
     parameters = {}
-    par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MwpqMode')[1]}']"
-    )
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MwpqMode")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["MwpqMode"] = par.get("value")
 
-    par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MqG')[1]}']"
-    )
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MqG")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["MqG"] = par.get("value")
 
@@ -431,27 +433,23 @@ def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
 
 def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     parameters = {}
-    par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'PfFlag')[1]}']"
-    )
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PfFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["PfFlag"] = par.get("value")
 
-    par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VFlag')[1]}']"
-    )
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "VFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["VFlag"] = par.get("value")
 
-    par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'QFlag')[1]}']"
-    )
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "QFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["QFlag"] = par.get("value")
 
-    par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'RefFlag')[1]}']"
-    )
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "RefFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["RefFlag"] = par.get("value")
 
