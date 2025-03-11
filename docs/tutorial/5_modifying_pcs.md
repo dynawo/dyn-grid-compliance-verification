@@ -31,22 +31,22 @@ All tool commands have the ```-p PCS, --pcs PCS     enter one pcs to validate```
 which allows the selected command to be executed only for the selected PCS.
 
 ```
-(dgcv_venv) user@dynawo:~/work/myTests$  dgcv validate -m Model/WECC Model/WECC/Curves -p PCS_RTE-I16z1
-2024-02-26 11:04:21,608 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2024-02-26 11:04:24,081 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2024-02-26 11:04:26,479 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2024-02-26 11:04:28,889 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
-2024-02-26 11:04:37,250 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
-2024-02-26 11:04:51,572 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2024-02-26 11:04:55,117 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
-2024-02-26 11:05:19,773 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
-2024-02-26 11:05:25,166 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
-2024-02-26 11:05:30,056 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
-2024-02-26 11:05:34,342 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
-2024-02-26 11:05:38,195 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2024-02-26 11:05:42,729 | DGCV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2024-02-26 11:06:03,355 |          DGCV.PDFLatex | WARNING |            figure.py:226 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
-2024-02-26 11:06:30,078 |          DGCV.PDFLatex |    INFO |            report.py:223 | PDF Done
+(dycov_venv) user@dynawo:~/work/myTests$  dycov validate -m Model/WECC Model/WECC/Curves -p PCS_RTE-I16z1
+2024-02-26 11:04:21,608 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
+2024-02-26 11:04:24,081 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
+2024-02-26 11:04:26,479 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
+2024-02-26 11:04:28,889 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
+2024-02-26 11:04:37,250 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
+2024-02-26 11:04:51,572 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
+2024-02-26 11:04:55,117 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
+2024-02-26 11:05:19,773 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
+2024-02-26 11:05:25,166 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
+2024-02-26 11:05:30,056 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
+2024-02-26 11:05:34,342 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
+2024-02-26 11:05:38,195 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
+2024-02-26 11:05:42,729 | DyCoV.Operating Condition |    INFO | operating_condition.py:886 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
+2024-02-26 11:06:03,355 |          DyCoV.PDFLatex | WARNING |            figure.py:226 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
+2024-02-26 11:06:30,078 |          DyCoV.PDFLatex |    INFO |            report.py:223 | PDF Done
 ```
 
 ## PCS results
@@ -211,8 +211,8 @@ To add a new operating condition to a PCS the user must create the new files
 in their configuration directory, specifically in the **templates** directory 
 within the user configuration directory, this directory is structured in:
 ```
-(dgcv_venv) user@dynawo:~/.config$ tree dgcv
-dgcv$
+(dycov_venv) user@dynawo:~/.config$ tree dycov
+dycov$
 ├── config.ini
 ...
 ├── templates
@@ -266,7 +266,7 @@ Steps to expand the configuration of an existing PCS with new operating conditio
   directory, since a new OC is to be added for the *model validation* of the 
   *Power Plant Modules(PPM)* in the PCS called **PCS_RTE-I16z1**.
   ```
-    (dgcv_venv) user@dynawo:~/.config$ touch ./templates/PCS/model/PPM/PCS_RTE-I16z1/PCSDescription.ini
+    (dycov_venv) user@dynawo:~/.config$ touch ./templates/PCS/model/PPM/PCS_RTE-I16z1/PCSDescription.ini
   ```
 
   The content of an existing operating condition in the PCS is copied to the new file. It is recommended 
@@ -352,7 +352,7 @@ the new operating condition:
   *model validation* of the *Power Plant Modules(PPM)* in the PCS called **PCS_RTE-I16z1**. 
   It is recommended to copy an operating condition from the benchmark that you want to expand.
   ```
-    (dgcv_venv) user@dynawo:~/.config$ cp /home/user/dgcv_repo/dgcv_venv/lib/python3.10/site-packages/dgcv/templates/reports/model/PPM/PCS_RTE-I16z1/report.GridVoltageStep.Rise.tex ./templates/reports/model/PPM/PCS_RTE-I16z1/report.GridVoltageStep.RiseQ0.tex
+    (dycov_venv) user@dynawo:~/.config$ cp /home/user/dycov_repo/dycov_venv/lib/python3.10/site-packages/dycov/templates/reports/model/PPM/PCS_RTE-I16z1/report.GridVoltageStep.Rise.tex ./templates/reports/model/PPM/PCS_RTE-I16z1/report.GridVoltageStep.RiseQ0.tex
   ```
 
 - Search the latex file for the placeholders that contain the name of the copied operating 

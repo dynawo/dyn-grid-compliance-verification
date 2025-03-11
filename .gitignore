@@ -16,7 +16,7 @@ dist/
 build/
 
 # Exclude the recommended virtual env:
-dgcv_venv/
+dycov_venv/
 
 # Exclude windows installer output:
 installers/Output

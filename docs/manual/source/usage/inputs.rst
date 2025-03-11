@@ -250,7 +250,7 @@ to the case of *RMS Model Validation* tests.
 Available Topologies
 --------------------
 
-Currently *Dynamic Grid Compliance Verification* is limited to 8 different topologies to represent the
+Currently *Dynamic grid Compliance Verification* is limited to 8 different topologies to represent the
 *Producer Model*:
 
 .. figure:: figs_topologies/s.png

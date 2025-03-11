@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# This script automatically builds an installable "*.tar.gz" package of the DGCV tool
+# This script automatically builds an installable "*.tar.gz" package of the dycov tool
 # for Linux environments. This package provides a mostly self-sufficient install, since
-# it bundles as many depemdencies as possible: Dynawo, Python, DGCV, and all of its
+# it bundles as many depemdencies as possible: Dynawo, Python, dycov, and all of its
 # dependencies (plus the manual and examples).
 #
 #
@@ -13,9 +13,9 @@
 #
 # For end-users of the installer:
 #   * Unpack the tar.gz file directly under $HOME
-#   * Enable the application with: source DGCV/dgcv_activate
+#   * Enable the application with: source dycov/dycov_activate
 #   * Note: if you choose a base directory different than $HOME, you'll have to edit
-#     paths in DGCV/dgcv_activate accordingly.
+#     paths in dycov/dycov_activate accordingly.
 #
 #
 # (c) Rte 2024
@@ -31,8 +31,8 @@ BUILD=$(date +%Y-%m-%d)
 BUILD_DIR=$PWD/build
 DYNAWO_ZIP=$PWD/Dynawo_omc_v1.7.0.zip
 DYNAWO_CHECKSUM=69bec858b6b245ce4bf0b2cd38b2ac8f271c17bb
-LOCAL_REPO=$BUILD_DIR/repo_dgcv
-PKG_DIR=$BUILD_DIR/DGCV
+LOCAL_REPO=$BUILD_DIR/repo_dycov
+PKG_DIR=$BUILD_DIR/dycov
 
 
 
@@ -68,7 +68,7 @@ if [ "$python_cmd" = "" ]; then
 fi
 
 echo
-echo "Building a DGCV installer:"
+echo "Building a dycov installer:"
 echo "   * Using $DYNAWO_ZIP"
 echo "   * Using Python $($python_cmd --version)"
 echo
@@ -83,7 +83,7 @@ git clone https://github.com/dynawo/dyn-grid-compliance-verification.git "$LOCAL
 echo
 
 
-# Step 2: inside the repo, build and install into the default venv ("dgcv_venv")
+# Step 2: inside the repo, build and install into the default venv ("dycov_venv")
 echo "Executing './build_and_install.sh' inside the local repository"
 echo
 cd "$LOCAL_REPO"
@@ -94,16 +94,16 @@ cd "$LOCAL_REPO"
 echo
 echo "Copying the venv to $PKG_DIR and customizing the activate script..." 
 mkdir "$PKG_DIR"
-cp -a "$LOCAL_REPO"/dgcv_venv "$PKG_DIR"/
+cp -a "$LOCAL_REPO"/dycov_venv "$PKG_DIR"/
 # Customize paths. Note two things: (a) We're assume the user will unpack directly under
 # $HOME, otherwise he will have to adjust these two paths; (b) We are adding Dynawo to
 # the PATH here as well.
-ACTIVATE_SCRIPT="$PKG_DIR"/dgcv_venv/bin/activate
-USER_VENV="\$HOME/DGCV/dgcv_venv"
-USER_PATH="\$HOME/DGCV/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
+ACTIVATE_SCRIPT="$PKG_DIR"/dycov_venv/bin/activate
+USER_VENV="\$HOME/dycov/dycov_venv"
+USER_PATH="\$HOME/dycov/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
 sed -E --in-place=.ORIG -e "s%^VIRTUAL_ENV=.*%VIRTUAL_ENV=\"$USER_VENV\"%"  \
      -e "s%^PATH=.*%PATH=\"$USER_PATH\"%"  "$ACTIVATE_SCRIPT"
-cp "$ACTIVATE_SCRIPT" "$PKG_DIR"/activate_dgcv
+cp "$ACTIVATE_SCRIPT" "$PKG_DIR"/activate_dycov
 # Copy the examples too
 cp -a "$LOCAL_REPO"/examples "$PKG_DIR"/
 
@@ -113,7 +113,7 @@ echo
 echo "Compiling the user manual..." 
 cd "$LOCAL_REPO"
 # shellcheck source=/dev/null
-source "$LOCAL_REPO"/dgcv_venv/bin/activate
+source "$LOCAL_REPO"/dycov_venv/bin/activate
 pip install sphinx
 cd "$LOCAL_REPO"/docs/manual
 make latexpdf
@@ -121,7 +121,7 @@ make html
 deactivate
 mkdir "$PKG_DIR"/manual
 mv "$LOCAL_REPO"/docs/manual/build/html "$PKG_DIR"/manual/
-mv "$LOCAL_REPO"/docs/manual/build/latex/dgcv.pdf "$PKG_DIR"/manual/
+mv "$LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$PKG_DIR"/manual/
 
 
 # Step 5: unpack Dynawo under the installation tree
@@ -136,7 +136,7 @@ echo
 echo "Making the tar.gz file..."
 VERSION="v"$(grep  '^version =' "$LOCAL_REPO"/pyproject.toml | cut -d'=' -f 2 | cut -d'"' -f2)
 cd "$BUILD_DIR"
-tar -zcf DGCV_"$VERSION"_"$BUILD".tar.gz DGCV/
+tar -zcf dycov_"$VERSION"_"$BUILD".tar.gz dycov/
 echo
 echo "Done."
 

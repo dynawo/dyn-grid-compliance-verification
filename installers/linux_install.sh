@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This script automatically installs the dgcv tool for end-users, on Linux
+# This script automatically installs the DyCoV tool for end-users, on Linux
 # environments. It does not need root permissions -- it is designed as a user-level
 # install under $HOME.  However, it needs to have some packages available in the system
 # such as git, latex, etc. (keep reading below).
@@ -12,15 +12,15 @@
 #   * All the required OS packages, as listed in the main README.
 #
 # How it works:
-#   * It creates a root dir ("dgcv") under the $PWD. Everything, temporary or permanent, will go in there.
-#   * It downloads Dynawo (our own controlled nightly version) and unpacks the zip under $PWD/dgcv/dynawo.
-#   * It git-clones the DGCV repo under a temporary subdir, $PWD/dgcv/repo_dgcv.
-#   * It builds & installs the app (and all of its Python dependencies) in a venv, under $PWD/dgcv/dgcv_venv.
+#   * It creates a root dir ("dycov") under the $PWD. Everything, temporary or permanent, will go in there.
+#   * It downloads Dynawo (our own controlled nightly version) and unpacks the zip under $PWD/dycov/dynawo.
+#   * It git-clones the DyCoV repo under a temporary subdir, $PWD/dycov/repo_dycov.
+#   * It builds & installs the app (and all of its Python dependencies) in a venv, under $PWD/dycov/dycov_venv.
 #     (Note: it also edits the venv activation script to make sure this Dynawo is the first in the $PATH).
-#   * It copies the examples under $PWD/dgcv/examples.
-#   * It also builds the User Manual and leaves it under $PWD/dgcv/user_manual.
+#   * It copies the examples under $PWD/dycov/examples.
+#   * It also builds the User Manual and leaves it under $PWD/dycov/user_manual.
 #   * It deletes the temporarily cloned repo.
-#   * The tool is then ready to be used, by sourcing $PWD/dgcv/activate_dgcv
+#   * The tool is then ready to be used, by sourcing $PWD/dycov/activate_dycov
 #
 # Why we do it this way:
 #   * Publishing our own wheels would avoid git-cloning and building, but on the other
@@ -42,7 +42,7 @@ set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
 # --------------------------------------------------------------------------------------------------------
-RELEASE_TAG="v0.7.0"
+RELEASE_TAG="v0.8.1"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
 DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
@@ -53,9 +53,9 @@ DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/relea
 # The configurable section ends here, you shouldn't need to edit the rest.
 
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
-INSTALL_DIR=$PWD/dgcv
-TMP_LOCAL_REPO=$INSTALL_DIR/repo_dgcv
-VENV="dgcv_venv"
+INSTALL_DIR=$PWD/dycov
+TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
+VENV="dycov_venv"
 DATETIME=$(date '+%Y%m%d_%H%M%S')
 LOG=$INSTALL_DIR/installation_$DATETIME.log
 
@@ -147,7 +147,7 @@ if [ "$python_cmd" = "" ]; then
 fi
 
 color_msg ""
-color_msg "Beginning the installation of the dgcv tool under: $INSTALL_DIR"
+color_msg "Beginning the installation of the DyCoV tool under: $INSTALL_DIR"
 color_msg "   * Base Python version is $($python_cmd --version), python command is: \"$python_cmd\""
 color_msg "   * The installation will download ~900 MB, use up to ~2.2GB, and end up taking ~1.6 GB of disk space"
 color_msg "   * To view the progress of the installation in detail, open another term and execute:"
@@ -160,7 +160,7 @@ color_msg ""
 # Step 1: download Dynawo and unpack under the installation tree
 #####################################################################
 color_msg ""
-color_msg_nnl "Downloading Dynawo from the dgcv repository (~ 150 MB)... "
+color_msg_nnl "Downloading Dynawo from the DyCoV repository (~ 150 MB)... "
 cd "$INSTALL_DIR"
 curl -O -L --fail "$DYNAWO_ZIP_URL"
 CHECKSUM=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
@@ -186,7 +186,7 @@ fi
 
 
 ##################################################################################
-# Step 2: git-clone the repo under a temporary subdir inside $PWD/dgcv/.
+# Step 2: git-clone the repo under a temporary subdir inside $PWD/dycov/.
 ##################################################################################
 color_msg ""
 color_msg_nnl "Cloning the git repo (shallow clone of tag \"$RELEASE_TAG\", this will take ~ 1 min)... "
@@ -197,7 +197,7 @@ color_msg "repo cloned OK."
 
 
 ##################################################################################
-# Step 3: build & install the app in a venv under $PWD/dgcv/dgcv_venv/.
+# Step 3: build & install the app in a venv under $PWD/dycov/dycov_venv/.
 ##################################################################################
 color_msg ""
 color_msg_nnl "Building and installing to a fresh venv (this will take ~ 30 to 60 sec)... "
@@ -218,10 +218,10 @@ color_msg_nnl "Customize the venv 'activate' script... "
 ACTIVATE_SCRIPT="$INSTALL_DIR/$VENV"/bin/activate
 USER_PATH="$INSTALL_DIR/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
 sed -E --in-place=.ORIG -e "s%^PATH=.*%PATH=\"$USER_PATH\"%"  "$ACTIVATE_SCRIPT"
-cp "$ACTIVATE_SCRIPT" "$INSTALL_DIR"/activate_dgcv
+cp "$ACTIVATE_SCRIPT" "$INSTALL_DIR"/activate_dycov
 # Also leave a trace of the package versions installed by pip
 # shellcheck source=/dev/null
-source "$INSTALL_DIR"/activate_dgcv
+source "$INSTALL_DIR"/activate_dycov
 echo -e "\n\nLIST OF INSTALLED PACKAGES IN THE VENV:"
 pip list
 echo -e "------------------------------------------------\n\n"
@@ -237,7 +237,7 @@ color_msg ""
 color_msg_nnl "Copy the examples and build the User Manual... "
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
 # shellcheck source=/dev/null
-source "$INSTALL_DIR"/activate_dgcv
+source "$INSTALL_DIR"/activate_dycov
 pip install sphinx
 cd "$TMP_LOCAL_REPO"/docs/manual
 make latexpdf
@@ -245,7 +245,7 @@ make html
 deactivate
 mkdir "$INSTALL_DIR"/manual
 mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
-mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dgcv.pdf "$INSTALL_DIR"/manual/
+mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
 color_msg "examples and manuals installed OK."
 
 
