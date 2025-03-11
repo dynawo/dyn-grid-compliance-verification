@@ -128,7 +128,7 @@ class Translator:
 
         Returns
         -------
-        int 
+        int
             Sign of the variable
         str
             Dynawo variable name
@@ -155,7 +155,7 @@ class Translator:
         if translated_name and translated_name.startswith("-"):
             sign = -1
             translated_name = translated_name[1:]
-            
+
         return sign, translated_name
 
     def get_curve_variable(self, id: str, lib: str, name: str) -> Optional[str]:

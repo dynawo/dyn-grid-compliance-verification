@@ -57,13 +57,21 @@ def _add_bus_curves(curves_root: etree.Element, zone: int, curves_dict: dict) ->
         if not dynawo_variable:
             continue
 
-        _add_curve_to_file(curves_root, "BusPDR", variable, "BUS", sign, dynawo_variable, curves_dict)
+        _add_curve_to_file(
+            curves_root, "BusPDR", variable, "BUS", sign, dynawo_variable, curves_dict
+        )
     if zone == 1:
         sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
             "InfiniteBus", "NetworkFrequencyPu"
         )
         _add_curve_to_file(
-            curves_root, "InfiniteBus", "NetworkFrequencyPu", "BUS", sign, dynawo_variable, curves_dict
+            curves_root,
+            "InfiniteBus",
+            "NetworkFrequencyPu",
+            "BUS",
+            sign,
+            dynawo_variable,
+            curves_dict,
         )
 
 
@@ -145,14 +153,26 @@ def _add_generators_curves(
                         generator.lib, variable
                     )
                     _add_curve_to_file(
-                        curves_root, generator.id, variable, "GEN", sign, dynawo_variable, curves_dict
+                        curves_root,
+                        generator.id,
+                        variable,
+                        "GEN",
+                        sign,
+                        dynawo_variable,
+                        curves_dict,
                     )
                     variable = "MagnitudeControlledByAVRQPu"
                     sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
                         generator.lib, variable
                     )
                     _add_curve_to_file(
-                        curves_root, generator.id, variable, "GEN", sign, dynawo_variable, curves_dict
+                        curves_root,
+                        generator.id,
+                        variable,
+                        "GEN",
+                        sign,
+                        dynawo_variable,
+                        curves_dict,
                     )
                 continue
 
