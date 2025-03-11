@@ -90,21 +90,21 @@ def _append_generator(
     # Parameter Set from which to extract the generator parameters we need
     parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
-    generator_imax = dynawo_translator.get_dynawo_variable(lib, "InjectedCurrentMax")
+    sign, generator_imax = dynawo_translator.get_dynawo_variable(lib, "InjectedCurrentMax")
     imaxpu = parset.find(f"{{{ns}}}par[@name='{generator_imax}']")
     if imaxpu is not None:
-        imax = float(imaxpu.get("value"))
+        imax = float(imaxpu.get("value")) * sign
     else:
         imax = None
 
-    generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
+    sign, generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
     p0pu = parset.find(f"{{{ns}}}par[@name='{generator_P}']")
-    P = float(p0pu.get("value"))
-    generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
+    P = float(p0pu.get("value")) * sign
+    sign, generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
     q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
-    Q = float(q0pu.get("value"))
+    Q = float(q0pu.get("value")) * sign
 
-    generator_VoltageDrop = dynawo_translator.get_dynawo_variable(lib, "VoltageDrop")
+    _, generator_VoltageDrop = dynawo_translator.get_dynawo_variable(lib, "VoltageDrop")
     if generator_VoltageDrop is not None:
         gVoltageDrop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDrop}']")
         VoltageDrop = float(gVoltageDrop.get("value"))
@@ -131,10 +131,10 @@ def _get_line_values(
         # Parameter Set from which to extract the line parameters
         parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
-        line_R = dynawo_translator.get_dynawo_variable(lib, "ResistancePu")
-        line_X = dynawo_translator.get_dynawo_variable(lib, "ReactancePu")
-        line_B = dynawo_translator.get_dynawo_variable(lib, "SusceptancePu")
-        line_G = dynawo_translator.get_dynawo_variable(lib, "ConductancePu")
+        _, line_R = dynawo_translator.get_dynawo_variable(lib, "ResistancePu")
+        _, line_X = dynawo_translator.get_dynawo_variable(lib, "ReactancePu")
+        _, line_B = dynawo_translator.get_dynawo_variable(lib, "SusceptancePu")
+        _, line_G = dynawo_translator.get_dynawo_variable(lib, "ConductancePu")
         r_par = parset.find(f"{{{ns}}}par[@name='{line_R}']")
         x_par = parset.find(f"{{{ns}}}par[@name='{line_X}']")
         b_par = parset.find(f"{{{ns}}}par[@name='{line_B}']")
@@ -179,17 +179,17 @@ def _get_transformer_values(
         parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
         # Not all Transformer models provide their params in pu
-        transformer_R = dynawo_translator.get_dynawo_variable(lib, "Resistance")
-        transformer_X = dynawo_translator.get_dynawo_variable(lib, "Reactance")
-        transformer_B = dynawo_translator.get_dynawo_variable(lib, "Susceptance")
-        transformer_G = dynawo_translator.get_dynawo_variable(lib, "Conductance")
+        _, transformer_R = dynawo_translator.get_dynawo_variable(lib, "Resistance")
+        _, transformer_X = dynawo_translator.get_dynawo_variable(lib, "Reactance")
+        _, transformer_B = dynawo_translator.get_dynawo_variable(lib, "Susceptance")
+        _, transformer_G = dynawo_translator.get_dynawo_variable(lib, "Conductance")
         r_par = parset.find(f"{{{ns}}}par[@name='{transformer_R}']")
         x_par = parset.find(f"{{{ns}}}par[@name='{transformer_X}']")
         g_par = parset.find(f"{{{ns}}}par[@name='{transformer_G}']")
         b_par = parset.find(f"{{{ns}}}par[@name='{transformer_B}']")
         units_inPu = transformer_R.endswith("Pu")
         if not units_inPu:
-            transformer_SNom = dynawo_translator.get_dynawo_variable(lib, "SNom")
+            _, transformer_SNom = dynawo_translator.get_dynawo_variable(lib, "SNom")
             snom_par = parset.find(f"{{{ns}}}par[@name='{transformer_SNom}']")
             s_nom = float(snom_par.get("value"))
             xfmr_rpu = (s_nref / s_nom) * float(r_par.get("value")) / 100
@@ -203,7 +203,7 @@ def _get_transformer_values(
             xfmr_bpu = float(b_par.get("value"))
 
         # If there's a regulating tap, get rTfo0Pu; otherwise get rTfoPu
-        transformer_rTfoPu = dynawo_translator.get_dynawo_variable(lib, "Rho")
+        _, transformer_rTfoPu = dynawo_translator.get_dynawo_variable(lib, "Rho")
         tap_par = parset.find(f"{{{ns}}}par[@name='{transformer_rTfoPu}']")
         xfmr_tapr = float(tap_par.get("value"))
 
@@ -235,10 +235,10 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
         # Parameter Set from which to extract the transformer parameters
         parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
-        load_P0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0")
-        load_Q0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
-        load_U0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
-        load_Ph0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
+        sign_P, load_P0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0")
+        sign_Q, load_Q0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
+        _, load_U0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
+        _, load_Ph0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
         p0_par = parset.find(f"{{{ns}}}par[@name='{load_P0}']")
         q0_par = parset.find(f"{{{ns}}}par[@name='{load_Q0}']")
         u0_par = parset.find(f"{{{ns}}}par[@name='{load_U0}']")
@@ -246,13 +246,13 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
 
         # Check if value contains a float or a placeholder
         if "{" in p0_par.get("value"):
-            aux_ppu = p0_par.get("value").replace("{", "").replace("}", "")
-            aux_qpu = q0_par.get("value").replace("{", "").replace("}", "")
+            aux_ppu = p0_par.get("value").replace("{", "").replace("}", "") * sign_P
+            aux_qpu = q0_par.get("value").replace("{", "").replace("}", "") * sign_Q
             aux_upu = u0_par.get("value").replace("{", "").replace("}", "")
             aux_phpu = ph0_par.get("value").replace("{", "").replace("}", "")
         else:
-            aux_ppu = float(p0_par.get("value"))
-            aux_qpu = float(q0_par.get("value"))
+            aux_ppu = float(p0_par.get("value")) * sign_P
+            aux_qpu = float(q0_par.get("value")) * sign_Q
             aux_upu = float(u0_par.get("value"))
             aux_phpu = float(ph0_par.get("value"))
 
@@ -297,20 +297,21 @@ def _adjust_transformer(
     if parset is None:
         return
 
-    active_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ActivePower0")
-    _set_parameter(parset, ns, active_power0, generator_p0pu)
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ActivePower0")
+    _set_parameter(parset, ns, active_power0, sign, generator_p0pu)
 
-    reactive_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ReactivePower0")
-    _set_parameter(parset, ns, reactive_power0, generator_q0pu)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ReactivePower0")
+    _set_parameter(parset, ns, reactive_power0, sign, generator_q0pu)
 
-    voltage0 = dynawo_translator.get_dynawo_variable(transformer.lib, "Voltage0")
-    _set_parameter(parset, ns, voltage0, generator_u0pu)
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(transformer.lib, "Voltage0")
+    _set_parameter(parset, ns, voltage0, sign, generator_u0pu)
 
-    phase0 = dynawo_translator.get_dynawo_variable(transformer.lib, "Phase0")
-    _set_parameter(parset, ns, phase0, generator_uphase0)
+    _, phase0 = dynawo_translator.get_dynawo_variable(transformer.lib, "Phase0")
+    _set_parameter(parset, ns, phase0, sign, generator_uphase0)
 
-    voltage_setpoint = dynawo_translator.get_dynawo_variable(transformer.lib, "VoltageSetpoint")
-    _set_parameter(parset, ns, voltage_setpoint, pdr.U)
+    _, voltage_setpoint = dynawo_translator.get_dynawo_variable(transformer.lib, "VoltageSetpoint")
+    _set_parameter(parset, ns, voltage_setpoint, sign, pdr.U)
 
 
 def _adjust_generator(
@@ -330,17 +331,18 @@ def _adjust_generator(
     if parset is None:
         return
 
-    active_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ActivePower0Pu")
-    _set_parameter(parset, ns, active_power0, generator_p0pu)
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ActivePower0Pu")
+    _set_parameter(parset, ns, active_power0, sign, generator_p0pu)
 
-    reactive_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ReactivePower0Pu")
-    _set_parameter(parset, ns, reactive_power0, generator_q0pu)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ReactivePower0Pu")
+    _set_parameter(parset, ns, reactive_power0, sign, generator_q0pu)
 
-    voltage0 = dynawo_translator.get_dynawo_variable(generator.lib, "Voltage0Pu")
-    _set_parameter(parset, ns, voltage0, generator_u0pu)
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(generator.lib, "Voltage0Pu")
+    _set_parameter(parset, ns, voltage0, sign, generator_u0pu)
 
-    phase0 = dynawo_translator.get_dynawo_variable(generator.lib, "Phase0")
-    _set_parameter(parset, ns, phase0, generator_uphase0)
+    _, phase0 = dynawo_translator.get_dynawo_variable(generator.lib, "Phase0")
+    _set_parameter(parset, ns, phase0, sign, generator_uphase0)
 
     _set_control_mode(generator, parset, ns, generator_control_mode)
 
@@ -352,7 +354,7 @@ def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> 
 
     if "RefFlag" in control_mode_parameters:
         if control_mode_parameters["RefFlag"].lower() == "true":
-            VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
+            _, VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
             par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
             if par is not None and par.get("value").lower() == "false":
                 generator.UseVoltageDrop = True
@@ -413,13 +415,13 @@ def _get_control_mode_parameters(generator, parset, ns) -> dict:
 def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
     parameters = {}
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MwpqMode')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MwpqMode')[1]}']"
     )
     if par is not None:
         parameters["MwpqMode"] = par.get("value")
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MqG')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'MqG')[1]}']"
     )
     if par is not None:
         parameters["MqG"] = par.get("value")
@@ -430,25 +432,25 @@ def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
 def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     parameters = {}
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'PfFlag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'PfFlag')[1]}']"
     )
     if par is not None:
         parameters["PfFlag"] = par.get("value")
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VFlag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'VFlag')[1]}']"
     )
     if par is not None:
         parameters["VFlag"] = par.get("value")
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'QFlag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'QFlag')[1]}']"
     )
     if par is not None:
         parameters["QFlag"] = par.get("value")
 
     par = parset.find(
-        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'RefFlag')}']"
+        f"{{{ns}}}par[@name='{dynawo_translator.get_dynawo_variable(generator.lib, 'RefFlag')[1]}']"
     )
     if par is not None:
         parameters["RefFlag"] = par.get("value")
@@ -472,8 +474,8 @@ def _get_default_control_mode_parameters(generator, generator_control_mode) -> d
 
 def _set_control_mode_parameters(generator, parset, ns, control_mode_parameters: dict):
     for name, value in control_mode_parameters.items():
-        dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
-        _set_parameter(parset, ns, dynawo_name, value.lower())
+        _, dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
+        _set_parameter(parset, ns, dynawo_name, 1, value.lower())
 
 
 def _adjust_load(
@@ -489,26 +491,27 @@ def _adjust_load(
     if parset is None:
         return
 
-    active_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ActivePower0")
-    _set_parameter(parset, ns, active_power0, load_p0pu)
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ActivePower0")
+    _set_parameter(parset, ns, active_power0, sign, load_p0pu)
 
-    reactive_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ReactivePower0")
-    _set_parameter(parset, ns, reactive_power0, load_q0pu)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ReactivePower0")
+    _set_parameter(parset, ns, reactive_power0, sign, load_q0pu)
 
-    voltage0 = dynawo_translator.get_dynawo_variable(load.lib, "Voltage0")
-    _set_parameter(parset, ns, voltage0, load_u0pu)
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(load.lib, "Voltage0")
+    _set_parameter(parset, ns, voltage0, sign, load_u0pu)
 
-    phase0 = dynawo_translator.get_dynawo_variable(load.lib, "Phase0")
-    _set_parameter(parset, ns, phase0, load_uphase0)
+    _, phase0 = dynawo_translator.get_dynawo_variable(load.lib, "Phase0")
+    _set_parameter(parset, ns, phase0, sign, load_uphase0)
 
 
-def _set_parameter(parset, ns, parameter_name, parameter_value):
+def _set_parameter(parset, ns, parameter_name, sign, parameter_value):
     if parameter_name is None:
         return
 
     parameter = parset.find(f"{{{ns}}}par[@name='{parameter_name}']")
     if parameter is not None:
-        parameter.set("value", str(parameter_value))
+        parameter.set("value", str(sign * parameter_value))
 
 
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
