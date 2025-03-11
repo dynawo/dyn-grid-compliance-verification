@@ -171,7 +171,7 @@ class DynawoCurves(ProducerCurves):
 
     def __adjust_event_value(self, event_params: dict) -> None:
         generator = self.get_producer().generators[0]
-        if generator.UseVoltageDrop:
+        if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
             event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
 
     def __complete_model(
@@ -461,11 +461,11 @@ class DynawoCurves(ProducerCurves):
 
         if "Qmin" in pdr_q:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "Qmin", self.get_producer().q_min_pu
+                pdr_q, "Qmin", self.get_producer().q_min_pu * -1
             )
         elif "Qmax" in pdr_q:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "Qmax", self.get_producer().q_max_pu
+                pdr_q, "Qmax", self.get_producer().q_max_pu * -1
             )
         else:
             ini_pdr_q = model_parameters.extract_defined_value(
