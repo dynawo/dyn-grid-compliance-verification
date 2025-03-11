@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Quick and dirty script to automate all steps for building/installing the package:
-#   * it uses a venv named "dgcv_venv" (created under the $PWD when you invoke it)
+#   * it uses a venv named "dycov_venv" (created under the $PWD when you invoke it)
 #   * it also pip-updates all dependencies to their latest version ("eager" strategy)
 # Assumes Python 3.9 or later.
 # 
@@ -15,10 +15,10 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail
 
 
-PKG="dgcv"
+PKG="dycov"
 SCRIPT_PATH=$(realpath "$0")
 MY_LOCAL_REPO=$(dirname "$SCRIPT_PATH")
-MY_VENV="$PWD"/dgcv_venv
+MY_VENV="$PWD"/dycov_venv
 python_cmd=""
 
 
@@ -142,9 +142,9 @@ colormsg "OK."
 
 # Step 2: build
 echo
-colormsg "Building the DGCV Tool package... "
+colormsg "Building the DyCoV Tool package... "
 if [ $EDITABLE = "y" ]; then
-    colormsg "   SKIPPING (installing the DGCV Tool as an editable Python package)."
+    colormsg "   SKIPPING (installing the DyCoV Tool as an editable Python package)."
 else
     cd "$MY_LOCAL_REPO" && rm -rf build dist && python -m build --wheel
     colormsg "OK."
@@ -153,9 +153,9 @@ fi
 
 # Step 3: install the package
 echo
-colormsg "Uninstalling the previous version of the DGCV Tool... (if it exists)"
+colormsg "Uninstalling the previous version of the DyCoV Tool... (if it exists)"
 pip uninstall "$PKG"
-colormsg "Installing the DGCV Tool package and all its dependencies... "
+colormsg "Installing the DyCoV Tool package and all its dependencies... "
 if [ $EDITABLE = "y" ]; then
     cd "$MY_LOCAL_REPO" && pip install -e .
 else

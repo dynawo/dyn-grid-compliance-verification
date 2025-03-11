@@ -1,9 +1,9 @@
 ====================================================
-Dynamic Grid Compliance Verification Developer Guide
+Dynamic grid Compliance Verification Developer Guide
 ====================================================
 
 The purpose of this documents is *not* to provide a detailed explanation of each of the
-modules that make up the **Dynamic Grid Compliance Verification** tool. Instead, it explains the
+modules that make up the **Dynamic grid Compliance Verification** tool. Instead, it explains the
 design principles and the internal organization of the code, so that a developer can
 efficiently navigate through the source code in order to extend and/or modify the tool's
 functionalities.
@@ -31,7 +31,7 @@ without changing the Python code.
 Overall project structure
 =========================
 
-At the highest level, the **Dynamic Grid Compliance Verification** tool is divided into 5 directories:
+At the highest level, the **Dynamic grid Compliance Verification** tool is divided into 5 directories:
 
 .. figure:: figs_structure/main_structure.png
     :scale: 80
@@ -172,9 +172,9 @@ that the application should perform:
 Developer Guides
 ================
 
-These sections cover various topics in extending Dynamic Grid Compliance Verification for various
-use-case. They are comprehensive guide to using Dynamic Grid Compliance Verification in many contexts
-and assume more knowledge of Dynamic Grid Compliance Verification.
+These sections cover various topics in extending Dynamic grid Compliance Verification for various
+use-case. They are comprehensive guide to using Dynamic grid Compliance Verification in many contexts
+and assume more knowledge of Dynamic grid Compliance Verification.
 
 .. toctree::
    :maxdepth: 3
