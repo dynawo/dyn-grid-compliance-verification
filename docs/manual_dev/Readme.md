@@ -6,13 +6,13 @@ Dynamic-grid-compliance-verification developer manual.
 
 1. Clone the repository via: 
    ```bash
-   git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    ```
-   (you may of course use any name for the top-level directory, here `"dgcv_repo"`.)
+   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
 
 2. Cd into the repository and run the shell script named `build_and_install.sh` in developer
    mode. This builds the Python package, creates a Python virtual environment under the 
-   subdirectory `dgcv_venv`, and installs the package into it (together with all the necessary 
+   subdirectory `dycov_venv`, and installs the package into it (together with all the necessary 
    library dependencies, such as NumPy, etc. and the developer library dependencies, such as 
    Sphinx, etc.).
     ```bash
@@ -21,7 +21,7 @@ Dynamic-grid-compliance-verification developer manual.
 
 3. Next, you must activate the virtual environment that has just been created: 
    ```bash
-   source dgcv_venv/bin/activate
+   source dycov_venv/bin/activate
    ```
 
 ## Compile the manual
@@ -36,7 +36,7 @@ version of it. Steps to compile the developer manual:
    * Run **make html** to obtain a HTML version of the developer manual 
 
 3. Sphinx creates a subdirectory xxx, within which we find the HTML version of the manual 
-   in the `build/html/` directory and/or the `dgcv-dev.pdf` file in the 
+   in the `build/html/` directory and/or the `dycov-dev.pdf` file in the 
    `build/latex/` directory.
    ```bash
    build

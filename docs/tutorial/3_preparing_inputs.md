@@ -62,7 +62,7 @@ Producer model are a set of files organized in a directory structure such
 as the one shown in this example:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree Dynawo
+(dycov_venv) user@dynawo:~/work/MyTests$ tree Dynawo
 Dynawo
 ├── Producer.dyd
 ├── Producer.par
@@ -167,7 +167,7 @@ Producer curves are a set of files organized in a directory
 structure similar to reference curves, as seen in this example:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree ProducerCurves
+(dycov_venv) user@dynawo:~/work/MyTests$ tree ProducerCurves
 ProducerCurves
 ├── CurvesFiles.ini
 ├── PCS.BenchMark1.OperatingCondition1.csv
@@ -194,7 +194,7 @@ Reference curves are a set of files organized in a directory structure such
 as the one shown in this example:
 
 ``` 
-(dgcv_venv) user@dynawo:~/work/MyTests$ tree ReferenceCurves
+(dycov_venv) user@dynawo:~/work/MyTests$ tree ReferenceCurves
 ReferenceCurves
 ├── CurvesFiles.ini
 ├── PCS.BenchMark1.OperatingCondition1.csv
@@ -279,15 +279,15 @@ for synchronous generation units, the network to be modeled only has one generat
 has auxiliary load.
 
 ```
-(dgcv_venv) user@dynawo:~$ dgcv generate -t S+Aux -v performance_SM -o ../SM_SA
-2025-01-23 15:30:18,839 |        DGCV.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
+(dycov_venv) user@dynawo:~$ dycov generate -t S+Aux -v performance_SM -o ../SM_SA
+2025-01-23 15:30:18,839 |        dycov.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
 Edit the Producer.dyd file is necessary to complete each equipment in the model with a dynamic model. Press Enter when finishing editing.
 ```
 
 In this first step, the tool has copied all the templates to the target directory, and has 
 edited the DYD file to generate the desired connectivity:
 ```
-(dgcv_venv) user@dynawo:~$ tree ../SM_SA
+(dycov_venv) user@dynawo:~$ tree ../SM_SA
 ../SM_SA
 ├── Producer.dyd
 ├── Producer.ini
@@ -349,10 +349,10 @@ executed, the tool will validate the DYD file, and modify the PAR file based on
 the dynamic models selected in the DYD file:
 
 ```
-(dgcv_venv) user@dynawo:~$ dgcv generate -t S+Aux -v performance_SM -o ../SM_SA
-2025-01-23 15:30:18,839 |        DGCV.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
+(dycov_venv) user@dynawo:~$ dycov generate -t S+Aux -v performance_SM -o ../SM_SA
+2025-01-23 15:30:18,839 |        dycov.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
 Edit the Producer.dyd file is necessary to complete each equipment in the model with a dynamic model. Press Enter when finishing editing.
-2025-01-23 15:48:18,403 |        DGCV.Create input files |       INFO |         input_template.py:   37 | Creating the input PAR file in ../SM_SA.
+2025-01-23 15:48:18,403 |        dycov.Create input files |       INFO |         input_template.py:   37 | Creating the input PAR file in ../SM_SA.
 Edit the Producer.par file is necessary to complete each parameter with a value. Press Enter when finishing editing.    
 ```
 
@@ -646,12 +646,12 @@ After saving the edited PAR file, press *Enter* in the terminal where the comman
 executed, the tool will validate the PAR file, and modify the INI file:
 
 ```
-(dgcv_venv) user@dynawo:~$ dgcv generate -t S+Aux -v performance_SM -o ../SM_SA
-2025-01-23 15:30:18,839 |        DGCV.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
+(dycov_venv) user@dynawo:~$ dycov generate -t S+Aux -v performance_SM -o ../SM_SA
+2025-01-23 15:30:18,839 |        dycov.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
 Edit the Producer.dyd file is necessary to complete each equipment in the model with a dynamic model. Press Enter when finishing editing.
-2025-01-23 15:48:18,403 |        DGCV.Create input files |       INFO |         input_template.py:   37 | Creating the input PAR file in ../SM_SA.
+2025-01-23 15:48:18,403 |        dycov.Create input files |       INFO |         input_template.py:   37 | Creating the input PAR file in ../SM_SA.
 Edit the Producer.par file is necessary to complete each parameter with a value. Press Enter when finishing editing.    
-2025-01-23 15:58:24,777 |        DGCV.Create input files |       INFO |         input_template.py:   51 | Creating the input INI file in ../SM_SA.
+2025-01-23 15:58:24,777 |        dycov.Create input files |       INFO |         input_template.py:   51 | Creating the input INI file in ../SM_SA.
 Edit the Producer.ini file is necessary to complete each parameter with a value. Press Enter when finishing editing.
 ```
 
@@ -679,14 +679,14 @@ After saving the edited INI file, press *Enter* in the terminal where the comman
 executed, the tool will validate the INI file, and generate the CurvesFiles.ini file:
 
 ```
-(dgcv_venv) user@dynawo:~$ dgcv generate -t S+Aux -v performance_SM -o ../SM_SA
-2025-01-23 15:30:18,839 |        DGCV.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
+(dycov_venv) user@dynawo:~$ dycov generate -t S+Aux -v performance_SM -o ../SM_SA
+2025-01-23 15:30:18,839 |        dycov.Create input files |       INFO |         input_template.py:   23 | Creating the input DYD file in ../SM_SA.
 Edit the Producer.dyd file is necessary to complete each equipment in the model with a dynamic model. Press Enter when finishing editing.
-2025-01-23 15:48:18,403 |        DGCV.Create input files |       INFO |         input_template.py:   37 | Creating the input PAR file in ../SM_SA.
+2025-01-23 15:48:18,403 |        dycov.Create input files |       INFO |         input_template.py:   37 | Creating the input PAR file in ../SM_SA.
 Edit the Producer.par file is necessary to complete each parameter with a value. Press Enter when finishing editing.    
-2025-01-23 15:58:24,777 |        DGCV.Create input files |       INFO |         input_template.py:   51 | Creating the input INI file in ../SM_SA.
+2025-01-23 15:58:24,777 |        dycov.Create input files |       INFO |         input_template.py:   51 | Creating the input INI file in ../SM_SA.
 Edit the Producer.ini file is necessary to complete each parameter with a value. Press Enter when finishing editing.
-2025-01-23 16:02:18,040 |        DGCV.Create input files |       INFO |         input_template.py:   66 | Creating the reference curves files in ../SM_SA/ReferenceCurves.
+2025-01-23 16:02:18,040 |        dycov.Create input files |       INFO |         input_template.py:   66 | Creating the reference curves files in ../SM_SA/ReferenceCurves.
 Edit the CurvesFiles.ini file is necessary to complete each parameter with a curves file. Press Enter when finishing editing.
 ```
 

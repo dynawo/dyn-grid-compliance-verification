@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Installation script for end-users:
-#   * it uses a venv named "dgcv_venv" right under the current directory
+#   * it uses a venv named "dycov_venv" right under the current directory
 #   * it can be used both for first-time installation and for upgrades
 #   * it also pip-updates all dependencies to their latest version ("eager" strategy)
 # Assumes Python 3.9+.
@@ -16,11 +16,11 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail
 
 
-PKG="dgcv"
+PKG="dycov"
 LATEST_RELEASE="https://api.github.com/repos/dynawo/dyn-grid-compliance-verification/releases/latest"
 SCRIPT_PATH=$(realpath "$0")
 MY_PWD=$(dirname "$SCRIPT_PATH")
-MY_VENV="$MY_PWD"/dgcv_venv
+MY_VENV="$MY_PWD"/dycov_venv
 python_cmd=""
 
 
@@ -112,9 +112,9 @@ curl -s "$LATEST_RELEASE" \
 
 # Step 3: (re)install the package
 echo
-colormsg "Uninstalling the previous version of the DGCV Tool... (if it exists)"
+colormsg "Uninstalling the previous version of the dycov Tool... (if it exists)"
 pip uninstall "$PKG"
-colormsg "Installing the DGCV Tool package and all its dependencies... "
+colormsg "Installing the dycov Tool package and all its dependencies... "
 pip install "$MY_PWD"/*.whl
 
 
@@ -135,7 +135,7 @@ echo
 colormsg "INSTALLATION COMPLETE"
 colormsg "To use the tool, activate the virtual environment with:"
 echo
-colormsg"    source dgcv/bin/activate"
+colormsg"    source dycov/bin/activate"
 echo
-colormsg "Then, run the command dgcv -h to see the available options."
+colormsg "Then, run the command dycov -h to see the available options."
 echo

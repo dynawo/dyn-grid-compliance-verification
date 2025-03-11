@@ -28,8 +28,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 # Metadata:
-name = "dgcv"
-version = "0.7.0"
+name = "dycov"
+version = "0.8.1"
 description = "A tool for automating the verification of dynamic grid compliance requirements for solar, wind, and storage farms, including RMS model validation."
 authors = [
     {name="Guiu Oms", email="omsg@aia.es"},
@@ -50,7 +50,7 @@ classifiers = [
 urls = {"Code repo"="https://github.com/dynawo/dyn-grid-compliance-verification", "Bug tracker"="https://github.com/dynawo/dyn-grid-compliance-verification"}
 
 # Required packages: here we declare only the direct dependencies. To see all the cascading
-# dependencies, pip-install pipdeptree and run "pipdeptree -p dgcv".
+# dependencies, pip-install pipdeptree and run "pipdeptree -p dycov".
 dependencies = [
     "comtrade>=0.0.10",		# MIT License
     "fpdf>=1.7.2",		# GNU Lesser General Public License v3 (LGPLv3)
@@ -68,11 +68,11 @@ dependencies = [
 # Data files: we now manage them here, instead of the MANIFEST.in file.
 # See: https://setuptools.pypa.io/en/latest/userguide/datafiles.html
 # The former content of the MANIFEST.in file was:
-#   recursive-include src/dgcv/report/templates *
-#   recursive-include src/dgcv/templates *
-#   recursive-include src/dgcv/model_lib *
-#   recursive-include src/dgcv *.ini
-#   include src/dgcv/dynawo/Vsx64.cmd
+#   recursive-include src/dycov/report/templates *
+#   recursive-include src/dycov/templates *
+#   recursive-include src/dycov/model_lib *
+#   recursive-include src/dycov *.ini
+#   include src/dycov/dynawo/Vsx64.cmd
 #
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -83,7 +83,7 @@ dcgv = ["report/templates", "templates", "model_lib", "*.ini", "dynawo/Vsx64.cmd
 
 # Entry points and automatic script creation:
 [project.scripts]
-dgcv = "dgcv.launchers:dgcv"
+dycov = "dycov.launchers:dycov"
 
 
 # Importer tool

@@ -13,7 +13,7 @@ import sys
 
 import pandas as pd
 
-from dgcv.logging.logging import dgcv_logging
+from dycov.logging.logging import dycov_logging
 
 # Set args
 
@@ -69,8 +69,8 @@ def main():
         mean_val_max = mean_val + abs(THRESH * mean_val)
         mean_val_min = mean_val - abs(THRESH * mean_val)
 
-    dgcv_logging.get_logger("Attic").info("Min threshold value = " + str(mean_val_min))
-    dgcv_logging.get_logger("Attic").info("Max threshold value = " + str(mean_val_max))
+    dycov_logging.get_logger("Attic").info("Min threshold value = " + str(mean_val_min))
+    dycov_logging.get_logger("Attic").info("Max threshold value = " + str(mean_val_max))
 
     # Check all values inside the steady time
     steady_state = True
@@ -80,7 +80,7 @@ def main():
             break
 
     if steady_state:
-        dgcv_logging.get_logger("Attic").info("\nThe curve has reached steady state")
+        dycov_logging.get_logger("Attic").info("\nThe curve has reached steady state")
 
         # Get the first position of the steady state
         lst_val = list(df_curves[curve_name])
@@ -91,12 +91,12 @@ def main():
                 first_steady = pos
                 break
 
-        dgcv_logging.get_logger("Attic").info(
+        dycov_logging.get_logger("Attic").info(
             "The steady state is reached in " + str(df_curves["time"][first_steady]) + " seconds"
         )
 
     else:
-        dgcv_logging.get_logger("Attic").info("\nThe curve has NOT reached steady state")
+        dycov_logging.get_logger("Attic").info("\nThe curve has NOT reached steady state")
 
     return 0
 

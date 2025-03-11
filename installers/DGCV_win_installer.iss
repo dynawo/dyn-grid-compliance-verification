@@ -1,12 +1,12 @@
 [CustomMessages]
 #define PythonVersion "11"
 #define PythonSubVersion "6"
-#define DGCVVersion "0.7.0"
+#define DyCoVVersion "0.8.1"
 #define CMakeVersion "3.31.1"
 #define MiktexVersion "24.1"
 #define SourceDir "SOURCE DIRECTORY"
 ; SourceDir directory should contain the following items:
-;   * dgcv_repo: tool directory (https://github.com/dynawo/dyn-grid-compliance-verification)
+;   * dycov_repo: tool directory (https://github.com/dynawo/dyn-grid-compliance-verification)
 ;   * manual: compiled user manual of the tool (PDF & HTML)
 ;   * dynawo: Directory with the installation for Windows systems of Dynawo (https://github.com/dynawo/dynawo/releases)
 ;       After installing Dynawo applies the following corrections:
@@ -16,23 +16,20 @@
 ;			endif()
 
 [Setup]
-AppName=Dynamic Grid Compliance Verification
-AppVersion={#DGCVVersion}
-DefaultDirName={sd}\DGCV
-OutputBaseFilename=DGCV_win_Installer
+AppName=Dynamic grid Compliance Verification
+AppVersion={#DyCoVVersion}
+DefaultDirName={sd}\DyCoV
+OutputBaseFilename=DyCoV_win_Installer
 Compression=lzma
 SolidCompression=yes
 AlwaysRestart=yes
+SetupLogging=yes
 
 [Files]
 ; Add project files
-Source: "{#SourceDir}\dgcv_repo\*"; Excludes: ".git"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Add examples files
-Source: "{#SourceDir}\dgcv_repo\examples\*"; Excludes: ".git"; DestDir: "{app}\examples\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dycov_repo\*"; Excludes: ".git,attic,docker,docs,examples,installers,tests,tools"; DestDir: "{tmp}\dyn-grid-compliance-verification\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Add Manuals in the root directory
-Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Add Dynawo files in the root directory
-Source: "{#SourceDir}\dynawo\*"; DestDir: "{app}\dynawo\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\manual\*"; DestDir: "{app}\manual\"; Permissions: users-readexec; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
 ; Install Python if not found
@@ -47,24 +44,30 @@ StatusMsg: "Installing CMake..."; Filename: "msiexec"; Parameters: "/i {tmp}\cma
 ; Install VS2019 if not found
 StatusMsg: "Installing Visual Studio 2019..."; Filename: "{tmp}\vs_BuildTools.exe"; Parameters: "--wait --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.VC.ASAN --add Microsoft.VisualStudio.Component.VC.CMake.Project --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041"; Check: not IsVSInstalled
 
+; Install Dynawo 
+StatusMsg: "Installing Dynawo..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\Dynawo_omc_v1.8.0_win.tgz -C {app}"; Flags: runhidden;
+
+; Install the project examples
+StatusMsg: "Installing the project examples..."; Filename: "tar.exe"; Parameters: "xzvf {tmp}\examples.tgz -C {app}"; Flags: runhidden;
+
 ; Create a virtual environment
-StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dgcv_venv"; WorkingDir: "{app}"; Flags: runhidden
+StatusMsg: "Creating virtual environment..."; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dycov_venv"; WorkingDir: "{app}"; Flags: runhidden
 
 ; Install build module for Python
-StatusMsg: "Installing Python build module..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
+StatusMsg: "Installing Python build module..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
 
 ; Compile the project using build
-StatusMsg: "Compiling the project..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
+StatusMsg: "Compiling the project..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
 
 ; Install the built package in the virtual environment
-StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dgcv_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dgcv-{#DGCVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
+StatusMsg: "Installing project package in virtual environment..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
-Type: files; Name: "{userdesktop}\DGCV.bat"
+Type: files; Name: "{commondesktop}\DyCoV.bat"
 
 [Registry]
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app};{app}\dynawo"; Check: NeedsAddPath(ExpandConstant('{app}'))
 
 [Code]
 const
@@ -152,10 +155,12 @@ var
   fileName : string;
   lines : TArrayOfString;
 begin
-  fileName := ExpandConstant('{userdesktop}\DGCV.bat');
-  SetArrayLength(lines, 1);
-  lines[0] := ExpandConstant('start cmd /k "{app}\dgcv_venv\Scripts\activate && cd /d {app}"');
-  Result := SaveStringsToFile(filename,lines,true);
+  fileName := ExpandConstant('{commondesktop}\DyCoV.bat');
+  if not FileExists(fileName) then begin
+    SetArrayLength(lines, 1);
+    lines[0] := ExpandConstant('start cmd /k "{app}\dycov_venv\Scripts\activate && cd /d {app}"');
+    Result := SaveStringsToFile(filename,lines,true);
+  end;
 end;
 
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
@@ -170,6 +175,8 @@ begin
   if CurPageID = wpReady then begin
     DownloadPage.Clear;
     // Use AddEx to specify a username and password
+    DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/examples.tgz', 'examples.tgz', '');
+    DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/Dynawo_omc_v1.8.0_win.tgz', 'Dynawo_omc_v1.8.0_win.tgz', '');
     if not IsCMakeInstalled then 
       DownloadPage.Add('https://github.com/Kitware/CMake/releases/download/v{#CMakeVersion}/cmake-{#CMakeVersion}-windows-x86_64.msi', 'cmake-{#CMakeVersion}-windows-x86_64.msi', '');
     if not IsMikTeXInstalled then 
@@ -195,6 +202,22 @@ begin
     end;
   end else
     Result := True;
+end;
+
+function NeedsAddPath(Param: string): boolean;
+var
+  OrigPath: string;
+begin
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path', OrigPath)
+  then begin
+    Result := True;
+    exit;
+  end;
+  { look for the path with leading and trailing semicolon }
+  { Pos() returns 0 if not found }
+  Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
 end;
 
 procedure InitializeWizard;

@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# run_dgcv_docker.sh: A simple wrapper script to launch the Docker
-# container for the Dynamic Grid Compliance Verification tool. It facilitates the
+# run_dycov_docker.sh: A simple wrapper script to launch the Docker
+# container for the Dynamic grid Compliance Verification tool. It facilitates the
 # mapping of the working directory and the user/group to use inside
 # the container.
 # 
 # Example for running it as your current user under your directory "mywork":
 #
-#    $ ./run_dgcv_docker.sh $HOME/mywork
+#    $ ./run_dycov_docker.sh $HOME/mywork
 #
 # and then $HOME/mywork will be mapped to just $HOME/ when inside the
 # container; the resulting files will be owned by your user UID and
@@ -26,7 +26,7 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail 
 
 # Config vars
-DOCKER_IMAGE="dgcv:latest"
+DOCKER_IMAGE="dycov:latest"
 
 
 # Nothing else to configure below this point
@@ -138,20 +138,20 @@ fi
 #######################################
 
 # Whoever launches the container, he needs rw permissions on WORK_DIR
-MAPPED_DIR=$WORK_DIR/dgcv_docker
+MAPPED_DIR=$WORK_DIR/dycov_docker
 mkdir -p "$MAPPED_DIR"
-DGCV_UID=$(id -u "$user")
-DGCV_GID=$(getent group "$group" | cut -d: -f3)
-DGCV_USER=$(id -un "$user")  # because $user may be numeric
-DGCV_GROUP=$(getent group "$group" | cut -d: -f1)  # because $group may be numeric
-chown "$DGCV_UID":"$DGCV_GID" "$MAPPED_DIR"
+dycov_UID=$(id -u "$user")
+dycov_GID=$(getent group "$group" | cut -d: -f3)
+dycov_USER=$(id -un "$user")  # because $user may be numeric
+dycov_GROUP=$(getent group "$group" | cut -d: -f1)  # because $group may be numeric
+chown "$dycov_UID":"$dycov_GID" "$MAPPED_DIR"
 
 colormsg "\nLaunching container."
 colormsg "   Files will be generated under: $MAPPED_DIR"
-colormsg "   Files will be owned by $DGCV_UID:$DGCV_GID\n\n"
+colormsg "   Files will be owned by $dycov_UID:$dycov_GID\n\n"
 exec docker run --rm -it \
-     -v "$MAPPED_DIR":/home/"$DGCV_USER" \
-     -e DGCV_USER="$DGCV_USER" -e DGCV_GROUP="$DGCV_GROUP" -e DGCV_UID="$DGCV_UID" -e DGCV_GID="$DGCV_GID" \
-     --entrypoint /start_dgcv.sh \
-     --name dgcv --hostname dgcv "$DOCKER_IMAGE"
+     -v "$MAPPED_DIR":/home/"$dycov_USER" \
+     -e dycov_USER="$dycov_USER" -e dycov_GROUP="$dycov_GROUP" -e dycov_UID="$dycov_UID" -e dycov_GID="$dycov_GID" \
+     --entrypoint /start_dycov.sh \
+     --name dycov --hostname dycov "$DOCKER_IMAGE"
 

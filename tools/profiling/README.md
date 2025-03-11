@@ -16,7 +16,7 @@ For this test, the **model_validation** command is executed using the model and 
 reference curves available in *examples/Model/Wind/WECC/* as inputs.
 
 ```
-py-spy record -o profile.svg -- dgcv validate examples/Model/Wind/WECC/ReferenceCurves -m examples/Model/Wind/WECC/Dynawo -o ../Results/Model/WindWECC
+py-spy record -o profile.svg -- dycov validate examples/Model/Wind/WECC/ReferenceCurves -m examples/Model/Wind/WECC/Dynawo -o ../Results/Model/WindWECC
 ```
 
 ## Results

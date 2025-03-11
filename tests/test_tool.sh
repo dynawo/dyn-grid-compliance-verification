@@ -15,6 +15,39 @@ color_msg()
 }
 
 launch_test() {
+   launch_start=$(date +%s)
+   declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
+   declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
+   declare -a bess_models=("WECC")
+
+   # Model validation
+   for bess_model in "${bess_models[@]}"
+   do
+      start=$(date +%s)
+      color_msg "dycov validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model"
+      dycov validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model --testing
+      end=$(date +%s)
+      color_msg "Validate: $bess_model Elapsed Time: $(($end-$start)) seconds"
+   done
+
+   for photo_model in "${photo_models[@]}"
+   do
+      start=$(date +%s)
+      color_msg "dycov validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model"
+      dycov validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model --testing
+      end=$(date +%s)
+      color_msg "Validate: $photo_model Elapsed Time: $(($end-$start)) seconds"
+   done
+
+   for wind_model in "${wind_models[@]}"
+   do
+      start=$(date +%s)
+      color_msg "dycov validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model"
+      dycov validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model --testing
+      end=$(date +%s)
+      color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
+   done
+
    declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a" "IECB2015" "IECB2020" "WECCB")
    declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
 
@@ -24,45 +57,15 @@ launch_test() {
       for model in "${models[@]}"
       do
          start=$(date +%s)
-         color_msg "dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model"
-         dgcv performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model --testing
+         color_msg "dycov performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model"
+         dycov performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model --testing
          end=$(date +%s)
          color_msg "Verificate: $topology - $model Elapsed Time: $(($end-$start)) seconds"
       done
    done
 
-   declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
-   declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
-   declare -a bess_models=("WECC")
-
-   # Model validation
-   for bess_model in "${bess_models[@]}"
-   do
-      start=$(date +%s)
-      color_msg "dgcv validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model"
-      dgcv validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model --testing
-      end=$(date +%s)
-      color_msg "Validate: $bess_model Elapsed Time: $(($end-$start)) seconds"
-   done
-
-   for photo_model in "${photo_models[@]}"
-   do
-      start=$(date +%s)
-      color_msg "dgcv validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model"
-      dgcv validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model --testing
-      end=$(date +%s)
-      color_msg "Validate: $photo_model Elapsed Time: $(($end-$start)) seconds"
-   done
-
-   for wind_model in "${wind_models[@]}"
-   do
-      start=$(date +%s)
-      color_msg "dgcv validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model"
-      dgcv validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model --testing
-      end=$(date +%s)
-      color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
-   done
-
+   launch_end=$(date +%s)
+   color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
 }
 
 launcher="dynawo.sh"
