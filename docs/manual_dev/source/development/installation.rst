@@ -1,13 +1,13 @@
 ===============================================
-Installing Dynamic Grid Compliance Verification
+Installing Dynamic grid Compliance Verification
 ===============================================
 
 Overview
 --------
 
-Dynamic Grid Compliance Verification is written in `Python`__ and supports **Python
+Dynamic grid Compliance Verification is written in `Python`__ and supports **Python
 3.9+**. It builds upon the shoulders of many third-party libraries such as `lxml`__ and
-`Jinja`__, which are installed when Dynamic Grid Compliance Verification is installed
+`Jinja`__, which are installed when Dynamic grid Compliance Verification is installed
 
 __ https://docs.python-guide.org/
 __ https://lxml.de/
@@ -102,29 +102,29 @@ Linux
 
     .. code-block:: console
 
-       git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+       git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
        
-   (You may of course use any name for the top-level directory, here "dgcv_repo")
+   (You may of course use any name for the top-level directory, here "dycov_repo")
    
-#. Get into the repository and run the shell script named build_and_install.sh. This builds the Python package, creates a Python virtual environment under the subdirectory dgcv_venv, and installs the package into it (together with all the necessary library dependencies, such as NumPy, etc.).
+#. Get into the repository and run the shell script named build_and_install.sh. This builds the Python package, creates a Python virtual environment under the subdirectory dycov_venv, and installs the package into it (together with all the necessary library dependencies, such as NumPy, etc.).
 
 #. Next, you must activate the virtual environment that has just been created:
 
     .. code-block:: console
     
-    	source dgcv_venv/bin/activate
+    	source dycov_venv/bin/activate
 
-#. The tool is used via a single command dgcv having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
+#. The tool is used via a single command dycov having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
 
     .. code-block:: console
 
-       dgcv -h
+       dycov -h
 
 #. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
 
     .. code-block:: console
 
-	   dgcv compile
+	   dycov compile
  
 .. note::
     The tool has a sanity check implemented to verify that all system requirements
@@ -141,9 +141,9 @@ Windows
          
    .. code-block:: console
 
-     git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+     git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
      
-   (You may of course use any name for the top-level directory, here "dgcv_repo")
+   (You may of course use any name for the top-level directory, here "dycov_repo")
 
    - Choose a local directory where you want to save the repository and click **Clone**.
 
@@ -154,15 +154,15 @@ Windows
          
    .. code-block:: console
 
-     cd dgcv_repo
+     cd dycov_repo
 
    - Create a new virtual environment with:
          
    .. code-block:: console
 
-     python.exe -m venv dgcv_venv
+     python.exe -m venv dycov_venv
      
-   - This will create a directory `dgcv_venv` in your repository folder.
+   - This will create a directory `dycov_venv` in your repository folder.
    
 #. Build the Package
    The next step is to compile the package into a distributable format:
@@ -178,16 +178,16 @@ Windows
        
    .. code-block:: console
 
-   	dgcv_venv\Scripts\activate
+   	dycov_venv\Scripts\activate
    
-   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dgcv_venv)` at the beginning of the prompt).
+   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dycov_venv)` at the beginning of the prompt).
 
 #. Install the Package
    Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
        
    .. code-block:: console
 
-   	python.exe -m pip install dist\dgcv....whl
+   	python.exe -m pip install dist\dycov....whl
    
    - This will install the package into your active virtual environment.
 
@@ -196,7 +196,7 @@ Windows
        
    .. code-block:: console
 
-   	dgcv -h
+   	dycov -h
    
    - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
 
@@ -205,7 +205,7 @@ Windows
        
    .. code-block:: console
 
-   	dgcv compile
+   	dycov compile
    
    - This step ensures that all necessary files are generated and compiled for optimal performance.
 
@@ -215,7 +215,7 @@ Your installation is now complete, and you can start using the `dyn-grid-complia
     
    .. code-block:: console
 
-	dgcv -h
+	dycov -h
 
 
 ---

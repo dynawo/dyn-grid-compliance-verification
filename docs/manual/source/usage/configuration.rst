@@ -2,12 +2,12 @@
 Configuration
 =============
 
-Dynamic Grid Compliance Verification is configured via a `config.ini` file, written in the well-known INI
+Dynamic grid Compliance Verification is configured via a `config.ini` file, written in the well-known INI
 format (of the `Python flavor`__). The location of this file follows the customary standard of
 each platform for application data:
 
-* Under Linux: ``$HOME/.config/dgcv/``
-* Under Windows: ``%APPDATA%\Local\dgcv\``
+* Under Linux: ``$HOME/.config/dycov/``
+* Under Windows: ``%APPDATA%\Local\dycov\``
 
 Besides the ``config.ini`` file, there is a subfolder named ``ddb``, which will contain all compiled
 preassembled Modelica models defined by the user.
@@ -34,7 +34,7 @@ organized into sections, where each section has its own configuration options.
 PCS Structure
 ---------------
 
-Dynamic Grid Compliance Verification is structured as a series of independent tests, these tests correspond to
+Dynamic grid Compliance Verification is structured as a series of independent tests, these tests correspond to
 the *PCS I** in the RTE's DTR document.
 
 Each DTR document *PCS* has been implemented using the following terminology:

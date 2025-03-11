@@ -21,7 +21,7 @@ Developed by Grupo AIA
 
 ## Overview
 
-Dynamic Grid Compliance Verification is developed in `Python` and requires 
+Dynamic grid Compliance Verification is developed in `Python` and requires 
 **Python 3.9+**. It relies on several third-party libraries which will be 
 automatically installed along with the tool when using the `build_and_install.sh` 
 script. However there are some required packages that should be installed manually.
@@ -94,35 +94,35 @@ with its dependencies, will be placed in a *Python virtual environment* inside y
 1. Run the following command:
 
    ```bash
-   curl https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.7.0/linux_install.sh | bash
+   curl https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/linux_install.sh | bash
    ```
 
    This will download the lastest version of the Python package,
-   create a Python virtual environment under the subdirectory `dgcv_venv`, and
+   create a Python virtual environment under the subdirectory `dycov_venv`, and
    install the package into it (together with all the necessary library 
    dependencies, such as NumPy, etc.).
 
 2. Next, you must activate the virtual environment that has just been created: 
    ```bash
-   source dgcv_venv/bin/activate
+   source dycov_venv/bin/activate
    ```
 
-3. The tool is used via a single command `dgcv` having several subcommands. Quickly
+3. The tool is used via a single command `dycov` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
    you all available subcommands:
    ```bash
-   dgcv -h
+   dycov -h
    ```
 
 4. Upon the first use, the tool will automatically compile the Modelica models
    internally defined by the tool. You can also run this command explicitly, as follows:
    ```bash
-   dgcv compile
+   dycov compile
    ```
    (Note: this command is also used to compile any new Modelica models custom-defined by the
    user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
    
-The dgcv application is now ready to use.
+The DyCoV application is now ready to use.
 
 
 ## Build and install (for developers)
@@ -130,19 +130,19 @@ The dgcv application is now ready to use.
 * **Clone the repository**:
 
     ```bash
-    git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
     ```
 
-    You can rename the top-level directory to something other than `"dgcv_repo"` if you wish.
+    You can rename the top-level directory to something other than `"dycov_repo"` if you wish.
 
 * **Navigate to the repository** and run the `build_and_install.sh` script. This will 
-  build the Python package, create a virtual environment inside the `dgcv_venv` 
+  build the Python package, create a virtual environment inside the `dycov_venv` 
   subdirectory, and install the tool along with all required dependencies.
 
 * **Activate the virtual environment**:
 
     ```bash
-    source dgcv_venv/bin/activate
+    source dycov_venv/bin/activate
     ```
 
     **Note:** The tool includes a built-in sanity check to ensure that all necessary system 
@@ -151,7 +151,7 @@ The dgcv application is now ready to use.
 
 * **First run**:
 The first time the tool is run from a clean state, a configuration folder will be created
-in $HOME/.config/dgcv, and the models will be compiled with Open Modelica. This process
+in $HOME/.config/dycov, and the models will be compiled with Open Modelica. This process
 may take several minutes and will only need to be repeated if the Dynawo version is updated.
 
 [Dynawo Official Page](https://dynawo.github.io/)

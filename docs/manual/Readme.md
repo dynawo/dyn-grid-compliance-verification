@@ -10,9 +10,9 @@ and run `make latexpdf && make html`. The next section describes the process ste
 
 1. Clone the repository via: 
    ```bash
-   git clone https://github.com/dynawo/dyn-grid-compliance-verification dgcv_repo
+   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    ```
-   (you may of course use any name for the top-level directory, here `"dgcv_repo"`.)
+   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
 
 2. Get into the repository and run the shell script named `build_and_install.sh` in developer
    mode:
@@ -20,13 +20,13 @@ and run `make latexpdf && make html`. The next section describes the process ste
     ./build_and_install.sh -d
     ```
    This builds the Python package, creates a Python virtual environment under the
-   subdirectory `dgcv_venv`, and installs the package into it (together with all the
+   subdirectory `dycov_venv`, and installs the package into it (together with all the
    necessary library dependencies, such as NumPy, etc., *and* the developer library
    dependencies, such as Sphinx, etc.).
 
 3. Next, you must activate the virtual environment that has just been created: 
    ```bash
-   source dgcv_venv/bin/activate
+   source dycov_venv/bin/activate
    ```
 
 4. Next, get into the manual directory (`docs/manual`) and run:
@@ -35,7 +35,7 @@ and run `make latexpdf && make html`. The next section describes the process ste
 
 
 Sphinx creates a subdirectory `build`, in which we will find the HTML version of the manual
-in the `build/html/` directory and the PDF version (`dgcv.pdf`) in the `build/latex/`
+in the `build/html/` directory and the PDF version (`dycov.pdf`) in the `build/latex/`
 directory.
    ```bash
    build

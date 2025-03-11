@@ -9,7 +9,7 @@ and you simply have to check a new PCS.
         its configuration, and if necessary, the TableInfiniteBus.txt file.
 
     2. If the external model is not modelled in the tool. Create a new directory in 
-        ~/.config/dgcv/user_models called with a name that minimally describes the model. It must 
+        ~/.config/dycov/user_models called with a name that minimally describes the model. It must 
         contain the necessary files to specify the part of the external network (not the 
         producer's part). At a minimum, it should contain .dyd and .par files.
 
@@ -19,17 +19,17 @@ and you simply have to check a new PCS.
 
 ---
 **Note1:** 
-  * ~/.config/dgcv/templates/PCS/model for Model Validation PCS 
-  * ~/.config/dgcv/templates/PCS/performance_PPM for Electric performance 
+  * ~/.config/dycov/templates/PCS/model for Model Validation PCS 
+  * ~/.config/dycov/templates/PCS/performance_PPM for Electric performance 
     verification (for Power Park Modules) 
-  * ~/.config/dgcv/templates/PCS/performance_SM for Electric performance 
+  * ~/.config/dycov/templates/PCS/performance_SM for Electric performance 
     verification (for Synchronous Machines) 
 
 **Note2:** 
-  * ~/.config/dgcv/templates/reports/model for Model Validation PCS 
-  * ~/.config/dgcv/templates/reports/performance_PPM for Electric performance 
+  * ~/.config/dycov/templates/reports/model for Model Validation PCS 
+  * ~/.config/dycov/templates/reports/performance_PPM for Electric performance 
     verification (for Power Park Modules) 
-  * ~/.config/dgcv/templates/reports/performance_SM for Electric performance 
+  * ~/.config/dycov/templates/reports/performance_SM for Electric performance 
     verification (for Synchronous Machines) 
 ---
 
@@ -42,26 +42,26 @@ and you simply have to check a new PCS.
         [Performance-Validations] section if it is a performance test, or in the 
         [Model-Validations] section if it is a model test.
     
-    3. In the src/dgcv/model/benchmark.py file, the new test must be inserted in the 
+    3. In the src/dycov/model/benchmark.py file, the new test must be inserted in the 
         __initialize_validation_by_benchmark function, reading the list of PCSs that are going to 
         execute it and adding it to validation_lists (look at some example of the same function).
     
     4. In the appropriate script for the type of test (performance.py, model.py or common.py), in 
-        the directory src/dgcv/validation/, a new condition must be added to execute the test, as 
+        the directory src/dycov/validation/, a new condition must be added to execute the test, as 
         it is done in the other tests that are already defined, and in the same script a new 
         function must be defined to execute the python test. Once this is done, the result should 
         be added to the results dictionary as desired.
     
-    5. Finally, in the _pcs_replace function of the src/dgcv/report/report.py file, a new 
+    5. Finally, in the _pcs_replace function of the src/dycov/report/report.py file, a new 
         line must be added with the name of the placeholder that you have chosen to show in the 
         final report.
     
 ---
 **Note3:** 
-  * ~/src/dgcv/templates/PCS/model for Model Validation PCS 
-  * ~/src/dgcv/templates/PCS/performance_PPM for Electric performance 
+  * ~/src/dycov/templates/PCS/model for Model Validation PCS 
+  * ~/src/dycov/templates/PCS/performance_PPM for Electric performance 
     verification (for Power Park Modules) 
-  * ~/src/dgcv/templates/PCS/performance_SM for Electric performance 
+  * ~/src/dycov/templates/PCS/performance_SM for Electric performance 
     verification (for Synchronous Machines) 
 ---
 

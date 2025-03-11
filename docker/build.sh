@@ -53,9 +53,9 @@ ZIP="Dynawo_omc_V1.6.0.zip"
 
 # Launch the build
 rm -f build.log
-docker build -t dgcv:latest -t dgcv:"$TAG" \
-             --build-arg DGCV_PKG="$PKG" \
-             --build-arg DGCV_EXAMPLES="$EXAMPLES" \
+docker build -t dycov:latest -t dycov:"$TAG" \
+             --build-arg dycov_PKG="$PKG" \
+             --build-arg dycov_EXAMPLES="$EXAMPLES" \
              --build-arg DWO_ZIP="$ZIP" \
              .
 
