@@ -21,6 +21,8 @@ from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
+VOLTAGE_DIP_THRESHOLD = 1e-6
+
 
 def _compile_model_name(models_path: Path, model_name: str):
     model_tree = etree.parse(models_path / model_name, etree.XMLParser(remove_blank_text=True))
@@ -666,7 +668,7 @@ def check_voltage_dip(
     curves: pd.DataFrame,
     fault_start: float,
     fault_duration: float,
-    dip: float,
+    expected_dip: float,
 ) -> int:
     """Check if desired voltage drop has ocurred.
 
@@ -678,7 +680,7 @@ def check_voltage_dip(
         Fault start time in seconds
     fault_duration: float
         Fault duration in seconds
-    dip: float
+    expected_dip: float
         Required voltage drop
 
     Returns
@@ -691,9 +693,9 @@ def check_voltage_dip(
     bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
 
     dycov_logging.get_logger("Dynawo").debug(
-        f"Checking voltage dip: {bus_pdr_voltage} for {dip} V"
+        f"Checking voltage dip: {bus_pdr_voltage} for {expected_dip} V"
     )
-    if dip == 0.0:
+    if expected_dip == 0.0:
         return 0
 
     time_values = list(curves["time"])
@@ -719,11 +721,13 @@ def check_voltage_dip(
 
     dycov_logging.get_logger("Dynawo").debug(
         f"Voltage dip: {pre_voltage_values[pre_pos] - post_voltage_values[post_pos]} "
-        f"Expected dip: {dip}"
+        f"Expected dip: {expected_dip}"
     )
-    if pre_voltage_values[pre_pos] - post_voltage_values[post_pos] > dip:
+    voltage_dip = pre_voltage_values[pre_pos] - post_voltage_values[post_pos]
+
+    if expected_dip - voltage_dip < -VOLTAGE_DIP_THRESHOLD:
         return 1
-    elif pre_voltage_values[pre_pos] - post_voltage_values[post_pos] < dip:
+    elif expected_dip - voltage_dip > VOLTAGE_DIP_THRESHOLD:
         return -1
     else:
         return 0
