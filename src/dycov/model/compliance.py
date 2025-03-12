@@ -10,6 +10,8 @@ class Compliance(Enum):
     WithoutCurves = 6
     WithoutReferenceCurves = 7
     WithoutProducerCurves = 8
+    FaultSimulationFails = 9
+    FaultDipUnachievable = 10
 
     def to_str(self) -> str:
         if self == Compliance.Compliant:
@@ -28,3 +30,7 @@ class Compliance(Enum):
             return "Test without reference curves"
         elif self == Compliance.WithoutProducerCurves:
             return "Test without producer curves"
+        elif self == Compliance.FaultSimulationFails:
+            return "Fault simulation fails"
+        elif self == Compliance.FaultDipUnachievable:
+            return "Fault dip unachievable"
