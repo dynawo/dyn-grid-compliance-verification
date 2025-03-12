@@ -780,6 +780,12 @@ class DynawoCurves(ProducerCurves):
             ) = self.__execute_dynawo(output_dir, working_oc_dir_fault, jobs_output_dir)
 
             # Restore the solver to the default values
+            # It is necessary to restore the parameters because only
+            # the current iteration has the possible changes made, the
+            # original file still has the starting parameters.Additionally,
+            # to copy the parameters back to the original file, you need
+            # to modify the backup mode so that it can take into account
+            # changes already applied in previous iterations.
             self.__reset_solver()
 
             # returned values:
