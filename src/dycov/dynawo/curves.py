@@ -553,9 +553,9 @@ class DynawoCurves(ProducerCurves):
         )
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
+            dycov_logging.get_logger("ProducerCurves").warning(log)
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         # Check if there is a curves file
         has_dynawo_curves = False
@@ -608,12 +608,14 @@ class DynawoCurves(ProducerCurves):
         )
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning("Retry by modifying the minimum time step")
+            dycov_logging.get_logger("ProducerCurves").warning(
+                "Retry by modifying the minimum time step"
+            )
 
             # Modifying the minimum time step
             self._minimum_time_step /= 10.0
             self._minimal_acceptable_step /= 10.0
-            dycov_logging.get_logger("Dynawo").debug(
+            dycov_logging.get_logger("ProducerCurves").debug(
                 f"New minimum time step: {self._minimum_time_step}"
             )
             if self._solver_id == "IDA":
@@ -646,15 +648,19 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning("Retry by modifying the required accuracy")
+            dycov_logging.get_logger("ProducerCurves").warning(
+                "Retry by modifying the required accuracy"
+            )
 
             # Modifying the required accuracy
             self._relAccuracy *= 10.0
             self._absAccuracy *= 10.0
-            dycov_logging.get_logger("Dynawo").debug(f"New required accuracy: {self._absAccuracy}")
+            dycov_logging.get_logger("ProducerCurves").debug(
+                f"New required accuracy: {self._absAccuracy}"
+            )
             if self._solver_id == "IDA":
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
@@ -686,12 +692,12 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         if not success:
             if show_output_log:
-                dycov_logging.get_logger("Dynawo").warning(log)
-            dycov_logging.get_logger("Dynawo").warning("Retry by changing the solver type")
+                dycov_logging.get_logger("ProducerCurves").warning(log)
+            dycov_logging.get_logger("ProducerCurves").warning("Retry by changing the solver type")
 
             # Changing the solver type
             if self._solver_id == "SIM":
@@ -713,7 +719,7 @@ class DynawoCurves(ProducerCurves):
                     "Dynawo", "sim_minimalAcceptableStep", 1e-6
                 )
                 self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
-            dycov_logging.get_logger("Dynawo").debug(f"Selected solver: {self._solver_id}")
+            dycov_logging.get_logger("ProducerCurves").debug(f"Selected solver: {self._solver_id}")
             replace_placeholders.modify_jobs_file(
                 working_oc_dir,
                 "TSOModel.jobs",
@@ -730,7 +736,7 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         return success, log, curves_calculated
 
