@@ -46,6 +46,9 @@ from dycov.model.parameters import (
 )
 from dycov.validation import common, sanity_checks
 
+MINIMAL_HIZ_FAULT = 1e-10
+NDIGITS_HIZ_FAULT = 10
+
 
 class DynawoCurves(ProducerCurves):
     def __init__(
@@ -719,12 +722,13 @@ class DynawoCurves(ProducerCurves):
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
 
         max_val = 1
-        min_val = 0.000001
+        min_val = MINIMAL_HIZ_FAULT
         incomplete_bisection = True
-        last_fault_xpu = 0
+        last_fault_xpu = MINIMAL_HIZ_FAULT
         working_oc_dirs_to_remove = []
+        bisection_success = False
         while incomplete_bisection:
-            fault_xpu = round(((max_val + min_val) / 2), 4)
+            fault_xpu = round(((max_val + min_val) / 2), NDIGITS_HIZ_FAULT)
 
             now = datetime.now()
             working_oc_dir_fault = manage_files.clone_as_subdirectory(
@@ -735,6 +739,10 @@ class DynawoCurves(ProducerCurves):
                 fault_rpu = 0
             else:
                 fault_rpu = fault_xpu / fault_r_factor
+            dycov_logging.get_logger("ProducerCurves").debug(
+                f"Bisecction between {max_val} and {min_val}"
+            )
+            dycov_logging.get_logger("ProducerCurves").debug(f"Fault XPU in {fault_xpu}")
             self.__modify_fault(
                 working_oc_dir_fault,
                 fault_start,
@@ -757,35 +765,50 @@ class DynawoCurves(ProducerCurves):
             #  *  1 if the required dip is greater than that obtained
             #  * -1 if the required dip is less than that obtained
             #  *  0 otherwise
-            voltage_dip = dynawo.check_voltage_dip(
-                success,
-                curves_calculated,
-                fault_start,
-                fault_duration,
-                abs(dip),
-            )
-
             if success:
+                bisection_success = True
                 last_fault_xpu = fault_xpu
+                voltage_dip = dynawo.check_voltage_dip(
+                    curves_calculated,
+                    fault_start,
+                    fault_duration,
+                    abs(dip),
+                )
 
-            if dycov_logging.getEffectiveLevel() != logging.DEBUG:
-                working_oc_dirs_to_remove.append(working_oc_dir_fault)
-            else:
-                if success:
-                    manage_files.rename_dir(
-                        working_oc_dir_fault, working_oc_dir / "bisection_last_success"
-                    )
+                if dycov_logging.getEffectiveLevel() != logging.DEBUG:
+                    working_oc_dirs_to_remove.append(working_oc_dir_fault)
                 else:
-                    manage_files.rename_dir(
-                        working_oc_dir_fault, working_oc_dir / "bisection_last_failure"
-                    )
+                    if success:
+                        manage_files.rename_dir(
+                            working_oc_dir_fault, working_oc_dir / "bisection_last_success"
+                        )
+                    else:
+                        manage_files.rename_dir(
+                            working_oc_dir_fault, working_oc_dir / "bisection_last_failure"
+                        )
 
-            if voltage_dip == 1:
-                min_val = fault_xpu
-            elif voltage_dip == -1:
-                max_val = fault_xpu
+                if voltage_dip == 1:
+                    min_val = fault_xpu
+                elif voltage_dip == -1:
+                    max_val = fault_xpu
+                else:
+                    incomplete_bisection = False
             else:
-                incomplete_bisection = False
+                dycov_logging.get_logger("ProducerCurves").debug("Simulation fails")
+                # If the simulation fails after decreasing the fault value,
+                # it is necessary to increase it.
+                # If the simulation fails after increasing the fault value,
+                # it is necessary to decrease it
+                dycov_logging.get_logger("ProducerCurves").debug(
+                    f"Last fault XPU in {last_fault_xpu} actual {fault_xpu}"
+                )
+                try:
+                    if voltage_dip == 1:
+                        max_val = fault_xpu
+                    elif voltage_dip == -1:
+                        min_val = fault_xpu
+                except UnboundLocalError:
+                    max_val = fault_xpu
 
             if self.__is_bisection_complete(max_val, min_val):
                 incomplete_bisection = False
@@ -793,6 +816,21 @@ class DynawoCurves(ProducerCurves):
         # Remove all bisection directories
         for dir_to_remove in working_oc_dirs_to_remove:
             manage_files.remove_dir(dir_to_remove)
+
+        if not bisection_success:
+            dycov_logging.get_logger("ProducerCurves").error(
+                "The simulation fails with any value for the fault"
+            )
+            raise ValueError("Fault simulation fails")
+
+        try:
+            achive_dip = voltage_dip == 0
+        except UnboundLocalError:
+            achive_dip = False
+
+        if not achive_dip:
+            dycov_logging.get_logger("ProducerCurves").error("The required dip was not achieved")
+            raise ValueError("Fault dip unachievable")
 
         # Recover the last successful fault values
         if fault_r_factor == 0.0:
@@ -915,7 +953,11 @@ class DynawoCurves(ProducerCurves):
         bool
             True if the bisection method is complete, False otherwise.
         """
-        return round(max_val - min_val, 4) <= 0.0001
+        dycov_logging.get_logger("ProducerCurves").debug(
+            "Bisection method is complete: "
+            f"{round(max_val - min_val, NDIGITS_HIZ_FAULT)} <= {MINIMAL_HIZ_FAULT}"
+        )
+        return round(max_val - min_val, NDIGITS_HIZ_FAULT) <= MINIMAL_HIZ_FAULT
 
     def get_solver(self) -> dict:
         solver_parameters = {
@@ -1087,7 +1129,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame, str]:
         """Runs Dynawo to get the simulated curves.
 
         Parameters
@@ -1117,8 +1159,11 @@ class DynawoCurves(ProducerCurves):
             True if simulation calculated curves
         DataFrame
            Simulation calculated curves
+        Str
+            Error message if simulation fails
         """
 
+        error_message = None
         self.__reset_solver()
 
         # Prepare environment to validate it,
@@ -1170,11 +1215,12 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
 
-        except ValueError:
+        except ValueError as e:
             success = False
             has_dynawo_curves = False
             event_params = dict()
             curves_calculated = pd.DataFrame()
+            error_message = str(e)
 
         self._logger.close_handlers()
 
@@ -1185,6 +1231,7 @@ class DynawoCurves(ProducerCurves):
             success,
             has_dynawo_curves,
             curves_calculated,
+            error_message,
         )
 
     def get_disconnection_model(self) -> Disconnection_Model:

@@ -453,13 +453,22 @@ def _create_curves(
     curves_dict = dict()
     curves_dict["BusPDR_BUS_Voltage"] = pdr_voltage_modulus
     curves_dict["BusPDR_BUS_ActivePower"] = pdr_active_power
+    active_power = np.array(pdr_active_power)
+    reactive_power = np.array(pdr_reactive_power)
+    voltage_modulus = np.array(pdr_voltage_modulus)
     curves_dict["BusPDR_BUS_ActiveCurrent"] = np.divide(
-        pdr_active_power, pdr_voltage_modulus
+        active_power,
+        voltage_modulus,
+        out=np.zeros_like(active_power),
+        where=(voltage_modulus != 0),
     ).tolist()
 
     curves_dict["BusPDR_BUS_ReactivePower"] = pdr_reactive_power
     curves_dict["BusPDR_BUS_ReactiveCurrent"] = np.divide(
-        pdr_reactive_power, pdr_voltage_modulus
+        reactive_power,
+        voltage_modulus,
+        out=np.zeros_like(reactive_power),
+        where=(voltage_modulus != 0.0),
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
@@ -654,7 +663,6 @@ def run_base_dynawo(
 
 
 def check_voltage_dip(
-    is_simulation_success: bool,
     curves: pd.DataFrame,
     fault_start: float,
     fault_duration: float,
@@ -664,8 +672,6 @@ def check_voltage_dip(
 
     Parameters
     ----------
-    is_simulation_success: bool
-        Simulation result, True if success, Folse otherwise
     curves: DataFrame
         Dataframe with the simulated curves
     fault_start: float
@@ -684,11 +690,11 @@ def check_voltage_dip(
     """
     bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
 
+    dycov_logging.get_logger("Dynawo").debug(
+        f"Checking voltage dip: {bus_pdr_voltage} for {dip} V"
+    )
     if dip == 0.0:
         return 0
-
-    if not is_simulation_success:
-        return -1
 
     time_values = list(curves["time"])
     voltage_values = list(curves[bus_pdr_voltage])
@@ -711,6 +717,10 @@ def check_voltage_dip(
     # gET the stable value after the failure taking into account its duration
     _, post_pos = is_stable(post_time_values, post_voltage_values, fault_duration / 10)
 
+    dycov_logging.get_logger("Dynawo").debug(
+        f"Voltage dip: {pre_voltage_values[pre_pos] - post_voltage_values[post_pos]} "
+        f"Expected dip: {dip}"
+    )
     if pre_voltage_values[pre_pos] - post_voltage_values[post_pos] > dip:
         return 1
     elif pre_voltage_values[pre_pos] - post_voltage_values[post_pos] < dip:
