@@ -613,7 +613,7 @@ class DynawoCurves(ProducerCurves):
             # Modifying the minimum time step
             self._minimum_time_step /= 10.0
             self._minimal_acceptable_step /= 10.0
-            dycov_logging.get_logger("Dynawo").warning(
+            dycov_logging.get_logger("Dynawo").debug(
                 f"New minimum time step: {self._minimum_time_step}"
             )
             if self._solver_id == "IDA":
@@ -654,6 +654,7 @@ class DynawoCurves(ProducerCurves):
             # Modifying the required accuracy
             self._relAccuracy *= 10.0
             self._absAccuracy *= 10.0
+            dycov_logging.get_logger("Dynawo").debug(f"New required accuracy: {self._absAccuracy}")
             if self._solver_id == "IDA":
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
@@ -712,6 +713,7 @@ class DynawoCurves(ProducerCurves):
                     "Dynawo", "sim_minimalAcceptableStep", 1e-6
                 )
                 self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
+            dycov_logging.get_logger("Dynawo").debug(f"Selected solver: {self._solver_id}")
             replace_placeholders.modify_jobs_file(
                 working_oc_dir,
                 "TSOModel.jobs",
