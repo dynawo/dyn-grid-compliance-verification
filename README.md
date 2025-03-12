@@ -567,9 +567,11 @@ options:
 # Workshop presentation
 Here you can watch the video of the presentation workshop held on 11/03/2025.
 Part 1: 
+
 https://github.com/user-attachments/assets/d8c0bcd8-339f-47e4-9f26-e452b2e87980
 
 Part 2:
+
 https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 
 
