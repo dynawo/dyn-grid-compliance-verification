@@ -548,15 +548,73 @@ class DynawoCurves(ProducerCurves):
             output_dir,
             working_oc_dir,
             jobs_output_dir,
+            show_output_log=True,
         )
 
         if not success:
             dycov_logging.get_logger("Dynawo").warning(log)
+        else:
+            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+
+        # Check if there is a curves file
+        has_dynawo_curves = False
+        if (working_oc_dir / jobs_output_dir / "curves/curves.csv").exists() and success:
+            has_dynawo_curves = True
+
+        return success, has_dynawo_curves, curves_calculated
+
+    def __execute_dynawo_core(
+        self,
+        output_dir: Path,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+    ) -> tuple[bool, str, pd.DataFrame]:
+        # Run Dynawo
+        success, log, has_error, curves_calculated, sim_time = dynawo.run_base_dynawo(
+            self._launcher_dwo,
+            "TSOModel",
+            self._curves_dict,
+            working_oc_dir,
+            jobs_output_dir,
+            self.get_producer().generators,
+            self.get_producer().s_nom,
+            self._s_nref,
+        )
+        if has_error:
+            log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
+            log = f"Simulation Fails, logs in {str(log_file)}"
+        if success:
+            self._sim_time = sim_time
+
+        return success, log, curves_calculated
+
+    def __execute_dynawo(
+        self,
+        output_dir: Path,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        show_output_log: bool = False,
+    ) -> tuple[bool, str, pd.DataFrame]:
+
+        (
+            success,
+            log,
+            curves_calculated,
+        ) = self.__execute_dynawo_core(
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+        )
+
+        if not success:
             dycov_logging.get_logger("Dynawo").warning("Retry by modifying the minimum time step")
 
             # Modifying the minimum time step
             self._minimum_time_step /= 10.0
             self._minimal_acceptable_step /= 10.0
+            dycov_logging.get_logger("Dynawo").warning(
+                f"New minimum time step: {self._minimum_time_step}"
+            )
             if self._solver_id == "IDA":
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
@@ -581,7 +639,7 @@ class DynawoCurves(ProducerCurves):
                 success,
                 log,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__execute_dynawo_core(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
@@ -590,7 +648,6 @@ class DynawoCurves(ProducerCurves):
             dycov_logging.get_logger("Dynawo").debug("Simulation successful")
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
             dycov_logging.get_logger("Dynawo").warning("Retry by modifying the required accuracy")
 
             # Modifying the required accuracy
@@ -621,7 +678,7 @@ class DynawoCurves(ProducerCurves):
                 success,
                 log,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__execute_dynawo_core(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
@@ -630,7 +687,8 @@ class DynawoCurves(ProducerCurves):
             dycov_logging.get_logger("Dynawo").debug("Simulation successful")
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
+            if show_output_log:
+                dycov_logging.get_logger("Dynawo").warning(log)
             dycov_logging.get_logger("Dynawo").warning("Retry by changing the solver type")
 
             # Changing the solver type
@@ -663,50 +721,13 @@ class DynawoCurves(ProducerCurves):
                 success,
                 log,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__execute_dynawo_core(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
-                show_log_file=True,
             )
         else:
             dycov_logging.get_logger("Dynawo").debug("Simulation successful")
-
-        if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
-        else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
-
-        # Check if there is a curves file
-        has_dynawo_curves = False
-        if (working_oc_dir / jobs_output_dir / "curves/curves.csv").exists() and success:
-            has_dynawo_curves = True
-
-        return success, has_dynawo_curves, curves_calculated
-
-    def __execute_dynawo(
-        self,
-        output_dir: Path,
-        working_oc_dir: Path,
-        jobs_output_dir: Path,
-        show_log_file: bool = False,
-    ) -> tuple[bool, str, pd.DataFrame]:
-        # Run Dynawo
-        success, log, has_error, curves_calculated, sim_time = dynawo.run_base_dynawo(
-            self._launcher_dwo,
-            "TSOModel",
-            self._curves_dict,
-            working_oc_dir,
-            jobs_output_dir,
-            self.get_producer().generators,
-            self.get_producer().s_nom,
-            self._s_nref,
-        )
-        if has_error and show_log_file:
-            log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
-            log = f"Simulation Fails, logs in {str(log_file)}"
-        if success:
-            self._sim_time = sim_time
 
         return success, log, curves_calculated
 
@@ -755,11 +776,10 @@ class DynawoCurves(ProducerCurves):
                 success,
                 _,
                 curves_calculated,
-            ) = self.__execute_dynawo(
-                output_dir,
-                working_oc_dir_fault,
-                jobs_output_dir,
-            )
+            ) = self.__execute_dynawo(output_dir, working_oc_dir_fault, jobs_output_dir)
+
+            # Restore the solver to the default values
+            self.__reset_solver()
 
             # returned values:
             #  *  1 if the required dip is greater than that obtained
