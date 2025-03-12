@@ -47,7 +47,8 @@ from dycov.model.parameters import (
 from dycov.validation import common, sanity_checks
 
 MINIMAL_HIZ_FAULT = 1e-10
-NDIGITS_HIZ_FAULT = 10
+BISECTION_THRESHOLD = 1e-10
+BISECTION_ROUND = 10
 
 
 class DynawoCurves(ProducerCurves):
@@ -749,7 +750,7 @@ class DynawoCurves(ProducerCurves):
         working_oc_dirs_to_remove = []
         bisection_success = False
         while incomplete_bisection:
-            fault_xpu = round(((max_val + min_val) / 2), NDIGITS_HIZ_FAULT)
+            fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
             now = datetime.now()
             working_oc_dir_fault = manage_files.clone_as_subdirectory(
@@ -761,7 +762,7 @@ class DynawoCurves(ProducerCurves):
             else:
                 fault_rpu = fault_xpu / fault_r_factor
             dycov_logging.get_logger("ProducerCurves").debug(
-                f"Bisecction between {max_val} and {min_val}"
+                f"Bisection between {max_val} and {min_val}"
             )
             dycov_logging.get_logger("ProducerCurves").debug(f"Fault XPU in {fault_xpu}")
             self.__modify_fault(
@@ -975,9 +976,9 @@ class DynawoCurves(ProducerCurves):
         """
         dycov_logging.get_logger("ProducerCurves").debug(
             "Bisection method is complete: "
-            f"{round(max_val - min_val, NDIGITS_HIZ_FAULT)} <= {MINIMAL_HIZ_FAULT}"
+            f"{round(max_val - min_val, BISECTION_ROUND)} <= {BISECTION_THRESHOLD}"
         )
-        return round(max_val - min_val, NDIGITS_HIZ_FAULT) <= MINIMAL_HIZ_FAULT
+        return round(max_val - min_val, BISECTION_ROUND) <= BISECTION_THRESHOLD
 
     def get_solver(self) -> dict:
         solver_parameters = {
@@ -1092,7 +1093,7 @@ class DynawoCurves(ProducerCurves):
 
         # The maximum duration that the fault admits without losing
         #  stability is sought by bisection
-        time = round(((max_val + min_val) / 2), 4)
+        time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
         find = False
         working_oc_dirs_to_remove = []
@@ -1129,7 +1130,7 @@ class DynawoCurves(ProducerCurves):
                         working_oc_dir_fault, working_oc_dir / "bisection_last_failure"
                     )
 
-            time = round(((max_val + min_val) / 2), 4)
+            time = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
             if self.__is_bisection_complete(max_val, min_val):
                 find = True
