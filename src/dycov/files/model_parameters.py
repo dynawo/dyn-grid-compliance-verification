@@ -111,8 +111,23 @@ def _append_generator(
     else:
         VoltageDrop = 0.0
 
+    _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
+    snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
+    s_nom = float(snom_par.get("value"))
+
     generators.append(
-        Gen_params(gen_id, lib, connectedXmfr, imax, par_id, P, Q, VoltageDrop, False)
+        Gen_params(
+            id=gen_id,
+            lib=lib,
+            connectedXmfr=connectedXmfr,
+            SNom=s_nom,
+            IMax=imax,
+            par_id=par_id,
+            P=P,
+            Q=Q,
+            VoltageDrop=VoltageDrop,
+            UseVoltageDrop=False,
+        )
     )
 
 

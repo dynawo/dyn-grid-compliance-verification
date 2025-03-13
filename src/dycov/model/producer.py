@@ -29,8 +29,7 @@ MODEL_VALIDATION = 1
 
 def _check_parameters_definition(producer_config, section):
     if (
-        not producer_config.has_option(section, "s_nom")
-        or not producer_config.has_option(section, "u_nom")
+        not producer_config.has_option(section, "u_nom")
         or not producer_config.has_option(section, "q_min")
         or not producer_config.has_option(section, "q_max")
         or not producer_config.has_option(section, "p_max")
@@ -214,7 +213,6 @@ class Producer:
         self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
         self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom"))
-        self.s_nom = float(producer_config.get(default_section, "s_nom"))
         self.topology = producer_config.get(default_section, "topology")
 
     def __init_model(self) -> None:
@@ -233,6 +231,9 @@ class Producer:
             self._s_nref,
         )
         self._connected_to_pdr = model_parameters.get_connected_to_pdr(self.get_producer_dyd())
+        self.s_nom = sum(gen.SNom for gen in self.generators)
+
+        # Check sanity of the producer network
         sanity_checks.check_topology(
             self.topology,
             self.generators,
@@ -242,7 +243,6 @@ class Producer:
             self.ppm_xfmr,
             self.intline,
         )
-
         sanity_checks.check_trafos(self.stepup_xfmrs)
         sanity_checks.check_auxiliary_load(self.aux_load)
         sanity_checks.check_trafo(self.auxload_xfmr)
