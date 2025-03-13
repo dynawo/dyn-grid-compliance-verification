@@ -841,7 +841,7 @@ class DynawoCurves(ProducerCurves):
                 except UnboundLocalError:
                     max_val = fault_xpu
 
-            if self.__is_bisection_complete(max_val, min_val):
+            if self.__is_bisection_complete(max_val, min_val, BISECTION_THRESHOLD):
                 incomplete_bisection = False
 
         # Remove all bisection directories
@@ -969,7 +969,7 @@ class DynawoCurves(ProducerCurves):
 
         return steady_state
 
-    def __is_bisection_complete(self, max_val: float, min_val: float) -> bool:
+    def __is_bisection_complete(self, max_val: float, min_val: float, threshold: float) -> bool:
         """Check if the bisection method is complete.
 
         Parameters
@@ -978,6 +978,8 @@ class DynawoCurves(ProducerCurves):
             Maximum value in the bisection method.
         min_val: float
             Minimum value in the bisection method.
+        threshold: float
+            Threshold to consider the bisection method as complete.
 
         Returns
         -------
@@ -986,9 +988,9 @@ class DynawoCurves(ProducerCurves):
         """
         dycov_logging.get_logger("ProducerCurves").debug(
             "Bisection method is complete: "
-            f"{round(max_val - min_val, BISECTION_ROUND)} <= {BISECTION_THRESHOLD}"
+            f"{round(max_val - min_val, BISECTION_ROUND)} <= {threshold}"
         )
-        return round(max_val - min_val, BISECTION_ROUND) <= BISECTION_THRESHOLD
+        return round(max_val - min_val, BISECTION_ROUND) <= threshold
 
     def get_solver(self) -> dict:
         solver_parameters = {
@@ -1142,7 +1144,7 @@ class DynawoCurves(ProducerCurves):
 
             time = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
-            if self.__is_bisection_complete(max_val, min_val):
+            if self.__is_bisection_complete(max_val, min_val, 0.0001):
                 find = True
 
             counter += 1
