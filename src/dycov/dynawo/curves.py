@@ -549,7 +549,6 @@ class DynawoCurves(ProducerCurves):
             output_dir,
             working_oc_dir,
             jobs_output_dir,
-            show_output_log=True,
         )
 
         if not success:
@@ -594,7 +593,6 @@ class DynawoCurves(ProducerCurves):
         output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
-        show_output_log: bool = False,
     ) -> tuple[bool, str, pd.DataFrame]:
 
         (
@@ -695,8 +693,6 @@ class DynawoCurves(ProducerCurves):
             dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         if not success:
-            if show_output_log:
-                dycov_logging.get_logger("ProducerCurves").warning(log)
             dycov_logging.get_logger("ProducerCurves").warning("Retry by changing the solver type")
 
             # Changing the solver type
