@@ -20,6 +20,7 @@ class Gen_params:
     id: str
     lib: str
     connectedXmfr: str
+    SNom: float
     IMax: float
     par_id: str
     P: float
