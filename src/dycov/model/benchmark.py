@@ -467,7 +467,7 @@ class Benchmark:
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, float, bool, bool, int]:
+    ) -> tuple[Path, Path, dict, float, bool, bool, int, str]:
         return self._curves_manager.has_required_curves(
             measurement_names, pcs_bm_name, bm_name, oc_name
         )
@@ -543,7 +543,7 @@ class Benchmark:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         for op_name in self._op_names:
             dycov_logging.get_logger("Benchmark").info(
-                "RUNNING BENCHMARK: " + pcs_benchmark_name + ", OPER. COND.: " + op_name
+                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, OPER. COND.: {op_name}"
             )
             (
                 working_path,
@@ -553,6 +553,7 @@ class Benchmark:
                 success,
                 has_simulated_curves,
                 has_curves,
+                error_message,
             ) = self.__has_required_curves(
                 self._validator.get_measurement_names(),
                 pcs_benchmark_name,
@@ -582,6 +583,14 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
             else:
                 compliance = Compliance.WithoutCurves
+                results = {"compliance": False, "curves": None}
+
+            if error_message:
+                dycov_logging.get_logger("Benchmark").debug(f"Error message: {error_message}")
+                if error_message == "Fault simulation fails":
+                    compliance = Compliance.FaultSimulationFails
+                elif error_message == "Fault dip unachievable":
+                    compliance = Compliance.FaultDipUnachievable
                 results = {"compliance": False, "curves": None}
 
             results["summary"] = compliance

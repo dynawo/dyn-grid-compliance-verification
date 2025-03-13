@@ -106,6 +106,7 @@ class CurvesManager:
             success,
             has_simulated_curves,
             self._curves["calculated"],
+            error_message,
         ) = self.__get_producer_curves_generator().obtain_simulated_curve(
             working_oc_dir,
             pcs_bm_name,
@@ -123,6 +124,7 @@ class CurvesManager:
             fs,
             success,
             has_simulated_curves,
+            error_message,
         )
 
     def __check_curves(
@@ -179,7 +181,7 @@ class CurvesManager:
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, float, bool, bool, int]:
+    ) -> tuple[Path, Path, dict, float, bool, bool, int, str]:
         """Check if all curves are present.
 
         Parameters
@@ -212,6 +214,8 @@ class CurvesManager:
             1 producer's curves are missing
             2 reference curves are missing
             3 all curves are missing
+        str
+            Error message if simulation failed.
         """
         (
             working_oc_dir,
@@ -220,6 +224,7 @@ class CurvesManager:
             fs,
             success,
             has_simulated_curves,
+            error_message,
         ) = self.__obtain_curve(
             pcs_bm_name,
             bm_name,
@@ -262,6 +267,7 @@ class CurvesManager:
             success,
             has_simulated_curves,
             has_curves,
+            error_message,
         )
 
     def apply_signal_processing(

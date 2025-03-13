@@ -209,7 +209,7 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, float, bool, bool, pd.DataFrame]:
+    ) -> tuple[str, dict, float, bool, bool, pd.DataFrame, str]:
         """Read the input curves to get the simulated curves.
 
         Parameters
@@ -252,14 +252,7 @@ class ImportedCurves(ProducerCurves):
             working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves_path()
         )
 
-        return (
-            ".",
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-            curves,
-        )
+        return (".", event_params, fs, success, has_imported_curves, curves, None)
 
     def get_disconnection_model(self) -> Disconnection_Model:
         """Get all equipment in the model that can be disconnected in the simulation.

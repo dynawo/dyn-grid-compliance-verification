@@ -46,6 +46,10 @@ from dycov.model.parameters import (
 )
 from dycov.validation import common, sanity_checks
 
+MINIMAL_HIZ_FAULT = 1e-10
+BISECTION_THRESHOLD = 1e-10
+BISECTION_ROUND = 10
+
 
 class DynawoCurves(ProducerCurves):
     def __init__(
@@ -548,12 +552,70 @@ class DynawoCurves(ProducerCurves):
         )
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
-            dycov_logging.get_logger("Dynawo").warning("Retry by modifying the minimum time step")
+            dycov_logging.get_logger("ProducerCurves").warning(log)
+        else:
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
+
+        # Check if there is a curves file
+        has_dynawo_curves = False
+        if (working_oc_dir / jobs_output_dir / "curves/curves.csv").exists() and success:
+            has_dynawo_curves = True
+
+        return success, has_dynawo_curves, curves_calculated
+
+    def __execute_dynawo_core(
+        self,
+        output_dir: Path,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+    ) -> tuple[bool, str, pd.DataFrame]:
+        # Run Dynawo
+        success, log, has_error, curves_calculated, sim_time = dynawo.run_base_dynawo(
+            self._launcher_dwo,
+            "TSOModel",
+            self._curves_dict,
+            working_oc_dir,
+            jobs_output_dir,
+            self.get_producer().generators,
+            self.get_producer().s_nom,
+            self._s_nref,
+        )
+        if has_error:
+            log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
+            log = f"Simulation Fails, logs in {str(log_file)}"
+        if success:
+            self._sim_time = sim_time
+
+        return success, log, curves_calculated
+
+    def __execute_dynawo(
+        self,
+        output_dir: Path,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+    ) -> tuple[bool, str, pd.DataFrame]:
+
+        (
+            success,
+            log,
+            curves_calculated,
+        ) = self.__execute_dynawo_core(
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+        )
+
+        if not success:
+            dycov_logging.get_logger("ProducerCurves").warning(
+                "Retry by modifying the minimum time step"
+            )
 
             # Modifying the minimum time step
             self._minimum_time_step /= 10.0
             self._minimal_acceptable_step /= 10.0
+            dycov_logging.get_logger("ProducerCurves").debug(
+                f"New minimum time step: {self._minimum_time_step}"
+            )
             if self._solver_id == "IDA":
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
@@ -578,21 +640,25 @@ class DynawoCurves(ProducerCurves):
                 success,
                 log,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__execute_dynawo_core(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
             )
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
-            dycov_logging.get_logger("Dynawo").warning("Retry by modifying the required accuracy")
+            dycov_logging.get_logger("ProducerCurves").warning(
+                "Retry by modifying the required accuracy"
+            )
 
             # Modifying the required accuracy
             self._relAccuracy *= 10.0
             self._absAccuracy *= 10.0
+            dycov_logging.get_logger("ProducerCurves").debug(
+                f"New required accuracy: {self._absAccuracy}"
+            )
             if self._solver_id == "IDA":
                 replace_placeholders.modify_par_file(
                     working_oc_dir,
@@ -618,17 +684,16 @@ class DynawoCurves(ProducerCurves):
                 success,
                 log,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__execute_dynawo_core(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
             )
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
-            dycov_logging.get_logger("Dynawo").warning("Retry by changing the solver type")
+            dycov_logging.get_logger("ProducerCurves").warning("Retry by changing the solver type")
 
             # Changing the solver type
             if self._solver_id == "SIM":
@@ -650,6 +715,7 @@ class DynawoCurves(ProducerCurves):
                     "Dynawo", "sim_minimalAcceptableStep", 1e-6
                 )
                 self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
+            dycov_logging.get_logger("ProducerCurves").debug(f"Selected solver: {self._solver_id}")
             replace_placeholders.modify_jobs_file(
                 working_oc_dir,
                 "TSOModel.jobs",
@@ -660,50 +726,13 @@ class DynawoCurves(ProducerCurves):
                 success,
                 log,
                 curves_calculated,
-            ) = self.__execute_dynawo(
+            ) = self.__execute_dynawo_core(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
-                show_log_file=True,
             )
         else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
-
-        if not success:
-            dycov_logging.get_logger("Dynawo").warning(log)
-        else:
-            dycov_logging.get_logger("Dynawo").debug("Simulation successful")
-
-        # Check if there is a curves file
-        has_dynawo_curves = False
-        if (working_oc_dir / jobs_output_dir / "curves/curves.csv").exists() and success:
-            has_dynawo_curves = True
-
-        return success, has_dynawo_curves, curves_calculated
-
-    def __execute_dynawo(
-        self,
-        output_dir: Path,
-        working_oc_dir: Path,
-        jobs_output_dir: Path,
-        show_log_file: bool = False,
-    ) -> tuple[bool, str, pd.DataFrame]:
-        # Run Dynawo
-        success, log, has_error, curves_calculated, sim_time = dynawo.run_base_dynawo(
-            self._launcher_dwo,
-            "TSOModel",
-            self._curves_dict,
-            working_oc_dir,
-            jobs_output_dir,
-            self.get_producer().generators,
-            self.get_producer().s_nom,
-            self._s_nref,
-        )
-        if has_error and show_log_file:
-            log_file = output_dir / jobs_output_dir / "logs/dynawo.log"
-            log = f"Simulation Fails, logs in {str(log_file)}"
-        if success:
-            self._sim_time = sim_time
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
 
         return success, log, curves_calculated
 
@@ -719,12 +748,13 @@ class DynawoCurves(ProducerCurves):
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
 
         max_val = 1
-        min_val = 0.000001
+        min_val = MINIMAL_HIZ_FAULT
         incomplete_bisection = True
-        last_fault_xpu = 0
+        last_fault_xpu = MINIMAL_HIZ_FAULT
         working_oc_dirs_to_remove = []
+        bisection_success = False
         while incomplete_bisection:
-            fault_xpu = round(((max_val + min_val) / 2), 4)
+            fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
             now = datetime.now()
             working_oc_dir_fault = manage_files.clone_as_subdirectory(
@@ -735,6 +765,10 @@ class DynawoCurves(ProducerCurves):
                 fault_rpu = 0
             else:
                 fault_rpu = fault_xpu / fault_r_factor
+            dycov_logging.get_logger("ProducerCurves").debug(
+                f"Bisection between {max_val} and {min_val}"
+            )
+            dycov_logging.get_logger("ProducerCurves").debug(f"Fault XPU in {fault_xpu}")
             self.__modify_fault(
                 working_oc_dir_fault,
                 fault_start,
@@ -747,52 +781,87 @@ class DynawoCurves(ProducerCurves):
                 success,
                 _,
                 curves_calculated,
-            ) = self.__execute_dynawo(
-                output_dir,
-                working_oc_dir_fault,
-                jobs_output_dir,
-            )
+            ) = self.__execute_dynawo(output_dir, working_oc_dir_fault, jobs_output_dir)
+
+            # Restore the solver to the default values
+            # It is necessary to restore the parameters because only
+            # the current iteration has the possible changes made, the
+            # original file still has the starting parameters.Additionally,
+            # to copy the parameters back to the original file, you need
+            # to modify the backup mode so that it can take into account
+            # changes already applied in previous iterations.
+            self.__reset_solver()
 
             # returned values:
             #  *  1 if the required dip is greater than that obtained
             #  * -1 if the required dip is less than that obtained
             #  *  0 otherwise
-            voltage_dip = dynawo.check_voltage_dip(
-                success,
-                curves_calculated,
-                fault_start,
-                fault_duration,
-                abs(dip),
-            )
-
             if success:
+                bisection_success = True
                 last_fault_xpu = fault_xpu
+                voltage_dip = dynawo.check_voltage_dip(
+                    curves_calculated,
+                    fault_start,
+                    fault_duration,
+                    abs(dip),
+                )
 
-            if dycov_logging.getEffectiveLevel() != logging.DEBUG:
-                working_oc_dirs_to_remove.append(working_oc_dir_fault)
-            else:
-                if success:
-                    manage_files.rename_dir(
-                        working_oc_dir_fault, working_oc_dir / "bisection_last_success"
-                    )
+                if dycov_logging.getEffectiveLevel() != logging.DEBUG:
+                    working_oc_dirs_to_remove.append(working_oc_dir_fault)
                 else:
-                    manage_files.rename_dir(
-                        working_oc_dir_fault, working_oc_dir / "bisection_last_failure"
-                    )
+                    if success:
+                        manage_files.rename_dir(
+                            working_oc_dir_fault, working_oc_dir / "bisection_last_success"
+                        )
+                    else:
+                        manage_files.rename_dir(
+                            working_oc_dir_fault, working_oc_dir / "bisection_last_failure"
+                        )
 
-            if voltage_dip == 1:
-                min_val = fault_xpu
-            elif voltage_dip == -1:
-                max_val = fault_xpu
+                if voltage_dip == 1:
+                    min_val = fault_xpu
+                elif voltage_dip == -1:
+                    max_val = fault_xpu
+                else:
+                    incomplete_bisection = False
             else:
-                incomplete_bisection = False
+                dycov_logging.get_logger("ProducerCurves").debug("Simulation fails")
+                # If the simulation fails after decreasing the fault value,
+                # it is necessary to increase it.
+                # If the simulation fails after increasing the fault value,
+                # it is necessary to decrease it
+                dycov_logging.get_logger("ProducerCurves").debug(
+                    f"Last fault XPU in {last_fault_xpu} actual {fault_xpu}"
+                )
+                try:
+                    if voltage_dip == 1:
+                        max_val = fault_xpu
+                    elif voltage_dip == -1:
+                        min_val = fault_xpu
+                except UnboundLocalError:
+                    max_val = fault_xpu
 
-            if self.__is_bisection_complete(max_val, min_val):
+            if self.__is_bisection_complete(max_val, min_val, BISECTION_THRESHOLD):
                 incomplete_bisection = False
 
         # Remove all bisection directories
         for dir_to_remove in working_oc_dirs_to_remove:
             manage_files.remove_dir(dir_to_remove)
+
+        if not bisection_success:
+            dycov_logging.get_logger("ProducerCurves").error(
+                "The simulation fails with any value for the fault"
+            )
+            raise ValueError("Fault simulation fails")
+
+        try:
+            achive_dip = voltage_dip == 0
+        except UnboundLocalError:
+            achive_dip = False
+
+        if not achive_dip:
+            dycov_logging.get_logger("ProducerCurves").error("The required dip was not achieved")
+            raise ValueError("Fault dip unachievable")
 
         # Recover the last successful fault values
         if fault_r_factor == 0.0:
@@ -900,7 +969,7 @@ class DynawoCurves(ProducerCurves):
 
         return steady_state
 
-    def __is_bisection_complete(self, max_val: float, min_val: float) -> bool:
+    def __is_bisection_complete(self, max_val: float, min_val: float, threshold: float) -> bool:
         """Check if the bisection method is complete.
 
         Parameters
@@ -909,13 +978,19 @@ class DynawoCurves(ProducerCurves):
             Maximum value in the bisection method.
         min_val: float
             Minimum value in the bisection method.
+        threshold: float
+            Threshold to consider the bisection method as complete.
 
         Returns
         -------
         bool
             True if the bisection method is complete, False otherwise.
         """
-        return round(max_val - min_val, 4) <= 0.0001
+        dycov_logging.get_logger("ProducerCurves").debug(
+            "Bisection method is complete: "
+            f"{round(max_val - min_val, BISECTION_ROUND)} <= {threshold}"
+        )
+        return round(max_val - min_val, BISECTION_ROUND) <= threshold
 
     def get_solver(self) -> dict:
         solver_parameters = {
@@ -1030,7 +1105,7 @@ class DynawoCurves(ProducerCurves):
 
         # The maximum duration that the fault admits without losing
         #  stability is sought by bisection
-        time = round(((max_val + min_val) / 2), 4)
+        time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
         find = False
         working_oc_dirs_to_remove = []
@@ -1067,9 +1142,9 @@ class DynawoCurves(ProducerCurves):
                         working_oc_dir_fault, working_oc_dir / "bisection_last_failure"
                     )
 
-            time = round(((max_val + min_val) / 2), 4)
+            time = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
-            if self.__is_bisection_complete(max_val, min_val):
+            if self.__is_bisection_complete(max_val, min_val, 0.0001):
                 find = True
 
             counter += 1
@@ -1087,7 +1162,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame, str]:
         """Runs Dynawo to get the simulated curves.
 
         Parameters
@@ -1117,8 +1192,11 @@ class DynawoCurves(ProducerCurves):
             True if simulation calculated curves
         DataFrame
            Simulation calculated curves
+        Str
+            Error message if simulation fails
         """
 
+        error_message = None
         self.__reset_solver()
 
         # Prepare environment to validate it,
@@ -1170,11 +1248,12 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
 
-        except ValueError:
+        except ValueError as e:
             success = False
             has_dynawo_curves = False
             event_params = dict()
             curves_calculated = pd.DataFrame()
+            error_message = str(e)
 
         self._logger.close_handlers()
 
@@ -1185,6 +1264,7 @@ class DynawoCurves(ProducerCurves):
             success,
             has_dynawo_curves,
             curves_calculated,
+            error_message,
         )
 
     def get_disconnection_model(self) -> Disconnection_Model:

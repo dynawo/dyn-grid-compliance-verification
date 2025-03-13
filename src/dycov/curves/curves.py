@@ -228,7 +228,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame]:
+    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame, str]:
         """Obtain the simulated curves.
 
         Parameters
