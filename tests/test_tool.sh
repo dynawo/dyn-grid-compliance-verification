@@ -14,6 +14,19 @@ color_msg()
     echo -e "${GREEN}$1${NC}" >&6              # to the console, in color
 }
 
+usage()
+{
+   echo "This script is used to test the dycov tool."
+   echo "Execute the script in the root directory of the dycov tool."
+   echo "The results are saved in the parent directory of the dycov tool"
+   echo "Usage: $0 [options]"
+   echo "Options:"
+   echo "  -v, --validate: execute only model validation"
+   echo "  -p, --performance: execute only performance verification"
+   echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
+   echo "  -h, --help: display this help"
+}
+
 launch_validate() {
    declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
    declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
@@ -81,6 +94,10 @@ while (($#)); do
       -p|--performance)
          validate=false
          shift
+         ;;
+      -l|--launcher)
+         launcher=$2
+         shift 2
          ;;
       --help|-h)
          usage
