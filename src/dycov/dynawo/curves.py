@@ -814,8 +814,10 @@ class DynawoCurves(ProducerCurves):
         fault_start: float,
         fault_duration: float,
     ):
-        fault_rpu = 0.0173
-        fault_xpu = 0.0
+        fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
+
+        fault_xpu = 1e-5
+        fault_rpu = fault_xpu / fault_r_factor
 
         self.__modify_fault(
             working_oc_dir,
