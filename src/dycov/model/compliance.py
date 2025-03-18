@@ -34,3 +34,10 @@ class Compliance(Enum):
             return "Fault simulation fails"
         elif self == Compliance.FaultDipUnachievable:
             return "Fault dip unachievable"
+
+    def show_report(self) -> bool:
+        return self in [
+            Compliance.Compliant,
+            Compliance.NonCompliant,
+            Compliance.FaultDipUnachievable,
+        ]

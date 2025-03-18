@@ -14,8 +14,7 @@ color_msg()
     echo -e "${GREEN}$1${NC}" >&6              # to the console, in color
 }
 
-launch_test() {
-   launch_start=$(date +%s)
+launch_validate() {
    declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
    declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
    declare -a bess_models=("WECC")
@@ -48,6 +47,9 @@ launch_test() {
       color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
    done
 
+}
+
+launch_performance() {
    declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a" "IECB2015" "IECB2020" "WECCB")
    declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
 
@@ -64,14 +66,22 @@ launch_test() {
       done
    done
 
-   launch_end=$(date +%s)
-   color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
 }
 
 launcher="dynawo.sh"
+validate=true  # by default, validate the models
+performance=true  # by default, verificate the performance
 
 while (($#)); do
    case "$1" in
+      -v|--validate)
+         performance=false
+         shift
+         ;;
+      -p|--performance)
+         validate=false
+         shift
+         ;;
       --help|-h)
          usage
          exit 0
@@ -98,4 +108,12 @@ exec 2>&1      # stderr redirected to stdout
 #exec 1>&6 6>&-    # Restore stdout and close fd 6
 #exec 2>&7 7>&-    # Restore stderr and close fd 7
 
-launch_test
+launch_start=$(date +%s)
+if [ "$validate" = true ]; then
+   launch_validate
+fi
+if [ "$performance" = true ]; then
+   launch_performance
+fi
+launch_end=$(date +%s)
+color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
