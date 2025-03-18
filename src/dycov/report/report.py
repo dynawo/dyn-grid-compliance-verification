@@ -180,10 +180,7 @@ def _pcs_replace(
         if oc_report_name is not None:
             # Process only "Compliant" and "Non-compliant" results;
             # thus ignoring FAILED simulations:
-            if (
-                oc_results["summary"] == Compliance.Compliant
-                or oc_results["summary"] == Compliance.NonCompliant
-            ):
+            if oc_results["summary"].show_report():
                 subreports.append(f"\\input{{{oc_report_name.replace('.tex', '')}}}")
 
             oc_template = _get_template(working_path, oc_report_name)

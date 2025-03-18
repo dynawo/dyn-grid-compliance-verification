@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import math
 import os
 import re
 import subprocess
@@ -21,7 +22,7 @@ from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
-VOLTAGE_DIP_THRESHOLD = 1e-6
+VOLTAGE_DIP_THRESHOLD = 0.002
 
 
 def _compile_model_name(models_path: Path, model_name: str):
@@ -725,9 +726,12 @@ def check_voltage_dip(
     )
     voltage_dip = pre_voltage_values[pre_pos] - post_voltage_values[post_pos]
 
-    if expected_dip - voltage_dip < -VOLTAGE_DIP_THRESHOLD:
-        return 1
-    elif expected_dip - voltage_dip > VOLTAGE_DIP_THRESHOLD:
-        return -1
-    else:
+    rtol = VOLTAGE_DIP_THRESHOLD
+    atol = 0.1 * rtol
+    if math.isclose(voltage_dip, expected_dip, rel_tol=rtol, abs_tol=atol):
         return 0
+    else:
+        if expected_dip < voltage_dip:
+            return 1
+        elif expected_dip > voltage_dip:
+            return -1

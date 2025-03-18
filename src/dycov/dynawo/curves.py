@@ -747,7 +747,7 @@ class DynawoCurves(ProducerCurves):
     ):
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
 
-        max_val = 1
+        max_val = 10.0
         min_val = MINIMAL_HIZ_FAULT
         incomplete_bisection = True
         last_fault_xpu = MINIMAL_HIZ_FAULT

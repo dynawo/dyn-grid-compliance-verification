@@ -95,18 +95,18 @@ def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_e
     q_init = reactive[idx_t_event]
 
     # Get max diff between values after event vs the steady-state value right before
-    v_max = max(abs(np.array(voltage[idx_t_event:]) - v_init))
-    p_max = max(abs(np.array(active[idx_t_event:]) - p_init))
-    q_max = max(abs(np.array(reactive[idx_t_event:]) - q_init))
+    v_max_diff = max(abs(np.array(voltage[idx_t_event:]) - v_init))
+    p_max_diff = max(abs(np.array(active[idx_t_event:]) - p_init))
+    q_max_diff = max(abs(np.array(reactive[idx_t_event:]) - q_init))
 
     # Check if this max diff is smaller than the tolerances
     rtol = thr_ss_tol  # i.e., 0.2% relative error
     atol = 0.1 * rtol  # i.e., when magnitudes are near 0.01, switch to abs error
-    v_flag = math.isclose(v_max, v_init, rel_tol=rtol, abs_tol=atol)
-    p_flag = math.isclose(p_max, p_init, rel_tol=rtol, abs_tol=atol)
-    q_flag = math.isclose(q_max, q_init, rel_tol=rtol, abs_tol=atol)
+    v_flat = math.isclose(v_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
+    p_flat = math.isclose(p_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
+    q_flat = math.isclose(q_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
 
-    return v_flag and p_flag and q_flag
+    return v_flat and p_flat and q_flat
 
 
 def is_stable(time: list, curve: list, stable_time: float) -> tuple[bool, int]:
