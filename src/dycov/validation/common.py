@@ -12,6 +12,7 @@ import math
 import numpy as np
 
 from dycov.configuration.cfg import config
+from dycov.logging.logging import dycov_logging
 
 # when magnitudes are smaller than atol, switch to absolute error
 ATOL = 1.0e-6
@@ -88,16 +89,25 @@ def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_e
     # (-1 to make sure it's *before* the event, in case the closest point is right after)
     # TODO: we should assert(t_event >= time[0]), but not here -- do it at init time
     idx_t_event = np.argmin(abs(np.array(time) - t_event)) - 1
+    dycov_logging.get_logger("Common Validation").debug(
+        f"Start values: V: {voltage[0]}, P: {active[0]}, Q: {reactive[0]}"
+    )
 
     # Get the steady-state value right before the event
     v_init = voltage[idx_t_event]
     p_init = active[idx_t_event]
     q_init = reactive[idx_t_event]
+    dycov_logging.get_logger("Common Validation").debug(
+        f"Steady-state values: V: {v_init}, P: {p_init}, Q: {q_init}"
+    )
 
     # Get max diff between values after event vs the steady-state value right before
     v_max_diff = max(abs(np.array(voltage[idx_t_event:]) - v_init))
     p_max_diff = max(abs(np.array(active[idx_t_event:]) - p_init))
     q_max_diff = max(abs(np.array(reactive[idx_t_event:]) - q_init))
+    dycov_logging.get_logger("Common Validation").debug(
+        f"Max diff: V: {v_max_diff}, P: {p_max_diff}, Q: {q_max_diff}"
+    )
 
     # Check if this max diff is smaller than the tolerances
     rtol = thr_ss_tol  # i.e., 0.2% relative error
@@ -105,6 +115,9 @@ def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_e
     v_flat = math.isclose(v_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
     p_flat = math.isclose(p_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
     q_flat = math.isclose(q_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
+    dycov_logging.get_logger("Common Validation").debug(
+        f"Flat Curves: V: {v_flat}, P: {p_flat}, Q: {q_flat}"
+    )
 
     return v_flat and p_flat and q_flat
 
