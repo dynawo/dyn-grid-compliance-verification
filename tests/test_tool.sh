@@ -16,9 +16,19 @@ color_msg()
 
 launch_test() {
    launch_start=$(date +%s)
-   declare -a wind_models=("IECA2015" "IECA2020" "IECA2020WithProtections" "WECCA" "IECB2015" "IECB2020" "IECB2020WithProtections" "WECCB")
-   declare -a photo_models=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
-   declare -a bess_models=("WECC")
+   declare -a wind_models=()
+   declare -a photo_models=()
+   declare -a bess_models=()
+   if [ "$iec_models" = true ]; then
+      color_msg "IEC models"
+      wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
+   fi
+   if [ "$wecc_models" = true ]; then
+      color_msg "WECC models"
+      wind_models+=("WECCA" "WECCB")
+      photo_models+=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
+      bess_models+=("WECC")
+   fi
 
    # Model validation
    for bess_model in "${bess_models[@]}"
@@ -48,7 +58,13 @@ launch_test() {
       color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
    done
 
-   declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a" "IECB2015" "IECB2020" "WECCB")
+   declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a")
+   if [ "$iec_models" = true ]; then
+      models+=("IECB2015" "IECB2020")
+   fi
+   if [ "$wecc_models" = true ]; then
+      models+=("WECCB")
+   fi
    declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
 
    # performance validation
@@ -69,9 +85,19 @@ launch_test() {
 }
 
 launcher="dynawo.sh"
+iec_models=true
+wecc_models=true
 
 while (($#)); do
    case "$1" in
+      --iec)
+         wecc_models=false
+         shift
+         ;;
+      --wecc)
+         iec_models=false
+         shift
+         ;;
       --help|-h)
          usage
          exit 0
