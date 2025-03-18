@@ -30,7 +30,6 @@ from dycov.core.global_variables import (
 from dycov.dynawo import dynawo
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
-from dycov.model.compliance import Compliance
 from dycov.model.producer import Producer
 from dycov.report import figure, html
 from dycov.report.LatexReportException import LatexReportException
