@@ -14,8 +14,20 @@ color_msg()
     echo -e "${GREEN}$1${NC}" >&6              # to the console, in color
 }
 
-launch_test() {
-   launch_start=$(date +%s)
+usage()
+{
+   echo "This script is used to test the dycov tool."
+   echo "Execute the script in the root directory of the dycov tool."
+   echo "The results are saved in the parent directory of the dycov tool"
+   echo "Usage: $0 [options]"
+   echo "Options:"
+   echo "  -v, --validate: execute only model validation"
+   echo "  -p, --performance: execute only performance verification"
+   echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
+   echo "  -h, --help: display this help"
+}
+
+launch_validate() {
    declare -a wind_models=()
    declare -a photo_models=()
    declare -a bess_models=()
@@ -58,6 +70,9 @@ launch_test() {
       color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
    done
 
+}
+
+launch_performance() {
    declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a")
    if [ "$iec_models" = true ]; then
       models+=("IECB2015" "IECB2020")
@@ -80,13 +95,13 @@ launch_test() {
       done
    done
 
-   launch_end=$(date +%s)
-   color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
 }
 
 launcher="dynawo.sh"
-iec_models=true
-wecc_models=true
+iec_models=true # by default, add IEC models
+wecc_models=true # by default, add WECC models
+validate=true  # by default, validate the models
+performance=true  # by default, verificate the performance
 
 while (($#)); do
    case "$1" in
@@ -97,6 +112,18 @@ while (($#)); do
       --wecc)
          iec_models=false
          shift
+         ;;
+      -v|--validate)
+         performance=false
+         shift
+         ;;
+      -p|--performance)
+         validate=false
+         shift
+         ;;
+      -l|--launcher)
+         launcher=$2
+         shift 2
          ;;
       --help|-h)
          usage
@@ -124,4 +151,12 @@ exec 2>&1      # stderr redirected to stdout
 #exec 1>&6 6>&-    # Restore stdout and close fd 6
 #exec 2>&7 7>&-    # Restore stderr and close fd 7
 
-launch_test
+launch_start=$(date +%s)
+if [ "$validate" = true ]; then
+   launch_validate
+fi
+if [ "$performance" = true ]; then
+   launch_performance
+fi
+launch_end=$(date +%s)
+color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"

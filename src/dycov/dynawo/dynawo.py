@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import math
 import os
 import re
 import subprocess
@@ -20,6 +21,8 @@ from lxml import etree
 from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
+
+VOLTAGE_DIP_THRESHOLD = 0.002
 
 
 def _compile_model_name(models_path: Path, model_name: str):
@@ -453,13 +456,22 @@ def _create_curves(
     curves_dict = dict()
     curves_dict["BusPDR_BUS_Voltage"] = pdr_voltage_modulus
     curves_dict["BusPDR_BUS_ActivePower"] = pdr_active_power
+    active_power = np.array(pdr_active_power)
+    reactive_power = np.array(pdr_reactive_power)
+    voltage_modulus = np.array(pdr_voltage_modulus)
     curves_dict["BusPDR_BUS_ActiveCurrent"] = np.divide(
-        pdr_active_power, pdr_voltage_modulus
+        active_power,
+        voltage_modulus,
+        out=np.zeros_like(active_power),
+        where=(voltage_modulus != 0),
     ).tolist()
 
     curves_dict["BusPDR_BUS_ReactivePower"] = pdr_reactive_power
     curves_dict["BusPDR_BUS_ReactiveCurrent"] = np.divide(
-        pdr_reactive_power, pdr_voltage_modulus
+        reactive_power,
+        voltage_modulus,
+        out=np.zeros_like(reactive_power),
+        where=(voltage_modulus != 0.0),
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
@@ -654,25 +666,22 @@ def run_base_dynawo(
 
 
 def check_voltage_dip(
-    is_simulation_success: bool,
     curves: pd.DataFrame,
     fault_start: float,
     fault_duration: float,
-    dip: float,
+    expected_dip: float,
 ) -> int:
     """Check if desired voltage drop has ocurred.
 
     Parameters
     ----------
-    is_simulation_success: bool
-        Simulation result, True if success, Folse otherwise
     curves: DataFrame
         Dataframe with the simulated curves
     fault_start: float
         Fault start time in seconds
     fault_duration: float
         Fault duration in seconds
-    dip: float
+    expected_dip: float
         Required voltage drop
 
     Returns
@@ -684,11 +693,11 @@ def check_voltage_dip(
     """
     bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
 
-    if dip == 0.0:
+    dycov_logging.get_logger("Dynawo").debug(
+        f"Checking voltage dip: {bus_pdr_voltage} for {expected_dip} V"
+    )
+    if expected_dip == 0.0:
         return 0
-
-    if not is_simulation_success:
-        return -1
 
     time_values = list(curves["time"])
     voltage_values = list(curves[bus_pdr_voltage])
@@ -711,9 +720,18 @@ def check_voltage_dip(
     # gET the stable value after the failure taking into account its duration
     _, post_pos = is_stable(post_time_values, post_voltage_values, fault_duration / 10)
 
-    if pre_voltage_values[pre_pos] - post_voltage_values[post_pos] > dip:
-        return 1
-    elif pre_voltage_values[pre_pos] - post_voltage_values[post_pos] < dip:
-        return -1
-    else:
+    dycov_logging.get_logger("Dynawo").debug(
+        f"Voltage dip: {pre_voltage_values[pre_pos] - post_voltage_values[post_pos]} "
+        f"Expected dip: {expected_dip}"
+    )
+    voltage_dip = pre_voltage_values[pre_pos] - post_voltage_values[post_pos]
+
+    rtol = VOLTAGE_DIP_THRESHOLD
+    atol = 0.1 * rtol
+    if math.isclose(voltage_dip, expected_dip, rel_tol=rtol, abs_tol=atol):
         return 0
+    else:
+        if expected_dip < voltage_dip:
+            return 1
+        elif expected_dip > voltage_dip:
+            return -1

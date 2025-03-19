@@ -111,8 +111,23 @@ def _append_generator(
     else:
         VoltageDrop = 0.0
 
+    _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
+    snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
+    s_nom = float(snom_par.get("value"))
+
     generators.append(
-        Gen_params(gen_id, lib, connectedXmfr, imax, par_id, P, Q, VoltageDrop, False)
+        Gen_params(
+            id=gen_id,
+            lib=lib,
+            connectedXmfr=connectedXmfr,
+            SNom=s_nom,
+            IMax=imax,
+            par_id=par_id,
+            P=P,
+            Q=Q,
+            VoltageDrop=VoltageDrop,
+            UseVoltageDrop=False,
+        )
     )
 
 
@@ -785,7 +800,9 @@ def find_output_dir(results_case_dir: Path, filename: str) -> str:
     return output_dir
 
 
-def extract_defined_value(value_definition: str, parameter: str, base_value: float) -> float:
+def extract_defined_value(
+    value_definition: str, parameter: str, base_value: float, sign: int = 1
+) -> float:
     """Converts a parameter definition to a value.
     Examples:
         - P = P_max -> value_definition: 'pmax', parameter: 'pmax', base_value: 90, return 90
@@ -799,6 +816,8 @@ def extract_defined_value(value_definition: str, parameter: str, base_value: flo
         Parameter name
     base_value: float
         Base value
+    sign: int
+        Sign of the value
 
     Returns
     -------
@@ -819,7 +838,7 @@ def extract_defined_value(value_definition: str, parameter: str, base_value: flo
     if parameter.lower() in value.lower():
         value = base_value
 
-    return float(value) * multiplier
+    return sign * float(value) * multiplier
 
 
 def adjust_producer_init(
