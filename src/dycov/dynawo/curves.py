@@ -455,21 +455,24 @@ class DynawoCurves(ProducerCurves):
         pdr_u = config.get_value(config_section, "pdr_U")
         self.__log(f"\tpdr_U={pdr_u}")
 
+        # Sign convention:
+        # the initializations expects Pdr to be negative;
+        # therefore we need to flip its sign.
         ini_pdr_p = model_parameters.extract_defined_value(
-            pdr_p, "Pmax", self.get_producer().p_max_pu * -1
+            pdr_p, "Pmax", self.get_producer().p_max_pu, -1
         )
 
         if "Qmin" in pdr_q:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "Qmin", self.get_producer().q_min_pu * -1
+                pdr_q, "Qmin", self.get_producer().q_min_pu, -1
             )
         elif "Qmax" in pdr_q:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "Qmax", self.get_producer().q_max_pu * -1
+                pdr_q, "Qmax", self.get_producer().q_max_pu, -1
             )
         else:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q, "Pmax", self.get_producer().p_max_pu * -1
+                pdr_q, "Pmax", self.get_producer().p_max_pu, -1
             )
 
         ini_pdr_u = (
