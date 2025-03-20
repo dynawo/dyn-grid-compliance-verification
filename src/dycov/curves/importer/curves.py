@@ -60,6 +60,7 @@ class ImportedCurves(ProducerCurves):
                         Q="",
                         VoltageDrop="",
                         UseVoltageDrop=False,
+                        equiv_int_line=None,
                     )
                 )
 

@@ -7,11 +7,13 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import cmath
 import logging
 import math
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from dycov.configuration.cfg import config
@@ -23,7 +25,7 @@ from dycov.dynawo.jobs import JobsFile
 from dycov.dynawo.par import ParFile
 from dycov.dynawo.solvers import SolversFile
 from dycov.dynawo.table import TableFile
-from dycov.dynawo.translator import dynawo_translator
+from dycov.dynawo.translator import dynawo_translator, get_generator_family_level
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
@@ -172,11 +174,6 @@ class DynawoCurves(ProducerCurves):
             return gen.U0
 
         return 0.0
-
-    def __adjust_event_value(self, event_params: dict) -> None:
-        generator = self.get_producer().generators[0]
-        if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
-            event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
 
     def __complete_model(
         self,
@@ -340,6 +337,68 @@ class DynawoCurves(ProducerCurves):
         ]
         return any(fault in pcs_bm_name for fault in specific_faults)
 
+    def __adjust_event_value(self, event_params: dict) -> None:
+        generator = self.get_producer().generators[0]
+        if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
+            event_params["pre_value"] = (
+                self._gens[0].U0
+                + generator.VoltageDrop * self._gens[0].Q0 * self._s_nref / generator.SNom
+            )
+
+    def __obtain_generator_values(
+        self, generator_params, generator_values
+    ) -> tuple[float, float, float, float]:
+        family, level = get_generator_family_level(generator_params)
+        if family == "WECC" and level == "Turbine" and "VoltageSource" not in generator_params.lib:
+            equiv_int_line = generator_params.equiv_int_line
+            u0Pu = cmath.rect(generator_values.U0, generator_values.UPhase0)
+            s0Pu = complex(generator_values.P0, generator_values.Q0)
+            i0Pu = np.conj(s0Pu / u0Pu)
+            uInj0Pu = u0Pu - i0Pu * complex(equiv_int_line.R, equiv_int_line.X)
+            iInj0Pu = -i0Pu * self._s_nref / generator_params.SNom
+            sInj0Pu = uInj0Pu * np.conj(iInj0Pu)
+            PInj0Pu = sInj0Pu.real
+            QInj0Pu = sInj0Pu.imag
+            UInj0Pu = abs(uInj0Pu)
+            UInjPhase0 = np.angle(uInj0Pu)
+            if "CurrentSource" not in generator_params.lib:
+                PInj0Pu = -PInj0Pu
+                QInj0Pu = -QInj0Pu
+        else:
+            PInj0Pu = generator_values.P0 * self._s_nref / generator_params.SNom
+            QInj0Pu = generator_values.Q0 * self._s_nref / generator_params.SNom
+            UInj0Pu = generator_values.U0
+            UInjPhase0 = generator_values.UPhase0
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"Generator terminal values: {generator_values.P0=}, {generator_values.Q0=}, "
+            f"{generator_values.U0=}"
+        )
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"Initial values: {PInj0Pu=}, {QInj0Pu=}, {UInj0Pu=}, {UInjPhase0=}"
+        )
+        return PInj0Pu, QInj0Pu, UInj0Pu, UInjPhase0
+
+    def __obtain_setpoint_value(self, connect_event_to: str) -> float:
+        generator_params = self.get_producer().generators[0]
+        generator_values = self._gens[0]
+        PInj0Pu, QInj0Pu, UInj0Pu, _ = self.__obtain_generator_values(
+            generator_params, generator_values
+        )
+        pre_value = 1.0
+        if connect_event_to:
+            if "ActivePowerSetpointPu" == connect_event_to:
+                pre_value = -PInj0Pu
+            elif "ReactivePowerSetpointPu" == connect_event_to:
+                pre_value = -QInj0Pu
+            elif "AVRSetpointPu" == connect_event_to:
+                family, level = get_generator_family_level(generator_params)
+                if family == "WECC" and level == "Turbine":
+                    pre_value = -QInj0Pu
+                else:
+                    pre_value = UInj0Pu
+
+        return pre_value
+
     def __get_event_parameters(
         self,
         pcs_bm_name: str,
@@ -349,15 +408,7 @@ class DynawoCurves(ProducerCurves):
 
         connect_event_to = config.get_value(config_section, "connect_event_to")
         self.__log(f"\t{connect_event_to=}")
-        pre_value = 1.0
-        if connect_event_to:
-            if "ActivePowerSetpointPu" == connect_event_to:
-                pre_value = -self._gens[0].P0
-            elif "ReactivePowerSetpointPu" == connect_event_to:
-                pre_value = -self._gens[0].Q0
-            elif "AVRSetpointPu" == connect_event_to:
-                pre_value = self._gens[0].U0
-
+        pre_value = self.__obtain_setpoint_value(connect_event_to)
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(f"\tsim_t_event_start={start_time}")
         # Read Fault duration if exists

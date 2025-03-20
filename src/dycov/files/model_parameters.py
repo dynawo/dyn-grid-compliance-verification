@@ -25,6 +25,7 @@ from dycov.configuration.cfg import config
 from dycov.dynawo.translator import dynawo_translator, get_generator_family_level
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import (
+    EquivIntLine_params,
     Gen_params,
     Line_params,
     Load_init,
@@ -115,6 +116,52 @@ def _append_generator(
     snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
     s_nom = float(snom_par.get("value"))
 
+    _, equiv_int_line_RPu = dynawo_translator.get_dynawo_variable(lib, "EquivIntLineRPu")
+    if equiv_int_line_RPu is not None:
+        rpu_par = parset.find(f"{{{ns}}}par[@name='{equiv_int_line_RPu}']")
+        rpu = float(rpu_par.get("value"))
+    else:
+        rpu = 0.0
+
+    _, equiv_int_line_RSourcePu = dynawo_translator.get_dynawo_variable(
+        lib, "EquivIntLineRSourcePu"
+    )
+    if equiv_int_line_RSourcePu is not None:
+        rsourcepu_par = parset.find(f"{{{ns}}}par[@name='{equiv_int_line_RSourcePu}']")
+        rsourcepu = float(rsourcepu_par.get("value"))
+    else:
+        rsourcepu = 0.0
+
+    _, equiv_int_line_XPu = dynawo_translator.get_dynawo_variable(lib, "EquivIntLineXPu")
+    if equiv_int_line_XPu is not None:
+        xpu_par = parset.find(f"{{{ns}}}par[@name='{equiv_int_line_XPu}']")
+        xpu = float(xpu_par.get("value"))
+    else:
+        xpu = 0.0
+
+    _, equiv_int_line_XSourcePu = dynawo_translator.get_dynawo_variable(
+        lib, "EquivIntLineXSourcePu"
+    )
+    if equiv_int_line_XSourcePu is not None:
+        xsourcepu_par = parset.find(f"{{{ns}}}par[@name='{equiv_int_line_XSourcePu}']")
+        xsourcepu = float(xsourcepu_par.get("value"))
+    else:
+        xsourcepu = 0.0
+
+    _, equiv_int_line_BPu = dynawo_translator.get_dynawo_variable(lib, "EquivIntLineBPu")
+    if equiv_int_line_BPu is not None:
+        bpu_par = parset.find(f"{{{ns}}}par[@name='{equiv_int_line_BPu}']")
+        bpu = float(bpu_par.get("value"))
+    else:
+        bpu = 0.0
+
+    _, equiv_int_line_GPu = dynawo_translator.get_dynawo_variable(lib, "EquivIntLineGPu")
+    if equiv_int_line_GPu is not None:
+        gpu_par = parset.find(f"{{{ns}}}par[@name='{equiv_int_line_GPu}']")
+        gpu = float(gpu_par.get("value"))
+    else:
+        gpu = 0.0
+
     generators.append(
         Gen_params(
             id=gen_id,
@@ -127,6 +174,7 @@ def _append_generator(
             Q=Q,
             VoltageDrop=VoltageDrop,
             UseVoltageDrop=False,
+            equiv_int_line=EquivIntLine_params(rpu, xpu, rsourcepu, xsourcepu, bpu, gpu),
         )
     )
 
@@ -367,16 +415,11 @@ def _adjust_generator(
 
 
 def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> None:
-    if "MwpqMode" in control_mode_parameters:
-        if control_mode_parameters["MwpqMode"] == "3":
-            generator.UseVoltageDrop = True
-
     if "RefFlag" in control_mode_parameters:
-        if control_mode_parameters["RefFlag"].lower() == "true":
-            _, VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
-            par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
-            if par is not None and par.get("value").lower() == "false":
-                generator.UseVoltageDrop = True
+        _, VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
+        par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
+        if par is not None and par.get("value").lower() == "false":
+            generator.UseVoltageDrop = True
 
 
 def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 Line_params = namedtuple("Line_params", ["id", "lib", "connectedPdr", "R", "X", "B", "G"])
 Xfmr_params = namedtuple("Xfmr_params", ["id", "lib", "R", "X", "B", "G", "rTfo", "par_id"])
 Load_params = namedtuple("Load_params", ["id", "lib", "connectedXmfr", "P", "Q", "U", "UPhase"])
+EquivIntLine_params = namedtuple("EquivIntLine_params", ["R", "X", "RSource", "XSource", "B", "G"])
 
 
 @dataclass
@@ -27,6 +28,7 @@ class Gen_params:
     Q: float
     VoltageDrop: float
     UseVoltageDrop: bool
+    equiv_int_line: EquivIntLine_params
 
 
 Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
