@@ -78,8 +78,8 @@
 
     <!-- BaseWT4 -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="90"/>
-    <par type="DOUBLE" name="photovoltaics_RPu" value="0.0004"/>
-    <par type="DOUBLE" name="photovoltaics_XPu" value="0.0015"/>
+    <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
+    <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
     <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="0"/>
  </set>
   <!-- tfo -->
