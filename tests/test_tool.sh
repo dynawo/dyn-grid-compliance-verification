@@ -21,6 +21,8 @@ usage()
    echo "The results are saved in the parent directory of the dycov tool"
    echo "Usage: $0 [options]"
    echo "Options:"
+   echo "  --iec: execute only IEC models"
+   echo "  --wecc: execute only WECC models"
    echo "  -v, --validate: execute only model validation"
    echo "  -p, --performance: execute only performance verification"
    echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
