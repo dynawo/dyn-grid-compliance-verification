@@ -10,7 +10,7 @@ GREEN="\\033[1;32m"
 NC="\\033[0m"
 color_msg()
 {
-    echo -e "$(date '+%Y-%m-%d %H:%M%S'): $1"  # to the log file, no color, timestamped
+    echo -e "$(date '+%Y-%m-%d %H:%M:%S')     | $1"  # to the log file, no color, timestamped
     echo -e "${GREEN}$1${NC}" >&6              # to the console, in color
 }
 
@@ -104,6 +104,7 @@ iec_models=true # by default, add IEC models
 wecc_models=true # by default, add WECC models
 validate=true  # by default, validate the models
 performance=true  # by default, verificate the performance
+remove=false # by default, remove Results path
 
 while (($#)); do
    case "$1" in
@@ -131,6 +132,10 @@ while (($#)); do
          usage
          exit 0
          ;;
+	  --remove|-r)
+	     remove=true
+		 shift
+		 ;;
       *)
          echo "$1: invalid option."
          usage
@@ -139,8 +144,10 @@ while (($#)); do
    esac
 done
 
-rm -rf ../Results
-mkdir ../Results
+if [ "$remove" = true ]; then
+	rm -rf ../Results
+fi
+mkdir -p ../Results
 DATETIME=$(date '+%Y%m%d_%H%M%S')
 LOG=../Results/test_tool_$DATETIME.log
 
