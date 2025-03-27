@@ -12,6 +12,7 @@ class Compliance(Enum):
     WithoutProducerCurves = 8
     FaultSimulationFails = 9
     FaultDipUnachievable = 10
+    SimulationTimeOut = 11
 
     def to_str(self) -> str:
         if self == Compliance.Compliant:
@@ -34,6 +35,8 @@ class Compliance(Enum):
             return "Fault simulation fails"
         elif self == Compliance.FaultDipUnachievable:
             return "Fault dip unachievable"
+        elif self == Compliance.SimulationTimeOut:
+            return "Simulation time out"
 
     def show_report(self) -> bool:
         return self in [

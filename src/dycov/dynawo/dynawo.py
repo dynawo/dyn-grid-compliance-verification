@@ -167,8 +167,6 @@ def _run_dynawo(
     simulation_limit: float = None,
 ) -> tuple[bool, str]:
 
-    if simulation_limit is None:
-        simulation_limit = config.get_float("Dynawo", "simulation_limit", 90.0)
     dycov_logging.get_logger("Dynawo").debug(f"Simulation limit: {simulation_limit}")
 
     tic = time.time()

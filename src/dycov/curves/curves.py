@@ -17,7 +17,7 @@ from dycov.configuration.cfg import config
 from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
-from dycov.model.parameters import Disconnection_Model
+from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.model.producer import Producer
 
 
@@ -228,7 +228,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, bool, bool, pd.DataFrame, str]:
+    ) -> tuple[str, dict, int, Simulation_result, pd.DataFrame]:
         """Obtain the simulated curves.
 
         Parameters
@@ -254,10 +254,8 @@ class ProducerCurves:
             Fault duration in seconds
         float
             Frequency sampling
-        bool
-            True if simulation is success
-        bool
-            True if simulation calculated curves
+        Simulation_result
+            Information about the simulation result.
         DataFrame
            Simulation calculated curves
         """
