@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 
-from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 

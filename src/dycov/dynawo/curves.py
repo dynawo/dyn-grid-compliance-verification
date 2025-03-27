@@ -1271,7 +1271,8 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
             dycov_logging.get_logger("ProducerCurves").debug(
-                f"Simulation finished in {self._sim_time}s: {success=} {time_exceeds=} {has_dynawo_curves=}"
+                f"Simulation finished in {self._sim_time}s: "
+                f"{success=} {time_exceeds=} {has_dynawo_curves=}"
             )
 
         except ValueError as e:
@@ -1284,7 +1285,9 @@ class DynawoCurves(ProducerCurves):
 
         self._logger.close_handlers()
 
-        simulation_result = Simulation_result(success, False, has_dynawo_curves, error_message)
+        simulation_result = Simulation_result(
+            success, time_exceeds, has_dynawo_curves, error_message
+        )
         return (
             jobs_output_dir,
             event_params,
