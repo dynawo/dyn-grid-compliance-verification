@@ -122,7 +122,7 @@ def test_perf_ppm_model():
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
-        Compliance.FailedSimulation,
+        Compliance.SimulationTimeOut,
     ] == compliance
 
 
@@ -207,7 +207,7 @@ def test_model_validation_iec2015_curves():
         Compliance.Compliant,
         Compliance.NonCompliant,
         Compliance.NonCompliant,
-        Compliance.Compliant,
+        Compliance.NonCompliant,
         Compliance.NonCompliant,
         Compliance.NonCompliant,
         Compliance.NonCompliant,
