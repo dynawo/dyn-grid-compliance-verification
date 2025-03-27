@@ -559,6 +559,12 @@ class Benchmark:
                 self._name,
                 op_name,
             )
+            dycov_logging.get_logger("Benchmark").debug(
+                f"Error message: {simulation_result.error_message} "
+                f"Time exceeds: {simulation_result.time_exceeds} "
+                f"Has curves: {has_curves} "
+                f"Succes: {simulation_result.success} "
+            )
             if simulation_result.error_message is not None:
                 dycov_logging.get_logger("Benchmark").debug(
                     f"Error message: {simulation_result.error_message}"
