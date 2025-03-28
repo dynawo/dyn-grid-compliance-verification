@@ -26,6 +26,7 @@ usage()
    echo "  -v, --validate: execute only model validation"
    echo "  -p, --performance: execute only performance verification"
    echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
+   echo "  -r, --remove: remove the Results directory"
    echo "  -h, --help: display this help"
 }
 
