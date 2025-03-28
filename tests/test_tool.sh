@@ -17,16 +17,16 @@ color_msg()
 usage()
 {
    echo "This script is used to test the dycov tool."
-   echo "Execute the script in the root directory of the dycov tool."
-   echo "The results are saved in the parent directory of the dycov tool"
    echo "Usage: $0 [options]"
    echo "Options:"
+   echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
+   echo "  -e, --examples: specify the examples path (default: ./examples)"
+   echo "  -o, --output: specify the output path (default: ../Results)"
+   echo "  -r, --remove: remove the output path if it exists"
    echo "  --iec: execute only IEC models"
    echo "  --wecc: execute only WECC models"
    echo "  -v, --validate: execute only model validation"
    echo "  -p, --performance: execute only performance verification"
-   echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
-   echo "  -r, --remove: remove the Results directory"
    echo "  -h, --help: display this help"
 }
 
@@ -49,8 +49,8 @@ launch_validate() {
    for bess_model in "${bess_models[@]}"
    do
       start=$(date +%s)
-      color_msg "dycov validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model"
-      dycov validate -l $launcher -m ./examples/Model/BESS/$bess_model/Dynawo ./examples/Model/BESS/$bess_model/ReferenceCurves -o ../Results/Model/BESS/$bess_model --testing
+      color_msg "dycov validate -l $launcher -m $examples_path/Model/BESS/$bess_model/Dynawo $examples_path/Model/BESS/$bess_model/ReferenceCurves -o $results_path/Model/BESS/$bess_model"
+      dycov validate -l $launcher -m $examples_path/Model/BESS/$bess_model/Dynawo $examples_path/Model/BESS/$bess_model/ReferenceCurves -o $results_path/Model/BESS/$bess_model --testing
       end=$(date +%s)
       color_msg "Validate: $bess_model Elapsed Time: $(($end-$start)) seconds"
    done
@@ -58,8 +58,8 @@ launch_validate() {
    for photo_model in "${photo_models[@]}"
    do
       start=$(date +%s)
-      color_msg "dycov validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model"
-      dycov validate -l $launcher -m ./examples/Model/Photovoltaics/$photo_model/Dynawo ./examples/Model/Photovoltaics/$photo_model/ReferenceCurves -o ../Results/Model/Photovoltaics/$photo_model --testing
+      color_msg "dycov validate -l $launcher -m $examples_path/Model/Photovoltaics/$photo_model/Dynawo $examples_path/Model/Photovoltaics/$photo_model/ReferenceCurves -o $results_path/Model/Photovoltaics/$photo_model"
+      dycov validate -l $launcher -m $examples_path/Model/Photovoltaics/$photo_model/Dynawo $examples_path/Model/Photovoltaics/$photo_model/ReferenceCurves -o $results_path/Model/Photovoltaics/$photo_model --testing
       end=$(date +%s)
       color_msg "Validate: $photo_model Elapsed Time: $(($end-$start)) seconds"
    done
@@ -67,8 +67,8 @@ launch_validate() {
    for wind_model in "${wind_models[@]}"
    do
       start=$(date +%s)
-      color_msg "dycov validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model"
-      dycov validate -l $launcher -m ./examples/Model/Wind/$wind_model/Dynawo ./examples/Model/Wind/$wind_model/ReferenceCurves -o ../Results/Model/Wind/$wind_model --testing
+      color_msg "dycov validate -l $launcher -m $examples_path/Model/Wind/$wind_model/Dynawo $examples_path/Model/Wind/$wind_model/ReferenceCurves -o $results_path/Model/Wind/$wind_model"
+      dycov validate -l $launcher -m $examples_path/Model/Wind/$wind_model/Dynawo $examples_path/Model/Wind/$wind_model/ReferenceCurves -o $results_path/Model/Wind/$wind_model --testing
       end=$(date +%s)
       color_msg "Validate: $wind_model Elapsed Time: $(($end-$start)) seconds"
    done
@@ -91,8 +91,8 @@ launch_performance() {
       for model in "${models[@]}"
       do
          start=$(date +%s)
-         color_msg "dycov performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model"
-         dycov performance -l $launcher -m ./examples/Performance/$topology/$model/Dynawo -o ../Results/Performance/$topology/$model --testing
+         color_msg "dycov performance -l $launcher -m $examples_path/Performance/$topology/$model/Dynawo -o $results_path/Performance/$topology/$model"
+         dycov performance -l $launcher -m $examples_path/Performance/$topology/$model/Dynawo -o $results_path/Performance/$topology/$model --testing
          end=$(date +%s)
          color_msg "Verificate: $topology - $model Elapsed Time: $(($end-$start)) seconds"
       done
@@ -106,6 +106,8 @@ wecc_models=true # by default, add WECC models
 validate=true  # by default, validate the models
 performance=true  # by default, verificate the performance
 remove=false # by default, remove Results path
+examples_path="./examples"
+results_path="../Results"
 
 while (($#)); do
    case "$1" in
@@ -129,14 +131,22 @@ while (($#)); do
          launcher=$2
          shift 2
          ;;
-      --help|-h)
-         usage
-         exit 0
+      -e|--examples)
+         examples_path=$2
+         shift 2
          ;;
-	  --remove|-r)
+      -o|--output)
+         results_path=$2
+         shift 2
+         ;;
+      -r|--remove)      
 	     remove=true
 		 shift
 		 ;;
+      -h|--help)
+         usage
+         exit 0
+         ;;
       *)
          echo "$1: invalid option."
          usage
@@ -146,11 +156,11 @@ while (($#)); do
 done
 
 if [ "$remove" = true ]; then
-	rm -rf ../Results
+	rm -rf $results_path
 fi
-mkdir -p ../Results
+mkdir -p $results_path
 DATETIME=$(date '+%Y%m%d_%H%M%S')
-LOG=../Results/test_tool_$DATETIME.log
+LOG=$results_path/test_tool_$DATETIME.log
 
 # Set up redirections to the log file
 exec 6>&1      # Link file descriptor #6 with stdout. Saves stdout.
