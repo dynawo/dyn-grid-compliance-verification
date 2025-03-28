@@ -13,10 +13,10 @@ is safe to use against production Python code.
 ## Initial conditions
 
 For this test, the **model_validation** command is executed using the model and the
-reference curves available in *examples/Model/Wind/WECC/* as inputs.
+reference curves available in *examples/Model/Wind/WECCA/* as inputs.
 
 ```
-py-spy record -o profile.svg -- dycov validate examples/Model/Wind/WECC/ReferenceCurves -m examples/Model/Wind/WECC/Dynawo -o ../Results/Model/WindWECC
+py-spy record -o profile.svg -- dycov validate examples/Model/Wind/WECCA/ReferenceCurves -m examples/Model/Wind/WECCA/Dynawo -o ../Results/Model/Wind/WECCA
 ```
 
 ## Results

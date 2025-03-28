@@ -148,7 +148,7 @@ def _get_xrange_for_curve(
     xmin = None
     xmax = None
 
-    if time_curve[steady_pos] > sim_t_event_end:
+    if time_curve[steady_pos] >= sim_t_event_end:
         graph_preevent_trange_pct = (
             config.get_float("Global", "graph_preevent_trange_pct", 15) / 100.0
         )
