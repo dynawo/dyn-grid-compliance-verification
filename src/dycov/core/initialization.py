@@ -9,6 +9,7 @@
 #
 
 import configparser
+from importlib.metadata import version
 import shutil
 import sys
 from pathlib import Path
@@ -267,6 +268,7 @@ def init(launcher_dwo: Path, debug: bool) -> None:
     _setup_user_config()
     _setup_templates_and_models(tool_path)
     _initialize_logger(debug)
+    dycov_logging.get_logger("Initialization").info(f"Starting DyCoV - version {version('dycov')}")
 
     # Precompiled modelica models
     if launcher_dwo:
