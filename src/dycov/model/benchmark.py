@@ -19,6 +19,7 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
+from dycov.model.parameters import Simulation_result
 from dycov.validation import compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
@@ -467,7 +468,7 @@ class Benchmark:
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, float, bool, bool, int, str]:
+    ) -> tuple[Path, Path, dict, float, Simulation_result, int]:
         return self._curves_manager.has_required_curves(
             measurement_names, pcs_bm_name, bm_name, oc_name
         )
@@ -550,18 +551,33 @@ class Benchmark:
                 jobs_output_dir,
                 event_params,
                 fs,
-                success,
-                has_simulated_curves,
+                simulation_result,
                 has_curves,
-                error_message,
             ) = self.__has_required_curves(
                 self._validator.get_measurement_names(),
                 pcs_benchmark_name,
                 self._name,
                 op_name,
             )
-
-            if has_curves == 0:
+            dycov_logging.get_logger("Benchmark").debug(
+                f"Error message: {simulation_result.error_message} "
+                f"Time exceeds: {simulation_result.time_exceeds} "
+                f"Has curves: {has_curves} "
+                f"Succes: {simulation_result.success} "
+            )
+            if simulation_result.error_message is not None:
+                dycov_logging.get_logger("Benchmark").debug(
+                    f"Error message: {simulation_result.error_message}"
+                )
+                if simulation_result.error_message == "Fault simulation fails":
+                    compliance = Compliance.FaultSimulationFails
+                elif simulation_result.error_message == "Fault dip unachievable":
+                    compliance = Compliance.FaultDipUnachievable
+                results = {"compliance": False, "curves": None}
+            elif simulation_result.time_exceeds:
+                compliance = Compliance.SimulationTimeOut
+                results = {"compliance": False, "curves": None}
+            elif has_curves == 0:
                 op_cond_success, results, compliance = self.__validate(
                     op_name,
                     pcs_benchmark_name,
@@ -569,8 +585,8 @@ class Benchmark:
                     jobs_output_dir,
                     event_params,
                     fs,
-                    success,
-                    has_simulated_curves,
+                    simulation_result.success,
+                    simulation_result.has_simulated_curves,
                 )
                 results["solver"] = self._curves_manager.get_solver()
                 # If there is a correct simulation, the report must be created
@@ -583,14 +599,6 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
             else:
                 compliance = Compliance.WithoutCurves
-                results = {"compliance": False, "curves": None}
-
-            if error_message:
-                dycov_logging.get_logger("Benchmark").debug(f"Error message: {error_message}")
-                if error_message == "Fault simulation fails":
-                    compliance = Compliance.FaultSimulationFails
-                elif error_message == "Fault dip unachievable":
-                    compliance = Compliance.FaultDipUnachievable
                 results = {"compliance": False, "curves": None}
 
             results["summary"] = compliance
