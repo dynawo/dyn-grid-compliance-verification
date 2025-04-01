@@ -10,7 +10,6 @@
     <!-- Electrical Control -->
     <par type="BOOL" name="WT4A_QFlag" value="true"/>
     <par type="BOOL" name="WT4A_VFlag" value="true"/>
-    <par type="BOOL" name="WT4A_VCompFlag" value="false"/>
     <par type="BOOL" name="WT4A_PfFlag" value="false"/>
     <par type="BOOL" name="WT4A_PQFlag" value="false"/>
     <par type="DOUBLE" name="WT4A_tRv" value="0.01"/>
@@ -22,9 +21,6 @@
     <par type="DOUBLE" name="WT4A_Kqv" value="2"/>
     <par type="DOUBLE" name="WT4A_Iqh1Pu" value="1.1"/>
     <par type="DOUBLE" name="WT4A_Iql1Pu" value="-1.1"/>
-    <par type="DOUBLE" name="WT4A_tP" value="0.05"/>
-    <par type="DOUBLE" name="WT4A_QMaxPu" value="0.4"/>
-    <par type="DOUBLE" name="WT4A_QMinPu" value="-0.4"/>
     <par type="DOUBLE" name="WT4A_Kqp" value="1"/>
     <par type="DOUBLE" name="WT4A_Kqi" value="0.7"/>
     <par type="DOUBLE" name="WT4A_VMaxPu" value="1.1"/>
@@ -33,17 +29,20 @@
     <par type="DOUBLE" name="WT4A_Kvi" value="0.7"/>
     <par type="DOUBLE" name="WT4A_tIq" value="0.01"/>
     <par type="DOUBLE" name="WT4A_tPord" value="0.01"/>
-    <par type="DOUBLE" name="WT4A_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="WT4A_PMinPu" value="0"/>
     <par type="DOUBLE" name="WT4A_DPMaxPu" value="999"/>
     <par type="DOUBLE" name="WT4A_DPMinPu" value="-999"/>
     <par type="DOUBLE" name="WT4A_IMaxPu" value="1.3"/>
+    <par type="DOUBLE" name="WT4A_tP" value="0.05"/>
+    <par type="DOUBLE" name="WT4A_QMaxPu" value="0.4"/>
+    <par type="DOUBLE" name="WT4A_QMinPu" value="-0.4"/>
+    <par type="DOUBLE" name="WT4A_PMaxPu" value="1"/>
+    <par type="DOUBLE" name="WT4A_PMinPu" value="0"/>
 
     <!-- Generator Control -->
     <par type="DOUBLE" name="WT4A_tG" value="0.02"/>
     <par type="DOUBLE" name="WT4A_tFilterGC" value="0.02"/>
-    <par type="DOUBLE" name="WT4A_IqrMinPu" value="-999"/>
     <par type="DOUBLE" name="WT4A_IqrMaxPu" value="999"/>
+    <par type="DOUBLE" name="WT4A_IqrMinPu" value="-999"/>
     <par type="DOUBLE" name="WT4A_RrpwrPu" value="10"/>
     <par type="BOOL" name="WT4A_RateFlag" value="false"/>
 

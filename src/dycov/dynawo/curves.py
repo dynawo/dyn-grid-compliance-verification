@@ -79,7 +79,7 @@ class DynawoCurves(ProducerCurves):
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
         sanity_checks.check_simulation_duration(self.get_simulation_duration())
 
-        self._sim_time = config.get_float("Dynawo", "simulation_limit", 120.0)
+        self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
         logging.setLoggerClass(SimulationLogger)
         self._logger = logging.getLogger("ProducerCurves")
@@ -575,7 +575,7 @@ class DynawoCurves(ProducerCurves):
     ) -> tuple[bool, bool, str, pd.DataFrame]:
         # Run Dynawo
         if max_sim_time is None:
-            max_sim_time = config.get_float("Dynawo", "simulation_limit", 120.0)
+            max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
         success, log, has_error, curves_calculated, sim_time = dynawo.run_base_dynawo(
             self._launcher_dwo,
             "TSOModel",
@@ -704,7 +704,14 @@ class DynawoCurves(ProducerCurves):
                 jobs_output_dir,
             )
 
-        if not success and not time_exceeds:
+        if time_exceeds:
+            if max_sim_time is None:
+                max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
+            dycov_logging.get_logger("ProducerCurves").warning(
+                f"Simulation time exceeds the maximum allowed ({max_sim_time})"
+            )
+
+        if not success:
             dycov_logging.get_logger("ProducerCurves").warning("Retry by changing the solver type")
 
             # Changing the solver type
@@ -750,7 +757,7 @@ class DynawoCurves(ProducerCurves):
 
         if time_exceeds:
             if max_sim_time is None:
-                max_sim_time = config.get_float("Dynawo", "simulation_limit", 120.0)
+                max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
             dycov_logging.get_logger("ProducerCurves").warning(
                 f"Simulation time exceeds the maximum allowed ({max_sim_time})"
             )
