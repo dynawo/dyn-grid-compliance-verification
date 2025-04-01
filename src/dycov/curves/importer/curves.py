@@ -16,7 +16,7 @@ from dycov.core.execution_parameters import Parameters
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.files import manage_files
-from dycov.model.parameters import Disconnection_Model, Gen_init, Gen_params
+from dycov.model.parameters import Disconnection_Model, Gen_init, Gen_params, Simulation_result
 
 
 def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
@@ -48,7 +48,20 @@ class ImportedCurves(ProducerCurves):
         for key in curves.keys():
             if key.endswith("_AVRSetpointPu"):
                 gen_id = key.replace("_AVRSetpointPu", "")
-                generators.append(Gen_params(gen_id, "", "", "", "", "", "", "", False))
+                generators.append(
+                    Gen_params(
+                        id=gen_id,
+                        lib="",
+                        connectedXmfr="",
+                        SNom="",
+                        IMax="",
+                        par_id="",
+                        P="",
+                        Q="",
+                        VoltageDrop="",
+                        UseVoltageDrop=False,
+                    )
+                )
 
         self.get_producer().set_generators(generators)
         return generators
@@ -209,7 +222,7 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, float, bool, bool, pd.DataFrame]:
+    ) -> tuple[str, dict, float, Simulation_result, pd.DataFrame]:
         """Read the input curves to get the simulated curves.
 
         Parameters
@@ -235,10 +248,8 @@ class ImportedCurves(ProducerCurves):
             Fault duration in seconds
         float
             Frequency sampling
-        bool
-            True if simulation is success
-        bool
-            True if simulation calculated curves
+        Simulation_result
+            Information about the simulation result.
         DataFrame
            Simulation calculated curves
         """
@@ -252,14 +263,8 @@ class ImportedCurves(ProducerCurves):
             working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves_path()
         )
 
-        return (
-            ".",
-            event_params,
-            fs,
-            success,
-            has_imported_curves,
-            curves,
-        )
+        simulation_result = Simulation_result(success, False, has_imported_curves, None)
+        return (".", event_params, fs, simulation_result, curves)
 
     def get_disconnection_model(self) -> Disconnection_Model:
         """Get all equipment in the model that can be disconnected in the simulation.

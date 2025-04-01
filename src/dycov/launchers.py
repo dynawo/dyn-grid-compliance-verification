@@ -11,6 +11,7 @@
 import argparse
 import os
 import shutil
+from importlib.metadata import version
 from pathlib import Path
 
 from dycov.core import initialization
@@ -264,9 +265,14 @@ def _add_only_dtr_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_version_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--version", action="version", version=version("dycov"))
+
+
 def _subcomands_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
+    _add_version_argument(parser)
 
     validate = subparsers.add_parser("validate", help="run the RMS model validation process")
     group = validate.add_mutually_exclusive_group(required=False)
