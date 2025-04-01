@@ -37,14 +37,10 @@ def _add_curve_to_file(
     model: str,
     variable: str,
     type: str,
+    sign: int,
     dynawo_variable: str,
     curves_dict: dict,
 ):
-    sign = 1
-    if dynawo_variable.startswith("-"):
-        sign = -1
-        dynawo_variable = dynawo_variable[1:]
-
     if _add_curves_dict(model, variable, type, dynawo_variable, sign, curves_dict):
         etree.SubElement(
             curves_root,
@@ -57,17 +53,25 @@ def _add_curve_to_file(
 def _add_bus_curves(curves_root: etree.Element, zone: int, curves_dict: dict) -> None:
     bus_variables = ["VoltageRe", "VoltageIm"]
     for variable in bus_variables:
-        dynawo_variable = dynawo_translator.get_dynawo_variable("Bus", variable)
+        sign, dynawo_variable = dynawo_translator.get_dynawo_variable("Bus", variable)
         if not dynawo_variable:
             continue
 
-        _add_curve_to_file(curves_root, "BusPDR", variable, "BUS", dynawo_variable, curves_dict)
+        _add_curve_to_file(
+            curves_root, "BusPDR", variable, "BUS", sign, dynawo_variable, curves_dict
+        )
     if zone == 1:
-        dynawo_variable = dynawo_translator.get_dynawo_variable(
+        sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
             "InfiniteBus", "NetworkFrequencyPu"
         )
         _add_curve_to_file(
-            curves_root, "InfiniteBus", "NetworkFrequencyPu", "BUS", dynawo_variable, curves_dict
+            curves_root,
+            "InfiniteBus",
+            "NetworkFrequencyPu",
+            "BUS",
+            sign,
+            dynawo_variable,
+            curves_dict,
         )
 
 
@@ -92,12 +96,12 @@ def _add_xfmrs_curves(curves_root: etree.Element, xfmrs: list, curves_dict: dict
     xfmr_variables = ["Tap"]
     for xfmr in xfmrs:
         for variable in xfmr_variables:
-            dynawo_variable = dynawo_translator.get_dynawo_variable(xfmr.lib, variable)
+            sign, dynawo_variable = dynawo_translator.get_dynawo_variable(xfmr.lib, variable)
             if not dynawo_variable:
                 continue
 
             _add_curve_to_file(
-                curves_root, xfmr.id, variable, "XFMR", dynawo_variable, curves_dict
+                curves_root, xfmr.id, variable, "XFMR", sign, dynawo_variable, curves_dict
             )
 
 
@@ -137,7 +141,7 @@ def _add_generators_curves(
 
     for generator in generators:
         for variable in generator_variables:
-            dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, variable)
+            sign, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, variable)
             if not dynawo_variable:
                 # Check needed as long as there are Dynawo models that do not have
                 # a variable that corresponds to U + lambda * Q. In these models,
@@ -145,18 +149,30 @@ def _add_generators_curves(
                 # in the tool.
                 if variable == "MagnitudeControlledByAVRPu":
                     variable = "MagnitudeControlledByAVRUPu"
-                    dynawo_variable = dynawo_translator.get_dynawo_variable(
+                    sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
                         generator.lib, variable
                     )
                     _add_curve_to_file(
-                        curves_root, generator.id, variable, "GEN", dynawo_variable, curves_dict
+                        curves_root,
+                        generator.id,
+                        variable,
+                        "GEN",
+                        sign,
+                        dynawo_variable,
+                        curves_dict,
                     )
                     variable = "MagnitudeControlledByAVRQPu"
-                    dynawo_variable = dynawo_translator.get_dynawo_variable(
+                    sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
                         generator.lib, variable
                     )
                     _add_curve_to_file(
-                        curves_root, generator.id, variable, "GEN", dynawo_variable, curves_dict
+                        curves_root,
+                        generator.id,
+                        variable,
+                        "GEN",
+                        sign,
+                        dynawo_variable,
+                        curves_dict,
                     )
                 continue
 
@@ -164,7 +180,7 @@ def _add_generators_curves(
                 continue
 
             _add_curve_to_file(
-                curves_root, generator.id, variable, "GEN", dynawo_variable, curves_dict
+                curves_root, generator.id, variable, "GEN", sign, dynawo_variable, curves_dict
             )
 
 

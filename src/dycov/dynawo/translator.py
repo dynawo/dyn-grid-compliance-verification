@@ -116,7 +116,7 @@ class Translator:
 
         return valid_parameters
 
-    def get_dynawo_variable(self, lib: str, name: str) -> Optional[str]:
+    def get_dynawo_variable(self, lib: str, name: str) -> tuple[int, Optional[str]]:
         """Get the Dynawo variable name for a tool variable name.
 
         Parameters
@@ -128,27 +128,35 @@ class Translator:
 
         Returns
         -------
+        int
+            Sign of the variable
         str
             Dynawo variable name
         """
+        sign = 1
+        translated_name = None
         if self._bus.has_option(lib, name):
-            return self._bus.get(lib, name)
+            translated_name = self._bus.get(lib, name)
         elif self._synchronous_machine.has_option(lib, name):
-            return self._synchronous_machine.get(lib, name)
+            translated_name = self._synchronous_machine.get(lib, name)
         elif self._power_park.has_option(lib, name):
-            return self._power_park.get(lib, name)
+            translated_name = self._power_park.get(lib, name)
         elif self._storage.has_option(lib, name):
-            return self._storage.get(lib, name)
+            translated_name = self._storage.get(lib, name)
         elif self._line.has_option(lib, name):
-            return self._line.get(lib, name)
+            translated_name = self._line.get(lib, name)
         elif self._load.has_option(lib, name):
-            return self._load.get(lib, name)
+            translated_name = self._load.get(lib, name)
         elif self._transformer.has_option(lib, name):
-            return self._transformer.get(lib, name)
+            translated_name = self._transformer.get(lib, name)
         elif self._control_modes.has_option(lib, name):
-            return self._control_modes.get(lib, name)
+            translated_name = self._control_modes.get(lib, name)
 
-        return None
+        if translated_name and translated_name.startswith("-"):
+            sign = -1
+            translated_name = translated_name[1:]
+
+        return sign, translated_name
 
     def get_curve_variable(self, id: str, lib: str, name: str) -> Optional[str]:
         """Get the Dynawo curve name for a equipment.
@@ -167,7 +175,7 @@ class Translator:
         str
             Dynawo curve name
         """
-        suffix = self.get_dynawo_variable(lib, name)
+        _, suffix = self.get_dynawo_variable(lib, name)
         if not suffix:
             return None
 

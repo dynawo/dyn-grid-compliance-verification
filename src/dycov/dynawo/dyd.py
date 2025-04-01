@@ -41,7 +41,7 @@ class DydFile(FileVariables):
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.dyd")
 
         if event_params.get("connect_to"):
-            connect_event_to = dynawo_translator.get_dynawo_variable(
+            _, connect_event_to = dynawo_translator.get_dynawo_variable(
                 self._dynawo_curves.get_producer().generators[0].lib, event_params["connect_to"]
             )
             variables_dict["generator_id"] = self._dynawo_curves.get_producer().generators[0].id

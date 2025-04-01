@@ -29,9 +29,10 @@ Developed by Grupo AIA
 4. [Running examples](#running-examples)
 5. [Configuration](#configuration)
 6. [Compiling Modelica models](#compiling-modelica-models)
-7. [For developers](#for-developers)
-8. [Roadmap](#roadmap)
-9. [Contact](#contact)
+7. [Workshop presentation](#workshop-presentation)
+8. [For developers](#for-developers)
+9. [Roadmap](#roadmap)
+10. [Contact](#contact)
 
 --------------------------------------------------------------------------------
 
@@ -561,6 +562,17 @@ options:
   -f, --force           force the recompilation of all Modelica models (the
                         user's and the tool's own)
 ```
+
+
+# Workshop presentation
+Here you can watch the video of the presentation workshop held on 11/03/2025. (english subtitles available only if you download the video)
+Part 1: 
+
+https://github.com/user-attachments/assets/d8c0bcd8-339f-47e4-9f26-e452b2e87980
+
+Part 2:
+
+https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 
 
 

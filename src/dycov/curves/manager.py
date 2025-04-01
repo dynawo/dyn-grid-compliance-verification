@@ -8,7 +8,7 @@ from dycov.core.execution_parameters import Parameters
 from dycov.curves import curves_factory
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Disconnection_Model
+from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.sigpro import signal_windows, sigpro
 from dycov.validation import sanity_checks
 
@@ -103,8 +103,7 @@ class CurvesManager:
             jobs_output_dir,
             event_params,
             fs,
-            success,
-            has_simulated_curves,
+            simulation_result,
             self._curves["calculated"],
         ) = self.__get_producer_curves_generator().obtain_simulated_curve(
             working_oc_dir,
@@ -121,8 +120,7 @@ class CurvesManager:
             jobs_output_dir,
             event_params,
             fs,
-            success,
-            has_simulated_curves,
+            simulation_result,
         )
 
     def __check_curves(
@@ -179,7 +177,7 @@ class CurvesManager:
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, float, bool, bool, int]:
+    ) -> tuple[Path, Path, dict, float, Simulation_result, int]:
         """Check if all curves are present.
 
         Parameters
@@ -203,10 +201,8 @@ class CurvesManager:
             Event parameters
         float
             Frequency sampling
-        bool
-            True if simulation is success
-        bool
-            True if simulation calculated curves
+        Simulation_result
+            Information about the simulation result.
         int
             0 all curves are present
             1 producer's curves are missing
@@ -218,8 +214,7 @@ class CurvesManager:
             jobs_output_dir,
             event_params,
             fs,
-            success,
-            has_simulated_curves,
+            simulation_result,
         ) = self.__obtain_curve(
             pcs_bm_name,
             bm_name,
@@ -259,8 +254,7 @@ class CurvesManager:
             jobs_output_dir,
             event_params,
             fs,
-            success,
-            has_simulated_curves,
+            simulation_result,
             has_curves,
         )
 
