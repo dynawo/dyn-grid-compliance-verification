@@ -173,6 +173,7 @@ class DynawoCurves(ProducerCurves):
         return 0.0
 
     def __adjust_event_value(self, event_params: dict) -> None:
+        # TODO: (M-topologies) Adjust Uref value by generator
         generator = self.get_producer().generators[0]
         if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
             event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
@@ -312,6 +313,17 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
         )
 
+        # TODO: (M-topologies) Create a Setpoint model by generator, with their connections
+        #       and parameters.
+        # tso_file.complete_setpoint(
+        #     working_oc_dir,
+        #     "TSOModel.dyd",
+        #     "TSOModel.par",
+        #     self.get_producer().generators,
+        #     config.get_value(pcs_bm_name, "TSO_model"),
+        #     event_params["connect_to"],
+        # )
+
         xmfrs = self.get_producer().stepup_xfmrs.copy()
         if self.get_producer().auxload_xfmr:
             xmfrs.append(self.get_producer().auxload_xfmr)
@@ -348,6 +360,10 @@ class DynawoCurves(ProducerCurves):
 
         connect_event_to = config.get_value(config_section, "connect_event_to")
         self.__log(f"\t{connect_event_to=}")
+        # TODO: (M-topologies) Event values depends of the test type
+        # * for reference tracking tests the tool needs an event by generator
+        #       (Save in Gen_Params object? Refactor to a new class?)
+        # * for others tests only one global event is needed.
         pre_value = 1.0
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:

@@ -161,6 +161,7 @@ def _pcs_replace(
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
+        subst_dict = subst_dict | {"producer": oc_results["producer"]}
         subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
         subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
         subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
@@ -175,6 +176,7 @@ def _pcs_replace(
                 * 100
             }
 
+        # TODO: (M-topologies) Identify the producer files used in each test
         oc_report_name = config.get_value(operating_condition, "report_name")
         if oc_report_name is not None:
             # Process only "Compliant" and "Non-compliant" results;
@@ -371,13 +373,16 @@ def _summary_log(
 
     header_txt += (
         "\n\n"
-        "Pcs          Benchmark                Operating Condition      Overall Result\n"
-        "-----------------------------------------------------------------------------\n"
+        "Producer            Pcs          Benchmark                "
+        "Operating Condition      Overall Result\n"
+        "----------------------------------------------------------"
+        "---------------------------------------\n"
     )
     body_txt = ""
     for i in summary_list:
         body_txt += (
-            f"{i.pcs:13}{i.benchmark:25}{i.operating_condition:25}{i.compliance.to_str()}\n"
+            f"{i.producer_file:20}{i.pcs:13}{i.benchmark:25}"
+            f"{i.operating_condition:25}{i.compliance.to_str()}\n"
         )
     body_txt += "\n"
     # Show the summary report on the console and save it to file

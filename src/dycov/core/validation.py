@@ -121,9 +121,12 @@ class Validation:
                 validation_pcs, "model_bess_validation_pcs", "model/BESS"
             )
 
+        # TODO: (M-topologies) Its necessary to add a Zone1 PCS by DYD file in the producer path
         self._validation_pcs = validation_pcs
 
         # Prepare the environment to execute the tool
+        # TODO: (M-topologies) Repeated PCS must distinguish which is their model using the
+        #       DYD file name
         pcs_list = [Pcs(pcs_name, parameters) for pcs_name in self._validation_pcs]
         self._pcs_list = sorted(pcs_list, key=attrgetter("_id", "_zone"))
 
@@ -166,7 +169,7 @@ class Validation:
 
     def __create_report(self, summary_list: list, report_results: dict) -> None:
         """Create the full report."""
-        sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone"))
+        sorted_summary_list = sorted(summary_list, key=attrgetter("producer_file", "id", "zone"))
         dycov_logging.get_logger("Validation").debug(f"Sorted summary {sorted_summary_list}")
         try:
             report.create_pdf(
