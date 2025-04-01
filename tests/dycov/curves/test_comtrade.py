@@ -28,8 +28,11 @@ def test_comtrade():
 
         assert not df_comtrade_curve.empty
         assert "time" in df_comtrade_curve
+        assert df_comtrade_curve["time"].iloc[0] == 0.0
+        assert df_comtrade_curve["time"].iloc[-1] == 7.5
         assert "Vac_a" in df_comtrade_curve
         assert "Ineg_q" in df_comtrade_curve
         assert tt == 2.584
+        assert fs == 12499.999999987498
     finally:
         shutil.rmtree(path)

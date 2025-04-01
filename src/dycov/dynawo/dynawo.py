@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 
-from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
@@ -167,8 +166,6 @@ def _run_dynawo(
     simulation_limit: float = None,
 ) -> tuple[bool, str]:
 
-    if simulation_limit is None:
-        simulation_limit = config.get_float("Dynawo", "simulation_limit", 90.0)
     dycov_logging.get_logger("Dynawo").debug(f"Simulation limit: {simulation_limit}")
 
     tic = time.time()
@@ -452,6 +449,9 @@ def _create_curves(
     pdr_active_power = _get_pdr_active_power(pdr_voltage, pdr_current, snom, snref)
     pdr_reactive_power = _get_pdr_reactive_power(pdr_voltage, pdr_current, snom, snref)
 
+    rtol = 0.002  # i.e., 0.2% relative error
+    atol = 0.1 * rtol  # i.e., when magnitudes are near 0.01, switch to abs error
+
     # Create the new curves file
     curves_dict = dict()
     curves_dict["BusPDR_BUS_Voltage"] = pdr_voltage_modulus
@@ -463,7 +463,7 @@ def _create_curves(
         active_power,
         voltage_modulus,
         out=np.zeros_like(active_power),
-        where=(voltage_modulus != 0),
+        where=np.invert(np.isclose(voltage_modulus, 0.0, rtol=rtol, atol=atol)),
     ).tolist()
 
     curves_dict["BusPDR_BUS_ReactivePower"] = pdr_reactive_power
@@ -471,7 +471,7 @@ def _create_curves(
         reactive_power,
         voltage_modulus,
         out=np.zeros_like(reactive_power),
-        where=(voltage_modulus != 0.0),
+        where=np.invert(np.isclose(voltage_modulus, 0.0, rtol=rtol, atol=atol)),
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
