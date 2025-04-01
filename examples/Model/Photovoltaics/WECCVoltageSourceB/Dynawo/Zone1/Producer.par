@@ -42,6 +42,7 @@
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
 
     <!-- Plant Control -->
+    <!-- These parameters are not really used, but the current compilation forces them to be set. -->
     <par type="BOOL" name="photovoltaics_RefFlag" value="true"/>
     <par type="BOOL" name="photovoltaics_VCompFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_FreqFlag" value="true"/>

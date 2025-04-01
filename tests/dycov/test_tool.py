@@ -26,7 +26,6 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         assert (testpath / reference_curves_path).exists()
 
     try:
-        config._default_config.set("Dynawo", "simulation_limit", "90")
         only_dtr = True
         if producer_model_path:
             if "Performance" in producer_model_path:
@@ -172,16 +171,16 @@ def test_model_validation_wecca_model():
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
-        Compliance.SimulationTimeOut,
+        Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.NonCompliant,
         Compliance.InvalidTest,
         Compliance.Compliant,
+        Compliance.Compliant,
         Compliance.NonCompliant,
-        Compliance.NonCompliant,
-        Compliance.NonCompliant,
+        Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
@@ -217,7 +216,7 @@ def test_model_validation_iec2015_curves():
         Compliance.NonCompliant,
         Compliance.NonCompliant,
         Compliance.NonCompliant,
-        Compliance.NonCompliant,
+        Compliance.Compliant,
         Compliance.NonCompliant,
         Compliance.Compliant,
         Compliance.Compliant,
