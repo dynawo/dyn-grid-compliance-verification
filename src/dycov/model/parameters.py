@@ -37,6 +37,9 @@ Pimodel_params = namedtuple("Pimodel_params", ["Ytr", "Ysh1", "Ysh2"])
 Gen_init = namedtuple("Gen_init", ["id", "P0", "Q0", "U0", "UPhase0"])
 Load_init = namedtuple("Load_init", ["id", "lib", "P0", "Q0", "U0", "UPhase0"])
 
+Simulation_result = namedtuple(
+    "Simulation_result", ["success", "time_exceeds", "has_simulated_curves", "error_message"]
+)
 Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
 Disconnection_Model = namedtuple(
     "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]

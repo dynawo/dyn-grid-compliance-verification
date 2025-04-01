@@ -1,0 +1,24 @@
+name: 💡 Suggestion
+description: Suggest an enhancement
+labels: ['enhancement']
+
+body:
+- type: markdown
+  attributes:
+    value: |
+
+      Thank you for your suggestion! Use the sections below to submit a suggestion. 
+      
+      - All ideas are welcome - let's build something together!
+      - Remember to include sufficient details and context.
+      - If you have multiple suggestions please submit them separately so we can track resolution.
+      - Screenshots are always helpful (just paste any images right here in the suggestion)
+
+- type: textarea
+  id: suggestion
+  attributes:
+    label: Suggestion
+    description: What would you like to see improved?
+    placeholder: The more details, the better
+  validations:
+    required: true
