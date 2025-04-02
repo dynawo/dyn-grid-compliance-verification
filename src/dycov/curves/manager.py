@@ -102,7 +102,6 @@ class CurvesManager:
         (
             jobs_output_dir,
             event_params,
-            fs,
             simulation_result,
             self._curves["calculated"],
         ) = self.__get_producer_curves_generator().obtain_simulated_curve(
@@ -119,7 +118,6 @@ class CurvesManager:
             working_oc_dir,
             jobs_output_dir,
             event_params,
-            fs,
             simulation_result,
         )
 
@@ -177,7 +175,7 @@ class CurvesManager:
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, float, Simulation_result, int]:
+    ) -> tuple[Path, Path, dict, Simulation_result, int]:
         """Check if all curves are present.
 
         Parameters
@@ -199,8 +197,6 @@ class CurvesManager:
             Simulator output path.
         dict
             Event parameters
-        float
-            Frequency sampling
         Simulation_result
             Information about the simulation result.
         int
@@ -213,7 +209,6 @@ class CurvesManager:
             working_oc_dir,
             jobs_output_dir,
             event_params,
-            fs,
             simulation_result,
         ) = self.__obtain_curve(
             pcs_bm_name,
@@ -253,7 +248,6 @@ class CurvesManager:
             working_oc_dir,
             jobs_output_dir,
             event_params,
-            fs,
             simulation_result,
             has_curves,
         )
@@ -262,7 +256,6 @@ class CurvesManager:
         self,
         working_path: Path,
         event_params: dict,
-        fs: float,
         setpoint_tracking_controlled_magnitude: bool,
     ):
         """Apply signal processing.
@@ -273,8 +266,6 @@ class CurvesManager:
             Working path.
         event_params: dict
             Event parameters.
-        fs: float
-            Frequency sampling.
         setpoint_tracking_controlled_magnitude: bool
             Setpoint tracking controlled magnitude.
 
@@ -310,7 +301,7 @@ class CurvesManager:
         sanity_checks.check_sampling_interval(t_com, f_cutoff)
 
         # Reference signals should be converted to RMS PS (if they are EMT)
-        reference_curves = sigpro.ensure_rms_signals(csv_reference_curves, fs)
+        reference_curves = sigpro.ensure_rms_signals(csv_reference_curves)
 
         # First resampling: ensure a constant time-step signal
         calculated_curves = sigpro.resample_to_fixed_step(csv_calculated_curves)

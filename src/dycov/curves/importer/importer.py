@@ -95,9 +95,7 @@ class CurvesImporter:
         """
         return self._curves_cfg
 
-    def get_curves_dataframe(
-        self, zone: int, remove_file: bool = True
-    ) -> tuple[pd.DataFrame, dict, float, float]:
+    def get_curves_dataframe(self, zone: int, remove_file: bool = True) -> pd.DataFrame:
         """Import a curve file and return its relevant data.
 
         Parameters
@@ -113,14 +111,6 @@ class CurvesImporter:
         -------
         DataFrame
            Curves imported from the file
-        dict
-            A dictionary to match the columns of the imported file with the columns expected by
-            the tool
-        float
-            Time at which the event is triggered
-        float
-            Frequency sampling of the imported curves
-
         """
 
         curves_dict = self.__get_curves_dict(zone)
@@ -146,9 +136,4 @@ class CurvesImporter:
 
             df_dict[curves_dict[channel_id]] = curves_reader.analog[idx]
 
-        return (
-            pd.DataFrame.from_dict(df_dict, orient="columns"),
-            curves_dict,
-            curves_reader.trigger_time,
-            curves_reader.frequency_sampling,
-        )
+        return pd.DataFrame.from_dict(df_dict, orient="columns")
