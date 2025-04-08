@@ -435,6 +435,23 @@ class DynawoCurves(ProducerCurves):
                 self._has_line = False
                 line_xpu = 0
                 line_rpu = 0
+        elif config.has_key(config_section, "Zcc"):
+            self._has_line = True
+            scc = generator_variables.get_scc(self.get_producer().u_nom)
+            udim = generator_variables.get_generator_u_dim(self.get_producer().u_nom)
+            uc = udim / self.get_producer().u_nom
+            ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
+            if ztanphi < 1.0:
+                ztanphi = 1.0
+            if scc != 0:
+                zcc = uc * uc / scc
+                self.__log(f"\tZcc={zcc}")
+                line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
+                line_rpu = line_xpu / ztanphi
+            else:
+                self._has_line = False
+                line_xpu = 0
+                line_rpu = 0
         else:
             self._has_line = False
             line_xpu = 0
