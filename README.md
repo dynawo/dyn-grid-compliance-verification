@@ -698,7 +698,7 @@ the [Developer Manual](docs/manual_dev).
 
 Below is the DyCoV flowchart. This diagram is not intended to show all the details of the tool, but rather to facilitate understanding of its main flow.
 
-![DyCoV Flowchart](https://github.com/dynawo/dyn-grid-compliance-verification/blob/flowchart/docs/manual_dev/source/figs_structure/flowchart.svg?sanitize=true)
+![DyCoV Flowchart](./docs/manual_dev/source/figs_structure/flowchart.svg?sanitize=true)
 
 # Roadmap
 
