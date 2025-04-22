@@ -373,15 +373,15 @@ def _summary_log(
 
     header_txt += (
         "\n\n"
-        "Producer            Pcs          Benchmark                "
+        "Producer            Pcs            Benchmark                "
         "Operating Condition      Overall Result\n"
-        "----------------------------------------------------------"
+        "------------------------------------------------------------"
         "---------------------------------------\n"
     )
     body_txt = ""
     for i in summary_list:
         body_txt += (
-            f"{i.producer_file:20}{i.pcs:13}{i.benchmark:25}"
+            f"{i.producer_file:20}{i.pcs:15}{i.benchmark:25}"
             f"{i.operating_condition:25}{i.compliance.to_str()}\n"
         )
     body_txt += "\n"
