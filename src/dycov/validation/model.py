@@ -354,25 +354,30 @@ def _save_measurement_errors_by_error(
     error: str,
     results: dict,
 ) -> None:
-    results["before_" + error + "_" + measurement + "_value"] = compliance_values[
-        "before_" + error + "_" + measurement + "_value"
-    ]
-    results["before_" + error + "_" + measurement + "_position"] = compliance_values[
-        "before_" + error + "_" + measurement + "_position"
-    ]
-    results["after_" + error + "_" + measurement + "_value"] = compliance_values[
-        "after_" + error + "_" + measurement + "_value"
-    ]
-    results["after_" + error + "_" + measurement + "_position"] = compliance_values[
-        "after_" + error + "_" + measurement + "_position"
-    ]
+    _save_measurement_errors_by_error_window(
+        compliance_values, measurement, error, "before", results
+    )
+    _save_measurement_errors_by_error_window(
+        compliance_values, measurement, error, "after", results
+    )
+    _save_measurement_errors_by_error_window(
+        compliance_values, measurement, error, "during", results
+    )
 
-    if compliance_values["during_" + error + "_" + measurement + "_value"] is not None:
-        results["during_" + error + "_" + measurement + "_value"] = compliance_values[
-            "during_" + error + "_" + measurement + "_value"
+
+def _save_measurement_errors_by_error_window(
+    compliance_values: dict,
+    measurement: str,
+    error: str,
+    window: str,
+    results: dict,
+) -> None:
+    if compliance_values[window + "_" + error + "_" + measurement + "_value"] is not None:
+        results[window + "_" + error + "_" + measurement + "_value"] = compliance_values[
+            window + "_" + error + "_" + measurement + "_value"
         ]
-        results["during_" + error + "_" + measurement + "_position"] = compliance_values[
-            "during_" + error + "_" + measurement + "_position"
+        results[window + "_" + error + "_" + measurement + "_position"] = compliance_values[
+            window + "_" + error + "_" + measurement + "_position"
         ]
 
 
@@ -392,30 +397,27 @@ def _check_measurement_by_error(
     error: str,
     results: dict,
 ) -> None:
-    results["before_" + error + "_" + measurement + "_check"] = compliance_values[
-        "before_" + error + "_" + measurement + "_check"
-    ]
-    results["voltage_dips_" + measurement + "_check"] = results[
-        "before_" + error + "_" + measurement + "_check"
-    ]
-    results["compliance"] &= results["before_" + error + "_" + measurement + "_check"]
+    results["voltage_dips_" + measurement + "_check"] = True
+    _check_measurement_by_error_window(compliance_values, measurement, error, "before", results)
+    _check_measurement_by_error_window(compliance_values, measurement, error, "after", results)
+    _check_measurement_by_error_window(compliance_values, measurement, error, "during", results)
 
-    results["after_" + error + "_" + measurement + "_check"] = compliance_values[
-        "after_" + error + "_" + measurement + "_check"
-    ]
-    results["voltage_dips_" + measurement + "_check"] &= results[
-        "after_" + error + "_" + measurement + "_check"
-    ]
-    results["compliance"] &= results["after_" + error + "_" + measurement + "_check"]
 
-    if compliance_values["during_" + error + "_" + measurement + "_check"] is not None:
-        results["during_" + error + "_" + measurement + "_check"] = compliance_values[
-            "during_" + error + "_" + measurement + "_check"
+def _check_measurement_by_error_window(
+    compliance_values: dict,
+    measurement: str,
+    error: str,
+    window: str,
+    results: dict,
+) -> None:
+    if compliance_values[window + "_" + error + "_" + measurement + "_check"] is not None:
+        results[window + "_" + error + "_" + measurement + "_check"] = compliance_values[
+            window + "_" + error + "_" + measurement + "_check"
         ]
         results["voltage_dips_" + measurement + "_check"] &= results[
-            "during_" + error + "_" + measurement + "_check"
+            window + "_" + error + "_" + measurement + "_check"
         ]
-        results["compliance"] &= results["during_" + error + "_" + measurement + "_check"]
+        results["compliance"] &= results[window + "_" + error + "_" + measurement + "_check"]
 
 
 def _calculate_curves_errors(

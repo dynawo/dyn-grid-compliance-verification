@@ -182,6 +182,11 @@ class DynawoCurves(ProducerCurves):
         reference_event_start_time: float,
     ) -> dict:
 
+        self.__log(
+            f"Unom: {self.get_producer().u_nom}, "
+            f"Generator type: {generator_variables.get_generator_type(self.get_producer().u_nom)}"
+        )
+
         self.__log(f"Model definition for '{get_cfg_oc_name(pcs_bm_name, oc_name)}':")
 
         # Read the load parameters in the TSO network, if exists
@@ -190,13 +195,13 @@ class DynawoCurves(ProducerCurves):
             working_oc_dir / "TSOModel.par",
         )
 
-        line_rpu, line_xpu = self.__get_line(pcs_bm_name, oc_name)
-
         u_dim = self.get_generator_u_dim()
         pdr = self.__get_pdr(pcs_bm_name, oc_name, u_dim)
 
         # Calculates the initialization parameters and replace the placeholders by
         #  its values in the input files of Dynawo.
+        line_rpu, line_xpu = self.__get_line(pcs_bm_name, oc_name)
+        rte_lines = list()
         if self._has_line:
             # Read lines configuration from TSO network
             rte_lines = model_parameters.get_pcs_lines_params(
@@ -225,8 +230,8 @@ class DynawoCurves(ProducerCurves):
                 Ytr += pimodel_line.Ytr
                 Ysh1 += pimodel_line.Ysh1
                 Ysh2 += pimodel_line.Ysh2
-        else:
-            rte_lines = list()
+
+        if len(rte_lines) == 0:
             Ytr = math.inf
             Ysh1 = 0
             Ysh2 = 0
@@ -482,6 +487,24 @@ class DynawoCurves(ProducerCurves):
                     line_rpu = 0
                 else:
                     line_rpu = line_xpu / scr_r_factor
+            else:
+                self._has_line = False
+                line_xpu = 0
+                line_rpu = 0
+        elif config.has_key(config_section, "Zcc"):
+            self._has_line = True
+            scc = generator_variables.get_scc(self.get_producer().u_nom)
+            udim = generator_variables.get_generator_u_dim(self.get_producer().u_nom)
+            uc_pu = udim / self.get_producer().u_nom
+            scc_pu = scc / self._s_nref
+            ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
+            if ztanphi < 1.0:
+                ztanphi = 1.0
+            if scc != 0:
+                zcc = uc_pu**2 / scc_pu
+                self.__log(f"\tZcc={zcc}")
+                line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
+                line_rpu = line_xpu / ztanphi
             else:
                 self._has_line = False
                 line_xpu = 0
