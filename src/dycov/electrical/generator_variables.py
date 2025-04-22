@@ -26,6 +26,9 @@ class GeneratorVariables:
         htb1_p_max = config.get_float("GridCode", "HTB1_p_max", 0.0)
         htb2_p_max = config.get_float("GridCode", "HTB2_p_max", 0.0)
         htb3_p_max = config.get_float("GridCode", "HTB3_p_max", 0.0)
+        htb1_scc = config.get_float("GridCode", "HTB1_Scc", 400.0)
+        htb2_scc = config.get_float("GridCode", "HTB2_Scc", 1500.0)
+        htb3_scc = config.get_float("GridCode", "HTB3_Scc", 7000.0)
 
         self._x_dtr_switcher = {
             "htb1": {
@@ -45,6 +48,11 @@ class GeneratorVariables:
             "htb1": htb1_p_max,
             "htb2": htb2_p_max,
             "htb3": htb3_p_max,
+        }
+        self._scc_switcher = {
+            "htb1": htb1_scc,
+            "htb2": htb2_scc,
+            "htb3": htb3_scc,
         }
 
     def __get_generator_type(self, u_nom: float) -> str:
@@ -114,6 +122,25 @@ class GeneratorVariables:
 
         udim_name = f"Udim_{int(u_nom)}kV"
         return config.get_float("GridCode", udim_name, 0.0)
+
+    def get_scc(self, u_nom: float) -> float:
+        """Gets the short circuit current.
+
+        Parameters
+        ----------
+        u_nom: float
+            Nominal voltage
+
+        Returns
+        -------
+        float
+            Short circuit current (Scc)
+        """
+        generator_type = self.__get_generator_type(u_nom)
+        if generator_type == "Invalid UNom":
+            return "Invalid Type"
+
+        return self._scc_switcher.get(generator_type, lambda: "Invalid Type")
 
     def calculate_line_xpu(
         self, line_xtype: str, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float

@@ -31,7 +31,13 @@ and the configuration of the new benchmarks in their corresponding sections.
 
     [DummySample.Benchmark1.OperatingCondition1]
     report_name = report.Benchmark1.OperatingCondition1.tex
-    # Reactance of the line connected to the PDR point
+    # Uncomment only the desired option (line_XPu, SRC, or Zcc). 
+# If there is more than one uncommented option, the tool will use the first option according to the order:
+#    1. line_XPu
+#    2. SRC
+#    3. Zcc
+# Use when the reactance of the line connected to the PDR point is specified in the DTR
+# Used in the DTR fiches I2, I3, I4, I5 and I8 and their equivalents in the DTR Fiche I16 zone 3
     line_XPu = a
     # PDR point
     pdr_P = Pmax
