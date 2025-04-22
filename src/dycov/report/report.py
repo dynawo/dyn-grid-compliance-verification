@@ -371,13 +371,13 @@ def _summary_log(
 
     header_txt += (
         "\n\n"
-        "Pcs          Benchmark                Operating Condition      Overall Result\n"
-        "-----------------------------------------------------------------------------\n"
+        "Pcs            Benchmark                Operating Condition      Overall Result\n"
+        "-------------------------------------------------------------------------------\n"
     )
     body_txt = ""
     for i in summary_list:
         body_txt += (
-            f"{i.pcs:13}{i.benchmark:25}{i.operating_condition:25}{i.compliance.to_str()}\n"
+            f"{i.pcs:15}{i.benchmark:25}{i.operating_condition:25}{i.compliance.to_str()}\n"
         )
     body_txt += "\n"
     # Show the summary report on the console and save it to file
