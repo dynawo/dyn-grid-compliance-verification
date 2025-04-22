@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="InfiniteBus">
+    <par type="STRING" name="infiniteBus_UPuTableName" value="TableUPu"/>
+    <par type="STRING" name="infiniteBus_UPhaseTableName" value="TableUPhase"/>
+    <par type="STRING" name="infiniteBus_OmegaRefPuTableName" value="TableOmegaRefPu"/>
+    <par type="STRING" name="infiniteBus_TableFile" value="TableInfiniteBus.txt"/>
+  </set>
+</parametersSet>
