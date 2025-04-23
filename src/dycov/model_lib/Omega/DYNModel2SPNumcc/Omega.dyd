@@ -4,8 +4,8 @@
   <dyn:blackBoxModel id="OmegaRef" lib="DYNModelOmegaRef" parFile="Omega.par" parId="OmegaRef"/>
   <dyn:blackBoxModel id="SPNumccRte" lib="SPNumcc" parFile="Omega.par" parId="SetPointNumcc"/>
   <dyn:blackBoxModel id="SPNumccProducer" lib="SPNumcc" parFile="Omega.par" parId="SetPointNumcc"/>
-  <dyn:connect id1="Generator" var1="generator_omegaPu" id2="OmegaRef" var2="omega_grp_0"/>
-  <dyn:connect id1="Generator" var1="generator_omegaRefPu" id2="OmegaRef" var2="omegaRef_grp_0"/>
+  <dyn:connect id1="Generator" var1="generator_omegaPu" id2="OmegaRef" var2="omega_grp_0_value"/>
+  <dyn:connect id1="Generator" var1="generator_omegaRefPu" id2="OmegaRef" var2="omegaRef_grp_0_value"/>
   <dyn:connect id1="Generator" var1="generator_running" id2="OmegaRef" var2="running_grp_0"/>
   <dyn:connect id1="SPNumccRte" var1="setPointNumcc_setPoint" id2="OmegaRef" var2="numcc_node_0"/>
 </dyn:dynamicModelsArchitecture>
