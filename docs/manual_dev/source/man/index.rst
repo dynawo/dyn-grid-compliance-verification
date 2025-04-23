@@ -8,9 +8,11 @@ Dynamic grid Compliance Verification API
    dycov.launchers
    dycov.core.execution_parameters
    dycov.core.input_template
-   dycov.core.model_validation
-   dycov.core.simulator
+   dycov.core.validation
    dycov.core.validator
+   dycov.curves.anonymizer
+   dycov.curves.curves_factory
+   dycov.curves.manager
    dycov.dynawo.prepare_tool
    dycov.model.benchmark
    dycov.model.operating_condition
