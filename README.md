@@ -694,6 +694,12 @@ The DyCoV application is now ready to use.
 Finally, if you want to further _develop_ the source code of this tool, consult
 the [Developer Manual](docs/manual_dev).
 
+## DyCoV flowchart
+
+Below is the DyCoV flowchart. This diagram is not intended to show all the details of the tool, but rather to facilitate understanding of its main flow.
+
+![DyCoV Flowchart](./docs/manual_dev/source/figs_structure/flowchart.svg?sanitize=true)
+
 # Roadmap
 
 Below are the major development axis identified for DyCoV in the next few months with associated contents. It is important to notice that the development content may be subject to change due to unforeseen complexity in implementing features or priority changes.
