@@ -165,6 +165,15 @@ that the application should perform:
 * ``validation``
     Implementation of the compliance checks defined by each of the DTR document *PCSs*.
 
+Flowchart
+=========
+
+Below is the DyCoV flowchart. This diagram is not intended to show all the details of the 
+tool, but rather to facilitate understanding of its main flow.
+
+.. image:: figs_structure/flowchart.*
+    :scale: 80%
+    :alt: Flowchart of the DyCoV tool
 
 
 .. _devel-guides:
