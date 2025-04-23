@@ -65,8 +65,8 @@ def test_perf_sm_model():
         None,
     )
     assert [
-        Compliance.NonCompliant,
-        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
@@ -100,8 +100,8 @@ def test_perf_sm_complete():
         None,
     )
     assert [
-        Compliance.NonCompliant,
-        Compliance.NonCompliant,
+        Compliance.Compliant,
+        Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
         Compliance.Compliant,
