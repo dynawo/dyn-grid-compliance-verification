@@ -1,0 +1,10 @@
+#1
+double ImpedanceTable(8,3)
+{{simulation_start}} 0 10000
+{{start_event}} 0 10000
+{{start_event}} 0 {{x_ret}}
+{{end_event}} 0 {{x_ret}}
+{{end_event}} 0 {{x_clear}}
+{{delta_t_rec1}} 0 {{x_clear}}
+{{delta_t_rec2}} 0 {{x_rec2}}
+{{simulation_stop}} 0 {{x_rec2}}
