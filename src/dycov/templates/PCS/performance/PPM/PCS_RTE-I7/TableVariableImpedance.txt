@@ -1,0 +1,12 @@
+#1
+double ImpedanceTable(10,3)
+{{simulation_start}} 0 100.0
+{{start_event}} 0 100.0
+{{start_event}} 0 900.0
+{{end_event}} 0 900.0
+{{end_event}} 0 750.0
+{{delta_t_rec2}} 0 750.0
+{{delta_t_rec2}} 0 450.0
+{{delta_t_rec3}} 0 450.0
+{{delta_t_rec3}} 0 300.0
+{{simulation_stop}} 0 300.0
