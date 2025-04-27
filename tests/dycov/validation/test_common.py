@@ -1,6 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2025 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
 import math
-import pytest
+
 import numpy as np
+import pandas as pd
+import pytest
 
 from dycov.validation import common
 
@@ -173,3 +183,99 @@ def test_correct_time_lag_calculation():
 
     # Assert
     assert math.isclose(result, expected), f"Expected time lag {expected}, but got {result}"
+
+
+def test_get_static_diff_returns_correct_percentage():
+    primary_voltages = [1.0, 1.05, 1.10]
+    voltage_setpoint = [1.0, 1.04, 1.00]
+    # last values: 1.10 and 1.00, so diff = abs(1.10 - 1.00) / 1.00 = 0.10
+    result = common.get_static_diff(primary_voltages, voltage_setpoint)
+    assert pytest.approx(result, rel=1e-9) == 0.10
+
+
+def test_get_overshoot_returns_correct_value():
+    curve = [1.0, 2.0, 3.5, 2.5, 2.0]
+    # peak is 3.5, final value is 2.0, overshoot = 3.5 - 2.0 = 1.5
+    result = common.get_overshoot(curve)
+    assert pytest.approx(result, rel=1e-9) == 1.5
+
+
+def test_check_frequency_within_threshold_returns_true():
+    frequency = [1.0, 1.01, 0.99, 1.0, 1.005]
+    time = [0, 1, 2, 3, 4]
+    threshold = 0.02  # All values within 1.0 ± 0.02
+    result, error_time = common.check_frequency(threshold, frequency, time)
+    assert result is True
+    assert error_time == -1
+
+
+def test_get_txp_raises_value_error_on_length_mismatch():
+    percent = 0.05
+    time = [0, 1, 2]
+    curve = [1, 2]
+    sim_t_event_end = 1
+    with pytest.raises(ValueError, match="different length"):
+        common.get_txp(percent, time, curve, sim_t_event_end)
+
+
+def test_maximum_error_position_raises_value_error_on_length_mismatch():
+    time = pd.Series([0, 1, 2])
+    signal = pd.Series([1, 2, 3])
+    reference = pd.Series([1, 2])
+    with pytest.raises(ValueError, match="different length"):
+        common.maximum_error_position(time, signal, reference)
+
+
+def test_get_reached_time_returns_correct_time_and_value():
+    # Curve starts at 2, ends at 10, 50% of the way is 2 + 0.5*(10-2) = 6
+    time = [0, 1, 2, 3, 4, 5]
+    curve = [2, 3, 5, 6, 8, 10]
+    percentage = 0.5
+    sim_t_event_start = 1
+    ret_val, objective_value = common.get_reached_time(percentage, time, curve, sim_t_event_start)
+    # After event at t=1, curve[2]=5, curve[3]=6, so first >=6 is at t=3
+    assert ret_val == 2  # time[3] - sim_t_event_start = 3 - 1 = 2
+    assert pytest.approx(objective_value, rel=1e-9) == 6
+
+
+def test_mean_error_returns_correct_value():
+    signal = [1, 2, 3, 4]
+    reference = [1, 2, 2, 2]
+    step_magnitude = 2
+    expected = ((1 - 1) + (2 - 2) + (3 - 2) + (4 - 2)) / 4 / 2
+    result = common.mean_error(signal, reference, step_magnitude)
+    assert pytest.approx(result, rel=1e-9) == expected
+
+
+def test_get_value_error_returns_zero_for_perfect_match():
+    # curve matches ideal ramp exactly, so error should be zero
+    time = np.linspace(0, 1, 5)
+    curve = np.linspace(0, 1, 5)
+    sim_t_event_start = 1
+    event_duration = 1
+    freq0 = 0
+    freq_peak = 1
+    # The function will cut curve between
+    # time >= sim_t_event_start - event_duration and < sim_t_event_start
+    # For this input, the cut will be the first 4 points
+    result = common.get_value_error(
+        time, curve, sim_t_event_start, event_duration, freq0, freq_peak
+    )
+    assert pytest.approx(result, rel=1e-9) == 0
+
+
+def test_check_generator_imax_raises_value_error_on_length_mismatch():
+    imax = 5
+    time = [0, 1, 2]
+    injected_current = [1, 2]
+    injected_active_current = [1, 2]
+    with pytest.raises(ValueError, match="different length"):
+        common.check_generator_imax(imax, time, injected_current, injected_active_current)
+
+
+def test_maximum_error_raises_value_error_on_length_mismatch():
+    signal = np.array([1, 2, 3])
+    reference = np.array([1, 2])
+    step_magnitude = 1
+    with pytest.raises(ValueError, match="different length"):
+        common.maximum_error(signal, reference, step_magnitude)

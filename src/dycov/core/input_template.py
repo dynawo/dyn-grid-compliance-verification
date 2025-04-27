@@ -19,6 +19,10 @@ from dycov.files.producer_par_file import check_parameters, create_producer_par_
 from dycov.logging.logging import dycov_logging
 
 
+def _get_input(text):
+    return input(text)
+
+
 def _copy_input_templates(target: Path, template: str) -> None:
     input_templates_path = config.get_value("Global", "input_templates_path")
     if template == "performance_SM":
@@ -34,11 +38,11 @@ def _create_dyd_template(target: Path, topology: str, template: str) -> None:
         f"Creating the input DYD file in {target}."
     )
     create_producer_dyd_file(target, topology, template)
-    input(
+    _get_input(
         "Edit Producer.dyd to complete each equipment with a dynamic model. Press Enter when done."
     )
     while not check_dynamic_models(target, template):
-        input(
+        _get_input(
             "Edit Producer.dyd is necessary to complete each equipment  with a dynamic model."
             "Press Enter when done."
         )
@@ -49,9 +53,9 @@ def _create_par_template(launcher_dwo: Path, target: Path, topology: str, templa
         f"Creating the input PAR file in {target}."
     )
     create_producer_par_file(launcher_dwo, target, template)
-    input("Edit Producer.par to complete each parameter with a value. Press Enter when done.")
+    _get_input("Edit Producer.par to complete each parameter with a value. Press Enter when done.")
     while not check_parameters(target, template):
-        input(
+        _get_input(
             "Edit Producer.par is necessary to complete each parameter with a value."
             "Press Enter when done."
         )
@@ -62,9 +66,9 @@ def _create_ini_template(target: Path, topology: str, template: str) -> None:
         f"Creating the input INI file in {target}."
     )
     create_producer_ini_file(target, topology, template)
-    input("Edit Producer.ini to complete each parameter with a value. Press Enter when done.")
+    _get_input("Edit Producer.ini to complete each parameter with a value. Press Enter when done.")
     while not check_ini_parameters(target, template):
-        input(
+        _get_input(
             "Edit Producer.ini is necessary to complete each parameter with a value."
             "Press Enter when done."
         )
@@ -76,12 +80,12 @@ def _create_curves_template(target: Path, topology: str, template: str) -> None:
         f"Creating the reference curves files in {ref_target}."
     )
     create_producer_curves(target, ref_target, template)
-    input(
+    _get_input(
         "Edit CurvesFiles.ini to complete each parameter with a curves file. Press Enter when "
         "done."
     )
     while not check_curves(ref_target):
-        input(
+        _get_input(
             "Edit CurvesFiles.ini is necessary to complete each parameter with a curves file."
             "Press Enter when done."
         )
