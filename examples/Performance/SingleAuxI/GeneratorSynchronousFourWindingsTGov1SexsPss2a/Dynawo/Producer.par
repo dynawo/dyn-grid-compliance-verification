@@ -102,6 +102,8 @@
     <par type="DOUBLE" name="load_Q0Pu" value="0.05"/>
     <par type="DOUBLE" name="load_U0Pu" value="1.0086"/>
     <par type="DOUBLE" name="load_UPhase0" value="0.4334"/>
+    <par type="DOUBLE" name="load_alpha" value="1.0"/>
+    <par type="DOUBLE" name="load_beta" value="1.0"/>
   </set>
   <set id="IntNetwork_Line">
     <par type="DOUBLE" name="line_RPu" value="0.0004"/>
