@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+<timeline xmlns="http://www.rte-france.com/dynawo">
+  <event time="19.999996" modelName="StepUp_Xfmr" message="Tap-changer : below minimum allowed value"/>
+  <event time="20.001864" modelName="Wind_Turbine" message="IEC WT disconnected due to undervoltage protection (minimum allowed voltage : 0.000000 pu)"/>
+</timeline>
