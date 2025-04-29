@@ -26,6 +26,7 @@ from dycov.validation import common, compliance_list
 
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
 LOAD_DISCONNECT_MSG = "LOAD : disconnecting"
+IEC_DISCONNECT_PROTECTION_MSG = "IEC WT disconnected due to"
 
 
 def _check_compliance(
@@ -41,9 +42,19 @@ def _check_compliance(
         results["compliance"] &= results[results_name + "_check"]
 
 
-def is_disconnection_event(event, element_type):
-    return (event.get("message") == GENERATOR_DISCONNECT_MSG and element_type == "gen") or (
-        event.get("message") == LOAD_DISCONNECT_MSG and element_type == "load"
+def _is_generator_disconnection_event(event: etree.Element):
+    return event.get("message") == GENERATOR_DISCONNECT_MSG or event.get("message").startswith(
+        IEC_DISCONNECT_PROTECTION_MSG
+    )
+
+
+def _is_load_disconnection_event(event: etree.Element):
+    return event.get("message") == LOAD_DISCONNECT_MSG
+
+
+def _is_disconnection_event(event: etree.Element, element_type: str):
+    return (element_type == "gen" and _is_generator_disconnection_event(event)) or (
+        element_type == "load" and _is_load_disconnection_event(event)
     )
 
 
@@ -57,7 +68,7 @@ def _check_timeline(timeline_file: Path, element_type: str) -> tuple[bool, list]
     ns = etree.QName(root).namespace
     disconnection_list = []
     for timeline_event in root.iter("{%s}event" % ns):
-        if is_disconnection_event(timeline_event, element_type):
+        if _is_disconnection_event(timeline_event, element_type):
             no_error = False
             disconnection_list.append(timeline_event.get("modelName"))
             dycov_logging.get_logger("Validation").debug(
@@ -81,6 +92,9 @@ class PerformanceValidator(Validator):
         )
         self._stable_time = stable_time
 
+    def __curve_list(self, curve_name: str) -> list:
+        return list(self._get_calculated_curve_by_name(curve_name))
+
     def __run_common_tests(
         self,
         stable_time: float,
@@ -89,20 +103,20 @@ class PerformanceValidator(Validator):
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         # Run stabilization test
         steady_v, first_steady_pos_v = common.is_stable(
-            list(self._get_calculated_curve_by_name("time")),
-            list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+            self.__curve_list("time"),
+            self.__curve_list(bus_pdr_voltage),
             stable_time,
         )
 
         steady_p, first_steady_pos_p = common.is_stable(
-            list(self._get_calculated_curve_by_name("time")),
-            list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+            self.__curve_list("time"),
+            self.__curve_list("BusPDR_BUS_ActivePower"),
             stable_time,
         )
 
         steady_q, first_steady_pos_q = common.is_stable(
-            list(self._get_calculated_curve_by_name("time")),
-            list(self._get_calculated_curve_by_name("BusPDR_BUS_ReactivePower")),
+            self.__curve_list("time"),
+            self.__curve_list("BusPDR_BUS_ReactivePower"),
             stable_time,
         )
 
@@ -143,15 +157,15 @@ class PerformanceValidator(Validator):
         for key in internal_angle_keys:
 
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name(key)),
+                self.__curve_list("time"),
+                self.__curve_list(key),
                 stable_time,
             )
 
             # Check +- Pi
             gen_pass_pi = common.theta_pi(
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name(key)),
+                self.__curve_list("time"),
+                self.__curve_list(key),
             )
             stable_theta &= gen_stable_theta
             if gen_first_stable_pos_theta < first_stable_pos_theta:
@@ -176,24 +190,24 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["time_5U"], self._validations):
             compliance_values["time_5u"] = common.get_txu_relative(
                 0.05,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+                self.__curve_list("time"),
+                self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_10U"], self._validations):
             compliance_values["time_10u"] = common.get_txu_relative(
                 0.10,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+                self.__curve_list("time"),
+                self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
             compliance_values["time_10pfloor"] = common.get_txpfloor(
                 0.1,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+                self.__curve_list("time"),
+                self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
 
@@ -208,8 +222,8 @@ class PerformanceValidator(Validator):
         ):
             compliance_values["time_5p"] = common.get_txp(
                 0.05,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+                self.__curve_list("time"),
+                self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
 
@@ -218,30 +232,30 @@ class PerformanceValidator(Validator):
         ):
             compliance_values["time_10p"] = common.get_txp(
                 0.1,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+                self.__curve_list("time"),
+                self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_5P_85U", "time_10P_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
                 0.85,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+                self.__curve_list("time"),
+                self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
                 0.85,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
+                self.__curve_list("time"),
+                self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
             compliance_values["time_10pfloor"] = common.get_txpfloor(
                 0.1,
-                list(self._get_calculated_curve_by_name("time")),
-                list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
+                self.__curve_list("time"),
+                self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
 
@@ -271,12 +285,12 @@ class PerformanceValidator(Validator):
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
                 avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
                 gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
-                    list(self._get_calculated_curve_by_name("time")),
-                    list(self._get_calculated_curve_by_name(magnitude_controlled_by_avr)),
-                    list(self._get_calculated_curve_by_name(avr_setpoint)),
+                    self.__curve_list("time"),
+                    self.__curve_list(magnitude_controlled_by_avr),
+                    self.__curve_list(avr_setpoint),
                     t_event_start,
                 )
-                AVR_5_crv.append(list(self._get_calculated_curve_by_name(avr_setpoint)))
+                AVR_5_crv.append(self.__curve_list(avr_setpoint))
                 AVR_5_check &= gen_AVR_5_check
                 if gen_AVR_5 != -1:
                     AVR_5 = gen_AVR_5
@@ -296,8 +310,8 @@ class PerformanceValidator(Validator):
             for curve_name in filter_col:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
                     1 / f_nom,
-                    list(self._get_calculated_curve_by_name(curve_name)),
-                    list(self._get_calculated_curve_by_name("time")),
+                    self.__curve_list(curve_name),
+                    self.__curve_list("time"),
                 )
                 check_freq1 &= gen_check_freq1
                 if gen_time_freq1 != -1:
@@ -312,10 +326,10 @@ class PerformanceValidator(Validator):
     ):
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         compliance_values["is_invalid_test"] = common.is_invalid_test(
-            list(self._get_calculated_curve_by_name("time")),
-            list(self._get_calculated_curve_by_name(bus_pdr_voltage)),
-            list(self._get_calculated_curve_by_name("BusPDR_BUS_ActivePower")),
-            list(self._get_calculated_curve_by_name("BusPDR_BUS_ReactivePower")),
+            self.__curve_list("time"),
+            self.__curve_list(bus_pdr_voltage),
+            self.__curve_list("BusPDR_BUS_ActivePower"),
+            self.__curve_list("BusPDR_BUS_ReactivePower"),
             t_event_start,
         )
 
@@ -332,8 +346,8 @@ class PerformanceValidator(Validator):
                 avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
 
                 static_diff = common.get_static_diff(
-                    list(self._get_calculated_curve_by_name(magnitude_controlled_by_avr)),
-                    list(self._get_calculated_curve_by_name(avr_setpoint)),
+                    self.__curve_list(magnitude_controlled_by_avr),
+                    self.__curve_list(avr_setpoint),
                 )
                 if max_static_diff < static_diff:
                     max_static_diff = static_diff
@@ -350,9 +364,9 @@ class PerformanceValidator(Validator):
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
                     self._generators_imax[generator_id],
-                    list(self._get_calculated_curve_by_name("time")),
-                    list(self._get_calculated_curve_by_name(injected_current)),
-                    list(self._get_calculated_curve_by_name(injected_active_current)),
+                    self.__curve_list("time"),
+                    self.__curve_list(injected_current),
+                    self.__curve_list(injected_active_current),
                 )
                 if not imax_gen_reac_check:
                     if imax_reac_check:
@@ -533,7 +547,7 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "gen"
             )
             if not results["no_disconnection_gen"]:
-                if self._disconnection_model.auxload_xfmr is None:
+                if self._disconnection_model.gen_intline is None:
                     gen_intline_id = "Empty"
                 else:
                     gen_intline_id = self._disconnection_model.gen_intline.id
