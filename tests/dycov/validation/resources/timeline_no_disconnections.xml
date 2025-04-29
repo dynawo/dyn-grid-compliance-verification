@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+<timeline xmlns="http://www.rte-france.com/dynawo">
+  <event time="30.000000" modelName="NODE_FAULT" message="Fault (node) : beginning"/>
+  <event time="30.000000" modelName="StepUp_Xfmr" message="Tap-changer : below minimum allowed value"/>
+  <event time="30.090000" modelName="NODE_FAULT" message="Fault (node) : end"/>
+  <event time="30.090000" modelName="Line4b" message="LINE : opening both sides"/>
+  <event time="30.090000" modelName="NODE_FAULT" message="Fault (node) : end"/>
+  <event time="40.002500" modelName="StepUp_Xfmr" message="Tap position change (increment)"/>
+  <event time="41.006250" modelName="StepUp_Xfmr" message="Tap position change (increment)"/>
+  <event time="42.011250" modelName="StepUp_Xfmr" message="Tap position change (increment)"/>
+  <event time="42.924375" modelName="StepUp_Xfmr" message="Tap-changer : above maximum allowed value"/>
+</timeline>
