@@ -1,4 +1,4 @@
-    \subsection{Overview of DTR PCS \DTRPcs{} ($X_\text{cc} = X_b$)}
+    \subsection{Overview of DTR PCS \DTRPcs{} in consumption ($X_\text{cc} = X_a$)}
 
     Checks the compliance behavior of the battery energy storage system (BESS) in a network
     scenario where there is a step adjustment in the setpoint of the primary voltage
@@ -12,13 +12,13 @@
         \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
         side --- the Producer's side may vary, depending on the user-provided model.}
     \end{center}
-    where the connecting branch has the value $X_\text{cc} = X_b$, as specified in
+    where the connecting branch has the value $X_\text{cc} = X_a$, as specified in
     the DTR.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_{max\_unite}$
+            \item $P = P_{max\_consumption\_unite}$
             \item $Q = 0$
             \item $U = U_{dim}$
         \end{itemize}
@@ -32,7 +32,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI2USetPointStepBReactance}
+            \BLOCK{for row in solverPCSI2USetPointStepAReactanceConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -61,7 +61,7 @@
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I2.USetPointStep.BReactance}
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I2.USetPointStep.AReactanceConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Voltage magnitude measured at the PDR bus.
         \end{minipage}
@@ -69,7 +69,7 @@
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I2.USetPointStep.BReactance}
+        \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I2.USetPointStep.AReactanceConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
             The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
@@ -82,7 +82,7 @@
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I2.USetPointStep.BReactance}
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I2.USetPointStep.AReactanceConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus.
         \end{minipage}
@@ -90,14 +90,13 @@
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I2.USetPointStep.BReactance}
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I2.USetPointStep.AReactanceConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Reactive power output Q, measured at the PDR bus.
         \end{minipage}
     \end{minipage}
     \\[2\baselineskip]
-    Go to  {{ linkPCSI2USetPointStepBReactance }}
-
+    Go to  {{ linkPCSI2USetPointStepAReactanceConsumption }}
 
     \subsubsection{Analysis of results}
 
@@ -109,7 +108,7 @@
             \toprule
             \textbf{Parameter} & \multicolumn{1}{c}{\textbf{value}} \\
             \midrule
-            \BLOCK{for row in rmPCSI2USetPointStepBReactance}
+            \BLOCK{for row in rmPCSI2USetPointStepAReactanceConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -135,10 +134,9 @@
             \toprule
             \textbf{Check} & \multicolumn{1}{c}{\textbf{value}} & \multicolumn{1}{c}{\textbf{Compliant?}} \\
             \midrule
-            \BLOCK{for row in cmPCSI2USetPointStepBReactance}
+            \BLOCK{for row in cmPCSI2USetPointStepAReactanceConsumption}
             {{row[0]}}     & {{row[1]}}                         & {{row[2]}}                              \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{center}
-
