@@ -28,7 +28,8 @@ class TestProducerIniFile:
             assert ini_file.exists()
             content = ini_file.read_text()
             assert "topology = S" in content
-            assert "p_max =" in content
+            assert "p_max_injection =" in content
+            assert "p_max_consumption =" in content
             assert "u_nom =" in content
             assert "s_nom =" in content
             assert "q_max =" in content
