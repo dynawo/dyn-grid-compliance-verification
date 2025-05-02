@@ -1,26 +1,27 @@
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Frequency ramp %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Three Phase Fault %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    \renewcommand{\DTRPcs}{GridFreqRamp} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{Grid Frequency Ramp}
-    \renewcommand{\OCname}{W500mHz250ms}
+    \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
+    \renewcommand{\DTRPcsLong}{Three Phase Fault}
+    \renewcommand{\OCname}{TransientBoltedSCR3QminInjection}
 
 
-    \subsection{Ramp response to grid changes: frequency ramp}
+    \subsection{Transient fault in injection: full short-circuit ($Q_{min}, SCR=3, 150ms$)}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a frequency ramp from +500mHz to 2Hz/s on the AC source.
+    is a transient three-phase earth fault.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_\text{max\_unite}$
-            \item $Q = 0$
+            \item $P = P_\text{max\_injection\_unite}$
+            \item $Q = Q_\text{min}$
             \item $U = U_\text{dim}$
             \item $SCR = 3$
+            \item $T_\text{clear} = 150ms$
         \end{itemize}
     \end{description}
 
@@ -32,7 +33,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1GridFreqRampW500mHz250ms}
+            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -41,7 +42,7 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1GridFreqRampW500mHz250ms }}
+    Go to  {{ linkPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection }}
 
     \subsubsection{Analysis of results}
     \begin{center}
@@ -52,7 +53,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1GridFreqRampW500mHz250ms}
+            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -70,7 +71,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1GridFreqRampW500mHz250ms}
+            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -86,26 +87,26 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
-            \BLOCK{for row in emPCSI16z1GridFreqRampW500mHz250ms}
+            \BLOCK{for row in emPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{center}
 
-    \noindent Compliance checks on the ramp-response characteristic: \\
-    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
-        \centering
+    \noindent Compliance checks on the Active Power Recovery:
+    \begin{center}
         \scriptsize
-        \begin{tabular}{lccccc}
+        \begin{tabular}{cllc}
             \toprule
-            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
+            Variable   & Error      & Threshold   & Check      \\
             \midrule
-            \BLOCK{for row in temPCSI16z1GridFreqRampW500mHz250ms}
-            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
+            \bottomrule
         \end{tabular}
-    \end{minipage}
+    \end{center}
 
     \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
     \begin{center}
@@ -114,7 +115,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1GridFreqRampW500mHz250ms}
+            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

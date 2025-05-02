@@ -1,25 +1,25 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Voltage Step %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Three Phase Fault %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    \renewcommand{\DTRPcs}{GridVoltageStep} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{Grid Voltage Step}
-    \renewcommand{\OCname}{Rise}
+    \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
+    \renewcommand{\DTRPcsLong}{Three Phase Fault}
+    \renewcommand{\OCname}{PermanentHiZInjection}
 
 
-    \subsection{Step response to grid changes: V swell}
+    \subsection{Permanent fault in injection: High-impedance fault ($SCR=10, V=0.5Un$)}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a $10\%$ voltage step increase on AC source.
+    is an impedance-to-earth three-phase permanent fault with a voltage dip of 0.5 $U_{dim}$.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = 0.5*P_\text{max\_unite}$
-            \item $Q = Q_\text{min}$
-            \item $U = 0.95*U_\text{dim}$
+            \item $P = P_\text{max\_injection\_unite}$
+            \item $Q = 0$
+            \item $U = U_\text{dim}$
             \item $SCR = 10$
         \end{itemize}
     \end{description}
@@ -32,7 +32,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1GridVoltageStepRise}
+            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultPermanentHiZInjection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -41,18 +41,18 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1GridVoltageStepRise }}
+    Go to  {{ linkPCSI16z1ThreePhaseFaultPermanentHiZInjection }}
 
     \subsubsection{Analysis of results}
     \begin{center}
         \scriptsize
-        \begin{tabular}{lccccccc}
+        \begin{tabular}{lcccccc}
             \toprule
             & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1GridVoltageStepRise}
+            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultPermanentHiZInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -70,7 +70,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1GridVoltageStepRise}
+            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultPermanentHiZInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -86,27 +86,26 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z1GridVoltageStepRise}
+            \BLOCK{for row in emPCSI16z1ThreePhaseFaultPermanentHiZInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{center}
 
-    \noindent Compliance checks on the step-response characteristic: \\
-    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
-        \centering
+    \noindent Compliance checks on the Active Power Recovery:
+    \begin{center}
         \scriptsize
-        \begin{tabular}{lccccc}
+        \begin{tabular}{cllc}
             \toprule
-            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
+            Variable   & Error      & Threshold   & Check      \\
             \midrule
-            \BLOCK{for row in temPCSI16z1GridVoltageStepRise}
-            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultPermanentHiZInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
-    \end{minipage}
+    \end{center}
 
     \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
     \begin{center}
@@ -115,7 +114,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1GridVoltageStepRise}
+            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultPermanentHiZInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

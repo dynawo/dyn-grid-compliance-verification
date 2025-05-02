@@ -4,21 +4,21 @@
 
     \renewcommand{\DTRPcs}{SetPointStep} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{SetPoint Step}
-    \renewcommand{\OCname}{Active}
+    \renewcommand{\OCname}{ReactiveConsumption}
 
 
-    \subsection{Step response to control changes: P-setpoint drop}
+    \subsection{Step response to control changes in consumption: Q-setpoint drop}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a $5\%$ step decrease in the setpoint of the active flow control.
+    is a $5\%$ step decrease in the setpoint of the reactive flow control.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_\text{max\_unite}$
-            \item $Q = Q_\text{min}$
+            \item $P = P_\text{max\_consumption\_unite}$
+            \item $Q = 0$
             \item $U = U_\text{dim}$
             \item $SCR = 3$
         \end{itemize}
@@ -32,7 +32,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1SetPointStepActive}
+            \BLOCK{for row in solverPCSI16z1SetPointStepReactiveConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -41,9 +41,10 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1SetPointStepActive }}
+    Go to  {{ linkPCSI16z1SetPointStepReactiveConsumption }}
 
     \subsubsection{Analysis of results}
+
     \begin{center}
         \scriptsize
         \begin{tabular}{lccccccc}
@@ -52,7 +53,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1SetPointStepActive}
+            \BLOCK{for row in rmPCSI16z1SetPointStepReactiveConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -70,7 +71,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1SetPointStepActive}
+            \BLOCK{for row in thmPCSI16z1SetPointStepReactiveConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -86,7 +87,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z1SetPointStepActive}
+            \BLOCK{for row in emPCSI16z1SetPointStepReactiveConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -101,7 +102,7 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z1SetPointStepActive}
+            \BLOCK{for row in temPCSI16z1SetPointStepReactiveConsumption}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -115,7 +116,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1SetPointStepActive}
+            \BLOCK{for row in ssemPCSI16z1SetPointStepReactiveConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

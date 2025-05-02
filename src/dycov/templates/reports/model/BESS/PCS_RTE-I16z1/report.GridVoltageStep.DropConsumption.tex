@@ -1,26 +1,26 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SetPoint %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Voltage Step %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    \renewcommand{\DTRPcs}{SetPointStep} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{SetPoint Step}
-    \renewcommand{\OCname}{Reactive}
+    \renewcommand{\DTRPcs}{GridVoltageStep} % DTR pcs definition
+    \renewcommand{\DTRPcsLong}{Grid Voltage Step}
+    \renewcommand{\OCname}{DropConsumption}
 
 
-    \subsection{Step response to control changes: Q-setpoint drop}
+    \subsection{Step response to grid changes in consumption: V dip}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a $5\%$ step decrease in the setpoint of the reactive flow control.
+    is a $10\%$ voltage step decrease on AC source.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_\text{max\_unite}$
-            \item $Q = 0$
-            \item $U = U_\text{dim}$
-            \item $SCR = 3$
+            \item $P = 0.5*P_\text{max\_consumption\_unite}$
+            \item $Q = Q_\text{max}$
+            \item $U = 1.05*U_\text{dim}$
+            \item $SCR = 10$
         \end{itemize}
     \end{description}
 
@@ -32,7 +32,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1SetPointStepReactive}
+            \BLOCK{for row in solverPCSI16z1GridVoltageStepDropConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -41,19 +41,18 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1SetPointStepReactive }}
+    Go to  {{ linkPCSI16z1GridVoltageStepDropConsumption }}
 
     \subsubsection{Analysis of results}
-
     \begin{center}
         \scriptsize
-        \begin{tabular}{lccccccc}
+        \begin{tabular}{lcccccc}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1SetPointStepReactive}
+            \BLOCK{for row in rmPCSI16z1GridVoltageStepDropConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -71,7 +70,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1SetPointStepReactive}
+            \BLOCK{for row in thmPCSI16z1GridVoltageStepDropConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -87,7 +86,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z1SetPointStepReactive}
+            \BLOCK{for row in emPCSI16z1GridVoltageStepDropConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -102,12 +101,14 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z1SetPointStepReactive}
+            \BLOCK{for row in temPCSI16z1GridVoltageStepDropConsumption}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{minipage}
+
+
 
     \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
     \begin{center}
@@ -116,7 +117,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1SetPointStepReactive}
+            \BLOCK{for row in ssemPCSI16z1GridVoltageStepDropConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

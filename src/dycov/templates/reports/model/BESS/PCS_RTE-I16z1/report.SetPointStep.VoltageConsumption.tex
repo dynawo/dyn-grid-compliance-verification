@@ -1,26 +1,26 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Three Phase Fault %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SetPoint %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
-    \renewcommand{\DTRPcsLong}{Three Phase Fault}
-    \renewcommand{\OCname}{PermanentHiZ}
+    \renewcommand{\DTRPcs}{SetPointStep} % DTR pcs definition
+    \renewcommand{\DTRPcsLong}{SetPoint Step}
+    \renewcommand{\OCname}{VoltageConsumption}
 
 
-    \subsection{Permanent fault: High-impedance fault ($SCR=10, V=0.5Un$)}
+    \subsection{Step response to control changes in consumption: V-setpoint increase}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is an impedance-to-earth three-phase permanent fault with a voltage dip of 0.5 $U_{dim}$.
+    is a $5\%$ step increase in the setpoint of the primary voltage control.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_\text{max\_unite}$
+            \item $P = P_\text{max\_consumption\_unite}$
             \item $Q = 0$
             \item $U = U_\text{dim}$
-            \item $SCR = 10$
+            \item $SCR = 3$
         \end{itemize}
     \end{description}
 
@@ -32,7 +32,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultPermanentHiZ}
+            \BLOCK{for row in solverPCSI16z1SetPointStepVoltageConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -41,9 +41,10 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1ThreePhaseFaultPermanentHiZ }}
+    Go to  {{ linkPCSI16z1SetPointStepVoltageConsumption }}
 
     \subsubsection{Analysis of results}
+
     \begin{center}
         \scriptsize
         \begin{tabular}{lcccccc}
@@ -52,7 +53,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultPermanentHiZ}
+            \BLOCK{for row in rmPCSI16z1SetPointStepVoltageConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -70,7 +71,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultPermanentHiZ}
+            \BLOCK{for row in thmPCSI16z1SetPointStepVoltageConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -86,26 +87,27 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z1ThreePhaseFaultPermanentHiZ}
+            \BLOCK{for row in emPCSI16z1SetPointStepVoltageConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{center}
 
-    \noindent Compliance checks on the Active Power Recovery:
-    \begin{center}
+    \noindent Compliance checks on the step-response characteristic: \\
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \centering
         \scriptsize
-        \begin{tabular}{cllc}
+        \begin{tabular}{lccccc}
             \toprule
-            Variable   & Error      & Threshold   & Check      \\
+            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultPermanentHiZ}
-            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{for row in temPCSI16z1SetPointStepVoltageConsumption}
+            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
-    \end{center}
+    \end{minipage}
 
     \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
     \begin{center}
@@ -114,7 +116,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultPermanentHiZ}
+            \BLOCK{for row in ssemPCSI16z1SetPointStepVoltageConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

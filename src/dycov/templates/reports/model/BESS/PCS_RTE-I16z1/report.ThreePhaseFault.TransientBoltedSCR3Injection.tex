@@ -4,24 +4,24 @@
 
     \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{Three Phase Fault}
-    \renewcommand{\OCname}{TransientHiZTc500}
+    \renewcommand{\OCname}{TransientBoltedSCR3Injection}
 
 
-    \subsection{Transient fault: High-impedance fault ($V=0.7Un, 500ms$)}
+    \subsection{Transient fault in injection: full short-circuit ($SCR=3, 150ms$)}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a transient three-phase impedant fault with a voltage dip of 0.7 $U_{dim}$.
+    is a transient three-phase earth fault.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = -P_\text{max\_unite}$
+            \item $P = -P_\text{max\_injection\_unite}$
             \item $Q = 0$
             \item $U = U_\text{dim}$
             \item $SCR = 3$
-            \item $T_\text{clear} = 500ms$
+            \item $T_\text{clear} = 150ms$
         \end{itemize}
     \end{description}
 
@@ -33,7 +33,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultTransientHiZTc500}
+            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -42,7 +42,7 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1ThreePhaseFaultTransientHiZTc500 }}
+    Go to  {{ linkPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection }}
 
     \subsubsection{Analysis of results}
     \begin{center}
@@ -53,7 +53,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultTransientHiZTc500}
+            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -71,7 +71,8 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultTransientHiZTc500}
+            \\
+            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -87,7 +88,8 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
-            \BLOCK{for row in emPCSI16z1ThreePhaseFaultTransientHiZTc500}
+            \\
+            \BLOCK{for row in emPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -101,7 +103,7 @@
             \toprule
             Variable   & Error      & Threshold   & Check      \\
             \midrule
-            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultTransientHiZTc500}
+            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -115,7 +117,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultTransientHiZTc500}
+            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultTransientBoltedSCR3Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

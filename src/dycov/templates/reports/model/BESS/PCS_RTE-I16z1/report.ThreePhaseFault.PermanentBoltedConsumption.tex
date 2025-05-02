@@ -4,24 +4,23 @@
 
     \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{Three Phase Fault}
-    \renewcommand{\OCname}{TransientBoltedSCR3}
+    \renewcommand{\OCname}{PermanentBoltedConsumption}
 
 
-    \subsection{Transient fault: full short-circuit ($SCR=3, 150ms$)}
+    \subsection{Permanent fault in consumption: Full short-circuit ($SCR=10$)}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a transient three-phase earth fault.
+    is a three-phase permanent fault to earth.
 
     \GridCircuitZone
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = -P_\text{max\_unite}$
+            \item $P = P_\text{max\_consumption\_unite}$
             \item $Q = 0$
             \item $U = U_\text{dim}$
-            \item $SCR = 3$
-            \item $T_\text{clear} = 150ms$
+            \item $SCR = 10$
         \end{itemize}
     \end{description}
 
@@ -33,7 +32,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultTransientBoltedSCR3}
+            \BLOCK{for row in solverPCSI16z1ThreePhaseFaultPermanentBoltedConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -42,19 +41,19 @@
 
     \GridCurvesZone
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1ThreePhaseFaultTransientBoltedSCR3 }}
+    Go to  {{ linkPCSI16z1ThreePhaseFaultPermanentBoltedConsumption }}
 
     \subsubsection{Analysis of results}
     \begin{center}
         \scriptsize
-        \begin{tabular}{@{}lccccccccc@{}}
+        \begin{tabular}{lcccccc}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
-            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
-            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultTransientBoltedSCR3}
-            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{for row in rmPCSI16z1ThreePhaseFaultPermanentBoltedConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
@@ -65,15 +64,14 @@
     \noindent Compliance thresholds on the curves:
     \begin{center}
         \scriptsize
-        \begin{tabular}{@{}lccccccccc@{}}
+        \begin{tabular}{lcccccc}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
-            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
-            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \\
-            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultTransientBoltedSCR3}
-            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{for row in thmPCSI16z1ThreePhaseFaultPermanentBoltedConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
@@ -82,15 +80,14 @@
     \noindent Compliance checks on the curves:
     \begin{center}
         \scriptsize
-        \begin{tabular}{@{}lcccccccccc@{}}
+        \begin{tabular}{lccccccc}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
-            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
-            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \\
-            \BLOCK{for row in emPCSI16z1ThreePhaseFaultTransientBoltedSCR3}
-            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
+            \BLOCK{for row in emPCSI16z1ThreePhaseFaultPermanentBoltedConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
@@ -103,7 +100,7 @@
             \toprule
             Variable   & Error      & Threshold   & Check      \\
             \midrule
-            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultTransientBoltedSCR3}
+            \BLOCK{for row in aprPCSI16z1ThreePhaseFaultPermanentBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -117,7 +114,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultTransientBoltedSCR3}
+            \BLOCK{for row in ssemPCSI16z1ThreePhaseFaultPermanentBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
