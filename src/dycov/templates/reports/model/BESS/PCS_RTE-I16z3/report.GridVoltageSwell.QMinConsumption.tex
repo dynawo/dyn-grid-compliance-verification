@@ -1,11 +1,11 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I7 QMax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I7 QMin %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \renewcommand{\DTRPcs}{GridVoltageSwell} % DTR pcs definition
-    \renewcommand{\OCname}{QMax}
+    \renewcommand{\OCname}{QMinConsumption}
 
 
-    \subsection{Test I7 - Voltage swell ride-through ($Q_{max}$)}
+    \subsection{Test I7 - Voltage swell ride-through in consumption ($Q_{min}$)}
 
     Checks for compliant behavior of the generator under a grid scenario where
     there is a severe overvoltage at the PDR bus (which simulates the
@@ -47,12 +47,11 @@
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_{max\_unite}$
-            \item $Q = Q_{max}$
+            \item $P = P_{max\_consumption\_unite}$
+            \item $Q = Q_{min}$
             \item $U = U_{dim}$
         \end{itemize}
     \end{description}
-
 
     \subsubsection{Simulation parameters}
 
@@ -62,7 +61,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z3GridVoltageSwellQMax}
+            \BLOCK{for row in solverPCSI16z3GridVoltageSwellQMinConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -71,7 +70,7 @@
 
     \GridCurvesZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3GridVoltageSwellQMax }}
+    Go to  {{ linkPCSI16z3GridVoltageSwellQMinConsumption }}
 
     \subsubsection{Analysis of results}
 
@@ -83,7 +82,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z3GridVoltageSwellQMax}
+            \BLOCK{for row in rmPCSI16z3GridVoltageSwellQMinConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -101,7 +100,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z3GridVoltageSwellQMax}
+            \BLOCK{for row in thmPCSI16z3GridVoltageSwellQMinConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -117,7 +116,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
-            \BLOCK{for row in emPCSI16z3GridVoltageSwellQMax}
+            \BLOCK{for row in emPCSI16z3GridVoltageSwellQMinConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -131,7 +130,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z3GridVoltageSwellQMax}
+            \BLOCK{for row in ssemPCSI16z3GridVoltageSwellQMinConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

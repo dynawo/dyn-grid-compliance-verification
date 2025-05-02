@@ -2,10 +2,10 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I10 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \renewcommand{\DTRPcs}{Islanding} % DTR pcs definition
-    \renewcommand{\OCname}{DeltaP10DeltaQ4}
+    \renewcommand{\OCname}{DeltaP10DeltaQ4Injection}
 
 
-    \subsection{Test I10 - Islanding event}
+    \subsection{Test I10 - Islanding event in injection}
 
     Checks for compliant behavior of the generator under an
     \emph{islanding} event grid scenario, i.e., the network has been split in
@@ -30,7 +30,7 @@
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = 0.8 P_{max\_unite}$
+            \item $P = 0.8 P_{max\_injection\_unite}$
             \item $Q = 0$
             \item $U = U_{dim}$
             \item $f = 50 Hz$ (this is always the default in Dynawo)
@@ -45,7 +45,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z3IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in solverPCSI16z3IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -54,7 +54,7 @@
 
     \GridCurvesZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3IslandingDeltaP10DeltaQ4 }}
+    Go to  {{ linkPCSI16z3IslandingDeltaP10DeltaQ4Injection }}
 
     \subsubsection{Analysis of results}
 
@@ -67,7 +67,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z3IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in rmPCSI16z3IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -85,7 +85,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z3IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in thmPCSI16z3IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -101,7 +101,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z3IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in emPCSI16z3IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -115,7 +115,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z3IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in ssemPCSI16z3IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

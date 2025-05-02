@@ -1,19 +1,22 @@
-    % DTRPCS for cicuits
-    \renewcommand{\DTRPcs}{QSetPointStep} % DTR pcs definition
-    \renewcommand{\OCname}{Inc10}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I2 BReactance %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \renewcommand{\DTRPcs}{USetPointStep} % DTR pcs definition
+    \renewcommand{\OCname}{BReactanceConsumption} % DTR pcs definition
 
 
-    \subsection{Test I2 - Step response to Q-setpoint change ($+10\%$)}
+    \subsection{Test I2 - Step response to V-setpoint change in consumption ($X_b$)}
 
     Checks for compliant behavior of the BESS under a grid scenario where there
-    is a step adjustment in the setpoint of the reactive flow control.
+    is a step change in the setpoint of the primary voltage control.
 
     \GridCircuitZthree
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_{max\_unite}$
+            \item $P = P_{max\_consumption\_unite}$
             \item $Q = 0$
             \item $U = U_{dim}$
         \end{itemize}
@@ -27,7 +30,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z3QSetPointStepInc10}
+            \BLOCK{for row in solverPCSI16z3USetPointStepBReactanceConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -36,9 +39,12 @@
 
     \GridCurvesZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3QSetPointStepInc10 }}
+    Go to  {{ linkPCSI16z3USetPointStepBReactanceConsumption }}
 
     \subsubsection{Analysis of results}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
     \begin{center}
         \scriptsize
         \begin{tabular}{lcccccc}
@@ -47,7 +53,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z3QSetPointStepInc10}
+            \BLOCK{for row in rmPCSI16z3USetPointStepBReactanceConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -65,7 +71,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z3QSetPointStepInc10}
+            \BLOCK{for row in thmPCSI16z3USetPointStepBReactanceConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -81,7 +87,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z3QSetPointStepInc10}
+            \BLOCK{for row in emPCSI16z3USetPointStepBReactanceConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -96,7 +102,7 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z3QSetPointStepInc10}
+            \BLOCK{for row in temPCSI16z3USetPointStepBReactanceConsumption}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -110,7 +116,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z3QSetPointStepInc10}
+            \BLOCK{for row in ssemPCSI16z3USetPointStepBReactanceConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
