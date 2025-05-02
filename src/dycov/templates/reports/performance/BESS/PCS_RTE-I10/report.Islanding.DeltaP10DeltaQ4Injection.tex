@@ -1,4 +1,4 @@
-    \subsection{Overview of DTR PCS \DTRPcs}
+    \subsection{Overview of DTR PCS \DTRPcs in injection}
 
     Checks for compliant behavior of the BESS under an \emph{islanding} event grid
     scenario, i.e., the network has been split in such a way that the BESS is left as
@@ -29,7 +29,7 @@
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = 0.8 P_{max\_unite}$
+            \item $P = 0.8 P_{max\_injection\_unite}$
             \item $Q = 0$
             \item $U = U_{dim}$
             \item $f = 50 Hz$ (this is always the default in Dynawo)
@@ -44,7 +44,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI10IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in solverPCSI10IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -75,7 +75,7 @@
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4}
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
         \begin{minipage}[t]{0.8\textwidth}
             \small Voltage magnitude measured at the PDR bus.
         \end{minipage}
@@ -83,7 +83,7 @@
     \hfill
         \begin{minipage}[t]{0.48\textwidth}
             \centering
-            \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4}
+            \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
             \begin{minipage}[t]{0.8\textwidth}
                 \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
                 The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
@@ -96,7 +96,7 @@
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4}
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus.
         \end{minipage}
@@ -104,7 +104,7 @@
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4}
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
         \begin{minipage}[t]{0.8\textwidth}
             \small Reactive power output Q, measured at the PDR bus.
         \end{minipage}
@@ -114,14 +114,14 @@
 
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{fig_WRef_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4}
+        \includegraphics[width=\textwidth]{fig_WRef_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
         \begin{minipage}[t]{0.8\textwidth}
             \small Network frequency, in pu. The red dashed horizontal lines mark
             the compliance limits, [0.98, 1.02] pu.
         \end{minipage}
     \end{minipage}
     \\[2\baselineskip]
-    Go to  {{ linkPCSI10IslandingDeltaP10DeltaQ4 }}
+    Go to  {{ linkPCSI10IslandingDeltaP10DeltaQ4Injection }}
 
 
     \subsubsection{Analysis of results}
@@ -138,7 +138,7 @@
             \toprule
             \textbf{Check} & \multicolumn{1}{c}{\textbf{value}} & \multicolumn{1}{c}{\textbf{Compliant?}} \\
             \midrule
-            \BLOCK{for row in cmPCSI10IslandingDeltaP10DeltaQ4}
+            \BLOCK{for row in cmPCSI10IslandingDeltaP10DeltaQ4Injection}
             {{row[0]}}     & {{row[1]}}                         & {{row[2]}}                              \\
             \BLOCK{endfor}
             \bottomrule
