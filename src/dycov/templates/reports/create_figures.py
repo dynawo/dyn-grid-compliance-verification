@@ -14,6 +14,10 @@ def _get_pcs_name(pcs_name, simulation_type):
     pcs = pcs_name.replace("PCS_", "")
     if simulation_type == ELECTRIC_PERFORMANCE_SM:
         return pcs + "SM"
+    if simulation_type == ELECTRIC_PERFORMANCE_BESS:
+        return pcs + "BESS"
+    if simulation_type == MODEL_VALIDATION_BESS:
+        return pcs + "BESS"
 
     return pcs
 
