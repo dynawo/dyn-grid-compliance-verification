@@ -1,24 +1,24 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I2 Ext Inc40 Setpoint P %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I2 Ext Dec20Injection Setpoint Q %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % DTRPCS for cicuits
-    \renewcommand{\DTRPcs}{PSetPointStep} % DTR pcs definition
-    \renewcommand{\OCname}{Inc40}
+    \renewcommand{\DTRPcs}{QSetPointStep} % DTR pcs definition
+    \renewcommand{\OCname}{Dec20Injection}
 
 
-    \subsection{Test I2 - Step response to P-setpoint change ($+40\%$)}
+    \subsection{Test I2 - Step response to Q-setpoint change in injection ($-20\%$)}
 
     Checks for compliant behavior of the BESS under a grid scenario where there
-    is a step adjustment in the setpoint of the active flow control.
+    is a step adjustment in the setpoint of the reactive flow control.
 
     \GridCircuitZthree
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = 0.6*P_{max\_unite}$
-            \item $Q = 0$
+            \item $P = P_{max\_injection\_unite}$
+            \item $Q = 0.1*P_{max\_injection\_unite}$
             \item $U = U_{dim}$
         \end{itemize}
     \end{description}
@@ -31,7 +31,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z3PSetPointStepInc40}
+            \BLOCK{for row in solverPCSI16z3QSetPointStepDec20Injection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -40,10 +40,9 @@
 
     \GridCurvesZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3PSetPointStepInc40 }}
+    Go to  {{ linkPCSI16z3QSetPointStepDec20Injection }}
 
-    \subsubsection{Analysis of results}
-
+    \subsubsection{Analysis of Results}
 
     \begin{center}
         \scriptsize
@@ -53,7 +52,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z3PSetPointStepInc40}
+            \BLOCK{for row in rmPCSI16z3QSetPointStepDec20Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -71,7 +70,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z3PSetPointStepInc40}
+            \BLOCK{for row in thmPCSI16z3QSetPointStepDec20Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -87,7 +86,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z3PSetPointStepInc40}
+            \BLOCK{for row in emPCSI16z3QSetPointStepDec20Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -102,7 +101,7 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z3PSetPointStepInc40}
+            \BLOCK{for row in temPCSI16z3QSetPointStepDec20Injection}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -116,7 +115,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z3PSetPointStepInc40}
+            \BLOCK{for row in ssemPCSI16z3QSetPointStepDec20Injection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

@@ -1,8 +1,8 @@
     \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
-    \renewcommand{\OCname}{TransientBolted}
+    \renewcommand{\OCname}{TransientBoltedConsumption}
 
 
-    \subsection{Test I5 - Transient fault ride-through}
+    \subsection{Test I5 - Transient fault ride-through in consumption}
 
     Checks for compliant behavior of the BESS under a grid scenario where there
     is a symmetric three-phase fault at one of the four transmission lines
@@ -35,7 +35,7 @@
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_{max\_unite}$
+            \item $P = P_{max\_consumption\_unite}$
             \item $Q = 0$
             \item $U = U_{dim}$
         \end{itemize}
@@ -49,7 +49,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z3ThreePhaseFaultTransientBolted}
+            \BLOCK{for row in solverPCSI16z3ThreePhaseFaultTransientBoltedConsumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -144,7 +144,7 @@
         \end{minipage}
     \end{minipage}
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3ThreePhaseFaultTransientBolted }}
+    Go to  {{ linkPCSI16z3ThreePhaseFaultTransientBoltedConsumption }}
 
     \subsubsection{Analysis of results}
 
@@ -159,7 +159,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z3ThreePhaseFaultTransientBolted}
+            \BLOCK{for row in rmPCSI16z3ThreePhaseFaultTransientBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -177,7 +177,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z3ThreePhaseFaultTransientBolted}
+            \BLOCK{for row in thmPCSI16z3ThreePhaseFaultTransientBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -193,7 +193,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
-            \BLOCK{for row in emPCSI16z3ThreePhaseFaultTransientBolted}
+            \BLOCK{for row in emPCSI16z3ThreePhaseFaultTransientBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -207,7 +207,7 @@
             \toprule
             Variable   & Error      & Threshold   & Check      \\
             \midrule
-            \BLOCK{for row in aprPCSI16z3ThreePhaseFaultTransientBolted}
+            \BLOCK{for row in aprPCSI16z3ThreePhaseFaultTransientBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -221,7 +221,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z3ThreePhaseFaultTransientBolted}
+            \BLOCK{for row in ssemPCSI16z3ThreePhaseFaultTransientBoltedConsumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

@@ -1,13 +1,9 @@
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I2 Ext Dec20 Setpoint Q %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
     % DTRPCS for cicuits
     \renewcommand{\DTRPcs}{QSetPointStep} % DTR pcs definition
-    \renewcommand{\OCname}{Dec20}
+    \renewcommand{\OCname}{Inc10Consumption}
 
 
-    \subsection{Test I2 - Step response to Q-setpoint change ($-20\%$)}
+    \subsection{Test I2 - Step response to Q-setpoint change in consumption ($+10\%$)}
 
     Checks for compliant behavior of the BESS under a grid scenario where there
     is a step adjustment in the setpoint of the reactive flow control.
@@ -17,8 +13,8 @@
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_{max\_unite}$
-            \item $Q = 0.1*P_{max\_unite}$
+            \item $P = P_{max\_consumption\_unite}$
+            \item $Q = 0$
             \item $U = U_{dim}$
         \end{itemize}
     \end{description}
@@ -31,7 +27,7 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z3QSetPointStepDec20}
+            \BLOCK{for row in solverPCSI16z3QSetPointStepInc10Consumption}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
@@ -40,10 +36,9 @@
 
     \GridCurvesZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z3QSetPointStepDec20 }}
+    Go to  {{ linkPCSI16z3QSetPointStepInc10Consumption }}
 
-    \subsubsection{Analysis of Results}
-
+    \subsubsection{Analysis of results}
     \begin{center}
         \scriptsize
         \begin{tabular}{lcccccc}
@@ -52,7 +47,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z3QSetPointStepDec20}
+            \BLOCK{for row in rmPCSI16z3QSetPointStepInc10Consumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -70,7 +65,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z3QSetPointStepDec20}
+            \BLOCK{for row in thmPCSI16z3QSetPointStepInc10Consumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -86,7 +81,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
             \midrule
-            \BLOCK{for row in emPCSI16z3QSetPointStepDec20}
+            \BLOCK{for row in emPCSI16z3QSetPointStepInc10Consumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -101,7 +96,7 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z3QSetPointStepDec20}
+            \BLOCK{for row in temPCSI16z3QSetPointStepInc10Consumption}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -115,7 +110,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z3QSetPointStepDec20}
+            \BLOCK{for row in ssemPCSI16z3QSetPointStepInc10Consumption}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
