@@ -82,8 +82,8 @@
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_SNom" value="60"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.0273"/>
-    <par type="DOUBLE" name="transformer_XPu" value="2.4446"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.000455"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.040743"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_P10Pu" value="0.1"/>
