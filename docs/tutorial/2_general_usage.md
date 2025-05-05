@@ -299,8 +299,6 @@ An example of the console output:
 (dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI
 2024-02-01 11:52:16,161 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
 2024-02-01 11:52:16,164 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
-2024-02-01 11:54:32,140 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile TransformerTapChanger.xml
-2024-02-01 11:54:32,141 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list TransformerTapChanger.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
 2024-02-01 11:55:11,153 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
 2024-02-01 11:55:11,154 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SynchronousMachineI8SM.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
 2024-02-01 11:56:06,142 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointNumcc.xml
@@ -589,13 +587,7 @@ dycov$
 │   ├── SynchronousMachineI8SM.extvar
 │   ├── SynchronousMachineI8SM_INIT.mo
 │   ├── SynchronousMachineI8SM.mo
-│   ├── SynchronousMachineI8SM.so
-│   ├── TransformerTapChanger
-│   ├── TransformerTapChanger.desc.xml
-│   ├── TransformerTapChanger.extvar
-│   ├── TransformerTapChanger_INIT.mo
-│   ├── TransformerTapChanger.mo
-│   └── TransformerTapChanger.so
+│   └── SynchronousMachineI8SM.so
 ├── log
 │   └── dycov.log
 ├── templates
