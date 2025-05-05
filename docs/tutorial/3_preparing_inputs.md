@@ -84,7 +84,7 @@ Dynawo
     <!-- Producer -->
     <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
     <dyn:blackBoxModel id="Aux_Load" lib="LoadPQ" parFile="Producer.par" parId="Aux_Load"/>
-    <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
+    <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
     <dyn:blackBoxModel id="Wind_Turbine" lib="IECWPP4BCurrentSource2015" parFile="Producer.par" parId="Wind_Turbine"/>
     <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
     <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
@@ -319,7 +319,7 @@ models to use instead of the placeholders that the tool has set are indicated:
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal2"/>
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
-  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerTapChanger']-->
+  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
   <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
@@ -338,7 +338,7 @@ In this step we are going to modify the file to leave it like the following exam
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal2"/>
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
-  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerTapChanger']-->
+  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
   <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
