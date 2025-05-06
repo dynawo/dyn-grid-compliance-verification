@@ -370,14 +370,15 @@ def _summary_log(
         header_txt += f"***Reference: {reference_template}***\n"
 
     header_txt += (
-        "\n\n"
-        "Pcs            Benchmark                Operating Condition      Overall Result\n"
-        "-------------------------------------------------------------------------------\n"
+        "\n\n" f"{'PCS':15}{'Benchmark':25}{'Operating Condition':40}{'Overall Result':30}\n"
     )
+    header_txt += "-" * (15 + 25 + 40 + 30)
+    header_txt += "\n"
+
     body_txt = ""
     for i in summary_list:
         body_txt += (
-            f"{i.pcs:15}{i.benchmark:25}{i.operating_condition:25}{i.compliance.to_str()}\n"
+            f"{i.pcs:15}{i.benchmark:25}{i.operating_condition:40}{i.compliance.to_str():30}\n"
         )
     body_txt += "\n"
     # Show the summary report on the console and save it to file

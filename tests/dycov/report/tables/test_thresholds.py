@@ -68,11 +68,41 @@ def test_create_map_all_checks_present():
     assert result[0][1:] == [0.11, 0.12, 0.13, 0.21, 0.22, 0.23, 0.31, 0.32, 0.33]
 
 
-def test_setpoint_tracking_thresholds_full_window():
+def test_create_map_all_keys_present():
+    results = {
+        "setpoint_tracking_controlled_magnitude_check": True,
+        "setpoint_tracking_controlled_magnitude_name": "CM",
+        "during_mxe_controlled_magnitude_value": 0.0,
+        "setpoint_tracking_active_power_check": True,
+        "setpoint_tracking_active_power_name": "P",
+        "during_mxe_active_power_value": 0.0,
+        "setpoint_tracking_reactive_power_check": True,
+        "setpoint_tracking_reactive_power_name": "Q",
+        "during_mxe_reactive_power_value": 0.0,
+        "voltage_dips_voltage_check": True,
+        "during_mxe_voltage_value": 0.0,
+        "voltage_dips_active_power_check": True,
+        "during_mxe_active_power_value": 0.0,
+        "voltage_dips_reactive_power_check": True,
+        "during_mxe_reactive_power_value": 0.0,
+        "voltage_dips_active_current_check": True,
+        "during_mxe_active_current_value": 0.0,
+        "voltage_dips_reactive_current_check": True,
+        "during_mxe_reactive_current_value": 0.0,
+    }
+    is_field_measurements = False
+    result = thresholds.create_map(results, is_field_measurements)
+    # All entries should have 10 elements (with 'during' window)
+    assert len(result) == 8
+    for row in result:
+        assert len(row) == 10
+
+
+def test_setpoint_tracking_thresholds_with_during_window():
     results = {
         "setpoint_tracking_active_power_check": True,
         "setpoint_tracking_active_power_name": "P",
-        "during_mxe_active_power_value": 1,
+        "during_mxe_active_power_value": 0.0,
     }
     thresholds_map = []
     thresholds._setpoint_tracking_thresholds(results, "active_power", thresholds_map)

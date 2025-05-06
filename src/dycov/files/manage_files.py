@@ -23,19 +23,32 @@ ModelFiles = namedtuple("ModelFiles", ["model_path", "omega_path", "pcs_path", "
 ProducerFiles = namedtuple("ProducerFiles", ["producer_dyd", "producer_par"])
 
 
-def _copy_files(
-    path: Path,
-    target_path: Path,
+def copy_files(
+    source: Path,
+    target: Path,
 ):
+    """Copy from source to target, excluding the __init__.py and pycache files
+
+    Parameters
+    ----------
+    source: Path
+        path containing the files to copy
+    target: Path
+        path where the copy of the files is created
+    """
+    if not source.is_dir():
+        shutil.copy(source, target)
+        return
+
     pattern = re.compile(r".*")
     exclude_pattern1 = re.compile(r".*__init__.py")
     exclude_pattern2 = re.compile(r".*__pycache__*")
-    for file in path.iterdir():
+    for file in source.iterdir():
         matching = pattern.match(str(file))
         matching1 = exclude_pattern1.match(str(file))
         matching2 = exclude_pattern2.match(str(file))
         if matching and not matching1 and not matching2:
-            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
+            shutil.copy(file, target / (file.stem + file.suffix.lower()))
 
 
 def create_config_file(config_file: Path, target_file: Path) -> None:
@@ -186,7 +199,7 @@ def list_directories(source_path: Path) -> set:
     return pcs_list
 
 
-def copy_path(source_path: Path, target_path: Path) -> None:
+def copy_path(source_path: Path, target_path: Path, dirs_exist_ok: bool = False) -> None:
     """Copy the content of source in target.
 
     Parameters
@@ -198,7 +211,7 @@ def copy_path(source_path: Path, target_path: Path) -> None:
     """
     file_path = Path(__file__).resolve().parent.parent
     pcs_path = file_path / source_path
-    shutil.copytree(pcs_path, target_path, dirs_exist_ok=True)
+    shutil.copytree(pcs_path, target_path, dirs_exist_ok=dirs_exist_ok)
 
     for file in target_path.glob("**/__init__.py"):
         file.unlink()
@@ -224,8 +237,8 @@ def copy_base_case_files(
         Target path
     """
 
-    _copy_files(model_files.model_path, target_path)
-    _copy_files(model_files.omega_path, target_path)
+    copy_files(model_files.model_path, target_path)
+    copy_files(model_files.omega_path, target_path)
 
     pattern = re.compile(r".*")
     exclude_pattern1 = re.compile(r".*__init__.py")
