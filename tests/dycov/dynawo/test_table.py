@@ -54,7 +54,11 @@ def working_dir(tmp_path):
     # Create a dummy TableInfiniteBus.txt file
     file_path = tmp_path / "TableInfiniteBus.txt"
     file_path.write_text(
-        "start_event={{ start_event }}\nend_event={{ end_event }}\nbus_u0pu={{ bus_u0pu }}\nbus_upu={{ bus_upu }}\nend_freq={{ end_freq }}\n"
+        "start_event={{ start_event }}\n"
+        "end_event={{ end_event }}\n"
+        "bus_u0pu={{ bus_u0pu }}\n"
+        "bus_upu={{ bus_upu }}\n"
+        "end_freq={{ end_freq }}\n"
     )
     return tmp_path
 

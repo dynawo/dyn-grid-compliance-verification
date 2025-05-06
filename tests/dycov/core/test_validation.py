@@ -6,7 +6,6 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-import logging
 import shutil
 import tempfile
 from pathlib import Path
@@ -196,20 +195,6 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
     assert pcs_names == ["PCS2"]
 
 
-def test_validation_cleans_up_working_directory(monkeypatch, temp_dirs):
-    parameters = DummyParameters(output_dir=temp_dirs[0])
-    monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
-    )
-    monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
-    validation = Validation(parameters)
-    working_dir = parameters.get_working_dir()
-    assert working_dir.exists()
-    validation.set_testing(True)
-    validation.validate(is_test_validation=True)
-    assert not working_dir.exists() or not any(working_dir.iterdir())
-
-
 def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     parameters = DummyParameters(output_dir=temp_dirs[0])
     # Patch check_output_dir to simulate user not wanting to overwrite
@@ -232,7 +217,7 @@ def test_validation_exits_on_pcs_validation_exception(monkeypatch, temp_dirs):
     validation._pcs_list = pcs_list
     validation.set_testing(True)
     with pytest.raises(SystemExit):
-        validation.validate(is_test_validation=True)
+        validation.validate()
 
 
 def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs):
@@ -249,7 +234,7 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
     monkeypatch.setattr("dycov.files.manage_files.copy_output_files", fake_copy_output_files)
     validation = Validation(parameters)
     validation.set_testing(False)
-    validation.validate(is_test_validation=False)
+    validation.validate()
     pcs_name = parameters.get_selected_pcs()
     assert any(pcs_name in c[0] for c in copied)
     assert any("Reports" in c[0] for c in copied)

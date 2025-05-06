@@ -51,13 +51,13 @@ def test_calculate_returns_expected_windows():
     # Validate window boundaries
     validate = result["validate"]
     assert "before" in validate and "during" in validate and "after" in validate
-    before = validate["before"]
     during = validate["during"]
     after = validate["after"]
 
     # after window should end at time_values[-1] minus t_windowLPF_excl_end
     assert after[1] == pytest.approx(time_values[-1] - 0.02, abs=1e-8)
-    # during window should be between t_fault + tol + t_faultQS_excl and t_clear - tol - t_windowLPF_excl_end
+    # during window should be between
+    # t_fault + tol + t_faultQS_excl and t_clear - tol - t_windowLPF_excl_end
     tol = 1e-6
     t_clear = t_fault + fault_duration
     t_faultQS_excl = max(0.02, 0.02)
