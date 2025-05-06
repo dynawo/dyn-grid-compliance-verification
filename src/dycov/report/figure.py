@@ -132,7 +132,7 @@ def _get_xrange_for_curve(
     if reference_step_size is None:
         graph_scale = 1.0
     else:
-        graph_scale = _obtain_value(str(reference_step_size), unit_characteristics)
+        graph_scale = abs(_obtain_value(str(reference_step_size), unit_characteristics))
     graph_rel_tol = config.get_float("Global", "graph_rel_tol", 0.002)
     graph_abs_tol = config.get_float("Global", "graph_abs_tol", 0.01) * graph_scale
 
