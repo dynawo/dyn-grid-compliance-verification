@@ -477,7 +477,7 @@ class Benchmark:
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, float, Simulation_result, int]:
+    ) -> tuple[Path, Path, dict, Simulation_result, int]:
         return self._curves_manager.has_required_curves(
             measurement_names, pcs_bm_name, bm_name, oc_name
         )
@@ -489,7 +489,6 @@ class Benchmark:
         working_path: Path,
         jobs_output_dir: Path,
         event_params: dict,
-        fs: float,
         success: bool,
         has_simulated_curves: bool,
     ):
@@ -505,7 +504,6 @@ class Benchmark:
             working_path,
             jobs_output_dir,
             event_params,
-            fs,
             success,
             has_simulated_curves,
         )
@@ -559,7 +557,6 @@ class Benchmark:
                 working_path,
                 jobs_output_dir,
                 event_params,
-                fs,
                 simulation_result,
                 has_curves,
             ) = self.__has_required_curves(
@@ -593,7 +590,6 @@ class Benchmark:
                     working_path,
                     jobs_output_dir,
                     event_params,
-                    fs,
                     simulation_result.success,
                     simulation_result.has_simulated_curves,
                 )

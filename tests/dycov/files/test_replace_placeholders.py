@@ -17,7 +17,6 @@ from src.dycov.files.replace_placeholders import (
     fault_time,
     get_all_variables,
     modify_jobs_file,
-    modify_par_file,
 )
 
 

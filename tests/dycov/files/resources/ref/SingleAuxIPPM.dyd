@@ -5,9 +5,9 @@
   <dyn:blackBoxModel id="IntNetwork_Line" lib="LINE_DYNAMIC_MODEL" parFile="Producer.par" parId="IntNetwork_Line"/>
   <!--Replace the placeholder: 'BUS_DYNAMIC_MODEL', available_options: ['InfiniteBus', 'InfiniteBusFromTable', 'Bus']-->
   <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
-  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerTapChanger']-->
+  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
   <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
-  <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ', 'LoadAlphaBeta']-->
+  <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadAlphaBeta']-->
   <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
   <!--Replace the placeholder: 'PPM_DYNAMIC_MODEL', available_options: ['WTG4AWeccCurrentSource', 'WTG4BWeccCurrentSource', 'PhotovoltaicsWeccCurrentSourceB', 'PhotovoltaicsWeccVoltageSourceA', 'PhotovoltaicsWeccVoltageSourceB', 'IECWPP4ACurrentSource2015', 'IECWPP4BCurrentSource2015', 'IECWPP4ACurrentSource2020', 'IECWPP4BCurrentSource2020', 'WT4AWeccCurrentSource', 'WT4BWeccCurrentSource', 'PhotovoltaicsWeccVoltageSourceANoPlantControl', 'PhotovoltaicsWeccVoltageSourceBNoPlantControl', 'PhotovoltaicsWeccCurrentSourceBNoPlantControl', 'IECWT4ACurrentSource2015', 'IECWT4BCurrentSource2015', 'IECWT4ACurrentSource2020', 'IECWT4BCurrentSource2020']-->

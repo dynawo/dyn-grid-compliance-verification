@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
+  <!-- Benchmark Case -->
+  <dyn:blackBoxModel id="OmegaRef" lib="DYNModelOmegaRef" parFile="Omega.par" parId="OmegaRef"/>
+  <dyn:connect id1="Generator" var1="generator_omegaPu" id2="OmegaRef" var2="omega_grp_0_value"/>
+  <dyn:connect id1="Generator" var1="generator_omegaRefPu" id2="OmegaRef" var2="omegaRef_grp_0_value"/>
+  <dyn:connect id1="Generator" var1="generator_running" id2="OmegaRef" var2="running_grp_0"/>
+</dyn:dynamicModelsArchitecture>
+
+  

@@ -1,0 +1,140 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I7 QMaxInjection %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \renewcommand{\DTRPcs}{GridVoltageSwell} % DTR pcs definition
+    \renewcommand{\OCname}{QMaxInjection}
+
+
+    \subsection{Test I7 - Voltage swell ride-through in injection ($Q_{max}$)}
+
+    Checks for compliant behavior of the generator under a grid scenario where
+    there is a severe overvoltage at the PDR bus (which simulates the
+    effect of clearing a fault nearby in the network).
+
+    \GridCircuitZthree
+
+    In this PCS there are several events, which correspond to the changes that are
+    forced upon the PDR bus voltage curve:
+    \begin{itemize}
+        \item At $t = T_{0}$, the voltage swells to $U_{swell}$
+        \item At $t = T_{rec1}$, the voltage drops to $U_{rec2}$
+        \item At $t = T_{rec2}$, the voltage drops to $U_{rec3}$
+        \item At $t = T_{rec3}$, the voltage drops to $U_{rec4}$
+    \end{itemize}
+    These values of time and voltage are specified by the DTR as follows. (Remember
+    that the classification of generators into class A, B, C, D, is in the DTR under
+    Chapter 5, Article 5.1.1, Section 3. See the reminder in the document
+    \code{Summary\_data\_from\_the\_DTR.md}.)
+
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{variable} & \textbf{all Volt Levels} \\
+            \midrule
+            $U_{initial}$     & 1.0 pu                   \\
+            $T_{0}$           & (free)                   \\
+            $U_{swell}$       & 1.3 pu                   \\
+            $T_{rec1}$        & $T_{0}$ + 50 ms          \\
+            $U_{rec2}$        & 1.25 pu                  \\
+            $T_{rec2}$        & $T_{0}$ + 2.5 s          \\
+            $U_{rec3}$        & 1.15 pu                  \\
+            $T_{rec3}$        & $T_{0}$ + 30 s           \\
+            $U_{rec4}$        & 1.10 pu                  \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_{max\_injection\_unite}$
+            \item $Q = Q_{max}$
+            \item $U = U_{dim}$
+        \end{itemize}
+    \end{description}
+
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z3GridVoltageSwellQMaxInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \GridCurvesZthree
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z3GridVoltageSwellQMaxInjection }}
+
+    \subsubsection{Analysis of results}
+
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z3GridVoltageSwellQMaxInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z3GridVoltageSwellQMaxInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lcccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
+            \midrule
+            \BLOCK{for row in emPCSI16z3GridVoltageSwellQMaxInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z3GridVoltageSwellQMaxInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+
+    \end{center}
