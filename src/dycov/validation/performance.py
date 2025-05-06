@@ -649,7 +649,6 @@ class PerformanceValidator(Validator):
         working_path: Path,
         sim_output_path: str,
         event_params: dict,
-        fs: float,
     ) -> dict:
         """Electric Performance Verification.
 
@@ -663,8 +662,6 @@ class PerformanceValidator(Validator):
             Simulator output path.
         event_params: dict
             Event parameters
-        fs: float
-            Frequency sampling (Not used in this validator).
 
         Returns
         -------
