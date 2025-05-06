@@ -1218,7 +1218,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
         """Runs Dynawo to get the simulated curves.
 
         Parameters
@@ -1240,8 +1240,6 @@ class DynawoCurves(ProducerCurves):
             Simulation output dir
         dict
             Event parameters
-        float
-            Frequency sampling
         Simulation_result
             Information about the simulation result.
         DataFrame
@@ -1321,7 +1319,6 @@ class DynawoCurves(ProducerCurves):
         return (
             jobs_output_dir,
             event_params,
-            0,
             simulation_result,
             curves_calculated,
         )
