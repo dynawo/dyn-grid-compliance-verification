@@ -2,7 +2,7 @@
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!-- Producer -->
   <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
-  <dyn:blackBoxModel id="Aux_Load" lib="LoadPQ" parFile="Producer.par" parId="Aux_Load"/>
+  <dyn:blackBoxModel id="Aux_Load" lib="LoadAlphaBeta" parFile="Producer.par" parId="Aux_Load"/>
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="StepUp_Xfmr"/>
   <dyn:blackBoxModel id="Synch_Gen" lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a" parFile="Producer.par" parId="Synch_Gen"/>
   <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
