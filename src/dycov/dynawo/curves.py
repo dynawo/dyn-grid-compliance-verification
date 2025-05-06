@@ -27,12 +27,7 @@ from dycov.dynawo.translator import dynawo_translator
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
-from dycov.files import (
-    manage_files,
-    model_parameters,
-    omega_file,
-    replace_placeholders,
-)
+from dycov.files import manage_files, model_parameters, omega_file, replace_placeholders
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging.logging import dycov_logging
 from dycov.logging.simulation_logger import SimulationLogger
@@ -480,6 +475,10 @@ class DynawoCurves(ProducerCurves):
         self.__log(f"\tpdr_Q={pdr_q}")
         pdr_u = config.get_value(config_section, "pdr_U")
         self.__log(f"\tpdr_U={pdr_u}")
+
+        # Modify the PMax value depending on the PCS initialization:
+        # PmaxInjection (default) or PmaxConsumption
+        self.get_producer().set_consumption("PmaxConsumption" in pdr_p)
 
         # Sign convention:
         # the initializations expects Pdr to be negative;
@@ -1218,7 +1217,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
         """Runs Dynawo to get the simulated curves.
 
         Parameters
@@ -1240,8 +1239,6 @@ class DynawoCurves(ProducerCurves):
             Simulation output dir
         dict
             Event parameters
-        float
-            Frequency sampling
         Simulation_result
             Information about the simulation result.
         DataFrame
@@ -1321,7 +1318,6 @@ class DynawoCurves(ProducerCurves):
         return (
             jobs_output_dir,
             event_params,
-            0,
             simulation_result,
             curves_calculated,
         )

@@ -73,16 +73,11 @@ class ImportedCurves(ProducerCurves):
         oc_name: str,
         success: bool,
         is_reference: bool = False,
-    ) -> tuple[bool, float, float, float, pd.DataFrame]:
+    ) -> tuple[bool, float, float, pd.DataFrame]:
         has_imported_curves = True
         if success:
             importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
-            (
-                df_imported_curves,
-                _,
-                _,
-                fs,
-            ) = importer.get_curves_dataframe(self._producer.get_zone())
+            df_imported_curves = importer.get_curves_dataframe(self._producer.get_zone())
             if df_imported_curves.empty:
                 success = False
                 has_imported_curves = False
@@ -97,8 +92,6 @@ class ImportedCurves(ProducerCurves):
             fault_duration = _get_config_value(
                 importer.config, "Curves-Metadata", "fault_duration"
             )
-            if fs == 0:
-                fs = _get_config_value(importer.config, "Curves-Metadata", "frequency_sampling")
 
             if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
                 self._is_field_measurements = bool(
@@ -118,11 +111,10 @@ class ImportedCurves(ProducerCurves):
             has_imported_curves = False
             sim_t_event_start = 0
             fault_duration = 0
-            fs = 0
             self._generators_imax = {}
             df_imported_curves = pd.DataFrame()
 
-        return has_imported_curves, sim_t_event_start, fault_duration, fs, df_imported_curves
+        return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
     def __obtain_files_curve(
         self,
@@ -136,11 +128,17 @@ class ImportedCurves(ProducerCurves):
         success = manage_files.copy_base_curves_files(
             curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
         )
-        has_imported_curves, sim_t_event_start, fault_duration, fs, df_imported_curves = (
+        has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves = (
             self.__get_curves_dataframe(
                 working_oc_dir, pcs_bm_name, oc_name, success, is_reference
             )
         )
+
+        # Modify the PMax value depending on the PCS initialization:
+        # PmaxInjection (default) or PmaxConsumption
+        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Model"
+        pdr_p = config.get_value(config_section, "pdr_P")
+        self.get_producer().set_consumption("PmaxConsumption" in pdr_p)
 
         config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
         connect_event_to = config.get_value(config_section, "connect_event_to")
@@ -161,7 +159,6 @@ class ImportedCurves(ProducerCurves):
 
         return (
             event_params,
-            fs,
             success,
             has_imported_curves,
             df_imported_curves,
@@ -206,7 +203,6 @@ class ImportedCurves(ProducerCurves):
         """
         (
             event_params,
-            fs,
             success,
             has_imported_curves,
             curves,
@@ -222,7 +218,7 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, float, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
         """Read the input curves to get the simulated curves.
 
         Parameters
@@ -242,12 +238,8 @@ class ImportedCurves(ProducerCurves):
         -------
         str
             Simulation output dir
-        float
-            Instant of time when the event is triggered
-        float
-            Fault duration in seconds
-        float
-            Frequency sampling
+        dict
+            Event parameters
         Simulation_result
             Information about the simulation result.
         DataFrame
@@ -255,7 +247,6 @@ class ImportedCurves(ProducerCurves):
         """
         (
             event_params,
-            fs,
             success,
             has_imported_curves,
             curves,
@@ -264,7 +255,7 @@ class ImportedCurves(ProducerCurves):
         )
 
         simulation_result = Simulation_result(success, False, has_imported_curves, None)
-        return (".", event_params, fs, simulation_result, curves)
+        return (".", event_params, simulation_result, curves)
 
     def get_disconnection_model(self) -> Disconnection_Model:
         """Get all equipment in the model that can be disconnected in the simulation.
