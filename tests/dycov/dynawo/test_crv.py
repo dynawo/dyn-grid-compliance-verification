@@ -12,10 +12,8 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM
 from dycov.dynawo.crv import create_curves_file
-from dycov.dynawo.translator import dynawo_translator
 
 
 class DummyEquipment:
