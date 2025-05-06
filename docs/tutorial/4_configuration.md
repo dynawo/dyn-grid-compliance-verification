@@ -600,8 +600,6 @@ Running the above example with the **console_log_level = DEBUG** parameter:
 
 ```
 (dycov_venv) user@dynawo:~/work/MyTests$ dycov validate IEC2015ReferenceCurves -m IEC2015Dynawo -o IEC2015
-2025-01-21 12:03:17,911 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPNumcc was compiled
-2025-01-21 12:03:17,911 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | TransformerTapChanger was compiled
 2025-01-21 12:03:17,911 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | SPOmega was compiled
 2025-01-21 12:03:17,912 |                    DyCoV.Dynawo |      DEBUG |                 dynawo.py:   48 | SynchronousMachineI8SM was compiled
 2025-01-21 12:03:17,915 |                DyCoV.Validation |       INFO |             validation.py:  102 | DyCoV Model Validation for Power Park Modules

@@ -9,9 +9,8 @@
 #
 
 import configparser
-from importlib.metadata import version
-import shutil
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 from dycov.configuration.cfg import config
@@ -52,17 +51,19 @@ def _templates_config(tool_path: Path):
         _template_config(template)
         _dummysamples_config(tool_path, template)
 
-    shutil.copy(tool_path / "templates" / "README.md", config.get_config_dir() / "templates")
+    manage_files.copy_files(
+        tool_path / "templates" / "README.md", config.get_config_dir() / "templates"
+    )
     for template in templates:
-        shutil.copy(
+        manage_files.copy_files(
             tool_path / "templates" / template / "README.md",
             config.get_config_dir() / "templates" / template,
         )
-    shutil.copy(
+    manage_files.copy_files(
         tool_path / "templates" / "reports" / "TSO_logo.pdf",
         config.get_config_dir() / "templates" / "reports",
     )
-    shutil.copy(
+    manage_files.copy_files(
         tool_path / "templates" / "reports" / "fig_placeholder.pdf",
         config.get_config_dir() / "templates" / "reports",
     )
@@ -79,7 +80,7 @@ def _dummysamples_config(tool_path: Path, source: str):
             )
             if src.exists():
                 try:
-                    shutil.copytree(src, dest, dirs_exist_ok=True)
+                    manage_files.copy_path(src, dest, dirs_exist_ok=True)
                 except Exception as e:
                     dycov_logging.get_logger("Initialization").error(
                         f"Failed to copy {src} to {dest}: {e}"

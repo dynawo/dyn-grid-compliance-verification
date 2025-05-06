@@ -1,0 +1,229 @@
+    \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
+    \renewcommand{\OCname}{TransientBoltedInjection}
+
+
+    \subsection{Test I5 - Transient fault ride-through in injection}
+
+    Checks for compliant behavior of the BESS under a grid scenario where there
+    is a symmetric three-phase fault at one of the four transmission lines
+    (at a 1\% distance from the PDR). The BESS should remain connected and
+    be able to supply the necessary reactive injection.
+
+    \GridCircuitZthree
+
+    \noindent Important reminders:
+    \begin{itemize}
+        \item The time for fault clearance, $T_{clear}$, is a parameter that
+        is specified in the DTR and depends on the voltage level in
+        question:
+        \begin{itemize}
+            \item HTB3 (400 kV): $T_{clear}$ = 85 ms
+            \item HTB2 (150 kV and 225 kV): $T_{clear}$ = 85 ms
+            \item HTB1 (63 kV and 90 kV): $T_{clear}$ = 150 ms
+        \end{itemize}
+    \end{itemize}
+
+    In \Dynawo this fault has been modeled by splitting Line4 into Line4a
+    and Line4b, and then inserting an intermediate bus between them, to
+    which a NodeFault model is attached.
+
+    Note that although the DTR PCS also requires simulating a one-phase
+    fault, this tool will not implement it, as it would require the
+    simulation of a three-phase model. All simulations are only
+    positive-sequence.
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_{max\_injection\_unite}$
+            \item $Q = 0$
+            \item $U = U_{dim}$
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z3ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Simulation}
+    As required by the DTR PCS \DTRPcs, the figures below show the
+    following magnitudes:
+    \begin{itemize}
+        \item Voltage at connection point: modulus of the complex AC voltage at
+        the PDR bus.
+        \item Active power supplied at the connection point: sum of active power
+        over all lines on TSO side.
+        \item Reactive power supplied at the connection point: sum of reactive power
+        over all lines on TSO side.
+        \item Active current supplied at the connection point: sum of active power
+        over all lines on TSO side.
+        \item Reactive current supplied at the connection point: sum of reactive power
+        over all lines on TSO side.
+        \item The injected active and reactive currents. All BESS
+        units are plotted on the same graph.
+        \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
+        All BESS units are plotted on the same graph.
+        \item The BESS's main transformer tap ratio, if it is a transformer with an
+        automatic tap changer.
+    \end{itemize}
+
+    \subsubsection{Simulation results}
+    % For now we won't use floats for figures, to get more precise placement
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude measured at the PDR bus.
+    % The vertical dashed line marks the rise time $T_{85U}$.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Magnitude controlled by the AVR: modulus of the voltage
+            at the REPC, in pu. All BESS units are plotted on the same graph.
+            The gray dotted line show the AVR setpoint.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Real power output P, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Ire_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active current output Ip, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Iim_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive current output Iq, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Tap_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small The BESS's main transformer tap ratio (if it is a transformer with an
+            automatic tap changer).
+        \end{minipage}
+    \end{minipage}
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z3ThreePhaseFaultTransientBoltedInjection }}
+
+    \subsubsection{Analysis of results}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
+
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z3ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z3ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lcccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
+            \midrule
+            \BLOCK{for row in emPCSI16z3ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the Active Power Recovery:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & Error      & Threshold   & Check      \\
+            \midrule
+            \BLOCK{for row in aprPCSI16z3ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z3ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

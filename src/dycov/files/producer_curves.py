@@ -75,6 +75,25 @@ def _get_ppm_file_template() -> str:
     )
 
 
+def _get_bess_file_template() -> str:
+    return (
+        "PCS_RTE-I2.USetPointStep.AReactanceInjection = \n"
+        "PCS_RTE-I2.USetPointStep.BReactanceInjection = \n"
+        "PCS_RTE-I2.USetPointStep.AReactanceConsumption= \n"
+        "PCS_RTE-I2.USetPointStep.BReactanceConsumption= \n"
+        "PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection = \n"
+        "PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption= \n"
+        "PCS_RTE-I6.GridVoltageDip.QzeroInjection = \n"
+        "PCS_RTE-I6.GridVoltageDip.QzeroConsumption= \n"
+        "PCS_RTE-I7.GridVoltageSwell.QMaxInjection = \n"
+        "PCS_RTE-I7.GridVoltageSwell.QMaxConsumption= \n"
+        "PCS_RTE-I7.GridVoltageSwell.QMinInjection = \n"
+        "PCS_RTE-I7.GridVoltageSwell.QMinConsumption= \n"
+        "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection = \n"
+        "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Consumption= \n"
+    )
+
+
 def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
 
     curves_dictionary = (
@@ -136,6 +155,61 @@ def _get_model_file_template() -> str:
         "PCS_RTE-I16z3.GridVoltageSwell.QMax = \n"
         "PCS_RTE-I16z3.GridVoltageSwell.QMin = \n"
         "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4 = \n"
+    )
+
+
+def _get_bess_model_file_template() -> str:
+    return (
+        "#Curves for Zone1\n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Injection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Consumption= \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10Injection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10Consumption= \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3QminInjection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3QminConsumption= \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800Injection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800Consumption= \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500Injection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500Consumption= \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.PermanentBoltedInjection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.PermanentBoltedConsumption= \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZInjection = \n"
+        "PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZConsumption= \n"
+        "PCS_RTE-I16z1.SetPointStep.ActiveInjection = \n"
+        "PCS_RTE-I16z1.SetPointStep.ActiveConsumption= \n"
+        "PCS_RTE-I16z1.SetPointStep.ReactiveInjection = \n"
+        "PCS_RTE-I16z1.SetPointStep.ReactiveConsumption= \n"
+        "PCS_RTE-I16z1.SetPointStep.VoltageInjection = \n"
+        "PCS_RTE-I16z1.SetPointStep.VoltageConsumption= \n"
+        "PCS_RTE-I16z1.GridFreqRamp.W500mHz250msInjection = \n"
+        "PCS_RTE-I16z1.GridFreqRamp.W500mHz250msConsumption= \n"
+        "PCS_RTE-I16z1.GridVoltageStep.RiseInjection = \n"
+        "PCS_RTE-I16z1.GridVoltageStep.RiseConsumption= \n"
+        "PCS_RTE-I16z1.GridVoltageStep.DropInjection = \n"
+        "PCS_RTE-I16z1.GridVoltageStep.DropConsumption= \n"
+        "#Curves for Zone3\n"
+        "PCS_RTE-I16z3.USetPointStep.AReactanceInjection = \n"
+        "PCS_RTE-I16z3.USetPointStep.AReactanceConsumption= \n"
+        "PCS_RTE-I16z3.USetPointStep.BReactanceInjection = \n"
+        "PCS_RTE-I16z3.USetPointStep.BReactanceConsumption= \n"
+        "PCS_RTE-I16z3.PSetPointStep.Dec40Injection = \n"
+        "PCS_RTE-I16z3.PSetPointStep.Dec40Consumption= \n"
+        "PCS_RTE-I16z3.PSetPointStep.Inc40Injection = \n"
+        "PCS_RTE-I16z3.PSetPointStep.Inc40Consumption= \n"
+        "PCS_RTE-I16z3.QSetPointStep.Inc10Injection = \n"
+        "PCS_RTE-I16z3.QSetPointStep.Inc10Consumption= \n"
+        "PCS_RTE-I16z3.QSetPointStep.Dec20Injection = \n"
+        "PCS_RTE-I16z3.QSetPointStep.Dec20Consumption= \n"
+        "PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection = \n"
+        "PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption= \n"
+        "PCS_RTE-I16z3.GridVoltageDip.QzeroInjection = \n"
+        "PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption= \n"
+        "PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection = \n"
+        "PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption= \n"
+        "PCS_RTE-I16z3.GridVoltageSwell.QMinInjection = \n"
+        "PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption= \n"
+        "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection = \n"
+        "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption= \n"
     )
 
 
@@ -261,10 +335,11 @@ def _get_performance_templates(
         if template == "performance_PPM":
             for model in dynawo_translator.get_power_park_models():
                 gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
+            producer_curves_txt = _get_ppm_file_template()
         elif template == "performance_BESS":
             for model in dynawo_translator.get_storage_models():
                 gen_ppms.extend(find_bbmodel_by_type(producer_dyd_root, model))
-        producer_curves_txt = _get_ppm_file_template()
+            producer_curves_txt = _get_bess_file_template()
         curves_names_txt = _get_ppm_curves_template(xfmrs, gen_ppms)
 
     return producer_curves_txt, curves_names_txt
@@ -315,7 +390,10 @@ def _get_model_templates(
     z3_gen_ppms = _get_generator_models(model_path, template, "Zone3")
     z1_gen_ppms = _get_generator_models(model_path, template, "Zone1")
 
-    producer_curves_txt = _get_model_file_template()
+    if template == "model_PPM":
+        producer_curves_txt = _get_model_file_template()
+    elif template == "model_BESS":
+        producer_curves_txt = _get_bess_model_file_template()
     curves_names_txt = _get_model_curves_template(xfmrs, z1_gen_ppms, z3_gen_ppms)
 
     return producer_curves_txt, curves_names_txt

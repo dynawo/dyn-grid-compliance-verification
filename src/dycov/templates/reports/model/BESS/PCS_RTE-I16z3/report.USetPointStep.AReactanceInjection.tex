@@ -1,0 +1,125 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I2 AReactance %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \renewcommand{\DTRPcs}{USetPointStep} % DTR pcs definition
+    \renewcommand{\OCname}{AReactanceInjection}
+
+
+    \subsection{Test I2 - Step response to V-setpoint change in injection ($X_a$)}
+
+    Checks for compliant behavior of the BESS under a grid scenario where there
+    is a step change in the setpoint of the primary voltage control.
+
+    \GridCircuitZthree
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_{max\_injection\_unite}$
+            \item $Q = 0$
+            \item $U = U_{dim}$
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z3USetPointStepAReactanceInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \GridCurvesZthree
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z3USetPointStepAReactanceInjection }}
+
+    \subsubsection{Analysis of results}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
+
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lcccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z3USetPointStepAReactanceInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lcccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z3USetPointStepAReactanceInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lccccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
+            \midrule
+            \BLOCK{for row in emPCSI16z3USetPointStepAReactanceInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the step-response characteristic: \\
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \centering
+        \scriptsize
+        \begin{tabular}{lccccc}
+            \toprule
+            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
+            \midrule
+            \BLOCK{for row in temPCSI16z3USetPointStepAReactanceInjection}
+            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{minipage}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z3USetPointStepAReactanceInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

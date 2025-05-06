@@ -210,13 +210,8 @@ class Validation:
         """
         return Path(__file__).parent.parent
 
-    def validate(self, is_test_validation: bool = False) -> list:
+    def validate(self) -> list:
         """Validate the Producer inputs.
-
-        Parameters
-        ----------
-        is_test_validation: bool
-            True if the validation is used from unit tests
 
         Returns
         -------
@@ -251,21 +246,20 @@ class Validation:
                 sys.exit(1)
 
         # Create the pcs report
-        if not is_test_validation:
-            self.__create_report(summary_list, report_results)
+        self.__create_report(summary_list, report_results)
 
-            report_file = (
-                self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
+        report_file = (
+            self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
+        )
+        if report_file.exists():
+            _open_document(report_file, self._is_testing)
+        else:
+            dycov_logging.get_logger("Validation").warning(
+                f"Report file does not exist: {report_file}"
             )
-            if report_file.exists():
-                _open_document(report_file, self._is_testing)
-            else:
-                dycov_logging.get_logger("Validation").warning(
-                    f"Report file does not exist: {report_file}"
-                )
 
         compliance_list = list(map(operator.attrgetter("compliance"), summary_list))
-        if dycov_logging.getEffectiveLevel() == logging.DEBUG and not is_test_validation:
+        if dycov_logging.getEffectiveLevel() == logging.DEBUG:
             return compliance_list
 
         manage_files.remove_dir(self._parameters.get_working_dir())

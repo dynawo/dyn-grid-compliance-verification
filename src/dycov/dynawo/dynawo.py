@@ -10,6 +10,7 @@
 import math
 import os
 import re
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -178,6 +179,7 @@ def _run_dynawo(
         cwd=inputs_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        preexec_fn=os.setsid if os.name != "nt" else None,
     )
 
     toc = time.time()
@@ -197,7 +199,9 @@ def _run_dynawo(
                 stderr=subprocess.PIPE,
             )
         else:
-            proc.terminate()
+            os.killpg(
+                os.getpgid(proc.pid), signal.SIGTERM
+            )  # Send the signal to all the process groups
     else:
         stderr = proc.stderr.read().decode("utf-8")
         if "succeeded" in stderr:

@@ -1,0 +1,123 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SetPoint %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \renewcommand{\DTRPcs}{SetPointStep} % DTR pcs definition
+    \renewcommand{\DTRPcsLong}{SetPoint Step}
+    \renewcommand{\OCname}{ActiveInjection}
+
+
+    \subsection{Step response to control changes in injection: P-setpoint drop}
+
+    Checks for compliant behavior of the generating unit under a grid scenario where there
+    is a $5\%$ step decrease in the setpoint of the active flow control.
+
+    \GridCircuitZone
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_\text{max\_injection\_unite}$
+            \item $Q = Q_\text{min}$
+            \item $U = U_\text{dim}$
+            \item $SCR = 3$
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z1SetPointStepActiveInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \GridCurvesZone
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z1SetPointStepActiveInjection }}
+
+    \subsubsection{Analysis of results}
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lccccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z1SetPointStepActiveInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lcccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z1SetPointStepActiveInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lccccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
+            \midrule
+            \BLOCK{for row in emPCSI16z1SetPointStepActiveInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the step-response characteristic: \\
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \centering
+        \scriptsize
+        \begin{tabular}{lccccc}
+            \toprule
+            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
+            \midrule
+            \BLOCK{for row in temPCSI16z1SetPointStepActiveInjection}
+            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{minipage}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z1SetPointStepActiveInjection}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

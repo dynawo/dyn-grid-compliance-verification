@@ -18,8 +18,10 @@ def _create_producer_ini_file(
     topology: str,
 ) -> None:
     producer_ini_txt = (
-        f"# p_{{max_unite}} as defined by the DTR in MW\n"
-        f"p_max =\n"
+        f"# p_{{max_unite}} injection as defined by the DTR in MW\n"
+        f"p_max_injection =\n"
+        f"# p_{{max_unite}} consumption as defined by the DTR in MW (only for BESS)\n"
+        f"p_max_consumption =\n"
         f"# u_nom is the nominal voltage in the PDR Bus (in kV)\n"
         f"# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)\n"
         f"u_nom =\n"

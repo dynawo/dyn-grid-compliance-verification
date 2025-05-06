@@ -41,7 +41,7 @@
   <set id="NodeFault">
     <par type="DOUBLE" name="fault_tBegin" value="{{event_start}}"/>
     <par type="DOUBLE" name="fault_tEnd" value="{{event_end}}"/>
-    <par type="DOUBLE" name="fault_RPu" value="0.0173"/>
+    <par type="DOUBLE" name="fault_RPu" value="0.0"/>
     <par type="DOUBLE" name="fault_XPu" value="0.0"/>
   </set>
 </parametersSet>

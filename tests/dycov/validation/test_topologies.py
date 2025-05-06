@@ -154,7 +154,15 @@ def test_check_topology_saux():
         )
     ]
     auxiliary_load = parameters.Load_params(
-        id="Aux_Load", lib=None, connectedXmfr="", P=0.1, Q=0.05, U=1.0, UPhase=0.0
+        id="Aux_Load",
+        lib=None,
+        connectedXmfr="",
+        P=0.1,
+        Q=0.05,
+        U=1.0,
+        UPhase=0.0,
+        Alpha=None,
+        Beta=None,
     )
     auxiliary_transformer = parameters.Xfmr_params(
         id="AuxLoad_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
@@ -220,7 +228,15 @@ def test_check_topology_sauxi():
         )
     ]
     auxiliary_load = parameters.Load_params(
-        id="Aux_Load", lib=None, connectedXmfr="", P=0.1, Q=0.05, U=1.0, UPhase=0.0
+        id="Aux_Load",
+        lib=None,
+        connectedXmfr="",
+        P=0.1,
+        Q=0.05,
+        U=1.0,
+        UPhase=0.0,
+        Alpha=None,
+        Beta=None,
     )
     auxiliary_transformer = parameters.Xfmr_params(
         id="AuxLoad_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
@@ -458,7 +474,15 @@ def test_check_topology_maux():
         ),
     ]
     auxiliary_load = parameters.Load_params(
-        id="Aux_Load", lib=None, connectedXmfr="", P=0.1, Q=0.05, U=1.0, UPhase=0.0
+        id="Aux_Load",
+        lib=None,
+        connectedXmfr="",
+        P=0.1,
+        Q=0.05,
+        U=1.0,
+        UPhase=0.0,
+        Alpha=None,
+        Beta=None,
     )
     auxiliary_transformer = parameters.Xfmr_params(
         id="AuxLoad_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
@@ -543,7 +567,15 @@ def test_check_topology_mauxi():
         ),
     ]
     auxiliary_load = parameters.Load_params(
-        id="Aux_Load", lib=None, connectedXmfr="", P=0.1, Q=0.05, U=1.0, UPhase=0.0
+        id="Aux_Load",
+        lib=None,
+        connectedXmfr="",
+        P=0.1,
+        Q=0.05,
+        U=1.0,
+        UPhase=0.0,
+        Alpha=None,
+        Beta=None,
     )
     auxiliary_transformer = parameters.Xfmr_params(
         id="AuxLoad_Xfmr", lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""

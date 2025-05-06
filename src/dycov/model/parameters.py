@@ -12,7 +12,9 @@ from dataclasses import dataclass
 
 Line_params = namedtuple("Line_params", ["id", "lib", "connectedPdr", "R", "X", "B", "G"])
 Xfmr_params = namedtuple("Xfmr_params", ["id", "lib", "R", "X", "B", "G", "rTfo", "par_id"])
-Load_params = namedtuple("Load_params", ["id", "lib", "connectedXmfr", "P", "Q", "U", "UPhase"])
+Load_params = namedtuple(
+    "Load_params", ["id", "lib", "connectedXmfr", "P", "Q", "U", "UPhase", "Alpha", "Beta"]
+)
 EquivIntLine_params = namedtuple("EquivIntLine_params", ["R", "X", "RSource", "XSource", "B", "G"])
 
 

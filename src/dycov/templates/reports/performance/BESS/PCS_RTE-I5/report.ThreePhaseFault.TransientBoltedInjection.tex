@@ -1,0 +1,191 @@
+    \subsection{Overview of DTR PCS \DTRPcs in injection}
+
+    Checks for compliant behavior of the BESS under a grid scenario where there
+    is a symmetric three-phase fault at one of the four transmission lines
+    (at a 1\% distance from the PDR). The BESS should remain connected and
+    be able to supply the necessary reactive injection.
+
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+
+    \noindent Important reminders:
+    \begin{itemize}
+        \item The time for fault clearance, $T_{clear}$, is a parameter that
+        is specified in the DTR and depends on the voltage level in
+        question:
+        \begin{itemize}
+            \item HTB3 (400 kV): $T_{clear}$ = 85 ms
+            \item HTB2 (150 kV and 225 kV): $T_{clear}$ = 85 ms
+            \item HTB1 (63 kV and 90 kV): $T_{clear}$ = 150 ms
+        \end{itemize}
+    \end{itemize}
+
+    In \Dynawo{} this fault has been modeled by splitting \code{Line4} into
+    \code{Line4a} and \code{Line4b}, and then inserting an intermediate bus between
+    them, to which a \code{NodeFault} object is attached.
+
+    Note that although the DTR PCS also requires simulating a one-phase
+    fault, this tool will not implement it, as it would require the
+    simulation of a three-phase model. All simulations are only
+    positive-sequence.
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_{max\_injection\_unite}$
+            \item $Q = 0$
+            \item $U = U_{dim}$
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI5ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Simulation}
+    As required by the DTR PCS \DTRPcs, the figures below show the
+    following magnitudes:
+    \begin{itemize}
+        \item Voltage at connection point: modulus of the AC complex voltage at
+        the PDR bus.
+        \item Reactive power supplied at the connection point: sum of reactive power
+        over all lines on TSO side.
+        \item Active power supplied at the connection point: sum of active power
+        over all lines on TSO side.
+        \item The injected active and reactive currents. All BESS
+        units are plotted on the same graph.
+        \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
+        All BESS units are plotted on the same graph.
+        \item The BESS's main transformer tap ratio. if it is a transformer with an
+        automatic tap changer.
+    \end{itemize}
+
+    \subsubsection{Simulation results}
+    The blue line shows the calculated curve, if a reference curve has been entered it is
+    shown in orange.
+
+% For now we won't use floats for figures, to get more precise placement
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude measured at the PDR bus.
+            The vertical dashed line marks the rise time $T_{85U}$.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
+            The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
+            graph.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Real power output P, measured at the PDR bus. Green-dashed
+            line: $-10\%$ ``floor'' below the final value of P.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_I_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Injected active (light blue line) and reactive (violet line) currents. All BESS
+            units are plotted on the same graph.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Tap_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small The BESS's main transformer tap ratio (if it is a transformer with an
+            automatic tap changer).
+        \end{minipage}
+    \end{minipage}
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI5ThreePhaseFaultTransientBoltedInjection }}
+
+
+    \subsubsection{Analysis of results}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
+
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Parameter} & \multicolumn{1}{c}{\textbf{value}} \\
+            \midrule
+            \BLOCK{for row in rmPCSI5ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Key:
+    \begin{description}
+        \item[Recovery time $T_{10P_{floor}}$:] time at which the suplied power
+        P recovers and stays above -10\% of the final value of P (note
+        how this is not a "tube", but a "floor").
+        \item[Rise time $T_{85U}$:] time at which the the voltage at the PDR
+        bus returns back above 0.85 pu, regardless of any possible
+        overshooting / undershooting that may take place later on.
+    \end{description}
+
+
+    \subsubsection{Compliance checks}
+
+    Compliance checks required by PCS \DTRPcs:
+
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{Check} & \multicolumn{1}{c}{\textbf{value}} & \multicolumn{1}{c}{\textbf{Compliant?}} \\
+            \midrule
+            \BLOCK{for row in cmPCSI5ThreePhaseFaultTransientBoltedInjection}
+            {{row[0]}}     & {{row[1]}}                         & {{row[2]}}                              \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{minipage}

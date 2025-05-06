@@ -649,7 +649,6 @@ class ModelValidator(Validator):
         working_path: Path,
         sim_output_path: str,
         event_params: dict,
-        fs: float,
     ) -> dict:
         """Model Validation.
 
@@ -663,8 +662,6 @@ class ModelValidator(Validator):
             Simulator output path (Not used in this validator).
         event_params: dict
             Event parameters
-        fs: float
-            Frequency sampling.
 
         Returns
         -------
@@ -716,7 +713,6 @@ class ModelValidator(Validator):
         self._curves_manager.apply_signal_processing(
             working_path,
             event_params,
-            fs,
             compliance_list.contains_key(
                 ["setpoint_tracking_controlled_magnitude"], self._validations
             ),

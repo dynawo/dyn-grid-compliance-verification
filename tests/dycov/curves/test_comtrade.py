@@ -24,7 +24,7 @@ def test_comtrade():
 
     try:
         importer = CurvesImporter(path, "Wind_farm_comtrade_example")
-        df_comtrade_curve, curves_dict, tt, fs = importer.get_curves_dataframe(0)
+        df_comtrade_curve = importer.get_curves_dataframe(0)
 
         assert not df_comtrade_curve.empty
         assert "time" in df_comtrade_curve
@@ -32,7 +32,5 @@ def test_comtrade():
         assert df_comtrade_curve["time"].iloc[-1] == 7.5
         assert "Vac_a" in df_comtrade_curve
         assert "Ineg_q" in df_comtrade_curve
-        assert tt == 2.584
-        assert fs == 12499.999999987498
     finally:
         shutil.rmtree(path)

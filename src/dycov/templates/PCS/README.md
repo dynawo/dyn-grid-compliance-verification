@@ -20,7 +20,7 @@ of the new benchmarks in their corresponding sections.
     [DummySample.Benchmark2]
     job_name = Pcs - Synchronous Machine
     TSO_model = RefTracking_1Line_InfBus
-    Omega_model = DYNModel2SPNumccSPOmega
+    Omega_model = DYNModelSPOmega
    ```
 5. Add the new Operating Conditions to the *PCS-OperatingConditions* section, if it is desired,
 and the configuration of the new benchmarks in their corresponding sections.

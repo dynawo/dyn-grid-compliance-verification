@@ -59,12 +59,28 @@ def test_trafos():
 
 def test_auxiliary_loads():
     load = parameters.Load_params(
-        id=None, lib=None, connectedXmfr="", P=0.1, Q=0.05, U=1.0, UPhase=0.0
+        id=None,
+        lib=None,
+        connectedXmfr="",
+        P=0.1,
+        Q=0.05,
+        U=1.0,
+        UPhase=0.0,
+        Alpha=None,
+        Beta=None,
     )
     sanity_checks.check_auxiliary_load(load)
 
     bad_load = parameters.Load_params(
-        id=None, lib=None, connectedXmfr="", P=-0.1, Q=0.05, U=1.0, UPhase=0.0
+        id=None,
+        lib=None,
+        connectedXmfr="",
+        P=-0.1,
+        Q=0.05,
+        U=1.0,
+        UPhase=0.0,
+        Alpha=None,
+        Beta=None,
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         sanity_checks.check_auxiliary_load(bad_load)

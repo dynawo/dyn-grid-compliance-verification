@@ -1,0 +1,123 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I10 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \renewcommand{\DTRPcs}{Islanding} % DTR pcs definition
+    \renewcommand{\OCname}{DeltaP10DeltaQ4Consumption}
+
+
+    \subsection{Test I10 - Islanding event in consumption}
+
+    Checks for compliant behavior of the generator under an
+    \emph{islanding} event grid scenario, i.e., the network has been split in
+    such a way that the generator is left as the only synchronous machine
+    that should sustain the frequency of its subnetwork. The generator
+    should maintain the stability until the restoration process
+    re-synchronizes this subnetwork to the bulk transmission network.
+
+    \GridCircuitZthree
+
+    In this case the network is not modeled. In Dynawo, we simply attach
+    two loads of type \code{LoadPQ} (since the DTR specifies that the
+    loads have alpha=beta=0 and do not depend on frequency). Then their
+    PQ values are configured as follows:
+    \begin{itemize}
+        \item Load 1: P = 0.7 Pmax, Q = -0.04 Pmax
+        \item Load 2: P = 0.1 Pmax, Q = 0.04 Pmax
+    \end{itemize}
+    And then disconnect Load 2. This complies with the initial conditions
+    and the desired changes specified by the DTR.
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = 0.8 P_{max\_consumption\_unite}$
+            \item $Q = 0$
+            \item $U = U_{dim}$
+            \item $f = 50 Hz$ (this is always the default in Dynawo)
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z3IslandingDeltaP10DeltaQ4Consumption}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \GridCurvesZthree
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z3IslandingDeltaP10DeltaQ4Consumption }}
+
+    \subsubsection{Analysis of results}
+
+%\noindent No analysis is needed in PCS \DTRPcs.
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lcccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z3IslandingDeltaP10DeltaQ4Consumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lcccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z3IslandingDeltaP10DeltaQ4Consumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
+            \midrule
+            \BLOCK{for row in emPCSI16z3IslandingDeltaP10DeltaQ4Consumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z3IslandingDeltaP10DeltaQ4Consumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

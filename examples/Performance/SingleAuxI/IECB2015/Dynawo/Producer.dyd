@@ -4,8 +4,8 @@
   <dyn:blackBoxModel id="IntNetwork_Line" lib="Line" parFile="Producer.par" parId="IntNetwork_Line"/>
   <dyn:blackBoxModel id="Int_Bus" lib="Bus"/>
   <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
-  <dyn:blackBoxModel id="Aux_Load" lib="LoadPQ" parFile="Producer.par" parId="Aux_Load"/>
-  <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
+  <dyn:blackBoxModel id="Aux_Load" lib="LoadAlphaBeta" parFile="Producer.par" parId="Aux_Load"/>
+  <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
   <dyn:blackBoxModel id="Wind_Turbine" lib="IECWPP4BCurrentSource2015" parFile="Producer.par" parId="Wind_Turbine"/>
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Int_Bus" var2="bus_terminal"/>

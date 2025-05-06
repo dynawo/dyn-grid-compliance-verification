@@ -4,8 +4,8 @@
   <dyn:blackBoxModel id="Bus" lib="Bus"/>
   <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
   <dyn:blackBoxModel id="Line1" lib="Line" parFile="TSOModel.par" parId="Line1"/>
-  <dyn:blackBoxModel id="Load_eq" lib="LoadPQ" parFile="TSOModel.par" parId="Load_EQ"/>
-  <dyn:blackBoxModel id="Load_de" lib="LoadPQ" parFile="TSOModel.par" parId="Load_PE"/>
+  <dyn:blackBoxModel id="Load_eq" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Load_EQ"/>
+  <dyn:blackBoxModel id="Load_de" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Load_PE"/>
   <dyn:blackBoxModel id="Generator" lib="SynchronousMachineI8SM" parFile="TSOModel.par" parId="Generator"/>
   <dyn:blackBoxModel id="DISCONNECT_LOAD" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLoad"/>
   <dyn:connect id1="Load_eq" var1="load_terminal" id2="Bus" var2="bus_terminal"/>

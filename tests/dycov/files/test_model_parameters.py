@@ -20,19 +20,19 @@ def create_simple_dyd_and_par(
     ns = "http://www.rte-france.com/dynawo"
     dyd_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
     # Generator
-    gen = etree.SubElement(
+    etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=gen_id, lib="WTG4AWeccCurrentSource", parId="parGen"
     )
     # Transformer
-    xfmr = etree.SubElement(
+    etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=xfmr_id, lib="XfmrLib", parId="parXfmr"
     )
     # Load
-    load = etree.SubElement(
+    etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=load_id, lib="LoadLib", parId="parLoad"
     )
     # Line
-    line = etree.SubElement(
+    etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=line_id, lib="LineLib", parId="parLine"
     )
     # Connections

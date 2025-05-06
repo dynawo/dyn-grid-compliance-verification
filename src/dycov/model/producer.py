@@ -27,14 +27,18 @@ ELECTRIC_PERFORMANCE = 0
 MODEL_VALIDATION = 1
 
 
-def _check_parameters_definition(producer_config, section):
-    if (
-        not producer_config.has_option(section, "u_nom")
-        or not producer_config.has_option(section, "q_min")
-        or not producer_config.has_option(section, "q_max")
-        or not producer_config.has_option(section, "p_max")
-        or not producer_config.has_option(section, "topology")
-    ):
+def _check_parameters_definition(producer_config, section, needs_consumption):
+    if not producer_config.has_option(section, "u_nom"):
+        raise ValueError("The parameter file must specify the u_nom")
+    if not producer_config.has_option(section, "q_min"):
+        raise ValueError("The parameter file must specify the q_min")
+    if not producer_config.has_option(section, "q_max"):
+        raise ValueError("The parameter file must specify the q_max")
+    if not producer_config.has_option(section, "p_max_injection"):
+        raise ValueError("The parameter file must specify the p_max_injection")
+    if needs_consumption and not producer_config.has_option(section, "p_max_consumption"):
+        raise ValueError("The parameter file must specify the p_max_consumption")
+    if not producer_config.has_option(section, "topology"):
         raise ValueError("The parameter file must specify the topology")
 
 
@@ -207,9 +211,17 @@ class Producer:
     def __init_parameters(self):
         default_section = "DEFAULT"
         producer_config = self.read_producer_ini()
-        _check_parameters_definition(producer_config, default_section)
+        _check_parameters_definition(
+            producer_config, default_section, self._sim_type == MODEL_VALIDATION_BESS
+        )
 
-        self.p_max_pu = float(producer_config.get(default_section, "p_max")) / self._s_nref
+        self.p_max_injection_pu = (
+            float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
+        )
+        if producer_config.has_option(default_section, "p_max_consumption"):
+            self.p_max_consumption_pu = (
+                float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
+            )
         self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
         self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom"))
@@ -270,6 +282,21 @@ class Producer:
                 return path.resolve() / file
         dycov_logging.get_logger("Producer").warning(f"No found pattern: {pattern} in {path}")
         return None
+
+    def set_consumption(self, consumption: float) -> None:
+        """The value of p_max_pu is defined depending on the
+        operating mode: injection or consumption.
+
+        Parameters
+        ----------
+        consumption: float
+            If it is True use the Pmax Consumption
+            If it is False use the Pmax Injection
+        """
+        if consumption:
+            self.p_max_pu = self.p_max_consumption_pu
+        else:
+            self.p_max_pu = self.p_max_injection_pu
 
     def get_element(self, id: str) -> tuple[str, str]:
         """Get element information by id
@@ -332,7 +359,7 @@ class Producer:
         """
         self._zone = zone
         self.__init_parameters()
-        sanity_checks.check_producer_params(self.p_max_pu, self.u_nom)
+        sanity_checks.check_producer_params(self.p_max_injection_pu, self.u_nom)
 
         if self.is_dynawo_model():
             sanity_checks.check_well_formed_xml(self.get_producer_dyd())

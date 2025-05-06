@@ -302,10 +302,20 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
         sign_Q, load_Q0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
         _, load_U0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
         _, load_Ph0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
+        _, load_alpha = dynawo_translator.get_dynawo_variable(lib, "Alpha")
+        _, load_beta = dynawo_translator.get_dynawo_variable(lib, "Beta")
         p0_par = parset.find(f"{{{ns}}}par[@name='{load_P0}']")
         q0_par = parset.find(f"{{{ns}}}par[@name='{load_Q0}']")
         u0_par = parset.find(f"{{{ns}}}par[@name='{load_U0}']")
         ph0_par = parset.find(f"{{{ns}}}par[@name='{load_Ph0}']")
+        alpha_value = None
+        if load_alpha is not None:
+            alpha_par = parset.find(f"{{{ns}}}par[@name='{load_alpha}']")
+            alpha_value = float(alpha_par.get("value"))
+        beta_value = None
+        if load_beta is not None:
+            beta_par = parset.find(f"{{{ns}}}par[@name='{load_beta}']")
+            beta_value = float(beta_par.get("value"))
 
         # Check if value contains a float or a placeholder
         if "{" in p0_par.get("value"):
@@ -319,7 +329,19 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
             aux_upu = float(u0_par.get("value"))
             aux_phpu = float(ph0_par.get("value"))
 
-        loads.append(Load_params(load_id, lib, connectedXmfr, aux_ppu, aux_qpu, aux_upu, aux_phpu))
+        loads.append(
+            Load_params(
+                load_id,
+                lib,
+                connectedXmfr,
+                aux_ppu,
+                aux_qpu,
+                aux_upu,
+                aux_phpu,
+                alpha_value,
+                beta_value,
+            )
+        )
 
     return loads
 
@@ -728,7 +750,7 @@ def get_grid_load(loads: list) -> Load_params:
         ppu += load.P0
         qpu += load.Q0
 
-    return Load_params(None, None, None, ppu, qpu, None, None)
+    return Load_params(None, None, None, ppu, qpu, None, None, None, None)
 
 
 def get_pcs_lines_params(pcs_dyd: Path, pcs_par: Path, line_rpu: float, line_xpu: float) -> list:
