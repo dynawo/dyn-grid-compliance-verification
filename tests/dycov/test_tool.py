@@ -48,8 +48,8 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
             sim_type,
         )
         md = Validation(ep)
-
-        compliance = md.validate(True)
+        md.set_testing(True)
+        compliance = md.validate()
     except Exception as e:
         compliance = str(e)
     finally:

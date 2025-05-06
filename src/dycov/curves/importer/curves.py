@@ -134,6 +134,12 @@ class ImportedCurves(ProducerCurves):
             )
         )
 
+        # Modify the PMax value depending on the PCS initialization:
+        # PmaxInjection (default) or PmaxConsumption
+        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Model"
+        pdr_p = config.get_value(config_section, "pdr_P")
+        self.get_producer().set_consumption("PmaxConsumption" in pdr_p)
+
         config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
         connect_event_to = config.get_value(config_section, "connect_event_to")
         if config.has_key(config_section, "setpoint_step_value"):
