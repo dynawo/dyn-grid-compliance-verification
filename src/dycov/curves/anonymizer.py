@@ -198,7 +198,7 @@ def _process_curves(
 
         importer = CurvesImporter(curves_folder, curves_path.stem, False)
         if importer.config.has_section("Curves-Dictionary"):
-            df_imported_curve, _, _, _ = importer.get_curves_dataframe(zone=0, remove_file=False)
+            df_imported_curve = importer.get_curves_dataframe(zone=0, remove_file=False)
 
             if noisestd is not None:
                 # Apply noise to the curve based on event time
