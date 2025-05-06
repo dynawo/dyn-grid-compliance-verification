@@ -1,0 +1,172 @@
+    \subsection{Overview of DTR PCS \DTRPcs{} in injection ($Q_\text{PDR} = Q_\text{min}$)}
+
+    Checks for compliant behavior of the BESS under a grid scenario where
+    there is a severe overvoltage at the PDR bus (which simulates the
+    effect of clearing a fault nearby in the network).
+
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_\DTRPcs.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+    where $Q_\text{PDR} = Q_\text{min}$.
+
+    \noindent Important reminders:
+    \begin{itemize}
+        \item Contrary to the modeling that the DTR suggests for this PCS, which uses a
+        variable shunt impedance Zv, here the voltage drop is simulated via a variable
+        Infinite Bus source (Modelica model \code{ControllableSource}), directly
+        attached to the PDR bus, and for which we specify a voltage curve that
+        faithfully follows the shape prescribed by PCS I7.
+    \end{itemize}
+
+    In this PCS there are several events, which correspond to the changes that are
+    forced upon the PDR bus voltage curve:
+    \begin{itemize}
+        \item At $t = T_{0}$, the voltage swells to $U_{swell}$
+        \item At $t = T_{rec1}$, the voltage drops to $U_{rec2}$
+        \item At $t = T_{rec2}$, the voltage drops to $U_{rec3}$
+        \item At $t = T_{rec3}$, the voltage drops to $U_{rec4}$
+    \end{itemize}
+    These values of time and voltage are specified by the DTR as follows. (Remember
+    that the classification of generators into class A, B, C, D, is in the DTR under
+    Chapter 5, Article 5.1.1, Section 3. See the reminder in the document
+    \code{Summary\_data\_from\_the\_DTR.md}.)
+
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{variable} & \textbf{all Volt Levels} \\
+            \midrule
+            $U_{initial}$     & 1.0 pu                   \\
+            $T_{0}$           & (free)                   \\
+            $U_{swell}$       & 1.3 pu                   \\
+            $T_{rec1}$        & $T_{0}$ + 50 ms          \\
+            $U_{rec2}$        & 1.25 pu                  \\
+            $T_{rec2}$        & $T_{0}$ + 2.5 s          \\
+            $U_{rec3}$        & 1.15 pu                  \\
+            $T_{rec3}$        & $T_{0}$ + 30 s           \\
+            $U_{rec4}$        & 1.10 pu                  \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_{max\_injection\_unite}$
+            \item $Q = Q_{min}$
+            \item $U = U_{dim}$
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI7GridVoltageSwellQMinInjection}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Simulation}
+    The following figures show the magnitudes that DTR PCS \DTRPcs
+    requires to be monitored:
+    \begin{itemize}
+        \item Voltage at connection point: modulus of the AC complex voltage at
+        the PDR bus.
+        \item Reactive power supplied at the connection point (obtained from
+        the controllable Infinite Bus on TSO side).
+        \item Active power supplied at the connection point (obtained from
+        the controllable Infinite Bus on TSO side).
+        \item The injected active and reactive currents. All BESS
+        units are plotted on the same graph.
+        \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
+        All BESS units are plotted on the same graph.
+    \end{itemize}
+
+    \subsubsection{Simulation results}
+    The blue line shows the calculated curve, if a reference curve has been entered it is
+    shown in orange.
+
+% For now we won't use floats for figures, to get more precise placement
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_V_PCS_RTE-I7.GridVoltageSwell.QMinInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+        \begin{minipage}[t]{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{fig_Ustator_PCS_RTE-I7.GridVoltageSwell.QMinInjection}
+            \begin{minipage}[t]{0.8\textwidth}
+                \small Magnitude controlled by the AVR: modulus of the voltage at the REPC, in pu.
+                The gray dotted line show the AVR setpoint. All BESS units are plotted on the same
+                graph.
+            \end{minipage}
+        \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_P_PCS_RTE-I7.GridVoltageSwell.QMinInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Real power output P, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_Q_PCS_RTE-I7.GridVoltageSwell.QMinInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig_I_PCS_RTE-I7.GridVoltageSwell.QMinInjection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Injected active (light blue line) and reactive (violet line) currents. All BESS
+            units are plotted on the same graph.
+        \end{minipage}
+    \end{minipage}
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI7GridVoltageSwellQMinInjection }}
+
+
+    \subsubsection{Analysis of results}
+
+    \noindent No analysis is needed in PCS \DTRPcs.
+
+
+    \subsubsection{Compliance checks}
+
+    Compliance checks required by PCS \DTRPcs:
+    \begin{center}
+        \begin{tabular}{lcc}
+            \toprule
+            \textbf{Check} & \multicolumn{1}{c}{\textbf{value}} & \multicolumn{1}{c}{\textbf{Compliant?}} \\
+            \midrule
+            \BLOCK{for row in cmPCSI7GridVoltageSwellQMinInjection}
+            {{row[0]}}     & {{row[1]}}                         & {{row[2]}}                              \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

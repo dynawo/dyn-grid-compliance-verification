@@ -51,7 +51,11 @@ def temp_working_dir(tmp_path):
     # Create a temporary working directory and a minimal TSOModel.jobs template
     jobs_file = tmp_path / "TSOModel.jobs"
     jobs_file.write_text(
-        "{{ solver_lib }}\n{{ solver_id }}\n{{ dycov_ddb_path }}\n{{ producer_dyd }}\n{{ custom_var }}\n"
+        "{{ solver_lib }}\n"
+        "{{ solver_id }}\n"
+        "{{ dycov_ddb_path }}\n"
+        "{{ producer_dyd }}\n"
+        "{{ custom_var }}\n"
     )
     return tmp_path
 

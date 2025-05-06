@@ -228,7 +228,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, int, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
         """Obtain the simulated curves.
 
         Parameters
@@ -248,12 +248,8 @@ class ProducerCurves:
         -------
         str
             Simulation output dir
-        float
-            Instant of time when the event is triggered
-        float
-            Fault duration in seconds
-        float
-            Frequency sampling
+        dict
+            Event parameters
         Simulation_result
             Information about the simulation result.
         DataFrame
