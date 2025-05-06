@@ -59,7 +59,6 @@ class OperatingCondition:
         working_oc_dir: Path,
         jobs_output_dir: Path,
         event_params: dict,
-        fs: float,
     ) -> dict:
 
         validator.complete_parameters(
@@ -70,7 +69,6 @@ class OperatingCondition:
             working_oc_dir,
             jobs_output_dir,
             event_params,
-            fs,
         )
 
         # Operational point without defining its validations
@@ -90,7 +88,6 @@ class OperatingCondition:
         working_path: Path,
         jobs_output_dir: Path,
         event_params: dict,
-        fs: float,
         success: bool,
         has_simulated_curves: bool,
     ) -> tuple[bool, dict]:
@@ -106,8 +103,6 @@ class OperatingCondition:
             Simulator output path.
         event_params: dict
             Event parameters
-        fs: float
-            Frequency sampling
         success: bool
             True if simulation is success
         has_simulated_curves: bool
@@ -130,7 +125,6 @@ class OperatingCondition:
                 working_path,
                 jobs_output_dir,
                 event_params,
-                fs,
             )
         else:
             results = {"compliance": False, "curves": None}

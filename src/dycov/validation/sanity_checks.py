@@ -554,8 +554,15 @@ def check_auxiliary_load(load: Load_params) -> None:
     load: Load_params
         Auxiliary load parameters.
     """
-    if load is not None and load.P <= 0:
+    if load is None:
+        return
+    if load.P <= 0:
         raise ValueError("The active flow of the auxiliary load must be greater than zero.")
+    if load.Alpha is not None and load.Alpha == 0 and load.Beta is not None and load.Beta == 0:
+        dycov_logging.get_logger("Sanity Checks").warning(
+            "The auxiliary load is defined with alpha = 0 and beta = 0, "
+            "this configuration can cause unexpected results in bolted fault tests."
+        )
 
 
 def check_internal_line(line: Line_params) -> None:

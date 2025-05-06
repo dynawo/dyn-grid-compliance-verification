@@ -49,12 +49,16 @@
     <par type="DOUBLE" name="load_Q0Pu" value="0.0"/>
     <par type="DOUBLE" name="load_U0Pu" value="1.0453"/>
     <par type="DOUBLE" name="load_UPhase0" value="0.0"/>
+    <par type="DOUBLE" name="load_alpha" value="0.0"/>
+    <par type="DOUBLE" name="load_beta" value="0.0"/>
   </set>
   <set id="Load_PE">
     <par type="DOUBLE" name="load_P0Pu" value="70.0"/>
     <par type="DOUBLE" name="load_Q0Pu" value="0.0"/>
     <par type="DOUBLE" name="load_U0Pu" value="1.0453"/>
     <par type="DOUBLE" name="load_UPhase0" value="0.0"/>
+    <par type="DOUBLE" name="load_alpha" value="0.0"/>
+    <par type="DOUBLE" name="load_beta" value="0.0"/>
   </set>
   <set id="DisconnectLoad">
     <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>
