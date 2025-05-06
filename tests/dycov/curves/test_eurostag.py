@@ -26,7 +26,7 @@ def test_eurostag():
 
     try:
         importer = CurvesImporter(path, "fiche8")
-        df_eurostag_curve, curves_dict, tt, fs = importer.get_curves_dataframe(0)
+        df_eurostag_curve = importer.get_curves_dataframe(0)
 
         assert not df_eurostag_curve.empty
         assert "time" in df_eurostag_curve
@@ -34,7 +34,5 @@ def test_eurostag():
         assert math.isclose(df_eurostag_curve["time"].iloc[-1], 9.882547, rel_tol=1e-5)
         assert "bus_PDR_V" in df_eurostag_curve
         assert "generator_Omega" in df_eurostag_curve
-        assert tt == 0.0
-        assert fs == 0.0
     finally:
         shutil.rmtree(path)
