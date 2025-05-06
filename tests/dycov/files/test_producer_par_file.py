@@ -11,7 +11,6 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.configuration.cfg import config
 from dycov.files.producer_par_file import check_parameters, create_producer_par_file
 from dycov.logging.logging import dycov_logging
 
