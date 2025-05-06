@@ -32,7 +32,11 @@ def abc_to_psrms(abc, fs):
     return (1 / np.sqrt(2)) * np.abs(ps)
 
 
-def ensure_rms_signals(curves, fs):
+def ensure_rms_signals(curves):
+
+    time_step = np.mean(np.diff(curves["time"].to_numpy()))
+    fs = 1 / time_step
+
     processed_curve_dict = {}
     abc_items, rms_items = find_abc_signal(curves)
     for abc_item in abc_items:
