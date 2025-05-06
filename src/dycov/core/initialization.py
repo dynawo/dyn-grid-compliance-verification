@@ -80,7 +80,7 @@ def _dummysamples_config(tool_path: Path, source: str):
             )
             if src.exists():
                 try:
-                    manage_files.copy_filestree(src, dest, dirs_exist_ok=True)
+                    manage_files.copy_path(src, dest, dirs_exist_ok=True)
                 except Exception as e:
                     dycov_logging.get_logger("Initialization").error(
                         f"Failed to copy {src} to {dest}: {e}"

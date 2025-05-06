@@ -36,6 +36,10 @@ def copy_files(
     target: Path
         path where the copy of the files is created
     """
+    if not source.is_dir():
+        shutil.copy(source, target)
+        return
+
     pattern = re.compile(r".*")
     exclude_pattern1 = re.compile(r".*__init__.py")
     exclude_pattern2 = re.compile(r".*__pycache__*")
@@ -195,7 +199,7 @@ def list_directories(source_path: Path) -> set:
     return pcs_list
 
 
-def copy_path(source_path: Path, target_path: Path) -> None:
+def copy_path(source_path: Path, target_path: Path, dirs_exist_ok: bool = False) -> None:
     """Copy the content of source in target.
 
     Parameters
@@ -207,7 +211,7 @@ def copy_path(source_path: Path, target_path: Path) -> None:
     """
     file_path = Path(__file__).resolve().parent.parent
     pcs_path = file_path / source_path
-    shutil.copytree(pcs_path, target_path, dirs_exist_ok=True)
+    shutil.copytree(pcs_path, target_path, dirs_exist_ok=dirs_exist_ok)
 
     for file in target_path.glob("**/__init__.py"):
         file.unlink()
