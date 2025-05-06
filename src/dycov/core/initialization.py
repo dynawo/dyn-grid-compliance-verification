@@ -9,9 +9,9 @@
 #
 
 import configparser
-from importlib.metadata import version
 import shutil
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 from dycov.configuration.cfg import config

@@ -6,7 +6,6 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-import logging
 import shutil
 import tempfile
 from pathlib import Path

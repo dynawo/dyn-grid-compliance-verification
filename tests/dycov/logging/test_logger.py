@@ -33,7 +33,6 @@ class TestDycovLogger:
                 console_formatter="%(levelname)s:%(message)s",
                 log_dir=log_dir,
             )
-            handler_types = [type(h) for h in logger.handlers]
             assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
             assert any(
                 isinstance(h, logging.handlers.RotatingFileHandler) for h in logger.handlers

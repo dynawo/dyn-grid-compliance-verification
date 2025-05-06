@@ -6,8 +6,6 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-import pytest
-
 from dycov.report.tables.steady_state_error import _steady_state_error, create_map
 
 

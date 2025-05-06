@@ -8,14 +8,10 @@
 #     demiguelm@aia.es
 #
 import os
-import subprocess
-import tempfile
-from pathlib import Path
 
-import pandas as pd
 import pytest
 
-from dycov.dynawo.dynawo import _create_curves, run_base_dynawo
+from dycov.dynawo.dynawo import _create_curves
 
 
 class DummyLogger:
