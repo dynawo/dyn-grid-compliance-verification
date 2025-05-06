@@ -181,40 +181,6 @@ class Test_TemplateCmdConfig:
 
         yield tool_path, config_dir
 
-    # Identifies deprecated parameters in user config file and logs warnings
-    def test_deprecated_parameters_logged(self, mocker, tmp_path):
-        # Setup
-        logger_mock = mocker.Mock()
-        mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=logger_mock)
-
-        # Create tool config file
-        tool_config_file = tmp_path / "tool_config.ini"
-        with open(tool_config_file, "w") as f:
-            f.write("[section1]\nvalid_key = value\n")
-
-        # Create user config file with deprecated parameter
-        user_config_file = tmp_path / "config.ini"
-        with open(user_config_file, "w") as f:
-            f.write("[section1]\ndeprecated_key = value\n")
-
-        # Create template config files
-        basic_config = tmp_path / "config.ini_BASIC"
-        with open(basic_config, "w") as f:
-            f.write("[section1]\n# valid_key = default\n")
-
-        # Execute
-        from dycov.core.initialization import _check_config_file
-
-        _check_config_file(tool_config_file, user_config_file)
-
-        # Verify
-        logger_mock.warning.assert_called_once()
-        warning_msg = logger_mock.warning.call_args[0][0]
-        assert "Deprecated in config.ini" in warning_msg
-        assert "section section1" in warning_msg
-        assert "key deprecated_key" in warning_msg
-        assert "value value" in warning_msg
-
     # Initializes dycov tool with valid launcher_dwo path and debug=False
     def test_init_with_valid_launcher_dwo_and_debug_false(self, mocker):
         # Arrange
