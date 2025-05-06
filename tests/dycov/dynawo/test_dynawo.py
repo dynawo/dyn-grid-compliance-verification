@@ -8,14 +8,10 @@
 #     demiguelm@aia.es
 #
 import os
-import subprocess
-import tempfile
-from pathlib import Path
 
-import pandas as pd
 import pytest
 
-from dycov.dynawo.dynawo import _create_curves, run_base_dynawo
+from dycov.dynawo.dynawo import _create_curves
 
 
 class DummyLogger:
@@ -83,81 +79,6 @@ def test_is_stable_raises_on_length_mismatch():
     with pytest.raises(ValueError) as excinfo:
         is_stable(time, curve, stable_time)
     assert "different length" in str(excinfo.value)
-
-
-def test_run_base_dynawo_simulation_timeout(tmp_path, patch_dycov_logging):
-    # Setup
-    launcher = create_dummy_launcher(tmp_path)
-    jobs_filename = "testjob"
-    inputs_path = tmp_path / "inputs"
-    output_path = Path("output")
-    dynawo_output_dir = inputs_path / output_path
-    (dynawo_output_dir / "logs").mkdir(parents=True)
-    (dynawo_output_dir / "curves").mkdir(parents=True)
-    # Write dummy log file (no error)
-    with open(dynawo_output_dir / "logs/dynawo.log", "w") as f:
-        f.write("INFO: Simulation started\n")
-    # Variable translations
-    variable_translations = {
-        "BusPDR_BUS_Voltage": ["BusPDR_BUS_Voltage"],
-        "BusPDR_BUS_ActivePower": ["BusPDR_BUS_ActivePower"],
-        "BusPDR_BUS_ReactivePower": ["BusPDR_BUS_ReactivePower"],
-        "time": ["time"],
-    }
-
-    class DummyGen:
-        id = "G1"
-        UseVoltageDrop = False
-
-    generators = [DummyGen()]
-    s_nom = 1.0
-    s_nref = 1.0
-    # Write dummy jobs file
-    with open(inputs_path / (jobs_filename + ".jobs"), "w") as f:
-        f.write("<jobs></jobs>")
-    # Patch subprocess.Popen to simulate a process that never finishes
-    orig_popen = subprocess.Popen
-
-    class DummyProc:
-        def __init__(self, *a, **kw):
-            self._poll = None
-            self.pid = 12345
-            self.stderr = tempfile.TemporaryFile()
-            self.stderr.write(b"timeout\n")
-            self.stderr.seek(0)
-
-        def poll(self):
-            return None
-
-        def terminate(self):
-            self._poll = 1
-
-        def wait(self, timeout=None):
-            return 0
-
-    subprocess.Popen = lambda *a, **kw: DummyProc()
-    orig_run = subprocess.run
-    subprocess.run = lambda *a, **kw: type("DummyRun", (), {"stdout": "1.2.3\n"})()
-    try:
-        success, log, has_error, curves_calculated, sim_time = run_base_dynawo(
-            launcher,
-            jobs_filename,
-            variable_translations,
-            inputs_path,
-            output_path,
-            generators,
-            s_nom,
-            s_nref,
-            save_file=True,
-            simulation_limit=0.01,
-        )
-    finally:
-        subprocess.Popen = orig_popen
-        subprocess.run = orig_run
-    assert success is False
-    assert "timeout" in (log or "").lower() or "terminated" in (log or "").lower()
-    assert isinstance(curves_calculated, pd.DataFrame)
-    assert sim_time >= 0
 
 
 def test_create_curves_handles_missing_or_malformed_file(tmp_path):

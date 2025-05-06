@@ -103,7 +103,6 @@ def test_complete_file_populates_variables_dict_correctly(
     par = ParFile(DummyProducerCurves(), "BM", "OC")
     # Patch replace_placeholders.dump_file to capture variables_dict
     captured = {}
-    orig_dump_file = par.__class__.__bases__[0].__module__  # FileVariables module
     import dycov.files.replace_placeholders as rp
 
     orig_dump = rp.dump_file
