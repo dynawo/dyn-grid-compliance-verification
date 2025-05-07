@@ -12,7 +12,7 @@ import configparser
 
 import pytest
 
-from src.dycov.configuration.cfg import Config
+from dycov.configuration.cfg import Config
 
 
 @pytest.fixture
