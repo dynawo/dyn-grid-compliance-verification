@@ -12,7 +12,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from src.dycov.files.replace_placeholders import (
+from dycov.files.replace_placeholders import (
     dump_file,
     fault_time,
     get_all_variables,
