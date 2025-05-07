@@ -6,6 +6,7 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 import shutil
 import tempfile
 from pathlib import Path
@@ -123,7 +124,14 @@ def make_valid_pcs(name, parameters):
 
         def validate(self, summary_list):
             summary = type(
-                "Summary", (), {"compliance": True, "id": self._id, "zone": self._zone}
+                "Summary",
+                (),
+                {
+                    "compliance": True,
+                    "producer_file": "dummy_path",
+                    "id": self._id,
+                    "zone": self._zone,
+                },
             )()
             summary_list.append(summary)
             return "report.tex", True, {"dummy": "result"}

@@ -38,6 +38,8 @@ class Pcs:
         self._has_pcs_config = False
         self._has_user_config = False
 
+        # TODO: (M-topologies) New variable to save the current Zone1 DYD file
+        #       (Its an input parameter)
         report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(
             parameters.get_producer()
         )

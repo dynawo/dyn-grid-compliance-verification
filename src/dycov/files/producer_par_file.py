@@ -159,6 +159,8 @@ def create_producer_par_file(
         * 'model_BESS' if it is model validation for Storage Model
     """
     if template.startswith("model"):
+        # TODO: (M-topologies) First create the PAR file for Zone3
+        # TODO: (M-topologies) Then create a PAR file for Zone1 by DYD file of Zone1
         _create_producer_par_file(launcher_dwo, target / "Zone1")
         _create_producer_par_file(launcher_dwo, target / "Zone3")
     else:
