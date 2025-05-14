@@ -15,11 +15,11 @@ from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION_PPM
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
-from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
 from dycov.model.parameters import Simulation_result
+from dycov.model.producer import Producer
 from dycov.validation import compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
@@ -27,7 +27,7 @@ from dycov.validation.performance import PerformanceValidator
 Summary = namedtuple(
     "Summary",
     [
-        "producer_file",
+        "producer_name",
         "id",
         "zone",
         "pcs",
@@ -52,10 +52,16 @@ class Benchmark:
         PCS id
     pcs_zone: str
         PCS zone id
+    producer_name: str
+        Producer name
+    report_name: str
+        Report name
     benchmark_name: str
         Benchmark name
     parameters: Parameters
         Tool parameters
+    producer: Producer
+        Producer object
     """
 
     def __init__(
@@ -63,16 +69,20 @@ class Benchmark:
         pcs_name: str,
         pcs_id: int,
         pcs_zone: int,
+        producer_name: str,
         report_name: str,
         benchmark_name: str,
         parameters: Parameters,
+        producer: Producer,
     ):
         self._pcs_name = pcs_name
         self._pcs_id = pcs_id
         self._pcs_zone = pcs_zone
         self._report_name = report_name
+        self._producer_name = producer_name
         self._name = benchmark_name
         self._parameters = parameters
+        self._producer = producer
         self._working_dir = parameters.get_working_dir()
         self._output_dir = parameters.get_output_dir()
         self._templates_path = Path(config.get_value("Global", "templates_path"))
@@ -92,26 +102,21 @@ class Benchmark:
     def __prepare_benchmark_validation(
         self, parameters: Parameters, stable_time: float
     ) -> tuple[list, CurvesManager, Validator]:
-        # Read Benchmark configurations and prepare current Benchmark work path.
-        # Creates a specific folder by pcs
-        if not (self._working_dir / self._pcs_name).is_dir():
-            manage_files.create_dir(self._working_dir / self._pcs_name)
-        if not (self._working_dir / self._pcs_name / self._name).is_dir():
-            manage_files.create_dir(self._working_dir / self._pcs_name / self._name)
-
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         curves_manager = CurvesManager(
             parameters,
+            self._producer,
             pcs_benchmark_name,
             stable_time,
             self._lib_path,
             self._templates_path,
             self._pcs_name,
+            self._producer_name,
         )
 
         ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
-        if parameters.get_producer().get_sim_type() >= MODEL_VALIDATION_PPM:
+        if self._producer.get_sim_type() >= MODEL_VALIDATION_PPM:
             validator = ModelValidator(
                 curves_manager,
                 pcs_benchmark_name,
@@ -494,6 +499,7 @@ class Benchmark:
     ):
         op_cond = OperatingCondition(
             self._parameters,
+            self._producer,
             self._pcs_name,
             op_name,
         )
@@ -551,7 +557,10 @@ class Benchmark:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         for op_name in self._op_names:
             dycov_logging.get_logger("Benchmark").info(
-                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, OPER. COND.: {op_name}"
+                f"RUNNING PRODUCER: {self._producer_name},"
+                f" PCS: {self._pcs_name},"
+                f" BENCHMARK: {self._name},"
+                f" OPER. COND.: {op_name}"
             )
             (
                 working_path,
@@ -607,15 +616,9 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
 
             results["summary"] = compliance
-            if self._parameters.get_producer().is_dynawo_model():
-                producer_file = self._parameters.get_producer().get_producer_dyd().name
-            else:
-                producer_file = self._parameters.get_producer().get_producer_curves_path().name
-
-            results["producer"] = producer_file
             summary_list.append(
                 Summary(
-                    producer_file,
+                    self._producer_name,
                     int(self._pcs_id),
                     int(self._pcs_zone),
                     self._pcs_name,
@@ -628,6 +631,26 @@ class Benchmark:
             pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_name] = results
 
         return success
+
+    def get_zone(self) -> int:
+        """Get the pcs zone.
+
+        Returns
+        -------
+        int
+            PCS zone id
+        """
+        return self._pcs_zone
+
+    def get_producer_name(self) -> str:
+        """Get the producer file.
+
+        Returns
+        -------
+        str
+            Producer file name
+        """
+        return self._producer_name
 
     def get_name(self) -> str:
         """Get the benchmark name.
