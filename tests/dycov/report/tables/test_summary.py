@@ -12,8 +12,8 @@ from dycov.report.tables.summary import create_map
 
 
 class DummySummary:
-    def __init__(self, producer_file, pcs, benchmark, operating_condition, compliance):
-        self.producer_file = producer_file
+    def __init__(self, producer_name, pcs, benchmark, operating_condition, compliance):
+        self.producer_name = producer_name
         self.pcs = pcs
         self.benchmark = benchmark
         self.operating_condition = operating_condition
@@ -23,7 +23,7 @@ class DummySummary:
 def test_create_map_with_standard_compliant_entries():
     summary_list = [
         DummySummary(
-            producer_file="dummy_path",
+            producer_name="dummy_path",
             pcs="PCS1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -37,7 +37,7 @@ def test_create_map_with_standard_compliant_entries():
 def test_create_map_escapes_underscores_in_pcs():
     summary_list = [
         DummySummary(
-            producer_file="dummy_path",
+            producer_name="dummy_path",
             pcs="PCS_1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -51,7 +51,7 @@ def test_create_map_escapes_underscores_in_pcs():
 def test_create_map_applies_red_text_for_non_compliant():
     summary_list = [
         DummySummary(
-            producer_file="dummy_path",
+            producer_name="dummy_path",
             pcs="PCS1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -65,7 +65,7 @@ def test_create_map_applies_red_text_for_non_compliant():
 def test_create_map_with_empty_fields():
     summary_list = [
         DummySummary(
-            producer_file="",
+            producer_name="",
             pcs="",
             benchmark="",
             operating_condition="",
@@ -83,7 +83,7 @@ def test_create_map_with_invalid_compliance_value():
 
     summary_list = [
         DummySummary(
-            producer_file="dummy_path",
+            producer_name="dummy_path",
             pcs="PCS1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
