@@ -34,16 +34,16 @@ class DummyLogger:
     def __init__(self):
         self.messages = []
 
-    def get_logger(name):
+    def get_logger(self, name):
         return self
 
-    def debug(msg):
+    def debug(self, msg):
         self.messages.append(("debug", msg))
 
-    def info(msg):
+    def info(self, msg):
         self.messages.append(("info", msg))
 
-    def error(msg):
+    def error(self, msg):
         self.messages.append(("error", msg))
 
 
