@@ -158,12 +158,16 @@ class Validation:
         # Prepare the environment to execute the tool
         pcs_list = []
         if parameters.get_sim_type() >= MODEL_VALIDATION_PPM:
-            for producer_name in parameters.get_producer().get_filenames(zone=1):
+            producers = parameters.get_producer().get_filenames(zone=1)
+            dycov_logging.get_logger("Validation").debug(f"Zone1 files: {' '.join(producers)}")
+            for producer_name in producers:
                 pcs_list.extend(
                     (parameters, pcs_name, producer_name)
                     for pcs_name in self._validation_pcs
                     if pcs_name.endswith("z1")
                 )
+            producers = parameters.get_producer().get_filenames(zone=3)
+            dycov_logging.get_logger("Validation").debug(f"Zone3 files: {' '.join(producers)}")
             for producer_name in parameters.get_producer().get_filenames(zone=3):
                 pcs_list.extend(
                     (parameters, pcs_name, producer_name)
@@ -171,6 +175,8 @@ class Validation:
                     if pcs_name.endswith("z3")
                 )
         else:
+            producers = parameters.get_producer().get_filenames()
+            dycov_logging.get_logger("Validation").debug(f"Producer files: {' '.join(producers)}")
             for producer_name in parameters.get_producer().get_filenames():
                 pcs_list.extend(
                     (parameters, pcs_name, producer_name) for pcs_name in self._validation_pcs
