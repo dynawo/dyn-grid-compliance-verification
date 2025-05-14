@@ -1,6 +1,7 @@
 import configparser
 import errno
 import os
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -23,13 +24,17 @@ class CurvesImporter:
     ----
     path: Path
         Path where the curve files are located
+    producer_name: str
+        Name of the producer
     filename: str
         Name of the curve file without extension
     remove_working_dict: bool
         Remove dictionary from working directory once read
     """
 
-    def __init__(self, path: Path, filename: str, remove_working_dict: bool = True):
+    def __init__(
+        self, path: Path, producer_name: str, filename: str, remove_working_dict: bool = True
+    ):
         self._path = path
         self._filename = filename
 
@@ -42,9 +47,13 @@ class CurvesImporter:
             self._default_curves.add_section("Curves-Dictionary-Zone1")
             self._default_curves.add_section("Curves-Dictionary-Zone3")
 
-        files = [f for f in path.glob(filename + ".[dD][iI][cC][tT]")]
+        pattern = re.compile(rf".*.{producer_name}.{filename}.[dD][iI][cC][tT]")
+        files = [file for file in path.resolve().iterdir() if pattern.match(str(file))]
         if not files:
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), filename + ".dict")
+            pattern = re.compile(rf".*.{filename}.[dD][iI][cC][tT]")
+            files = [file for file in path.resolve().iterdir() if pattern.match(str(file))]
+        if not files:
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), f"{filename}.dict")
 
         dict_file = files[0]
         self._curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
