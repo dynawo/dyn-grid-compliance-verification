@@ -40,6 +40,7 @@ from dycov.model.parameters import (
     Pimodel_params,
     Simulation_result,
 )
+from dycov.model.producer import Producer
 from dycov.validation import common, sanity_checks
 
 BISECTION_ROUND = 10
@@ -49,6 +50,7 @@ class DynawoCurves(ProducerCurves):
     def __init__(
         self,
         parameters: Parameters,
+        producer: Producer,
         pcs_name: str,
         model_path: Path,
         omega_path: Path,
@@ -56,7 +58,7 @@ class DynawoCurves(ProducerCurves):
         job_name: str,
         stable_time: float,
     ):
-        super().__init__(parameters)
+        super().__init__(producer)
         self._output_dir = parameters.get_output_dir()
         self._launcher_dwo = parameters.get_launcher_dwo()
         self._pcs_name = pcs_name
@@ -1229,6 +1231,7 @@ class DynawoCurves(ProducerCurves):
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
@@ -1240,6 +1243,8 @@ class DynawoCurves(ProducerCurves):
         ----------
         working_oc_dir: Path
             Temporal working path
+        producer_name: str
+            Producer name
         pcs_bm_name: str
             PCS.Benchmark name
         bm_name: str
