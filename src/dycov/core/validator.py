@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from dycov.core.execution_parameters import Parameters
 from dycov.curves.manager import CurvesManager
 from dycov.model.parameters import Disconnection_Model
+from dycov.model.producer import Producer
 from dycov.validation import compliance_list
 
 
@@ -21,7 +21,7 @@ class Validator:
     def __init__(
         self,
         curves_manager: CurvesManager,
-        parameters: Parameters,
+        producer: Producer,
         validations: list,
         is_field_measurements: bool,
     ):
@@ -32,7 +32,7 @@ class Validator:
         self._setpoint_variation = 0.0
         self._validations = validations
         self._is_field_measurements = is_field_measurements
-        self._producer = parameters.get_producer()
+        self._producer = producer
 
     def _get_calculated_curves(self) -> dict:
         return self._curves_manager.get_curves("calculated")

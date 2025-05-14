@@ -94,18 +94,18 @@ class Benchmark:
             op_names,
             curves_manager,
             validator,
-        ) = self.__prepare_benchmark_validation(parameters, stable_time)
+        ) = self.__prepare_benchmark_validation(parameters, producer, stable_time)
         self._curves_manager = curves_manager
         self._validator = validator
         self._op_names = op_names
 
     def __prepare_benchmark_validation(
-        self, parameters: Parameters, stable_time: float
+        self, parameters: Parameters, producer: Producer, stable_time: float
     ) -> tuple[list, CurvesManager, Validator]:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         curves_manager = CurvesManager(
             parameters,
-            self._producer,
+            producer,
             pcs_benchmark_name,
             stable_time,
             self._lib_path,
@@ -120,14 +120,14 @@ class Benchmark:
             validator = ModelValidator(
                 curves_manager,
                 pcs_benchmark_name,
-                parameters,
+                producer,
                 validations,
                 curves_manager.is_field_measurements(),
             )
         else:
             validator = PerformanceValidator(
                 curves_manager,
-                parameters,
+                producer,
                 stable_time,
                 validations,
                 curves_manager.is_field_measurements(),
