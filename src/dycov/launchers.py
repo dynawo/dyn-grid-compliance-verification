@@ -14,6 +14,7 @@ import shutil
 from importlib.metadata import version
 from pathlib import Path
 
+from dycov.configuration.cfg import config
 from dycov.core import initialization
 from dycov.core.execution_parameters import Parameters
 from dycov.core.input_template import create_input_template
@@ -54,11 +55,12 @@ def _performance_verification(
     )
 
     if ep.is_valid():
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
         md = Validation(
             ep,
         )
         md.set_testing(testing)
-        md.validate()
+        md.validate(use_parallel=use_parallel)
     else:
         return -1
 
@@ -89,11 +91,12 @@ def _model_validation(
     if not ep.is_complete():
         return -1
 
+    use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
     md = Validation(
         ep,
     )
     md.set_testing(testing)
-    md.validate()
+    md.validate(use_parallel=use_parallel)
     return 0
 
 
