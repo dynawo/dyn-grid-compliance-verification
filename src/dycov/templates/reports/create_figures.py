@@ -32,15 +32,15 @@ def _get_pcs_figures(pcs):
     return []
 
 
-def _create_pcs_figures(path, pcs):
+def _create_pcs_figures(path, pcs, producer):
     figures = _get_pcs_figures(pcs)
     for figure in figures:
-        shutil.copy(path / "fig_placeholder.pdf", path / figure)
+        shutil.copy(path / "fig_placeholder.pdf", path / f"{producer}_{figure}")
 
 
-def create_figures(path, pcs_name, simulation_type):
+def create_figures(path, producer, pcs_name, simulation_type):
     pcs = _get_pcs_name(pcs_name, simulation_type)
-    _create_pcs_figures(path, pcs)
+    _create_pcs_figures(path, pcs, producer)
 
 
 if __name__ == "__main__":

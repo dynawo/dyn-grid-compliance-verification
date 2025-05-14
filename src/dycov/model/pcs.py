@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import copy
 from pathlib import Path
 from typing import Union
 
@@ -23,29 +24,44 @@ class Pcs:
 
     Args
     ----
+    producer_name: str
+        Name of the producer
     pcs_name: str
         Name of the pcs
     parameters: Parameters
         Tool parameters
     """
 
-    def __init__(self, pcs_name: str, parameters: Parameters):
+    def __init__(self, producer_name: str, pcs_name: str, parameters: Parameters):
         self._name = pcs_name
-        self._producer = parameters.get_producer()
+        self._producer_name = producer_name
+
+        # Ensure a unique copy of the Producer instance is created. This is crucial
+        # for correct functionality when the tool runs in parallel, preventing potential
+        # interference or shared state issues.
+        self._producer = copy.deepcopy(parameters.get_producer())
+
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self._figures_description = {}
 
         self._has_pcs_config = False
         self._has_user_config = False
 
-        report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(
-            parameters.get_producer()
-        )
+        report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(self._producer)
         self._report_name = report_name
         self._id = int(pcs_id)
         self._zone = int(pcs_zone)
         self._bm_list = [
-            Benchmark(pcs_name, pcs_id, pcs_zone, report_name, bm_name, parameters)
+            Benchmark(
+                self._name,
+                pcs_id,
+                pcs_zone,
+                self._producer_name,
+                report_name,
+                bm_name,
+                parameters,
+                self._producer,
+            )
             for bm_name in bms_by_pcs
         ]
 
@@ -119,10 +135,10 @@ class Pcs:
         dict
             Results of the validations applied in the pcs
         """
-        pcs_results = {}
+        pcs_results = {"producer": self._producer_name}
         success = False
-        self._producer.set_zone(self._zone)
         for bm in self._bm_list:
+            self._producer.set_zone(self._zone, self._producer_name)
             success |= bm.validate(
                 summary_list,
                 pcs_results,
@@ -132,6 +148,35 @@ class Pcs:
             )
 
         return self._report_name, success, pcs_results
+
+    def get_zone(self) -> int:
+        """Get the zone of the PCS.
+
+        Returns
+        -------
+        int
+            Zone of the PCS
+        """
+        return self._zone
+
+    def get_producer_name(self) -> str:
+        """Get the producer name.
+        Returns
+        -------
+        str
+            Producer name
+        """
+        return self._producer_name
+
+    def get_producer(self) -> Producer:
+        """Get the producer.
+
+        Returns
+        -------
+        Producer
+            Producer object
+        """
+        return self._producer
 
     def get_name(self) -> str:
         """Get the PCS name.

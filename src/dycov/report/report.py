@@ -79,16 +79,19 @@ def _create_reports(
     reports = []
     for pcs_results in report_results.values():
         pcs = pcs_results["pcs"]
+        report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
+        producer = pcs.get_producer()
+        producer.set_zone(pcs.get_zone(), pcs_results["producer"])
         subreports = _create_full_tex(
             pcs_results,
             working_path,
             output_path,
             pcs.get_figures_description(),
-            pcs_results["report_name"],
-            parameters.get_producer(),
+            report_name,
+            producer,
         )
         if subreports > 0:
-            reports.append(f"\\input{{{pcs_results['report_name'].replace('.tex', '')}}}")
+            reports.append(f"\\input{{{report_name.replace('.tex', '')}}}")
 
     return reports
 
@@ -100,24 +103,27 @@ def _create_figures(
     working_path: Path,
 ):
     for pcs_results in report_results.values():
+        pcs = pcs_results["pcs"]
         latex_template_path = (
-            path_latex_files
-            / parameters.get_producer().get_sim_type_str()
-            / pcs_results["pcs"].get_name()
+            path_latex_files / parameters.get_producer().get_sim_type_str() / pcs.get_name()
         )
 
         latex_user_path = config.get_config_dir() / latex_template_path
         dycov_logging.get_logger("PDFLatex").debug(
-            f"PCS: {pcs_results['pcs'].get_name()} User LaTeX path:{latex_user_path}"
+            f"PCS: {pcs.get_name()} User LaTeX path:{latex_user_path}"
         )
         latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
         dycov_logging.get_logger("PDFLatex").debug(
-            f"PCS: {pcs_results['pcs'].get_name()} Tool LaTeX path:{latex_tool_path}"
+            f"PCS: {pcs.get_name()} Tool LaTeX path:{latex_tool_path}"
         )
         if latex_user_path.exists():
-            copy_latex_files(latex_user_path, working_path)
+            copy_latex_files(
+                latex_user_path, working_path, pcs_results["producer"].replace("_", "")
+            )
         if latex_tool_path.exists():
-            copy_latex_files(latex_tool_path, working_path)
+            copy_latex_files(
+                latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
+            )
 
         if not (latex_tool_path.exists() or latex_user_path.exists()):
             dycov_logging.get_logger("PDFLatex").error("Latex Template do not exist")
@@ -125,7 +131,8 @@ def _create_figures(
 
         create_figures(
             working_path,
-            pcs_results["pcs"].get_name(),
+            pcs_results["producer"],
+            pcs.get_name(),
             pcs_results["sim_type"],
         )
 
@@ -133,9 +140,14 @@ def _create_figures(
 def _pcs_replace(
     working_path: Path, pcs_results: dict, report_name: str, producer: Producer
 ) -> int:
-    template = _get_template(working_path, report_name)
 
-    subst_dict = {}
+    # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
+    #  eliminating potentially problematic characters and unnecessary information.
+    producer_name = pcs_results["producer"].replace("_", "")
+
+    subst_dict = {
+        "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
+    }
     subreports = []
     for (
         operating_condition,
@@ -148,7 +160,7 @@ def _pcs_replace(
         #  eliminating potentially problematic characters and unnecessary information.
         operating_condition_ = operating_condition.replace(CASE_SEPARATOR, "").replace("_RTE-", "")
 
-        html_link = f"./HTML/{operating_condition}.html"
+        html_link = f"./HTML/{pcs_results['producer']}.{operating_condition}.html"
         latex_link = f"\\href{{run:{html_link}}}{{html figures}}"
         subst_dict = subst_dict | {"link" + operating_condition_: latex_link}
 
@@ -161,6 +173,7 @@ def _pcs_replace(
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
+        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", "\_")}
         subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
         subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
         subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
@@ -175,8 +188,9 @@ def _pcs_replace(
                 * 100
             }
 
-        oc_report_name = config.get_value(operating_condition, "report_name")
-        if oc_report_name is not None:
+        oc_report = config.get_value(operating_condition, "report_name")
+        if oc_report is not None:
+            oc_report_name = f"{producer_name}.{oc_report}"
             # Process only "Compliant" and "Non-compliant" results;
             # thus ignoring FAILED simulations:
             if oc_results["summary"].show_report():
@@ -187,12 +201,12 @@ def _pcs_replace(
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
 
     subst_dict = subst_dict | {"subReports": subreports}
-
     # We want the LaTeX templates to be also valid LaTeX files before Jinja substitutions,
     # in order to compile them from the command line (for design purposes). Therefore, we
     # cannot use LaTeX's active characters to separate words in the Jinja placeholders. With
     # the following instruction we get the tool to use a character that separates words with
     # a valid (i.e. non-active LaTeX) character.
+    template = _get_template(working_path, report_name)
     subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
     template.stream(subst_dict2).dump(str(working_path / report_name))
     return len(subreports)
@@ -220,6 +234,7 @@ def _get_template(path, template_file):
 
 def _generate_figures(
     working_path: Path,
+    producer_name: str,
     figures_description: dict,
     figure_key: str,
     oc_results: dict,
@@ -253,7 +268,7 @@ def _generate_figures(
             list(reference_curves["time"]) if reference_curves is not None else None,
             plot_reference_curves,
             {"min": xmin, "max": xmax},
-            working_path / (figure_description[0] + "_" + operating_condition + ".pdf"),
+            working_path / (f"{producer_name}_{figure_description[0]}_{operating_condition}.pdf"),
             figure_description[2],
             oc_results,
             figure_description[3],
@@ -334,6 +349,7 @@ def _create_full_tex(
 
         plotted_curves, figures = _generate_figures(
             working_path,
+            pcs_results["producer"],
             figures_description,
             figure_key,
             oc_results,
@@ -344,7 +360,7 @@ def _create_full_tex(
         try:
             if config.get_boolean("Debug", "plot_all_curves_in_html", False):
                 figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
-            html.create_html(figures, operating_condition, output_path)
+            html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
         except Exception as e:
             dycov_logging.get_logger("HTMLReport").error(
                 "A non fatal error occurred while generating the HTML report"
@@ -370,15 +386,18 @@ def _summary_log(
         header_txt += f"***Reference: {reference_template}***\n"
 
     header_txt += (
-        "\n\n" f"{'PCS':15}{'Benchmark':25}{'Operating Condition':40}{'Overall Result':30}\n"
+        "\n\n"
+        f"{'Producer':20}{'PCS':15}{'Benchmark':25}"
+        f"{'Operating Condition':40}{'Overall Result':30}\n"
     )
-    header_txt += "-" * (15 + 25 + 40 + 30)
+    header_txt += "-" * (20 + 15 + 25 + 40 + 30)
     header_txt += "\n"
 
     body_txt = ""
     for i in summary_list:
         body_txt += (
-            f"{i.pcs:15}{i.benchmark:25}{i.operating_condition:40}{i.compliance.to_str():30}\n"
+            f"{i.producer_name:20}{i.pcs:15}{i.benchmark:25}"
+            f"{i.operating_condition:40}{i.compliance.to_str():30}\n"
         )
     body_txt += "\n"
     # Show the summary report on the console and save it to file
@@ -449,9 +468,21 @@ def create_pdf(
     _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
     summary_map = summary.create_map(sorted_summary)
 
+    # Extracting zones from the PCS data in the summary to identify the relevant "common" files
+    # that will be included in the final LaTeX output.
+    zones = set(summary_item.zone for summary_item in sorted_summary)
+    commonz1_include = ""
+    commonz3_include = ""
+    if 1 in zones:
+        commonz1_include = "\\input{{commonz1}}"
+    if 3 in zones:
+        commonz3_include = "\\input{{commonz3}}"
+
     oc_template = _get_template(working_path, REPORT_NAME)
     oc_template.stream(
         {
+            "commonz1": commonz1_include,
+            "commonz3": commonz3_include,
             "summary_description": summary_description.replace("_", "\_"),
             "summaryReport": summary_map,
             "reports": reports,

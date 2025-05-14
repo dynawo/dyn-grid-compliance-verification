@@ -40,6 +40,7 @@ from dycov.model.parameters import (
     Pimodel_params,
     Simulation_result,
 )
+from dycov.model.producer import Producer
 from dycov.validation import common, sanity_checks
 
 BISECTION_ROUND = 10
@@ -49,6 +50,7 @@ class DynawoCurves(ProducerCurves):
     def __init__(
         self,
         parameters: Parameters,
+        producer: Producer,
         pcs_name: str,
         model_path: Path,
         omega_path: Path,
@@ -56,7 +58,7 @@ class DynawoCurves(ProducerCurves):
         job_name: str,
         stable_time: float,
     ):
-        super().__init__(parameters)
+        super().__init__(producer)
         self._output_dir = parameters.get_output_dir()
         self._launcher_dwo = parameters.get_launcher_dwo()
         self._pcs_name = pcs_name
@@ -168,6 +170,7 @@ class DynawoCurves(ProducerCurves):
         return 0.0
 
     def __adjust_event_value(self, event_params: dict) -> None:
+        # TODO: (M-topologies) Adjust Uref value by generator
         generator = self.get_producer().generators[0]
         if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
             event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
@@ -312,6 +315,17 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
         )
 
+        # TODO: (M-topologies) Create a Setpoint model by generator, with their connections
+        #       and parameters.
+        # tso_file.complete_setpoint(
+        #     working_oc_dir,
+        #     "TSOModel.dyd",
+        #     "TSOModel.par",
+        #     self.get_producer().generators,
+        #     config.get_value(pcs_bm_name, "TSO_model"),
+        #     event_params["connect_to"],
+        # )
+
         xmfrs = self.get_producer().stepup_xfmrs.copy()
         if self.get_producer().auxload_xfmr:
             xmfrs.append(self.get_producer().auxload_xfmr)
@@ -348,6 +362,10 @@ class DynawoCurves(ProducerCurves):
 
         connect_event_to = config.get_value(config_section, "connect_event_to")
         self.__log(f"\t{connect_event_to=}")
+        # TODO: (M-topologies) Event values depends of the test type
+        # * for reference tracking tests the tool needs an event by generator
+        #       (Save in Gen_Params object? Refactor to a new class?)
+        # * for others tests only one global event is needed.
         pre_value = 1.0
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:
@@ -1213,6 +1231,7 @@ class DynawoCurves(ProducerCurves):
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
@@ -1224,6 +1243,8 @@ class DynawoCurves(ProducerCurves):
         ----------
         working_oc_dir: Path
             Temporal working path
+        producer_name: str
+            Producer name
         pcs_bm_name: str
             PCS.Benchmark name
         bm_name: str

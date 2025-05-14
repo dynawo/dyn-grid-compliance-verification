@@ -14,7 +14,6 @@ from typing import Union
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
 from dycov.model.parameters import Disconnection_Model, Simulation_result
@@ -50,16 +49,16 @@ class ProducerCurves:
 
     Args
     ----
-    parameters : Parameters
-        The parameters object containing configuration and producer information.
+    producer: Producer
+        The producer object containing configuration and producer information.
 
     """
 
     def __init__(
         self,
-        parameters: Parameters,
+        producer: Producer,
     ):
-        self._producer = parameters.get_producer()
+        self._producer = producer
         self._line_Xpu = 0.0
 
     def obtain_value(self, value_definition: str) -> Union[str, float]:
@@ -195,6 +194,7 @@ class ProducerCurves:
     def obtain_reference_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
@@ -204,6 +204,8 @@ class ProducerCurves:
         ----------
         working_oc_dir: Path
             Temporal working path
+        producer_name: str
+            Producer name
         pcs_bm_name: str
             PCS.Benchmark name
         oc_name: str
@@ -224,6 +226,7 @@ class ProducerCurves:
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
@@ -235,6 +238,8 @@ class ProducerCurves:
         ----------
         working_oc_dir: Path
             Temporal working path
+        producer_name: str
+            Producer name
         pcs_bm_name: str
             PCS.Benchmark name
         bm_name: str

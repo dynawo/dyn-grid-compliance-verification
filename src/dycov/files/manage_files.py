@@ -23,6 +23,23 @@ ModelFiles = namedtuple("ModelFiles", ["model_path", "omega_path", "pcs_path", "
 ProducerFiles = namedtuple("ProducerFiles", ["producer_dyd", "producer_par"])
 
 
+def copy_file(
+    source: Path,
+    target: Path,
+):
+    """Copy from source to target
+
+    Parameters
+    ----------
+    source: Path
+        path to the file to copy
+    target: Path
+        path where the copy of the file is created
+    """
+    dycov_logging.get_logger("Manage files").debug(f"Copying {source} to {target}")
+    shutil.copy(source, target)
+
+
 def copy_files(
     source: Path,
     target: Path,
@@ -37,7 +54,7 @@ def copy_files(
         path where the copy of the files is created
     """
     if not source.is_dir():
-        shutil.copy(source, target)
+        copy_file(source, target)
         return
 
     pattern = re.compile(r".*")
@@ -48,7 +65,7 @@ def copy_files(
         matching1 = exclude_pattern1.match(str(file))
         matching2 = exclude_pattern2.match(str(file))
         if matching and not matching1 and not matching2:
-            shutil.copy(file, target / (file.stem + file.suffix.lower()))
+            copy_file(file, target / (file.stem + file.suffix.lower()))
 
 
 def create_config_file(config_file: Path, target_file: Path) -> None:
@@ -164,7 +181,7 @@ def clone_as_subdirectory(source_path: Path, name: str) -> Path:
         matching = exclude_pattern.match(str(file))
         if matching or file.is_dir():
             continue
-        shutil.copy(file, created_path / file.name)
+        copy_file(file, created_path / file.name)
 
     return created_path
 
@@ -259,7 +276,7 @@ def copy_base_case_files(
             and not matching4
             and not file.is_dir()
         ):
-            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
+            copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
     benchmark_path = model_files.pcs_path / model_files.benchmark
     if benchmark_path.exists():
@@ -269,7 +286,7 @@ def copy_base_case_files(
             matching2 = exclude_pattern2.match(str(file))
             matching3 = exclude_pattern3.match(str(file))
             if matching and not matching1 and not matching2 and not matching3 and not matching4:
-                shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
+                copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
     # Copy the jobs and cvr TSOModel files and solvers.par
     for file in (model_files.model_path / "../..").iterdir():
@@ -277,13 +294,13 @@ def copy_base_case_files(
         matching1 = exclude_pattern1.match(str(file))
         matching2 = exclude_pattern2.match(str(file))
         if matching and not matching1 and not matching2 and file.is_file():
-            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
+            copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
     # Copy the procuder files
     producer_dyd = producer_files.producer_dyd
     producer_par = producer_files.producer_par
-    shutil.copy(producer_dyd, target_path / (producer_dyd.stem + producer_dyd.suffix.lower()))
-    shutil.copy(producer_par, target_path / (producer_par.stem + producer_par.suffix.lower()))
+    copy_file(producer_dyd, target_path / (producer_dyd.stem + producer_dyd.suffix.lower()))
+    copy_file(producer_par, target_path / (producer_par.stem + producer_par.suffix.lower()))
 
 
 def copy_base_curves_files(
@@ -291,7 +308,8 @@ def copy_base_curves_files(
     target_path: Path,
     prefix_name: str,
 ) -> bool:
-    """Copies the files which name starts with prefix_name, from source dir to target dir.
+    """Copies the files which name starts with prefix_name,
+      from producer path to target dir.
 
     Parameters
     ----------
@@ -311,26 +329,32 @@ def copy_base_curves_files(
     if not curves_dir.exists():
         return False
 
-    file_copied = False
+    file_copied = None
     try:
         if (curves_dir / "CurvesFiles.ini").exists():
-            shutil.copy(curves_dir / "CurvesFiles.ini", target_path)
+            copy_file(curves_dir / "CurvesFiles.ini", target_path)
 
             curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
             curves_cfg.read(curves_dir / "CurvesFiles.ini")
 
+            curves_filename = None
             if curves_cfg.has_option("Curves-Files", prefix_name):
                 curves_filename = curves_cfg.get("Curves-Files", prefix_name)
+
+            if curves_filename is not None:
                 curves_file = curves_dir / curves_filename
                 if curves_file.exists():
-                    shutil.copy(
+                    copy_file(
                         curves_file, target_path / (prefix_name + curves_file.suffix.lower())
                     )
-                    file_copied = True
+                    file_copied = curves_file.stem
 
-        if not file_copied:
-            for file in curves_dir.glob(prefix_name + ".*"):
-                shutil.copy(file, target_path / (prefix_name + file.suffix.lower()))
+        if file_copied is None:
+            pattern = re.compile(rf".*{prefix_name}.[cC][sS][vV]")
+            for file in curves_dir.resolve().iterdir():
+                if pattern.match(file.name):
+                    copy_file(file, target_path / f"{prefix_name}.{file.suffix.lower()}")
+                    file_copied = file.stem
 
     except OSError:
         dycov_logging.get_logger("Manage files").warning(
@@ -339,9 +363,10 @@ def copy_base_curves_files(
 
     # copy the DICT file
     success = False
-    for file in curves_dir.iterdir():
-        if file.stem.startswith(prefix_name):
-            shutil.copy(file, target_path / (file.stem + file.suffix.lower()))
+    pattern = re.compile(rf".*{file_copied}.[dD][iI][cC][tT]")
+    for file in curves_dir.resolve().iterdir():
+        if pattern.match(file.name):
+            copy_file(file, target_path / (file_copied + file.suffix.lower()))
             success = True
 
     return success
@@ -374,24 +399,32 @@ def rename_file(source_file: Path, target_file: Path) -> None:
     shutil.move(source_file, target_file)
 
 
-def copy_output_files(pcs_name: str, source_path: Path, target_path: Path) -> None:
+def copy_output_files(
+    source_path: Path, target_path: Path, subpath: str, source_subpath: str = None
+) -> None:
     """Copy the output files from source to target.
 
     Parameters
     ----------
-    pcs_name: str
-        Pcs name
     source_path: Path
         Source path
     target_path: Path
         Target path
+    subpath: str
+        Relative path in the source to preserve in target
+    source_subpath: str
+        Relative source path to copy
+
     """
-    source_pcs = source_path / pcs_name
-    target_pcs = target_path / pcs_name
+    if source_subpath is not None:
+        source_pcs = source_path / source_subpath / subpath
+    else:
+        source_pcs = source_path / subpath
+    target_pcs = target_path / subpath
     shutil.copytree(source_pcs, target_pcs, dirs_exist_ok=True)
 
 
-def copy_latex_files(source: Path, target: Path) -> None:
+def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
     """Copy LaTex templates files from source to target.
 
     Parameters
@@ -400,22 +433,37 @@ def copy_latex_files(source: Path, target: Path) -> None:
         Source path
     target_path: Path
         Target path
+    prefix_name: str
+        prefix name to the files
     """
     pattern = re.compile(r".*")
     exclude_pattern1 = re.compile(r".*__init__.py")
     exclude_pattern2 = re.compile(r".*__pycache__*")
     exclude_hidden = re.compile(r"\.")
+    tex_pattern = re.compile(r".*.tex")
+    tex_pattern2 = re.compile(r"common*")
     for file in source.iterdir():
         matching = pattern.match(str(file))
         matching1 = exclude_pattern1.match(str(file))
         matching2 = exclude_pattern2.match(str(file))
         matching_hidden = exclude_hidden.match(file.resolve().name)
-        if matching and not matching1 and not matching2 and not matching_hidden:
-            shutil.copy(source / file, target)
+        matching_tex = tex_pattern.match(file.resolve().name)
+        matching_tex2 = tex_pattern2.match(file.resolve().name)
+        if (
+            matching
+            and not matching1
+            and not matching2
+            and not matching_hidden
+            and matching_tex
+            and not matching_tex2
+        ):
+            copy_file(source / file, target / f"{prefix_name}.{file.name}")
+        else:
+            copy_file(source / file, target)
 
-    shutil.copy(source / "../../../step_response_characteristics.png", target)
-    shutil.copy(source / "../../../TSO_logo.pdf", target)
-    shutil.copy(source / "../../../fig_placeholder.pdf", target)
+    copy_file(source / "../../../step_response_characteristics.png", target)
+    copy_file(source / "../../../TSO_logo.pdf", target)
+    copy_file(source / "../../../fig_placeholder.pdf", target)
 
 
 def move_report(
@@ -440,13 +488,13 @@ def move_report(
         True if the LaTex successfully compiled the report, False otherwise
     """
     if not (source / (report_name.split(CASE_SEPARATOR)[0] + ".pdf")).exists():
-        shutil.copy(
+        copy_file(
             source / (report_name.split(CASE_SEPARATOR)[0] + ".log"),
             target,
         )
         return False
 
-    shutil.copy(
+    copy_file(
         source / (report_name.split(CASE_SEPARATOR)[0] + ".pdf"),
         target,
     )

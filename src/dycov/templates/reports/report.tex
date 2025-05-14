@@ -41,6 +41,11 @@
 % Fancy header
 \fancyhf{}
 
+% Add common inputs if necessary
+{{ commonz1 }}
+{{ commonz3 }}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% From here on, our short-hand macros:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -53,6 +58,7 @@
 %% We have to define them here first and then use renewcommands in the PCS reports
 %% because the same reports are not always generated, so it is not possible
 %% to uniquely identify which is the first one.
+\newcommand{\Producer}{}
 \newcommand{\DTRPcs}{} % DTR pcs definition
 \newcommand{\DTRPcsLong}{}
 \newcommand{\OCname}{}

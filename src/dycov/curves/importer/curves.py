@@ -12,11 +12,11 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.files import manage_files
 from dycov.model.parameters import Disconnection_Model, Gen_init, Gen_params, Simulation_result
+from dycov.model.producer import Producer
 
 
 def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
@@ -38,9 +38,9 @@ def _get_config_value(config, section, option, default=0.0):
 class ImportedCurves(ProducerCurves):
     def __init__(
         self,
-        parameters: Parameters,
+        producer: Producer,
     ):
-        super().__init__(parameters)
+        super().__init__(producer)
         self._is_field_measurements = False
 
     def __get_generators(self, curves: pd.DataFrame) -> list:
@@ -119,6 +119,7 @@ class ImportedCurves(ProducerCurves):
     def __obtain_files_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         oc_name: str,
         curves: Path,
@@ -126,7 +127,7 @@ class ImportedCurves(ProducerCurves):
     ):
         # Copy base case and producers file
         success = manage_files.copy_base_curves_files(
-            curves, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
+            curves / producer_name, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
         )
         has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves = (
             self.__get_curves_dataframe(
@@ -177,6 +178,7 @@ class ImportedCurves(ProducerCurves):
     def obtain_reference_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         oc_name: str,
         curves: Path,
@@ -187,6 +189,8 @@ class ImportedCurves(ProducerCurves):
         ----------
         working_oc_dir: Path
             Temporal working path
+        producer_name: str
+            Producer name
         pcs_bm_name: str
             PCS.Benchmark name
         oc_name: str
@@ -207,13 +211,15 @@ class ImportedCurves(ProducerCurves):
             has_imported_curves,
             curves,
         ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, curves, is_reference=True
+            working_oc_dir, producer_name, pcs_bm_name, oc_name, curves, is_reference=True
         )
+
         return event_params["start_time"], curves
 
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
+        producer_name: str,
         pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
@@ -225,6 +231,8 @@ class ImportedCurves(ProducerCurves):
         ----------
         working_oc_dir: Path
             Temporal working path
+        producer_name: str
+            Producer name
         pcs_bm_name: str
             PCS.Benchmark name
         bm_name: str
@@ -251,7 +259,11 @@ class ImportedCurves(ProducerCurves):
             has_imported_curves,
             curves,
         ) = self.__obtain_files_curve(
-            working_oc_dir, pcs_bm_name, oc_name, self.get_producer().get_producer_curves_path()
+            working_oc_dir,
+            producer_name,
+            pcs_bm_name,
+            oc_name,
+            self.get_producer().get_producer_curves_path(),
         )
 
         simulation_result = Simulation_result(success, False, has_imported_curves, None)

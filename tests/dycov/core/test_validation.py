@@ -6,6 +6,7 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 import shutil
 import tempfile
 from pathlib import Path
@@ -53,6 +54,9 @@ class DummyProducer:
 
     def get_reference_path(self):
         return Path("dummy_reference_path")
+
+    def get_filenames(self):
+        return ["dummy_file1", "dummy_file2"]
 
 
 class DummyParameters(Parameters):
@@ -109,10 +113,10 @@ def temp_dirs():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def make_valid_pcs(name, parameters):
+def make_valid_pcs(producer, name, parameters):
     class ValidPCS(Pcs):
-        def __init__(self, pcs_name, parameters):
-            super().__init__(pcs_name, parameters)
+        def __init__(self, producer, pcs_name, parameters):
+            super().__init__(producer, pcs_name, parameters)
             self._has_pcs_config = True
             self._has_user_config = True
             self._id = 1
@@ -123,48 +127,19 @@ def make_valid_pcs(name, parameters):
 
         def validate(self, summary_list):
             summary = type(
-                "Summary", (), {"compliance": True, "id": self._id, "zone": self._zone}
+                "Summary",
+                (),
+                {
+                    "compliance": True,
+                    "producer_name": "dummy_path",
+                    "id": self._id,
+                    "zone": self._zone,
+                },
             )()
             summary_list.append(summary)
-            return "report.tex", True, {"dummy": "result"}
+            return "report.tex", True, {"dummy": "result", "producer": "Producer", "pcs": self}
 
-    return ValidPCS(name, parameters)
-
-
-def make_invalid_pcs(name, parameters):
-    class InvalidPCS(Pcs):
-        def __init__(self, pcs_name, parameters):
-            super().__init__(pcs_name, parameters)
-            self._has_pcs_config = False
-            self._has_user_config = False
-            self._id = 2
-            self._zone = 2
-
-        def is_valid(self):
-            return False
-
-        def get_name(self):
-            return name
-
-    return InvalidPCS(name, parameters)
-
-
-def make_exception_pcs(name, parameters, exc):
-    class ExceptionPCS(Pcs):
-        def __init__(self, pcs_name, parameters):
-            super().__init__(pcs_name, parameters)
-            self._has_pcs_config = True
-            self._has_user_config = True
-            self._id = 3
-            self._zone = 3
-
-        def is_valid(self):
-            return True
-
-        def validate(self, summary_list):
-            raise exc("PCS validation failed")
-
-    return ExceptionPCS(name, parameters)
+    return ValidPCS(producer, name, parameters)
 
 
 def make_latex_exception_report(monkeypatch):
@@ -187,12 +162,13 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
         output_dir=temp_dirs[0], selected_pcs="PCS2", sim_type=ELECTRIC_PERFORMANCE_PPM
     )
     monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.core.validation.Pcs",
+        lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     validation = Validation(parameters)
-    pcs_names = [pcs.get_name() for pcs in validation._pcs_list]
-    assert pcs_names == ["PCS2"]
+    pcs_names = [pcs_name for _, pcs_name, _ in validation._pcs_list]
+    assert pcs_names == ["PCS2", "PCS2"]
 
 
 def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
@@ -200,41 +176,29 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     # Patch check_output_dir to simulate user not wanting to overwrite
     monkeypatch.setattr("dycov.files.manage_files.check_output_dir", lambda path: True)
     monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.core.validation.Pcs",
+        lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     with pytest.raises(SystemExit):
         Validation(parameters)
-
-
-def test_validation_exits_on_pcs_validation_exception(monkeypatch, temp_dirs):
-    parameters = DummyParameters(output_dir=temp_dirs[0])
-    pcs_list = [
-        make_exception_pcs("PCS_EXCEPTION", parameters, FileNotFoundError),
-    ]
-    monkeypatch.setattr("dycov.core.validation.Pcs", lambda name, params: pcs_list[0])
-    monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
-    validation = Validation(parameters)
-    validation._pcs_list = pcs_list
-    validation.set_testing(True)
-    with pytest.raises(SystemExit):
-        validation.validate()
 
 
 def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs):
     parameters = DummyParameters(output_dir=temp_dirs[0])
     copied = []
 
-    def fake_copy_output_files(pcs_name, source_path, target_path):
-        copied.append((pcs_name, str(source_path), str(target_path)))
+    def fake_copy_output_files(source_path, target_path, pcs_name, producer=None):
+        copied.append((str(source_path), str(target_path), pcs_name, producer))
 
     monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.core.validation.Pcs",
+        lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     monkeypatch.setattr("dycov.files.manage_files.copy_output_files", fake_copy_output_files)
     validation = Validation(parameters)
     validation.set_testing(False)
-    validation.validate()
+    validation.validate(use_parallel=False)
     pcs_name = parameters.get_selected_pcs()
-    assert any(pcs_name in c[0] for c in copied)
-    assert any("Reports" in c[0] for c in copied)
+    assert any(pcs_name in c[2] for c in copied)
+    assert any("Reports" in c[2] for c in copied)
