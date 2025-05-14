@@ -196,7 +196,7 @@ def _process_curves(
         event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
         fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
 
-        importer = CurvesImporter(curves_folder, None, curves_path.stem, False)
+        importer = CurvesImporter(curves_folder, curves_path.stem, False)
         if importer.config.has_section("Curves-Dictionary"):
             df_imported_curve = importer.get_curves_dataframe(zone=0, remove_file=False)
 

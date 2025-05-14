@@ -69,7 +69,6 @@ class ImportedCurves(ProducerCurves):
     def __get_curves_dataframe(
         self,
         working_oc_dir: Path,
-        producer_name: str,
         pcs_bm_name: str,
         oc_name: str,
         success: bool,
@@ -77,9 +76,7 @@ class ImportedCurves(ProducerCurves):
     ) -> tuple[bool, float, float, pd.DataFrame]:
         has_imported_curves = True
         if success:
-            importer = CurvesImporter(
-                working_oc_dir, producer_name, get_cfg_oc_name(pcs_bm_name, oc_name)
-            )
+            importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
             df_imported_curves = importer.get_curves_dataframe(self._producer.get_zone())
             if df_imported_curves.empty:
                 success = False
@@ -129,13 +126,12 @@ class ImportedCurves(ProducerCurves):
         is_reference: bool = False,
     ):
         # Copy base case and producers file
-        # TODO: In Zone1 copy the curves file for the current model
         success = manage_files.copy_base_curves_files(
-            curves, working_oc_dir, producer_name, get_cfg_oc_name(pcs_bm_name, oc_name)
+            curves / producer_name, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
         )
         has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves = (
             self.__get_curves_dataframe(
-                working_oc_dir, producer_name, pcs_bm_name, oc_name, success, is_reference
+                working_oc_dir, pcs_bm_name, oc_name, success, is_reference
             )
         )
 
@@ -217,6 +213,7 @@ class ImportedCurves(ProducerCurves):
         ) = self.__obtain_files_curve(
             working_oc_dir, producer_name, pcs_bm_name, oc_name, curves, is_reference=True
         )
+
         return event_params["start_time"], curves
 
     def obtain_simulated_curve(

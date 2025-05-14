@@ -32,9 +32,7 @@ class CurvesImporter:
         Remove dictionary from working directory once read
     """
 
-    def __init__(
-        self, path: Path, producer_name: str, filename: str, remove_working_dict: bool = True
-    ):
+    def __init__(self, path: Path, filename: str, remove_working_dict: bool = True):
         self._path = path
         self._filename = filename
 
@@ -47,11 +45,8 @@ class CurvesImporter:
             self._default_curves.add_section("Curves-Dictionary-Zone1")
             self._default_curves.add_section("Curves-Dictionary-Zone3")
 
-        pattern = re.compile(rf".*.{producer_name}.{filename}.[dD][iI][cC][tT]")
+        pattern = re.compile(rf".*.{filename}.[dD][iI][cC][tT]")
         files = [file for file in path.resolve().iterdir() if pattern.match(str(file))]
-        if not files:
-            pattern = re.compile(rf".*.{filename}.[dD][iI][cC][tT]")
-            files = [file for file in path.resolve().iterdir() if pattern.match(str(file))]
         if not files:
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), f"{filename}.dict")
 

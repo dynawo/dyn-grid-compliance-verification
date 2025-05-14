@@ -24,7 +24,7 @@ def test_csv():
     shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     try:
-        importer = CurvesImporter(path, "Producer", "curves_final")
+        importer = CurvesImporter(path, "curves_final")
         df_csv_curve = importer.get_curves_dataframe(0)
 
         assert not df_csv_curve.empty

@@ -25,7 +25,7 @@ def test_eurostag():
     shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     try:
-        importer = CurvesImporter(path, "Producer", "fiche8")
+        importer = CurvesImporter(path, "fiche8")
         df_eurostag_curve = importer.get_curves_dataframe(0)
 
         assert not df_eurostag_curve.empty

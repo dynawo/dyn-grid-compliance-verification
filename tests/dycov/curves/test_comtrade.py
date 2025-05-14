@@ -23,7 +23,7 @@ def test_comtrade():
     shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
     try:
-        importer = CurvesImporter(path, "Producer", "Wind_farm_comtrade_example")
+        importer = CurvesImporter(path, "Wind_farm_comtrade_example")
         df_comtrade_curve = importer.get_curves_dataframe(0)
 
         assert not df_comtrade_curve.empty
