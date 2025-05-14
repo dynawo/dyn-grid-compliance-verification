@@ -306,11 +306,10 @@ def copy_base_case_files(
 def copy_base_curves_files(
     source_path: Path,
     target_path: Path,
-    producer_name: str,
     prefix_name: str,
 ) -> bool:
-    """Copies the files which name starts with prefix_name or producer_name.prefix_name,
-      from source dir to target dir.
+    """Copies the files which name starts with prefix_name,
+      from producer path to target dir.
 
     Parameters
     ----------
@@ -318,8 +317,6 @@ def copy_base_curves_files(
         Source path
     target_path: Path
         Target path
-    producer_name: str
-        Producer name
     prefix_name: str
         Prefix filename
 
@@ -344,9 +341,6 @@ def copy_base_curves_files(
             if curves_cfg.has_option("Curves-Files", prefix_name):
                 curves_filename = curves_cfg.get("Curves-Files", prefix_name)
 
-            if curves_cfg.has_option("Curves-Files", f"{producer_name}.{prefix_name}"):
-                curves_filename = curves_cfg.get("Curves-Files", f"{producer_name}.{prefix_name}")
-
             if curves_filename is not None:
                 curves_file = curves_dir / curves_filename
                 if curves_file.exists():
@@ -356,15 +350,9 @@ def copy_base_curves_files(
                     file_copied = curves_file.stem
 
         if file_copied is None:
-            pattern1 = re.compile(rf".*{producer_name}.{prefix_name}.[cC][sS][vV]")
-            pattern2 = re.compile(rf".*{prefix_name}.[cC][sS][vV]")
+            pattern = re.compile(rf".*{prefix_name}.[cC][sS][vV]")
             for file in curves_dir.resolve().iterdir():
-                if pattern1.match(file.name):
-                    copy_file(
-                        file, target_path / f"{producer_name}.{prefix_name}.{file.suffix.lower()}"
-                    )
-                    file_copied = file.stem
-                if pattern2.match(file.name):
+                if pattern.match(file.name):
                     copy_file(file, target_path / f"{prefix_name}.{file.suffix.lower()}")
                     file_copied = file.stem
 

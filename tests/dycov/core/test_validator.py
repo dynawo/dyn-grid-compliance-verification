@@ -89,22 +89,14 @@ class DummyCurvesManager:
         return (pd.DataFrame({"x": [1]}), pd.DataFrame({"y": [2]}))
 
 
-class DummyParameters:
-    def __init__(self, producer):
-        self._producer = producer
-
-    def get_producer(self):
-        return self._producer
-
-
 def test_get_generator_u_dim_returns_correct_value():
     curves_manager = DummyCurvesManager(generator_u_dim=456.7)
-    parameters = DummyParameters(DummyProducer(sim_type=1))
-    validator = Validator(curves_manager, parameters, validations=[], is_field_measurements=False)
+    producer = DummyProducer(sim_type=1)
+    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
     assert validator.get_generator_u_dim() == 456.7
 
 
-def test_complete_parameters_sets_all_attributes():
+def test_complete_producer_sets_all_attributes():
     curves_manager = DummyCurvesManager(
         generator_u_dim=111.1,
         time_cct=2.5,
@@ -114,9 +106,9 @@ def test_complete_parameters_sets_all_attributes():
         ),
         setpoint_variation=0.99,
     )
-    parameters = DummyParameters(DummyProducer(sim_type=0))
+    producer = DummyProducer(sim_type=0)
     validator = Validator(
-        curves_manager, parameters, validations=["time_cct"], is_field_measurements=False
+        curves_manager, producer, validations=["time_cct"], is_field_measurements=False
     )
     working_oc_dir = Path("/tmp/oc")
     jobs_output_dir = Path("/tmp/jobs")
@@ -133,9 +125,9 @@ def test_complete_parameters_sets_all_attributes():
 
 def test_has_validations_returns_true_when_validations_exist():
     curves_manager = DummyCurvesManager()
-    parameters = DummyParameters(DummyProducer(sim_type=1))
+    producer = DummyProducer(sim_type=1)
     validator = Validator(
-        curves_manager, parameters, validations=["some_validation"], is_field_measurements=False
+        curves_manager, producer, validations=["some_validation"], is_field_measurements=False
     )
     assert validator.has_validations() is True
 
@@ -145,8 +137,8 @@ def test_get_curve_by_name_returns_empty_for_missing_curve():
         calculated_curves={"curve1": pd.DataFrame({"a": [1]})},
         reference_curves={"curve2": pd.DataFrame({"b": [2]})},
     )
-    parameters = DummyParameters(DummyProducer(sim_type=1))
-    validator = Validator(curves_manager, parameters, validations=[], is_field_measurements=False)
+    producer = DummyProducer(sim_type=1)
+    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
     # calculated curve missing
     df = validator._get_calculated_curve_by_name("missing_curve")
     assert isinstance(df, pd.DataFrame)
@@ -158,12 +150,12 @@ def test_get_curve_by_name_returns_empty_for_missing_curve():
 
 def test_has_validations_returns_false_when_no_validations():
     curves_manager = DummyCurvesManager()
-    parameters = DummyParameters(DummyProducer(sim_type=2))
-    validator = Validator(curves_manager, parameters, validations=[], is_field_measurements=False)
+    producer = DummyProducer(sim_type=2)
+    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
     assert validator.has_validations() is False
 
 
-def test_complete_parameters_handles_missing_optional_parameters():
+def test_complete_producer_handles_missing_optional_producer():
     curves_manager = DummyCurvesManager(
         generators_imax={"g2": 20.0},
         disconnection_model=Disconnection_Model(
@@ -171,9 +163,9 @@ def test_complete_parameters_handles_missing_optional_parameters():
         ),
         setpoint_variation=0.0,
     )
-    parameters = DummyParameters(DummyProducer(sim_type=0))
+    producer = DummyProducer(sim_type=0)
     # No "time_cct" in validations, so set_time_cct should not be called
-    validator = Validator(curves_manager, parameters, validations=[], is_field_measurements=False)
+    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
     working_oc_dir = Path("/tmp/oc2")
     jobs_output_dir = Path("/tmp/jobs2")
     event_params = {"duration_time": 1.0}
@@ -189,15 +181,15 @@ def test_complete_parameters_handles_missing_optional_parameters():
 
 def test_get_sim_type_returns_expected_value():
     curves_manager = DummyCurvesManager()
-    parameters = DummyParameters(DummyProducer(sim_type=42))
-    validator = Validator(curves_manager, parameters, validations=[], is_field_measurements=False)
+    producer = DummyProducer(sim_type=42)
+    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
     assert validator.get_sim_type() == 42
 
 
 def test_set_generators_imax_handles_empty_dict():
     curves_manager = DummyCurvesManager()
-    parameters = DummyParameters(DummyProducer(sim_type=0))
-    validator = Validator(curves_manager, parameters, validations=[], is_field_measurements=False)
+    producer = DummyProducer(sim_type=0)
+    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
     validator.set_generators_imax({})
     assert validator._generators_imax == {}
 
@@ -212,9 +204,9 @@ def test_validate_returns_compliance_results_dict():
             return {"compliance": True, "details": {"oc_name": oc_name}}
 
     curves_manager = CustomCurvesManager()
-    parameters = DummyParameters(DummyProducer(sim_type=1))
+    producer = DummyProducer(sim_type=1)
     validator = CustomValidator(
-        curves_manager, parameters, validations=["val"], is_field_measurements=False
+        curves_manager, producer, validations=["val"], is_field_measurements=False
     )
     result = validator.validate("OC1", Path("/tmp/results"), "/tmp/sim", {"param": 1}, 50.0)
     assert isinstance(result, dict)
@@ -230,8 +222,8 @@ def test_get_measurement_names_returns_empty_when_no_validations():
             return []
 
     curves_manager = DummyCurvesManager()
-    parameters = DummyParameters(DummyProducer(sim_type=1))
+    producer = DummyProducer(sim_type=1)
     validator = CustomValidator(
-        curves_manager, parameters, validations=[], is_field_measurements=False
+        curves_manager, producer, validations=[], is_field_measurements=False
     )
     assert validator.get_measurement_names() == []

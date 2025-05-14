@@ -368,16 +368,14 @@ class Producer:
         elif self._producer_curves_path is not None:
             path = self._producer_curves_path
 
-            pattern = re.compile(r".*.[dD][iI][cC][tT]")
-            files = [
-                file.stem.split(".")[0]
-                for file in path.resolve().iterdir()
-                if pattern.match(str(file))
-            ]
-            producers = [file for file in files if not file.startswith("PCS")]
-            if not producers:
-                producers = ["Producer"]
-            return producers
+            exclude_pattern = re.compile(r".*.Zone[13]")
+            return sorted(
+                [
+                    p.stem
+                    for p in path.resolve().iterdir()
+                    if not exclude_pattern.match(str(p)) and p.is_dir()
+                ]
+            )
 
         dycov_logging.get_logger("Producer").error("No producer model has been defined")
         return list()
@@ -470,7 +468,9 @@ class Producer:
             sanity_checks.check_well_formed_xml(self.get_producer_dyd())
             sanity_checks.check_well_formed_xml(self.get_producer_par())
             sanity_checks.check_curves_files(
-                self._producer_model_path, self._reference_curves_path, self.get_sim_type_str()
+                self._producer_model_path,
+                self._reference_curves_path / filename,
+                self.get_sim_type_str(),
             )
             self.__init_model()
 
