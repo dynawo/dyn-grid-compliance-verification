@@ -13,18 +13,17 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
+    ELECTRIC_PERFORMANCE,
     ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION,
     MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
 )
 from dycov.files import model_parameters
 from dycov.logging.logging import dycov_logging
 from dycov.validation import sanity_checks
-
-ELECTRIC_PERFORMANCE = 0
-MODEL_VALIDATION = 1
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
@@ -467,11 +466,12 @@ class Producer:
         if self.is_dynawo_model():
             sanity_checks.check_well_formed_xml(self.get_producer_dyd())
             sanity_checks.check_well_formed_xml(self.get_producer_par())
-            sanity_checks.check_curves_files(
-                self._producer_model_path,
-                self._reference_curves_path / filename,
-                self.get_sim_type_str(),
-            )
+            if self.get_sim_type() > MODEL_VALIDATION:
+                sanity_checks.check_curves_files(
+                    self._producer_model_path,
+                    self._reference_curves_path / filename,
+                    self.get_sim_type_str(),
+                )
             self.__init_model()
 
     def get_zone(self) -> int:

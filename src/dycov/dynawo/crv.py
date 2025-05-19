@@ -12,7 +12,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION_PPM
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION
 from dycov.dynawo.translator import dynawo_translator
 
 
@@ -274,7 +274,7 @@ def create_curves_file(
     _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
     if sim_type == ELECTRIC_PERFORMANCE_SM:
         _add_sm_curves(curves_root, generators, control_mode, curves_dict)
-    elif sim_type >= MODEL_VALIDATION_PPM:
+    elif sim_type > MODEL_VALIDATION:
         _add_model_validation_curves(curves_root, generators, zone, control_mode, curves_dict)
     else:
         _add_ppm_curves(curves_root, generators, control_mode, curves_dict)

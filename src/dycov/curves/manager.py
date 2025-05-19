@@ -462,6 +462,8 @@ class CurvesManager:
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_duration: float,
+        bm_name: str,
+        oc_name: str,
     ) -> float:
         """Calculate the critical clearing time (CCT) for a fault.
 
@@ -483,6 +485,8 @@ class CurvesManager:
             working_oc_dir,
             jobs_output_dir,
             fault_duration,
+            bm_name,
+            oc_name,
         )
 
     def get_generators_imax(self) -> dict:

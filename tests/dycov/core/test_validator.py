@@ -63,7 +63,7 @@ class DummyCurvesManager:
     def get_generator_u_dim(self):
         return self._generator_u_dim
 
-    def get_time_cct(self, working_oc_dir, jobs_output_dir, duration_time):
+    def get_time_cct(self, working_oc_dir, jobs_output_dir, duration_time, bm_name, oc_name):
         return self._time_cct
 
     def get_generators_imax(self):

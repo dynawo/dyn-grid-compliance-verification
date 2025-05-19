@@ -148,26 +148,33 @@ def _precompile_model(
         dycov_logging.get_logger("Dynawo").error(f"Compilation of {compiled_model} failed")
 
 
-def _has_error_timeline(log_path: Path) -> bool:
+def _has_error_timeline(pcs_name: str, bm_name: str, oc_name: str, log_path: Path) -> bool:
     with open(log_path, "r") as log:
         for line in log:
             if "ERROR" not in line:
                 continue
 
-            dycov_logging.get_logger("Dynawo").debug(f"Error found in: {line}")
+            dycov_logging.get_logger("Dynawo").debug(
+                f"{pcs_name}.{bm_name}.{oc_name}: Error found in: {line}"
+            )
             return True
 
     return False
 
 
 def _run_dynawo(
+    pcs_name: str,
+    bm_name: str,
+    oc_name: str,
     launcher_dwo: Path,
     jobs_filename: str,
     inputs_path: Path,
     simulation_limit: float = None,
 ) -> tuple[bool, str]:
 
-    dycov_logging.get_logger("Dynawo").debug(f"Simulation limit: {simulation_limit}")
+    dycov_logging.get_logger("Dynawo").debug(
+        f"{pcs_name}.{bm_name}.{oc_name}: Simulation limit: {simulation_limit}"
+    )
 
     tic = time.time()
     proc = subprocess.Popen(
@@ -593,6 +600,9 @@ def precompile_models(
 
 
 def run_base_dynawo(
+    pcs_name: str,
+    bm_name: str,
+    oc_name: str,
     launcher_dwo: Path,
     jobs_filename: str,
     variable_translations: dict,
@@ -643,13 +653,13 @@ def run_base_dynawo(
         Time taken for the simulation
     """
     success, stderr, sim_time = _run_dynawo(
-        launcher_dwo, jobs_filename, inputs_path, simulation_limit
+        pcs_name, bm_name, oc_name, launcher_dwo, jobs_filename, inputs_path, simulation_limit
     )
     dynawo_output_dir = inputs_path / output_path
 
     log = None
     has_error = False
-    if _has_error_timeline(dynawo_output_dir / "logs/dynawo.log"):
+    if _has_error_timeline(pcs_name, bm_name, oc_name, dynawo_output_dir / "logs/dynawo.log"):
         has_error = True
         success = False
     if not success:
@@ -670,6 +680,9 @@ def run_base_dynawo(
 
 
 def check_voltage_dip(
+    pcs_name: str,
+    bm_name: str,
+    oc_name: str,
     curves: pd.DataFrame,
     fault_start: float,
     fault_duration: float,
@@ -698,7 +711,7 @@ def check_voltage_dip(
     bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
 
     dycov_logging.get_logger("Dynawo").debug(
-        f"Checking voltage dip: {bus_pdr_voltage} for {expected_dip} V"
+        f"{pcs_name}.{bm_name}.{oc_name}: Checking voltage dip {bus_pdr_voltage} for {expected_dip} V"
     )
     if expected_dip == 0.0:
         return 0
@@ -725,8 +738,9 @@ def check_voltage_dip(
     _, post_pos = is_stable(post_time_values, post_voltage_values, fault_duration / 10)
 
     dycov_logging.get_logger("Dynawo").debug(
-        f"Voltage dip: {pre_voltage_values[pre_pos] - post_voltage_values[post_pos]} "
-        f"Expected dip: {expected_dip}"
+        f"{pcs_name}.{bm_name}.{oc_name}: "
+        f"Voltage dip {pre_voltage_values[pre_pos] - post_voltage_values[post_pos]} "
+        f"Expected dip {expected_dip}"
     )
     voltage_dip = pre_voltage_values[pre_pos] - post_voltage_values[post_pos]
 

@@ -34,7 +34,7 @@ def _copy_input_templates(target: Path, template: str) -> None:
 
 
 def _create_dyd_template(target: Path, topology: str, template: str) -> None:
-    dycov_logging.get_logger("Create input files").info(
+    dycov_logging.get_logger("Create Input Files").info(
         f"Creating the input DYD file in {target}."
     )
     create_producer_dyd_file(target, topology, template)
@@ -49,7 +49,7 @@ def _create_dyd_template(target: Path, topology: str, template: str) -> None:
 
 
 def _create_par_template(launcher_dwo: Path, target: Path, topology: str, template: str) -> None:
-    dycov_logging.get_logger("Create input files").info(
+    dycov_logging.get_logger("Create Input Files").info(
         f"Creating the input PAR file in {target}."
     )
     create_producer_par_file(launcher_dwo, target, template)
@@ -62,7 +62,7 @@ def _create_par_template(launcher_dwo: Path, target: Path, topology: str, templa
 
 
 def _create_ini_template(target: Path, topology: str, template: str) -> None:
-    dycov_logging.get_logger("Create input files").info(
+    dycov_logging.get_logger("Create Input Files").info(
         f"Creating the input INI file in {target}."
     )
     create_producer_ini_file(target, topology, template)
@@ -76,7 +76,7 @@ def _create_ini_template(target: Path, topology: str, template: str) -> None:
 
 def _create_curves_template(target: Path, topology: str, template: str) -> None:
     ref_target = target / "ReferenceCurves"
-    dycov_logging.get_logger("Create input files").info(
+    dycov_logging.get_logger("Create Input Files").info(
         f"Creating the reference curves files in {ref_target}."
     )
     create_producer_curves(target, ref_target, template)
@@ -112,7 +112,7 @@ def create_input_template(launcher_dwo: Path, target: Path, topology: str, templ
     """
 
     if target.exists():
-        dycov_logging.get_logger("Create Input").error(
+        dycov_logging.get_logger("Create Input Files").error(
             "The output path already exists, please indicate a new path"
         )
         return

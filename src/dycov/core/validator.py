@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.curves.manager import CurvesManager
+from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Disconnection_Model
 from dycov.model.producer import Producer
 from dycov.validation import compliance_list
@@ -24,6 +25,8 @@ class Validator:
         producer: Producer,
         validations: list,
         is_field_measurements: bool,
+        pcs_name: str,
+        bm_name: str,
     ):
         self._curves_manager = curves_manager
         self._time_cct = None
@@ -33,6 +36,8 @@ class Validator:
         self._validations = validations
         self._is_field_measurements = is_field_measurements
         self._producer = producer
+        self._pcs_name = pcs_name
+        self._bm_name = bm_name
 
     def _get_calculated_curves(self) -> dict:
         return self._curves_manager.get_curves("calculated")
@@ -59,6 +64,24 @@ class Validator:
 
     def _get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         return self._curves_manager.get_curves_by_windows(windows)
+
+    def _get_log_title(self):
+        return f"{self._pcs_name}.{self._bm_name}.{self._oc_name}:"
+
+    def _info(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("Validator").info(f"{self._get_log_title()} {message}")
+
+    def _debug(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("Validator").debug(f"{self._get_log_title()} {message}")
+
+    def _warning(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("Validator").warning(f"{self._get_log_title()} {message}")
+
+    def set_oc_name(self, oc_name: str) -> None:
+        self._oc_name = oc_name
 
     def has_validations(self) -> bool:
         """Check if validator has defined validations.
@@ -148,6 +171,8 @@ class Validator:
         jobs_output_dir: Path,
         event_params: dict,
         cfg_oc_name: str,
+        bm_name: str,
+        oc_name: str,
     ) -> None:
         """Complete the parameters of the validation.
 
@@ -168,6 +193,8 @@ class Validator:
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["duration_time"],
+                    bm_name,
+                    oc_name,
                 )
             )
         self.set_generators_imax(self._curves_manager.get_generators_imax())

@@ -46,11 +46,13 @@ class OperatingCondition:
         parameters: Parameters,
         producer: Producer,
         pcs_name: str,
+        bm_name: str,
         oc_name: str,
     ):
         self._working_dir = parameters.get_working_dir()
         self._producer = producer
         self._pcs_name = pcs_name
+        self._bm_name = bm_name
         self._name = oc_name
 
         # Read default values
@@ -66,7 +68,12 @@ class OperatingCondition:
     ) -> dict:
 
         validator.complete_parameters(
-            working_oc_dir, jobs_output_dir, event_params, get_cfg_oc_name(pcs_bm_name, self._name)
+            working_oc_dir,
+            jobs_output_dir,
+            event_params,
+            get_cfg_oc_name(pcs_bm_name, self._name),
+            self._bm_name,
+            self._name,
         )
         results = validator.validate(
             self._name,

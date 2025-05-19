@@ -11,18 +11,19 @@
 import argparse
 import os
 import shutil
+import time
 from importlib.metadata import version
 from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.core import initialization
 from dycov.core.execution_parameters import Parameters
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import create_input_template
 from dycov.core.validation import Validation
 from dycov.curves import anonymizer
 from dycov.dynawo import prepare_tool
 from dycov.logging.logging import dycov_logging
-from dycov.model.producer import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.validation import sanity_checks
 
 
@@ -55,12 +56,18 @@ def _performance_verification(
     )
 
     if ep.is_valid():
+        t0 = time.monotonic()
         use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        num_processes = config.get_int("Global", "parallel_num_processes", 4)
         md = Validation(
             ep,
         )
         md.set_testing(testing)
-        md.validate(use_parallel=use_parallel)
+        md.validate(use_parallel=use_parallel, num_processes=num_processes)
+        dycov_logging.get_logger("Launchers").debug(
+            f"Performance Verification time {time.monotonic() - t0}s"
+            f" ({'parallel' if use_parallel else 'sequential'})",
+        )
     else:
         return -1
 
@@ -91,12 +98,18 @@ def _model_validation(
     if not ep.is_complete():
         return -1
 
+    t0 = time.monotonic()
     use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+    num_processes = config.get_int("Global", "parallel_num_processes", 4)
     md = Validation(
         ep,
     )
     md.set_testing(testing)
-    md.validate(use_parallel=use_parallel)
+    md.validate(use_parallel=use_parallel, num_processes=num_processes)
+    dycov_logging.get_logger("Launchers").debug(
+        f"Model Validation time {time.monotonic() - t0}s"
+        f" ({'parallel' if use_parallel else 'sequential'})",
+    )
     return 0
 
 
@@ -104,7 +117,7 @@ def _check_launchers(dwo_launcher: str) -> None:
     try:
         sanity_checks.check_launchers(dwo_launcher)
     except OSError as e:
-        dycov_logging.get_logger("Sanity Checks").error(e)
+        dycov_logging.get_logger("Launchers").error(e)
         exit(1)
 
 

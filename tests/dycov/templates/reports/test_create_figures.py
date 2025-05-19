@@ -1,12 +1,13 @@
+from dycov.core import global_variables
 from dycov.templates.reports import create_figures
 
 
 def test_pcs_name():
     pcs_names = ["PCS_RTE-I2", "PCS_RTE-I5", "PCS_RTE-I16z1"]
     simulation_types = [
-        create_figures.ELECTRIC_PERFORMANCE_SM,
-        create_figures.ELECTRIC_PERFORMANCE_PPM,
-        create_figures.MODEL_VALIDATION_PPM,
+        global_variables.ELECTRIC_PERFORMANCE_SM,
+        global_variables.ELECTRIC_PERFORMANCE_PPM,
+        global_variables.MODEL_VALIDATION_PPM,
     ]
     expected_ouputs = ["RTE-I2SM", "RTE-I5", "RTE-I16z1"]
     for pcs_name, simulation_type, expected_ouput in zip(

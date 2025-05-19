@@ -198,7 +198,7 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
     monkeypatch.setattr("dycov.files.manage_files.copy_output_files", fake_copy_output_files)
     validation = Validation(parameters)
     validation.set_testing(False)
-    validation.validate(use_parallel=False)
+    validation.validate(use_parallel=False, num_processes=4)
     pcs_name = parameters.get_selected_pcs()
     assert any(pcs_name in c[2] for c in copied)
     assert any("Reports" in c[2] for c in copied)
