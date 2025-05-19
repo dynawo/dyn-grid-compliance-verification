@@ -23,6 +23,7 @@ from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION,
     MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
@@ -48,15 +49,9 @@ from dycov.templates.reports.create_figures import create_figures
 
 
 def _get_verification_type(sim_type: int) -> str:
-    if (
-        sim_type == ELECTRIC_PERFORMANCE_SM
-        or sim_type == ELECTRIC_PERFORMANCE_PPM
-        or sim_type == ELECTRIC_PERFORMANCE_BESS
-    ):
-        return "Electrical Performance Verification"
-
-    elif sim_type == MODEL_VALIDATION_PPM or sim_type == MODEL_VALIDATION_BESS:
+    if sim_type > MODEL_VALIDATION:
         return "Model Validation"
+    return "Electrical Performance Verification"
 
 
 def _get_model_type(sim_type: int) -> str:
@@ -70,19 +65,18 @@ def _get_model_type(sim_type: int) -> str:
         return "Battery Energy Storage Systems"
 
 
-def _create_reports(
-    report_results: dict,
-    parameters: Parameters,
+def _create_pcs_reports(
+    pcs_results: dict,
     output_path: Path,
     working_path: Path,
 ) -> list:
-    reports = []
-    for pcs_results in report_results.values():
-        pcs = pcs_results["pcs"]
-        report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
-        producer = pcs.get_producer()
-        producer.set_zone(pcs.get_zone(), pcs_results["producer"])
-        subreports = _create_full_tex(
+    pcs = pcs_results["pcs"]
+    producer = pcs.get_producer()
+    producer.set_zone(pcs.get_zone(), pcs_results["producer"])
+    report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
+    return (
+        True
+        if _create_full_tex(
             pcs_results,
             working_path,
             output_path,
@@ -90,51 +84,64 @@ def _create_reports(
             report_name,
             producer,
         )
-        if subreports > 0:
-            reports.append(f"\\input{{{report_name.replace('.tex', '')}}}")
+        > 0
+        else False
+    )
 
+
+def _get_reports(
+    report_results: dict,
+    working_path: Path,
+) -> list:
+    reports = []
+    for pcs_results in report_results.values():
+        report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
+        if (working_path / report_name).exists():
+            reports.append(f"\\input{{{report_name.replace('.tex', '')}}}")
     return reports
 
 
-def _create_figures(
-    report_results: dict,
+def _copy_pcs_latex_files(
+    pcs_results: dict,
     parameters: Parameters,
     path_latex_files: Path,
     working_path: Path,
 ):
-    for pcs_results in report_results.values():
-        pcs = pcs_results["pcs"]
-        latex_template_path = (
-            path_latex_files / parameters.get_producer().get_sim_type_str() / pcs.get_name()
-        )
+    pcs = pcs_results["pcs"]
+    latex_template_path = (
+        path_latex_files / parameters.get_producer().get_sim_type_str() / pcs.get_name()
+    )
 
-        latex_user_path = config.get_config_dir() / latex_template_path
-        dycov_logging.get_logger("PDFLatex").debug(
-            f"PCS: {pcs.get_name()} User LaTeX path:{latex_user_path}"
-        )
-        latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
-        dycov_logging.get_logger("PDFLatex").debug(
-            f"PCS: {pcs.get_name()} Tool LaTeX path:{latex_tool_path}"
-        )
-        if latex_user_path.exists():
-            copy_latex_files(
-                latex_user_path, working_path, pcs_results["producer"].replace("_", "")
-            )
-        if latex_tool_path.exists():
-            copy_latex_files(
-                latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
-            )
+    latex_user_path = config.get_config_dir() / latex_template_path
+    dycov_logging.get_logger("Report").debug(
+        f"{pcs.get_name()}: User LaTeX path:{latex_user_path}"
+    )
+    latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
+    dycov_logging.get_logger("Report").debug(
+        f"{pcs.get_name()}: Tool LaTeX path:{latex_tool_path}"
+    )
 
-        if not (latex_tool_path.exists() or latex_user_path.exists()):
-            dycov_logging.get_logger("PDFLatex").error("Latex Template do not exist")
-            return
+    if latex_user_path.exists():
+        copy_latex_files(latex_user_path, working_path, pcs_results["producer"].replace("_", ""))
+    if latex_tool_path.exists():
+        copy_latex_files(latex_tool_path, working_path, pcs_results["producer"].replace("_", ""))
 
-        create_figures(
-            working_path,
-            pcs_results["producer"],
-            pcs.get_name(),
-            pcs_results["sim_type"],
-        )
+    if not (latex_tool_path.exists() or latex_user_path.exists()):
+        dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
+        return
+
+
+def _create_pcs_figures(
+    pcs_results: dict,
+    working_path: Path,
+):
+    pcs = pcs_results["pcs"]
+    create_figures(
+        working_path,
+        pcs_results["producer"],
+        pcs.get_name(),
+        pcs_results["sim_type"],
+    )
 
 
 def _pcs_replace(
@@ -272,6 +279,7 @@ def _generate_figures(
             figure_description[2],
             oc_results,
             figure_description[3],
+            f"{figure_description[0]}.{operating_condition}",
         )
 
         try:
@@ -282,10 +290,13 @@ def _generate_figures(
             if html_figure:
                 figures.append(html_figure)
         except Exception as e:
-            dycov_logging.get_logger("HTMLReport").error(
+            dycov_logging.get_logger("Report").error(
+                f"{figure_description[0]}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
-            dycov_logging.get_logger("HTMLReport").error(f"{e}")
+            dycov_logging.get_logger("Report").error(
+                f"{figure_description[0]}.{operating_condition}: {e}"
+            )
 
     return plotted_curves, figures
 
@@ -322,9 +333,7 @@ def _create_full_tex(
 
         figure_key = operating_condition.rsplit(".", 1)[0]
         if figure_key not in figures_description:
-            dycov_logging.get_logger("PDFLatex").warning(
-                "Curves of " + figure_key + " do not exist"
-            )
+            dycov_logging.get_logger("Report").warning("Curves of " + figure_key + " do not exist")
             continue
 
         if oc_results["curves"] is None:
@@ -341,6 +350,7 @@ def _create_full_tex(
             unit_characteristics,
             figures_description,
             oc_results,
+            operating_condition,
         )
         if config.get_boolean("Debug", "show_figs_t0", False):
             xmin = None
@@ -362,10 +372,11 @@ def _create_full_tex(
                 figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
         except Exception as e:
-            dycov_logging.get_logger("HTMLReport").error(
+            dycov_logging.get_logger("Report").error(
+                f"{operating_condition}: "
                 "A non fatal error occurred while generating the HTML report"
             )
-            dycov_logging.get_logger("HTMLReport").error(f"{e}")
+            dycov_logging.get_logger("Report").error(f"{operating_condition}: {e}")
 
     return _pcs_replace(working_path, pcs_results, report_name, producer)
 
@@ -404,6 +415,29 @@ def _summary_log(
     dycov_logging.get_logger("Report").info(f"{header_txt + body_txt}")
 
 
+def prepare_pcs_report(pcs_results: dict, parameters: Parameters, path_latex_files: Path):
+    output_path = parameters.get_working_dir() / "Reports"
+    working_path = parameters.get_working_dir() / "Latex"
+
+    _copy_pcs_latex_files(
+        pcs_results,
+        parameters,
+        path_latex_files,
+        working_path,
+    )
+
+    _create_pcs_figures(
+        pcs_results,
+        working_path,
+    )
+
+    _create_pcs_reports(
+        pcs_results,
+        output_path,
+        working_path,
+    )
+
+
 def create_pdf(
     sorted_summary: list,
     report_results: dict,
@@ -425,24 +459,17 @@ def create_pdf(
     """
 
     output_path = parameters.get_working_dir() / "Reports"
-    if not output_path.exists():
-        output_path.mkdir()
-
     working_path = parameters.get_working_dir() / "Latex"
-    if not working_path.exists():
-        working_path.mkdir()
-
-    _create_figures(report_results, parameters, path_latex_files, working_path)
 
     latex_root_path = Path(__file__).resolve().parent.parent / path_latex_files
-    dycov_logging.get_logger("PDFLatex").debug(f"Root LaTeX path:{latex_root_path}")
+    dycov_logging.get_logger("Report").debug(f"Root LaTeX path:{latex_root_path}")
     if latex_root_path.exists():
         shutil.copy(latex_root_path / REPORT_NAME, working_path)
     else:
-        dycov_logging.get_logger("PDFLatex").error("Latex Template do not exist")
+        dycov_logging.get_logger("Report").error("Latex Template do not exist")
         return
 
-    reports = _create_reports(report_results, parameters, output_path, working_path)
+    reports = _get_reports(report_results, working_path)
 
     summary_description = ""
     now = time.time()
@@ -542,8 +569,8 @@ def create_pdf(
                 stderr=subprocess.PIPE,
             )
 
-    dycov_logging.get_logger("PDFLatex").debug(proc.stderr.decode("utf-8"))
+    dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
     if move_report(working_path, output_path, REPORT_NAME):
-        dycov_logging.get_logger("PDFLatex").info("PDF done.")
+        dycov_logging.get_logger("Report").info("PDF done.")
     else:
         raise LatexReportException("PDFLatex Error.")

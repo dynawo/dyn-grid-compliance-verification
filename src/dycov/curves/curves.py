@@ -268,6 +268,8 @@ class ProducerCurves:
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_duration: float,
+        bm_name: str,
+        oc_name: str,
     ) -> float:
         """Calculate the critical clearing time (CCT) for a fault.
 

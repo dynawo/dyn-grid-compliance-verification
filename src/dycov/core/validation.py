@@ -13,7 +13,6 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from multiprocessing import Pool
 from operator import attrgetter
 from pathlib import Path
@@ -25,6 +24,7 @@ from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION,
     MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
@@ -58,9 +58,9 @@ def _open_document(file: Path, is_testing: bool) -> None:
             dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
 
 
-def _validate_pcs(pcs_tuple):
+def _validate_pcs(pcs_args) -> tuple:
     """Helper function to validate a single PCS."""
-    parameters, pcs_name, producer_name = pcs_tuple
+    parameters, pcs_name, producer_name, path_latex_files = pcs_args
     pcs = Pcs(
         producer_name, pcs_name, parameters
     )  # Assuming Pcs constructor can handle None for producer_name here
@@ -75,8 +75,9 @@ def _validate_pcs(pcs_tuple):
         pcs_results["sim_type"] = parameters.get_sim_type()
         pcs_results["success"] = success
         pcs_results["report_name"] = report_name
+        _prepare_report_pcs(pcs_results, parameters, path_latex_files)
         return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
-    except (LatexReportException, FileNotFoundError, IOError, ValueError) as e:
+    except (FileNotFoundError, IOError, ValueError) as e:
         if dycov_logging.getEffectiveLevel() == logging.DEBUG:
             dycov_logging.get_logger("Validation").exception(
                 f"Aborted execution for {pcs.get_name()}. {e}"
@@ -86,6 +87,22 @@ def _validate_pcs(pcs_tuple):
                 f"Aborted execution for {pcs.get_name()}. {e}"
             )
         return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
+
+
+def _prepare_report_pcs(pcs_results: dict, parameters: Parameters, path_latex_files: Path) -> None:
+    """Prepare the report for the PCS validation."""
+
+    # Create the report
+    try:
+        report.prepare_pcs_report(pcs_results, parameters, Path(path_latex_files))
+    except LatexReportException as e:
+        dycov_logging.get_logger("Validation").error(
+            f"An error occurred while preparing the report "
+            f"for {pcs_results['pcs'].get_name()}.",
+        )
+        _aborted_execution(e)
+    except (FileNotFoundError, IOError, ValueError) as e:
+        _aborted_execution(e)
 
 
 class Validation:
@@ -157,12 +174,12 @@ class Validation:
 
         # Prepare the environment to execute the tool
         pcs_list = []
-        if parameters.get_sim_type() >= MODEL_VALIDATION_PPM:
+        if parameters.get_sim_type() > MODEL_VALIDATION:
             producers = parameters.get_producer().get_filenames(zone=1)
             dycov_logging.get_logger("Validation").debug(f"Zone1 files: {' '.join(producers)}")
             for producer_name in producers:
                 pcs_list.extend(
-                    (parameters, pcs_name, producer_name)
+                    (parameters, pcs_name, producer_name, self._path_latex_files)
                     for pcs_name in self._validation_pcs
                     if pcs_name.endswith("z1")
                 )
@@ -170,7 +187,7 @@ class Validation:
             dycov_logging.get_logger("Validation").debug(f"Zone3 files: {' '.join(producers)}")
             for producer_name in parameters.get_producer().get_filenames(zone=3):
                 pcs_list.extend(
-                    (parameters, pcs_name, producer_name)
+                    (parameters, pcs_name, producer_name, self._path_latex_files)
                     for pcs_name in self._validation_pcs
                     if pcs_name.endswith("z3")
                 )
@@ -179,9 +196,10 @@ class Validation:
             dycov_logging.get_logger("Validation").debug(f"Producer files: {' '.join(producers)}")
             for producer_name in parameters.get_producer().get_filenames():
                 pcs_list.extend(
-                    (parameters, pcs_name, producer_name) for pcs_name in self._validation_pcs
+                    (parameters, pcs_name, producer_name, self._path_latex_files)
+                    for pcs_name in self._validation_pcs
                 )
-        self._pcs_list = sorted(pcs_list, key=lambda item: item[1])  # Sort by pcs_name
+        self._pcs_list = pcs_list
 
         # Flag to avoid opening the report in the tests
         self._is_testing = False
@@ -213,7 +231,7 @@ class Validation:
         # Check if results path exists to avoid overwriting if the user does not
         #  want to lose the files
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
-            logging.getLogger("Model Validation").warning(
+            dycov_logging.get_logger("Validation").warning(
                 "Exiting. Please rename your current Results directory, otherwise it will be "
                 "erased and a new one will be created."
             )
@@ -225,23 +243,22 @@ class Validation:
         sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone", "producer_name"))
         dycov_logging.get_logger("Validation").debug(f"Sorted summary {sorted_summary_list}")
 
-        if not self._is_testing:
-            try:
-                report.create_pdf(
-                    sorted_summary_list,
-                    report_results,
-                    self._parameters,
-                    Path(self._path_latex_files),
-                )
-            except LatexReportException as e:
-                dycov_logging.get_logger("PDFLatex").error(
-                    f"An error occurred while generating the report, "
-                    f"look for the {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log file "
-                    f"under {self._parameters.get_output_dir()/'Reports'}"
-                )
-                _aborted_execution(e)
-            except (FileNotFoundError, IOError, ValueError) as e:
-                _aborted_execution(e)
+        try:
+            report.create_pdf(
+                sorted_summary_list,
+                report_results,
+                self._parameters,
+                Path(self._path_latex_files),
+            )
+        except LatexReportException as e:
+            dycov_logging.get_logger("Validation").error(
+                f"An error occurred while generating the report, "
+                f"look for the {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log file "
+                f"under {self._parameters.get_output_dir()/'Reports'}"
+            )
+            _aborted_execution(e)
+        except (FileNotFoundError, IOError, ValueError) as e:
+            _aborted_execution(e)
 
         for pcs_results in report_results.values():
             pcs = pcs_results["pcs"]
@@ -289,7 +306,6 @@ class Validation:
         # Validate each configured Pcs
         summary_list = []
         report_results = {}
-        t0 = time.monotonic()
 
         if use_parallel:
             dycov_logging.get_logger("Validation").info(
@@ -307,7 +323,6 @@ class Validation:
                 summary_list.extend(summary)
                 report_results[f"{producer_name}_{pcs_name}"] = pcs_results
 
-        dycov_logging.get_logger("Validation").debug(f"Validation time {time.monotonic() - t0}s")
         # Create the pcs report
         self.__create_report(summary_list, report_results)
 

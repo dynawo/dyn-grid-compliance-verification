@@ -12,7 +12,7 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.core.execution_parameters import Parameters
-from dycov.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION_PPM
+from dycov.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.logging.logging import dycov_logging
@@ -91,13 +91,28 @@ class Benchmark:
 
         stable_time = config.get_float("GridCode", "stable_time", 100.0)
         (
-            op_names,
+            oc_names,
             curves_manager,
             validator,
         ) = self.__prepare_benchmark_validation(parameters, producer, stable_time)
         self._curves_manager = curves_manager
         self._validator = validator
-        self._op_names = op_names
+        self._oc_names = oc_names
+
+    def __get_log_title(self):
+        return f"{self._pcs_name}.{self._name}:"
+
+    def __info(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("Benchmark").info(f"{self.__get_log_title()} {message}")
+
+    def __debug(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("Benchmark").debug(f"{self.__get_log_title()} {message}")
+
+    def __warning(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("Benchmark").warning(f"{self.__get_log_title()} {message}")
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
@@ -116,13 +131,15 @@ class Benchmark:
 
         ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
-        if self._producer.get_sim_type() >= MODEL_VALIDATION_PPM:
+        if self._producer.get_sim_type() > MODEL_VALIDATION:
             validator = ModelValidator(
                 curves_manager,
                 pcs_benchmark_name,
                 producer,
                 validations,
                 curves_manager.is_field_measurements(),
+                self._pcs_name,
+                self._name,
             )
         else:
             validator = PerformanceValidator(
@@ -131,6 +148,8 @@ class Benchmark:
                 stable_time,
                 validations,
                 curves_manager.is_field_measurements(),
+                self._pcs_name,
+                self._name,
             )
 
         # If it is not a pcs with multiple operating conditions, returns itself
@@ -489,7 +508,7 @@ class Benchmark:
 
     def __validate(
         self,
-        op_name: str,
+        oc_name: str,
         pcs_benchmark_name: str,
         working_path: Path,
         jobs_output_dir: Path,
@@ -501,7 +520,8 @@ class Benchmark:
             self._parameters,
             self._producer,
             self._pcs_name,
-            op_name,
+            self._name,
+            oc_name,
         )
 
         op_cond_success, results = op_cond.validate(
@@ -517,12 +537,12 @@ class Benchmark:
         # Statuses for the Summary Report
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
-            dycov_logging.get_logger("Benchmark").warning("Undefined Validations")
+            self.__warning("Undefined Validations")
         elif not op_cond_success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
-            dycov_logging.get_logger("Benchmark").warning("Invalid Test")
+            self.__warning("Invalid Test")
         elif not results["compliance"]:
             compliance = Compliance.NonCompliant
         else:
@@ -555,13 +575,9 @@ class Benchmark:
 
         # Validate each operational point
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        for op_name in self._op_names:
-            dycov_logging.get_logger("Benchmark").info(
-                f"RUNNING PRODUCER: {self._producer_name},"
-                f" PCS: {self._pcs_name},"
-                f" BENCHMARK: {self._name},"
-                f" OPER. COND.: {op_name}"
-            )
+        for oc_name in self._oc_names:
+            self._validator.set_oc_name(oc_name)
+            self.__info(f"RUNNING PRODUCER: {self._producer_name}," f" OPER. COND.: {oc_name}")
             (
                 working_path,
                 jobs_output_dir,
@@ -572,18 +588,16 @@ class Benchmark:
                 self._validator.get_measurement_names(),
                 pcs_benchmark_name,
                 self._name,
-                op_name,
+                oc_name,
             )
-            dycov_logging.get_logger("Benchmark").debug(
+            self.__debug(
                 f"Error message: {simulation_result.error_message} "
                 f"Time exceeds: {simulation_result.time_exceeds} "
                 f"Has curves: {has_curves} "
                 f"Succes: {simulation_result.success} "
             )
             if simulation_result.error_message is not None:
-                dycov_logging.get_logger("Benchmark").debug(
-                    f"Error message: {simulation_result.error_message}"
-                )
+                self.__debug(f"Error message: {simulation_result.error_message}")
                 if simulation_result.error_message == "Fault simulation fails":
                     compliance = Compliance.FaultSimulationFails
                 elif simulation_result.error_message == "Fault dip unachievable":
@@ -594,7 +608,7 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
             elif has_curves == 0:
                 op_cond_success, results, compliance = self.__validate(
-                    op_name,
+                    oc_name,
                     pcs_benchmark_name,
                     working_path,
                     jobs_output_dir,
@@ -623,12 +637,12 @@ class Benchmark:
                     int(self._pcs_zone),
                     self._pcs_name,
                     self._name,
-                    op_name,
+                    oc_name,
                     compliance,
                     self._report_name,
                 )
             )
-            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_name] = results
+            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + oc_name] = results
 
         return success
 

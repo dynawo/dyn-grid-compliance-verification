@@ -3,11 +3,11 @@ import shutil
 import sys
 from pathlib import Path
 
-ELECTRIC_PERFORMANCE_SM = 0
-ELECTRIC_PERFORMANCE_PPM = 1
-ELECTRIC_PERFORMANCE_BESS = 2
-MODEL_VALIDATION_PPM = 10
-MODEL_VALIDATION_BESS = 11
+from dycov.core.global_variables import (
+    ELECTRIC_PERFORMANCE_BESS,
+    ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION_BESS,
+)
 
 
 def _get_pcs_name(pcs_name, simulation_type):

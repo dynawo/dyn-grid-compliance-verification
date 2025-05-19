@@ -49,7 +49,7 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         )
         md = Validation(ep)
         md.set_testing(True)
-        compliance = md.validate(use_parallel=False)
+        compliance = md.validate(use_parallel=False, num_processes=4)
     except Exception as e:
         compliance = str(e)
     finally:
