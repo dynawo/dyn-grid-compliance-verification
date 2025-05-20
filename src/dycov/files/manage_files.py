@@ -399,9 +399,7 @@ def rename_file(source_file: Path, target_file: Path) -> None:
     shutil.move(source_file, target_file)
 
 
-def copy_output_files(
-    source_path: Path, target_path: Path, subpath: str, source_subpath: str = None
-) -> None:
+def copy_output_files(source_path: Path, target_path: Path, subpath: str) -> None:
     """Copy the output files from source to target.
 
     Parameters
@@ -412,14 +410,9 @@ def copy_output_files(
         Target path
     subpath: str
         Relative path in the source to preserve in target
-    source_subpath: str
-        Relative source path to copy
 
     """
-    if source_subpath is not None:
-        source_pcs = source_path / source_subpath / subpath
-    else:
-        source_pcs = source_path / subpath
+    source_pcs = source_path / subpath
     target_pcs = target_path / subpath
     shutil.copytree(source_pcs, target_pcs, dirs_exist_ok=True)
 

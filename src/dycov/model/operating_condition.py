@@ -72,7 +72,6 @@ class OperatingCondition:
             jobs_output_dir,
             event_params,
             get_cfg_oc_name(pcs_bm_name, self._name),
-            self._bm_name,
             self._name,
         )
         results = validator.validate(

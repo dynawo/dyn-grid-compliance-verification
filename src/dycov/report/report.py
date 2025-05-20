@@ -90,12 +90,17 @@ def _create_pcs_reports(
 
 
 def _get_reports(
+    sorted_summary: list,
     report_results: dict,
     working_path: Path,
 ) -> list:
     reports = []
-    for pcs_results in report_results.values():
+    for pcs in sorted_summary:
+        pcs_results = report_results[f"{pcs.producer_name}_{pcs.pcs}"]
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
+        if any(report_name.replace(".tex", "") in report for report in reports):
+            continue
+
         if (working_path / report_name).exists():
             reports.append(f"\\input{{{report_name.replace('.tex', '')}}}")
     return reports
@@ -469,7 +474,7 @@ def create_pdf(
         dycov_logging.get_logger("Report").error("Latex Template do not exist")
         return
 
-    reports = _get_reports(report_results, working_path)
+    reports = _get_reports(sorted_summary, report_results, working_path)
 
     summary_description = ""
     now = time.time()

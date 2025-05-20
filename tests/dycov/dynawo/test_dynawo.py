@@ -158,7 +158,9 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
     mocker.patch("dycov.dynawo.dynawo.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
-    result = check_voltage_dip(curves, fault_start, fault_duration, expected_dip)
+    result = check_voltage_dip(
+        "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
+    )
 
     # Assert
     assert result == 0
@@ -197,7 +199,9 @@ def test_fault_duration_exceeds_simulation_time(mocker):
     mocker.patch("dycov.dynawo.dynawo.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
-    result = check_voltage_dip(curves, fault_start, fault_duration, expected_dip)
+    result = check_voltage_dip(
+        "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
+    )
 
     # Assert
     # Verify that _trim_curves was called with the adjusted fault_duration

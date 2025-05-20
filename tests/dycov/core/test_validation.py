@@ -37,7 +37,7 @@ class DummyProducer:
     def get_sim_type_str(self):
         return "SM"
 
-    def set_zone(self, zone):
+    def set_zone(self, zone, producer_name):
         pass
 
     def is_dynawo_model(self):
@@ -167,7 +167,7 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     validation = Validation(parameters)
-    pcs_names = [pcs_name for _, pcs_name, _ in validation._pcs_list]
+    pcs_names = [pcs_name for _, pcs_name, _, _ in validation._pcs_list]
     assert pcs_names == ["PCS2", "PCS2"]
 
 
@@ -187,8 +187,8 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
     parameters = DummyParameters(output_dir=temp_dirs[0])
     copied = []
 
-    def fake_copy_output_files(source_path, target_path, pcs_name, producer=None):
-        copied.append((str(source_path), str(target_path), pcs_name, producer))
+    def fake_copy_output_files(source_path, target_path, pcs_name):
+        copied.append((str(source_path), str(target_path), pcs_name))
 
     monkeypatch.setattr(
         "dycov.core.validation.Pcs",

@@ -17,15 +17,14 @@ from dycov.model.parameters import Gen_params
 
 
 def _connect_generator_to_setpoint(
-    dyd_root: etree.Element, ns: str, tso_model: str, generator: Gen_params, connect_to: str
+    dyd_root: etree.Element, ns: str, generator: Gen_params, connect_to: str
 ) -> None:
-    if tso_model == "RefTracking_1Line_InfBus":
-        setpoint_id = f"SetPoint_{generator.id}"
-        _create_model(dyd_root, ns, setpoint_id, "Step", "TSOModel.par", setpoint_id)
-        connect_event_to = dynawo_translator.get_dynawo_variable(generator.lib, connect_to)
-        _connect_generator(
-            dyd_root, ns, generator.id, connect_event_to, setpoint_id, "step_step_value"
-        )
+    setpoint_id = f"SetPoint_{generator.id}"
+    _create_model(dyd_root, ns, setpoint_id, "Step", "TSOModel.par", setpoint_id)
+    _, connect_event_to = dynawo_translator.get_dynawo_variable(generator.lib, connect_to)
+    _connect_generator(
+        dyd_root, ns, generator.id, connect_event_to, setpoint_id, "step_step_value"
+    )
 
 
 def _create_model(
@@ -59,39 +58,37 @@ def _connect_generator(
 
 
 def _add_setpoint_parameters(
-    par_root: etree.Element, ns: str, tso_model: str, generator: Gen_params
+    par_root: etree.Element, ns: str, generator: Gen_params, event_params: dict, pre_value: float
 ) -> None:
-    if tso_model == "RefTracking_1Line_InfBus":
-        parset = par_root.append(
-            etree.Element(
-                f"{{{ns}}}set",
-                id=f"SetPoint_{generator.id}",
-            )
+    parset = etree.SubElement(
+        par_root,
+        f"{{{ns}}}set",
+        id=f"SetPoint_{generator.id}",
+    )
+    parset.append(
+        etree.Element(
+            f"{{{ns}}}par",
+            type="DOUBLE",
+            name="step_tStep",
+            value=f"{event_params['start_time']}",
         )
-        parset.append(
-            etree.Element(
-                f"{{{ns}}}par",
-                type="DOUBLE",
-                name="step_tStep",
-                value=f"{generator.step_time}",
-            )
+    )
+    parset.append(
+        etree.Element(
+            f"{{{ns}}}par",
+            type="DOUBLE",
+            name="step_Value0",
+            value=f"{pre_value}",
         )
-        parset.append(
-            etree.Element(
-                f"{{{ns}}}par",
-                type="DOUBLE",
-                name="step_Value0",
-                value=f"{generator.step_value0}",
-            )
+    )
+    parset.append(
+        etree.Element(
+            f"{{{ns}}}par",
+            type="DOUBLE",
+            name="step_Height",
+            value=f"{event_params['step_value']}",
         )
-        parset.append(
-            etree.Element(
-                f"{{{ns}}}par",
-                type="DOUBLE",
-                name="step_Height",
-                value=f"{generator.step_height}",
-            )
-        )
+    )
 
 
 def complete_setpoint(
@@ -100,7 +97,7 @@ def complete_setpoint(
     par_file: str,
     generators: list,
     tso_model: str,
-    connect_to: str,
+    event_params: dict,
 ) -> None:
     """Replace DYD/PAR TSOModel files placeholders with values.
 
@@ -116,9 +113,12 @@ def complete_setpoint(
         Variable where the step is connected
     tso_model: str
         TSO Model library name
-    connect_to: str
-        Connect to variable
+    event_params: dict
+        Event parameters
     """
+    if tso_model != "RefTracking_1Line_InfBus":
+        return
+
     dyd_tree = etree.parse(path / dyd_file, etree.XMLParser(remove_blank_text=True))
     dyd_root = dyd_tree.getroot()
     dyd_ns = etree.QName(dyd_root).namespace
@@ -127,9 +127,11 @@ def complete_setpoint(
     par_root = par_tree.getroot()
     par_ns = etree.QName(dyd_root).namespace
 
-    for generator in generators:
-        _connect_generator_to_setpoint(dyd_root, dyd_ns, tso_model, generator, connect_to)
-        _add_setpoint_parameters(par_root, par_ns, tso_model, generator)
+    for i in range(len(generators)):
+        generator = generators[i]
+        pre_value = event_params["pre_value"][i]
+        _connect_generator_to_setpoint(dyd_root, dyd_ns, generator, event_params["connect_to"])
+        _add_setpoint_parameters(par_root, par_ns, generator, event_params, pre_value)
 
     par_tree.write(path / par_file, pretty_print=True)
     dyd_tree.write(path / dyd_file, pretty_print=True)

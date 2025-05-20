@@ -146,7 +146,7 @@ class Pcs:
         dict
             Results of the validations applied in the pcs
         """
-        pcs_results = {"producer": self._producer_name}
+        pcs_results = {"id": self._id, "zone": self._zone, "producer": self._producer_name}
         success = False
         for bm in self._bm_list:
             self._producer.set_zone(self._zone, self._producer_name)

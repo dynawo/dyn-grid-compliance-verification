@@ -171,7 +171,6 @@ class Validator:
         jobs_output_dir: Path,
         event_params: dict,
         cfg_oc_name: str,
-        bm_name: str,
         oc_name: str,
     ) -> None:
         """Complete the parameters of the validation.
@@ -193,7 +192,7 @@ class Validator:
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["duration_time"],
-                    bm_name,
+                    self._bm_name,
                     oc_name,
                 )
             )

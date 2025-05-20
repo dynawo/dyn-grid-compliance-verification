@@ -264,10 +264,9 @@ class Validation:
             pcs = pcs_results["pcs"]
             producer_name = pcs_results["producer"]
             manage_files.copy_output_files(
-                self._parameters.get_working_dir(),
-                self._parameters.get_output_dir(),
+                self._parameters.get_working_dir() / producer_name,
+                self._parameters.get_output_dir() / producer_name,
                 pcs.get_name(),
-                producer_name,
             )
 
         # Move output files to destination folder
