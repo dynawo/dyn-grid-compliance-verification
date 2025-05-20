@@ -70,7 +70,6 @@ def _check_timeline(timeline_file: Path, element_type: str) -> tuple[bool, list]
         if _is_disconnection_event(timeline_event, element_type):
             no_error = False
             disconnection_list.append(timeline_event.get("modelName"))
-            self._debug(f"Timeline disconnection. Model: {timeline_event.get('modelName')}")
 
     return no_error, disconnection_list
 
@@ -544,6 +543,9 @@ class PerformanceValidator(Validator):
             results["no_disconnection_gen"], disconnection_list = _check_timeline(
                 simulation_path / "timeLine/timeline.xml", "gen"
             )
+            for disconnection in disconnection_list:
+                self._debug(f"Timeline disconnection. Model: {disconnection}")
+
             if not results["no_disconnection_gen"]:
                 if self._disconnection_model.gen_intline is None:
                     gen_intline_id = "Empty"
@@ -564,6 +566,8 @@ class PerformanceValidator(Validator):
             results["no_disconnection_load"], disconnection_list = _check_timeline(
                 simulation_path / "timeLine/timeline.xml", "load"
             )
+            for disconnection in disconnection_list:
+                self._debug(f"Timeline disconnection. Model: {disconnection}")
 
             if not results["no_disconnection_load"]:
                 if self._disconnection_model.auxload_xfmr is None:

@@ -92,7 +92,14 @@ class DummyCurvesManager:
 def test_get_generator_u_dim_returns_correct_value():
     curves_manager = DummyCurvesManager(generator_u_dim=456.7)
     producer = DummyProducer(sim_type=1)
-    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
+    validator = Validator(
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
+    )
     assert validator.get_generator_u_dim() == 456.7
 
 
@@ -108,13 +115,18 @@ def test_complete_producer_sets_all_attributes():
     )
     producer = DummyProducer(sim_type=0)
     validator = Validator(
-        curves_manager, producer, validations=["time_cct"], is_field_measurements=False
+        curves_manager,
+        producer,
+        validations=["time_cct"],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
     )
     working_oc_dir = Path("/tmp/oc")
     jobs_output_dir = Path("/tmp/jobs")
     event_params = {"duration_time": 2.5}
     cfg_oc_name = "cfg"
-    validator.complete_parameters(working_oc_dir, jobs_output_dir, event_params, cfg_oc_name)
+    validator.complete_parameters(working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC")
     assert validator._time_cct == 2.5
     assert validator._generators_imax == {"g1": 10.0}
     assert validator._disconnection_model == Disconnection_Model(
@@ -127,7 +139,12 @@ def test_has_validations_returns_true_when_validations_exist():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
     validator = Validator(
-        curves_manager, producer, validations=["some_validation"], is_field_measurements=False
+        curves_manager,
+        producer,
+        validations=["some_validation"],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
     )
     assert validator.has_validations() is True
 
@@ -138,7 +155,14 @@ def test_get_curve_by_name_returns_empty_for_missing_curve():
         reference_curves={"curve2": pd.DataFrame({"b": [2]})},
     )
     producer = DummyProducer(sim_type=1)
-    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
+    validator = Validator(
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
+    )
     # calculated curve missing
     df = validator._get_calculated_curve_by_name("missing_curve")
     assert isinstance(df, pd.DataFrame)
@@ -151,7 +175,14 @@ def test_get_curve_by_name_returns_empty_for_missing_curve():
 def test_has_validations_returns_false_when_no_validations():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=2)
-    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
+    validator = Validator(
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
+    )
     assert validator.has_validations() is False
 
 
@@ -165,12 +196,19 @@ def test_complete_producer_handles_missing_optional_producer():
     )
     producer = DummyProducer(sim_type=0)
     # No "time_cct" in validations, so set_time_cct should not be called
-    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
+    validator = Validator(
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
+    )
     working_oc_dir = Path("/tmp/oc2")
     jobs_output_dir = Path("/tmp/jobs2")
     event_params = {"duration_time": 1.0}
     cfg_oc_name = "cfg2"
-    validator.complete_parameters(working_oc_dir, jobs_output_dir, event_params, cfg_oc_name)
+    validator.complete_parameters(working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC")
     assert validator._time_cct is None
     assert validator._generators_imax == {"g2": 20.0}
     assert validator._disconnection_model == Disconnection_Model(
@@ -182,14 +220,28 @@ def test_complete_producer_handles_missing_optional_producer():
 def test_get_sim_type_returns_expected_value():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=42)
-    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
+    validator = Validator(
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
+    )
     assert validator.get_sim_type() == 42
 
 
 def test_set_generators_imax_handles_empty_dict():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=0)
-    validator = Validator(curves_manager, producer, validations=[], is_field_measurements=False)
+    validator = Validator(
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
+    )
     validator.set_generators_imax({})
     assert validator._generators_imax == {}
 
@@ -206,7 +258,12 @@ def test_validate_returns_compliance_results_dict():
     curves_manager = CustomCurvesManager()
     producer = DummyProducer(sim_type=1)
     validator = CustomValidator(
-        curves_manager, producer, validations=["val"], is_field_measurements=False
+        curves_manager,
+        producer,
+        validations=["val"],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
     )
     result = validator.validate("OC1", Path("/tmp/results"), "/tmp/sim", {"param": 1}, 50.0)
     assert isinstance(result, dict)
@@ -224,6 +281,11 @@ def test_get_measurement_names_returns_empty_when_no_validations():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
     validator = CustomValidator(
-        curves_manager, producer, validations=[], is_field_measurements=False
+        curves_manager,
+        producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="PCS",
+        bm_name="BM",
     )
     assert validator.get_measurement_names() == []
