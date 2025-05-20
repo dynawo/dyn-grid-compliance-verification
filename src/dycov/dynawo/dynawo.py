@@ -711,7 +711,8 @@ def check_voltage_dip(
     bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
 
     dycov_logging.get_logger("Dynawo").debug(
-        f"{pcs_name}.{bm_name}.{oc_name}: Checking voltage dip {bus_pdr_voltage} for {expected_dip} V"
+        f"{pcs_name}.{bm_name}.{oc_name}: "
+        f"Checking voltage dip {bus_pdr_voltage} for {expected_dip} V"
     )
     if expected_dip == 0.0:
         return 0
