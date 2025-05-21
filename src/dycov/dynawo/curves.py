@@ -405,13 +405,16 @@ class DynawoCurves(ProducerCurves):
                 line_xtype = line_xpu_definition.split("*")[1]
             else:
                 line_xtype = line_xpu_definition
-            line_xpu = xpu_multiplier * generator_variables.calculate_line_xpu(
-                line_xtype,
-                self.get_producer().p_max_pu * -1,
-                self.get_producer().s_nom,
-                self.get_producer().u_nom,
-                self._s_nref,
-            )
+            try:
+                line_xpu = float(line_xtype)
+            except ValueError:
+                line_xpu = xpu_multiplier * generator_variables.calculate_line_xpu(
+                    line_xtype,
+                    self.get_producer().p_max_pu * -1,
+                    self.get_producer().s_nom,
+                    self.get_producer().u_nom,
+                    self._s_nref,
+                )
             if self.get_producer().get_zone() == 3:
                 xpu_r_factor = config.get_float("GridCode", "XPu_r_factor", 0.0)
                 if xpu_r_factor == 0.0:
