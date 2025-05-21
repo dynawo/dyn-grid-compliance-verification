@@ -458,20 +458,31 @@ def check_well_formed_xml(xml_file: Path) -> None:
     etree.parse(open(xml_file))
 
 
-def check_producer_params(p_max_pu: float, u_nom: float) -> None:
+def check_producer_params(
+    p_max_injection_pu: float, p_max_consumption_pu: float, u_nom: float
+) -> None:
     """Check whether the user-supplied model values are consistent:
-    * The value of maximum active power generation must be greater than 0.
+    * The value of maximum active power generation must be greater or equal than 0.
+    * The value of maximum active power consumption must be greater or equal than 0.
     * The nominal voltage value is defined in the configuration file.
 
     Parameters
     ----------
-    p_max_pu: float
+    p_max_injection_pu: float
         Maximum active power generation.
+    p_max_consumption_pu: float
+        Maximum active power consumption.
     u_nom: float
         Nominal voltage.
     """
-    if p_max_pu < 0:
-        raise ValueError("Unexpected maximum generation of active flow.")
+    if p_max_injection_pu < 0:
+        raise ValueError(
+            "The value of maximum active power generation must be greater or equal than 0."
+        )
+    if p_max_consumption_pu < 0:
+        raise ValueError(
+            "The value of maximum active power consumption must be greater or equal than 0."
+        )
     Udims = (
         config.get_list("GridCode", "HTB1_Udims")
         + config.get_list("GridCode", "HTB2_Udims")
