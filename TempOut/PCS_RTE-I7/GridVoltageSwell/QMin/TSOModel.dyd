@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
+  <!-- Benchmark Case -->
+  <dyn:blackBoxModel id="InfiniteBus" lib="InfiniteBusFromTable" parFile="TSOModel.par" parId="InfiniteBus"/>
+  <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="InfiniteBus" var2="infiniteBus_terminal"/>
+</dyn:dynamicModelsArchitecture>

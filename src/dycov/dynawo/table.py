@@ -35,7 +35,6 @@ class TableFile(FileVariables):
         self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict, filename: str
     ) -> None:
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
-
         variables_dict["start_event"] = event_params["start_time"]
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
         variables_dict["bus_u0pu"] = rte_gen.U0
@@ -43,6 +42,10 @@ class TableFile(FileVariables):
             variables_dict["bus_upu"] = rte_gen.U0 + float(event_params["step_value"])
         elif event_params["connect_to"] == "NetworkFrequencyPu":
             variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
+
+        list_Xv = [s for s in event_params.keys() if s.startswith("Xv_")]
+        for Xv in list_Xv:
+            variables_dict[Xv] = event_params[Xv]
 
         self.complete_parameters(variables_dict, event_params)
 

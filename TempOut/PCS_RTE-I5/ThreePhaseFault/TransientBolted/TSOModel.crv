@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<curvesInput xmlns="http://www.rte-france.com/dynawo">
+  <curve model="BusPDR" variable="bus_terminal_V_re"/>
+  <curve model="BusPDR" variable="bus_terminal_V_im"/>
+  <curve model="AuxLoad_Xfmr" variable="transformer_terminal1_V_re"/>
+  <curve model="AuxLoad_Xfmr" variable="transformer_terminal1_V_im"/>
+  <curve model="AuxLoad_Xfmr" variable="transformer_terminal1_i_re"/>
+  <curve model="AuxLoad_Xfmr" variable="transformer_terminal1_i_im"/>
+  <curve model="StepUp_Xfmr" variable="transformer_terminal1_V_re"/>
+  <curve model="StepUp_Xfmr" variable="transformer_terminal1_V_im"/>
+  <curve model="StepUp_Xfmr" variable="transformer_terminal1_i_re"/>
+  <curve model="StepUp_Xfmr" variable="transformer_terminal1_i_im"/>
+  <curve model="StepUp_Xfmr" variable="transformer_tap_value"/>
+  <curve model="Wind_Turbine" variable="WPP_wT4BCurrentSource_wT4Injector_genSystem_iECFrameRotation_ipCmdPu"/>
+  <curve model="Wind_Turbine" variable="WPP_wT4BCurrentSource_wT4Injector_genSystem_iECFrameRotation_iqCmdPu"/>
+  <curve model="Wind_Turbine" variable="WPP_UWPRefPu"/>
+  <curve model="Wind_Turbine" variable="WPP_wPPControl2015_qControl_UWPPu"/>
+  <curve model="Wind_Turbine" variable="WPP_wPPControl2015_qControl_QWPPu"/>
+  <curve model="Wind_Turbine" variable="WPP_omegaRefPu"/>
+</curvesInput>
