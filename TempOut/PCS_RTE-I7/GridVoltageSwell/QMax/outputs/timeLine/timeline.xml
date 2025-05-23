@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+<timeline xmlns="http://www.rte-france.com/dynawo">
+  <event time="20.333668" modelName="Wind_Turbine" message="IEC WT disconnected due to overvoltage protection (maximum allowed voltage : 1.100000 pu)"/>
+</timeline>

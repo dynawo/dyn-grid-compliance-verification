@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+<timeline xmlns="http://www.rte-france.com/dynawo">
+  <event time="29.999994" modelName="NODE_FAULT" message="Fault (node) : beginning"/>
+  <event time="30.084994" modelName="NODE_FAULT" message="Fault (node) : end"/>
+  <event time="30.084994" modelName="Line4b" message="LINE : opening both sides"/>
+  <event time="30.084994" modelName="NODE_FAULT" message="Fault (node) : end"/>
+</timeline>

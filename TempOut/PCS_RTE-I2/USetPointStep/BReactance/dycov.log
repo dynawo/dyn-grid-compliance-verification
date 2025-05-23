@@ -1,0 +1,11 @@
+2025-05-23 10:51:03,595 |                 ProducerCurves |       INFO |                 curves.py:  104 | Unom: 225.0, Generator type: HTB2
+2025-05-23 10:51:03,595 |                 ProducerCurves |       INFO |                 curves.py:  104 | Model definition for 'PCS_RTE-I2.USetPointStep.BReactance':
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	pdr_P=Pmax
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	pdr_Q=0
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	pdr_U=Udim
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	line_XPu=b
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | Event definition for 'PCS_RTE-I2.USetPointStep.BReactance':
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	connect_event_to='AVRSetpointPu'
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	sim_t_event_start=20.0
+2025-05-23 10:51:03,596 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	fault_duration_HTB2=0.0
+2025-05-23 10:51:03,597 |                 ProducerCurves |       INFO |                 curves.py:  104 | 	setpoint_step_value=0.02088888888888889
