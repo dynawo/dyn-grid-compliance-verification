@@ -31,6 +31,11 @@ class TableFile(FileVariables):
             oc_section,
         )
 
+    def __complete_Xv_entries(self, variables_dict, event_params):
+        list_Xv = [s for s in event_params.keys() if s.startswith("Xv_")]
+        for Xv in list_Xv:
+            variables_dict[Xv] = event_params[Xv]
+
     def __complete_file(
         self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict, filename: str
     ) -> None:
@@ -43,10 +48,7 @@ class TableFile(FileVariables):
         elif event_params["connect_to"] == "NetworkFrequencyPu":
             variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
 
-        list_Xv = [s for s in event_params.keys() if s.startswith("Xv_")]
-        for Xv in list_Xv:
-            variables_dict[Xv] = event_params[Xv]
-
+        self.__complete_Xv_entries(variables_dict, event_params)
         self.complete_parameters(variables_dict, event_params)
 
         # Replace placeholders in the TableInfiniteBus file with the calculated variables
