@@ -174,8 +174,10 @@ class DynawoCurves(ProducerCurves):
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:
-            print("Error: Uo cannot be equal to Udip to avoid division by zero.")
-            return None
+            dycov_logging.get_logger("ProducerCurves").error(
+                "Uinf cannot be equal to Udip to avoid division by zero."
+            )
+            raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
         Zv = (Udip * Zcc) / (Uinf - Udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
         Xv = (Zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
