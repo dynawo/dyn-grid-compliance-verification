@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="InfiniteBus">
+    <par type="DOUBLE" name="infiniteBus_UPu" value="{{infiniteBus_U0Pu}}"/>
+    <par type="DOUBLE" name="infiniteBus_UPhase" value="0.000"/>
+  </set>
+  <set id="VariableImpedantFault">
+    <par type="STRING" name="variableImpedantFault_ImpedanceTimeTable" value="ImpedanceTable"/>
+    <par type="STRING" name="variableImpedantFault_ImpedanceTableFile" value="TableVariableImpedance.txt"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+</parametersSet>
