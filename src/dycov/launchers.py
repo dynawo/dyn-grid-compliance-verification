@@ -24,7 +24,7 @@ from dycov.core.validation import Validation
 from dycov.curves import anonymizer
 from dycov.dynawo import prepare_tool
 from dycov.logging.logging import dycov_logging
-from dycov.validation import sanity_checks
+from dycov.sanity_checks import system_checks
 
 
 def _compile_dynawo_models(dwo_launcher: Path, dynawo_model: str, force: bool) -> None:
@@ -115,7 +115,7 @@ def _model_validation(
 
 def _check_launchers(dwo_launcher: str) -> None:
     try:
-        sanity_checks.check_launchers(dwo_launcher)
+        system_checks.check_launchers(dwo_launcher)
     except OSError as e:
         dycov_logging.get_logger("Launchers").error(e)
         exit(1)

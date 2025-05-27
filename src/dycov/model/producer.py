@@ -23,7 +23,7 @@ from dycov.core.global_variables import (
 )
 from dycov.files import model_parameters
 from dycov.logging.logging import dycov_logging
-from dycov.validation import sanity_checks
+from dycov.sanity_checks import file_checks, parameter_checks
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
@@ -75,59 +75,39 @@ class Producer:
         self._filename = None
         self._sim_type = None
 
-        # TODO: (M-topologies) Check if the Zone3 has only a DYD file
-        # TODO: (M-topologies) Check the number of DYD files in Zone1 is equal to the
-        #           number of generators in Zone3
-        # TODO: (M-topologies) Check that each DYD file has a PAR file and an INI file
-        #           with the same name
-        #  Expected input example:
-        #  Dynawo
-        #  ├─── Zone3
-        #  │     ├─── Producer.dyd
-        #  │     ├─── Producer.par
-        #  │     └─── Producer.ini
-        #  └─── Zone1
-        #        ├─── Producer_G1.dyd
-        #        ├─── Producer_G1.par
-        #        ├─── Producer_G1.ini
-        #        ├─── Producer_G2.dyd
-        #        ├─── Producer_G2.par
-        #        └─── Producer_G2.ini
-
-        # TODO: (M-topologies) Check that we only have one path with the set of
-        #           curves for each test in Zone3 at most
-        # TODO: (M-topologies) Check that we only have one path with the set of
-        #           curves for each Zone1 test and DYD file at most
-        # TODO: (M-topologies) By default the tool will search for the curve using
-        #           a compound name:
-        #               - DYDfilename.PCS.benchmark.OC
-        # TODO: (M-topologies) As a second option, it will search for the compound name:
-        #               - PCS.benchmark.OC
-        # TODO: (M-topologies) This logic is only used if the user does not inform the
-        #           file name specifically.
-        #  Expected input example:
-        #  ReferenceCurves
-        #  ├── CurvesFiles.ini
-        #  ...
-        #  ├── Producer_G1.PCS_RTE-I16z1.SetPointStep.Voltage.csv
-        #  ├── Producer_G1.PCS_RTE-I16z1.SetPointStep.Voltage.dict
-        #  ├── Producer_G2.PCS_RTE-I16z1.SetPointStep.Voltage.csv
-        #  ├── Producer_G2.PCS_RTE-I16z1.SetPointStep.Voltage.dict
-        #  ...
-        #  ├── PCS_RTE-I16z3.PSetPointStep.Dec40.csv
-        #  ├── PCS_RTE-I16z3.PSetPointStep.Dec40.dict
-        #  ...
-
         if verification_type == ELECTRIC_PERFORMANCE:
             self.__set_electric_performance_type()
         elif verification_type == MODEL_VALIDATION:
             self.__set_model_validation_type()
 
     def __set_electric_performance_type(self):
+        #  Expected input example:
+        #  Dynawo
+        #  ├─── Producer.dyd
+        #  ├─── Producer.par
+        #  └─── Producer.ini
+
+        # By default the tool will search for the curve using a compound name:
+        #               - DYDfilename.PCS.benchmark.OC
+        # As a second option, it will search for the compound name:
+        #               - PCS.benchmark.OC
+        # This logic is only used if the user does not inform the file name specifically.
+        #  Example of expected curve input:
+        # ProducerCurves
+        # ├── Producer
+        # │   ├── CurvesFiles.ini
+        # │   ├── PCS_RTE-I2.USetPointStep.AReactance.csv
+        # │   ├── PCS_RTE-I2.USetPointStep.AReactance.dict
+        #  ...
+        # │   ├── PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.csv
+        # │   └── PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.dict
+        # └── Producer.ini
+
         sm_models = 0
         ppm_models = 0
         bess_models = 0
         if self.is_dynawo_model():
+            file_checks.check_performance_model(self._producer_model_path)
             (
                 generators,
                 _,
@@ -140,8 +120,9 @@ class Producer:
                 self.get_producer_par(),
                 self._s_nref,
             )
-            sm_models, ppm_models, bess_models = sanity_checks.check_generators(generators)
+            sm_models, ppm_models, bess_models = file_checks.check_generators(generators)
         else:
+            file_checks.check_performance_curves(self._producer_curves_path)
             default_section = "DEFAULT"
             producer_config = self.__read_producer_ini()
             generator_type = producer_config.get(default_section, "generator_type")
@@ -164,6 +145,49 @@ class Producer:
             )
 
     def __set_model_validation_type(self):
+        #  Expected input example:
+        #  Dynawo
+        #  ├─── Zone3
+        #  │     ├─── Producer.dyd
+        #  │     ├─── Producer.par
+        #  │     └─── Producer.ini
+        #  └─── Zone1
+        #        ├─── Producer_G1.dyd
+        #        ├─── Producer_G1.par
+        #        ├─── Producer_G1.ini
+        #        ├─── Producer_G2.dyd
+        #        ├─── Producer_G2.par
+        #        └─── Producer_G2.ini
+
+        # By default the tool will search for the curve using a compound name:
+        #               - DYDfilename.PCS.benchmark.OC
+        # As a second option, it will search for the compound name:
+        #               - PCS.benchmark.OC
+        # This logic is only used if the user does not inform the file name specifically.
+        #  Example of expected curve input:
+        # ReferenceCurves
+        # ├── Producer
+        # │   ├── CurvesFiles.ini
+        # │   ├── PCS_RTE-I16z3.GridVoltageDip.Qzero.csv
+        # │   ├── PCS_RTE-I16z3.GridVoltageDip.Qzero.dict
+        #  ...
+        # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.csv
+        # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.dict
+        # ├── Producer_G1
+        # │   ├── CurvesFiles.ini
+        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
+        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #  ...
+        # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
+        # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
+        # └── Producer_G2
+        #     ├── CurvesFiles.ini
+        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
+        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #  ...
+        #     ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
+        #     └── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
+
         sm_models = 0
         ppm_models = 0
         bess_models = 0
@@ -171,6 +195,9 @@ class Producer:
             sm_models, ppm_models, bess_models = self.__set_dynawo_model_validation_type()
         else:
             sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
+            file_checks.check_validation_curves(
+                self._producer_curves_path, self._reference_curves_path
+            )
 
         if sm_models > 0:
             raise ValueError("Synchronous machine models are not allowed for model validation")
@@ -214,11 +241,18 @@ class Producer:
                 self._s_nref,
             )
             generators_z3 += generators
-        sm_models, ppm_models, bess_models = sanity_checks.check_generators(
-            generators_z1 + generators_z3
+        sm_models, ppm_models, bess_models = file_checks.check_generators(
+            generators_z1, generators_z3
         )
         self._zone = 0
 
+        file_checks.check_validation_model(
+            self._producer_model_path,
+            self._reference_curves_path,
+            len(generators_z3),
+            self.get_filenames(zone=3),
+            self.get_filenames(zone=1),
+        )
         return sm_models, ppm_models, bess_models
 
     def __set_curves_model_validation_type(self):
@@ -301,7 +335,7 @@ class Producer:
         self.s_nom = sum(gen.SNom for gen in self.generators)
 
         # Check sanity of the producer network
-        sanity_checks.check_topology(
+        file_checks.check_topology(
             self.topology,
             self.generators,
             self.stepup_xfmrs,
@@ -310,12 +344,12 @@ class Producer:
             self.ppm_xfmr,
             self.intline,
         )
-        sanity_checks.check_trafos(self.stepup_xfmrs)
-        sanity_checks.check_auxiliary_load(self.aux_load)
-        sanity_checks.check_trafo(self.auxload_xfmr)
-        sanity_checks.check_trafo(self.ppm_xfmr)
-        sanity_checks.check_internal_line(self.intline)
-        sanity_checks.check_generators(self.generators)
+        file_checks.check_trafos(self.stepup_xfmrs)
+        file_checks.check_auxiliary_load(self.aux_load)
+        file_checks.check_trafo(self.auxload_xfmr)
+        file_checks.check_trafo(self.ppm_xfmr)
+        file_checks.check_internal_line(self.intline)
+        file_checks.check_generators(self.generators)
 
     def __get_file_by_pattern(self, pattern) -> Path:
         if self._producer_model_path is not None:
@@ -463,15 +497,15 @@ class Producer:
         self._zone = zone
         self._filename = filename
         self.__init_parameters()
-        sanity_checks.check_producer_params(
+        parameter_checks.check_producer_params(
             self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom
         )
 
         if self.is_dynawo_model():
-            sanity_checks.check_well_formed_xml(self.get_producer_dyd())
-            sanity_checks.check_well_formed_xml(self.get_producer_par())
+            file_checks.check_well_formed_xml(self.get_producer_dyd())
+            file_checks.check_well_formed_xml(self.get_producer_par())
             if self.get_sim_type() > MODEL_VALIDATION:
-                sanity_checks.check_curves_files(
+                file_checks.check_curves_files(
                     self._producer_model_path,
                     self._reference_curves_path / filename,
                     self.get_sim_type_str(),
