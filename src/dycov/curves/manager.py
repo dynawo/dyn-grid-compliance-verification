@@ -10,8 +10,8 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.model.producer import Producer
+from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
-from dycov.validation import sanity_checks
 
 
 def _fix_after_windows(
@@ -315,7 +315,7 @@ class CurvesManager:
 
         t_com = config.get_float("GridCode", "t_com", 0.002)
         f_cutoff = config.get_float("GridCode", "cutoff", 15.0)
-        sanity_checks.check_sampling_interval(t_com, f_cutoff)
+        parameter_checks.check_sampling_interval(t_com, f_cutoff)
 
         # Reference signals should be converted to RMS PS (if they are EMT)
         reference_curves = sigpro.ensure_rms_signals(csv_reference_curves)
@@ -367,7 +367,7 @@ class CurvesManager:
         # Sanity check: the "pre" window should be in the steady-state
         t_from, t_to = self.__get_validation_windows("calculated", "before")
         before_calculated = signal_windows.get(self.get_curves("calculated"), t_from, t_to)
-        sanity_checks.check_pre_stable(
+        parameter_checks.check_pre_stable(
             list(before_calculated["time"]),
             list(before_calculated["BusPDR_BUS_Voltage"]),
         )

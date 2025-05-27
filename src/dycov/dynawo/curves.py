@@ -41,7 +41,8 @@ from dycov.model.parameters import (
     Simulation_result,
 )
 from dycov.model.producer import Producer
-from dycov.validation import common, sanity_checks
+from dycov.sanity_checks import parameter_checks
+from dycov.validation import common
 
 BISECTION_ROUND = 10
 
@@ -74,7 +75,7 @@ class DynawoCurves(ProducerCurves):
         self._simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
         self._simulation_stop = config.get_float("Dynawo", "simulation_stop", 100.0)
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
-        sanity_checks.check_simulation_duration(self.get_simulation_duration())
+        parameter_checks.check_simulation_duration(self.get_simulation_duration())
 
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
@@ -119,7 +120,7 @@ class DynawoCurves(ProducerCurves):
                 "Dynawo", "sim_minimalAcceptableStep", 1e-6
             )
             self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
-        sanity_checks.check_solver(self._solver_id, self._solver_lib)
+        parameter_checks.check_solver(self._solver_id, self._solver_lib)
 
     def __prepare_oc_validation(
         self,
