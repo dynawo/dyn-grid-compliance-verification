@@ -21,49 +21,91 @@ from dycov.cli.command_handlers import (
     handle_validate_command,
 )
 from dycov.cli.utils import check_dynawo_launcher_availability, get_dynawo_launcher_name
-from dycov.core import initialization
+from dycov.core.initialization import DycovInitializer  # Import the new class
 from dycov.logging.logging import dycov_logging
 
 
-def dycov() -> None:
+class DycovCLI:
     """
-    Main function for the dycov command-line interface.
-    Parses arguments and dispatches to appropriate subcommands.
+    Manages the command-line interface for the DYCOV tool.
+    Parses arguments, handles common initialization steps, and dispatches
+    commands to appropriate handlers.
     """
-    # Set up the main argument parser and its subparsers.
-    parser = setup_cli_parsers()
-    args = parser.parse_args()
 
-    # If no command is provided, show an error and help message.
-    if args.command is None:
-        parser.error("Please provide an additional command.")
-        parser.print_help()
-        return
+    def __init__(self):
+        """
+        Initializes the DycovCLI, creating an instance of the DycovInitializer.
+        """
+        self.initializer = DycovInitializer()
+        self.logger = dycov_logging.get_logger("CLI")
 
-    # Get the Dynawo launcher name.
-    # Not all operations require the Dynawo launcher (e.g., 'anonymize').
-    dwo_launcher_name = get_dynawo_launcher_name(parser, args)
+    def dycov(self) -> None:
+        """
+        Main entry point for the dycov command-line interface.
+        It parses command-line arguments, performs necessary initializations,
+        and dispatches to the relevant command handler functions.
+        """
+        # Set up the main argument parser and its subparsers.
+        parser = setup_cli_parsers()
+        args = parser.parse_args()
 
-    dwo_launcher = None
-    if args.command != "anonymize":
-        # Check for launcher availability and initialize if not 'anonymize'.
-        check_dynawo_launcher_availability(dwo_launcher_name)
-        dwo_launcher = Path(shutil.which(dwo_launcher_name)).resolve()
-        initialization.init(dwo_launcher, args.debug)
-    elif args.debug:
-        # If it's 'anonymize' but debug is required, initialize logging.
-        # This is necessary because anonymize doesn't go through _get_dynawo_launcher
-        # which is where dycov_logging is usually initialized.
-        dycov_logging.init_logging(args.debug)
+        # If no command is provided, display an error and the help message.
+        if args.command is None:
+            parser.error("Please provide a command. Use 'dycov --help' for available commands.")
+            return
 
-    # Dispatch to the appropriate command handler.
-    if args.command == "validate":
-        handle_validate_command(parser, args, dwo_launcher)
-    elif args.command == "generate":
-        handle_generate_command(parser, args, dwo_launcher)
-    elif args.command == "compile":
-        handle_compile_command(parser, args, dwo_launcher)
-    elif args.command == "performance":
-        handle_performance_command(parser, args, dwo_launcher)
-    elif args.command == "anonymize":
-        handle_anonymize_command(parser, args)
+        dynawo_launcher_path = None
+
+        # Determine Dynawo launcher availability and initialize components based on the command.
+        # The 'anonymize' command does not require a Dynawo launcher.
+        if args.command != "anonymize":
+            dynawo_launcher_name = get_dynawo_launcher_name(parser, args)
+            check_dynawo_launcher_availability(dynawo_launcher_name)
+            dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
+            self.initializer.init(dynawo_launcher_path, args.debug)
+        elif args.debug:
+            # For 'anonymize' with debug mode, initialize logging as it bypasses the full 'init'.
+            dycov_logging.init_logging(args.debug)
+            self.logger.info("Debug mode enabled for anonymize command.")
+
+        # Dispatch the command to the appropriate handler function.
+        self._dispatch_command(parser, args, dynawo_launcher_path)
+
+    def _dispatch_command(self, parser, args, dynawo_launcher_path: Path):
+        """
+        Dispatches the parsed command to its respective handler function.
+
+        Parameters
+        ----------
+        parser : argparse.ArgumentParser
+            The main argument parser.
+        args : argparse.Namespace
+            Parsed command-line arguments.
+        dynawo_launcher_path : Path
+            Resolved path to the Dynawo launcher executable, if required.
+        """
+        if args.command == "validate":
+            handle_validate_command(parser, args, dynawo_launcher_path)
+        elif args.command == "generate":
+            handle_generate_command(parser, args, dynawo_launcher_path)
+        elif args.command == "compile":
+            handle_compile_command(parser, args, dynawo_launcher_path)
+        elif args.command == "performance":
+            handle_performance_command(parser, args, dynawo_launcher_path)
+        elif args.command == "anonymize":
+            handle_anonymize_command(parser, args)
+        else:
+            # This case should ideally not be reached due to argparse configuration,
+            # but it serves as a safeguard.
+            self.logger.error(f"Unknown command: {args.command}")
+            parser.print_help()
+
+
+# Exposed function for the command-line entry point
+def dycov():
+    """
+    Entry point for the DYCOV command-line interface.
+    Instantiates and runs the DycovCLI.
+    """
+    cli = DycovCLI()
+    cli.dycov()
