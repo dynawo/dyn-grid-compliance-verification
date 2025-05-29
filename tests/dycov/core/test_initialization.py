@@ -64,7 +64,7 @@ class TestDycovInitializer:
 
         # Mock Validation.get_project_path
         self._mock_get_project_path = mocker.patch(
-            "dycov.core.initialization.Validation.get_project_path",
+            "dycov.core.validation.Validation.get_project_path",
             return_value=tmp_path / "project_root",
         )
         # Create dummy project root config files
