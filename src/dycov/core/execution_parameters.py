@@ -25,22 +25,22 @@ class Parameters:
     Args
     ----
     launcher_dwo: Path
-        Dynawo launcher
+        Dynawo launcher.
     producer_model: Path
-        Producer Model directory
+        Producer Model directory.
     producer_curves_path: Path
-        Producer curves directory
+        Producer curves directory.
     reference_curves_path: Path
-        Reference curves directory
+        Reference curves directory.
     selected_pcs: str
-        Individual PCS to validate
+        Individual PCS to validate.
     output_dir: Path
-        User output directory
+        User output directory.
     only_dtr: bool
-        option to validate a model using only the PCS defined in the DTR
+        Option to validate a model using only the PCS defined in the DTR.
     verification_type: int
-        0 if it is an electrical performance verification
-        1 if it is a model validation
+        0 if it is an electrical performance verification.
+        10 if it is a model validation.
     """
 
     def __init__(
@@ -54,104 +54,113 @@ class Parameters:
         only_dtr: bool,
         verification_type: int,
     ):
-        # Inputs parameters
+        # Input parameters
         self._launcher_dwo = launcher_dwo
         self._selected_pcs = selected_pcs
         self._output_dir = output_dir
         self._only_dtr = only_dtr
 
-        # Read producer inputs
+        # Initialize Producer model
         self._producer = Producer(
             producer_model, producer_curves_path, reference_curves_path, verification_type
         )
 
-        tmp_path = config.get_value("Global", "temporal_path")
-        username = getpass.getuser()
-        working_dir = Path(tempfile.gettempdir()) / f"{tmp_path}_{username}"
-        manage_files.create_dir(working_dir, clean_first=False, all=True)
+        # Set up the working directory
+        self._working_dir = self._initialize_working_directory()
 
-        # Remove old executions
-        current_time = time.time()
-        for execution_path in working_dir.iterdir():
-            modification_time = execution_path.stat().st_mtime
-            # Delete old directories (24h)
-            if current_time - modification_time >= 24 * 3600:
-                shutil.rmtree(execution_path)
-
-        self._working_dir = working_dir / Path(str(uuid.uuid4()))
-
-    def get_launcher_dwo(self) -> Path:
-        """Get the Dynawo launcher.
+    def _initialize_working_directory(self) -> Path:
+        """Initializes and cleans up the temporary working directory.
 
         Returns
         -------
         Path
-            Dynawo launcher
+            The path to the newly created unique working directory.
+        """
+        tmp_path_prefix = config.get_value("Global", "temporal_path")
+        username = getpass.getuser()
+        base_working_dir = Path(tempfile.gettempdir()) / f"{tmp_path_prefix}_{username}"
+        manage_files.create_dir(base_working_dir, clean_first=False, all=True)
+
+        # Remove old executions (older than 24 hours)
+        current_time = time.time()
+        for execution_path in base_working_dir.iterdir():
+            if current_time - execution_path.stat().st_mtime >= 24 * 3600:
+                shutil.rmtree(execution_path)
+
+        return base_working_dir / Path(str(uuid.uuid4()))
+
+    def get_launcher_dwo(self) -> Path:
+        """Get the Dynawo launcher path.
+
+        Returns
+        -------
+        Path
+            Dynawo launcher path.
         """
         return self._launcher_dwo
 
     def get_selected_pcs(self) -> str:
-        """Get the selected PCS
+        """Get the name of the selected PCS.
 
         Returns
         -------
         str
-            PCS name
+            PCS name.
         """
         return self._selected_pcs
 
     def get_producer(self) -> Producer:
-        """Get the producer model
+        """Get the Producer object.
 
         Returns
         -------
         Producer
-            Producer
+            The Producer object containing model and curve information.
         """
         return self._producer
 
     def get_working_dir(self) -> Path:
-        """Get the temporal working directory.
+        """Get the temporal working directory path.
 
         Returns
         -------
         Path
-            Temporal working directory
+            Temporal working directory path.
         """
         return self._working_dir
 
     def get_output_dir(self) -> Path:
-        """Get the user output directory.
+        """Get the user output directory path.
 
         Returns
         -------
         Path
-            User output directory
+            User output directory path.
         """
         return self._output_dir
 
     def get_sim_type(self) -> int:
-        """Get the executed validation type:
-            * 0 if it is an electrical performance for Synchronous Machine Model
-            * 1 if it is an electrical performance for Power Park Module Model
-            * 2 if it is an electrical performance for Storage Model
-            * 10 if it is a model validation for Power Park Module Model
-            * 11 if it is a model validation for Storage Model
+        """Get the executed validation type.
 
         Returns
         -------
         int
-            Validation type
+            Validation type:
+            * 1: Electrical performance for Synchronous Machine Model.
+            * 2: Electrical performance for Power Park Module Model.
+            * 3: Electrical performance for Storage Model.
+            * 11: Model validation for Power Park Module Model.
+            * 12: Model validation for Storage Model.
         """
         return self._producer.get_sim_type()
 
     def get_only_dtr(self) -> bool:
-        """Use only the PCS of the DTR:
+        """Check if only PCS defined in the DTR should be used.
 
         Returns
         -------
         bool
-            True if use only the PCS of the DTR
+            True if only DTR PCS should be used, False otherwise.
         """
         return self._only_dtr
 
@@ -161,49 +170,49 @@ class Parameters:
         Returns
         -------
         bool
-            True if the Dynawo model is valid, False otherwise
+            True if the Dynawo model is valid, False otherwise.
         """
         return self._producer.is_dynawo_model()
 
     def is_user_curves_valid(self) -> bool:
-        """Checks if the user curves are valid.
+        """Checks if the user-provided curves are valid.
 
         Returns
         -------
         bool
-            True if the user curves are valid, False otherwise
+            True if the user curves are valid, False otherwise.
         """
         return self._producer.is_user_curves()
 
-    def is_valid(self) -> bool:
-        """Checks if the execution of the tool is valid,
-        for this the tool must have the dynamic model of the user or, failing that, the
-        curves file.
-
-        Returns
-        -------
-        bool
-            True if it is a valid execution, False otherwise
-        """
-        return self.is_dynawo_model_valid() or self.is_user_curves_valid()
-
     def has_reference_curves_path(self) -> bool:
-        """Check if there are reference curves directory.
+        """Check if a reference curves directory is provided.
 
         Returns
         -------
         bool
-            True if has a reference curves directory, False otherwise
+            True if a reference curves directory exists, False otherwise.
         """
         return self._producer.has_reference_curves_path()
 
-    def is_complete(self) -> bool:
-        """Checks if the execution of the tool is complete,
-        for this the tool must have the dynamic model of the user and the curves file.
+    def is_valid(self) -> bool:
+        """Checks if the execution of the tool is valid.
+        The tool requires either a valid dynamic model or valid user curves.
 
         Returns
         -------
         bool
-            True if it is a complete execution, False otherwise
+            True if it is a valid execution, False otherwise.
+        """
+        return self.is_dynawo_model_valid() or self.is_user_curves_valid()
+
+    def is_complete(self) -> bool:
+        """Checks if the execution of the tool is complete.
+        For a complete execution, both a valid dynamic model (or user curves) and
+        reference curves must be available.
+
+        Returns
+        -------
+        bool
+            True if it is a complete execution, False otherwise.
         """
         return self.is_valid() and self.has_reference_curves_path()

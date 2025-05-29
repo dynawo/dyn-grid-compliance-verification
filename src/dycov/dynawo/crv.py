@@ -248,9 +248,9 @@ def create_curves_file(
     rte_loads: list
         Loads in the TSO side, if the model have loads
     sim_type: int
-        0 if it is an electrical performance for Synchronous Machine Model
-        1 if it is an electrical performance for Power Park Module Model
-        2 if it is a model validation
+        1 if it is an electrical performance for Synchronous Machine Model
+        2 if it is an electrical performance for Power Park Module Model
+        3 if it is a model validation
     zone: int
         If it is running the Model Validation:
         * 1: Zone1 (the individual generating unit)

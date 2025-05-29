@@ -23,7 +23,7 @@ from dycov.core.global_variables import (
 )
 from dycov.files import model_parameters
 from dycov.logging.logging import dycov_logging
-from dycov.sanity_checks import file_checks, parameter_checks
+from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
@@ -52,7 +52,7 @@ class Producer:
         Directory to the User Curves, if it is given
     verification_type: int
         0 if it is an electrical performance verification
-        1 if it is a model validation
+        10 if it is a model validation
     """
 
     def __init__(
@@ -120,7 +120,7 @@ class Producer:
                 self.get_producer_par(),
                 self._s_nref,
             )
-            sm_models, ppm_models, bess_models = file_checks.check_generators(generators)
+            sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
             file_checks.check_performance_curves(self._producer_curves_path)
             default_section = "DEFAULT"
@@ -241,7 +241,7 @@ class Producer:
                 self._s_nref,
             )
             generators_z3 += generators
-        sm_models, ppm_models, bess_models = file_checks.check_generators(
+        sm_models, ppm_models, bess_models = parameter_checks.check_generators(
             generators_z1, generators_z3
         )
         self._zone = 0
@@ -335,7 +335,7 @@ class Producer:
         self.s_nom = sum(gen.SNom for gen in self.generators)
 
         # Check sanity of the producer network
-        file_checks.check_topology(
+        topology_checks.check_topology(
             self.topology,
             self.generators,
             self.stepup_xfmrs,
@@ -344,12 +344,12 @@ class Producer:
             self.ppm_xfmr,
             self.intline,
         )
-        file_checks.check_trafos(self.stepup_xfmrs)
-        file_checks.check_auxiliary_load(self.aux_load)
-        file_checks.check_trafo(self.auxload_xfmr)
-        file_checks.check_trafo(self.ppm_xfmr)
-        file_checks.check_internal_line(self.intline)
-        file_checks.check_generators(self.generators)
+        parameter_checks.check_trafos(self.stepup_xfmrs)
+        parameter_checks.check_auxiliary_load(self.aux_load)
+        parameter_checks.check_trafo(self.auxload_xfmr)
+        parameter_checks.check_trafo(self.ppm_xfmr)
+        parameter_checks.check_internal_line(self.intline)
+        parameter_checks.check_generators(self.generators)
 
     def __get_file_by_pattern(self, pattern) -> Path:
         if self._producer_model_path is not None:
@@ -587,11 +587,11 @@ class Producer:
         Returns
         -------
         int
-            0 if it is an electrical performance for Synchronous Machine Model
-            1 if it is an electrical performance for Power Park Module Model
-            2 if it is an electrical performance for Storage Model
-            10 if it is a model validation for Power Park Module Model
-            11 if it is a model validation for Storage Model
+            1 if it is an electrical performance for Synchronous Machine Model
+            2 if it is an electrical performance for Power Park Module Model
+            3 if it is an electrical performance for Storage Model
+            11 if it is a model validation for Power Park Module Model
+            12 if it is a model validation for Storage Model
         """
         return self._sim_type
 
