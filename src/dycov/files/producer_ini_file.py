@@ -15,8 +15,13 @@ from dycov.logging.logging import dycov_logging
 
 def _create_producer_ini_file(
     target: Path,
+    filename: str,
     topology: str,
 ) -> None:
+
+    if (target / "Producer.ini").exists():
+        (target / "Producer.ini").rename(target / filename)
+
     producer_ini_txt = (
         f"# p_{{max_unite}} injection as defined by the DTR in MW\n"
         f"p_max_injection =\n"
@@ -34,14 +39,15 @@ def _create_producer_ini_file(
         f"# topology\n"
         f"topology = {topology}\n"
     )
-    with open(target / "Producer.ini", "w") as f:
+
+    with open(target / filename, "w") as f:
         f.write(producer_ini_txt)
 
 
-def _check_ini_parameters(target: Path) -> bool:
+def _check_ini_parameters(target: Path, filename: str) -> bool:
 
     default_section = "DEFAULT"
-    with open(target / "Producer.ini", "r") as f:
+    with open(target / filename, "r") as f:
         producer_ini_txt = "[" + default_section + "]\n" + f.read()
 
     producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -83,10 +89,14 @@ def create_producer_ini_file(
         * 'model_BESS' if it is model validation for Storage Model
     """
     if template.startswith("model"):
-        _create_producer_ini_file(target / "Zone1", "S")
-        _create_producer_ini_file(target / "Zone3", topology)
+        if topology.casefold().startswith("m"):
+            _create_producer_ini_file(target / "Zone1", "Producer_G1.ini", "S")
+            _create_producer_ini_file(target / "Zone1", "Producer_G2.ini", "S")
+        else:
+            _create_producer_ini_file(target / "Zone1", "Producer.ini", "S")
+        _create_producer_ini_file(target / "Zone3", "Producer.ini", topology)
     else:
-        _create_producer_ini_file(target, topology)
+        _create_producer_ini_file(target, "Producer.ini", topology)
 
 
 def check_ini_parameters(target: Path, template: str) -> bool:
@@ -110,8 +120,11 @@ def check_ini_parameters(target: Path, template: str) -> bool:
         False if there are empty values in the INI file
     """
     if template.startswith("model"):
-        check_zone1 = _check_ini_parameters(target / "Zone1")
-        check_zone3 = _check_ini_parameters(target / "Zone3")
-        return check_zone1 and check_zone3
+        ini_files = list((target / "Zone1").glob("*.[iI][nN][iI]"))
+        for ini_file in ini_files:
+            if not _check_ini_parameters(target / "Zone1", ini_file.name):
+                return False
+        check_zone3 = _check_ini_parameters(target / "Zone3", "Producer.ini")
+        return check_zone3
     else:
-        return _check_ini_parameters(target)
+        return _check_ini_parameters(target, "Producer.ini")
