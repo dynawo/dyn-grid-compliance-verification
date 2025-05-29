@@ -99,9 +99,9 @@ class Validator:
         Returns
         -------
         int
-            0 if it is an electrical performance for Synchronous Machine Model
-            1 if it is an electrical performance for Power Park Module Model
-            2 if it is a model validation
+            1 if it is an electrical performance for Synchronous Machine Model
+            2 if it is an electrical performance for Power Park Module Model
+            3 if it is a model validation
         """
         return self._producer.get_sim_type()
 
