@@ -25,12 +25,9 @@ def _get_input(text):
 
 def _copy_input_templates(target: Path, template: str) -> None:
     input_templates_path = config.get_value("Global", "input_templates_path")
-    if template == "performance_SM":
-        manage_files.copy_path(Path(input_templates_path) / "performance/SM", target)
-    elif template in ["performance_PPM", "performance_BESS"]:
-        manage_files.copy_path(Path(input_templates_path) / "performance/PPM", target)
-    elif template.startswith("model"):
-        manage_files.copy_path(Path(input_templates_path) / "model", target)
+    manage_files.copy_path(
+        Path(input_templates_path) / template.replace("_", "/"), target, dirs_exist_ok=True
+    )
 
 
 def _create_dyd_template(target: Path, topology: str, template: str) -> None:
@@ -52,7 +49,7 @@ def _create_par_template(launcher_dwo: Path, target: Path, topology: str, templa
     dycov_logging.get_logger("Create Input Files").info(
         f"Creating the input PAR file in {target}."
     )
-    create_producer_par_file(launcher_dwo, target, template)
+    create_producer_par_file(launcher_dwo, target, topology, template)
     _get_input("Edit Producer.par to complete each parameter with a value. Press Enter when done.")
     while not check_parameters(target, template):
         _get_input(

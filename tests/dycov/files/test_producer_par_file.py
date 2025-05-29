@@ -69,7 +69,10 @@ class TestProducerParFile:
 
         # Create PAR file
         create_producer_par_file(
-            launcher_dwo=Path("dummy_launcher"), target=dyd_dir, template="performance_SM"
+            launcher_dwo=Path("dummy_launcher"),
+            target=dyd_dir,
+            topology="S",
+            template="performance_SM",
         )
 
         # Check that Producer.par exists and has correct parameters
@@ -102,7 +105,10 @@ class TestProducerParFile:
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
         # Run
         create_producer_par_file(
-            launcher_dwo=Path("dummy_launcher"), target=tmp_path, template="model_PPM"
+            launcher_dwo=Path("dummy_launcher"),
+            target=tmp_path,
+            topology="S",
+            template="model_PPM",
         )
         # Check both Zone1/Producer.par and Zone3/Producer.par exist
         for zone in [zone1, zone3]:
@@ -132,7 +138,10 @@ class TestProducerParFile:
 
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
         create_producer_par_file(
-            launcher_dwo=Path("dummy_launcher"), target=tmp_path, template="performance_SM"
+            launcher_dwo=Path("dummy_launcher"),
+            target=tmp_path,
+            topology="S",
+            template="performance_SM",
         )
         assert check_parameters(tmp_path, "performance_SM") is True
 
@@ -148,7 +157,10 @@ class TestProducerParFile:
 
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
         create_producer_par_file(
-            launcher_dwo=Path("dummy_launcher"), target=tmp_path, template="performance_SM"
+            launcher_dwo=Path("dummy_launcher"),
+            target=tmp_path,
+            topology="S",
+            template="performance_SM",
         )
         captured = capsys.readouterr()
         assert "Error: libMissing.desc.xml file not found" in captured.out
@@ -175,7 +187,10 @@ class TestProducerParFile:
 
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
         create_producer_par_file(
-            launcher_dwo=Path("dummy_launcher"), target=tmp_path, template="performance_SM"
+            launcher_dwo=Path("dummy_launcher"),
+            target=tmp_path,
+            topology="S",
+            template="performance_SM",
         )
 
         # Patch logger to capture error
@@ -207,7 +222,10 @@ class TestProducerParFile:
 
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
         create_producer_par_file(
-            launcher_dwo=Path("dummy_launcher"), target=tmp_path, template="performance_SM"
+            launcher_dwo=Path("dummy_launcher"),
+            target=tmp_path,
+            topology="S",
+            template="performance_SM",
         )
         # Only one <set> should be present (for BB1)
         par_file = tmp_path / "Producer.par"
