@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.dynawo import dynawo
+from dycov.curves.dynawo import dynawo
 from dycov.files import manage_files
 
 

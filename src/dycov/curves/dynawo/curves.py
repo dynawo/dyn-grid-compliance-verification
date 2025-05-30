@@ -17,13 +17,13 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.execution_parameters import Parameters
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
-from dycov.dynawo import crv, dynawo
-from dycov.dynawo.dyd import DydFile
-from dycov.dynawo.jobs import JobsFile
-from dycov.dynawo.par import ParFile
-from dycov.dynawo.solvers import SolversFile
-from dycov.dynawo.table import TableFile
-from dycov.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo import crv, dynawo
+from dycov.curves.dynawo.dyd import DydFile
+from dycov.curves.dynawo.jobs import JobsFile
+from dycov.curves.dynawo.par import ParFile
+from dycov.curves.dynawo.solvers import SolversFile
+from dycov.curves.dynawo.table import TableFile
+from dycov.curves.dynawo.translator import dynawo_translator
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel

@@ -28,7 +28,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.dynawo import dynawo
+from dycov.curves.dynawo import dynawo
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer

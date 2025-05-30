@@ -10,7 +10,7 @@
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.dynawo.file_variables import FileVariables
+from dycov.curves.dynawo.file_variables import FileVariables
 
 
 class DummyProducer:

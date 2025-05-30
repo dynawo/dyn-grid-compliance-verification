@@ -13,7 +13,7 @@ Dynamic grid Compliance Verification API
    dycov.curves.anonymizer
    dycov.curves.curves_factory
    dycov.curves.manager
-   dycov.dynawo.prepare_tool
+   dycov.curves.dynawo.prepare_tool
    dycov.model.benchmark
    dycov.model.operating_condition
    dycov.model.pcs
