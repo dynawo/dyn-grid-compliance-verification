@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from dycov.dynawo.dynawo import (
+from dycov.curves.dynawo.dynawo import (
     _create_curves,
     _get_magnitude_controlled_by_avr,
     _get_modulus,
@@ -50,7 +50,7 @@ class DummyLogger:
 @pytest.fixture(autouse=True)
 def patch_dycov_logging(monkeypatch):
     dummy_logger = DummyLogger()
-    monkeypatch.setattr("dycov.dynawo.dynawo.dycov_logging", dummy_logger)
+    monkeypatch.setattr("dycov.logging.logging.dycov_logging", dummy_logger)
     return dummy_logger
 
 
@@ -140,7 +140,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
 
     # Mock _trim_curves to return controlled values
     mocker.patch(
-        "dycov.dynawo.dynawo._trim_curves",
+        "dycov.curves.dynawo.dynawo._trim_curves",
         return_value=(
             [0.0, 0.1],  # pre_time_values
             [0.2, 0.3, 0.4, 0.5],  # post_time_values
@@ -150,12 +150,12 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
     )
 
     # Mock is_stable to return expected values
-    mock_is_stable = mocker.patch("dycov.dynawo.dynawo.is_stable")
+    mock_is_stable = mocker.patch("dycov.curves.dynawo.dynawo.is_stable")
     mock_is_stable.side_effect = [(True, 0), (True, 0)]
 
     # Mock logger
     mock_logger = mocker.MagicMock()
-    mocker.patch("dycov.dynawo.dynawo.dycov_logging.get_logger", return_value=mock_logger)
+    mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
     result = check_voltage_dip(
@@ -181,7 +181,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
 
     # Mock _trim_curves to verify it's called with adjusted fault_duration
     mock_trim_curves = mocker.patch(
-        "dycov.dynawo.dynawo._trim_curves",
+        "dycov.curves.dynawo.dynawo._trim_curves",
         return_value=(
             [0.0, 0.1],  # pre_time_values
             [0.2, 0.3, 0.4, 0.5],  # post_time_values
@@ -191,12 +191,12 @@ def test_fault_duration_exceeds_simulation_time(mocker):
     )
 
     # Mock is_stable
-    mock_is_stable = mocker.patch("dycov.dynawo.dynawo.is_stable")
+    mock_is_stable = mocker.patch("dycov.curves.dynawo.dynawo.is_stable")
     mock_is_stable.side_effect = [(True, 0), (True, 0)]
 
     # Mock logger
     mock_logger = mocker.MagicMock()
-    mocker.patch("dycov.dynawo.dynawo.dycov_logging.get_logger", return_value=mock_logger)
+    mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
     result = check_voltage_dip(
@@ -257,14 +257,16 @@ def test_empty_input_lists():
 # Successfully processes a valid input file and returns a DataFrame with transformed curves
 def test_valid_input_file_processing(mocker):
     # Mock dependencies
-    mock_translate_curves = mocker.patch("dycov.dynawo.dynawo._translate_curves")
-    mock_get_pdr_voltage = mocker.patch("dycov.dynawo.dynawo._get_pdr_voltage")
-    mock_get_modulus = mocker.patch("dycov.dynawo.dynawo._get_modulus")
-    mock_get_pdr_current = mocker.patch("dycov.dynawo.dynawo._get_pdr_current")
-    mock_get_pdr_active_power = mocker.patch("dycov.dynawo.dynawo._get_pdr_active_power")
-    mock_get_pdr_reactive_power = mocker.patch("dycov.dynawo.dynawo._get_pdr_reactive_power")
+    mock_translate_curves = mocker.patch("dycov.curves.dynawo.dynawo._translate_curves")
+    mock_get_pdr_voltage = mocker.patch("dycov.curves.dynawo.dynawo._get_pdr_voltage")
+    mock_get_modulus = mocker.patch("dycov.curves.dynawo.dynawo._get_modulus")
+    mock_get_pdr_current = mocker.patch("dycov.curves.dynawo.dynawo._get_pdr_current")
+    mock_get_pdr_active_power = mocker.patch("dycov.curves.dynawo.dynawo._get_pdr_active_power")
+    mock_get_pdr_reactive_power = mocker.patch(
+        "dycov.curves.dynawo.dynawo._get_pdr_reactive_power"
+    )
     mock_get_magnitude_controlled_by_avr = mocker.patch(
-        "dycov.dynawo.dynawo._get_magnitude_controlled_by_avr"
+        "dycov.curves.dynawo.dynawo._get_magnitude_controlled_by_avr"
     )
 
     # Setup test data
@@ -298,7 +300,7 @@ def test_valid_input_file_processing(mocker):
     mock_get_pdr_reactive_power.return_value = [0.3, 0.3, 0.3]
 
     # Call function under test
-    from dycov.dynawo.dynawo import _create_curves
+    from dycov.curves.dynawo.dynawo import _create_curves
 
     result = _create_curves(variable_translations, input_file, generators, snom, snref)
 

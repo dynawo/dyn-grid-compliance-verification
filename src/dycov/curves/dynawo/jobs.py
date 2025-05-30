@@ -11,7 +11,7 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves
-from dycov.dynawo.file_variables import FileVariables
+from dycov.curves.dynawo.file_variables import FileVariables
 from dycov.files import replace_placeholders
 
 

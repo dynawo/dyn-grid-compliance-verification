@@ -10,7 +10,7 @@
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.dynawo.par import ParFile
+from dycov.curves.dynawo.par import ParFile
 from dycov.model.parameters import Gen_init
 
 

@@ -405,7 +405,7 @@ class TestDycovInitializer:
         )
         mock_initialize_logger = mocker.patch.object(dycov_initializer, "_initialize_logger")
         mock_prepare_dynawo_models = mocker.patch(
-            "dycov.dynawo.prepare_tool.precompile", return_value=False
+            "dycov.curves.dynawo.prepare_tool.precompile", return_value=False
         )  # Even if it's not called, define it
         mocker.patch("dycov.core.initialization.version", return_value="test_version")
 

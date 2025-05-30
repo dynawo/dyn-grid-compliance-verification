@@ -19,7 +19,7 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
 from dycov.core.validation import Validation
 from dycov.curves import anonymizer
-from dycov.dynawo import prepare_tool
+from dycov.curves.dynawo import prepare_tool
 from dycov.logging.logging import dycov_logging
 
 

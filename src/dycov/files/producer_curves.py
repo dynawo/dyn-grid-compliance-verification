@@ -12,7 +12,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.translator import dynawo_translator
 from dycov.files import manage_files
 from dycov.files.model_parameters import find_bbmodel_by_type
 from dycov.logging.logging import dycov_logging
