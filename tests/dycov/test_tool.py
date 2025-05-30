@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from dycov.core.execution_parameters import Parameters
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.validation import Validation
 from dycov.model.compliance import Compliance
 
@@ -28,14 +29,14 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         only_dtr = True
         if producer_model_path:
             if "Performance" in producer_model_path:
-                sim_type = 0
+                sim_type = ELECTRIC_PERFORMANCE
             else:
-                sim_type = 1
+                sim_type = MODEL_VALIDATION
         else:
             if "Performance" in producer_curves_path:
-                sim_type = 0
+                sim_type = ELECTRIC_PERFORMANCE
             else:
-                sim_type = 1
+                sim_type = MODEL_VALIDATION
 
         ep = Parameters(
             Path(shutil.which("dynawo.sh")).resolve() if shutil.which("dynawo.sh") else None,
@@ -49,11 +50,12 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         )
         md = Validation(ep)
         md.set_testing(True)
-        compliance = md.validate()
+        compliance = md.validate(use_parallel=False, num_processes=4)
     except Exception as e:
         compliance = str(e)
     finally:
         shutil.rmtree(output_dir)
+        print(compliance)
         return compliance
 
 
@@ -81,9 +83,9 @@ def test_perf_sm_model():
 def test_perf_sm_curves():
     compliance = _execute_tool(None, f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous/", None)
     assert [
-        Compliance.NonCompliant,  # 0
+        Compliance.Compliant,  # 0
         Compliance.NonCompliant,  # 1
-        Compliance.Compliant,  # 2
+        Compliance.NonCompliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
@@ -132,9 +134,9 @@ def test_perf_ppm_model():
 def test_perf_ppm_curves():
     compliance = _execute_tool(None, f"{PERFORMANCE}/ProducerCurves/Wind", None)
     assert [
-        Compliance.NonCompliant,  # 0
+        Compliance.Compliant,  # 0
         Compliance.NonCompliant,  # 1
-        Compliance.Compliant,  # 2
+        Compliance.NonCompliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5

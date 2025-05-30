@@ -13,6 +13,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.configuration.cfg import config
+from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
 
@@ -82,6 +83,7 @@ def _write_params_par_file(producer_par_root: etree.Element, params_list: list, 
 def _create_producer_par_file(
     launcher_dwo: Path,
     target: Path,
+    filename: str,
 ) -> None:
 
     ddb_dynawo_path = _get_ddb_model_path(launcher_dwo)
@@ -90,7 +92,7 @@ def _create_producer_par_file(
         """<parametersSet xmlns="http://www.rte-france.com/dynawo"></parametersSet>"""
     )
 
-    models_dict = _get_bbmodels_info(target / "Producer.dyd")
+    models_dict = _get_bbmodels_info(target / filename.replace(".par", ".dyd"))
     for key, value in models_dict.items():
         if value["parId"] is None:
             continue
@@ -111,14 +113,12 @@ def _create_producer_par_file(
         )
     )
     producer_par_tree.write(
-        target / "Producer.par", encoding="utf-8", pretty_print=True, xml_declaration=True
+        target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True
     )
 
 
-def _check_parameters(target: Path) -> bool:
-    producer_par_tree = etree.parse(
-        target / "Producer.par", etree.XMLParser(remove_blank_text=True)
-    )
+def _check_parameters(target: Path, filename: str) -> bool:
+    producer_par_tree = etree.parse(target / filename, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
 
     success = True
@@ -140,6 +140,7 @@ def _check_parameters(target: Path) -> bool:
 def create_producer_par_file(
     launcher_dwo: Path,
     target: Path,
+    topology: str,
     template: str,
 ) -> None:
     """Create a PAR file in target path
@@ -150,6 +151,8 @@ def create_producer_par_file(
         Dynawo launcher
     target: Path
         Target path
+    topology: str
+        Topology to the DYD file
     template: str
         Input template name:
         * 'performance_SM' if it is electrical performance for Synchronous Machine Model
@@ -159,10 +162,22 @@ def create_producer_par_file(
         * 'model_BESS' if it is model validation for Storage Model
     """
     if template.startswith("model"):
-        _create_producer_par_file(launcher_dwo, target / "Zone1")
-        _create_producer_par_file(launcher_dwo, target / "Zone3")
+        if topology.casefold().startswith("m"):
+            manage_files.copy_file(
+                target / "Zone1" / "Producer.par", target / "Zone1" / "Producer_G1.par"
+            )
+            manage_files.copy_file(
+                target / "Zone1" / "Producer.par", target / "Zone1" / "Producer_G2.par"
+            )
+            (target / "Zone1" / "Producer.par").unlink()
+
+            _create_producer_par_file(launcher_dwo, target / "Zone1", "Producer_G1.par")
+            _create_producer_par_file(launcher_dwo, target / "Zone1", "Producer_G2.par")
+        else:
+            _create_producer_par_file(launcher_dwo, target / "Zone1", "Producer.par")
+        _create_producer_par_file(launcher_dwo, target / "Zone3", "Producer.par")
     else:
-        _create_producer_par_file(launcher_dwo, target)
+        _create_producer_par_file(launcher_dwo, target, "Producer.par")
 
 
 def check_parameters(target: Path, template: str) -> bool:
@@ -186,8 +201,11 @@ def check_parameters(target: Path, template: str) -> bool:
         False if there are empty values in the PAR file
     """
     if template.startswith("model"):
-        check_zone1 = _check_parameters(target / "Zone1")
-        check_zone3 = _check_parameters(target / "Zone3")
-        return check_zone1 and check_zone3
+        par_files = list((target / "Zone1").glob("*.[pP][aA][rR]"))
+        for par_file in par_files:
+            if not _check_parameters(target / "Zone1", par_file.name):
+                return False
+        check_zone3 = _check_parameters(target / "Zone3", "Producer.par")
+        return check_zone3
     else:
-        return _check_parameters(target)
+        return _check_parameters(target, "Producer.par")

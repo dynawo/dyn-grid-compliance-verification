@@ -10,9 +10,7 @@
     <par type="DOUBLE" name="line_BPu" value="0.0"/>
     <par type="DOUBLE" name="line_GPu" value="0.0"/>
   </set>
-  <set id="SetPoint">
-    <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
-    <par type="DOUBLE" name="step_Value0" value="{{event_pre_value}}"/>
-    <par type="DOUBLE" name="step_Height" value="{{event_step_value}}"/>
-  </set>
+  <!-- For each generator defined in the producer's input files, a definition for its 
+  setpoint model will be added, followed by a set of parameters specific to that setpoint 
+  model. -->
 </parametersSet>

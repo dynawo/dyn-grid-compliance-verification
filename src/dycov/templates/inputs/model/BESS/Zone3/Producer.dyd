@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
+  <!-- Define the dynamic models of the producer network -->
+  <!-- Define the producer network connections -->
+  <!-- Define the connection of the producer network to the network through the busPDR -->
+</dyn:dynamicModelsArchitecture>

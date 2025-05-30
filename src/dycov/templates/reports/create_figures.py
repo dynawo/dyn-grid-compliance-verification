@@ -3,11 +3,11 @@ import shutil
 import sys
 from pathlib import Path
 
-ELECTRIC_PERFORMANCE_SM = 0
-ELECTRIC_PERFORMANCE_PPM = 1
-ELECTRIC_PERFORMANCE_BESS = 2
-MODEL_VALIDATION_PPM = 10
-MODEL_VALIDATION_BESS = 11
+from dycov.core.global_variables import (
+    ELECTRIC_PERFORMANCE_BESS,
+    ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION_BESS,
+)
 
 
 def _get_pcs_name(pcs_name, simulation_type):
@@ -32,15 +32,15 @@ def _get_pcs_figures(pcs):
     return []
 
 
-def _create_pcs_figures(path, pcs):
+def _create_pcs_figures(path, pcs, producer):
     figures = _get_pcs_figures(pcs)
     for figure in figures:
-        shutil.copy(path / "fig_placeholder.pdf", path / figure)
+        shutil.copy(path / "fig_placeholder.pdf", path / f"{producer}_{figure}")
 
 
-def create_figures(path, pcs_name, simulation_type):
+def create_figures(path, producer, pcs_name, simulation_type):
     pcs = _get_pcs_name(pcs_name, simulation_type)
-    _create_pcs_figures(path, pcs)
+    _create_pcs_figures(path, pcs, producer)
 
 
 if __name__ == "__main__":
