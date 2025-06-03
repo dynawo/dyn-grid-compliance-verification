@@ -213,10 +213,12 @@ def _is_composed_setpoint(
         return False  # If the control mode is not one of those affected, False is returned.
 
     if tool_variable == control_variable:
-        return False  # If the input variable is the complementary variable to the control mode, False is returned.
+        return False  # If the input variable is the complementary variable to the control mode,
+        # False is returned.
 
     # If the model defines different variables for the Q and V setpoints, False is returned.
-    # The comparison should be with the dynawo variable obtained from the generator_lib and control_variable
+    # The comparison should be with the dynawo variable obtained from the generator_lib and
+    # control_variable
     _, expected_dynawo_variable = dynawo_translator.get_dynawo_variable(
         generator_lib, control_variable
     )

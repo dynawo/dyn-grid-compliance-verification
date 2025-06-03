@@ -369,7 +369,8 @@ class ImportedCurves(ProducerCurves):
         oc_name: str
             Operating Condition name
         reference_event_start_time: float
-            Instant of time when the event is triggered in reference curves (not directly used but can be for future validation).
+            Instant of time when the event is triggered in reference curves
+            (not directly used but can be for future validation).
 
         Returns
         -------
