@@ -11,15 +11,16 @@
 import argparse
 import os
 import shutil
-import sys  # Added for sys.exit
+import sys
 
 from dycov.logging.logging import dycov_logging
 from dycov.sanity_checks import system_checks
 
+_LOGGER = dycov_logging.get_logger("CliUtils")
 
-def get_dynawo_launcher_name(p: argparse.ArgumentParser, args: argparse.Namespace) -> str:
-    """
-    Determines the name or path of the Dynawo launcher.
+
+def get_dynawo_launcher_name(parser: argparse.ArgumentParser, args: argparse.Namespace) -> str:
+    """Determines the name or path of the Dynawo launcher.
 
     This function first attempts to retrieve the Dynawo launcher path from the provided
     command-line arguments. If not found, it defaults to a system-specific launcher name
@@ -29,39 +30,46 @@ def get_dynawo_launcher_name(p: argparse.ArgumentParser, args: argparse.Namespac
 
     Parameters
     ----------
-    p : argparse.ArgumentParser
+    parser: argparse.ArgumentParser
         The argument parser, used for raising errors and printing help messages.
-    args : argparse.Namespace
-        The parsed command-line arguments, containing the 'dwo_launcher' and 'command' attributes.
+    args: argparse.Namespace
+        The parsed command-line arguments, containing the 'launcher' and 'command'
+        attributes.
 
     Returns
     -------
     str
         The resolved name or path of the Dynawo launcher.
     """
+    _LOGGER.debug("Getting Dynawo launcher name.")
     # Attempt to get the launcher from the arguments.
-    dwo_launcher_name = getattr(args, "dwo_launcher", None)
+    dynawo_launcher_name = getattr(args, "launcher", None)
 
-    if not dwo_launcher_name:
-        # If no launcher is provided, use the default name based on the operating system.
-        dwo_launcher_name = "dynawo.cmd" if os.name == "nt" else "dynawo.sh"
+    if not dynawo_launcher_name:
+        # Default to system-specific launcher name if not provided.
+        dynawo_launcher_name = "dynawo.cmd" if os.name == "nt" else "dynawo.sh"
+        _LOGGER.debug(f"No launcher specified, defaulting to: {dynawo_launcher_name}")
 
         # If the default launcher is not found in the system PATH
         # and the command is not 'anonymize' (which doesn't need it), show an error.
-        if shutil.which(dwo_launcher_name) is None and args.command != "anonymize":
-            p.error(
+        if shutil.which(dynawo_launcher_name) is None and args.command != "anonymize":
+            _LOGGER.critical(
+                f"The default Dynawo launcher '{dynawo_launcher_name}' has not "
+                "been found in PATH. Please provide a correct path using the -l argument."
+            )
+            parser.error(
                 "The default Dynawo launcher has not been found, please "
                 "provide a correct path using the -l argument."
             )
-            p.print_help()
-            sys.exit(1)  # Terminate execution if the launcher is essential and not found.
+            # sys.exit(1) is handled by the calling function's error handling.
+            # No explicit exit here to allow for centralized error management.
 
-    return dwo_launcher_name
+    _LOGGER.info(f"Dynawo launcher resolved to: {dynawo_launcher_name}")
+    return dynawo_launcher_name
 
 
-def check_dynawo_launcher_availability(dwo_launcher_name: str) -> None:
-    """
-    Checks the availability of the Dynawo launcher in the system's executable path.
+def check_dynawo_launcher_availability(dynawo_launcher_name: str) -> None:
+    """Checks the availability of the Dynawo launcher in the system's executable path.
 
     This function calls an external utility to verify if the specified Dynawo launcher
     can be found and executed by the system. If the launcher is not found or is not
@@ -69,13 +77,15 @@ def check_dynawo_launcher_availability(dwo_launcher_name: str) -> None:
 
     Parameters
     ----------
-    dwo_launcher_name : str
+    dynawo_launcher_name: str
         The name or path of the Dynawo launcher to check.
     """
+    _LOGGER.info(f"Checking Dynawo launcher availability: {dynawo_launcher_name}")
     try:
         # Calls the launcher check function from the sanity_checks module.
-        system_checks.check_launchers(dwo_launcher_name)
+        system_checks.check_launchers(dynawo_launcher_name)
+        _LOGGER.debug(f"Dynawo launcher '{dynawo_launcher_name}' is available.")
     except OSError as e:
         # If an OSError occurs (due to missing launchers), logs it and exits.
-        dycov_logging.get_logger("Launchers").error(e)
-        sys.exit(1)  # Exit with an error code to indicate failure
+        _LOGGER.critical(f"Dynawo launcher check failed: {e}")
+        sys.exit(1)

@@ -369,7 +369,3 @@ class DycovInitializer:
                         if user_config.has_option(current_section, key):
                             # Overwrite with user's existing value if present.
                             output_file.write(f"{key} = {user_config.get(current_section, key)}\n")
-
-
-# Instantiate the initializer for external use
-dycov_initializer = DycovInitializer()

@@ -9,9 +9,9 @@
 #
 from pathlib import Path
 
-from dycov.configuration.cfg import config  # type: ignore
-from dycov.curves.dynawo.dynawo import DynawoSimulator  # type: ignore
-from dycov.files import manage_files  # type: ignore
+from dycov.configuration.cfg import config
+from dycov.curves.dynawo.dynawo import DynawoSimulator
+from dycov.files import manage_files
 
 
 def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
