@@ -371,7 +371,8 @@ class DynawoSimulator:
             A tuple containing:
             - bool: True if the simulation completed successfully (no errors in log,
             no timeout, "succeeded" in stderr).
-            - Optional[str]: Log output from stderr if an error occurred or timeout, otherwise None.
+            - Optional[str]: Log output from stderr if an error occurred or timeout,
+            otherwise None.
             - bool: True if an error was found in the Dynawo timeline log, False otherwise.
             - pd.DataFrame: A DataFrame with the transformed and calculated curves. Empty
             if save_file is False or simulation failed.
