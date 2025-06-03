@@ -55,7 +55,6 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
         compliance = str(e)
     finally:
         shutil.rmtree(output_dir)
-        print(compliance)
         return compliance
 
 
