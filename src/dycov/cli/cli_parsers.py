@@ -10,7 +10,52 @@
 
 import argparse
 from importlib.metadata import version
+from pathlib import Path
 from typing import Optional
+
+from dycov.logging.logging import dycov_logging
+
+_LOGGER = dycov_logging.get_logger("CliParsers")
+
+
+def setup_cli_parsers() -> argparse.ArgumentParser:
+    """Sets up the command-line argument parsers for the DYCOV tool.
+
+    This function defines the main parser and its subparsers for various
+    DYCOV commands like validate, performance, generate, compile, and anonymize.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured argument parser.
+    """
+    _LOGGER.info("Setting up CLI parsers.")
+    main_parser = argparse.ArgumentParser(
+        prog="dycov",
+        description="Dynamic grid Compliance Verification tool.",
+        epilog="Use 'dycov <command> --help' for more information on a specific command.",
+    )
+
+    # Add global arguments
+    main_parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"%(prog)s {version('dycov')}",
+        help="Show program's version number and exit.",
+    )
+    _add_debug_argument(main_parser)
+
+    # Set up subparsers for different commands
+    subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
+
+    _add_validate_subparser(subparsers)
+    _add_performance_subparser(subparsers)
+    _add_generate_subparser(subparsers)
+    _add_compile_subparser(subparsers)
+    _add_anonymize_subparser(subparsers)
+
+    return main_parser
 
 
 def _add_argument(
@@ -22,324 +67,517 @@ def _add_argument(
     arg_type: Optional[type] = None,
     choices: Optional[list] = None,
     nargs: Optional[str] = None,
-    is_required: bool = False,  # Renamed from 'required' to avoid conflict and for clarity
+    is_required: bool = False,
 ) -> None:
     """Helper function to add an argument to a parser, dynamically including only
-    non-None parameters and handling 'required' based on argument type (positional vs. optional).
-    """
-    kwargs = {
-        "help": help_msg,
-    }
+    non-None parameters and handling 'required' based on argument type (positional
+    vs. optional).
 
-    # Determine if it's an optional argument (starts with '-')
-    # 'required' is only valid for optional arguments. Positional arguments are required
-    # by default.
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    *args: str
+        The argument names (e.g., "-d", "--debug").
+    help_msg: str
+        The help message for the argument.
+    action: Optional[str]
+        The action to be taken when this argument is encountered.
+    default: Optional[any]
+        The default value for the argument if it's not provided.
+    arg_type: Optional[type]
+        The type to which the command-line argument should be converted.
+    choices: Optional[list]
+        A container of the allowable values for the argument.
+    nargs: Optional[str]
+        The number of command-line arguments that should be consumed.
+    is_required: bool
+        Whether the argument is required.
+    """
+    kwargs = {"help": help_msg}
+
+    # 'required' is only valid for optional arguments. Positional arguments are
+    # required by default unless nargs is '?' or '*'.
     is_optional_arg = any(arg.startswith("-") for arg in args)
 
     if is_required and is_optional_arg:
         kwargs["required"] = True
-    # For positional arguments, 'required' is implicitly True if nargs is not '?' or '*'
-    # and should not be explicitly set in add_argument, as it causes a TypeError.
-    # We do not add 'required=False' for optional args if is_required is False,
-    # as this is the default behavior.
-
-    if action is not None:
+    if action:
         kwargs["action"] = action
     if default is not None:
         kwargs["default"] = default
-    if arg_type is not None:
+    if arg_type:
         kwargs["type"] = arg_type
-    if choices is not None:
+    if choices:
         kwargs["choices"] = choices
-    if nargs is not None:
+    if nargs:
         kwargs["nargs"] = nargs
 
-    parser.add_argument(
-        *args,
-        **kwargs,
-    )
+    parser.add_argument(*args, **kwargs)
+    _LOGGER.debug(f"Added argument {args} to parser with help: {help_msg}")
 
 
-def _add_testing_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the optional --testing argument to the parser."""
+def _add_debug_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--debug' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
     _add_argument(
-        parser, "--testing", action="store_true", help_msg=argparse.SUPPRESS, default=False
+        parser,
+        "-d",
+        "--debug",
+        action="store_true",
+        help_msg="Enable debug logging.",
     )
 
 
-def _add_launcher_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --dwo_launcher argument to the parser."""
+def _add_launcher_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--launcher' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
     _add_argument(
         parser,
         "-l",
-        "--dwo_launcher",
-        is_required=required,
-        help_msg="path to the Dynawo launcher",
-        default=None,
+        "--launcher",
+        arg_type=str,
+        help_msg=(
+            "Dynawo launcher for the tool (e.g., dynawo.sh). If not "
+            "provided, the tool will try to find it from the PATH "
+            "environment variable."
+        ),
     )
 
 
-def _add_output_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --output_dir argument to the parser."""
-    _add_argument(
-        parser,
-        "-o",
-        "--output_dir",
-        is_required=required,
-        help_msg="path to the output directory",
-        default=None,
-    )
+def _add_model_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the '--model' argument to the given parser.
 
-
-def _add_model_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --producer_model argument to the parser."""
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Path to the Dynawo model files (DYD, PAR, INI)."
+    if explain:
+        help_msg += f" {explain}"
     _add_argument(
         parser,
         "-m",
-        "--producer_model",
-        is_required=required,
-        help_msg="path to the directory containing the producer's RMS model files (DYD, PAR, INI)",
-        default=None,
+        "--model",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
     )
 
 
-def _add_curves_argument(
-    parser: argparse.ArgumentParser, explain: str, required: bool = False
+def _add_output_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
 ) -> None:
-    """Adds the --producer_curves argument to the parser."""
+    """Adds the '--output' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Path to the output directory."
+    if explain:
+        help_msg += f" {explain}"
     _add_argument(
         parser,
-        "-c",
-        "--producer_curves",
-        is_required=required,
-        help_msg=f"path to the directory containing producer's curves {explain}",
-        default=None,
+        "-o",
+        "--output",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
     )
 
 
-def _add_verification_results_path(
-    parser: argparse.ArgumentParser, required: bool = False
+def _add_topology_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
 ) -> None:
-    """Adds the --results_path argument to the parser."""
-    _add_argument(
-        parser,
-        "-r",
-        "--results_path",
-        is_required=required,
-        help_msg="path to the results directory of a model verification",
-        default=None,
-    )
+    """Adds the '--topology' argument to the given parser.
 
-
-def _add_reference_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the --reference_curves argument to the parser."""
-    # This is a positional argument, 'required' parameter should not be passed to
-    # add_argument for it.
-    # 'nargs="?"' makes it optional anyway.
-    _add_argument(
-        parser,
-        "reference_curves",
-        nargs="?",
-        help_msg="path to the directory containing the reference curves used for validation",
-        default=None,
-        is_required=False,  # Explicitly set to False, as it's optional positional due to nargs="?"
-    )
-
-
-def _add_pcs_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --pcs argument to the parser."""
-    _add_argument(
-        parser,
-        "-p",
-        "--pcs",
-        is_required=required,
-        help_msg="run only the given Performance Checking Sheet (PCS)",
-        default=None,
-    )
-
-
-def _add_topology_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --topology argument to the parser."""
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Choice of topology to implement in the DYD file"
+    if explain:
+        help_msg += f" {explain}"
     _add_argument(
         parser,
         "-t",
         "--topology",
-        is_required=required,
-        help_msg="choice of topology to implement in the DYD file",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
         choices=["S", "S+i", "S+Aux", "S+Aux+i", "M", "M+i", "M+Aux", "M+Aux+i"],
-        default=None,
     )
 
 
-def _add_validation_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --validation argument to the parser."""
+def _add_curves_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the '--curves' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Path to the directory containing the curves to be used."
+    if explain:
+        help_msg += f" {explain}"
+    _add_argument(
+        parser,
+        "-c",
+        "--curves",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
+    )
+
+
+def _add_reference_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the 'reference' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Path to the directory containing the reference curves to be used."
+    if explain:
+        help_msg += f" {explain}"
+    _add_argument(
+        parser,
+        "reference",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
+    )
+
+
+def _add_validation_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the '--validation' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Choice of process, performance verification (SM, PPM or BESS) vs. RMS model validation (PPM or BESS)"
+    if explain:
+        help_msg += f" {explain}"
     _add_argument(
         parser,
         "-v",
         "--validation",
-        is_required=required,
-        help_msg="choice of processs, performance verification (SM, PPM or BESS) "
-        "vs. RMS model validation (PPM or BESS)",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
         choices=["performance_SM", "performance_PPM", "model_PPM", "model_BESS"],
-        default=None,
     )
 
 
-def _add_dynamic_model_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --dynawo_model argument to the parser."""
+def _add_pcs_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--pcs' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
     _add_argument(
         parser,
-        "-m",
-        "--dynawo_model",
-        is_required=required,
-        help_msg="XML file describing a custom Modelica model",
-        default=None,
-    )
-
-
-def _add_force_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --force argument to the parser."""
-    _add_argument(
-        parser,
-        "-f",
-        "--force",
-        is_required=required,
-        action="store_true",
-        help_msg="force the recompilation of all Modelica models (the user's and the tool's own)",
-    )
-
-
-def _add_noise_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --noisestd argument to the parser."""
-    _add_argument(
-        parser,
-        "-n",
-        "--noisestd",
-        is_required=required,
-        arg_type=float,
-        help_msg="standard deviation of the noise added to the curves, in pu (recommended range:"
-        " [0.01, 0.1])",
-    )
-
-
-def _add_frequency_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
-    """Adds the --frequency argument to the parser."""
-    _add_argument(
-        parser,
-        "-f",
-        "--frequency",
-        is_required=required,
-        arg_type=float,
-        help_msg="cut-off frequency of the filter used for smoothing the noise, in Hz"
-        " (default: 3.0, recommended range: [1.0, 5.0])",
-        default=3.0,
-    )
-
-
-def _add_debug_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the --debug argument to the parser."""
-    _add_argument(
-        parser, "-d", "--debug", action="store_true", help_msg="show debug messages", default=False
+        "-p",
+        "--pcs",
+        help_msg="Enter one Performance Checking Sheet (PCS) to validate.",
     )
 
 
 def _add_only_dtr_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the --only_dtr argument to the parser."""
+    """Adds the '--only-dtr' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
     _add_argument(
         parser,
         "-od",
-        "--only_dtr",
+        "--only-dtr",
         action="store_true",
-        help_msg="run only the official PCS's defined in the DTR "
-        "(i.e., ignore any custom defined PCS)",
-        default=False,
+        help_msg="Run only the official PCS's defined in the DTR"
+        " (i.e., ignore any custom defined PCS).",
     )
 
 
-def _add_version_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the --version argument to the parser."""
-    # This one cannot use _add_argument because 'version' is a specific action
-    # directly on parser.add_argument, not a generic argument type.
-    parser.add_argument("--version", action="version", version=version("dycov"))
+def _add_testing_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--testing' argument to the given parser.
 
-
-def setup_cli_parsers() -> argparse.ArgumentParser:
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
     """
-    Sets up the main argument parser with subparsers for commands.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        The configured argument parser.
-    """
-    parser = argparse.ArgumentParser(
-        prog="dycov",
-        description="DYnamic COmpliance Verification tool for RMS models",
+    _add_argument(
+        parser,
+        "--testing",
+        action="store_true",
+        help_msg=argparse.SUPPRESS,  # Suppress help message for testing purposes
     )
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    _add_version_argument(parser)
 
-    # Subparser for the 'validate' command.
-    validate = subparsers.add_parser("validate", help="run the RMS model validation process")
-    group = validate.add_mutually_exclusive_group(required=False)
+
+def _add_dynamic_model_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--dynamic-model' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-dm",
+        "--dynamic-model",
+        arg_type=str,
+        help_msg="Name of the dynamic model to compile (e.g., 'MyModel.xml')."
+        " If not provided, all models will be compiled.",
+    )
+
+
+def _add_force_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--force' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-f",
+        "--force",
+        action="store_true",
+        help_msg="Force recompilation of models, removing existing ones.",
+    )
+
+
+def _add_noisestd_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--noisestd' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-n",
+        "--noisestd",
+        arg_type=float,
+        default=0.0,
+        help_msg="Standard deviation of the noise added to the curves, in pu"
+        " (recommended range: [0.01, 0.1]).",
+    )
+
+
+def _add_frequency_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--frequency' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-fr",
+        "--frequency",
+        arg_type=float,
+        default=3.0,
+        help_msg="Cut-off frequency of the filter used for smoothing the noise,"
+        " in Hz (default: 3.0, recommended range: [1.0, 5.0]).",
+    )
+
+
+def _add_results_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--results' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-r",
+        "--results",
+        arg_type=Path,
+        help_msg="Path to a verification results directory. If provided,"
+        " 'curves_calculated.csv' and 'dycov.log' files will be copied from here.",
+    )
+
+
+def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'validate' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'validate' subparser will be added.
+    """
+    validate = subparsers.add_parser(
+        "validate",
+        help="Validate a Dynawo model against a set of curves.",
+    )
+    model_or_curves = validate.add_mutually_exclusive_group(required=False)
     _add_debug_argument(validate)
     _add_launcher_argument(validate)
-    _add_model_argument(group)
-    _add_curves_argument(group, explain="(when using curves instead of an RMS model)")
-    _add_reference_argument(validate)
+    _add_model_argument(model_or_curves)
+    _add_curves_argument(model_or_curves, explain="(when using curves instead of an RMS model)")
+    _add_reference_argument(validate, is_required=True)
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
     _add_testing_argument(validate)
+    _LOGGER.debug("Added 'validate' subparser.")
 
-    # Subparser for the 'performance' command.
+
+def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'performance' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'performance' subparser will be added.
+    """
     performance = subparsers.add_parser(
         "performance",
-        help="run the electric performance verification process",
+        help="Analyze the performance of a Dynawo model (or its results).",
     )
     _add_debug_argument(performance)
     _add_launcher_argument(performance)
     _add_model_argument(performance)
     _add_curves_argument(
-        performance, explain="(if a model is also provided, these are used only for graphing)"
+        performance,
+        explain="(if a model is also provided, these are used only for graphing)",
     )
     _add_output_argument(performance)
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)
     _add_testing_argument(performance)
+    _LOGGER.debug("Added 'performance' subparser.")
 
-    # Subparser for the 'generate' command.
+
+def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'generate' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'generate' subparser will be added.
+    """
     generate = subparsers.add_parser(
         "generate",
-        help="create all the necessary input files through a guided process",
+        help="Create all the necessary input files through a guided process.",
     )
     _add_debug_argument(generate)
     _add_launcher_argument(generate)
-    _add_output_argument(generate, required=True)
-    _add_topology_argument(generate, required=True)
-    _add_validation_argument(generate, required=True)
+    _add_output_argument(generate, is_required=True)
+    _add_topology_argument(generate, is_required=True)
+    _add_validation_argument(generate, is_required=True)
+    _LOGGER.debug("Added 'generate' subparser.")
 
-    # Subparser for the 'compile' command.
+
+def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'compile' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'compile' subparser will be added.
+    """
     compile_model = subparsers.add_parser(
         "compile",
-        help="compile custom Modelica models",
+        help="Compile custom Modelica models.",
     )
     _add_debug_argument(compile_model)
     _add_launcher_argument(compile_model)
     _add_dynamic_model_argument(compile_model)
     _add_force_argument(compile_model)
+    _LOGGER.debug("Added 'compile' subparser.")
 
-    # Subparser for the 'anonymize' command.
+
+def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'anonymize' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'anonymize' subparser will be added.
+    """
     anonymize = subparsers.add_parser(
         "anonymize",
-        help="generate a new set of curves from a given one, using generic var names and "
-        "with (optional) noise added",
+        help="Generate a new set of curves from a given one, using generic "
+        "variable names and with (optional) noise added.",
     )
     _add_debug_argument(anonymize)
-    _add_curves_argument(anonymize, explain="", required=False)
+    _add_curves_argument(anonymize, is_required=False)
     _add_output_argument(anonymize)
-    _add_noise_argument(anonymize)
+    _add_noisestd_argument(anonymize)
     _add_frequency_argument(anonymize)
-    _add_verification_results_path(anonymize)
-
-    return parser
+    _add_results_argument(anonymize)
+    _LOGGER.debug("Added 'anonymize' subparser.")
