@@ -247,7 +247,7 @@ class DynawoSimulator:
         launcher_dwo: Path,
         jobs_filename: str,
         inputs_path: Path,
-        simulation_limit: float | None,
+        simulation_limit: Optional[float],
     ) -> tuple[bool, str, float]:
         """
         Executes the Dynawo simulation process.
@@ -260,7 +260,7 @@ class DynawoSimulator:
             The name of the .jobs file to execute.
         inputs_path : Path
             The working directory for the Dynawo simulation.
-        simulation_limit : float | None
+        simulation_limit : Optional[float]
             Maximum time (in seconds) allowed for the simulation to run.
             If None, no timeout is applied.
 
@@ -329,7 +329,7 @@ class DynawoSimulator:
         s_nom: float,
         s_nref: float,
         save_file: bool = True,
-        simulation_limit: float | None = None,
+        simulation_limit: Optional[float] = None,
     ) -> tuple[bool, Optional[str], bool, pd.DataFrame, float]:
         """
         Runs a dynamic simulation with Dynawo and processes the results.
@@ -361,7 +361,7 @@ class DynawoSimulator:
         save_file : bool, optional
             If True, the calculated curves DataFrame will be created and returned.
             Defaults to True.
-        simulation_limit : float | None, optional
+        simulation_limit : Optional[float], optional
             Maximum time (in seconds) allowed for the simulation to run.
             If None, no timeout is applied. Defaults to None.
 
