@@ -14,6 +14,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ class DynawoSimulator:
         """
         self.logger = dycov_logging.get_logger("Dynawo")
 
-    def _compile_model_name(self, models_path: Path, model_name: str) -> str | None:
+    def _compile_model_name(self, models_path: Path, model_name: str) -> Optional[str]:
         """
         Extracts the compiled model name (Modelica model ID) from a Dynawo model XML file.
 
@@ -50,7 +51,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        str | None
+        Optional[str]
             The Modelica model ID if found, otherwise None.
         """
         model_tree = etree.parse(models_path / model_name, etree.XMLParser(remove_blank_text=True))
@@ -150,7 +151,7 @@ class DynawoSimulator:
         launcher_dwo: Path,
         models_path: Path,
         user_dir: Path,
-        model_name: str | None,
+        model_name: Optional[str],
         output_path: Path,
     ) -> None:
         """
@@ -168,7 +169,7 @@ class DynawoSimulator:
             Directory where the tool's default models are stored.
         user_dir : Path
             Directory where user-defined models are stored.
-        model_name : str | None
+        model_name : Optional[str]
             Name of the model to compile. If None, all models in `models_path`
             and `user_dir` will be compiled.
         output_path : Path
@@ -329,7 +330,7 @@ class DynawoSimulator:
         s_nref: float,
         save_file: bool = True,
         simulation_limit: float | None = None,
-    ) -> tuple[bool, str | None, bool, pd.DataFrame, float]:
+    ) -> tuple[bool, Optional[str], bool, pd.DataFrame, float]:
         """
         Runs a dynamic simulation with Dynawo and processes the results.
 
@@ -366,11 +367,11 @@ class DynawoSimulator:
 
         Returns
         -------
-        tuple[bool, str | None, bool, pd.DataFrame, float]
+        tuple[bool, Optional[str], bool, pd.DataFrame, float]
             A tuple containing:
             - bool: True if the simulation completed successfully (no errors in log,
             no timeout, "succeeded" in stderr).
-            - str | None: Log output from stderr if an error occurred or timeout, otherwise None.
+            - Optional[str]: Log output from stderr if an error occurred or timeout, otherwise None.
             - bool: True if an error was found in the Dynawo timeline log, False otherwise.
             - pd.DataFrame: A DataFrame with the transformed and calculated curves. Empty
             if save_file is False or simulation failed.
