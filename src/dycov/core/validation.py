@@ -314,12 +314,11 @@ class Validation:
         report_results : dict
             A dictionary containing detailed PCS report results.
         """
-        sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone", "producer_name"))
-        dycov_logging.get_logger("Validation").debug(f"Sorted summary {sorted_summary_list}")
+        dycov_logging.get_logger("Validation").debug(f"Sorted summary {summary_list}")
 
         try:
             report.create_pdf(
-                sorted_summary_list,
+                summary_list,
                 report_results,
                 self._parameters,
                 Path(self._path_latex_files),
@@ -396,7 +395,8 @@ class Validation:
                 report_results[f"{producer_name}_{pcs_name}"] = pcs_results
 
         # Create the pcs report
-        self.__create_report(summary_list, report_results)
+        sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone", "producer_name"))
+        self.__create_report(sorted_summary_list, report_results)
 
         report_file = (
             self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
@@ -408,7 +408,7 @@ class Validation:
                 f"Report file does not exist: {report_file}"
             )
 
-        compliance_list = list(map(operator.attrgetter("compliance"), summary_list))
+        compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
         if dycov_logging.getEffectiveLevel() == logging.DEBUG:
             return compliance_list
 

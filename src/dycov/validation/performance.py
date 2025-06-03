@@ -127,11 +127,11 @@ class PerformanceValidator(Validator):
             )
 
         if not steady_p:
-            self._warning("P has not reached steady state")
+            self._log_message("warning", "P has not reached steady state")
         if not steady_q:
-            self._warning("Q has not reached steady state")
+            self._log_message("warning", "Q has not reached steady state")
         if not steady_v:
-            self._warning("V has not reached steady state")
+            self._log_message("warning", "V has not reached steady state")
 
         return (
             steady_p,
@@ -171,9 +171,9 @@ class PerformanceValidator(Validator):
             pass_pi &= gen_pass_pi
 
         if not stable_theta:
-            self._warning("Theta has not reached stabilization")
+            self._log_message("warning", "Theta has not reached stabilization")
         if not pass_pi:
-            self._warning("Theta has not met the success criterion")
+            self._log_message("warning", "Theta has not met the success criterion")
 
         return stable_theta, first_stable_pos_theta, pass_pi
 
@@ -544,7 +544,7 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "gen"
             )
             for disconnection in disconnection_list:
-                self._debug(f"Timeline disconnection. Model: {disconnection}")
+                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
 
             if not results["no_disconnection_gen"]:
                 if self._disconnection_model.gen_intline is None:
@@ -567,7 +567,7 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "load"
             )
             for disconnection in disconnection_list:
-                self._debug(f"Timeline disconnection. Model: {disconnection}")
+                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
 
             if not results["no_disconnection_load"]:
                 if self._disconnection_model.auxload_xfmr is None:

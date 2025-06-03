@@ -28,7 +28,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.curves.dynawo import dynawo
+from dycov.curves.dynawo.dynawo import DynawoSimulator
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
@@ -484,9 +484,9 @@ def create_pdf(
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
-        dynawo_version = str(dynawo.get_dynawo_version(parameters.get_launcher_dwo())).replace(
-            "\\", "\\\\"
-        )
+        dynawo_version = str(
+            DynawoSimulator().get_dynawo_version(parameters.get_launcher_dwo())
+        ).replace("\\", "\\\\")
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
     model_template = str(producer.get_producer_path()).replace("\\", "\\\\")

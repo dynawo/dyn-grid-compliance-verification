@@ -16,6 +16,7 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.files import manage_files
+from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
 
 
@@ -85,6 +86,9 @@ class Parameters:
         current_time = time.time()
         for execution_path in base_working_dir.iterdir():
             if current_time - execution_path.stat().st_mtime >= 24 * 3600:
+                dycov_logging.get_logger("Parameters").debug(
+                    f"Removing old execution: {execution_path}"
+                )
                 shutil.rmtree(execution_path)
 
         return base_working_dir / Path(str(uuid.uuid4()))
