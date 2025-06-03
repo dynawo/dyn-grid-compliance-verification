@@ -56,6 +56,38 @@ class Config:
         """
         return value if value is not None and value != "" else None
 
+    def _get_value(self, section: str, key: str) -> Optional[str]:
+        """Gets a configuration value for a given key and section.
+
+        The priority defined in the configuration is:
+          1. User config
+          2. Performance Checking Sheet (PCS) config
+          3. Default config
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Key within the section.
+
+        Returns
+        -------
+        Optional[str]
+            The string value if it exists, None otherwise.
+        """
+        value = None
+        if self._user_config.has_option(section, key):
+            value = self._user_config.get(section, key)
+
+        if not self._get_valid_value(value) and self._pcs_config.has_option(section, key):
+            value = self._pcs_config.get(section, key)
+
+        if not self._get_valid_value(value) and self._default_config.has_option(section, key):
+            value = self._default_config.get(section, key)
+
+        return self._get_valid_value(value)
+
     def load_pcs_config(self, pcs_path: str) -> None:
         """Load the Performance Checking Sheet (PCS) configuration file.
 
@@ -97,13 +129,8 @@ class Config:
             or self._default_config.has_option(section, key)
         )
 
-    def get_value(self, section: str, key: str) -> Optional[str]:
+    def get_value(self, section: str, key: str, default: str = None) -> str:
         """Gets a configuration value for a given key and section.
-
-        The priority defined in the configuration is:
-          1. User config
-          2. Performance Checking Sheet (PCS) config
-          3. Default config
 
         Parameters
         ----------
@@ -111,23 +138,16 @@ class Config:
             Section header.
         key: str
             Key within the section.
+        default: str
+            Default value to return if the key is not found.
 
         Returns
         -------
-        Optional[str]
-            The string value if it exists, None otherwise.
+        str
+            The string value if it exists, otherwise the default value.
         """
-        value = None
-        if self._user_config.has_option(section, key):
-            value = self._user_config.get(section, key)
-
-        if not self._get_valid_value(value) and self._pcs_config.has_option(section, key):
-            value = self._pcs_config.get(section, key)
-
-        if not self._get_valid_value(value) and self._default_config.has_option(section, key):
-            value = self._default_config.get(section, key)
-
-        return self._get_valid_value(value)
+        value = self._get_value(section, key)
+        return value if value is not None else default
 
     def get_int(self, section: str, key: str, default: int) -> int:
         """Gets an integer value for a given key and section.
@@ -146,7 +166,7 @@ class Config:
         int
             The integer value if it exists, otherwise the default value.
         """
-        value = self.get_value(section, key)
+        value = self._get_value(section, key)
         return int(value) if value is not None else default
 
     def get_float(self, section: str, key: str, default: float) -> float:
@@ -166,7 +186,7 @@ class Config:
         float
             The float value if it exists, otherwise the default value.
         """
-        value = self.get_value(section, key)
+        value = self._get_value(section, key)
         return float(value) if value is not None else default
 
     def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
@@ -186,7 +206,7 @@ class Config:
         bool
             The boolean value if it exists, otherwise the default value.
         """
-        value = self.get_value(section, key)
+        value = self._get_value(section, key)
         return value.lower() == "true" if value is not None else default
 
     def get_list(self, section: str, key: str) -> list:
@@ -205,7 +225,7 @@ class Config:
         list
             A list of strings if the key exists, an empty list otherwise.
         """
-        value = self.get_value(section, key)
+        value = self._get_value(section, key)
         return value.split(",") if value is not None else []
 
     def get_options(self, section: str) -> list:

@@ -591,13 +591,14 @@ class Benchmark:
                 oc_name,
             )
             self.__debug(
-                f"Error message: {simulation_result.error_message} "
-                f"Time exceeds: {simulation_result.time_exceeds} "
-                f"Has curves: {has_curves} "
                 f"Succes: {simulation_result.success} "
+                f"Has curves: {has_curves} "
+                f"Time exceeds: {simulation_result.time_exceeds} "
+                f"Error message: {simulation_result.error_message} "
             )
             if simulation_result.error_message is not None:
                 self.__debug(f"Error message: {simulation_result.error_message}")
+                compliance = Compliance.InvalidTest
                 if simulation_result.error_message == "Fault simulation fails":
                     compliance = Compliance.FaultSimulationFails
                 elif simulation_result.error_message == "Fault dip unachievable":

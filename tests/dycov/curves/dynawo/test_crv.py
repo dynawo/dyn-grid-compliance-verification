@@ -35,8 +35,8 @@ def test_create_curves_file_electric_performance_sm():
         path = Path(tmpdir)
         curves_filename = "curves_sm.xml"
         connected_to_pdr = [DummyEquipment("Xfmr", var="Xfmr_terminal")]
-        xfmrs = [DummyEquipment("Xfmr", lib="XfmrLib")]
-        generators = [DummyEquipment("Gen", lib="GenLib")]
+        xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
+        generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
         rte_loads = []
         sim_type = ELECTRIC_PERFORMANCE_SM
         zone = 1
@@ -55,12 +55,10 @@ def test_create_curves_file_electric_performance_sm():
         xml_path = path / curves_filename
         assert xml_path.exists()
         root = parse_curves_file(xml_path)
-        print(root)
         # Check that expected curve elements exist
         curve_models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        print(curve_models)
         assert "BusPDR" in curve_models
         assert "InfiniteBus" in curve_models
         assert "Xfmr" in curve_models
@@ -76,9 +74,9 @@ def test_create_curves_file_with_all_equipment_types():
         path = Path(tmpdir)
         curves_filename = "curves_all.xml"
         connected_to_pdr = [DummyEquipment("Xfmr", var="Xfmr_terminal")]
-        xfmrs = [DummyEquipment("Xfmr", lib="XfmrLib")]
-        generators = [DummyEquipment("Gen", lib="GenLib")]
-        rte_loads = [DummyEquipment("Load", lib="LoadLib")]
+        xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
+        generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
+        rte_loads = [DummyEquipment("Load", lib="LoadAlphaBeta")]
         sim_type = ELECTRIC_PERFORMANCE_SM
         zone = 1
         control_mode = "USetpoint"

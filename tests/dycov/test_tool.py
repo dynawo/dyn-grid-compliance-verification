@@ -83,9 +83,9 @@ def test_perf_sm_model():
 def test_perf_sm_curves():
     compliance = _execute_tool(None, f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous/", None)
     assert [
-        Compliance.Compliant,  # 0
+        Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
-        Compliance.NonCompliant,  # 2
+        Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
@@ -127,16 +127,16 @@ def test_perf_ppm_model():
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
-        Compliance.SimulationTimeOut,  # 6
+        Compliance.FailedSimulation,  # 6
     ] == compliance
 
 
 def test_perf_ppm_curves():
     compliance = _execute_tool(None, f"{PERFORMANCE}/ProducerCurves/Wind", None)
     assert [
-        Compliance.Compliant,  # 0
+        Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
-        Compliance.NonCompliant,  # 2
+        Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5

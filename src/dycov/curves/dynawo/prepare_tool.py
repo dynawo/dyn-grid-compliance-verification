@@ -1,12 +1,12 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo import dynawo
+from dycov.curves.dynawo.dynawo import DynawoSimulator
 from dycov.files import manage_files
 
 
 def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
-    dynawo_version = dynawo.get_dynawo_version(launcher_dwo)
+    dynawo_version = DynawoSimulator().get_dynawo_version(launcher_dwo)
     if force:
         manage_files.remove_dir(ddb_dir)
 
@@ -75,7 +75,7 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
 
     file_path = Path(__file__).resolve().parent.parent
 
-    dynawo.precompile_models(
+    DynawoSimulator().precompile_models(
         launcher_dwo,
         file_path / modelica_path,
         user_models,
