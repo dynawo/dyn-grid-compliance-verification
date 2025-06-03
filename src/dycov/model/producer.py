@@ -75,7 +75,7 @@ class Producer:
         self._filename = None
         self._sim_type = None
 
-        dycov_logging.get_logger("Producer").debug(f"Initializing Producer:")
+        dycov_logging.get_logger("Producer").debug("Initializing Producer:")
         if self._is_dynawo_model:
             dycov_logging.get_logger("Producer").debug(f"model path: {self._producer_model_path}")
         if self._is_user_curves:
