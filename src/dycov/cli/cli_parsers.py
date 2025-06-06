@@ -316,7 +316,8 @@ def _add_validation_argument(
     is_required: bool
         Whether the argument is required.
     """
-    help_msg = "Choice of process, performance verification (SM, PPM or BESS) vs. RMS model validation (PPM or BESS)"
+    help_msg = "Choice of process, performance verification (SM, PPM or BESS) "
+    help_msg += "vs. RMS model validation (PPM or BESS)"
     if explain:
         help_msg += f" {explain}"
     _add_argument(

@@ -14,6 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from dycov.logging.logging import dycov_logging
+
+LOGGER = dycov_logging.get_logger("Cfg")
+
 
 @dataclass(frozen=True)
 class Config:
@@ -41,7 +45,7 @@ class Config:
     _user_config: configparser.ConfigParser
     _pcs_config: configparser.ConfigParser
 
-    def _get_valid_value(self, value: str) -> Optional[str]:
+    def _is_valid_value(self, value: str) -> bool:
         """Internal helper to validate if a string value is not None or empty.
 
         Parameters
@@ -51,12 +55,12 @@ class Config:
 
         Returns
         -------
-        Optional[str]
-            The validated string if not None or empty, otherwise None.
+        bool
+            True if the validated string is not None or empty, otherwise False.
         """
-        return value if value is not None and value != "" else None
+        return value is not None and value != ""
 
-    def _get_value(self, section: str, key: str) -> Optional[str]:
+    def _get_config_value(self, section: str, key: str) -> Optional[str]:
         """Gets a configuration value for a given key and section.
 
         The priority defined in the configuration is:
@@ -76,17 +80,22 @@ class Config:
         Optional[str]
             The string value if it exists, None otherwise.
         """
-        value = None
         if self._user_config.has_option(section, key):
             value = self._user_config.get(section, key)
+            if self._is_valid_value(value):
+                return value
 
-        if not self._get_valid_value(value) and self._pcs_config.has_option(section, key):
+        if self._pcs_config.has_option(section, key):
             value = self._pcs_config.get(section, key)
+            if self._is_valid_value(value):
+                return value
 
-        if not self._get_valid_value(value) and self._default_config.has_option(section, key):
+        if self._default_config.has_option(section, key):
             value = self._default_config.get(section, key)
+            if self._is_valid_value(value):
+                return value
 
-        return self._get_valid_value(value)
+        return None
 
     def load_pcs_config(self, pcs_path: str) -> None:
         """Load the Performance Checking Sheet (PCS) configuration file.
@@ -96,7 +105,13 @@ class Config:
         pcs_path: str
             Path to the PCS configuration file to read.
         """
-        self._pcs_config.read(pcs_path)
+        LOGGER.info("Loading PCS configuration from: %s", pcs_path)
+        try:
+            self._pcs_config.read(pcs_path)
+            LOGGER.info("Successfully loaded PCS configuration.")
+        except Exception as e:
+            LOGGER.error("Error loading PCS configuration from %s: %s", pcs_path, e)
+            raise
 
     def get_config_dir(self) -> Path:
         """Returns the configuration directory path.
@@ -146,8 +161,16 @@ class Config:
         str
             The string value if it exists, otherwise the default value.
         """
-        value = self._get_value(section, key)
-        return value if value is not None else default
+        value = self._get_config_value(section, key)
+        if value is None:
+            LOGGER.debug(
+                "Key '%s' not found in section '%s'. Using default value: '%s'",
+                key,
+                section,
+                default,
+            )
+            return default
+        return value
 
     def get_int(self, section: str, key: str, default: int) -> int:
         """Gets an integer value for a given key and section.
@@ -166,8 +189,23 @@ class Config:
         int
             The integer value if it exists, otherwise the default value.
         """
-        value = self._get_value(section, key)
-        return int(value) if value is not None else default
+        value = self._get_config_value(section, key)
+        if value is None:
+            LOGGER.debug(
+                "Key '%s' not found in section '%s'. Using default integer value: %s",
+                key,
+                section,
+                default,
+            )
+            return default
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            LOGGER.error(
+                f"Could not convert value '{value}' to integer for "
+                f"section '{section}', key '{key}'. Using default: {default}"
+            )
+            return default
 
     def get_float(self, section: str, key: str, default: float) -> float:
         """Gets a float value for a given key and section.
@@ -186,8 +224,23 @@ class Config:
         float
             The float value if it exists, otherwise the default value.
         """
-        value = self._get_value(section, key)
-        return float(value) if value is not None else default
+        value = self._get_config_value(section, key)
+        if value is None:
+            LOGGER.debug(
+                "Key '%s' not found in section '%s'. Using default float value: %s",
+                key,
+                section,
+                default,
+            )
+            return default
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            LOGGER.error(
+                f"Could not convert value '{value}' to float for "
+                f"section '{section}', key '{key}'. Using default: {default}",
+            )
+            return default
 
     def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
         """Gets a boolean value for a given key and section.
@@ -206,8 +259,16 @@ class Config:
         bool
             The boolean value if it exists, otherwise the default value.
         """
-        value = self._get_value(section, key)
-        return value.lower() == "true" if value is not None else default
+        value = self._get_config_value(section, key)
+        if value is None:
+            LOGGER.debug(
+                "Key '%s' not found in section '%s'. Using default boolean value: %s",
+                key,
+                section,
+                default,
+            )
+            return default
+        return value.lower() == "true"
 
     def get_list(self, section: str, key: str) -> list:
         """Gets a list of string values for a given key and section.
@@ -225,8 +286,11 @@ class Config:
         list
             A list of strings if the key exists, an empty list otherwise.
         """
-        value = self._get_value(section, key)
-        return value.split(",") if value is not None else []
+        value = self._get_config_value(section, key)
+        if value is None:
+            LOGGER.debug("Key '%s' not found in section '%s'. Returning empty list.", key, section)
+            return []
+        return value.split(",")
 
     def get_options(self, section: str) -> list:
         """Returns a list of keys of a section.
@@ -246,22 +310,20 @@ class Config:
         list
             A list of keys in the specified section, or an empty list otherwise.
         """
-        options = []
         if self._user_config.has_section(section):
             options = self._user_config.options(section)
-            if options:  # Check if the list of options is not empty
+            if options:
                 return options
 
         if self._pcs_config.has_section(section):
             options = self._pcs_config.options(section)
-            if options:  # Check if the list of options is not empty
+            if options:
                 return options
 
         if self._default_config.has_section(section):
-            options = self._default_config.options(section)
-            return options  # Return default options even if empty
+            return self._default_config.options(section)
 
-        return []  # If no section found in any config
+        return []
 
 
 def _get_instance() -> Config:
@@ -275,28 +337,45 @@ def _get_instance() -> Config:
     Config
         A Config object initialized with default, user, and PCS config parsers.
     """
-    # Determine configuration directory based on operating system
-    if os.name == "nt":
-        config_dir = Path.home() / "AppData/Local/dycov"
-    else:
-        config_dir = Path.home() / ".config/dycov"
+    LOGGER.info("Initializing Config instance.")
+    config_dir = Path.home() / ("AppData/Local/dycov" if os.name == "nt" else ".config/dycov")
+    LOGGER.debug("Config directory set to: %s", config_dir)
 
     # Initialize ConfigParser objects for different configuration sources
     default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    default_config.optionxform = str  # Preserve case for options
+    default_config.optionxform = str
     user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     user_config.optionxform = str
     pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     pcs_config.optionxform = str
 
     # Load default configuration from the package
-    default_config.read(Path(__file__).resolve().parent / "defaultConfig.ini")
+    default_config_path = Path(__file__).resolve().parent / "defaultConfig.ini"
+    LOGGER.info("Loading default configuration from: %s", default_config_path)
+    try:
+        if not default_config_path.exists():
+            LOGGER.warning("Default configuration file not found at: %s", default_config_path)
+        default_config.read(default_config_path)
+        LOGGER.info("Successfully loaded default configuration.")
+    except Exception as e:
+        LOGGER.error("Error loading default configuration from %s: %s", default_config_path, e)
+        raise
 
     # Load user configuration
-    user_config_file = config_dir
-    if os.name != "nt":
-        user_config_file = config_dir / "config.ini"
-    user_config.read(user_config_file)
+    user_config_file = config_dir / (
+        "config.ini" if os.name != "nt" else ""
+    )  # Adjusted for Windows not needing /config.ini suffix
+    LOGGER.info("Loading user configuration from: %s", user_config_file)
+    try:
+        if not user_config_file.exists():
+            LOGGER.debug(
+                "User configuration file not found at: %s (This is often expected)",
+                user_config_file,
+            )
+        user_config.read(user_config_file)
+        LOGGER.info("Successfully loaded user configuration.")
+    except Exception as e:
+        LOGGER.warning("Could not load user configuration from %s: %s", user_config_file, e)
 
     return Config(config_dir, default_config, user_config, pcs_config)
 

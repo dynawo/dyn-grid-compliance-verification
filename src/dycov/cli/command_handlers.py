@@ -289,7 +289,8 @@ def _run_verification(
             verification_type=verification_type,
         )
 
-        # Determine if the execution parameters are valid or complete based on the verification type.
+        # Determine if the execution parameters are valid or complete based on the
+        # verification type.
         is_ready = (
             params.is_valid()
             if verification_type == ELECTRIC_PERFORMANCE
