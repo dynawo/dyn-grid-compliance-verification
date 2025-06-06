@@ -18,6 +18,8 @@ from dycov.curves.dynawo.prepare_tool import precompile
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
+LOGGER = dycov_logging.get_logger("Initialization")
+
 
 class DycovInitializer:
     """
@@ -30,12 +32,6 @@ class DycovInitializer:
     _DYCOV_CONFIG_TYPE_KEY = "type"
     _DYCOV_CONFIG_VERSION_KEY = "version"
     _DYCOV_TOOL_VERSION = "1.0.0.RC"
-
-    def __init__(self):
-        """
-        Initializes the DycovInitializer.
-        """
-        self._logger = dycov_logging.get_logger("Initialization")
 
     def init(self, launcher_dwo: Path, debug: bool) -> None:
         """
@@ -53,7 +49,7 @@ class DycovInitializer:
         self._setup_user_config(tool_path)
         self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
-        self._logger.info(f"Starting DyCoV - version {version('dycov')}")
+        LOGGER.info(f"Starting DyCoV - version {version('dycov')}")
 
         # Precompile Modelica models if a Dynawo launcher is provided.
         if launcher_dwo:
@@ -203,7 +199,7 @@ class DycovInitializer:
                     try:
                         manage_files.copy_path(src, dest, dirs_exist_ok=True)
                     except Exception as e:
-                        self._logger.error(f"Failed to copy {src} to {dest}: {e}")
+                        LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
 
     def _configure_user_models(self):
         """
@@ -310,7 +306,7 @@ class DycovInitializer:
         Logs warnings for deprecated parameters found in the user's configuration file.
         """
         for parameter in deprecated_parameters:
-            self._logger.warning(
+            LOGGER.warning(
                 f"Deprecated in {file_name}: section {parameter['section']} "
                 f"key {parameter['key']} value {parameter['value']}"
             )

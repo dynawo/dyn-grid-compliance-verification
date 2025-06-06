@@ -18,17 +18,13 @@ from dycov.files.producer_ini_file import check_ini_parameters, create_producer_
 from dycov.files.producer_par_file import check_parameters, create_producer_par_file
 from dycov.logging.logging import dycov_logging
 
+LOGGER = dycov_logging.get_logger("Input Template Generator")
+
 
 class InputTemplateGenerator:
     """
     A class to generate input templates for Dynawo simulations.
     """
-
-    def __init__(self):
-        """
-        Initializes the InputTemplateGenerator.
-        """
-        self.logger = dycov_logging.get_logger("Create Input Files")
 
     def _get_input(self, text: str) -> str:
         """
@@ -93,7 +89,7 @@ class InputTemplateGenerator:
         prompt_message: str
             The message to display to the user for editing instructions.
         """
-        self.logger.info(f"Creating the input {file_type} file in {target}.")
+        LOGGER.info(f"Creating the input {file_type} file in {target}.")
         if file_type == "PAR":
             # _create_par_template requires an additional argument 'launcher_dwo'
             # This needs to be handled if we want to truly generalize; for now,
@@ -131,7 +127,7 @@ class InputTemplateGenerator:
         template: str
             The template name.
         """
-        self.logger.info(f"Creating the input DYD file in {target}.")
+        LOGGER.info(f"Creating the input DYD file in {target}.")
         create_producer_dyd_file(target, topology, template)
         self._get_input(
             "Edit Producer.dyd to complete each equipment with a dynamic model. "
@@ -160,7 +156,7 @@ class InputTemplateGenerator:
         template: str
             The template name.
         """
-        self.logger.info(f"Creating the input PAR file in {target}.")
+        LOGGER.info(f"Creating the input PAR file in {target}.")
         create_producer_par_file(launcher_dwo, target, topology, template)
         self._get_input(
             "Edit Producer.par to complete each parameter with a value. Press Enter when done."
@@ -184,7 +180,7 @@ class InputTemplateGenerator:
         template: str
             The template name.
         """
-        self.logger.info(f"Creating the input INI file in {target}.")
+        LOGGER.info(f"Creating the input INI file in {target}.")
         create_producer_ini_file(target, topology, template)
         self._get_input(
             "Edit Producer.ini to complete each parameter with a value. Press Enter when done."
@@ -209,7 +205,7 @@ class InputTemplateGenerator:
             The template name.
         """
         ref_target = target / "ReferenceCurves"
-        self.logger.info(f"Creating the reference curves files in {ref_target}.")
+        LOGGER.info(f"Creating the reference curves files in {ref_target}.")
         create_producer_curves(target, ref_target, template)
         self._get_input(
             "Edit CurvesFiles.ini to complete each parameter with a curves file. "
@@ -244,7 +240,7 @@ class InputTemplateGenerator:
         """
 
         if target.exists():
-            self.logger.error("The output path already exists, please indicate a new path.")
+            LOGGER.error("The output path already exists, please indicate a new path.")
             return
 
         manage_files.create_dir(target)

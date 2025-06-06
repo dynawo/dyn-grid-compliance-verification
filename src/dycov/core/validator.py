@@ -18,6 +18,8 @@ from dycov.model.parameters import Disconnection_Model
 from dycov.model.producer import Producer
 from dycov.validation import compliance_list
 
+LOGGER = dycov_logging.get_logger("Validator")
+
 
 class Validator(ABC):  # Inherit from ABC to define an abstract base class
     """
@@ -64,8 +66,6 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         self._setpoint_variation: float = 0.0
         self._oc_name: str = None  # Operating Condition name
 
-        self._logger = dycov_logging.get_logger("Validator")
-
     def _get_log_title(self) -> str:
         """
         Generates a standardized title for log messages.
@@ -90,11 +90,11 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         """
         full_message = f"{self._get_log_title()} {message}"
         if level == "info":
-            self._logger.info(full_message)
+            LOGGER.info(full_message)
         elif level == "debug":
-            self._logger.debug(full_message)
+            LOGGER.debug(full_message)
         elif level == "warning":
-            self._logger.warning(full_message)
+            LOGGER.warning(full_message)
 
     def _get_calculated_curves(self) -> dict:
         """
