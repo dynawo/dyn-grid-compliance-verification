@@ -115,9 +115,9 @@
     <par type="DOUBLE" name="transformer_U10Pu" value="1.0086"/>
     <par type="DOUBLE" name="transformer_U1Phase0" value="0.4334"/>
     <par type="DOUBLE" name="transformer_U20Pu" value="1.0"/>
-    <par type="DOUBLE" name="transformer_rTfo0Pu" value="1.05"/>
-    <par type="DOUBLE" name="transformer_rTfoMaxPu" value="1.5"/>
-    <par type="DOUBLE" name="transformer_rTfoMinPu" value="0.5"/>
+    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.05"/>
+    <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.5"/>
     <par type="INT" name="transformer_NbTap" value="21"/>
     <par type="INT" name="transformer_Tap0" value="10"/>
   </set>

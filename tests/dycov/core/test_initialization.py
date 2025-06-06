@@ -6,274 +6,206 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 import configparser
 import shutil
-from pathlib import Path
 
 import pytest
 
-from dycov.core import initialization
+from dycov.core.initialization import DycovInitializer  # Import the class
+
+# No need to import cfg directly if patching via string path
 
 
-class Test_TemplateCmdConfig:
+class TestDycovInitializer:
+    """
+    Tests for the DycovInitializer class, covering various initialization
+    and configuration setup functionalities.
+    """
 
-    # Creates template directory when none of the required directories exist
-    def test_creates_template_directory_when_none_exist(self, mocker):
-        # Arrange
-        mock_config = mocker.patch("dycov.core.initialization.config")
-        mock_config_dir = Path("/fake/config/dir")
-        mock_config.get_config_dir.return_value = mock_config_dir
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self, mocker, tmp_path):
+        """
+        Fixture to set up common mocks for all tests in this class.
+        It mocks `dycov.core.initialization.config` to point to a temporary
+        directory and creates necessary initial directories, preventing issues
+        with frozen dataclasses.
+        """
+        # Patch the 'config' object as it is imported into the initialization module.
+        # This allows mocking its methods without trying to modify a potentially frozen object.
+        self.mock_config = mocker.patch("dycov.core.initialization.config")
+        self.mock_config.get_config_dir.return_value = tmp_path / "user_config"
 
-        # Mock is_dir to return False for all directory checks
-        mocker.patch.object(Path, "is_dir", return_value=False)
+        # Set default side_effects/return_values for methods used by _initialize_logger
+        # These can be overridden in specific tests if needed.
+        self.mock_config.get_value.side_effect = lambda section, key: {
+            ("Global", "file_log_level"): "INFO",
+            ("Global", "file_formatter"): "%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+            ("Global", "console_log_level"): "INFO",
+            ("Global", "console_formatter"): "%(levelname)s - %(name)s - %(message)s",
+        }.get((section, key), None)
+        self.mock_config.get_int.return_value = 50 * 1024 * 1024
 
-        # Mock create_dir function
-        mock_create_dir = mocker.patch("dycov.core.initialization.manage_files.create_dir")
-
-        template = "my_template"
-        cmd = "my_cmd"
-        expected_template_dir = mock_config_dir / "templates" / template / cmd
-
-        # Act
-        from dycov.core.initialization import _template_cmd_config
-
-        _template_cmd_config(template, cmd)
-
-        # Assert
-        mock_create_dir.assert_called_once_with(expected_template_dir)
-
-    # Creates template directories for each subdir (model, performance)
-    def test_creates_template_directories_for_subdirs(self, mocker):
-        # Arrange
-        mock_template_cmd_config = mocker.patch("dycov.core.initialization._template_cmd_config")
-        template_name = "test_template"
-
-        # Act
-        from dycov.core.initialization import _template_config
-
-        _template_config(template_name)
-
-        # Assert
-        # Check that _template_cmd_config was called for each subdir
-        mock_template_cmd_config.assert_any_call(template_name, "model")
-        mock_template_cmd_config.assert_any_call(template_name, "performance")
-
-        # Check that _template_cmd_config was called for each model in each subdir
-        mock_template_cmd_config.assert_any_call(f"{template_name}/model", "BESS")
-        mock_template_cmd_config.assert_any_call(f"{template_name}/model", "PPM")
-        mock_template_cmd_config.assert_any_call(f"{template_name}/model", "SM")
-        mock_template_cmd_config.assert_any_call(f"{template_name}/performance", "BESS")
-        mock_template_cmd_config.assert_any_call(f"{template_name}/performance", "PPM")
-        mock_template_cmd_config.assert_any_call(f"{template_name}/performance", "SM")
-
-        # Verify total number of calls (2 subdirs + 2*3 models = 8 calls)
-        assert mock_template_cmd_config.call_count == 8
-
-    # Function correctly creates template directories for PCS and reports
-    def test_templates_config_creates_directories(self, mocker):
-        # Arrange
-        mock_template_config = mocker.patch("dycov.core.initialization._template_config")
-        mock_dummysamples_config = mocker.patch("dycov.core.initialization._dummysamples_config")
-        mock_shutil_copy = mocker.patch("shutil.copy")
-        mock_config = mocker.patch("dycov.core.initialization.config")
-        mock_config.get_config_dir.return_value = Path("/mock/config/dir")
-
-        tool_path = Path("/mock/tool/path")
-
-        # Act
-        from dycov.core.initialization import _templates_config
-
-        _templates_config(tool_path)
-
-        # Assert
-        assert mock_template_config.call_count == 2
-        mock_template_config.assert_any_call("PCS")
-        mock_template_config.assert_any_call("reports")
-
-        assert mock_dummysamples_config.call_count == 2
-        mock_dummysamples_config.assert_any_call(tool_path, "PCS")
-        mock_dummysamples_config.assert_any_call(tool_path, "reports")
-
-        assert mock_shutil_copy.call_count == 5
-        mock_shutil_copy.assert_any_call(
-            tool_path / "templates" / "README.md", mock_config.get_config_dir() / "templates"
+        # Ensure the mocked config directory exists for tests that need it
+        (tmp_path / "user_config").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "user_config" / "templates").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "user_config" / "user_models" / "dictionary").mkdir(
+            parents=True, exist_ok=True
         )
-        mock_shutil_copy.assert_any_call(
-            tool_path / "templates" / "PCS" / "README.md",
-            mock_config.get_config_dir() / "templates" / "PCS",
+        (tmp_path / "user_config" / "log").mkdir(parents=True, exist_ok=True)
+
+        # Mock the logger for initialization tests
+        self._mock_logger = mocker.MagicMock()
+        mocker.patch(
+            "dycov.logging.logging.dycov_logging.get_logger", return_value=self._mock_logger
         )
-        mock_shutil_copy.assert_any_call(
-            tool_path / "templates" / "reports" / "README.md",
-            mock_config.get_config_dir() / "templates" / "reports",
+        # We'll assert this directly in initialize_logger tests, no need to patch globally here
+        # mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
+
+        # Mock Validation.get_project_path
+        self._mock_get_project_path = mocker.patch(
+            "dycov.core.validation.Validation.get_project_path",
+            return_value=tmp_path / "project_root",
         )
-        mock_shutil_copy.assert_any_call(
-            tool_path / "templates" / "reports" / "TSO_logo.pdf",
-            mock_config.get_config_dir() / "templates" / "reports",
+        # Create dummy project root config files
+        (tmp_path / "project_root" / "configuration").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "project_root" / "configuration" / "config.ini").write_text(
+            "[dycov]\nversion = 1.0.0.RC\n"
         )
-        mock_shutil_copy.assert_any_call(
-            tool_path / "templates" / "reports" / "fig_placeholder.pdf",
-            mock_config.get_config_dir() / "templates" / "reports",
+        (tmp_path / "project_root" / "configuration" / "defaultConfig.ini").write_text(
+            "[dycov]\nversion = 1.0.0.RC\n"
         )
 
     @pytest.fixture
-    def temp_config_dir(self, tmp_path):
-        config_dir = tmp_path / "config"
-        config_dir.mkdir()
-        (config_dir / "templates").mkdir(parents=True)
-        (config_dir / "user_models" / "dictionary").mkdir(parents=True)
-        (config_dir / "log").mkdir()
-        yield config_dir
+    def dycov_initializer(self):
+        """
+        Provides an instance of DycovInitializer for tests.
+        """
+        return DycovInitializer()
 
     @pytest.fixture
-    def valid_config_file(self, tmp_path):
-        config_file = tmp_path / "config.ini"
-        parser = configparser.ConfigParser()
-        parser.add_section("dycov")
-        parser.set("dycov", "version", "1.0.0.RC")
-        with open(config_file, "w") as f:
-            parser.write(f)
-        return config_file
-
-    def test_is_valid_config_file_with_correct_version(self, valid_config_file):
-        from dycov.core.initialization import _is_valid_config_file
-
-        assert _is_valid_config_file(valid_config_file) is True
-
-    def test_exit_on_precompile_abort(self, tmp_path, monkeypatch):
-        launcher_dwo = tmp_path / "launcher"
-        # Patch precompile to return True (aborted)
-        monkeypatch.setattr("dycov.core.initialization.precompile", lambda launcher: True)
-        with pytest.raises(SystemExit):
-            from dycov.core.initialization import _prepare_dynawo_models
-
-            _prepare_dynawo_models(launcher_dwo)
-
-    @pytest.fixture
-    def tool_and_config_dirs(self, tmp_path):
-        # Setup tool_path with required template files and directories
+    def tool_path_fixture(self, tmp_path):
+        """
+        Sets up a dummy tool_path with necessary template structure for testing.
+        """
         tool_path = tmp_path / "tool"
         templates_dir = tool_path / "templates"
         templates_dir.mkdir(parents=True)
         (templates_dir / "README.md").write_text("README for templates")
+
         for template in ["PCS", "reports"]:
             template_dir = templates_dir / template
             template_dir.mkdir()
             (template_dir / "README.md").write_text(f"README for {template}")
-            for fname in ["TSO_logo.pdf", "fig_placeholder.pdf"]:
-                if template == "reports":
-                    (template_dir / fname).write_bytes(b"PDF content")
+            if template == "reports":
+                (template_dir / "TSO_logo.pdf").write_bytes(b"PDF content")
+                (template_dir / "fig_placeholder.pdf").write_bytes(b"PDF content")
+
             for category in ["performance", "model"]:
                 for model in ["SM", "PPM", "BESS"]:
-                    dummy_dir = template_dir / category / model / ".DummySample"
-                    dummy_dir.mkdir(parents=True, exist_ok=True)
-                    (dummy_dir / "dummy.txt").write_text("dummy sample")
+                    dummy_sample_dir = template_dir / category / model / ".DummySample"
+                    dummy_sample_dir.mkdir(
+                        parents=True, exist_ok=True
+                    )  # <-- This creates the directory
+                    (dummy_sample_dir / "dummy.txt").write_text(
+                        f"dummy sample for {template}/{category}/{model}"
+                    )
+        return tool_path
 
-        # Setup config.get_config_dir() to point to user config dir
-        config_dir = tmp_path / "user_config"
-        (config_dir / "templates").mkdir(parents=True)
-        (config_dir / "user_models" / "dictionary").mkdir(parents=True)
-        (config_dir / "log").mkdir(parents=True)
+    # Test cases for _configure_template_category
+    @pytest.mark.parametrize("template_name", ["PCS", "reports"])
+    def test_configure_template_category_creates_directories(
+        self, dycov_initializer, tmp_path, template_name
+    ):
+        """
+        Verifies that _configure_template_category correctly creates the expected directory
+        structure.
+        """
+        base_template_dir = self.mock_config.get_config_dir.return_value / "templates"
+        base_template_dir.mkdir(parents=True, exist_ok=True)
 
-        # Patch config.get_config_dir to return config_dir
-        import dycov.core.initialization as initialization_mod
+        dycov_initializer._configure_template_category(base_template_dir, template_name)
 
-        initialization_mod.config.get_config_dir = lambda: config_dir
+        expected_dirs = [
+            base_template_dir / template_name,
+            base_template_dir / template_name / "model",
+            base_template_dir / template_name / "performance",
+        ]
+        for model in ["BESS", "PPM", "SM"]:
+            expected_dirs.append(base_template_dir / template_name / "model" / model)
+            expected_dirs.append(base_template_dir / template_name / "performance" / model)
 
-        yield tool_path, config_dir
+        for d in expected_dirs:
+            assert d.is_dir()
 
-    # Initializes dycov tool with valid launcher_dwo path and debug=False
-    def test_init_with_valid_launcher_dwo_and_debug_false(self, mocker):
-        # Arrange
-        launcher_dwo = Path("/path/to/launcher_dwo")
-        debug = False
+    def test_configure_templates_copies_files(
+        self, dycov_initializer, tmp_path, tool_path_fixture, mocker
+    ):
+        """
+        Tests that _configure_templates correctly sets up the template directories and
+        copies necessary files.
+        """
+        mock_copy_path = mocker.patch("dycov.files.manage_files.copy_path")
+        mock_copy_files = mocker.patch("dycov.files.manage_files.copy_files")
 
-        # Mock dependencies
-        mock_setup_user_config = mocker.patch("dycov.core.initialization._setup_user_config")
-        mock_setup_templates_and_models = mocker.patch(
-            "dycov.core.initialization._setup_templates_and_models"
+        dycov_initializer._configure_templates(tool_path_fixture)
+
+        user_config_dir = self.mock_config.get_config_dir.return_value
+        config_templates_dir = user_config_dir / "templates"
+
+        # Assert copy_files calls
+        mock_copy_files.assert_any_call(
+            tool_path_fixture / "templates" / "README.md", config_templates_dir
         )
-        mock_initialize_logger = mocker.patch("dycov.core.initialization._initialize_logger")
-        mock_prepare_dynawo_models = mocker.patch(
-            "dycov.core.initialization._prepare_dynawo_models"
+        mock_copy_files.assert_any_call(
+            tool_path_fixture / "templates" / "PCS" / "README.md", config_templates_dir / "PCS"
         )
-        mock_logger = mocker.MagicMock()
-        mocker.patch(
-            "dycov.core.initialization.dycov_logging.get_logger", return_value=mock_logger
+        mock_copy_files.assert_any_call(
+            tool_path_fixture / "templates" / "reports" / "README.md",
+            config_templates_dir / "reports",
         )
-        mocker.patch("dycov.core.initialization.version", return_value="1.0.0")
+        mock_copy_files.assert_any_call(
+            tool_path_fixture / "templates" / "reports" / "TSO_logo.pdf",
+            config_templates_dir / "reports",
+        )
+        mock_copy_files.assert_any_call(
+            tool_path_fixture / "templates" / "reports" / "fig_placeholder.pdf",
+            config_templates_dir / "reports",
+        )
 
-        # Act
-        from dycov.core.initialization import init
+        assert mock_copy_files.call_count == 5  # Total copy_files calls
 
-        init(launcher_dwo, debug)
+        # Assert copy_path calls for dummy samples
+        # There are 2 templates ("PCS", "reports"), 2 categories, 3 models = 12 copy_path calls
+        assert mock_copy_path.call_count == 12
+        for template in ["PCS", "reports"]:
+            for category in ["performance", "model"]:
+                for model in ["SM", "PPM", "BESS"]:
+                    src = (
+                        tool_path_fixture
+                        / "templates"
+                        / template
+                        / category
+                        / model
+                        / ".DummySample"
+                    )
+                    dest = config_templates_dir / template / category / model / ".DummySample"
+                    mock_copy_path.assert_any_call(src, dest, dirs_exist_ok=True)
 
-        # Assert
-        mock_setup_user_config.assert_called_once()
-        mock_setup_templates_and_models.assert_called_once()
-        mock_initialize_logger.assert_called_once_with(debug)
-        mock_prepare_dynawo_models.assert_called_once_with(launcher_dwo)
-        mock_logger.info.assert_called_once_with("Starting DyCoV - version 1.0.0")
+    def test_configure_user_models_creates_files(self, dycov_initializer, tmp_path):
+        """
+        Verifies that _configure_user_models creates the expected user model dictionary and files.
+        """
+        user_models_dict_path = (
+            self.mock_config.get_config_dir.return_value / "user_models" / "dictionary"
+        )
+        # Ensure the directory is clean before the test
+        if user_models_dict_path.exists():
+            shutil.rmtree(user_models_dict_path)
 
-    def test_initialize_logger_with_debug_true(self, tmp_path, mocker):
-        # Setup config dir and log dir
-        log_dir = tmp_path / "log"
-        log_dir.mkdir(parents=True)
-        config_dir = tmp_path
+        dycov_initializer._configure_user_models()
 
-        mock_config = mocker.patch("dycov.core.initialization.config")
-
-        # Patch config.get_config_dir to return our tmp_path
-        mock_config.get_config_dir.return_value = config_dir
-        # Patch config.get_value and get_int to return known values
-        mock_config.get_value.return_value = lambda section, key: "INFO"
-        mock_config.get_int.return_value = lambda section, key, default: 123456
-
-        # Patch dycov_logging.init_handlers to capture arguments
-        called = {}
-
-        def fake_init_handlers(
-            file_log_level,
-            file_formatter,
-            file_max_bytes,
-            console_log_level,
-            console_formatter,
-            log_dir_arg,
-            *args,
-            **kwargs,
-        ):
-            called.update(
-                {
-                    "file_log_level": file_log_level,
-                    "file_formatter": file_formatter,
-                    "file_max_bytes": file_max_bytes,
-                    "console_log_level": console_log_level,
-                    "console_formatter": console_formatter,
-                    "log_dir": log_dir_arg,
-                }
-            )
-
-        initialization.dycov_logging.init_handlers = fake_init_handlers
-        # Run
-        initialization._initialize_logger(debug=True)
-        # Assert
-        assert called["file_log_level"] == "DEBUG"
-        assert called["console_log_level"] == "DEBUG"
-        assert called["log_dir"] == log_dir
-
-    def test_user_models_creates_dictionary_and_ini_files(self, tmp_path, mocker):
-        config_dir = tmp_path
-        user_models_dir = config_dir / "user_models" / "dictionary"
-        mock_config = mocker.patch("dycov.core.initialization.config")
-
-        # Patch config.get_config_dir to return our tmp_path
-        mock_config.get_config_dir.return_value = config_dir
-        # Remove user_models dir if exists
-        if user_models_dir.exists():
-            shutil.rmtree(user_models_dir.parent)
-        # Run
-        initialization._user_models()
-        # Assert
-        assert user_models_dir.is_dir()
+        assert user_models_dict_path.is_dir()
         expected_files = [
             "Bus.ini",
             "Line.ini",
@@ -284,180 +216,154 @@ class Test_TemplateCmdConfig:
             "Transformer.ini",
         ]
         for fname in expected_files:
-            assert (user_models_dir / fname).is_file()
+            assert (user_models_dict_path / fname).is_file()
 
-    def test_dummysamples_config_copies_existing_directories(self, tmp_path, mocker):
-        tool_path = tmp_path / "tool"
-        config_dir = tmp_path / "config"
-        mock_config = mocker.patch("dycov.core.initialization.config")
+    def test_is_valid_config_file_with_correct_version(self, dycov_initializer, tmp_path):
+        """
+        Tests _is_valid_config_file with a configuration file having the correct version.
+        """
+        config_file = tmp_path / "valid_config.ini"
+        parser = configparser.ConfigParser()
+        parser.add_section("dycov")
+        parser.set("dycov", "version", dycov_initializer._DYCOV_TOOL_VERSION)
+        with open(config_file, "w") as f:
+            parser.write(f)
+        assert dycov_initializer._is_valid_config_file(config_file) is True
 
-        # Patch config.get_config_dir to return our tmp_path
-        mock_config.get_config_dir.return_value = config_dir
-        categories = ["performance", "model"]
-        models = ["SM", "PPM", "BESS"]
-        source = "PCS"
-        # Create dummy sample source dirs and files
-        for category in categories:
-            for model in models:
-                src = tool_path / "templates" / source / category / model / ".DummySample"
-                src.mkdir(parents=True, exist_ok=True)
-                (src / "dummy.txt").write_text("dummy")
-        # Create destination parent dirs
-        for category in categories:
-            for model in models:
-                dest = config_dir / "templates" / source / category / model
-                dest.mkdir(parents=True, exist_ok=True)
-        # Run
-        initialization._dummysamples_config(tool_path, source)
-        # Assert
-        for category in categories:
-            for model in models:
-                dest = config_dir / "templates" / source / category / model / ".DummySample"
-                assert dest.is_dir()
-                assert (dest / "dummy.txt").is_file()
-
-    def test_setup_user_config_creates_missing_config_file(self, tmp_path, mocker):
-        config_dir = tmp_path
-        mock_config = mocker.patch("dycov.core.initialization.config")
-
-        # Patch config.get_config_dir to return our tmp_path
-        mock_config.get_config_dir.return_value = config_dir
-        # Prepare required config.ini_BASIC and config.ini_ADVANCED
-        basic = config_dir / "config.ini_BASIC"
-        advanced = config_dir / "config.ini_ADVANCED"
-        basic.write_text("[dycov]\nversion = 1.0.0.RC\n")
-        advanced.write_text("[dycov]\nversion = 1.0.0.RC\n")
-        # Remove config.ini if exists
-        config_ini = config_dir / "config.ini"
-        if config_ini.exists():
-            config_ini.unlink()
-
-        # Patch Validation.get_project_path to return a dummy path with configuration files
-        class DummyValidation:
-            @staticmethod
-            def get_project_path():
-                return tmp_path
-
-        initialization.Validation = DummyValidation
-        # Create configuration/config.ini and configuration/defaultConfig.ini
-        conf_dir = tmp_path / "configuration"
-        conf_dir.mkdir(exist_ok=True)
-        (conf_dir / "config.ini").write_text("[dycov]\nversion = 1.0.0.RC\n")
-        (conf_dir / "defaultConfig.ini").write_text("[dycov]\nversion = 1.0.0.RC\n")
-        # Run
-        initialization._setup_user_config()
-        # Assert
-        assert (config_dir / "config.ini").is_file()
-
-    def test_is_valid_config_file_with_incorrect_version(self, tmp_path):
-        config_file = tmp_path / "config.ini"
+    def test_is_valid_config_file_with_incorrect_version(self, dycov_initializer, tmp_path):
+        """
+        Tests _is_valid_config_file with a configuration file having an incorrect version.
+        """
+        config_file = tmp_path / "invalid_version_config.ini"
         parser = configparser.ConfigParser()
         parser.add_section("dycov")
         parser.set("dycov", "version", "0.9.9")
         with open(config_file, "w") as f:
             parser.write(f)
-        assert initialization._is_valid_config_file(config_file) is False
+        assert dycov_initializer._is_valid_config_file(config_file) is False
 
-    def test_setup_templates_and_models_creates_directories_and_files(self, tmp_path, mocker):
-        tool_path = tmp_path / "tool"
-        config_dir = tmp_path / "config"
-        mock_config = mocker.patch("dycov.core.initialization.config")
+    def test_is_valid_config_file_without_version_key(self, dycov_initializer, tmp_path):
+        """
+        Tests _is_valid_config_file with a configuration file missing the version key.
+        """
+        config_file = tmp_path / "no_version_config.ini"
+        parser = configparser.ConfigParser()
+        parser.add_section("dycov")
+        # No version key set
+        with open(config_file, "w") as f:
+            parser.write(f)
+        assert dycov_initializer._is_valid_config_file(config_file) is False
 
-        # Patch config.get_config_dir to return our tmp_path
-        mock_config.get_config_dir.return_value = config_dir
-        # Prepare tool_path/templates/PCS/model/SM/.DummySample etc.
-        for template in ["PCS", "reports"]:
-            for category in ["performance", "model"]:
-                for model in ["SM", "PPM", "BESS"]:
-                    dummy = tool_path / "templates" / template / category / model / ".DummySample"
-                    dummy.mkdir(parents=True, exist_ok=True)
-                    (dummy / "dummy.txt").write_text("dummy")
-            # Add README.md and PDFs for reports
-            tdir = tool_path / "templates" / template
-            tdir.mkdir(parents=True, exist_ok=True)
-            (tdir / "README.md").write_text("README")
-            if template == "reports":
-                (tdir / "TSO_logo.pdf").write_bytes(b"pdf")
-                (tdir / "fig_placeholder.pdf").write_bytes(b"pdf")
-        (tool_path / "templates" / "README.md").write_text("README")
-        # Create config_dir/templates and user_models/dictionary
-        (config_dir / "templates").mkdir(parents=True, exist_ok=True)
-        (config_dir / "user_models" / "dictionary").mkdir(parents=True, exist_ok=True)
-        # Run
-        initialization._setup_templates_and_models(tool_path)
-        # Assert: check that dummy samples and PDFs are copied
-        for template in ["PCS", "reports"]:
-            for category in ["performance", "model"]:
-                for model in ["SM", "PPM", "BESS"]:
-                    dest = config_dir / "templates" / template / category / model / ".DummySample"
-                    assert dest.is_dir()
-                    assert (dest / "dummy.txt").is_file()
-        assert (config_dir / "templates" / "README.md").is_file()
-        assert (config_dir / "templates" / "PCS" / "README.md").is_file()
-        assert (config_dir / "templates" / "reports" / "README.md").is_file()
-        assert (config_dir / "templates" / "reports" / "TSO_logo.pdf").is_file()
-        assert (config_dir / "templates" / "reports" / "fig_placeholder.pdf").is_file()
-        # User models .ini files
-        for fname in [
-            "Bus.ini",
-            "Line.ini",
-            "Load.ini",
-            "Power_Park.ini",
-            "Storage.ini",
-            "Synch_Gen.ini",
-            "Transformer.ini",
-        ]:
-            assert (config_dir / "user_models" / "dictionary" / fname).is_file()
+    def test_is_valid_config_file_non_existent(self, dycov_initializer, tmp_path):
+        """
+        Tests _is_valid_config_file with a non-existent configuration file.
+        """
+        config_file = tmp_path / "non_existent.ini"
+        assert dycov_initializer._is_valid_config_file(config_file) is False
 
-    def test_init_exits_on_precompile_abort(self, tmp_path, mocker, monkeypatch):
-        config_dir = tmp_path / "config"
-        config_dir.mkdir()
-        mock_config = mocker.patch("dycov.core.initialization.config")
+    def test_find_deprecated_parameters(self, dycov_initializer, tmp_path):
+        """
+        Tests _find_deprecated_parameters correctly identifies deprecated entries.
+        """
+        tool_config = configparser.ConfigParser()
+        tool_config.read_string("[SectionA]\nkey1 = value1\n[SectionB]\nkey2 = value2\n")
 
-        # Patch config.get_config_dir to return our tmp_path
-        mock_config.get_config_dir.return_value = config_dir
+        user_config = configparser.ConfigParser()
+        user_config.read_string(
+            "[SectionA]\nkey1 = new_value1\nkey_deprecated = old_value_deprecated\n"
+            "[SectionC]\nnew_section_key = new_value\n"
+        )
 
-        # Patch Validation.get_project_path to return a dummy path
-        class DummyValidation:
-            @staticmethod
-            def get_project_path():
-                return tmp_path
+        deprecated = dycov_initializer._find_deprecated_parameters(tool_config, user_config)
 
-        initialization.Validation = DummyValidation
-        # Create configuration/config.ini and configuration/defaultConfig.ini
-        conf_dir = tmp_path / "configuration"
-        conf_dir.mkdir(exist_ok=True)
-        (conf_dir / "config.ini").write_text("[dycov]\nversion = 1.0.0.RC\n")
-        (conf_dir / "defaultConfig.ini").write_text("[dycov]\nversion = 1.0.0.RC\n")
-        # Prepare tool_path/templates/PCS/model/SM/.DummySample etc.
-        tool_path = tmp_path
-        for template in ["PCS", "reports"]:
-            for category in ["performance", "model"]:
-                for model in ["SM", "PPM", "BESS"]:
-                    dummy = tool_path / "templates" / template / category / model / ".DummySample"
-                    dummy.mkdir(parents=True, exist_ok=True)
-                    (dummy / "dummy.txt").write_text("dummy")
-            tdir = tool_path / "templates" / template
-            tdir.mkdir(parents=True, exist_ok=True)
-            (tdir / "README.md").write_text("README")
-            if template == "reports":
-                (tdir / "TSO_logo.pdf").write_bytes(b"pdf")
-                (tdir / "fig_placeholder.pdf").write_bytes(b"pdf")
-        (tool_path / "templates" / "README.md").write_text("README")
+        expected_deprecated = [
+            {"section": "SectionA", "key": "key_deprecated", "value": "old_value_deprecated"},
+            {"section": "SectionC", "key": "new_section_key", "value": "new_value"},
+        ]
+        assert sorted(deprecated, key=lambda x: (x["section"], x["key"])) == sorted(
+            expected_deprecated, key=lambda x: (x["section"], x["key"])
+        )
 
-        # Patch dycov_logging.get_logger to a dummy logger
-        class DummyLogger:
-            def info(self, msg):
-                pass
+    def test_backup_config_file(self, dycov_initializer, tmp_path):
+        """
+        Tests _backup_config_file correctly renames the user config file.
+        """
+        user_config_file = self.mock_config.get_config_dir.return_value / "config.ini"
+        user_config_file.write_text("initial content")
 
-        dummy_logger = DummyLogger()
-        monkeypatch.setattr("dycov.dynawo.dynawo.dycov_logging", dummy_logger)
+        # Create a dummy old backup to ensure ID increment
+        (self.mock_config.get_config_dir.return_value / "config.ini.OLD.0").write_text(
+            "old backup"
+        )
 
-        # Patch version to return a string
-        initialization.version = lambda name: "1.0.0"
-        # Patch precompile to abort
-        initialization.precompile = lambda launcher: True
-        launcher_dwo = tmp_path / "launcher"
-        # Expect SystemExit
-        with pytest.raises(SystemExit):
-            initialization.init(launcher_dwo, debug=False)
+        dycov_initializer._backup_config_file(user_config_file)
+
+        assert not user_config_file.exists()
+        assert (self.mock_config.get_config_dir.return_value / "config.ini.OLD.1").is_file()
+
+    def test_setup_templates_and_models(
+        self, dycov_initializer, tmp_path, tool_path_fixture, mocker
+    ):
+        """
+        Tests that _setup_templates_and_models orchestrates the setup of templates and user models.
+        """
+        mock_configure_templates = mocker.patch.object(dycov_initializer, "_configure_templates")
+        mock_configure_user_models = mocker.patch.object(
+            dycov_initializer, "_configure_user_models"
+        )
+
+        dycov_initializer._setup_templates_and_models(tool_path_fixture)
+
+        mock_configure_templates.assert_called_once_with(tool_path_fixture)
+        mock_configure_user_models.assert_called_once()
+
+    def test_initialize_logger_debug_mode(self, dycov_initializer, tmp_path, mocker):
+        """
+        Tests that _initialize_logger sets log levels to DEBUG when debug is True.
+        """
+        # Ensure init_handlers is mocked correctly
+        mock_init_handlers = mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
+
+        dycov_initializer._initialize_logger(debug=True)
+
+        mock_init_handlers.assert_called_once_with(
+            "DEBUG",  # file_log_level
+            self.mock_config.get_value.side_effect(
+                "Global", "file_formatter"
+            ),  # file_formatter from mock_config
+            self.mock_config.get_int.return_value,  # file_max_bytes
+            "DEBUG",  # console_log_level
+            self.mock_config.get_value.side_effect(
+                "Global", "console_formatter"
+            ),  # console_formatter from mock_config
+            self.mock_config.get_config_dir.return_value / "log",  # log_dir
+        )
+
+    def test_initialize_logger_no_debug(self, dycov_initializer, tmp_path, mocker):
+        """
+        Tests that _initialize_logger uses configured log levels when debug is False.
+        """
+        # Ensure init_handlers is mocked correctly
+        mock_init_handlers = mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
+
+        # Override default mock config behavior for this specific test
+        self.mock_config.get_value.side_effect = lambda section, key: {
+            ("Global", "file_log_level"): "WARNING",
+            ("Global", "file_formatter"): "%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+            ("Global", "console_log_level"): "ERROR",
+            ("Global", "console_formatter"): "%(levelname)s - %(name)s - %(message)s",
+        }.get((section, key), None)
+        self.mock_config.get_int.return_value = 50 * 1024 * 1024
+
+        dycov_initializer._initialize_logger(debug=False)
+
+        mock_init_handlers.assert_called_once_with(
+            "WARNING",  # file_log_level
+            self.mock_config.get_value.side_effect("Global", "file_formatter"),  # file_formatter
+            self.mock_config.get_int.return_value,  # file_max_bytes
+            "ERROR",  # console_log_level
+            self.mock_config.get_value.side_effect(
+                "Global", "console_formatter"
+            ),  # console_formatter
+            self.mock_config.get_config_dir.return_value / "log",  # log_dir
+        )

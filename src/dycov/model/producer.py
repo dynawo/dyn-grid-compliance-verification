@@ -13,18 +13,17 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
+    ELECTRIC_PERFORMANCE,
     ELECTRIC_PERFORMANCE_BESS,
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
+    MODEL_VALIDATION,
     MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
 )
 from dycov.files import model_parameters
 from dycov.logging.logging import dycov_logging
-from dycov.validation import sanity_checks
-
-ELECTRIC_PERFORMANCE = 0
-MODEL_VALIDATION = 1
+from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
@@ -53,7 +52,7 @@ class Producer:
         Directory to the User Curves, if it is given
     verification_type: int
         0 if it is an electrical performance verification
-        1 if it is a model validation
+        10 if it is a model validation
     """
 
     def __init__(
@@ -73,16 +72,56 @@ class Producer:
         self._is_user_curves = self._producer_curves_path is not None
         self._has_reference_curves_path = self._reference_curves_path is not None
 
+        self._filename = None
+        self._sim_type = None
+
+        dycov_logging.get_logger("Producer").debug("Initializing Producer:")
+        if self._is_dynawo_model:
+            dycov_logging.get_logger("Producer").debug(f"model path: {self._producer_model_path}")
+        if self._is_user_curves:
+            dycov_logging.get_logger("Producer").debug(
+                f"curves path: {self._producer_curves_path}"
+            )
+        if self._has_reference_curves_path:
+            dycov_logging.get_logger("Producer").debug(
+                f"reference curves path: {self._reference_curves_path}"
+                if self._reference_curves_path
+                else ""
+            )
+
         if verification_type == ELECTRIC_PERFORMANCE:
             self.__set_electric_performance_type()
         elif verification_type == MODEL_VALIDATION:
             self.__set_model_validation_type()
 
     def __set_electric_performance_type(self):
+        #  Expected input example:
+        #  Dynawo
+        #  ├─── Producer.dyd
+        #  ├─── Producer.par
+        #  └─── Producer.ini
+
+        # By default the tool will search for the curve using a compound name:
+        #               - DYDfilename.PCS.benchmark.OC
+        # As a second option, it will search for the compound name:
+        #               - PCS.benchmark.OC
+        # This logic is only used if the user does not inform the file name specifically.
+        #  Example of expected curve input:
+        # ProducerCurves
+        # ├── Producer
+        # │   ├── CurvesFiles.ini
+        # │   ├── PCS_RTE-I2.USetPointStep.AReactance.csv
+        # │   ├── PCS_RTE-I2.USetPointStep.AReactance.dict
+        #  ...
+        # │   ├── PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.csv
+        # │   └── PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.dict
+        # └── Producer.ini
+
         sm_models = 0
         ppm_models = 0
         bess_models = 0
         if self.is_dynawo_model():
+            file_checks.check_performance_model(self._producer_model_path)
             (
                 generators,
                 _,
@@ -95,10 +134,11 @@ class Producer:
                 self.get_producer_par(),
                 self._s_nref,
             )
-            sm_models, ppm_models, bess_models = sanity_checks.check_generators(generators)
+            sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
+            file_checks.check_performance_curves(self._producer_curves_path)
             default_section = "DEFAULT"
-            producer_config = self.read_producer_ini()
+            producer_config = self.__read_producer_ini()
             generator_type = producer_config.get(default_section, "generator_type")
             if "SM" == generator_type:
                 sm_models = 1
@@ -119,6 +159,49 @@ class Producer:
             )
 
     def __set_model_validation_type(self):
+        #  Expected input example:
+        #  Dynawo
+        #  ├─── Zone3
+        #  │     ├─── Producer.dyd
+        #  │     ├─── Producer.par
+        #  │     └─── Producer.ini
+        #  └─── Zone1
+        #        ├─── Producer_G1.dyd
+        #        ├─── Producer_G1.par
+        #        ├─── Producer_G1.ini
+        #        ├─── Producer_G2.dyd
+        #        ├─── Producer_G2.par
+        #        └─── Producer_G2.ini
+
+        # By default the tool will search for the curve using a compound name:
+        #               - DYDfilename.PCS.benchmark.OC
+        # As a second option, it will search for the compound name:
+        #               - PCS.benchmark.OC
+        # This logic is only used if the user does not inform the file name specifically.
+        #  Example of expected curve input:
+        # ReferenceCurves
+        # ├── Producer
+        # │   ├── CurvesFiles.ini
+        # │   ├── PCS_RTE-I16z3.GridVoltageDip.Qzero.csv
+        # │   ├── PCS_RTE-I16z3.GridVoltageDip.Qzero.dict
+        #  ...
+        # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.csv
+        # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.dict
+        # ├── Producer_G1
+        # │   ├── CurvesFiles.ini
+        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
+        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #  ...
+        # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
+        # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
+        # └── Producer_G2
+        #     ├── CurvesFiles.ini
+        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
+        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #  ...
+        #     ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
+        #     └── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
+
         sm_models = 0
         ppm_models = 0
         bess_models = 0
@@ -126,6 +209,9 @@ class Producer:
             sm_models, ppm_models, bess_models = self.__set_dynawo_model_validation_type()
         else:
             sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
+            file_checks.check_validation_curves(
+                self._producer_curves_path, self._reference_curves_path
+            )
 
         if sm_models > 0:
             raise ValueError("Synchronous machine models are not allowed for model validation")
@@ -138,45 +224,58 @@ class Producer:
 
     def __set_dynawo_model_validation_type(self):
         self._zone = 1
-        (
-            generators_z1,
-            _,
-            _,
-            _,
-            _,
-            _,
-        ) = model_parameters.get_producer_values(
-            self.get_producer_dyd(),
-            self.get_producer_par(),
-            self._s_nref,
-        )
+        generators_z1 = list()
+        for self._filename in self.get_filenames(self._zone):
+            (
+                generators,
+                _,
+                _,
+                _,
+                _,
+                _,
+            ) = model_parameters.get_producer_values(
+                self.get_producer_dyd(),
+                self.get_producer_par(),
+                self._s_nref,
+            )
+            generators_z1 += generators
         self._zone = 3
-        (
-            generators_z3,
-            _,
-            _,
-            _,
-            _,
-            _,
-        ) = model_parameters.get_producer_values(
-            self.get_producer_dyd(),
-            self.get_producer_par(),
-            self._s_nref,
-        )
-        sm_models, ppm_models, bess_models = sanity_checks.check_generators(
-            generators_z1 + generators_z3
+        generators_z3 = list()
+        for self._filename in self.get_filenames(self._zone):
+            (
+                generators,
+                _,
+                _,
+                _,
+                _,
+                _,
+            ) = model_parameters.get_producer_values(
+                self.get_producer_dyd(),
+                self.get_producer_par(),
+                self._s_nref,
+            )
+            generators_z3 += generators
+        sm_models, ppm_models, bess_models = parameter_checks.check_generators(
+            generators_z1, generators_z3
         )
         self._zone = 0
 
+        file_checks.check_validation_model(
+            self._producer_model_path,
+            self._reference_curves_path,
+            len(generators_z3),
+            self.get_filenames(zone=3),
+            self.get_filenames(zone=1),
+        )
         return sm_models, ppm_models, bess_models
 
     def __set_curves_model_validation_type(self):
         default_section = "DEFAULT"
         self._zone = 1
-        producer_config = self.read_producer_ini()
+        producer_config = self.__read_producer_ini()
         generator_type_z1 = producer_config.get(default_section, "generator_type")
         self._zone = 3
-        producer_config = self.read_producer_ini()
+        producer_config = self.__read_producer_ini()
         generator_type_z3 = producer_config.get(default_section, "generator_type")
         sm_models = 0
         ppm_models = 0
@@ -196,8 +295,11 @@ class Producer:
 
         return sm_models, ppm_models, bess_models
 
-    def read_producer_ini(self):
-        pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
+    def __read_producer_ini(self):
+        if self._filename is None:
+            pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
+        else:
+            pattern_ini = re.compile(rf".*.{self._filename}.[iI][nN][iI]")
         producer_ini = self.__get_file_by_pattern(pattern_ini)
 
         default_section = "DEFAULT"
@@ -210,7 +312,7 @@ class Producer:
 
     def __init_parameters(self):
         default_section = "DEFAULT"
-        producer_config = self.read_producer_ini()
+        producer_config = self.__read_producer_ini()
         _check_parameters_definition(
             producer_config, default_section, self._sim_type == MODEL_VALIDATION_BESS
         )
@@ -247,7 +349,7 @@ class Producer:
         self.s_nom = sum(gen.SNom for gen in self.generators)
 
         # Check sanity of the producer network
-        sanity_checks.check_topology(
+        topology_checks.check_topology(
             self.topology,
             self.generators,
             self.stepup_xfmrs,
@@ -256,12 +358,12 @@ class Producer:
             self.ppm_xfmr,
             self.intline,
         )
-        sanity_checks.check_trafos(self.stepup_xfmrs)
-        sanity_checks.check_auxiliary_load(self.aux_load)
-        sanity_checks.check_trafo(self.auxload_xfmr)
-        sanity_checks.check_trafo(self.ppm_xfmr)
-        sanity_checks.check_internal_line(self.intline)
-        sanity_checks.check_generators(self.generators)
+        parameter_checks.check_trafos(self.stepup_xfmrs)
+        parameter_checks.check_auxiliary_load(self.aux_load)
+        parameter_checks.check_trafo(self.auxload_xfmr)
+        parameter_checks.check_trafo(self.ppm_xfmr)
+        parameter_checks.check_internal_line(self.intline)
+        parameter_checks.check_generators(self.generators)
 
     def __get_file_by_pattern(self, pattern) -> Path:
         if self._producer_model_path is not None:
@@ -283,6 +385,47 @@ class Producer:
                 return path.resolve() / file
         dycov_logging.get_logger("Producer").warning(f"No found pattern: {pattern} in {path}")
         return None
+
+    def get_filenames(self, zone: int = 0) -> list[str]:
+        """Get the filenames of the producer model.
+
+        Parameters
+        ----------
+        zone: int
+            Zone to test, only applies to model validation
+
+        Returns
+        -------
+        list[str]
+            List of filenames.
+        """
+        if self._producer_model_path is not None:
+            if zone == 0:
+                path = self._producer_model_path
+            elif zone == 1:
+                path = self._producer_model_path / "Zone1"
+            elif zone == 3:
+                path = self._producer_model_path / "Zone3"
+
+            pattern = re.compile(r".*.[dD][yY][dD]")
+            return sorted(
+                [file.stem for file in path.resolve().iterdir() if pattern.match(str(file))]
+            )
+
+        elif self._producer_curves_path is not None:
+            path = self._producer_curves_path
+
+            exclude_pattern = re.compile(r".*.Zone[13]")
+            return sorted(
+                [
+                    p.stem
+                    for p in path.resolve().iterdir()
+                    if not exclude_pattern.match(str(p)) and p.is_dir()
+                ]
+            )
+
+        dycov_logging.get_logger("Producer").error("No producer model has been defined")
+        return list()
 
     def set_consumption(self, consumption: float) -> None:
         """The value of p_max_pu is defined depending on the
@@ -352,26 +495,35 @@ class Producer:
         """
         return self._reference_curves_path
 
-    def set_zone(self, zone: int) -> None:
+    def set_zone(self, zone: int, filename: str) -> None:
         """Set the zone to test.
 
         Parameters
         ----------
         zone: int
             Zone to test, only applies to model validation
+        filename: str
+            Name of the file to validate
         """
+        dycov_logging.get_logger("Producer").debug(
+            f"Setting zone to {zone} and filename to {filename}"
+        )
         self._zone = zone
+        self._filename = filename
         self.__init_parameters()
-        sanity_checks.check_producer_params(
+        parameter_checks.check_producer_params(
             self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom
         )
 
         if self.is_dynawo_model():
-            sanity_checks.check_well_formed_xml(self.get_producer_dyd())
-            sanity_checks.check_well_formed_xml(self.get_producer_par())
-            sanity_checks.check_curves_files(
-                self._producer_model_path, self._reference_curves_path, self.get_sim_type_str()
-            )
+            file_checks.check_well_formed_xml(self.get_producer_dyd())
+            file_checks.check_well_formed_xml(self.get_producer_par())
+            if self.get_sim_type() > MODEL_VALIDATION:
+                file_checks.check_curves_files(
+                    self._producer_model_path,
+                    self._reference_curves_path / filename,
+                    self.get_sim_type_str(),
+                )
             self.__init_model()
 
     def get_zone(self) -> int:
@@ -449,11 +601,11 @@ class Producer:
         Returns
         -------
         int
-            0 if it is an electrical performance for Synchronous Machine Model
-            1 if it is an electrical performance for Power Park Module Model
-            2 if it is an electrical performance for Storage Model
-            10 if it is a model validation for Power Park Module Model
-            11 if it is a model validation for Storage Model
+            1 if it is an electrical performance for Synchronous Machine Model
+            2 if it is an electrical performance for Power Park Module Model
+            3 if it is an electrical performance for Storage Model
+            11 if it is a model validation for Power Park Module Model
+            12 if it is a model validation for Storage Model
         """
         return self._sim_type
 
@@ -465,7 +617,10 @@ class Producer:
         Path
             Path to the Producer DYD file
         """
-        pattern_dyd = re.compile(r".*.[dD][yY][dD]")
+        if self._filename is None:
+            pattern_dyd = re.compile(r".*.[dD][yY][dD]")
+        else:
+            pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
         return self.__get_file_by_pattern(pattern_dyd)
 
     def get_producer_par(self):
@@ -476,7 +631,10 @@ class Producer:
         Path
             Path to the Producer PAR file
         """
-        pattern_par = re.compile(r".*.[pP][aA][rR]")
+        if self._filename is None:
+            pattern_par = re.compile(r".*.[pP][aA][rR]")
+        else:
+            pattern_par = re.compile(rf".*.{self._filename}.[pP][aA][rR]")
         return self.__get_file_by_pattern(pattern_par)
 
     def get_producer_curves_path(self) -> Path:
