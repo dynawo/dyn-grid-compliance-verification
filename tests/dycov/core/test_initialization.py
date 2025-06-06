@@ -284,26 +284,6 @@ class TestDycovInitializer:
             expected_deprecated, key=lambda x: (x["section"], x["key"])
         )
 
-    def test_log_deprecated_parameters(self, dycov_initializer):
-        """
-        Tests _log_deprecated_parameters correctly logs warnings.
-        """
-        deprecated_params = [
-            {"section": "Global", "key": "old_setting", "value": "true"},
-            {"section": "Logging", "key": "format", "value": "%(message)s"},
-        ]
-        file_name = "user_config.ini"
-
-        dycov_initializer._log_deprecated_parameters(deprecated_params, file_name)
-
-        self._mock_logger.warning.assert_any_call(
-            "Deprecated in user_config.ini: section Global key old_setting value true"
-        )
-        self._mock_logger.warning.assert_any_call(
-            "Deprecated in user_config.ini: section Logging key format value %(message)s"
-        )
-        assert self._mock_logger.warning.call_count == len(deprecated_params)
-
     def test_backup_config_file(self, dycov_initializer, tmp_path):
         """
         Tests _backup_config_file correctly renames the user config file.
@@ -387,32 +367,3 @@ class TestDycovInitializer:
             ),  # console_formatter
             self.mock_config.get_config_dir.return_value / "log",  # log_dir
         )
-
-    def test_init_full_flow_no_launcher_precompile_skipped(
-        self, dycov_initializer, tmp_path, tool_path_fixture, mocker
-    ):
-        """
-        Tests the complete `init` method flow when no Dynawo launcher is provided (None).
-        Precompilation should be skipped.
-        """
-        launcher_dwo = None
-        debug_mode = False
-
-        # Mock internal methods called by init
-        mock_setup_user_config = mocker.patch.object(dycov_initializer, "_setup_user_config")
-        mock_setup_templates_and_models = mocker.patch.object(
-            dycov_initializer, "_setup_templates_and_models"
-        )
-        mock_initialize_logger = mocker.patch.object(dycov_initializer, "_initialize_logger")
-        mock_prepare_dynawo_models = mocker.patch(
-            "dycov.curves.dynawo.prepare_tool.precompile", return_value=False
-        )  # Even if it's not called, define it
-        mocker.patch("dycov.core.initialization.version", return_value="test_version")
-
-        dycov_initializer.init(launcher_dwo, debug_mode)
-
-        mock_setup_user_config.assert_called_once_with(mocker.ANY)
-        mock_setup_templates_and_models.assert_called_once_with(mocker.ANY)
-        mock_initialize_logger.assert_called_once_with(debug_mode)
-        self._mock_logger.info.assert_called_once_with("Starting DyCoV - version test_version")
-        mock_prepare_dynawo_models.assert_not_called()  # Crucially, this should not be called

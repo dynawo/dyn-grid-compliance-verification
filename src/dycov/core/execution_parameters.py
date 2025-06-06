@@ -19,11 +19,13 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
 
+LOGGER = dycov_logging.get_logger("Execution Parameters")
+
 
 class Parameters:
     """Parameters defined in the command arguments.
 
-    Args
+    Attributes
     ----
     launcher_dwo: Path
         Dynawo launcher.
@@ -55,7 +57,9 @@ class Parameters:
         only_dtr: bool,
         verification_type: int,
     ):
-        # Input parameters
+        """
+        Initializes the Parameters instance with provided execution arguments.
+        """
         self._launcher_dwo = launcher_dwo
         self._selected_pcs = selected_pcs
         self._output_dir = output_dir
@@ -66,16 +70,18 @@ class Parameters:
             producer_model, producer_curves_path, reference_curves_path, verification_type
         )
 
-        # Set up the working directory
-        self._working_dir = self._initialize_working_directory()
+        self._working_dir = self._create_working_dir()
+        LOGGER.info(f"Working directory created at: {self._working_dir}")
 
-    def _initialize_working_directory(self) -> Path:
-        """Initializes and cleans up the temporary working directory.
+    def _create_working_dir(self) -> Path:
+        """Creates a unique temporary working directory for the current execution.
+
+        The directory name is based on the current username, timestamp, and a UUID.
 
         Returns
         -------
         Path
-            The path to the newly created unique working directory.
+            The path to the newly created working directory.
         """
         tmp_path_prefix = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
@@ -86,9 +92,7 @@ class Parameters:
         current_time = time.time()
         for execution_path in base_working_dir.iterdir():
             if current_time - execution_path.stat().st_mtime >= 24 * 3600:
-                dycov_logging.get_logger("Parameters").debug(
-                    f"Removing old execution: {execution_path}"
-                )
+                LOGGER.debug(f"Removing old execution: {execution_path}")
                 shutil.rmtree(execution_path)
 
         return base_working_dir / Path(str(uuid.uuid4()))
