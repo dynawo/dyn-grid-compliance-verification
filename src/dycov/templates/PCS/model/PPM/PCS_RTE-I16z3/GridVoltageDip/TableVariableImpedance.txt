@@ -7,4 +7,4 @@ double ImpedanceTable(8,3)
 {{end_event}} 0 {{Xv_clear}}
 {{delta_t_rec1}} 0 {{Xv_clear}}
 {{delta_t_rec2}} 0 {{Xv_rec2}}
-{{simulation_stop}} 0 100
+{{simulation_stop}} 0 {{Xv_rec2}}
