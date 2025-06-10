@@ -1,0 +1,12 @@
+#1
+double ImpedanceTable(10,3)
+{{simulation_start}} 0 100
+{{start_event}} 0 100
+{{start_event}} 0 {{Xv_swell}}
+{{delta_t_rec1}} 0 {{Xv_swell}}
+{{delta_t_rec1}} 0 {{Xv_rec2}}
+{{delta_t_rec2}} 0 {{Xv_rec2}}
+{{delta_t_rec2}} 0 {{Xv_rec3}}
+{{delta_t_rec3}} 0 {{Xv_rec3}}
+{{delta_t_rec3}} 0 {{Xv_rec4}}
+{{simulation_stop}} 0 {{Xv_rec4}}

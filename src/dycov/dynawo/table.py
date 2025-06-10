@@ -31,6 +31,29 @@ class TableFile(FileVariables):
             oc_section,
         )
 
+    def __complete_Xv_entries(self, variables_dict, event_params):
+        list_Xv = [s for s in event_params.keys() if s.startswith("Xv_")]
+        for Xv in list_Xv:
+            variables_dict[Xv] = event_params[Xv]
+
+    def __complete_file(
+        self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict, filename: str
+    ) -> None:
+        variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
+        variables_dict["start_event"] = event_params["start_time"]
+        variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
+        variables_dict["bus_u0pu"] = rte_gen.U0
+        if event_params["connect_to"] == "AVRSetpointPu":
+            variables_dict["bus_upu"] = rte_gen.U0 + float(event_params["step_value"])
+        elif event_params["connect_to"] == "NetworkFrequencyPu":
+            variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
+
+        self.__complete_Xv_entries(variables_dict, event_params)
+        self.complete_parameters(variables_dict, event_params)
+
+        # Replace placeholders in the TableInfiniteBus file with the calculated variables
+        replace_placeholders.dump_file(working_oc_dir, filename, variables_dict)
+
     def complete_file(self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict) -> None:
         """Replace the file placeholders with the corresponding values.
 
@@ -43,22 +66,9 @@ class TableFile(FileVariables):
         event_params: dict
             Event parameters
         """
-        variables_dict = replace_placeholders.get_all_variables(
-            working_oc_dir, "TableInfiniteBus.txt"
-        )
-
-        variables_dict["start_event"] = event_params["start_time"]
-        variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
-        variables_dict["bus_u0pu"] = rte_gen.U0
-        if event_params["connect_to"] == "AVRSetpointPu":
-            variables_dict["bus_upu"] = rte_gen.U0 + float(event_params["step_value"])
-        elif event_params["connect_to"] == "NetworkFrequencyPu":
-            variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
-
-        self.complete_parameters(variables_dict, event_params)
-
-        if not (working_oc_dir / "TableInfiniteBus.txt").exists():
-            return
-
-        # Replace placeholders in the TableInfiniteBus file with the calculated variables
-        replace_placeholders.dump_file(working_oc_dir, "TableInfiniteBus.txt", variables_dict)
+        if (working_oc_dir / "TableInfiniteBus.txt").exists():
+            self.__complete_file(working_oc_dir, rte_gen, event_params, "TableInfiniteBus.txt")
+        if (working_oc_dir / "TableVariableImpedance.txt").exists():
+            self.__complete_file(
+                working_oc_dir, rte_gen, event_params, "TableVariableImpedance.txt"
+            )
