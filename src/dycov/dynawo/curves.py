@@ -172,6 +172,44 @@ class DynawoCurves(ProducerCurves):
         if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
             event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
 
+    def __calculate_Xv(self, Udip, Zcc, Uinf):
+        if Uinf == Udip:
+            dycov_logging.get_logger("ProducerCurves").error(
+                "Uinf cannot be equal to Udip to avoid division by zero."
+            )
+            raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
+        Zv = (Udip * Zcc) / (Uinf - Udip)
+        ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
+        Xv = (Zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
+        return Xv
+
+    def __calculate_Xv_values(
+        self,
+        event_params,
+        line_xpu,
+        line_rpu,
+        rte_gen_U0,
+        pcs_bm_name,
+        oc_name,
+        generator_variables,
+    ):
+        Zcc = math.sqrt(line_xpu * line_xpu + line_rpu * line_rpu)
+        Uinf = rte_gen_U0
+        model_section = f"{get_cfg_oc_name(pcs_bm_name, oc_name)}.Model"
+
+        generator_type = generator_variables.get_generator_type(self.get_producer().u_nom)
+
+        u_list_options = [
+            s
+            for s in config.get_options(model_section)
+            if s.startswith("u_") and s.endswith(generator_type)
+        ]
+
+        for option in u_list_options:
+            name_Xv = f"Xv_{option[2:]}".replace(f"_{generator_type}", "")
+            u_value_from_config = config.get_float(model_section, option, -999.0)
+            event_params[name_Xv] = self.__calculate_Xv(u_value_from_config, Zcc, Uinf)
+
     def __complete_model(
         self,
         working_oc_dir: Path,
@@ -289,6 +327,10 @@ class DynawoCurves(ProducerCurves):
             control_mode,
         )
         self.__adjust_event_value(event_params)
+
+        self.__calculate_Xv_values(
+            event_params, line_xpu, line_rpu, rte_gen.U0, pcs_bm_name, oc_name, generator_variables
+        )
 
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
         jobs_file.complete_file(working_oc_dir, self._solver_id, self._solver_lib, event_params)
