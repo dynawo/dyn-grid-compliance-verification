@@ -51,25 +51,16 @@ class TableFile(FileVariables):
             oc_section,
         )
 
-    def complete_file(self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict) -> None:
-        """
-        Replaces the file placeholders in the 'TableInfiniteBus.txt' file with the corresponding
-        values.
+    def __complete_Xv_entries(self, variables_dict, event_params):
+        list_Xv = [s for s in event_params.keys() if s.startswith("Xv_")]
+        for Xv in list_Xv:
+            variables_dict[Xv] = event_params[Xv]
 
-        Parameters
-        ----------
-        working_oc_dir: Path
-            The working directory where the 'TableInfiniteBus.txt' file is located.
-        rte_gen: Gen_init
-            Parameters for the initialization of the TSO's bus side (P, Q, U, angle).
-        event_params: dict
-            A dictionary containing event-specific parameters, including start time,
-            duration, step value, and connection type.
-        """
+    def __complete_file(
+        self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict, filename: str
+    ) -> None:
         # Retrieve all existing variables from the TableInfiniteBus.txt file
-        variables_dict = replace_placeholders.get_all_variables(
-            working_oc_dir, "TableInfiniteBus.txt"
-        )
+        variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
 
         # Update event timing variables
         variables_dict["start_event"] = event_params["start_time"]
@@ -85,11 +76,30 @@ class TableFile(FileVariables):
             variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
 
         # Complete any additional parameters using the inherited method
+        self.__complete_Xv_entries(variables_dict, event_params)
         self.complete_parameters(variables_dict, event_params)
 
-        # Check if the file exists before attempting to dump variables
-        if not (working_oc_dir / "TableInfiniteBus.txt").exists():
-            return
-
         # Replace placeholders in the TableInfiniteBus file with the calculated variables
-        replace_placeholders.dump_file(working_oc_dir, "TableInfiniteBus.txt", variables_dict)
+        replace_placeholders.dump_file(working_oc_dir, filename, variables_dict)
+
+    def complete_file(self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict) -> None:
+        """
+        Replaces the file placeholders in the 'TableInfiniteBus.txt' file with the corresponding
+        values.
+
+        Parameters
+        ----------
+        working_oc_dir: Path
+            The working directory where the 'TableInfiniteBus.txt' file is located.
+        rte_gen: Gen_init
+            Parameters for the initialization of the TSO's bus side (P, Q, U, angle).
+        event_params: dict
+            A dictionary containing event-specific parameters, including start time,
+            duration, step value, and connection type.
+        """
+        if (working_oc_dir / "TableInfiniteBus.txt").exists():
+            self.__complete_file(working_oc_dir, rte_gen, event_params, "TableInfiniteBus.txt")
+        if (working_oc_dir / "TableVariableImpedance.txt").exists():
+            self.__complete_file(
+                working_oc_dir, rte_gen, event_params, "TableVariableImpedance.txt"
+            )
