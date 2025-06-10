@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <!-- Declare the parameters of all dynamic models defined in your DYD file -->
+</parametersSet>

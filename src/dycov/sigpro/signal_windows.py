@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.validation import sanity_checks
+from dycov.sanity_checks import parameter_checks
 
 Exclusion_zones = namedtuple(
     "Exclusion_zones",
@@ -76,7 +76,7 @@ def _get_windows_times(
     # nous préconisons 1 secondes pour la période avant événement (régime établi initial) et
     # 5 secondes après événement."
     pre_windows_len = 1.0
-    sanity_checks.check_t_fault(time_values[0], t_fault, pre_windows_len)
+    parameter_checks.check_t_fault(time_values[0], t_fault, pre_windows_len)
 
     t_w1_end = t_fault - exclusion_zones.t_integrator_tol - exclusion_zones.t_faultLPF_excl
     t_w1_init = t_w1_end - pre_windows_len

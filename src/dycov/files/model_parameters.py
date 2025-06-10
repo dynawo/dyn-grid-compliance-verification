@@ -22,7 +22,7 @@ from typing import Optional
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.dynawo.translator import dynawo_translator, get_generator_family_level
+from dycov.curves.dynawo.translator import dynawo_translator, get_generator_family_level
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import (
     Gen_params,

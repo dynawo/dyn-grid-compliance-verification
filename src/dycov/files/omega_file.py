@@ -11,7 +11,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.translator import dynawo_translator
 from dycov.model.parameters import Gen_params
 
 

@@ -84,6 +84,7 @@ def test_create_plot_saves_expected_plot():
             additional_curves,
             results,
             unit,
+            log_title="",
         )
         assert output_file.exists()
         assert output_file.stat().st_size > 0
@@ -103,7 +104,11 @@ def test_get_common_time_range_includes_all_events():
     unit_characteristics = {}
     operating_condition = "OC.Benchmark"
     xmin, xmax = get_common_time_range(
-        operating_condition, unit_characteristics, figures_description, results
+        operating_condition,
+        unit_characteristics,
+        figures_description,
+        results,
+        log_title="",
     )
     assert xmin <= 1.0
     assert xmax >= 3.5
