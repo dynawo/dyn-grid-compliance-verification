@@ -400,10 +400,10 @@ def _get_magnitude_controlled_by_avr(generators: list, df_curves: pd.DataFrame, 
             delete_columns.append(variable)
         elif u_variable in df_curves.columns:
             q_variable = f"{generator.id}_GEN_MagnitudeControlledByAVRQPu"
-            if generator.UseVoltageDrop:
+            if generator.UseVoltageDroop:
                 curve_u = list(df_curves[u_variable])
                 curve_q = list(df_curves[q_variable])
-                voltage_drop = float(generator.VoltageDrop)
+                voltage_drop = float(generator.VoltageDroop)
                 curves_dict[variable] = np.add(
                     curve_u, np.multiply(curve_q, voltage_drop)
                 ).tolist()
