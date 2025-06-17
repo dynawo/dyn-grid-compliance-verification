@@ -169,8 +169,10 @@ class DynawoCurves(ProducerCurves):
 
     def __adjust_event_value(self, event_params: dict) -> None:
         generator = self.get_producer().generators[0]
-        if generator.UseVoltageDrop and event_params["connect_to"] == "AVRSetpointPu":
-            event_params["pre_value"] = self._gens[0].U0 + generator.VoltageDrop * self._gens[0].Q0
+        if generator.UseVoltageDroop and event_params["connect_to"] == "AVRSetpointPu":
+            event_params["pre_value"] = (
+                self._gens[0].U0 + generator.VoltageDroop * self._gens[0].Q0
+            )
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:

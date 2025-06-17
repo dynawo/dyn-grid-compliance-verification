@@ -104,12 +104,12 @@ def _append_generator(
     q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
     Q = float(q0pu.get("value")) * sign
 
-    _, generator_VoltageDrop = dynawo_translator.get_dynawo_variable(lib, "VoltageDrop")
-    if generator_VoltageDrop is not None:
-        gVoltageDrop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDrop}']")
-        VoltageDrop = float(gVoltageDrop.get("value"))
+    _, generator_VoltageDroop = dynawo_translator.get_dynawo_variable(lib, "VoltageDroop")
+    if generator_VoltageDroop is not None:
+        gVoltageDroop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDroop}']")
+        VoltageDroop = float(gVoltageDroop.get("value"))
     else:
-        VoltageDrop = 0.0
+        VoltageDroop = 0.0
 
     _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
     snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
@@ -125,8 +125,8 @@ def _append_generator(
             par_id=par_id,
             P=P,
             Q=Q,
-            VoltageDrop=VoltageDrop,
-            UseVoltageDrop=False,
+            VoltageDroop=VoltageDroop,
+            UseVoltageDroop=False,
         )
     )
 
@@ -391,14 +391,14 @@ def _adjust_generator(
 def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> None:
     if "MwpqMode" in control_mode_parameters:
         if control_mode_parameters["MwpqMode"] == "3":
-            generator.UseVoltageDrop = True
+            generator.UseVoltageDroop = True
 
     if "RefFlag" in control_mode_parameters:
         if control_mode_parameters["RefFlag"].lower() == "true":
             _, VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
             par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
             if par is not None and par.get("value").lower() == "false":
-                generator.UseVoltageDrop = True
+                generator.UseVoltageDroop = True
 
 
 def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
