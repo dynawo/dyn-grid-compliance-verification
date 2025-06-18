@@ -155,7 +155,7 @@ def _pcs_replace(
         solver_map = solver.create_map(oc_results)
         results_map = results.create_map(oc_results)
         compliance_map = compliance.create_map(oc_results)
-        thresholds_map = thresholds.create_map(oc_results, producer.is_dynawo_model())
+        thresholds_map = thresholds.create_map(oc_results, producer.is_field_measurements())
         error_map = signal_error.create_map(oc_results)
         steady_state_error_map = steady_state_error.create_map(oc_results)
         time_error_map = characteristics_response.create_map(oc_results)
