@@ -71,6 +71,7 @@ class Producer:
         self._is_dynawo_model = self._producer_model_path is not None
         self._is_user_curves = self._producer_curves_path is not None
         self._has_reference_curves_path = self._reference_curves_path is not None
+        self._is_field_measurements = False
 
         self._filename = None
         self._sim_type = None
@@ -701,3 +702,22 @@ class Producer:
             Equipments connected to the bus PDR
         """
         return self._connected_to_pdr
+
+    def set_is_field_measurements(self, is_field_measurements: bool) -> None:
+        """Sets if the curves are field measurements.
+        Parameters
+        ----------
+        is_field_measurements: bool
+            True if the curves are field measurements, False otherwise
+        """
+        self._is_field_measurements = is_field_measurements
+
+    def is_field_measurements(self) -> bool:
+        """Checks if the curves are field measurements.
+
+        Returns
+        -------
+        bool
+            True if the curves are field measurements, False otherwise
+        """
+        return self._is_field_measurements

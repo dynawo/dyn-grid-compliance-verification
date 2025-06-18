@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 
+from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
@@ -306,7 +307,7 @@ class DynawoSimulator:
                 )
             else:
                 # On Unix-like systems, send SIGTERM to the process group
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             proc.wait()  # Wait for the process to actually terminate
         else:
             stderr_output = proc.stderr.read().decode("utf-8")
@@ -378,11 +379,14 @@ class DynawoSimulator:
             if save_file is False or simulation failed.
             - float: The actual time taken for the simulation.
         """
+        # Remove previous output directory (Dynawo does not remove old output directories)
+        dynawo_output_full_path = inputs_path / output_path
+        manage_files.remove_dir(dynawo_output_full_path)
+
         success, stderr, sim_time = self._run_dynawo_process(
             launcher_dwo, jobs_filename, inputs_path, simulation_limit
         )
 
-        dynawo_output_full_path = inputs_path / output_path
         log_file_path = dynawo_output_full_path / "logs/dynawo.log"
 
         has_error_in_timeline = self._has_error_timeline(pcs_name, bm_name, oc_name, log_file_path)

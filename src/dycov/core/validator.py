@@ -200,7 +200,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         bool
             True if validations are defined, False otherwise.
         """
-        return bool(self._validations)
+        return False if not self._validations else True
 
     def get_sim_type(self) -> int:
         """
