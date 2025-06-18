@@ -318,6 +318,7 @@ class DynawoCurves(ProducerCurves):
         # Modify producer par to add generator init values
         section = get_cfg_oc_name(pcs_bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
+        force_voltage_droop = config.get_boolean(section, "force_voltage_droop", False)
         model_parameters.adjust_producer_init(
             working_oc_dir,
             self.get_producer().get_producer_par(),
@@ -327,6 +328,7 @@ class DynawoCurves(ProducerCurves):
             aux_load,
             pdr,
             control_mode,
+            force_voltage_droop,
         )
         self.__adjust_event_value(event_params)
 
