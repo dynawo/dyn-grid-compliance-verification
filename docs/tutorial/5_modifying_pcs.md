@@ -283,6 +283,9 @@ Steps to expand the configuration of an existing PCS with new operating conditio
      hiz_fault = false
      # OperatingCondition type
      setpoint_change_test_type = Others
+     # Force to configure Voltage Droop Mode
+     # (Only applies to USetpoint type tests, and generating units with Plant Controller)
+     force_voltage_droop = false
      [PCS_RTE-I16z1.GridVoltageStep.Rise.Model]
      # Reactance of the line connected to the PDR point
      #line_XPu =
