@@ -96,7 +96,7 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
 
     class DummyGen:
         id = "G1"
-        UseVoltageDrop = False
+        UseVoltageDroop = False
 
     generators = [DummyGen()]
     snom = 1.0
@@ -389,8 +389,8 @@ def test_process_generators_with_variable_in_columns():
     class Generator:
         def __init__(self, id):
             self.id = id
-            self.UseVoltageDrop = True
-            self.VoltageDrop = 0.1
+            self.UseVoltageDroop = True
+            self.VoltageDroop = 0.1
 
     generators = [Generator("GEN1"), Generator("GEN2"), Generator("GEN3")]
     df_curves = pd.DataFrame(

@@ -197,8 +197,8 @@ class ImportedCurves(ProducerCurves):
                         par_id="",
                         P="",
                         Q="",
-                        VoltageDrop="",
-                        UseVoltageDrop=False,
+                        VoltageDroop="",
+                        UseVoltageDroop=False,
                     )
                 )
         self.get_producer().set_generators(generators)
