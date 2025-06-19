@@ -92,7 +92,7 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
 
     class DummyGen:
         id = "G1"
-        UseVoltageDrop = False
+        UseVoltageDroop = False
 
     generators = [DummyGen()]
     snom = 1.0
