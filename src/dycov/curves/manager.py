@@ -9,8 +9,9 @@ from dycov.curves import curves_factory
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Disconnection_Model, Simulation_result
+from dycov.model.producer import Producer
+from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
-from dycov.validation import sanity_checks
 
 
 def _fix_after_windows(
@@ -35,23 +36,32 @@ class CurvesManager:
     def __init__(
         self,
         parameters: Parameters,
+        producer: Producer,
         pcs_benchmark_name: str,
         stable_time: float,
         lib_path: Path,
         templates_path: Path,
         pcs_name: str,
+        producer_name: str,
     ):
         self._working_dir = parameters.get_working_dir()
-        self._producer = parameters.get_producer()
+        self._producer = producer
         self._pcs_name = pcs_name
+        self._producer_name = producer_name
         self._before_filters_curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._windows = {"calculated": dict(), "reference": dict()}
 
         self._producer_curves_generator = curves_factory.get_producer(
-            parameters, pcs_benchmark_name, stable_time, lib_path, templates_path, pcs_name
+            parameters,
+            producer,
+            pcs_benchmark_name,
+            stable_time,
+            lib_path,
+            templates_path,
+            pcs_name,
         )
-        self._reference_curves_generator = curves_factory.get_reference(parameters)
+        self._reference_curves_generator = curves_factory.get_reference(producer)
 
     def __copy_curves_to_before_filters(self):
         self._before_filters_curves["calculated"] = self._curves["calculated"].copy()
@@ -87,7 +97,9 @@ class CurvesManager:
         oc_name: str,
     ):
         # Create a specific folder by operational point
-        working_oc_dir = self._working_dir / self._pcs_name / bm_name / oc_name
+        working_oc_dir = (
+            self._working_dir / self._producer_name / self._pcs_name / bm_name / oc_name
+        )
         manage_files.create_dir(working_oc_dir)
 
         reference_event_start_time = None
@@ -96,7 +108,11 @@ class CurvesManager:
                 reference_event_start_time,
                 self._curves["reference"],
             ) = self.__get_reference_curves_generator().obtain_reference_curve(
-                working_oc_dir, pcs_bm_name, oc_name, self.__get_reference_curves_path()
+                working_oc_dir,
+                self._producer_name,
+                pcs_bm_name,
+                oc_name,
+                self.__get_reference_curves_path(),
             )
 
         (
@@ -106,6 +122,7 @@ class CurvesManager:
             self._curves["calculated"],
         ) = self.__get_producer_curves_generator().obtain_simulated_curve(
             working_oc_dir,
+            self._producer_name,
             pcs_bm_name,
             bm_name,
             oc_name,
@@ -298,7 +315,7 @@ class CurvesManager:
 
         t_com = config.get_float("GridCode", "t_com", 0.002)
         f_cutoff = config.get_float("GridCode", "cutoff", 15.0)
-        sanity_checks.check_sampling_interval(t_com, f_cutoff)
+        parameter_checks.check_sampling_interval(t_com, f_cutoff)
 
         # Reference signals should be converted to RMS PS (if they are EMT)
         reference_curves = sigpro.ensure_rms_signals(csv_reference_curves)
@@ -350,7 +367,7 @@ class CurvesManager:
         # Sanity check: the "pre" window should be in the steady-state
         t_from, t_to = self.__get_validation_windows("calculated", "before")
         before_calculated = signal_windows.get(self.get_curves("calculated"), t_from, t_to)
-        sanity_checks.check_pre_stable(
+        parameter_checks.check_pre_stable(
             list(before_calculated["time"]),
             list(before_calculated["BusPDR_BUS_Voltage"]),
         )
@@ -445,6 +462,8 @@ class CurvesManager:
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_duration: float,
+        bm_name: str,
+        oc_name: str,
     ) -> float:
         """Calculate the critical clearing time (CCT) for a fault.
 
@@ -466,6 +485,8 @@ class CurvesManager:
             working_oc_dir,
             jobs_output_dir,
             fault_duration,
+            bm_name,
+            oc_name,
         )
 
     def get_generators_imax(self) -> dict:

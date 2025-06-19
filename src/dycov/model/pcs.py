@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import copy
 from pathlib import Path
 from typing import Union
 
@@ -23,29 +24,44 @@ class Pcs:
 
     Args
     ----
+    producer_name: str
+        Name of the producer
     pcs_name: str
         Name of the pcs
     parameters: Parameters
         Tool parameters
     """
 
-    def __init__(self, pcs_name: str, parameters: Parameters):
+    def __init__(self, producer_name: str, pcs_name: str, parameters: Parameters):
         self._name = pcs_name
-        self._producer = parameters.get_producer()
+        self._producer_name = producer_name
+
+        # Ensure a unique copy of the Producer instance is created. This is crucial
+        # for correct functionality when the tool runs in parallel, preventing potential
+        # interference or shared state issues.
+        self._producer = copy.deepcopy(parameters.get_producer())
+
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self._figures_description = {}
 
         self._has_pcs_config = False
         self._has_user_config = False
 
-        report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(
-            parameters.get_producer()
-        )
+        report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(self._producer)
         self._report_name = report_name
         self._id = int(pcs_id)
         self._zone = int(pcs_zone)
         self._bm_list = [
-            Benchmark(pcs_name, pcs_id, pcs_zone, report_name, bm_name, parameters)
+            Benchmark(
+                self._name,
+                pcs_id,
+                pcs_zone,
+                self._producer_name,
+                report_name,
+                bm_name,
+                parameters,
+                self._producer,
+            )
             for bm_name in bms_by_pcs
         ]
 
@@ -55,11 +71,22 @@ class Pcs:
     def __str__(self):
         return self._name
 
+    def __get_log_title(self):
+        return f"{self._name}:"
+
+    def __debug(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("PCS").debug(f"{self.__get_log_title()} {message}")
+
+    def __warning(self, message):
+        """Debug function to print the PCS information."""
+        dycov_logging.get_logger("PCS").warning(f"{self.__get_log_title()} {message}")
+
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
 
         # It checks if the PCS configuration file exists in the tool and reads it.
         pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
-        dycov_logging.get_logger("PCS").debug(f"PCS Path {pcs_path}")
+        self.__debug(f"PCS Path {pcs_path}")
         if pcs_path and pcs_path.exists():
             config.load_pcs_config(pcs_path)
             self._has_pcs_config = True
@@ -68,7 +95,7 @@ class Pcs:
         # The order is important, since the user configuration must override the tool
         #  configuration if both files exists
         pcs_path = self.__get_pcs_path(producer, config.get_config_dir())
-        dycov_logging.get_logger("PCS").debug(f"User PCS Path {pcs_path}")
+        self.__debug(f"User PCS Path {pcs_path}")
         if pcs_path and pcs_path.exists():
             config.load_pcs_config(pcs_path)
             self._has_user_config = True
@@ -91,9 +118,9 @@ class Pcs:
             return files["pcsdescription"]
         elif len(files) > 0:
             file = files[list(files.keys())[0]]
-            dycov_logging.get_logger("PCS").warning(
-                f"Loading '{file.name}'. To avoid confusion it is recommended to rename the "
-                f"configuration file to use the name: 'PCS_Description.ini'"
+            self.__warning(
+                f"Loading '{file.name}'. To avoid confusion it is recommended to rename "
+                f"the configuration file to use the name: 'PCS_Description.ini'"
             )
             return file
 
@@ -119,10 +146,10 @@ class Pcs:
         dict
             Results of the validations applied in the pcs
         """
-        pcs_results = {}
+        pcs_results = {"id": self._id, "zone": self._zone, "producer": self._producer_name}
         success = False
-        self._producer.set_zone(self._zone)
         for bm in self._bm_list:
+            self._producer.set_zone(self._zone, self._producer_name)
             success |= bm.validate(
                 summary_list,
                 pcs_results,
@@ -132,6 +159,35 @@ class Pcs:
             )
 
         return self._report_name, success, pcs_results
+
+    def get_zone(self) -> int:
+        """Get the zone of the PCS.
+
+        Returns
+        -------
+        int
+            Zone of the PCS
+        """
+        return self._zone
+
+    def get_producer_name(self) -> str:
+        """Get the producer name.
+        Returns
+        -------
+        str
+            Producer name
+        """
+        return self._producer_name
+
+    def get_producer(self) -> Producer:
+        """Get the producer.
+
+        Returns
+        -------
+        Producer
+            Producer object
+        """
+        return self._producer
 
     def get_name(self) -> str:
         """Get the PCS name.
