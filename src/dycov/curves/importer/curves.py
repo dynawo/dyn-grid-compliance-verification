@@ -58,8 +58,8 @@ class ImportedCurves(ProducerCurves):
                         par_id="",
                         P="",
                         Q="",
-                        VoltageDrop="",
-                        UseVoltageDrop=False,
+                        VoltageDroop="",
+                        UseVoltageDroop=False,
                     )
                 )
 

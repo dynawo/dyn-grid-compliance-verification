@@ -52,7 +52,7 @@ def create_simple_dyd_and_par(
     etree.SubElement(set_gen, f"{{{ns}}}par", name="InjectedCurrentMax", value="100.0")
     etree.SubElement(set_gen, f"{{{ns}}}par", name="ActivePower0Pu", value="0.1")
     etree.SubElement(set_gen, f"{{{ns}}}par", name="ReactivePower0Pu", value="0.05")
-    etree.SubElement(set_gen, f"{{{ns}}}par", name="VoltageDrop", value="0.01")
+    etree.SubElement(set_gen, f"{{{ns}}}par", name="VoltageDroop", value="0.01")
     etree.SubElement(set_gen, f"{{{ns}}}par", name="NominalApparentPower", value="90")
     # Transformer params
     set_xfmr = etree.SubElement(par_root, f"{{{ns}}}set", id="parXfmr")
@@ -195,7 +195,7 @@ def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch)
     class DummyGen:
         lib = "IEC"
         id = "Gen1"
-        UseVoltageDrop = False
+        UseVoltageDroop = False
         par_id = "parGen"
 
     ns = "http://www.rte-france.com/dynawo"
