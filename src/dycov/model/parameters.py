@@ -27,8 +27,8 @@ class Gen_params:
     par_id: str
     P: float
     Q: float
-    VoltageDrop: float
-    UseVoltageDrop: bool
+    VoltageDroop: float
+    UseVoltageDroop: bool
 
 
 Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
