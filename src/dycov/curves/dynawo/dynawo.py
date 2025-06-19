@@ -765,8 +765,8 @@ class DynawoSimulator:
         Parameters
         ----------
         generators : list
-            A list of generator objects, each potentially having 'UseVoltageDrop' and
-            'VoltageDrop' attributes.
+            A list of generator objects, each potentially having 'UseVoltageDroop' and
+            'VoltageDroop' attributes.
         df_curves : pd.DataFrame
             The DataFrame containing the original curves from Dynawo.
         curves_dict : dict
@@ -782,10 +782,10 @@ class DynawoSimulator:
                 curves_dict[variable] = df_curves[variable].tolist()
                 delete_columns.append(variable)
             elif u_variable in df_curves.columns:
-                if generator.UseVoltageDrop and q_variable in df_curves.columns:
+                if generator.UseVoltageDroop and q_variable in df_curves.columns:
                     curve_u = df_curves[u_variable].to_numpy()
                     curve_q = df_curves[q_variable].to_numpy()
-                    voltage_drop = float(generator.VoltageDrop)
+                    voltage_drop = float(generator.VoltageDroop)
                     curves_dict[variable] = np.add(
                         curve_u, np.multiply(curve_q, voltage_drop)
                     ).tolist()

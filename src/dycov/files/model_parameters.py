@@ -104,12 +104,12 @@ def _append_generator(
     q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
     Q = float(q0pu.get("value")) * sign
 
-    _, generator_VoltageDrop = dynawo_translator.get_dynawo_variable(lib, "VoltageDrop")
-    if generator_VoltageDrop is not None:
-        gVoltageDrop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDrop}']")
-        VoltageDrop = float(gVoltageDrop.get("value"))
+    _, generator_VoltageDroop = dynawo_translator.get_dynawo_variable(lib, "VoltageDroop")
+    if generator_VoltageDroop is not None:
+        gVoltageDroop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDroop}']")
+        VoltageDroop = float(gVoltageDroop.get("value"))
     else:
-        VoltageDrop = 0.0
+        VoltageDroop = 0.0
 
     _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
     snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
@@ -125,8 +125,8 @@ def _append_generator(
             par_id=par_id,
             P=P,
             Q=Q,
-            VoltageDrop=VoltageDrop,
-            UseVoltageDrop=False,
+            VoltageDroop=VoltageDroop,
+            UseVoltageDroop=False,
         )
     )
 
@@ -361,6 +361,7 @@ def _adjust_generator(
     generator_u0pu: float,
     generator_uphase0: float,
     generator_control_mode: str,
+    force_voltage_droop: bool,
 ) -> None:
     """Modify the Producer generator to add the init values.
     MODEL_DEPENDENT_CODE
@@ -387,18 +388,59 @@ def _adjust_generator(
 
     _set_control_mode(generator, parset, ns, generator_control_mode)
 
+    _set_voltage_droop(generator, parset, ns, generator_control_mode, force_voltage_droop)
 
-def _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters) -> None:
-    if "MwpqMode" in control_mode_parameters:
-        if control_mode_parameters["MwpqMode"] == "3":
-            generator.UseVoltageDrop = True
 
-    if "RefFlag" in control_mode_parameters:
-        if control_mode_parameters["RefFlag"].lower() == "true":
-            _, VCompFlag = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
-            par = parset.find(f"{{{ns}}}par[@name='{VCompFlag}']")
-            if par is not None and par.get("value").lower() == "false":
-                generator.UseVoltageDrop = True
+def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
+    if "MwpqMode" in voltage_droop_parameters:
+        if voltage_droop_parameters["MwpqMode"] == "3":
+            generator.UseVoltageDroop = True
+
+    if all(p in voltage_droop_parameters for p in ["RefFlag", "VCompFlag"]):
+        if voltage_droop_parameters["RefFlag"].lower() != "true":
+            return
+        if voltage_droop_parameters["VCompFlag"].lower() != "false":
+            return
+        generator.UseVoltageDroop = True
+
+
+def _set_voltage_droop(generator, parset, ns, generator_control_mode, force_voltage_droop) -> None:
+    # Get the generator voltage droop parameters from the producer PAR file.
+    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, ns)
+    dycov_logging.get_logger("Model Parameters").debug(
+        f"Generator {generator.id} Voltage Droop Mode: {voltage_droop_parameters}"
+    )
+    # If the generator has not voltage droop parameters return, like NonPlant Controller units.
+    if not voltage_droop_parameters:
+        return
+
+    if generator_control_mode == "USetpoint" and force_voltage_droop:
+
+        # Check if the configured voltage droop is valid
+        if not dynawo_translator.is_valid_control_mode(
+            generator, "VoltageDroop", voltage_droop_parameters
+        ):
+            dycov_logging.get_logger("Model Parameters").warning(
+                f"{generator.lib} voltage droop mode will be changed"
+            )
+            default_voltage_droop_parameters = _get_default_voltage_droop_parameters(
+                generator, "VoltageDroop"
+            )
+            dycov_logging.get_logger("Model Parameters").debug(
+                f"Default Voltage Droop Mode: {default_voltage_droop_parameters} "
+                f"for {generator_control_mode}"
+            )
+            if dynawo_translator.is_valid_control_mode(
+                generator, "VoltageDroop", default_voltage_droop_parameters
+            ):
+                _set_parameters(generator, parset, ns, default_voltage_droop_parameters)
+            else:
+                dycov_logging.get_logger("Model Parameters").error(
+                    f"{generator.lib} executed with wrong voltage droop mode"
+                )
+                raise ValueError(f"{generator.lib} executed with wrong voltage droop mode")
+
+    _recalculate_voltage_ref(generator, voltage_droop_parameters)
 
 
 def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
@@ -413,12 +455,9 @@ def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
             return
 
         # Check if the configured control mode is valid
-        if dynawo_translator.is_valid_control_mode(
+        if not dynawo_translator.is_valid_control_mode(
             generator, generator_control_mode, control_mode_parameters
         ):
-            _recalculate_voltage_ref(generator, parset, ns, control_mode_parameters)
-
-        else:
             dycov_logging.get_logger("Model Parameters").warning(
                 f"{generator.lib} control mode will be changed"
             )
@@ -426,15 +465,13 @@ def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
                 generator, generator_control_mode
             )
             dycov_logging.get_logger("Model Parameters").debug(
-                f"Default Control Mode: {control_mode_parameters} for {generator_control_mode}"
+                f"Default Control Mode: {default_control_mode_parameters} "
+                f"for {generator_control_mode}"
             )
             if dynawo_translator.is_valid_control_mode(
                 generator, generator_control_mode, default_control_mode_parameters
             ):
-                _set_control_mode_parameters(
-                    generator, parset, ns, default_control_mode_parameters
-                )
-                _recalculate_voltage_ref(generator, parset, ns, default_control_mode_parameters)
+                _set_parameters(generator, parset, ns, default_control_mode_parameters)
             else:
                 dycov_logging.get_logger("Model Parameters").error(
                     f"{generator.lib} executed with wrong control mode"
@@ -442,6 +479,44 @@ def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
                 raise ValueError(f"{generator.lib} executed with wrong control mode")
 
     return
+
+
+def _get_voltage_droop_parameters(generator, parset, ns) -> dict:
+    if "IEC" in generator.lib:
+        return _get_voltage_droop_parameters_iec(generator, parset, ns)
+    elif "Wecc" in generator.lib:
+        return _get_voltage_droop_parameters_wecc(generator, parset, ns)
+    else:
+        return {}
+
+
+def _get_voltage_droop_parameters_iec(generator, parset, ns) -> dict:
+    parameters = {}
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MwpqMode")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["MwpqMode"] = par.get("value")
+
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MqG")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["MqG"] = par.get("value")
+
+    return parameters
+
+
+def _get_voltage_droop_parameters_wecc(generator, parset, ns) -> dict:
+    parameters = {}
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "RefFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["RefFlag"] = par.get("value")
+
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["VCompFlag"] = par.get("value")
+    return parameters
 
 
 def _get_control_mode_parameters(generator, parset, ns) -> dict:
@@ -493,6 +568,20 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     return parameters
 
 
+def _get_default_voltage_droop_parameters(generator, generator_voltage_droop) -> dict:
+    family, level = get_generator_family_level(generator)
+    parameters = {}
+    section = f"{generator_voltage_droop}_{family}_{level}"
+    if config.has_key(section, "control_option"):
+        control_option = config.get_int(section, "control_option", 1)
+        parameters = dynawo_translator.get_control_mode(section, control_option)
+    else:
+        options = config.get_options(section)
+        for option in options:
+            parameters[option] = config.get_value(section, option)
+    return parameters
+
+
 def _get_default_control_mode_parameters(generator, generator_control_mode) -> dict:
     family, level = get_generator_family_level(generator)
     parameters = {}
@@ -507,8 +596,8 @@ def _get_default_control_mode_parameters(generator, generator_control_mode) -> d
     return parameters
 
 
-def _set_control_mode_parameters(generator, parset, ns, control_mode_parameters: dict):
-    for name, value in control_mode_parameters.items():
+def _set_parameters(generator, parset, ns, parameters: dict):
+    for name, value in parameters.items():
         _, dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
         _set_parameter(parset, ns, dynawo_name, 1, value.lower())
 
@@ -872,6 +961,7 @@ def adjust_producer_init(
     aux_load: Load_init,
     pdr: Pdr_params,
     generator_control_mode: str,
+    force_voltage_droop: bool,
 ) -> None:
     """Modify the Producer PAR file to add the init values.
 
@@ -893,6 +983,8 @@ def adjust_producer_init(
         Initial values for the transformer on the PDR side
     generator_control_mode: str
         Control mode
+    force_voltage_droop: bool
+        Force the voltage droop to be applied even if the control mode is not VoltageDroop
     """
 
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
@@ -916,6 +1008,7 @@ def adjust_producer_init(
             gen.U0,
             gen.UPhase0,
             generator_control_mode,
+            force_voltage_droop,
         )
 
     if aux_load:

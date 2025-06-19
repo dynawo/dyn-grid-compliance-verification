@@ -361,9 +361,9 @@ class DynawoCurves(ProducerCurves):
 
         # Optimized: Iterate through generators once to update pre_value
         for i, generator in enumerate(self.get_producer().generators):
-            if generator.UseVoltageDrop:
+            if generator.UseVoltageDroop:
                 gen = self._gens[i]
-                event_params["pre_value"][i] = gen.U0 + generator.VoltageDrop * gen.Q0
+                event_params["pre_value"][i] = gen.U0 + generator.VoltageDroop * gen.Q0
 
     def __get_lines_for_initial_calcs(
         self, rte_lines: list, is_specific_fault: bool
@@ -544,6 +544,7 @@ class DynawoCurves(ProducerCurves):
         # Modify producer par to add generator init values
         section = get_cfg_oc_name(pcs_bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
+        force_voltage_droop = config.get_boolean(section, "force_voltage_droop", False)
         model_parameters.adjust_producer_init(
             working_oc_dir,
             self.get_producer().get_producer_par(),
@@ -553,6 +554,7 @@ class DynawoCurves(ProducerCurves):
             aux_load,
             pdr,
             control_mode,
+            force_voltage_droop,
         )
         self.__adjust_event_value(event_params)
 
