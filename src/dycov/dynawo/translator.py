@@ -14,11 +14,11 @@ FAMILY_LEVEL_MAP = {
     "Wecc": {
         "family": "WECC",
         "types": {
-            "WTG": "Plant",
-            "WT": "Turbine",
+            "NoPlantControl": "Turbine",
+            "WT4": "Turbine",
+            "WTG4": "Plant",
             "Photovoltaics": "Plant",
             "BESS": "Plant",
-            "NoPlantControl": "Turbine",
         },
     },
     "IEC": {"family": "IEC", "types": {"IECWPP": "Plant", "IECWT": "Turbine"}},
@@ -103,6 +103,7 @@ class Translator:
         """
         family, level = get_generator_family_level(generator)
         option = f"{generator_control_mode}_{family}_{level}"
+        print(f"Looking for control modes with option: {option}")
         if self._control_modes.has_option("ControlModes", option):
             return self._control_modes.get("ControlModes", option).split(",")
         else:
@@ -278,6 +279,10 @@ class Translator:
         valid_control_modes = self._get_control_modes_by_generator(
             generator, generator_control_mode
         )
+        print(f"Valid control modes for {generator_control_mode}: {valid_control_modes}")
+        if not valid_control_modes:
+            return True  # No control modes defined for this generator
+
         for control_mode in valid_control_modes:
             valid_parameters = self._get_control_mode_parameters(control_mode)
             if _is_valid_control_mode_parameters(generator_parameters, valid_parameters):
