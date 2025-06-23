@@ -434,15 +434,12 @@ def _set_voltage_droop(generator, parset, ns, generator_control_mode, force_volt
             if dynawo_translator.is_valid_control_mode(
                 generator, "VoltageDroop", default_voltage_droop_parameters
             ):
-                print(f"\tgenerator {generator.id} Forced")
                 _set_parameters(generator, parset, ns, default_voltage_droop_parameters)
             else:
                 dycov_logging.get_logger("Model Parameters").error(
                     f"{generator.lib} executed with wrong voltage droop mode"
                 )
                 raise ValueError(f"{generator.lib} executed with wrong voltage droop mode")
-        else:
-            print(f"\tgenerator {generator.id} in voltage droop mode")
 
     _recalculate_voltage_ref(generator, voltage_droop_parameters)
 
