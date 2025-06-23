@@ -444,41 +444,41 @@ def _set_voltage_droop(generator, parset, ns, generator_control_mode, force_volt
 
 
 def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
-    if generator_control_mode == "USetpoint" or generator_control_mode == "QSetpoint":
-        # Get the generator control mode parameters from the producer PAR file.
-        control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
-        dycov_logging.get_logger("Model Parameters").debug(
-            f"Generator {generator.id} Control Mode: {control_mode_parameters}"
+    if generator_control_mode == "Others":
+        return
+
+    # Get the generator control mode parameters from the producer PAR file.
+    control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
+    dycov_logging.get_logger("Model Parameters").debug(
+        f"Generator {generator.id} Control Mode: {control_mode_parameters}"
+    )
+    # If the generator has not control mode parameters return.
+    if not control_mode_parameters:
+        return
+
+    # Check if the configured control mode is valid
+    if not dynawo_translator.is_valid_control_mode(
+        generator, generator_control_mode, control_mode_parameters
+    ):
+        dycov_logging.get_logger("Model Parameters").warning(
+            f"{generator.lib} control mode will be changed"
         )
-        # If the generator has not control mode parameters return.
-        if not control_mode_parameters:
-            return
-
-        # Check if the configured control mode is valid
-        if not dynawo_translator.is_valid_control_mode(
-            generator, generator_control_mode, control_mode_parameters
+        default_control_mode_parameters = _get_default_control_mode_parameters(
+            generator, generator_control_mode
+        )
+        dycov_logging.get_logger("Model Parameters").debug(
+            f"Default Control Mode: {default_control_mode_parameters} "
+            f"for {generator_control_mode}"
+        )
+        if dynawo_translator.is_valid_control_mode(
+            generator, generator_control_mode, default_control_mode_parameters
         ):
-            dycov_logging.get_logger("Model Parameters").warning(
-                f"{generator.lib} control mode will be changed"
+            _set_parameters(generator, parset, ns, default_control_mode_parameters)
+        else:
+            dycov_logging.get_logger("Model Parameters").error(
+                f"{generator.lib} executed with wrong control mode"
             )
-            default_control_mode_parameters = _get_default_control_mode_parameters(
-                generator, generator_control_mode
-            )
-            dycov_logging.get_logger("Model Parameters").debug(
-                f"Default Control Mode: {default_control_mode_parameters} "
-                f"for {generator_control_mode}"
-            )
-            if dynawo_translator.is_valid_control_mode(
-                generator, generator_control_mode, default_control_mode_parameters
-            ):
-                _set_parameters(generator, parset, ns, default_control_mode_parameters)
-            else:
-                dycov_logging.get_logger("Model Parameters").error(
-                    f"{generator.lib} executed with wrong control mode"
-                )
-                raise ValueError(f"{generator.lib} executed with wrong control mode")
-
-    return
+            raise ValueError(f"{generator.lib} executed with wrong control mode")
 
 
 def _get_voltage_droop_parameters(generator, parset, ns) -> dict:
@@ -555,6 +555,11 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     if par is not None:
         parameters["VFlag"] = par.get("value")
 
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["PFlag"] = par.get("value")
+
     _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "QFlag")
     par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
@@ -564,6 +569,11 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["RefFlag"] = par.get("value")
+
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "FreqFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["FreqFlag"] = par.get("value")
 
     return parameters
 
