@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-# Named tuples for GFM parameters and base values
+DEBUG = False
+# Named tuples for GFM parameters and base values.
 # These are used to store the parameters and computed values for the GFM
 # phase jump calculations.
 GFM_Params = namedtuple(
@@ -28,7 +29,7 @@ GFM_Params = namedtuple(
         "delta_theta",
         "SCR",
         "Xtr",  # Transformer reactance (pu)
-        "Wb",  # Base angular frequency(rad/s)
+        "Wb",  # Base angular frequency (rad/s)
         "Ucv",  # RMS voltage Uconverter (pu)
         "Ugr",  # RMS voltage Ugrid (pu)
         "MarginHigh",
@@ -42,23 +43,23 @@ GFM_Params = namedtuple(
 BaseGFM_Values = namedtuple(
     "BaseGFM_Values",
     [
-        "D_array",
-        "H_array",
-        "delta_theta_array",
-        "Xgr_array",
-        "Xtot_array",
-        "Ts_array",
-        "Sigma_array",  # sigma = epsilon * Wn
-        "Wn_array",
-        "Tunnel_array",
-        "epsilon_array",
-        "wd_array",  # Single damped frequency array
-        "a_array",  # Root 1 of characteristic equation
-        "b_array",  # Root 2 of characteristic equation
-        "A_array",  # Coefficient for root 1
-        "B_array",  # Coefficient for root 2
-        "Ppeak_array",
-        "is_overdamped_global",  # New: flag for global damping type
+        "D_array",  # Array of damping constant (D) in pu.
+        "H_array",  # Array of inertia constant (H) in pu.
+        "delta_theta_array",  # Array of phase angle change (delta_theta) in radians.
+        "Xgr_array",  # Array of grid reactance (Xgr) in pu.
+        "Xtot_array",  # Array of total reactance (Xtot) in pu.
+        "Ts_array",  # Array of system response time constant.
+        "Sigma_array",  # Array of damping factor (sigma = epsilon * Wn).
+        "Wn_array",  # Array of system undamped natural frequency (Wn).
+        "Tunnel_array",  # Array defining the "tunnel region" or power variation limits.
+        "epsilon_array",  # Array of damping coefficient (epsilon).
+        "wd_array",  # Array of damped natural frequency (wd).
+        "a_array",  # Array containing roots r1 of the characteristic equation.
+        "b_array",  # Array containing roots r2 of the characteristic equation.
+        "A_array",  # Array of coefficients C1 for the transient response.
+        "B_array",  # Array of coefficients C2 for the transient response.
+        "Ppeak_array",  # Array of peak power (Ppeak) reached in pu.
+        "is_overdamped_global",  # Boolean indicating if the system is globally overdamped.
     ],
 )
 
@@ -68,11 +69,11 @@ class PhaseJump:
     Class to calculate the GFM phase jump and generate related plots and CSVs.
     """
 
-    # Constantes para indexación de arrays de parámetros (original, min, max)
+    # Constants for parameter array indexing (original, min, max)
     _ORIGINAL_PARAMS_IDX = 0
     _MINIMUM_PARAMS_IDX = 1
     _MAXIMUM_PARAMS_IDX = 2
-    # Umbral para diferenciar overdamped de underdamped (critically damped
+    # Threshold to differentiate overdamped from underdamped (critically damped
     # included with overdamped)
     _EPSILON_THRESHOLD = 1.0
 
@@ -87,7 +88,7 @@ class PhaseJump:
         """
         self._gfm_params = gfm_params
         self._base_values = None
-        self._theorical_response_from_vsm = None
+        self._theoretical_response_from_vsm = None
         self._pdown = None
         self._pup = None
 
@@ -157,9 +158,10 @@ class PhaseJump:
             Ppeak_array=Ppeak_array,
             is_overdamped_global=is_overdamped_global,
         )
-        print("Valores individuales de BaseGFM_Values:")
-        for field, value in self._base_values._asdict().items():
-            print(f"  {field}: {value}")
+        if DEBUG:
+            print("Valores individuales de BaseGFM_Values:")
+            for field, value in self._base_values._asdict().items():
+                print(f"  {field}: {value}")
 
     def calculate_envelopes(self, time_array: np.ndarray, event_time: float) -> None:
         """
@@ -177,20 +179,41 @@ class PhaseJump:
             print("Warning: event_time is outside the provided time_array range.")
 
         (
-            theorical_response_from_vsm_no_P0,
+            theoretical_response_from_vsm_no_P0,
             active_power_multipled_by_1_plus_margin_high,
-            theorical_response_with_minimum_values,
-            theorical_response_with_maximum_values,
+            theoretical_response_with_minimum_values,
+            theoretical_response_with_maximum_values,
             active_power_multipled_by_margin_low,
         ) = self._calculate_initial_responses(time_array)
+
+        if DEBUG:
+            # Debugging prints for initial responses
+            print("\nDebugging prints for calculate_envelopes:")
+            print(f"  theoretical_response_from_vsm_no_P0: {theoretical_response_from_vsm_no_P0}")
+            print(
+                f"  active_power_multipled_by_1_plus_margin_high: "
+                f"{active_power_multipled_by_1_plus_margin_high}"
+            )
+            print(
+                f"  theoretical_response_with_minimum_values: "
+                f"{theoretical_response_with_minimum_values}"
+            )
+            print(
+                f"  theoretical_response_with_maximum_values: "
+                f"{theoretical_response_with_maximum_values}"
+            )
+            print(
+                f"  active_power_multipled_by_margin_low: "
+                f"{active_power_multipled_by_margin_low}"
+            )
 
         tunnel = self._calculate_tunnel(time_array)
 
         list_of_arrays = [
-            theorical_response_from_vsm_no_P0,
+            theoretical_response_from_vsm_no_P0,
             active_power_multipled_by_1_plus_margin_high,
-            theorical_response_with_minimum_values,
-            theorical_response_with_maximum_values,
+            theoretical_response_with_minimum_values,
+            theoretical_response_with_maximum_values,
             active_power_multipled_by_margin_low,
         ]
 
@@ -198,10 +221,10 @@ class PhaseJump:
         pdown_limited, pup_limited = self._limit_power_envelopes(pdown_no_P0, pup_no_P0)
 
         delta_theta_sign = 1 if self._gfm_params.delta_theta > 0 else -1
-        self._theorical_response_from_vsm = np.where(
+        self._theoretical_response_from_vsm = np.where(
             time_array < event_time,
             self._gfm_params.P0,
-            theorical_response_from_vsm_no_P0 * -1 * delta_theta_sign + self._gfm_params.P0,
+            theoretical_response_from_vsm_no_P0 * -1 * delta_theta_sign + self._gfm_params.P0,
         )
 
         pdown_final, pup_final = self._apply_emt_delay_if_needed(
@@ -229,7 +252,7 @@ class PhaseJump:
         df = pd.DataFrame(
             {
                 "Time (s)": time_array,
-                "P_PCC (pu)": self._theorical_response_from_vsm,
+                "P_PCC (pu)": self._theoretical_response_from_vsm,
                 "P_down (pu)": self._pdown,
                 "P_up (pu)": self._pup,
             }
@@ -263,7 +286,7 @@ class PhaseJump:
         plt.figure(figsize=(8, 5))
         plt.plot(
             time,
-            self._theorical_response_from_vsm,
+            self._theoretical_response_from_vsm,
             label="Theoretical response from VSM",
             linewidth="3",
         )
@@ -281,7 +304,7 @@ class PhaseJump:
         plt.legend(loc="lower right")
         plt.grid(True)
         plt.savefig(path, bbox_inches="tight", dpi=300)
-        plt.close()  # Cierra la figura para liberar memoria
+        plt.close()  # Close the figure to free up memory
 
     def get_base_values(self) -> BaseGFM_Values:
         """
@@ -303,7 +326,7 @@ class PhaseJump:
         np.ndarray
             The theoretical response from VSM array.
         """
-        return self._theorical_response_from_vsm
+        return self._theoretical_response_from_vsm
 
     def get_pdown(self) -> np.ndarray:
         """
@@ -546,14 +569,6 @@ class PhaseJump:
     def _calculate_initial_responses(
         self, time_array: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        if self._base_values.is_overdamped_global:
-            return self._calculate_overdamped_initial_responses(time_array)
-        else:
-            return self._calculate_underdamped_initial_responses(time_array)
-
-    def _calculate_overdamped_initial_responses(
-        self, time_array: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates various initial theoretical responses and power values.
 
@@ -566,67 +581,37 @@ class PhaseJump:
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - theorical_response_from_vsm_no_P0
+            - theoretical_response_from_vsm_no_P0
             - active_power_multipled_by_1_plus_margin_high
-            - theorical_response_with_minimum_values
-            - theorical_response_with_maximum_values
+            - theoretical_response_with_minimum_values
+            - theoretical_response_with_maximum_values
             - active_power_multipled_by_margin_low
         """
-        theorical_response_from_vsm_no_P0 = self._calculate_theorical_response_no_p0(
+        theoretical_response_from_vsm_no_P0 = self._calculate_theoretical_response_no_p0(
             time_array, self._ORIGINAL_PARAMS_IDX
         )
         active_power_multipled_by_1_plus_margin_high = (
-            1 + self._gfm_params.MarginHigh
-        ) * theorical_response_from_vsm_no_P0
-        theorical_response_with_minimum_values = self._calculate_theorical_response_no_p0(
+            self._calculate_shifted_response_margin_high(
+                time_array, theoretical_response_from_vsm_no_P0, self._ORIGINAL_PARAMS_IDX
+            )
+        )
+        theoretical_response_with_minimum_values = self._calculate_theoretical_response_no_p0(
             time_array, self._MINIMUM_PARAMS_IDX
         )
-        theorical_response_with_maximum_values = self._calculate_theorical_response_no_p0(
+        theoretical_response_with_maximum_values = self._calculate_theoretical_response_no_p0(
             time_array, self._MAXIMUM_PARAMS_IDX
         )
-        shifted_theorical_response_from_vsm_no_P0 = self._apply_delay(
-            delay=0.01,
-            delayed_value=0.0,
-            time_array=time_array,
-            signal=theorical_response_from_vsm_no_P0,
-        )
-        active_power_multipled_by_margin_low = (
-            self._gfm_params.MarginLow * shifted_theorical_response_from_vsm_no_P0
+        active_power_multipled_by_margin_low = self._calculate_shifted_response_margin_low(
+            time_array, theoretical_response_from_vsm_no_P0, self._ORIGINAL_PARAMS_IDX
         )
 
         return (
-            theorical_response_from_vsm_no_P0,
+            theoretical_response_from_vsm_no_P0,
             active_power_multipled_by_1_plus_margin_high,
-            theorical_response_with_minimum_values,
-            theorical_response_with_maximum_values,
+            theoretical_response_with_minimum_values,
+            theoretical_response_with_maximum_values,
             active_power_multipled_by_margin_low,
         )
-
-    def _calculate_underdamped_initial_responses(
-        self, time_array: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Calculates various initial theoretical responses and power values for
-        underdamped systems.
-
-        Parameters
-        ----------
-        time_array : np.ndarray
-            The time array for the simulation.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing:
-            - theorical_response_from_vsm_no_P0
-            - active_power_multipled_by_1_plus_margin_high
-            - theorical_response_with_minimum_values
-            - theorical_response_with_maximum_values
-            - active_power_multipled_by_margin_low
-        """
-
-        # TODO: Calculate the initial responses from Excel file sample
-        pass
 
     def _calculate_tunnel(self, time_array: np.ndarray) -> np.ndarray:
         """
@@ -748,7 +733,49 @@ class PhaseJump:
             )
         return pdown_limited, pup_limited
 
-    def _calculate_theorical_response_no_p0(
+    def _calculate_shifted_response_margin_high(
+        self, time_array: np.ndarray, theoretical_response_from_vsm_no_P0: np.ndarray, index: int
+    ) -> np.ndarray:
+        if self._base_values.is_overdamped_global:
+            return (1 + self._gfm_params.MarginHigh) * theoretical_response_from_vsm_no_P0
+        else:
+            Ppeak = self._base_values.Ppeak_array[index]
+            Sigma = self._base_values.Sigma_array[index]
+
+            response_margin_high = (
+                Ppeak * (1 + self._gfm_params.MarginHigh) * np.exp(-1 * Sigma * time_array)
+            )
+            return self._apply_delay(
+                delay=0.01,
+                delayed_value=response_margin_high[0],
+                time_array=time_array,
+                signal=response_margin_high,
+            )
+
+    def _calculate_shifted_response_margin_low(
+        self, time_array: np.ndarray, theoretical_response_from_vsm_no_P0: np.ndarray, index: int
+    ) -> np.ndarray:
+        if self._base_values.is_overdamped_global:
+            shifted_theoretical_response_from_vsm_no_P0 = self._apply_delay(
+                delay=0.01,
+                delayed_value=0.0,
+                time_array=time_array,
+                signal=theoretical_response_from_vsm_no_P0,
+            )
+
+            return self._gfm_params.MarginLow * shifted_theoretical_response_from_vsm_no_P0
+        else:
+            Ppeak = self._base_values.Ppeak_array[index]
+            Sigma = self._base_values.Sigma_array[index]
+
+            return self._apply_delay(
+                delay=0.01,
+                delayed_value=0.0,
+                time_array=time_array,
+                signal=Ppeak * (1 - self._gfm_params.MarginLow) * np.exp(-1 * Sigma * time_array),
+            )
+
+    def _calculate_theoretical_response_no_p0(
         self, time_array: np.ndarray, index: int
     ) -> np.ndarray:
         """
@@ -773,9 +800,7 @@ class PhaseJump:
         H = self._base_values.H_array[index]
         D = self._base_values.D_array[index]
 
-        # Roots (r1, r2) and Coefficients (C1, C2) from base values
-        r1 = self._base_values.a_array[index]
-        r2 = self._base_values.b_array[index]
+        # Coefficients (C1, C2) from base values
         C1 = self._base_values.A_array[index]
         C2 = self._base_values.B_array[index]
 
@@ -807,19 +832,17 @@ class PhaseJump:
             response = (Ppeak / (2 * H)) * (term1 + term2 + term3 + term4)
 
         else:  # Underdamped
-            # For underdamped, r1 and r2 are complex conjugates (-sigma +/- j*wd_ud).
-            # C1 and C2 are also complex conjugates.
 
-            exp_r1_t = np.exp(r1 * time_array)
-            exp_r2_t = np.exp(r2 * time_array)
+            epsilon_val = self._base_values.epsilon_array[index]
+            wd_val = self._base_values.wd_array[index]
+            wn_val = self._base_values.Wn_array[index]
 
-            term1 = 2 * H * C1 * (1 + r1 * exp_r1_t)
-            term2 = 2 * H * C2 * (1 + r2 * exp_r2_t)
-            term3 = D * C1 * exp_r1_t
-            term4 = D * C2 * exp_r2_t
+            formula_sin = np.sin(wd_val * time_array)
 
-            response = (Ppeak / (2 * H)) * (term1 + term2 + term3 + term4)
-            response = response.real  # Ensure real output for power.
+            term1 = np.exp(-1 * epsilon_val * wn_val * time_array)
+            term2 = np.cos(wd_val * time_array) - (epsilon_val * wn_val - 1) / wd_val * formula_sin
+
+            response = term1 * term2 * Ppeak
 
         return response.real
 
@@ -846,14 +869,14 @@ class PhaseJump:
             The delayed signal.
         """
         if len(time_array) < 2:
-            return signal  # No se puede calcular fs si solo hay un punto o ninguno
-        fs = time_array[1] - time_array[0]  # Asumimos paso de tiempo constante
+            return signal  # Cannot calculate fs if there's only one or no point.
+        fs = time_array[1] - time_array[0]  # Assumes constant time step.
 
         delay_samples = int(round(delay / fs))
 
         if delay_samples >= len(time_array):
-            # Si el retardo es mayor que la longitud de la señal, toda la señal
-            # será el valor de retardo
+            # If the delay is greater than the signal length, the entire signal
+            # will be the delayed value.
             return np.full_like(signal, delayed_value)
 
         sample = np.full(delay_samples, delayed_value)
