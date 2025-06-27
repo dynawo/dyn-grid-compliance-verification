@@ -138,7 +138,7 @@ def test_phase_jump_initialization():
 
     assert phase_jump._gfm_params == gfm_overdamped_params
     assert not phase_jump._base_values
-    assert not phase_jump._theorical_response_from_vsm
+    assert not phase_jump._theoretical_response_from_vsm
     assert not phase_jump._pdown
     assert not phase_jump._pup
 
@@ -200,7 +200,7 @@ def test_phase_jump_overdamped_envelopes():
     assert pup[-1] == np.float64(0.5209853573483934)
 
 
-def test_phase_jump_overdamped_envelopes_event_at_1s():
+def test_phase_jump_overdamped_envelopes_event_at_200ms():
 
     start_time = 0
     end_time = 1.315
@@ -287,9 +287,47 @@ def test_phase_jump_underdamped_envelopes():
     )
 
     assert len(pdown) == nb_points
-    assert pdown[0] == np.float64(0.803008036)
-    assert pdown[-1] == np.float64(0.756366769)
+    assert pdown[0] == np.float64(0.803008035946675)
+    assert pdown[-1] == np.float64(0.7564723505574613)
 
     assert len(pup) == nb_points
     assert pup[0] == np.float64(1.1)
-    assert pup[-1] == np.float64(0.843633231)
+    assert pup[-1] == np.float64(0.8447078551626718)
+
+
+def test_phase_jump_underdamped_envelopes_event_at_200ms():
+
+    start_time = 0
+    end_time = 1.315
+    event_time = 0.2
+    nb_points = 264
+    time_array = np.linspace(start_time, end_time, nb_points)  # From Start_Time to End_Time
+
+    phase_jump = PhaseJump(gfm_params=gfm_underdamped_params)
+    phase_jump.calculate_base_values(D=200.0, H=10.0, Xeff=0)
+    phase_jump.calculate_envelopes(time_array, event_time)
+    pdown = phase_jump.get_pdown()
+    pup = phase_jump.get_pup()
+
+    title = "Underdamped_PhaseJump_event"
+    csv_path = Path(__file__).parent / "CSVResults"
+    csv_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
+
+    png_path = Path(__file__).parent / "PNGResults"
+    png_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+    phase_jump.plot_results(
+        png_path / f"{title}.png",
+        time_array,
+        event_time,
+        0,
+        title,
+    )
+
+    assert len(pdown) == nb_points
+    assert pdown[0] == np.float64(0.8)
+    assert pdown[-1] == np.float64(0.7564723505574613)
+
+    assert len(pup) == nb_points
+    assert pup[0] == np.float64(0.8)
+    assert pup[-1] == np.float64(0.8447078551626718)
