@@ -657,8 +657,6 @@ class PhaseJump:
         """
         Calculates the minimum DeltaP for an underdamped system, applying
         the lower margin and setting pre-event values to zero.
-        Note: This specific implementation uses a simplified exponential decay
-        formula for min/max envelopes consistent with the original script's logic.
 
         Parameters
         ----------
@@ -678,22 +676,14 @@ class PhaseJump:
         np.ndarray
             The minimum DeltaP array for the underdamped system.
         """
-        Xgr = 1 / self._gfm_params.SCR
-        Xtotal_initial = self._gfm_params.Xtr + Xeff + Xgr
-        # Recalculate Ppeak as the base was not used in original logic for min/max
-        Ppeak_val = (
-            np.abs(self._gfm_params.delta_theta * np.pi / 180)
-            * self._gfm_params.Ucv
-            * self._gfm_params.Ugr
-            / Xtotal_initial
-        )
+        DeltaP1, Ppeak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)  # Decay rate.
         # Apply lower margin and exponential decay.
-        DeltaP1 = Ppeak_val * (1 - self._gfm_params.MarginLow) * np.exp(-sigma * time_array)
+        DeltaP_margined = Ppeak * (1 - self._gfm_params.MarginLow) * np.exp(-sigma * time_array)
         # Apply a small delay.
-        DeltaP1_delayed = self._apply_delay(0.01, 0, time_array, DeltaP1)
+        DeltaP_delayed = self._apply_delay(0.01, 0, time_array, DeltaP_margined)
         # Set DeltaP to 0 before the event time.
-        DeltaP = np.where(time_array < event_time, 0, DeltaP1_delayed)
+        DeltaP = np.where(time_array < event_time, 0, DeltaP_delayed)
         return DeltaP
 
     def _get_underdamped_delta_p_max(
@@ -702,8 +692,6 @@ class PhaseJump:
         """
         Calculates the maximum DeltaP for an underdamped system, applying
         the upper margin and setting pre-event values to zero.
-        Note: This specific implementation uses a simplified exponential decay
-        formula for min/max envelopes consistent with the original script's logic.
 
         Parameters
         ----------
@@ -723,22 +711,14 @@ class PhaseJump:
         np.ndarray
             The maximum DeltaP array for the underdamped system.
         """
-        Xgr = 1 / self._gfm_params.SCR
-        Xtotal_initial = self._gfm_params.Xtr + Xeff + Xgr
-        # Recalculate Ppeak as the base was not used in original logic for min/max
-        Ppeak_val = (
-            np.abs(self._gfm_params.delta_theta * np.pi / 180)
-            * self._gfm_params.Ucv
-            * self._gfm_params.Ugr
-            / Xtotal_initial
-        )
+        DeltaP1, Ppeak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)  # Decay rate.
         # Apply upper margin and exponential decay.
-        DeltaP1 = Ppeak_val * (1 + self._gfm_params.MarginHigh) * np.exp(-sigma * time_array)
+        DeltaP_margined = Ppeak * (1 + self._gfm_params.MarginHigh) * np.exp(-sigma * time_array)
         # Apply a small delay.
-        DeltaP1_delayed = self._apply_delay(0.01, DeltaP1[0], time_array, DeltaP1)
+        DeltaP_delayed = self._apply_delay(0.01, DeltaP_margined[0], time_array, DeltaP_margined)
         # Set DeltaP to 0 before the event time.
-        DeltaP = np.where(time_array < event_time, 0, DeltaP1_delayed)
+        DeltaP = np.where(time_array < event_time, 0, DeltaP_delayed)
         return DeltaP
 
     def _get_underdamped_delta_p(
