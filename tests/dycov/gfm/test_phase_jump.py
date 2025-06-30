@@ -97,23 +97,12 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
-    df = pd.DataFrame(
-        {
-            "Time (s)": time_array,
-            "P_PCC (pu)": P_pcc,
-            "P_down (pu)": P_down_anal,
-            "P_up (pu)": P_up_anal,
-        }
-    )
-    df.to_csv(csv_path / f"{title}.csv", index=False)
+    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
     phase_jump.plot_results(
         png_path / f"{title}.png",
-        P_pcc,
-        P_up_anal,
-        P_down_anal,
         time_array,
         event_time,
         0,
@@ -162,23 +151,12 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
-    df = pd.DataFrame(
-        {
-            "Time (s)": time_array,
-            "P_PCC (pu)": P_pcc,
-            "P_down (pu)": P_down_anal,
-            "P_up (pu)": P_up_anal,
-        }
-    )
-    df.to_csv(csv_path / f"{title}.csv", index=False)
+    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
     phase_jump.plot_results(
         png_path / f"{title}.png",
-        P_pcc,
-        P_up_anal,
-        P_down_anal,
         time_array,
         event_time,
         0,
@@ -227,23 +205,12 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
-    df = pd.DataFrame(
-        {
-            "Time (s)": time_array,
-            "P_PCC (pu)": P_pcc,
-            "P_down (pu)": P_down_anal,
-            "P_up (pu)": P_up_anal,
-        }
-    )
-    df.to_csv(csv_path / f"{title}.csv", index=False)
+    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
     phase_jump.plot_results(
         png_path / f"{title}.png",
-        P_pcc,
-        P_up_anal,
-        P_down_anal,
         time_array,
         event_time,
         0,
@@ -292,23 +259,12 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
-    df = pd.DataFrame(
-        {
-            "Time (s)": time_array,
-            "P_PCC (pu)": P_pcc,
-            "P_down (pu)": P_down_anal,
-            "P_up (pu)": P_up_anal,
-        }
-    )
-    df.to_csv(csv_path / f"{title}.csv", index=False)
+    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
     phase_jump.plot_results(
         png_path / f"{title}.png",
-        P_pcc,
-        P_up_anal,
-        P_down_anal,
         time_array,
         event_time,
         0,
