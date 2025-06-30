@@ -187,7 +187,7 @@ class PhaseJump:
         )
 
         # Calculate the theoretical power at PCC and limit it by PMin/PMax.
-        p_pcc = self.cut_signal(
+        p_pcc = self._cut_signal(
             self._gfm_params.PMin, self._gfm_params.P0 + delta_p, self._gfm_params.PMax
         )
 
@@ -301,6 +301,411 @@ class PhaseJump:
         plt.savefig(path, bbox_inches="tight", dpi=300)  # Save the figure.
         plt.close()  # Close the figure to free up memory.
 
+    def _calculate_common_params(self, D: float, H: float, Xeff: float) -> tuple:
+        """
+        Calculates common parameters required for delta_p calculations,
+        such as total initial reactance, damping ratio (epsilon),
+        natural frequency (wn), and peak power (p_peak_calc).
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - x_total_initial: Total initial reactance.
+            - epsilon: Damping ratio.
+            - wn: Natural frequency.
+            - p_peak_calc: Calculated peak power.
+        """
+        x_gr = 1 / self._gfm_params.SCR  # Grid reactance.
+        x_total_initial = self._gfm_params.Xtr + Xeff + x_gr  # Sum of reactances.
+        u_prod = self._gfm_params.Ucv * self._gfm_params.Ugr  # Product of voltages.
+
+        # Calculate damping ratio (epsilon).
+        epsilon = D / 2 * np.sqrt(x_total_initial / (2 * H * self._gfm_params.Wb * u_prod))
+        # Calculate natural frequency (wn).
+        wn = np.sqrt(self._gfm_params.Wb * u_prod / (2 * H * x_total_initial))
+
+        # Convert delta_theta to radians and calculate peak power.
+        delta_theta_rad = np.abs(self._gfm_params.delta_theta * np.pi / 180)
+        p_peak_calc = delta_theta_rad * u_prod / x_total_initial
+
+        return x_total_initial, epsilon, wn, p_peak_calc
+
+    def _calculate_epsilon_initial_check(
+        self, D: float, H: float, x_total_initial: float
+    ) -> float:
+        """
+        Calculates the initial damping ratio (epsilon) to determine
+        whether the system's response is overdamped or underdamped.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        x_total_initial : float
+            Total initial reactance of the system.
+
+        Returns
+        -------
+        float
+            The calculated initial damping ratio (epsilon).
+        """
+        return (
+            D
+            / 2
+            * np.sqrt(
+                x_total_initial
+                / (2 * H * self._gfm_params.Wb * self._gfm_params.Ucv * self._gfm_params.Ugr)
+            )
+        )
+
+    def _calculate_delta_p_for_damping(
+        self,
+        D: float,
+        H: float,
+        Xeff: float,
+        time_array: np.array,
+        event_time: float,
+        epsilon_initial_check: float,
+    ) -> tuple[np.ndarray, float, float]:
+        """
+        Dispatches the calculation of delta_p, p_peak, and epsilon to the
+        appropriate method based on whether the system is overdamped or
+        underdamped.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+        epsilon_initial_check : float
+            The pre-calculated initial damping ratio to determine damping type.
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            A tuple containing:
+            - delta_p: The delta_p array for the system.
+            - p_peak: The peak power.
+            - epsilon: The damping ratio.
+        """
+        if epsilon_initial_check > self._EPSILON_THRESHOLD:
+            # Call method for overdamped system.
+            return self._get_overdamped_delta_p(D, H, Xeff, time_array, event_time)
+        else:
+            # Call method for underdamped system.
+            return self._get_underdamped_delta_p(D, H, Xeff, time_array, event_time)
+
+    def _get_overdamped_delta_p_base(
+        self, D: float, H: float, Xeff: float, time_array: np.array
+    ) -> tuple[np.ndarray, float, float]:
+        """
+        Calculates the base delta_p waveform and related parameters for
+        an overdamped system, before applying event time or margins.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            A tuple containing:
+            - delta_p1: The base delta_p waveform.
+            - p_peak: The peak power.
+            - epsilon: The damping ratio.
+        """
+        x_total_initial, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
+        wd = wn * np.sqrt(epsilon**2 - 1)  # Damped natural frequency for overdamped.
+
+        alpha = epsilon * wn + wd  # Root 1
+        beta = epsilon * wn - wd  # Root 2
+
+        A = 1 / (beta - alpha)  # Coefficient A
+        B = -A  # Coefficient B
+
+        # Calculate individual terms for delta_p1 based on overdamped response.
+        term1 = 2 * H * A * (1 - alpha * np.exp(-alpha * time_array))
+        term2 = 2 * H * B * (1 - beta * np.exp(-beta * time_array))
+        term3 = D * A * np.exp(-alpha * time_array)
+        term4 = D * B * np.exp(-beta * time_array)
+
+        # Combine terms to get the base delta_p1.
+        delta_p1 = (p_peak / (2 * H)) * (term1 + term2 + term3 + term4)
+        return delta_p1, p_peak, epsilon
+
+    def _get_overdamped_delta_p(
+        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+    ) -> tuple[np.ndarray, float, float]:
+        """
+        Calculates delta_p, p_peak, and epsilon for an overdamped system,
+        setting pre-event values to zero.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            A tuple containing:
+            - delta_p: The delta_p array for the overdamped system.
+            - p_peak: The peak power.
+            - epsilon: The damping ratio.
+        """
+        # Get the base delta_p waveform, p_peak, and epsilon.
+        delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
+        # Set delta_p to 0 before the event time.
+        delta_p = np.where(time_array < event_time, 0, delta_p1)
+        return delta_p, p_peak, epsilon
+
+    def _get_overdamped_delta_p_min(
+        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+    ) -> np.ndarray:
+        """
+        Calculates the minimum delta_p for an overdamped system, applying
+        the lower margin and setting pre-event values to zero.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+
+        Returns
+        -------
+        np.ndarray
+            The minimum delta_p array for the overdamped system.
+        """
+        # Get the base delta_p waveform.
+        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
+        # Apply the lower margin.
+        delta_p1_margined = (1 + self._gfm_params.MarginLow) * delta_p1
+        # Set delta_p to 0 before the event time.
+        delta_p = np.where(time_array < event_time, 0, delta_p1_margined)
+        return delta_p
+
+    def _get_overdamped_delta_p_max(
+        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+    ) -> np.ndarray:
+        """
+        Calculates the maximum delta_p for an overdamped system, applying
+        the upper margin, an additional delay, and setting pre-event
+        values to zero.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+
+        Returns
+        -------
+        np.ndarray
+            The maximum delta_p array for the overdamped system.
+        """
+        # Get the base delta_p waveform.
+        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
+        # Apply the upper margin.
+        delta_p1_margined = self._gfm_params.MarginHigh * delta_p1
+        # Apply a small delay to the margined delta_p.
+        delta_p1_delayed = self._apply_delay(0.01, 0, time_array, delta_p1_margined)
+        # Set delta_p to 0 before the event time.
+        delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
+        return delta_p
+
+    def _get_underdamped_delta_p_base(
+        self, D: float, H: float, Xeff: float, time_array: np.array
+    ) -> tuple[np.ndarray, float, float]:
+        """
+        Calculates the base delta_p waveform and related parameters for
+        an underdamped system, before applying event time or margins.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            A tuple containing:
+            - delta_p1: The base delta_p waveform.
+            - p_peak: The peak power.
+            - epsilon: The damping ratio.
+        """
+        x_total_initial, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
+        wd = wn * np.sqrt(1 - epsilon**2)  # Damped natural frequency for underdamped.
+
+        # Calculate individual terms for delta_p1 based on underdamped response.
+        term1 = np.exp(-epsilon * wn * time_array)
+        term2 = np.cos(wd * time_array)
+        term3 = np.sin(wd * time_array)
+
+        # Combine terms to get the base delta_p1.
+        delta_p1 = term1 * (term2 - (epsilon * wn - 1) / wd * term3) * p_peak
+        return delta_p1, p_peak, epsilon
+
+    def _get_underdamped_delta_p(
+        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+    ) -> tuple[np.ndarray, float, float]:
+        """
+        Calculates delta_p, p_peak, and epsilon for an underdamped system,
+        setting pre-event values to zero.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            A tuple containing:
+            - delta_p: The delta_p array for the system.
+            - p_peak: The peak power.
+            - epsilon: The damping ratio.
+        """
+        # Get the base delta_p waveform, p_peak, and epsilon.
+        delta_p1, p_peak, epsilon = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
+        # Set delta_p to 0 before the event time.
+        delta_p = np.where(time_array < event_time, 0, delta_p1)
+        return delta_p, p_peak, epsilon
+
+    def _get_underdamped_delta_p_min(
+        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+    ) -> np.ndarray:
+        """
+        Calculates the minimum delta_p for an underdamped system, applying
+        the lower margin and setting pre-event values to zero.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+
+        Returns
+        -------
+        np.ndarray
+            The minimum delta_p array for the underdamped system.
+        """
+        delta_p1, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
+        sigma = D / (4 * H)  # Decay rate.
+        # Apply lower margin and exponential decay.
+        delta_p_margined = p_peak * (1 - self._gfm_params.MarginLow) * np.exp(-sigma * time_array)
+        # Apply a small delay.
+        delta_p_delayed = self._apply_delay(0.01, 0, time_array, delta_p_margined)
+        # Set delta_p to 0 before the event time.
+        delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
+        return delta_p
+
+    def _get_underdamped_delta_p_max(
+        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+    ) -> np.ndarray:
+        """
+        Calculates the maximum delta_p for an underdamped system, applying
+        the upper margin and setting pre-event values to zero.
+
+        Parameters
+        ----------
+        D : float
+            Damping factor.
+        H : float
+            Inertia constant.
+        Xeff : float
+            Effective reactance.
+        time_array : np.array
+            Array of time points.
+        event_time : float
+            The time at which the event occurs.
+
+        Returns
+        -------
+        np.ndarray
+            The maximum delta_p array for the underdamped system.
+        """
+        delta_p1, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
+        sigma = D / (4 * H)  # Decay rate.
+        # Apply upper margin and exponential decay.
+        delta_p_margined = p_peak * (1 + self._gfm_params.MarginHigh) * np.exp(-sigma * time_array)
+        # Apply a small delay.
+        delta_p_delayed = self._apply_delay(
+            0.01, delta_p_margined[0], time_array, delta_p_margined
+        )
+        # Set delta_p to 0 before the event time.
+        delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
+        return delta_p
+
     def _calculate_unlimited_power_envelopes(
         self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -383,506 +788,6 @@ class PhaseJump:
         )
         return pdown_limited, pup_limited
 
-    def _apply_delay(
-        self, delay: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
-    ) -> np.ndarray:
-        """
-        Applies a time delay to a given signal by prepending a constant
-        `delayed_value` for the duration of the `delay`.
-
-        Parameters
-        ----------
-        delay : float
-            The delay time in seconds.
-        delayed_value : float
-            The constant value to fill the signal during the delay period.
-        time_array : np.ndarray
-            The time array corresponding to the signal.
-        signal : np.ndarray
-            The original signal to be delayed.
-
-        Returns
-        -------
-        np.ndarray
-            The delayed signal, truncated to the original signal length.
-        """
-        if len(time_array) < 2:
-            return signal  # Cannot calculate sampling frequency if only one or no point.
-        fs = time_array[1] - time_array[0]  # Assume constant time step (sampling freq).
-
-        # Calculate the number of samples corresponding to the delay.
-        delay_samples = int(round(delay / fs))
-
-        if delay_samples >= len(time_array):
-            # If delay is greater than or equal to signal length,
-            # the entire signal becomes the delayed value.
-            return np.full_like(signal, delayed_value)
-
-        # Create an array of `delayed_value` for the delay duration.
-        sample = np.full(delay_samples, delayed_value)
-        # Concatenate the delay samples with the original signal and
-        # truncate to the original length.
-        return np.concatenate((sample, signal))[: len(time_array)]
-
-    def _calculate_common_params(self, D: float, H: float, Xeff: float) -> tuple:
-        """
-        Calculates common parameters required for delta_p calculations,
-        such as total initial reactance, damping ratio (epsilon),
-        natural frequency (wn), and peak power (p_peak_calc).
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-
-        Returns
-        -------
-        tuple
-            A tuple containing:
-            - x_total_initial: Total initial reactance.
-            - epsilon: Damping ratio.
-            - wn: Natural frequency.
-            - p_peak_calc: Calculated peak power.
-        """
-        x_gr = 1 / self._gfm_params.SCR  # Grid reactance.
-        x_total_initial = self._gfm_params.Xtr + Xeff + x_gr  # Sum of reactances.
-        u_prod = self._gfm_params.Ucv * self._gfm_params.Ugr  # Product of voltages.
-
-        # Calculate damping ratio (epsilon).
-        epsilon = D / 2 * np.sqrt(x_total_initial / (2 * H * self._gfm_params.Wb * u_prod))
-        # Calculate natural frequency (wn).
-        wn = np.sqrt(self._gfm_params.Wb * u_prod / (2 * H * x_total_initial))
-
-        # Convert delta_theta to radians and calculate peak power.
-        delta_theta_rad = np.abs(self._gfm_params.delta_theta * np.pi / 180)
-        p_peak_calc = delta_theta_rad * u_prod / x_total_initial
-
-        return x_total_initial, epsilon, wn, p_peak_calc
-
-    def _get_overdamped_delta_p_base(
-        self, D: float, H: float, Xeff: float, time_array: np.array
-    ) -> tuple[np.ndarray, float, float]:
-        """
-        Calculates the base delta_p waveform and related parameters for
-        an overdamped system, before applying event time or margins.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-
-        Returns
-        -------
-        tuple[np.ndarray, float, float]
-            A tuple containing:
-            - delta_p1: The base delta_p waveform.
-            - p_peak: The peak power.
-            - epsilon: The damping ratio.
-        """
-        x_total_initial, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
-        wd = wn * np.sqrt(epsilon**2 - 1)  # Damped natural frequency for overdamped.
-
-        alpha = epsilon * wn + wd  # Root 1
-        beta = epsilon * wn - wd  # Root 2
-
-        A = 1 / (beta - alpha)  # Coefficient A
-        B = -A  # Coefficient B
-
-        # Calculate individual terms for delta_p1 based on overdamped response.
-        term1 = 2 * H * A * (1 - alpha * np.exp(-alpha * time_array))
-        term2 = 2 * H * B * (1 - beta * np.exp(-beta * time_array))
-        term3 = D * A * np.exp(-alpha * time_array)
-        term4 = D * B * np.exp(-beta * time_array)
-
-        # Combine terms to get the base delta_p1.
-        delta_p1 = (p_peak / (2 * H)) * (term1 + term2 + term3 + term4)
-        return delta_p1, p_peak, epsilon
-
-    def _get_overdamped_delta_p_min(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> np.ndarray:
-        """
-        Calculates the minimum delta_p for an overdamped system, applying
-        the lower margin and setting pre-event values to zero.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        np.ndarray
-            The minimum delta_p array for the overdamped system.
-        """
-        # Get the base delta_p waveform.
-        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        # Apply the lower margin.
-        delta_p1_margined = (1 + self._gfm_params.MarginLow) * delta_p1
-        # Set delta_p to 0 before the event time.
-        delta_p = np.where(time_array < event_time, 0, delta_p1_margined)
-        return delta_p
-
-    def _get_overdamped_delta_p_max(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> np.ndarray:
-        """
-        Calculates the maximum delta_p for an overdamped system, applying
-        the upper margin, an additional delay, and setting pre-event
-        values to zero.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        np.ndarray
-            The maximum delta_p array for the overdamped system.
-        """
-        # Get the base delta_p waveform.
-        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        # Apply the upper margin.
-        delta_p1_margined = self._gfm_params.MarginHigh * delta_p1
-        # Apply a small delay to the margined delta_p.
-        delta_p1_delayed = self._apply_delay(0.01, 0, time_array, delta_p1_margined)
-        # Set delta_p to 0 before the event time.
-        delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
-        return delta_p
-
-    def _get_overdamped_delta_p(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> tuple[np.ndarray, float, float]:
-        """
-        Calculates delta_p, p_peak, and epsilon for an overdamped system,
-        setting pre-event values to zero.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        tuple[np.ndarray, float, float]
-            A tuple containing:
-            - delta_p: The delta_p array for the overdamped system.
-            - p_peak: The peak power.
-            - epsilon: The damping ratio.
-        """
-        # Get the base delta_p waveform, p_peak, and epsilon.
-        delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        # Set delta_p to 0 before the event time.
-        delta_p = np.where(time_array < event_time, 0, delta_p1)
-        return delta_p, p_peak, epsilon
-
-    def _get_underdamped_delta_p_base(
-        self, D: float, H: float, Xeff: float, time_array: np.array
-    ) -> tuple[np.ndarray, float, float]:
-        """
-        Calculates the base delta_p waveform and related parameters for
-        an underdamped system, before applying event time or margins.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-
-        Returns
-        -------
-        tuple[np.ndarray, float, float]
-            A tuple containing:
-            - delta_p1: The base delta_p waveform.
-            - p_peak: The peak power.
-            - epsilon: The damping ratio.
-        """
-        x_total_initial, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
-        wd = wn * np.sqrt(1 - epsilon**2)  # Damped natural frequency for underdamped.
-
-        # Calculate individual terms for delta_p1 based on underdamped response.
-        term1 = np.exp(-epsilon * wn * time_array)
-        term2 = np.cos(wd * time_array)
-        term3 = np.sin(wd * time_array)
-
-        # Combine terms to get the base delta_p1.
-        delta_p1 = term1 * (term2 - (epsilon * wn - 1) / wd * term3) * p_peak
-        return delta_p1, p_peak, epsilon
-
-    def _get_underdamped_delta_p_min(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> np.ndarray:
-        """
-        Calculates the minimum delta_p for an underdamped system, applying
-        the lower margin and setting pre-event values to zero.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        np.ndarray
-            The minimum delta_p array for the underdamped system.
-        """
-        delta_p1, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
-        sigma = D / (4 * H)  # Decay rate.
-        # Apply lower margin and exponential decay.
-        delta_p_margined = p_peak * (1 - self._gfm_params.MarginLow) * np.exp(-sigma * time_array)
-        # Apply a small delay.
-        delta_p_delayed = self._apply_delay(0.01, 0, time_array, delta_p_margined)
-        # Set delta_p to 0 before the event time.
-        delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
-        return delta_p
-
-    def _get_underdamped_delta_p_max(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> np.ndarray:
-        """
-        Calculates the maximum delta_p for an underdamped system, applying
-        the upper margin and setting pre-event values to zero.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        np.ndarray
-            The maximum delta_p array for the underdamped system.
-        """
-        delta_p1, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
-        sigma = D / (4 * H)  # Decay rate.
-        # Apply upper margin and exponential decay.
-        delta_p_margined = p_peak * (1 + self._gfm_params.MarginHigh) * np.exp(-sigma * time_array)
-        # Apply a small delay.
-        delta_p_delayed = self._apply_delay(
-            0.01, delta_p_margined[0], time_array, delta_p_margined
-        )
-        # Set delta_p to 0 before the event time.
-        delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
-        return delta_p
-
-    def _get_underdamped_delta_p(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> tuple[np.ndarray, float, float]:
-        """
-        Calculates delta_p, p_peak, and epsilon for an underdamped system,
-        setting pre-event values to zero.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        tuple[np.ndarray, float, float]
-            A tuple containing:
-            - delta_p: The delta_p array for the system.
-            - p_peak: The peak power.
-            - epsilon: The damping ratio.
-        """
-        # Get the base delta_p waveform, p_peak, and epsilon.
-        delta_p1, p_peak, epsilon = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
-        # Set delta_p to 0 before the event time.
-        delta_p = np.where(time_array < event_time, 0, delta_p1)
-        return delta_p, p_peak, epsilon
-
-    def _calculate_epsilon_initial_check(
-        self, D: float, H: float, x_total_initial: float
-    ) -> float:
-        """
-        Calculates the initial damping ratio (epsilon) to determine
-        whether the system's response is overdamped or underdamped.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        x_total_initial : float
-            Total initial reactance of the system.
-
-        Returns
-        -------
-        float
-            The calculated initial damping ratio (epsilon).
-        """
-        return (
-            D
-            / 2
-            * np.sqrt(
-                x_total_initial
-                / (2 * H * self._gfm_params.Wb * self._gfm_params.Ucv * self._gfm_params.Ugr)
-            )
-        )
-
-    def _calculate_delta_p_for_damping(
-        self,
-        D: float,
-        H: float,
-        Xeff: float,
-        time_array: np.array,
-        event_time: float,
-        epsilon_initial_check: float,
-    ) -> tuple[np.ndarray, float, float]:
-        """
-        Dispatches the calculation of delta_p, p_peak, and epsilon to the
-        appropriate method based on whether the system is overdamped or
-        underdamped.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.array
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-        epsilon_initial_check : float
-            The pre-calculated initial damping ratio to determine damping type.
-
-        Returns
-        -------
-        tuple[np.ndarray, float, float]
-            A tuple containing:
-            - delta_p: The delta_p array for the system.
-            - p_peak: The peak power.
-            - epsilon: The damping ratio.
-        """
-        if epsilon_initial_check > self._EPSILON_THRESHOLD:
-            # Call method for overdamped system.
-            return self._get_overdamped_delta_p(D, H, Xeff, time_array, event_time)
-        else:
-            # Call method for underdamped system.
-            return self._get_underdamped_delta_p(D, H, Xeff, time_array, event_time)
-
-    def cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
-        """
-        Clips the values of a given signal array to ensure they stay
-        within a specified minimum and maximum range.
-
-        Parameters
-        ----------
-        value_min : float
-            The minimum allowed value for the signal.
-        signal : np.ndarray
-            The input signal array.
-        value_max : float
-            The maximum allowed value for the signal.
-
-        Returns
-        -------
-        np.ndarray
-            The signal with values clipped within the specified limits.
-        """
-        # Replace values below value_min with value_min.
-        signal = np.where(signal < value_min, value_min, signal)
-        # Replace values above value_max with value_max.
-        signal = np.where(signal > value_max, value_max, signal)
-        return signal
-
-    def _get_value_at_specific_time(
-        self, selected_time: float, signal: np.ndarray, time_array: np.ndarray
-    ) -> float:
-        """
-        Retrieves the signal value at a specific time, considering a small
-        offset of 10ms prior to the selected time. This is useful for
-        capturing values just before an event.
-
-        Parameters
-        ----------
-        selected_time : float
-            The target time (in seconds) to get the value from.
-        signal : np.ndarray
-            The signal array from which to retrieve the value.
-        time_array : np.ndarray
-            The time array corresponding to the signal.
-
-        Returns
-        -------
-        float
-            The value of the signal at the specified time minus a 10ms offset.
-        """
-        # Find the index in time_array closest to (selected_time - 0.01) seconds.
-        # This captures the value approximately 10ms before the selected time.
-        index = np.argmin(np.abs(time_array - (selected_time - 0.01)))
-        # Retrieve the value from the signal array at the identified index.
-        value_at_time = signal[index]
-        return value_at_time
-
     def _get_tunnel(self, p_peak_array: list) -> float:
         """
         Calculates a constant "tunnel" value, which defines a band
@@ -937,3 +842,69 @@ class PhaseJump:
         tunnel = t_val * tunnel_exp
         # Ensure the tunnel is zero before the event_time.
         return np.where(time_array < event_time, 0, tunnel)
+
+    def _apply_delay(
+        self, delay: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
+    ) -> np.ndarray:
+        """
+        Applies a time delay to a given signal by prepending a constant
+        `delayed_value` for the duration of the `delay`.
+
+        Parameters
+        ----------
+        delay : float
+            The delay time in seconds.
+        delayed_value : float
+            The constant value to fill the signal during the delay period.
+        time_array : np.ndarray
+            The time array corresponding to the signal.
+        signal : np.ndarray
+            The original signal to be delayed.
+
+        Returns
+        -------
+        np.ndarray
+            The delayed signal, truncated to the original signal length.
+        """
+        if len(time_array) < 2:
+            return signal  # Cannot calculate sampling frequency if only one or no point.
+        fs = time_array[1] - time_array[0]  # Assume constant time step (sampling freq).
+
+        # Calculate the number of samples corresponding to the delay.
+        delay_samples = int(round(delay / fs))
+
+        if delay_samples >= len(time_array):
+            # If delay is greater than or equal to signal length,
+            # the entire signal becomes the delayed value.
+            return np.full_like(signal, delayed_value)
+
+        # Create an array of `delayed_value` for the delay duration.
+        sample = np.full(delay_samples, delayed_value)
+        # Concatenate the delay samples with the original signal and
+        # truncate to the original length.
+        return np.concatenate((sample, signal))[: len(time_array)]
+
+    def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
+        """
+        Clips the values of a given signal array to ensure they stay
+        within a specified minimum and maximum range.
+
+        Parameters
+        ----------
+        value_min : float
+            The minimum allowed value for the signal.
+        signal : np.ndarray
+            The input signal array.
+        value_max : float
+            The maximum allowed value for the signal.
+
+        Returns
+        -------
+        np.ndarray
+            The signal with values clipped within the specified limits.
+        """
+        # Replace values below value_min with value_min.
+        signal = np.where(signal < value_min, value_min, signal)
+        # Replace values above value_max with value_max.
+        signal = np.where(signal > value_max, value_max, signal)
+        return signal
