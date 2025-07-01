@@ -133,6 +133,7 @@ class Producer:
             ) = model_parameters.get_producer_values(
                 self.get_producer_dyd(),
                 self.get_producer_par(),
+                self.__read_producer_ini(),
                 self._s_nref,
             )
             sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
@@ -237,6 +238,7 @@ class Producer:
             ) = model_parameters.get_producer_values(
                 self.get_producer_dyd(),
                 self.get_producer_par(),
+                self.__read_producer_ini(),
                 self._s_nref,
             )
             generators_z1 += generators
@@ -253,6 +255,7 @@ class Producer:
             ) = model_parameters.get_producer_values(
                 self.get_producer_dyd(),
                 self.get_producer_par(),
+                self.__read_producer_ini(),
                 self._s_nref,
             )
             generators_z3 += generators
@@ -344,6 +347,7 @@ class Producer:
         ) = model_parameters.get_producer_values(
             self.get_producer_dyd(),
             self.get_producer_par(),
+            self.__read_producer_ini(),
             self._s_nref,
         )
         self._connected_to_pdr = model_parameters.get_connected_to_pdr(self.get_producer_dyd())
