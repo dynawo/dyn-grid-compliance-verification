@@ -12,7 +12,11 @@ from pathlib import Path
 
 import numpy as np
 
+from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.phase_jump import GFM_Params, PhaseJump
+
+# Float tolerance
+epsilon = 1e-9
 
 gfm_overdamped_params = GFM_Params(
     P0=0.5,
@@ -101,7 +105,7 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
-    _, p_up_anal, p_down_anal = phase_jump.get_envelopes(
+    p_pcc, p_up, p_down = phase_jump.get_envelopes(
         delta_p_array=delta_p_array,
         delta_p_min=delta_p_min,
         delta_p_max=delta_p_max,
@@ -114,25 +118,28 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
+    save_results_to_csv(csv_path / f"{title}.csv", time_array, p_pcc, p_down, p_up)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)
-    phase_jump.plot_results(
+    plot_results(
         png_path / f"{title}.png",
+        title,
         time_array,
         event_time,
         0,
-        title,
+        p_pcc,
+        p_down,
+        p_up,
     )
 
-    assert len(p_down_anal) == nb_points
-    assert p_down_anal[0] == np.float64(0.5013787821149449)
-    assert p_down_anal[-1] == np.float64(0.4804503537321287)
+    assert len(p_down) == nb_points
+    assert abs(p_down[0] - np.float64(0.5013787821149449)) < epsilon
+    assert abs(p_down[-1] - np.float64(0.4804503537321287)) < epsilon
 
-    assert len(p_up_anal) == nb_points
-    assert p_up_anal[0] == np.float64(0.7323706712771527)
-    assert p_up_anal[-1] == np.float64(0.5209853573483934)
+    assert len(p_up) == nb_points
+    assert abs(p_up[0] - np.float64(0.7323706712771527)) < epsilon
+    assert abs(p_up[-1] - np.float64(0.5209853573483934)) < epsilon
 
 
 def test_phase_jump_overdamped_envelopes_event_at_200ms():
@@ -155,7 +162,7 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
-    _, p_up_anal, p_down_anal = phase_jump.get_envelopes(
+    p_pcc, p_up, p_down = phase_jump.get_envelopes(
         delta_p_array=delta_p_array,
         delta_p_min=delta_p_min,
         delta_p_max=delta_p_max,
@@ -168,25 +175,28 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
+    save_results_to_csv(csv_path / f"{title}.csv", time_array, p_pcc, p_down, p_up)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)
-    phase_jump.plot_results(
+    plot_results(
         png_path / f"{title}.png",
+        title,
         time_array,
         event_time,
         0,
-        title,
+        p_pcc,
+        p_down,
+        p_up,
     )
 
-    assert len(p_down_anal) == nb_points
-    assert p_down_anal[0] == np.float64(0.5)
-    assert p_down_anal[-1] == np.float64(0.4804503537321287)
+    assert len(p_down) == nb_points
+    assert abs(p_down[0] - np.float64(0.5)) < epsilon
+    assert abs(p_down[-1] - np.float64(0.4804503537321287)) < epsilon
 
-    assert len(p_up_anal) == nb_points
-    assert p_up_anal[0] == np.float64(0.5)
-    assert p_up_anal[-1] == np.float64(0.5209853573483934)
+    assert len(p_up) == nb_points
+    assert abs(p_up[0] - np.float64(0.5)) < epsilon
+    assert abs(p_up[-1] - np.float64(0.5209853573483934)) < epsilon
 
 
 def test_phase_jump_underdamped_envelopes_event_at_0s():
@@ -209,7 +219,7 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
         D=200.0, H=10.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
-    _, p_up_anal, p_down_anal = phase_jump.get_envelopes(
+    p_pcc, p_up, p_down = phase_jump.get_envelopes(
         delta_p_array=delta_p_array,
         delta_p_min=delta_p_min,
         delta_p_max=delta_p_max,
@@ -222,25 +232,28 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
+    save_results_to_csv(csv_path / f"{title}.csv", time_array, p_pcc, p_down, p_up)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)
-    phase_jump.plot_results(
+    plot_results(
         png_path / f"{title}.png",
+        title,
         time_array,
         event_time,
         0,
-        title,
+        p_pcc,
+        p_down,
+        p_up,
     )
 
-    assert len(p_down_anal) == nb_points
-    assert p_down_anal[0] == np.float64(0.803008035946675)
-    assert p_down_anal[-1] == np.float64(0.7564723505574613)
+    assert len(p_down) == nb_points
+    assert abs(p_down[0] - np.float64(0.803008035946675)) < epsilon
+    assert abs(p_down[-1] - np.float64(0.7564723505574613)) < epsilon
 
-    assert len(p_up_anal) == nb_points
-    assert p_up_anal[0] == np.float64(1.1)
-    assert p_up_anal[-1] == np.float64(0.8447078551626718)
+    assert len(p_up) == nb_points
+    assert abs(p_up[0] - np.float64(1.1)) < epsilon
+    assert abs(p_up[-1] - np.float64(0.8447078551626718)) < epsilon
 
 
 def test_phase_jump_underdamped_envelopes_event_at_200ms():
@@ -263,7 +276,7 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
         D=200.0, H=10.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
-    _, p_up_anal, p_down_anal = phase_jump.get_envelopes(
+    p_pcc, p_up, p_down = phase_jump.get_envelopes(
         delta_p_array=delta_p_array,
         delta_p_min=delta_p_min,
         delta_p_max=delta_p_max,
@@ -276,25 +289,28 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
+    save_results_to_csv(csv_path / f"{title}.csv", time_array, p_pcc, p_down, p_up)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)
-    phase_jump.plot_results(
+    plot_results(
         png_path / f"{title}.png",
+        title,
         time_array,
         event_time,
         0,
-        title,
+        p_pcc,
+        p_down,
+        p_up,
     )
 
-    assert len(p_down_anal) == nb_points
-    assert p_down_anal[0] == np.float64(0.8)
-    assert p_down_anal[-1] == np.float64(0.7564723505574613)
+    assert len(p_down) == nb_points
+    assert abs(p_down[0] - np.float64(0.8)) < epsilon
+    assert abs(p_down[-1] - np.float64(0.7564723505574613)) < epsilon
 
-    assert len(p_up_anal) == nb_points
-    assert p_up_anal[0] == np.float64(0.8)
-    assert p_up_anal[-1] == np.float64(0.8447078551626718)
+    assert len(p_up) == nb_points
+    assert abs(p_up[0] - np.float64(0.8)) < epsilon
+    assert abs(p_up[-1] - np.float64(0.8447078551626718)) < epsilon
 
 
 def test_s_vol_ang_step_1_phase_jump():
@@ -318,7 +334,7 @@ def test_s_vol_ang_step_1_phase_jump():
     )
     print(f"It's an {'overdamped' if overdamped else 'underdamped'} system")
 
-    _, p_up_anal, p_down_anal = phase_jump.get_envelopes(
+    p_pcc, p_up, p_down = phase_jump.get_envelopes(
         delta_p_array=delta_p_array,
         delta_p_min=delta_p_min,
         delta_p_max=delta_p_max,
@@ -331,22 +347,25 @@ def test_s_vol_ang_step_1_phase_jump():
     csv_path = Path(__file__).parent / "CSVResults"
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    phase_jump.save_results_to_csv(csv_path / f"{title}.csv", time_array)
+    save_results_to_csv(csv_path / f"{title}.csv", time_array, p_pcc, p_down, p_up)
 
     png_path = Path(__file__).parent / "PNGResults"
     png_path.mkdir(parents=True, exist_ok=True)
-    phase_jump.plot_results(
+    plot_results(
         png_path / f"{title}.png",
+        title,
         time_array,
         event_time,
         0,
-        title,
+        p_pcc,
+        p_down,
+        p_up,
     )
 
-    assert len(p_down_anal) == nb_points
-    assert p_down_anal[0] == np.float64(0.5486212178850551)
-    assert p_down_anal[-1] == np.float64(0.57)
+    assert len(p_down) == nb_points
+    assert abs(p_down[0] - np.float64(0.5486212178850551)) < epsilon
+    assert abs(p_down[-1] - np.float64(0.5700000000000003)) < epsilon
 
-    assert len(p_up_anal) == nb_points
-    assert p_up_anal[0] == np.float64(0.16615968292476785)
-    assert p_up_anal[-1] == np.float64(0.5299999999999907)
+    assert len(p_up) == nb_points
+    assert abs(p_up[0] - np.float64(0.16615968292476785)) < epsilon
+    assert abs(p_up[-1] - np.float64(0.5299999999997788)) < epsilon

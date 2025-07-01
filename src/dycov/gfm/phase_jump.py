@@ -8,41 +8,15 @@
 #     demiguelm@aia.es
 #
 
-from collections import namedtuple
-from pathlib import Path
-
 import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
 
-# Named tuple to store Grid Forming (GFM) parameters. This structure
-# provides immutable and descriptive access to configuration values.
-GFM_Params = namedtuple(
-    "GFM_Params",
-    [
-        "EMT",  # Electro-Magnetic Transients simulation flag
-        "RatioMin",  # Minimum ratio for parameter variations
-        "RatioMax",  # Maximum ratio for parameter variations
-        "P0",  # Initial active power (per unit - pu)
-        "delta_theta",  # Phase angle jump magnitude (degrees)
-        "SCR",  # Short Circuit Ratio, indicating grid strength
-        "Wb",  # Base angular frequency (radians/second)
-        "Ucv",  # Converter RMS voltage (pu)
-        "Ugr",  # Grid RMS voltage (pu)
-        "MarginHigh",  # Upper margin for power envelopes
-        "MarginLow",  # Lower margin for power envelopes
-        "FinalAllowedTunnelVariation",  # Parameter for tunnel function (% variation)
-        "FinalAllowedTunnelPn",  # Parameter for tunnel function (% Pn)
-        "PMax",  # Maximum allowed active power (pu)
-        "PMin",  # Minimum allowed active power (pu)
-    ],
-)
+from dycov.gfm.parameters import GFM_Params
 
 
 class PhaseJump:
     """
-    Class to calculate the GFM phase jump response and generate related
-    plots and CSVs for analysis.
+    Class to calculate the GFM phase jump response.
+    This class handles all core calculations for delta_p and power envelopes.
     """
 
     # Constants for indexing parameter arrays: original, minimum, and maximum values.
@@ -65,8 +39,6 @@ class PhaseJump:
         self._gfm_params = gfm_params
         self._debug = debug
         # Attributes to store calculated results for later saving and plotting.
-        # These are initialized to None and populated after calculations in
-        # get_envelopes().
         self._theoretical_response_from_vsm = None
         self._pdown = None
         self._pup = None
@@ -236,85 +208,6 @@ class PhaseJump:
 
         # Return the final calculated power signals.
         return p_pcc_final, p_up_final, p_down_final
-
-    def save_results_to_csv(
-        self,
-        path: Path,
-        time_array: np.ndarray,
-    ) -> None:
-        """
-        Save the calculated results (P_PCC, P_down, P_up) to a CSV file.
-
-        Parameters
-        ----------
-        path : Path
-            The file path where the CSV file will be saved.
-        time_array : np.ndarray
-            The time array corresponding to the power signals.
-        """
-        df = pd.DataFrame(
-            {
-                "Time (s)": time_array,
-                "P_PCC (pu)": self._theoretical_response_from_vsm,
-                "P_down (pu)": self._pdown,
-                "P_up (pu)": self._pup,
-            }
-        )
-        # Save the DataFrame to a CSV file without including the index.
-        df.to_csv(path, index=False)
-
-    def plot_results(
-        self,
-        path: Path,
-        time: np.ndarray,
-        event_time: float,
-        shift_time: float,
-        title: str,
-    ) -> None:
-        """
-        Plot the results of the GFM phase jump: theoretical response,
-        upper envelope, and lower envelope.
-
-        Parameters
-        ----------
-        path : Path
-            The file path where the plot image will be saved.
-        time : np.ndarray
-            The time array for the x-axis.
-        event_time : float
-            The time (in seconds) when the phase jump event occurred.
-        shift_time : float
-            A time shift (in milliseconds) to adjust the event time marker
-            for plotting purposes.
-        title : str
-            The title of the plot, which will also be used as the filename.
-        """
-        plt.figure(figsize=(8, 5))  # Create a new figure with a specified size.
-        # Plot the theoretical power response.
-        plt.plot(
-            time,
-            self._theoretical_response_from_vsm,
-            label="Theoretical response from VSM",
-            linewidth="3",
-        )
-        # Plot the lower power envelope.
-        plt.plot(time, self._pdown, label="Pdown", linewidth=2)
-        # Plot the upper power envelope.
-        plt.plot(time, self._pup, label="Pup", linewidth=2)
-        plt.xlabel("sec")  # Set x-axis label.
-        plt.ylabel("P at PCC (pu)")  # Set y-axis label.
-        plt.title(title)  # Set the plot title.
-        # Add a vertical line to mark the event time.
-        plt.axvline(
-            x=event_time + shift_time / 1000,  # Convert ms to seconds
-            color="black",
-            linestyle="--",
-            label="t at Event Time",
-        )
-        plt.legend(loc="lower right")  # Display legend.
-        plt.grid(True)  # Show grid.
-        plt.savefig(path, bbox_inches="tight", dpi=300)  # Save the figure.
-        plt.close()  # Close the figure to free up memory.
 
     def _calculate_common_params(self, D: float, H: float, Xeff: float) -> tuple:
         """
