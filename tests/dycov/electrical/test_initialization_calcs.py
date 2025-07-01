@@ -31,8 +31,8 @@ def _initialize_topo_s():
         Q=1,
         SNom=90,
         IMax=None,
-        VoltageDrop=None,
-        UseVoltageDrop=False,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
         equiv_int_line=None,
     )
     gen_xfmr = parameters.Xfmr_params(
@@ -87,8 +87,8 @@ def _initialize_topo_s_i():
         Q=1,
         SNom=90,
         IMax=None,
-        VoltageDrop=None,
-        UseVoltageDrop=False,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
         equiv_int_line=None,
     )
     gen_xfmr = parameters.Xfmr_params(

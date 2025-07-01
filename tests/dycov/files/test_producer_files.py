@@ -18,6 +18,7 @@ def generate_dyd_file(topology, template):
         create_producer_dyd_file(path, topology, template)
         with open(path / "Producer.dyd") as f:
             content = f.read()
+            print(content)
     finally:
         shutil.rmtree(path)
         return content

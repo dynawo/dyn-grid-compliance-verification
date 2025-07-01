@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 
+from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
@@ -200,7 +201,7 @@ def _run_dynawo(
             )
         else:
             os.killpg(
-                os.getpgid(proc.pid), signal.SIGTERM
+                os.getpgid(proc.pid), signal.SIGKILL
             )  # Send the signal to all the process groups
     else:
         stderr = proc.stderr.read().decode("utf-8")
@@ -400,10 +401,10 @@ def _get_magnitude_controlled_by_avr(generators: list, df_curves: pd.DataFrame, 
             delete_columns.append(variable)
         elif u_variable in df_curves.columns:
             q_variable = f"{generator.id}_GEN_MagnitudeControlledByAVRQPu"
-            if generator.UseVoltageDrop:
+            if generator.UseVoltageDroop:
                 curve_u = list(df_curves[u_variable])
                 curve_q = list(df_curves[q_variable])
-                voltage_drop = float(generator.VoltageDrop)
+                voltage_drop = float(generator.VoltageDroop)
                 curves_dict[variable] = np.add(
                     curve_u, np.multiply(curve_q, voltage_drop)
                 ).tolist()
@@ -642,10 +643,13 @@ def run_base_dynawo(
     float
         Time taken for the simulation
     """
+    # Remove previous output directory (Dynawo does not remove old output directories)
+    dynawo_output_dir = inputs_path / output_path
+    manage_files.remove_dir(dynawo_output_dir)
+
     success, stderr, sim_time = _run_dynawo(
         launcher_dwo, jobs_filename, inputs_path, simulation_limit
     )
-    dynawo_output_dir = inputs_path / output_path
 
     log = None
     has_error = False

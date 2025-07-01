@@ -101,8 +101,8 @@ def test_generators():
         par_id="",
         P=0.1,
         Q=0.05,
-        VoltageDrop=None,
-        UseVoltageDrop=False,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
         equiv_int_line=None,
     )
     ppm = parameters.Gen_params(
@@ -114,8 +114,8 @@ def test_generators():
         par_id="",
         P=0.1,
         Q=0.05,
-        VoltageDrop=None,
-        UseVoltageDrop=False,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
         equiv_int_line=None,
     )
     bess = parameters.Gen_params(
@@ -127,8 +127,8 @@ def test_generators():
         par_id="",
         P=0.1,
         Q=0.05,
-        VoltageDrop=None,
-        UseVoltageDrop=False,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
         equiv_int_line=None,
     )
     sm_models, ppm_models, bess_models = sanity_checks.check_generators([sm])

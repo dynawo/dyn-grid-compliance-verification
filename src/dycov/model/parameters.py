@@ -28,8 +28,8 @@ class Gen_params:
     par_id: str
     P: float
     Q: float
-    VoltageDrop: float
-    UseVoltageDrop: bool
+    VoltageDroop: float
+    UseVoltageDroop: bool
     equiv_int_line: EquivIntLine_params
 
 

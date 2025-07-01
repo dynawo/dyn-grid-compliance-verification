@@ -58,8 +58,8 @@ class ImportedCurves(ProducerCurves):
                         par_id="",
                         P="",
                         Q="",
-                        VoltageDrop="",
-                        UseVoltageDrop=False,
+                        VoltageDroop="",
+                        UseVoltageDroop=False,
                         equiv_int_line=None,
                     )
                 )
@@ -95,9 +95,11 @@ class ImportedCurves(ProducerCurves):
             )
 
             if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
-                self._is_field_measurements = bool(
-                    importer.config.get("Curves-Metadata", "is_field_measurements")
+                self._is_field_measurements = (
+                    importer.config.get("Curves-Metadata", "is_field_measurements").lower()
+                    == "true"
                 )
+            self.get_producer().set_is_field_measurements(self._is_field_measurements)
 
             generators_imax = {}
             for key in importer.config["Curves-Metadata"].keys():

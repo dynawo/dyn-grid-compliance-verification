@@ -72,6 +72,7 @@ class Producer:
         self._is_dynawo_model = self._producer_model_path is not None
         self._is_user_curves = self._producer_curves_path is not None
         self._has_reference_curves_path = self._reference_curves_path is not None
+        self._is_field_measurements = False
 
         if verification_type == ELECTRIC_PERFORMANCE:
             self.__set_electric_performance_type()
@@ -218,6 +219,7 @@ class Producer:
         self.p_max_injection_pu = (
             float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
         )
+        self.p_max_consumption_pu = 0.0
         if producer_config.has_option(default_section, "p_max_consumption"):
             self.p_max_consumption_pu = (
                 float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
@@ -294,7 +296,9 @@ class Producer:
             If it is False use the Pmax Injection
         """
         if consumption:
-            self.p_max_pu = self.p_max_consumption_pu
+            # The maximum active power consumption value must be
+            # sign-flipped to adhere to the tool's adopted sign convention.
+            self.p_max_pu = -self.p_max_consumption_pu
         else:
             self.p_max_pu = self.p_max_injection_pu
 
@@ -359,7 +363,9 @@ class Producer:
         """
         self._zone = zone
         self.__init_parameters()
-        sanity_checks.check_producer_params(self.p_max_injection_pu, self.u_nom)
+        sanity_checks.check_producer_params(
+            self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom
+        )
 
         if self.is_dynawo_model():
             sanity_checks.check_well_formed_xml(self.get_producer_dyd())
@@ -538,3 +544,22 @@ class Producer:
             Equipments connected to the bus PDR
         """
         return self._connected_to_pdr
+
+    def set_is_field_measurements(self, is_field_measurements: bool) -> None:
+        """Sets if the curves are field measurements.
+        Parameters
+        ----------
+        is_field_measurements: bool
+            True if the curves are field measurements, False otherwise
+        """
+        self._is_field_measurements = is_field_measurements
+
+    def is_field_measurements(self) -> bool:
+        """Checks if the curves are field measurements.
+
+        Returns
+        -------
+        bool
+            True if the curves are field measurements, False otherwise
+        """
+        return self._is_field_measurements

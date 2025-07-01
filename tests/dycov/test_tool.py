@@ -210,17 +210,17 @@ def test_model_validation_iec2015_curves():
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
-        Compliance.NonCompliant,  # 6
+        Compliance.Compliant,  # 6
         Compliance.NonCompliant,  # 7
-        Compliance.NonCompliant,  # 8
+        Compliance.Compliant,  # 8
         Compliance.NonCompliant,  # 9
         Compliance.NonCompliant,  # 10
         Compliance.NonCompliant,  # 11
         Compliance.NonCompliant,  # 12
         Compliance.NonCompliant,  # 13
         Compliance.NonCompliant,  # 14
-        Compliance.Compliant,  # 15
-        Compliance.Compliant,  # 16
+        Compliance.NonCompliant,  # 15
+        Compliance.NonCompliant,  # 16
         Compliance.NonCompliant,  # 17
         Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
