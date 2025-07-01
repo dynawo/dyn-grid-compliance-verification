@@ -26,14 +26,13 @@ GFM_Params = namedtuple(
         "P0",  # Initial active power (per unit - pu)
         "delta_theta",  # Phase angle jump magnitude (degrees)
         "SCR",  # Short Circuit Ratio, indicating grid strength
-        "Xtr",  # Transformer reactance (pu)
         "Wb",  # Base angular frequency (radians/second)
         "Ucv",  # Converter RMS voltage (pu)
         "Ugr",  # Grid RMS voltage (pu)
         "MarginHigh",  # Upper margin for power envelopes
         "MarginLow",  # Lower margin for power envelopes
-        "FinalAllowedTunnelVariation",  # Parameter for tunnel function
-        "FinalAllowedTunnelPn",  # Parameter for tunnel function
+        "FinalAllowedTunnelVariation",  # Parameter for tunnel function (% variation)
+        "FinalAllowedTunnelPn",  # Parameter for tunnel function (% Pn)
         "PMax",  # Maximum allowed active power (pu)
         "PMin",  # Minimum allowed active power (pu)
     ],
@@ -54,7 +53,7 @@ class PhaseJump:
     # Critically damped systems are grouped with overdamped.
     _EPSILON_THRESHOLD = 1.0
 
-    def __init__(self, gfm_params: GFM_Params):
+    def __init__(self, gfm_params: GFM_Params, debug: bool = False):
         """
         Initializes the PhaseJump class with GFM parameters.
 
@@ -64,6 +63,7 @@ class PhaseJump:
             Parameters for the GFM phase jump calculations.
         """
         self._gfm_params = gfm_params
+        self._debug = debug
         # Attributes to store calculated results for later saving and plotting.
         # These are initialized to None and populated after calculations in
         # get_envelopes().
@@ -102,7 +102,7 @@ class PhaseJump:
             - epsilon_array: List of epsilon values for original, min, and max parameters.
         """
         x_gr = 1 / self._gfm_params.SCR  # Grid reactance derived from SCR
-        x_total_initial = self._gfm_params.Xtr + Xeff + x_gr  # Total initial reactance
+        x_total_initial = Xeff + x_gr  # Total initial reactance
         # Calculate initial epsilon to determine damping type (overdamped/underdamped).
         epsilon_initial_check = self._calculate_epsilon_initial_check(D, H, x_total_initial)
 
@@ -131,6 +131,13 @@ class PhaseJump:
         else:
             delta_p_min = self._get_underdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_underdamped_delta_p_max(D, H, Xeff, time_array, event_time)
+
+        if self._debug:
+            print(f"DeltaP Nom {delta_p_array[self._ORIGINAL_PARAMS_IDX]}")
+            print(f"DeltaP Min {delta_p_array[self._MINIMUM_PARAMS_IDX]}")
+            print(f"DeltaP Max {delta_p_array[self._MAXIMUM_PARAMS_IDX]}")
+            print(f"P Min {delta_p_min}")
+            print(f"P Max {delta_p_max}")
 
         # Return all calculated delta_p arrays, p_peak, and damping information.
         return (
@@ -187,9 +194,10 @@ class PhaseJump:
         )
 
         # Calculate the theoretical power at PCC and limit it by PMin/PMax.
-        p_pcc = self._cut_signal(
-            self._gfm_params.PMin, self._gfm_params.P0 + delta_p, self._gfm_params.PMax
+        p_pcc = self._gfm_params.P0 + delta_p * -(
+            self._gfm_params.delta_theta / np.abs(self._gfm_params.delta_theta)
         )
+        p_pcc = self._cut_signal(self._gfm_params.PMin, p_pcc, self._gfm_params.PMax)
 
         # Combine all delta_p arrays for envelope calculations.
         list_of_arrays = delta_p_array + [delta_p_min, delta_p_max]
@@ -198,10 +206,17 @@ class PhaseJump:
         pdown_no_p0, pup_no_p0 = self._calculate_unlimited_power_envelopes(
             list_of_arrays, tunnel_time_dep
         )
+        if self._debug:
+            print(f"Pdown No P0 {pdown_no_p0}")
+            print(f"Pup No P0 {pup_no_p0}")
+
         # Apply final limits to the power envelopes using the static tunnel value.
         pdown_limited, pup_limited = self._limit_power_envelopes(
             pdown_no_p0, pup_no_p0, self._get_tunnel(p_peak_array)
         )
+        if self._debug:
+            print(f"Pdown Limited {pdown_limited}")
+            print(f"Pup Limited {pup_limited}")
 
         # Apply a delay if EMT simulation flag is true.
         if self._gfm_params.EMT:
@@ -326,7 +341,7 @@ class PhaseJump:
             - p_peak_calc: Calculated peak power.
         """
         x_gr = 1 / self._gfm_params.SCR  # Grid reactance.
-        x_total_initial = self._gfm_params.Xtr + Xeff + x_gr  # Sum of reactances.
+        x_total_initial = Xeff + x_gr  # Sum of reactances.
         u_prod = self._gfm_params.Ucv * self._gfm_params.Ugr  # Product of voltages.
 
         # Calculate damping ratio (epsilon).
@@ -440,7 +455,7 @@ class PhaseJump:
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        x_total_initial, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
+        _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(epsilon**2 - 1)  # Damped natural frequency for overdamped.
 
         alpha = epsilon * wn + wd  # Root 1
@@ -588,7 +603,7 @@ class PhaseJump:
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        x_total_initial, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
+        _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(1 - epsilon**2)  # Damped natural frequency for underdamped.
 
         # Calculate individual terms for delta_p1 based on underdamped response.
@@ -659,7 +674,7 @@ class PhaseJump:
         np.ndarray
             The minimum delta_p array for the underdamped system.
         """
-        delta_p1, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
+        _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)  # Decay rate.
         # Apply lower margin and exponential decay.
         delta_p_margined = p_peak * (1 - self._gfm_params.MarginLow) * np.exp(-sigma * time_array)
@@ -778,11 +793,11 @@ class PhaseJump:
         )
         # Limit the upper envelope:
         # 1. Adjust by P0 and delta_theta_sign.
-        # 2. Ensure it stays within [-PMax, PMax].
+        # 2. Ensure it stays within [PMin, PMax].
         pup_limited = np.minimum(
             np.maximum(
                 self._gfm_params.P0 - 1 * delta_theta_sign * pup_no_p0,
-                -1 * self._gfm_params.PMax,
+                self._gfm_params.PMin,
             ),
             self._gfm_params.PMax,
         )
