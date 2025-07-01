@@ -386,9 +386,13 @@ def _adjust_generator(
     _, phase0 = dynawo_translator.get_dynawo_variable(generator.lib, "Phase0")
     _set_parameter(parset, ns, phase0, sign, generator_uphase0)
 
-    _set_control_mode(generator, parset, ns, generator_control_mode)
+    control_mode_name = _set_control_mode(
+        generator, parset, ns, generator_control_mode, force_voltage_droop
+    )
 
-    _set_voltage_droop(generator, parset, ns, generator_control_mode, force_voltage_droop)
+    _set_voltage_droop(
+        generator, parset, ns, generator_control_mode, control_mode_name, force_voltage_droop
+    )
 
 
 def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
@@ -404,7 +408,9 @@ def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
         generator.UseVoltageDroop = True
 
 
-def _set_voltage_droop(generator, parset, ns, generator_control_mode, force_voltage_droop) -> None:
+def _set_voltage_droop(
+    generator, parset, ns, generator_control_mode, control_mode_name, force_voltage_droop
+) -> None:
     # Get the generator voltage droop parameters from the producer PAR file.
     voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, ns)
     dycov_logging.get_logger("Model Parameters").debug(
@@ -412,10 +418,15 @@ def _set_voltage_droop(generator, parset, ns, generator_control_mode, force_volt
     )
     # If the generator has not voltage droop parameters return, like NonPlant Controller units.
     if not voltage_droop_parameters:
-        return
+        force_voltage_droop = False
 
-    if generator_control_mode == "USetpoint" and force_voltage_droop:
+    # If the control mode is reactive, disable voltage droop
+    if control_mode_name:
+        force_voltage_droop = not dynawo_translator.is_reactive_control_mode(
+            generator, control_mode_name
+        )
 
+    if force_voltage_droop:
         # Check if the configured voltage droop is valid
         if not dynawo_translator.is_valid_control_mode(
             generator, "VoltageDroop", voltage_droop_parameters
@@ -443,21 +454,22 @@ def _set_voltage_droop(generator, parset, ns, generator_control_mode, force_volt
     _recalculate_voltage_ref(generator, voltage_droop_parameters)
 
 
-def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
+def _set_control_mode(generator, parset, ns, generator_control_mode, force_voltage_droop) -> str:
+    control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
+    dycov_logging.get_logger("Model Parameters").debug(
+        f"Generator {generator.id} Control Mode: {control_mode_parameters}"
+    )
+    # If the generator has not control mode parameters return.
+    if not control_mode_parameters:
+        return
+
+    # Check if the configured control mode is valid
+    control_mode_name = dynawo_translator.is_valid_control_mode(
+        generator, generator_control_mode, control_mode_parameters
+    )
     if generator_control_mode == "USetpoint" or generator_control_mode == "QSetpoint":
         # Get the generator control mode parameters from the producer PAR file.
-        control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
-        dycov_logging.get_logger("Model Parameters").debug(
-            f"Generator {generator.id} Control Mode: {control_mode_parameters}"
-        )
-        # If the generator has not control mode parameters return.
-        if not control_mode_parameters:
-            return
-
-        # Check if the configured control mode is valid
-        if not dynawo_translator.is_valid_control_mode(
-            generator, generator_control_mode, control_mode_parameters
-        ):
+        if not control_mode_name:
             dycov_logging.get_logger("Model Parameters").warning(
                 f"{generator.lib} control mode will be changed"
             )
@@ -468,9 +480,10 @@ def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
                 f"Default Control Mode: {default_control_mode_parameters} "
                 f"for {generator_control_mode}"
             )
-            if dynawo_translator.is_valid_control_mode(
+            control_mode_name = dynawo_translator.is_valid_control_mode(
                 generator, generator_control_mode, default_control_mode_parameters
-            ):
+            )
+            if control_mode_name:
                 _set_parameters(generator, parset, ns, default_control_mode_parameters)
             else:
                 dycov_logging.get_logger("Model Parameters").error(
@@ -478,7 +491,7 @@ def _set_control_mode(generator, parset, ns, generator_control_mode) -> None:
                 )
                 raise ValueError(f"{generator.lib} executed with wrong control mode")
 
-    return
+    return control_mode_name
 
 
 def _get_voltage_droop_parameters(generator, parset, ns) -> dict:

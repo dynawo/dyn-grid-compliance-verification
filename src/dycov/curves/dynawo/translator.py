@@ -362,8 +362,8 @@ class Translator:
         return self._get_control_mode_parameters(control_mode)
 
     def is_valid_control_mode(
-        self, generator: Gen_params, generator_control_mode: str, generator_parameters: dict
-    ) -> bool:
+        self, generator: Gen_params, generator_control_mode: str, control_mode_parameters: dict
+    ) -> str:
         """
         Checks if the provided generator control mode and its parameters are valid.
 
@@ -389,9 +389,28 @@ class Translator:
         )
         for control_mode in valid_control_modes:
             valid_parameters = self._get_control_mode_parameters(control_mode)
-            if _is_valid_control_mode_parameters(generator_parameters, valid_parameters):
-                return True
-        return False
+            if _is_valid_control_mode_parameters(control_mode_parameters, valid_parameters):
+                return control_mode
+
+        return ""
+
+    def is_reactive_control_mode(self, generator: Gen_params, control_mode_name: str) -> bool:
+        """Check if the control mode is a reactive control mode.
+
+        Parameters
+        ----------
+        generator: Gen_params
+            Generator parameters
+        control_mode_name: str
+            Control mode name
+
+        Returns
+        -------
+        bool
+            True if the control mode is a reactive control mode, False otherwise
+        """
+        valid_control_modes = self._get_control_modes_by_generator(generator, "QSetpoint")
+        return True if control_mode_name in valid_control_modes else False
 
 
 def _get_instance() -> Translator:
