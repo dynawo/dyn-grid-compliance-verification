@@ -68,12 +68,12 @@ def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element, prod
     total_q = sum(q.P for q in generators)
 
     if not math.isclose(total_p, 1.0):
-        dycov_logging.get_logger("Model Parameters").error(f"Generator P flows do not add up to 1")
-        raise ValueError(f"Generator P flows do not add up to 1")
+        dycov_logging.get_logger("Model Parameters").error("Generator P flows do not add up to 1")
+        raise ValueError("Generator P flows do not add up to 1")
 
     if not math.isclose(total_q, 1.0):
-        dycov_logging.get_logger("Model Parameters").error(f"Generator Q flows do not add up to 1")
-        raise ValueError(f"Generator Q flows do not add up to 1")
+        dycov_logging.get_logger("Model Parameters").error("Generator Q flows do not add up to 1")
+        raise ValueError("Generator Q flows do not add up to 1")
 
     return generators
 
