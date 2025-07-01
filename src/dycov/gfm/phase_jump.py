@@ -38,10 +38,6 @@ class PhaseJump:
         """
         self._gfm_params = gfm_params
         self._debug = debug
-        # Attributes to store calculated results for later saving and plotting.
-        self._theoretical_response_from_vsm = None
-        self._pdown = None
-        self._pup = None
 
     def get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
@@ -199,12 +195,6 @@ class PhaseJump:
             p_up_final = pup_limited
             p_down_final = pdown_limited
             p_pcc_final = p_pcc
-
-        # Store the final results as instance attributes for later use in
-        # saving and plotting methods.
-        self._theoretical_response_from_vsm = p_pcc_final
-        self._pdown = p_down_final
-        self._pup = p_up_final
 
         # Return the final calculated power signals.
         return p_pcc_final, p_up_final, p_down_final
