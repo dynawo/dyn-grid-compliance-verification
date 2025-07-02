@@ -114,7 +114,7 @@ def main():
 
     curves_final = curves_final.set_index("time")
 
-    curves_final.to_csv(curves_file, sep=";")
+    curves_final.to_csv(curves_file, sep=";", float_format="%.3e")
 
     return 0
 
