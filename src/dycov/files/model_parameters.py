@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 from typing import Optional
+import configparser
 
 from lxml import etree
 
@@ -35,7 +36,9 @@ from dycov.model.parameters import (
 )
 
 
-def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element, producer_ini) -> list:
+def _get_generator_values(
+    dyd_root: etree.Element, par_root: etree.Element, producer_ini: configparser.ConfigParser
+) -> list:
     generators = []
     # Generators
     for model_parameter in find_bbmodel_by_type(dyd_root, "GeneratorSynchronous"):
@@ -63,7 +66,6 @@ def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element, prod
     for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
         _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
-    # TODO: Should this be checked?
     total_p = sum(g.P for g in generators)
     total_q = sum(q.P for q in generators)
 
@@ -82,7 +84,7 @@ def _append_generator(
     dyd_root: etree.Element,
     par_root: etree.Element,
     model_parameter: etree.Element,
-    producer_ini,
+    producer_ini: configparser.ConfigParser,
     generators: list,
 ):
     gen_id = model_parameter.get("id")
@@ -110,32 +112,21 @@ def _append_generator(
     else:
         imax = None
 
-    # OLD CODE
-    """
-    sign, generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
-    p0pu = parset.find(f"{{{ns}}}par[@name='{generator_P}']")
-    P = float(p0pu.get("value")) * sign
-    sign, generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
-    q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
-    Q = float(q0pu.get("value")) * sign
-    """
     default_section = "DEFAULT"
 
-    sign, generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
-    if producer_ini.has_option(default_section, f"p0_{gen_id}"):
-        # TODO: Should it be multiplied by the sign?
-        p0 = producer_ini.get(default_section, f"p0_{gen_id}")
-        P = float(p0) * sign
+    if producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
+        P_sharing = producer_ini.get(default_section, f"P_sharing_{gen_id}")
+        P = float(P_sharing)
     else:
+        sign, generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
         p0pu = parset.find(f"{{{ns}}}par[@name='{generator_P}']")
         P = float(p0pu.get("value")) * sign
 
-    sign, generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
-    if producer_ini.has_option(default_section, f"q0_{gen_id}"):
-        q0 = producer_ini.get(default_section, f"q0_{gen_id}")
-        # TODO: Should it be multiplied by the sign?
-        Q = float(q0) * sign
+    if producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
+        Q_sharing = producer_ini.get(default_section, f"Q_sharing_{gen_id}")
+        Q = float(Q_sharing)
     else:
+        sign, generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
         q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
         Q = float(q0pu.get("value")) * sign
 
