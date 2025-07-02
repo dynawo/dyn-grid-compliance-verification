@@ -149,9 +149,13 @@ class CurvesManager:
 
     def __save_curves(self, working_oc_dir: Path):
         if not self.get_curves("calculated").empty:
-            self.get_curves("calculated").to_csv(working_oc_dir / "curves_calculated.csv", sep=";")
+            self.get_curves("calculated").to_csv(
+                working_oc_dir / "curves_calculated.csv", sep=";", float_format="%.3e"
+            )
         if not self.get_curves("reference").empty:
-            self.get_curves("reference").to_csv(working_oc_dir / "curves_reference.csv", sep=";")
+            self.get_curves("reference").to_csv(
+                working_oc_dir / "curves_reference.csv", sep=";", float_format="%.3e"
+            )
 
     def __get_signal_processing_windows(self, curve: str, windows: str) -> tuple[float, float]:
         return self._windows[curve]["sigpro"][windows]
@@ -356,8 +360,8 @@ class CurvesManager:
         )
 
         if dycov_logging.getEffectiveLevel() == logging.DEBUG:
-            calculated_curves.to_csv(working_path / "signal.csv", sep=";")
-            reference_curves.to_csv(working_path / "reference.csv", sep=";")
+            calculated_curves.to_csv(working_path / "signal.csv", sep=";", float_format="%.3e")
+            reference_curves.to_csv(working_path / "reference.csv", sep=";", float_format="%.3e")
 
     def get_curves(self, curve: str) -> pd.DataFrame:
         """Get the curves.
