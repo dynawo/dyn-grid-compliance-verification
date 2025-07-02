@@ -25,7 +25,7 @@ def main():
 
     df_noise_curves["time"] = time
     df_noise_curves = df_noise_curves.set_index("time")
-    df_noise_curves.to_csv(curves_file, sep=";")
+    df_noise_curves.to_csv(curves_file, sep=";", float_format="%.3e")
 
 
 if __name__ == "__main__":
