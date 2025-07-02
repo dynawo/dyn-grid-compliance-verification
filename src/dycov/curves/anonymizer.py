@@ -207,7 +207,9 @@ def _process_curves(
                 )
 
             df_imported_curve = df_imported_curve.set_index("time")
-            df_imported_curve.to_csv(output_folder / f"{curves_path.stem}.csv", sep=";")
+            df_imported_curve.to_csv(
+                output_folder / f"{curves_path.stem}.csv", sep=";", float_format="%.3e"
+            )
 
             with open(dict_file, "r") as file:
                 filedata = file.read()
