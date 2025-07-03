@@ -67,7 +67,7 @@ def _get_generator_values(
         _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
     total_p = sum(g.P for g in generators)
-    total_q = sum(q.P for q in generators)
+    total_q = sum(q.Q for q in generators)
 
     if not math.isclose(total_p, 1.0):
         dycov_logging.get_logger("Model Parameters").error("Generator P flows do not add up to 1")
