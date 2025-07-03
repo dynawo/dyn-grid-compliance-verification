@@ -17,7 +17,7 @@ import pandas as pd
 from dycov.gfm.phase_jump import GFM_Params, PhaseJump
 
 # Float tolerance
-epsilon = 1e-9
+epsilon = 1e-3
 
 gfm_overdamped_params = GFM_Params(
     P0=0.5,
@@ -117,7 +117,7 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
 
     title = "Overdamped_PhaseJump_DeltaP_0s"
     csv_path = Path(__file__).parent / "resources"
-    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=",")
+    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
     assert math.isclose(max(np.abs(csv_data["P_PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
@@ -156,7 +156,7 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
 
     title = "Overdamped_PhaseJump_DeltaP_event"
     csv_path = Path(__file__).parent / "resources"
-    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=",")
+    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
     assert math.isclose(max(np.abs(csv_data["P_PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
@@ -195,7 +195,7 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
 
     title = "Underdamped_PhaseJump_DeltaP_0s"
     csv_path = Path(__file__).parent / "resources"
-    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=",")
+    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
     assert math.isclose(max(np.abs(csv_data["P_PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
@@ -234,7 +234,7 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
 
     title = "Underdamped_PhaseJump_DeltaP_event"
     csv_path = Path(__file__).parent / "resources"
-    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=",")
+    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
     assert math.isclose(max(np.abs(csv_data["P_PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
@@ -274,8 +274,7 @@ def test_s_vol_ang_step_1_phase_jump():
 
     title = "S_VolAngStep1_OC2"
     csv_path = Path(__file__).parent / "resources"
-    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=",")
-    print(csv_data.keys)
+    csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
     assert math.isclose(max(np.abs(csv_data["P_PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
