@@ -6,9 +6,7 @@ Dynamic grid Compliance Verification API
    :toctree: _autosummary
 
    dycov.launchers
-   dycov.core.execution_parameters
    dycov.core.input_template
-   dycov.core.validation
    dycov.core.validator
    dycov.curves.anonymizer
    dycov.curves.curves_factory
@@ -18,3 +16,5 @@ Dynamic grid Compliance Verification API
    dycov.model.operating_condition
    dycov.model.pcs
    dycov.model.producer
+   dycov.validate.parameters
+   dycov.validate.validation

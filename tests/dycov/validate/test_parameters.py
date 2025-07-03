@@ -11,7 +11,7 @@
 import shutil
 from pathlib import Path
 
-from dycov.core.execution_parameters import Parameters
+from dycov.validate.parameters import ValidationParameters
 
 
 def _get_resources_path():
@@ -32,7 +32,7 @@ def test_parameters():
     verification_type = 0
 
     try:
-        parameters = Parameters(
+        parameters = ValidationParameters(
             launcher_dwo,
             producer_model,
             producer_curves_path,

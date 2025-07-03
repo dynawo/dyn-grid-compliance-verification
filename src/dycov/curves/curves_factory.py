@@ -11,14 +11,14 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.importer.curves import ImportedCurves
 from dycov.dynawo.curves import DynawoCurves
+from dycov.validate.parameters import ValidationParameters
 
 
 def get_producer(
-    parameters: Parameters,
+    parameters: ValidationParameters,
     pcs_benchmark_name: str,
     stable_time: float,
     lib_path: Path,
@@ -78,7 +78,7 @@ def get_producer(
 
 
 def get_reference(
-    parameters: Parameters,
+    parameters: ValidationParameters,
 ) -> ImportedCurves:
     """Gets the reference curve generator.
 

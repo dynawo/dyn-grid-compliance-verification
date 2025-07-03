@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import logging
 import operator
 import os
@@ -17,7 +18,6 @@ from operator import attrgetter
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     CASE_SEPARATOR,
     ELECTRIC_PERFORMANCE_BESS,
@@ -32,6 +32,7 @@ from dycov.logging.logging import dycov_logging
 from dycov.model.pcs import Pcs
 from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
+from dycov.validate.parameters import ValidationParameters
 
 
 def _aborted_execution(e: Exception) -> None:
@@ -70,7 +71,7 @@ class Validation:
 
     def __init__(
         self,
-        parameters: Parameters,
+        parameters: ValidationParameters,
     ):
         self._parameters = parameters
         self.__initialize_working_environment()

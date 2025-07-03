@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from dycov.core.execution_parameters import Parameters
 from dycov.curves.manager import CurvesManager
 from dycov.model.parameters import Disconnection_Model
+from dycov.validate.parameters import ValidationParameters
 from dycov.validation import compliance_list
 
 
@@ -21,7 +21,7 @@ class Validator:
     def __init__(
         self,
         curves_manager: CurvesManager,
-        parameters: Parameters,
+        parameters: ValidationParameters,
         validations: list,
         is_field_measurements: bool,
     ):

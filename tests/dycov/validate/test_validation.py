@@ -12,15 +12,15 @@ from pathlib import Path
 
 import pytest
 
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
     REPORT_NAME,
 )
-from dycov.core.validation import Validation
 from dycov.model.pcs import Pcs
 from dycov.report.LatexReportException import LatexReportException
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.validation import Validation
 
 
 class DummyProducer:
@@ -55,7 +55,7 @@ class DummyProducer:
         return Path("dummy_reference_path")
 
 
-class DummyParameters(Parameters):
+class DummyParameters(ValidationParameters):
     def __init__(
         self,
         launcher_dwo=Path("dummy_launcher"),
@@ -187,7 +187,7 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
         output_dir=temp_dirs[0], selected_pcs="PCS2", sim_type=ELECTRIC_PERFORMANCE_PPM
     )
     monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.validate.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     validation = Validation(parameters)
@@ -200,7 +200,7 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     # Patch check_output_dir to simulate user not wanting to overwrite
     monkeypatch.setattr("dycov.files.manage_files.check_output_dir", lambda path: True)
     monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.validate.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
     )
     with pytest.raises(SystemExit):
         Validation(parameters)
@@ -211,7 +211,7 @@ def test_validation_exits_on_pcs_validation_exception(monkeypatch, temp_dirs):
     pcs_list = [
         make_exception_pcs("PCS_EXCEPTION", parameters, FileNotFoundError),
     ]
-    monkeypatch.setattr("dycov.core.validation.Pcs", lambda name, params: pcs_list[0])
+    monkeypatch.setattr("dycov.validate.validation.Pcs", lambda name, params: pcs_list[0])
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     validation = Validation(parameters)
     validation._pcs_list = pcs_list
@@ -228,7 +228,7 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
         copied.append((pcs_name, str(source_path), str(target_path)))
 
     monkeypatch.setattr(
-        "dycov.core.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.validate.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     monkeypatch.setattr("dycov.files.manage_files.copy_output_files", fake_copy_output_files)

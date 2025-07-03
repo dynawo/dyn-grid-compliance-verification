@@ -14,21 +14,23 @@ from typing import Union
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
 from dycov.model.parameters import Disconnection_Model, Simulation_result
-from dycov.model.producer import Producer
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.producer import ModelProducer
 
 
-def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
+def get_cfg_oc_name(pcs_name: str, bm_name: str, oc_name: str) -> str:
     """Generate a combined configuration operating condition name from PCS benchmark
     name and operating condition name.
 
     Parameters
     ----------
-    pcs_bm_name : str
-        The PCS benchmark name.
+    pcs_name : str
+        The PCS name.
+    bm_name : str
+        The benchmark name.
     oc_name : str
         The operating condition name.
 
@@ -37,6 +39,7 @@ def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
     str
         The combined configuration operating condition name.
     """
+    pcs_bm_name = pcs_name + CASE_SEPARATOR + bm_name
     if pcs_bm_name == oc_name:
         return oc_name
     return pcs_bm_name + CASE_SEPARATOR + oc_name
@@ -57,7 +60,7 @@ class ProducerCurves:
 
     def __init__(
         self,
-        parameters: Parameters,
+        parameters: ValidationParameters,
     ):
         self._producer = parameters.get_producer()
         self._line_Xpu = 0.0
@@ -114,7 +117,7 @@ class ProducerCurves:
             "line_XPu": self._line_Xpu,
         }
 
-    def get_producer(self) -> Producer:
+    def get_producer(self) -> ModelProducer:
         """Get the producer instance.
 
         Returns
@@ -195,7 +198,9 @@ class ProducerCurves:
     def obtain_reference_curve(
         self,
         working_oc_dir: Path,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
+        oc_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
         """Obtain the reference curves.
@@ -204,8 +209,10 @@ class ProducerCurves:
         ----------
         working_oc_dir: Path
             Temporal working path
-        pcs_bm_name: str
-            PCS.Benchmark name
+        pcs_name: str
+            PCS name
+        bm_name: str
+            Benchmark name
         oc_name: str
             Operating Condition name
         curves: Path
@@ -224,7 +231,7 @@ class ProducerCurves:
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
-        pcs_bm_name: str,
+        pcs_name: str,
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
@@ -235,8 +242,8 @@ class ProducerCurves:
         ----------
         working_oc_dir: Path
             Temporal working path
-        pcs_bm_name: str
-            PCS.Benchmark name
+        pcs_name: str
+            PCS name
         bm_name: str
             Benchmark name
         oc_name: str

@@ -14,10 +14,10 @@ from importlib.metadata import version
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.core.validation import Validation
 from dycov.dynawo.prepare_tool import precompile
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
+from dycov.validate.validation import Validation
 
 dycov_CONFIG_SECTION = "dycov"
 dycov_CONFIG_TYPE_KEY = "type"

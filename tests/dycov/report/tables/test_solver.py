@@ -7,7 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from src.dycov.report.tables.solver import create_map
+from dycov.report.tables.solver import create_map
 
 
 class TestCreateMap:
