@@ -47,7 +47,7 @@ def save_results_to_csv(
         }
     )
     # Save the DataFrame to a CSV file without including the index.
-    df.to_csv(path, index=False)
+    df.to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
 def plot_results(
