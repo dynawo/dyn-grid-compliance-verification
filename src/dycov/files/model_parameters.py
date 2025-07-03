@@ -117,18 +117,38 @@ def _append_generator(
     if producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
         P_sharing = producer_ini.get(default_section, f"P_sharing_{gen_id}")
         P = float(P_sharing)
+    elif (
+        producer_ini.has_option(default_section, "topology")
+        and str(producer_ini.get(default_section, "topology"))[0] == "S"
+    ):
+        P = 1
+        dycov_logging.get_logger("Model Parameters").warning(
+            "A P flow of 1 has been automatically defined."
+        )
+        raise Warning("A P flow of 1 has been automatically defined.")
     else:
-        sign, generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
-        p0pu = parset.find(f"{{{ns}}}par[@name='{generator_P}']")
-        P = float(p0pu.get("value")) * sign
+        dycov_logging.get_logger("Model Parameters").error(
+            "It is mandatory to define the distribution of P flows for multi-topology generators"
+        )
+        raise ValueError("Generator P flows not defined")
 
     if producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
         Q_sharing = producer_ini.get(default_section, f"Q_sharing_{gen_id}")
         Q = float(Q_sharing)
+    elif (
+        producer_ini.has_option(default_section, "topology")
+        and str(producer_ini.get(default_section, "topology"))[0] == "S"
+    ):
+        Q = 1
+        dycov_logging.get_logger("Model Parameters").warning(
+            "A Q flow of 1 has been automatically defined."
+        )
+        raise Warning("A Q flow of 1 has been automatically defined.")
     else:
-        sign, generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
-        q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
-        Q = float(q0pu.get("value")) * sign
+        dycov_logging.get_logger("Model Parameters").error(
+            "It is mandatory to define the distribution of Q flows for multi-topology generators"
+        )
+        raise ValueError("Generator Q flows not defined")
 
     _, generator_VoltageDroop = dynawo_translator.get_dynawo_variable(lib, "VoltageDroop")
     if generator_VoltageDroop is not None:
