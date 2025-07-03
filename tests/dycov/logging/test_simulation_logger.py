@@ -12,7 +12,7 @@ import logging
 
 import pytest
 
-from src.dycov.logging.simulation_logger import SimulationLogger
+from dycov.logging.simulation_logger import SimulationLogger
 
 
 class TestSimulationLogger:

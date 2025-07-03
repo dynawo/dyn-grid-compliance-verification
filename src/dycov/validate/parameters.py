@@ -7,20 +7,14 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import getpass
-import shutil
-import tempfile
-import time
-import uuid
 from pathlib import Path
 
-from dycov.configuration.cfg import config
-from dycov.files import manage_files
-from dycov.model.producer import Producer
+from dycov.core.parameters import Parameters
+from dycov.validate.producer import ModelProducer
 
 
-class Parameters:
-    """Parameters defined in the command arguments.
+class ValidationParameters(Parameters):
+    """Parameters to define the validation of a model.
 
     Args
     ----
@@ -55,80 +49,12 @@ class Parameters:
         verification_type: int,
     ):
         # Inputs parameters
-        self._launcher_dwo = launcher_dwo
-        self._selected_pcs = selected_pcs
-        self._output_dir = output_dir
-        self._only_dtr = only_dtr
+        super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
 
         # Read producer inputs
-        self._producer = Producer(
+        self._producer = ModelProducer(
             producer_model, producer_curves_path, reference_curves_path, verification_type
         )
-
-        tmp_path = config.get_value("Global", "temporal_path")
-        username = getpass.getuser()
-        working_dir = Path(tempfile.gettempdir()) / f"{tmp_path}_{username}"
-        manage_files.create_dir(working_dir, clean_first=False, all=True)
-
-        # Remove old executions
-        current_time = time.time()
-        for execution_path in working_dir.iterdir():
-            modification_time = execution_path.stat().st_mtime
-            # Delete old directories (24h)
-            if current_time - modification_time >= 24 * 3600:
-                shutil.rmtree(execution_path)
-
-        self._working_dir = working_dir / Path(str(uuid.uuid4()))
-
-    def get_launcher_dwo(self) -> Path:
-        """Get the Dynawo launcher.
-
-        Returns
-        -------
-        Path
-            Dynawo launcher
-        """
-        return self._launcher_dwo
-
-    def get_selected_pcs(self) -> str:
-        """Get the selected PCS
-
-        Returns
-        -------
-        str
-            PCS name
-        """
-        return self._selected_pcs
-
-    def get_producer(self) -> Producer:
-        """Get the producer model
-
-        Returns
-        -------
-        Producer
-            Producer
-        """
-        return self._producer
-
-    def get_working_dir(self) -> Path:
-        """Get the temporal working directory.
-
-        Returns
-        -------
-        Path
-            Temporal working directory
-        """
-        return self._working_dir
-
-    def get_output_dir(self) -> Path:
-        """Get the user output directory.
-
-        Returns
-        -------
-        Path
-            User output directory
-        """
-        return self._output_dir
 
     def get_sim_type(self) -> int:
         """Get the executed validation type:
@@ -144,16 +70,6 @@ class Parameters:
             Validation type
         """
         return self._producer.get_sim_type()
-
-    def get_only_dtr(self) -> bool:
-        """Use only the PCS of the DTR:
-
-        Returns
-        -------
-        bool
-            True if use only the PCS of the DTR
-        """
-        return self._only_dtr
 
     def is_dynawo_model_valid(self) -> bool:
         """Checks if the Dynawo model is valid.

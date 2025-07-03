@@ -7,13 +7,14 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import shutil
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from src.dycov.files.producer_ini_file import check_ini_parameters, create_producer_ini_file
+from dycov.files.producer_ini_file import check_ini_parameters, create_producer_ini_file
 
 
 class TestProducerIniFile:

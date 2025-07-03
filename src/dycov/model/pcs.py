@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Union
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR
+from dycov.core.parameters import Parameters
 from dycov.logging.logging import dycov_logging
 from dycov.model.benchmark import Benchmark
-from dycov.model.producer import Producer
+from dycov.validate.producer import ModelProducer
 
 
 class Pcs:
@@ -55,7 +55,7 @@ class Pcs:
     def __str__(self):
         return self._name
 
-    def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
+    def __prepare_pcs_config(self, producer: ModelProducer) -> tuple[str, list, int]:
 
         # It checks if the PCS configuration file exists in the tool and reads it.
         pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
@@ -81,7 +81,7 @@ class Pcs:
 
         return report_name, bms_by_pcs, pcs_id, pcs_zone
 
-    def __get_pcs_path(self, producer: Producer, source_path: Path) -> Union[Path, None]:
+    def __get_pcs_path(self, producer: ModelProducer, source_path: Path) -> Union[Path, None]:
         path = source_path / self._templates_path / producer.get_sim_type_str() / self._name
         if not path.exists():
             return None
@@ -132,6 +132,10 @@ class Pcs:
             )
 
         return self._report_name, success, pcs_results
+
+    def generate(self):
+        for bm in self._bm_list:
+            bm.generate()
 
     def get_name(self) -> str:
         """Get the PCS name.

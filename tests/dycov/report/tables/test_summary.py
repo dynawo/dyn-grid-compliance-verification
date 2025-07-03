@@ -8,7 +8,7 @@
 #     demiguelm@aia.es
 #
 from dycov.model.compliance import Compliance
-from src.dycov.report.tables.summary import create_map
+from dycov.report.tables.summary import create_map
 
 
 class DummySummary:

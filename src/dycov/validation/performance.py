@@ -12,7 +12,6 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
@@ -22,6 +21,7 @@ from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Stability
+from dycov.validate.parameters import ValidationParameters
 from dycov.validation import common, compliance_list
 
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
@@ -82,14 +82,12 @@ class PerformanceValidator(Validator):
     def __init__(
         self,
         curves_manager: CurvesManager,
-        parameters: Parameters,
+        parameters: ValidationParameters,
         stable_time: float,
         validations: list,
         is_field_measurements: bool,
     ):
-        super(PerformanceValidator, self).__init__(
-            curves_manager, parameters, validations, is_field_measurements
-        )
+        super().__init__(curves_manager, parameters, validations, is_field_measurements)
         self._stable_time = stable_time
 
     def __curve_list(self, curve_name: str) -> list:

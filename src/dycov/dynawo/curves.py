@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import logging
 import math
 from datetime import datetime
@@ -15,7 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
+from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.dynawo import crv, dynawo
 from dycov.dynawo.dyd import DydFile
@@ -40,6 +41,7 @@ from dycov.model.parameters import (
     Pimodel_params,
     Simulation_result,
 )
+from dycov.validate.parameters import ValidationParameters
 from dycov.validation import common, sanity_checks
 
 BISECTION_ROUND = 10
@@ -48,7 +50,7 @@ BISECTION_ROUND = 10
 class DynawoCurves(ProducerCurves):
     def __init__(
         self,
-        parameters: Parameters,
+        parameters: ValidationParameters,
         pcs_name: str,
         model_path: Path,
         omega_path: Path,
@@ -107,7 +109,7 @@ class DynawoCurves(ProducerCurves):
     def __prepare_oc_validation(
         self,
         working_oc_dir: Path,
-        pcs_bm_name: str,
+        pcs_name: str,
         bm_name: str,
         oc_name: str,
     ):
@@ -116,10 +118,7 @@ class DynawoCurves(ProducerCurves):
         op_path_name = op_path.resolve().name
 
         # Create a specific folder by operational point
-        if pcs_bm_name == op_path_name:
-            output_dir = self._output_dir / self._pcs_name / bm_name
-        else:
-            output_dir = self._output_dir / self._pcs_name / bm_name / op_path_name
+        output_dir = self._output_dir / self._pcs_name / bm_name / op_path_name
 
         # Copy base case and producers file
         manage_files.copy_base_case_files(
@@ -191,13 +190,14 @@ class DynawoCurves(ProducerCurves):
         line_xpu,
         line_rpu,
         rte_gen_U0,
-        pcs_bm_name,
+        pcs_name,
+        bm_name,
         oc_name,
         generator_variables,
     ):
         Zcc = math.sqrt(line_xpu * line_xpu + line_rpu * line_rpu)
         Uinf = rte_gen_U0
-        model_section = f"{get_cfg_oc_name(pcs_bm_name, oc_name)}.Model"
+        model_section = f"{get_cfg_oc_name(pcs_name, bm_name, oc_name)}.Model"
 
         generator_type = generator_variables.get_generator_type(self.get_producer().u_nom)
 
@@ -215,7 +215,8 @@ class DynawoCurves(ProducerCurves):
     def __complete_model(
         self,
         working_oc_dir: Path,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
     ) -> dict:
@@ -225,7 +226,7 @@ class DynawoCurves(ProducerCurves):
             f"Generator type: {generator_variables.get_generator_type(self.get_producer().u_nom)}"
         )
 
-        self.__log(f"Model definition for '{get_cfg_oc_name(pcs_bm_name, oc_name)}':")
+        self.__log(f"Model definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':")
 
         # Read the load parameters in the TSO network, if exists
         self._rte_loads = model_parameters.get_pcs_load_params(
@@ -234,11 +235,11 @@ class DynawoCurves(ProducerCurves):
         )
 
         u_dim = self.get_generator_u_dim()
-        pdr = self.__get_pdr(pcs_bm_name, oc_name, u_dim)
+        pdr = self.__get_pdr(pcs_name, bm_name, oc_name, u_dim)
 
         # Calculates the initialization parameters and replace the placeholders by
         #  its values in the input files of Dynawo.
-        line_rpu, line_xpu = self.__get_line(pcs_bm_name, oc_name)
+        line_rpu, line_xpu = self.__get_line(pcs_name, bm_name, oc_name)
         rte_lines = list()
         if self._has_line:
             # Read lines configuration from TSO network
@@ -252,7 +253,7 @@ class DynawoCurves(ProducerCurves):
             # In order to implement the fault in a line, the line with
             #  the fault is divided into two lines in series, but for calculation
             #  purposes it must be taken into account as a single line.
-            if self.__is_specific_fault(pcs_bm_name):
+            if self.__is_specific_fault(pcs_name, bm_name):
                 line = rte_lines[0]
                 lines = [line, line, line, line]
             else:
@@ -295,13 +296,14 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().intline,
             pdr,
             conn_line,
-            self.__get_grid_load(pcs_bm_name, oc_name, u_dim),
+            self.__get_grid_load(pcs_name, bm_name, oc_name, u_dim),
         )
         self._gens = gens
 
-        self.__log(f"Event definition for '{get_cfg_oc_name(pcs_bm_name, oc_name)}':")
+        self.__log(f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':")
         event_params = self.__get_event_parameters(
-            pcs_bm_name,
+            pcs_name,
+            bm_name,
             oc_name,
         )
         if (
@@ -316,7 +318,7 @@ class DynawoCurves(ProducerCurves):
             event_params["start_time"] = reference_event_start_time
 
         # Modify producer par to add generator init values
-        section = get_cfg_oc_name(pcs_bm_name, oc_name)
+        section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
         force_voltage_droop = config.get_boolean(self._pcs_name, "force_voltage_droop", False)
         model_parameters.adjust_producer_init(
@@ -333,9 +335,17 @@ class DynawoCurves(ProducerCurves):
         self.__adjust_event_value(event_params)
 
         self.__calculate_Xv_values(
-            event_params, line_xpu, line_rpu, rte_gen.U0, pcs_bm_name, oc_name, generator_variables
+            event_params,
+            line_xpu,
+            line_rpu,
+            rte_gen.U0,
+            pcs_name,
+            bm_name,
+            oc_name,
+            generator_variables,
         )
 
+        pcs_bm_name = pcs_name + CASE_SEPARATOR + bm_name
         jobs_file = JobsFile(self, pcs_bm_name, oc_name)
         jobs_file.complete_file(working_oc_dir, self._solver_id, self._solver_lib, event_params)
 
@@ -377,20 +387,22 @@ class DynawoCurves(ProducerCurves):
         )
         return event_params
 
-    def __is_specific_fault(self, pcs_bm_name: str) -> bool:
+    def __is_specific_fault(self, pcs_name: str, bm_name: str) -> bool:
         specific_faults = [
             "PCS_RTE-I4.ThreePhaseFault",
             "PCS_RTE-I5.ThreePhaseFault",
             "PCS_RTE-I16z3.ThreePhaseFault",
         ]
+        pcs_bm_name = pcs_name + CASE_SEPARATOR + bm_name
         return any(fault in pcs_bm_name for fault in specific_faults)
 
     def __get_event_parameters(
         self,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
     ) -> dict:
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
+        config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Event"
 
         connect_event_to = config.get_value(config_section, "connect_event_to")
         self.__log(f"\t{connect_event_to=}")
@@ -434,10 +446,11 @@ class DynawoCurves(ProducerCurves):
 
     def __get_line(
         self,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
     ) -> tuple[float, float]:
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Model"
+        config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Model"
 
         # Read reactance definition
         # Calculate line X from DTR and Producer info
@@ -514,8 +527,8 @@ class DynawoCurves(ProducerCurves):
             line_xpu,
         )
 
-    def __get_pdr(self, pcs_bm_name: str, oc_name: str, u_dim: float) -> Pdr_params:
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Model"
+    def __get_pdr(self, pcs_name: str, bm_name: str, oc_name: str, u_dim: float) -> Pdr_params:
+        config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Model"
 
         # Read PDR params
         pdr_p = config.get_value(config_section, "pdr_P")
@@ -557,11 +570,12 @@ class DynawoCurves(ProducerCurves):
 
     def __get_grid_load(
         self,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
         u_dim: float,
     ) -> Load_params:
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Model"
+        config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Model"
         self._init_loads = self.__complete_loads(config_section, u_dim)
         return model_parameters.get_grid_load(self._init_loads)
 
@@ -1262,7 +1276,7 @@ class DynawoCurves(ProducerCurves):
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
-        pcs_bm_name: str,
+        pcs_name: str,
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
@@ -1273,7 +1287,7 @@ class DynawoCurves(ProducerCurves):
         ----------
         working_oc_dir: Path
             Temporal working path
-        pcs_bm_name: str
+        pcs_name: str
             PCS.Benchmark name
         bm_name: str
             Benchmark name
@@ -1304,7 +1318,7 @@ class DynawoCurves(ProducerCurves):
             jobs_output_dir,
         ) = self.__prepare_oc_validation(
             working_oc_dir,
-            pcs_bm_name,
+            pcs_name,
             bm_name,
             oc_name,
         )
@@ -1313,11 +1327,12 @@ class DynawoCurves(ProducerCurves):
         try:
             event_params = self.__complete_model(
                 working_oc_dir,
-                pcs_bm_name,
+                pcs_name,
+                bm_name,
                 oc_name,
                 reference_event_start_time,
             )
-            pcs_bm_oc_name = get_cfg_oc_name(pcs_bm_name, oc_name)
+            pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)
             # Pcs with desired voltage dip are High impedance faults
             if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
                 self.__get_hiz_fault(

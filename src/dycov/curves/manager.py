@@ -4,12 +4,11 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.curves import curves_factory
-from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.sigpro import signal_windows, sigpro
+from dycov.validate.parameters import ValidationParameters
 from dycov.validation import sanity_checks
 
 
@@ -34,7 +33,7 @@ def _fix_after_windows(
 class CurvesManager:
     def __init__(
         self,
-        parameters: Parameters,
+        parameters: ValidationParameters,
         pcs_benchmark_name: str,
         stable_time: float,
         lib_path: Path,
@@ -82,13 +81,10 @@ class CurvesManager:
 
     def __obtain_curve(
         self,
-        pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
     ):
-        # Create a specific folder by operational point
         working_oc_dir = self._working_dir / self._pcs_name / bm_name / oc_name
-        manage_files.create_dir(working_oc_dir)
 
         reference_event_start_time = None
         if self.__has_reference_curves():
@@ -96,7 +92,11 @@ class CurvesManager:
                 reference_event_start_time,
                 self._curves["reference"],
             ) = self.__get_reference_curves_generator().obtain_reference_curve(
-                working_oc_dir, pcs_bm_name, oc_name, self.__get_reference_curves_path()
+                working_oc_dir,
+                self._pcs_name,
+                bm_name,
+                oc_name,
+                self.__get_reference_curves_path(),
             )
 
         (
@@ -106,7 +106,7 @@ class CurvesManager:
             self._curves["calculated"],
         ) = self.__get_producer_curves_generator().obtain_simulated_curve(
             working_oc_dir,
-            pcs_bm_name,
+            self._pcs_name,
             bm_name,
             oc_name,
             reference_event_start_time,
@@ -176,7 +176,6 @@ class CurvesManager:
     def has_required_curves(
         self,
         measurement_names: list,
-        pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
     ) -> tuple[Path, Path, dict, Simulation_result, int]:
@@ -186,8 +185,6 @@ class CurvesManager:
         ----------
         measurement_names: list
             Measurement names
-        pcs_bm_name: str
-            Composite name, pcs + Benchmark name
         bm_name: str
             Benchmark name
         oc_name: str
@@ -215,7 +212,6 @@ class CurvesManager:
             event_params,
             simulation_result,
         ) = self.__obtain_curve(
-            pcs_bm_name,
             bm_name,
             oc_name,
         )

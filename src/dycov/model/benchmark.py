@@ -11,8 +11,8 @@ from collections import namedtuple
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION_PPM
+from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.files import manage_files
@@ -72,13 +72,27 @@ class Benchmark:
 
         stable_time = config.get_float("GridCode", "stable_time", 100.0)
         (
-            op_names,
+            oc_names,
             curves_manager,
             validator,
         ) = self.__prepare_benchmark_validation(parameters, stable_time)
         self._curves_manager = curves_manager
         self._validator = validator
-        self._op_names = op_names
+        self._oc_list = [
+            OperatingCondition(
+                self._parameters,
+                self._pcs_name,
+                self._name,
+                oc_name,
+            )
+            for oc_name in oc_names
+        ]
+
+    def __create_operating_condition_working_paths(self, oc_names: list):
+        # Create a specific folder by operating condition
+        for oc_name in oc_names:
+            working_oc_dir = self._working_dir / self._pcs_name / self._name / oc_name
+            manage_files.create_dir(working_oc_dir)
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, stable_time: float
@@ -91,6 +105,11 @@ class Benchmark:
             manage_files.create_dir(self._working_dir / self._pcs_name / self._name)
 
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
+        oc_names = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
+        self.__create_operating_condition_working_paths(oc_names)
+        if parameters.get_producer().is_gfm():
+            return oc_names, None, None
+
         curves_manager = CurvesManager(
             parameters,
             pcs_benchmark_name,
@@ -99,9 +118,8 @@ class Benchmark:
             self._templates_path,
             self._pcs_name,
         )
-
-        ops = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         validations = self.__initialize_validation_by_benchmark()
+
         if parameters.get_producer().get_sim_type() >= MODEL_VALIDATION_PPM:
             validator = ModelValidator(
                 curves_manager,
@@ -120,7 +138,7 @@ class Benchmark:
             )
 
         # If it is not a pcs with multiple operating conditions, returns itself
-        return ops, curves_manager, validator
+        return oc_names, curves_manager, validator
 
     def __initialize_validation_by_benchmark(self) -> list:
         # Prepare the validation list by pcs.benchmark
@@ -465,33 +483,22 @@ class Benchmark:
     def __has_required_curves(
         self,
         measurement_names: list,
-        pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
     ) -> tuple[Path, Path, dict, Simulation_result, int]:
-        return self._curves_manager.has_required_curves(
-            measurement_names, pcs_bm_name, bm_name, oc_name
-        )
+        return self._curves_manager.has_required_curves(measurement_names, bm_name, oc_name)
 
     def __validate(
         self,
-        op_name: str,
-        pcs_benchmark_name: str,
+        op_cond: OperatingCondition,
         working_path: Path,
         jobs_output_dir: Path,
         event_params: dict,
         success: bool,
         has_simulated_curves: bool,
     ):
-        op_cond = OperatingCondition(
-            self._parameters,
-            self._pcs_name,
-            op_name,
-        )
-
         op_cond_success, results = op_cond.validate(
             self._validator,
-            pcs_benchmark_name,
             working_path,
             jobs_output_dir,
             event_params,
@@ -538,11 +545,11 @@ class Benchmark:
 
         # Check for operating conditions in the Pcs
 
-        # Validate each operational point
-        pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        for op_name in self._op_names:
+        # Validate each operating condition
+        for op_cond in self._oc_list:
             dycov_logging.get_logger("Benchmark").info(
-                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, OPER. COND.: {op_name}"
+                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, "
+                f"OPER. COND.: {op_cond.get_name()}"
             )
             (
                 working_path,
@@ -552,9 +559,8 @@ class Benchmark:
                 has_curves,
             ) = self.__has_required_curves(
                 self._validator.get_measurement_names(),
-                pcs_benchmark_name,
                 self._name,
-                op_name,
+                op_cond.get_name(),
             )
             dycov_logging.get_logger("Benchmark").debug(
                 f"Error message: {simulation_result.error_message} "
@@ -576,8 +582,7 @@ class Benchmark:
                 results = {"compliance": False, "curves": None}
             elif has_curves == 0:
                 op_cond_success, results, compliance = self.__validate(
-                    op_name,
-                    pcs_benchmark_name,
+                    op_cond,
                     working_path,
                     jobs_output_dir,
                     event_params,
@@ -604,14 +609,21 @@ class Benchmark:
                     int(self._pcs_zone),
                     self._pcs_name,
                     self._name,
-                    op_name,
+                    op_cond.get_name(),
                     compliance,
                     self._report_name,
                 )
             )
-            pcs_results[pcs_benchmark_name + CASE_SEPARATOR + op_name] = results
+            pcs_results[
+                self._pcs_name + CASE_SEPARATOR + self._name + CASE_SEPARATOR + op_cond.get_name()
+            ] = results
 
         return success
+
+    def generate(self):
+        for op_cond in self._oc_list:
+            working_dir = self._working_dir / self._pcs_name / self._name / op_cond.get_name()
+            op_cond.generate(working_dir)
 
     def get_name(self) -> str:
         """Get the benchmark name.

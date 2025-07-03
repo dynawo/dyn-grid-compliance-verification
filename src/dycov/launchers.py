@@ -15,13 +15,15 @@ from importlib.metadata import version
 from pathlib import Path
 
 from dycov.core import initialization
-from dycov.core.execution_parameters import Parameters
 from dycov.core.input_template import create_input_template
-from dycov.core.validation import Validation
 from dycov.curves import anonymizer
 from dycov.dynawo import prepare_tool
+from dycov.gfm.generator import GFMGeneration
+from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
-from dycov.model.producer import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.producer import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
+from dycov.validate.validation import Validation
 from dycov.validation import sanity_checks
 
 
@@ -33,6 +35,21 @@ def _generate_input(dwo_launcher: Path, target: Path, topology: str, validation:
     create_input_template(dwo_launcher, target, topology, validation)
 
 
+def _generate_envelopes(
+    dwo_launcher: Path, output_dir: Path, producer_csv: Path, emt: bool
+) -> None:
+    params = GFMParameters(dwo_launcher, producer_csv, None, output_dir, True, emt)
+    if params.is_valid():
+        gfm = GFMGeneration(
+            params,
+        )
+        gfm.generate()
+    else:
+        return -1
+
+    return 0
+
+
 def _performance_verification(
     dwo_launcher: Path,
     output_dir: Path,
@@ -42,7 +59,7 @@ def _performance_verification(
     only_dtr: bool,
     testing: bool,
 ) -> int:
-    ep = Parameters(
+    params = ValidationParameters(
         dwo_launcher,
         producer_model,
         producer_curves,
@@ -53,9 +70,9 @@ def _performance_verification(
         verification_type=ELECTRIC_PERFORMANCE,
     )
 
-    if ep.is_valid():
+    if params.is_valid():
         md = Validation(
-            ep,
+            params,
         )
         md.set_testing(testing)
         md.validate()
@@ -75,7 +92,7 @@ def _model_validation(
     only_dtr: bool,
     testing: bool,
 ) -> int:
-    ep = Parameters(
+    params = ValidationParameters(
         dwo_launcher,
         producer_model,
         producer_curves,
@@ -86,11 +103,11 @@ def _model_validation(
         verification_type=MODEL_VALIDATION,
     )
 
-    if not ep.is_complete():
+    if not params.is_complete():
         return -1
 
     md = Validation(
-        ep,
+        params,
     )
     md.set_testing(testing)
     md.validate()
@@ -265,6 +282,26 @@ def _add_only_dtr_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_csv_argument(parser: argparse.ArgumentParser, required: bool = False) -> None:
+    parser.add_argument(
+        "-p",
+        "--producer_csv",
+        required=required,
+        help="producer file describing the physical and control parameters of the installation",
+        default=False,
+    )
+
+
+def _add_emt_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "-e",
+        "--emt",
+        action="store_true",
+        help="type of simulation engine to be used for the GFM compliance procedure",
+        default=False,
+    )
+
+
 def _add_version_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--version", action="version", version=version("dycov"))
 
@@ -273,6 +310,15 @@ def _subcomands_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
     _add_version_argument(parser)
+
+    envelops = subparsers.add_parser(
+        "generateEnvelopes",
+        help="create all the envelopes based on the description of the different test cases",
+    )
+    _add_debug_argument(envelops)
+    _add_csv_argument(envelops, required=True)
+    _add_emt_argument(envelops)
+    _add_output_argument(envelops)
 
     validate = subparsers.add_parser("validate", help="run the RMS model validation process")
     group = validate.add_mutually_exclusive_group(required=False)
@@ -346,7 +392,8 @@ def _get_dwo_launcher_name(p: argparse.ArgumentParser, args: argparse.Namespace)
         else:
             dwo_launcher_name = "dynawo.sh"
 
-        if shutil.which(dwo_launcher_name) is None and args.command != "anonymize":
+        commands = ["anonymize", "generateEnvelopes"]
+        if shutil.which(dwo_launcher_name) is None and args.command not in commands:
             p.error(
                 "The default Dynawo launcher has not been found, please "
                 "provide a correct path using the -l argument."
@@ -414,6 +461,27 @@ def _execute_generate(
     validation = args.validation
 
     _generate_input(dwo_launcher, output_dir, topology, validation)
+
+
+def _execute_generate_envelopes(
+    p: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+
+    emt = args.emt
+    if args.producer_csv is None:
+        producer_csv = None
+    else:
+        producer_csv = Path(args.producer_csv)
+        output_dir = (
+            producer_csv.parent / "Results" if args.output_dir is None else Path(args.output_dir)
+        )
+
+    if not producer_csv:
+        p.error("Missing arguments.\nTry 'dycov generateEnvelopes -h' for more information.")
+        p.print_help()
+        return
+
+    _generate_envelopes(dwo_launcher, output_dir, producer_csv, emt)
 
 
 def _execute_performance(
@@ -536,3 +604,6 @@ def dycov() -> None:
 
     elif args.command == "anonymize":
         _execute_anonymize(p, args)
+
+    elif args.command == "generateEnvelopes":
+        _execute_generate_envelopes(p, args, dwo_launcher)
