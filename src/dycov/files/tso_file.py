@@ -22,9 +22,7 @@ def _connect_generator_to_setpoint(
     setpoint_id = f"SetPoint_{generator.id}"
     _create_model(dyd_root, ns, setpoint_id, "Step", "TSOModel.par", setpoint_id)
     _, connect_event_to = dynawo_translator.get_dynawo_variable(generator.lib, connect_to)
-    _connect_generator(
-        dyd_root, ns, generator.id, connect_event_to, setpoint_id, "step_step_value"
-    )
+    _connect_generator(dyd_root, ns, generator.id, connect_event_to, setpoint_id, "step_step")
 
 
 def _create_model(
