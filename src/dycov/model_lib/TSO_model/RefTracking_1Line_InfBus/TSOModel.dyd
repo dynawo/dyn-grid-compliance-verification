@@ -4,8 +4,10 @@
   <dyn:blackBoxModel id="InfiniteBus" lib="InfiniteBus" parFile="TSOModel.par" parId="InfiniteBus"/>
   <dyn:blackBoxModel id="Line" lib="Line" parFile="TSOModel.par" parId="Line"/>
   <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
-  <dyn:blackBoxModel id="SetPoint" lib="Step" parFile="TSOModel.par" parId="SetPoint"/>
   <dyn:connect id1="Line" var1="line_terminal1" id2="InfiniteBus" var2="infiniteBus_terminal"/>
   <dyn:connect id1="Line" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="SetPoint" var1="step_step_value" id2="{{generator_id}}" var2="{{connection_event}}"/>
+  <!-- For each generator defined within the producer's input files, two lines will be added to 
+  the output. The first of these lines will define the setpoint model specifically for that 
+  generator. The second line will establish the connection, linking the producer's generator model 
+  with the newly defined setpoint model.-->
 </dyn:dynamicModelsArchitecture>

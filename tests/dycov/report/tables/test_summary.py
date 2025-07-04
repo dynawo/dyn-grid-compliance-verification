@@ -8,11 +8,12 @@
 #     demiguelm@aia.es
 #
 from dycov.model.compliance import Compliance
-from src.dycov.report.tables.summary import create_map
+from dycov.report.tables.summary import create_map
 
 
 class DummySummary:
-    def __init__(self, pcs, benchmark, operating_condition, compliance):
+    def __init__(self, producer_name, pcs, benchmark, operating_condition, compliance):
+        self.producer_name = producer_name
         self.pcs = pcs
         self.benchmark = benchmark
         self.operating_condition = operating_condition
@@ -22,6 +23,7 @@ class DummySummary:
 def test_create_map_with_standard_compliant_entries():
     summary_list = [
         DummySummary(
+            producer_name="dummy_path",
             pcs="PCS1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -29,12 +31,13 @@ def test_create_map_with_standard_compliant_entries():
         )
     ]
     result = create_map(summary_list)
-    assert result == [["PCS1", "BenchmarkA", "OC1", "Compliant"]]
+    assert result == [["dummy\\_path", "PCS1", "BenchmarkA", "OC1", "Compliant"]]
 
 
 def test_create_map_escapes_underscores_in_pcs():
     summary_list = [
         DummySummary(
+            producer_name="dummy_path",
             pcs="PCS_1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -42,12 +45,13 @@ def test_create_map_escapes_underscores_in_pcs():
         )
     ]
     result = create_map(summary_list)
-    assert result[0][0] == "PCS\\_1"
+    assert result[0][1] == "PCS\\_1"
 
 
 def test_create_map_applies_red_text_for_non_compliant():
     summary_list = [
         DummySummary(
+            producer_name="dummy_path",
             pcs="PCS1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -55,12 +59,13 @@ def test_create_map_applies_red_text_for_non_compliant():
         )
     ]
     result = create_map(summary_list)
-    assert result[0][3] == "\\textcolor{red}{Non-compliant}"
+    assert result[0][4] == "\\textcolor{red}{Non-compliant}"
 
 
 def test_create_map_with_empty_fields():
     summary_list = [
         DummySummary(
+            producer_name="",
             pcs="",
             benchmark="",
             operating_condition="",
@@ -68,7 +73,7 @@ def test_create_map_with_empty_fields():
         )
     ]
     result = create_map(summary_list)
-    assert result == [["", "", "", "Compliant"]]
+    assert result == [["", "", "", "", "Compliant"]]
 
 
 def test_create_map_with_invalid_compliance_value():
@@ -78,6 +83,7 @@ def test_create_map_with_invalid_compliance_value():
 
     summary_list = [
         DummySummary(
+            producer_name="dummy_path",
             pcs="PCS1",
             benchmark="BenchmarkA",
             operating_condition="OC1",
@@ -86,7 +92,7 @@ def test_create_map_with_invalid_compliance_value():
     ]
     result = create_map(summary_list)
     # Since FakeCompliance is not Compliance.Compliant, should be wrapped in red
-    assert result[0][3] == "\\textcolor{red}{Unknown compliance}"
+    assert result[0][4] == "\\textcolor{red}{Unknown compliance}"
 
 
 def test_create_map_with_empty_summary_list():

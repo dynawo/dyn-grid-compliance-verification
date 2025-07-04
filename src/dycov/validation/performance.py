@@ -12,7 +12,6 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
@@ -20,8 +19,8 @@ from dycov.core.global_variables import (
 )
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
-from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Stability
+from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
 
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
@@ -71,9 +70,6 @@ def _check_timeline(timeline_file: Path, element_type: str) -> tuple[bool, list]
         if _is_disconnection_event(timeline_event, element_type):
             no_error = False
             disconnection_list.append(timeline_event.get("modelName"))
-            dycov_logging.get_logger("Validation").debug(
-                f"Timeline disconnection. Model: {timeline_event.get('modelName')}"
-            )
 
     return no_error, disconnection_list
 
@@ -82,13 +78,15 @@ class PerformanceValidator(Validator):
     def __init__(
         self,
         curves_manager: CurvesManager,
-        parameters: Parameters,
+        producer: Producer,
         stable_time: float,
         validations: list,
         is_field_measurements: bool,
+        pcs_name: str,
+        bm_name: str,
     ):
         super(PerformanceValidator, self).__init__(
-            curves_manager, parameters, validations, is_field_measurements
+            curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
         self._stable_time = stable_time
 
@@ -129,11 +127,11 @@ class PerformanceValidator(Validator):
             )
 
         if not steady_p:
-            dycov_logging.get_logger("Validation").warning("P has not reached steady state")
+            self._log_message("warning", "P has not reached steady state")
         if not steady_q:
-            dycov_logging.get_logger("Validation").warning("Q has not reached steady state")
+            self._log_message("warning", "Q has not reached steady state")
         if not steady_v:
-            dycov_logging.get_logger("Validation").warning("V has not reached steady state")
+            self._log_message("warning", "V has not reached steady state")
 
         return (
             steady_p,
@@ -173,11 +171,9 @@ class PerformanceValidator(Validator):
             pass_pi &= gen_pass_pi
 
         if not stable_theta:
-            dycov_logging.get_logger("Validation").warning("Theta has not reached stabilization")
+            self._log_message("warning", "Theta has not reached stabilization")
         if not pass_pi:
-            dycov_logging.get_logger("Validation").warning(
-                "Theta has not met the success criterion"
-            )
+            self._log_message("warning", "Theta has not met the success criterion")
 
         return stable_theta, first_stable_pos_theta, pass_pi
 
@@ -331,6 +327,7 @@ class PerformanceValidator(Validator):
             self.__curve_list("BusPDR_BUS_ActivePower"),
             self.__curve_list("BusPDR_BUS_ReactivePower"),
             t_event_start,
+            self._get_log_title(),
         )
 
         if compliance_list.contains_key(["static_diff"], self._validations):
@@ -546,6 +543,9 @@ class PerformanceValidator(Validator):
             results["no_disconnection_gen"], disconnection_list = _check_timeline(
                 simulation_path / "timeLine/timeline.xml", "gen"
             )
+            for disconnection in disconnection_list:
+                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
+
             if not results["no_disconnection_gen"]:
                 if self._disconnection_model.gen_intline is None:
                     gen_intline_id = "Empty"
@@ -566,6 +566,8 @@ class PerformanceValidator(Validator):
             results["no_disconnection_load"], disconnection_list = _check_timeline(
                 simulation_path / "timeLine/timeline.xml", "load"
             )
+            for disconnection in disconnection_list:
+                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
 
             if not results["no_disconnection_load"]:
                 if self._disconnection_model.auxload_xfmr is None:

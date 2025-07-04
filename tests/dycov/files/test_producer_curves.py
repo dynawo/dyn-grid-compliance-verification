@@ -100,8 +100,5 @@ def test_check_curves_missing_files(temp_model_dir):
 
 def test_create_producer_curves_unknown_template(temp_model_dir):
     create_producer_curves(temp_model_dir, temp_model_dir, "unknown_template")
-    ini_file = temp_model_dir / "CurvesFiles.ini"
-    assert ini_file.exists()
-    content = ini_file.read_text()
-    # Should only contain the section header and two newlines
-    assert content.strip() == "[Curves-Files]"
+    ini_file = temp_model_dir / "Producer" / "CurvesFiles.ini"
+    assert not ini_file.exists()
