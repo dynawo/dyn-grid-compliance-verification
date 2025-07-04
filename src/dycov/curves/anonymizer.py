@@ -450,7 +450,7 @@ def _process_curves(
 
             df_imported_curve = df_imported_curve.set_index("time")
             output_csv_path = output_folder / f"{curves_path.stem}.csv"
-            df_imported_curve.to_csv(output_csv_path, sep=";")
+            df_imported_curve.to_csv(output_csv_path, sep=";", float_format="%.3e")
             _LOGGER.info(f"Saved anonymized curve to {output_csv_path}")
 
             with open(dict_file, "r") as file:
