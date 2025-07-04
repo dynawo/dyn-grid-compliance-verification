@@ -179,16 +179,16 @@ class DynawoSimulator:
         output_path.mkdir(parents=True, exist_ok=True)  # Ensure output directory exists
 
         models_to_compile = []
-        if model_name:
-            if (models_path / model_name).is_file():
-                models_to_compile.append((models_path, model_name))
-            if (user_dir / model_name).is_file():
-                models_to_compile.append((user_dir, model_name))
-        else:
+        if model_name is None:
             for model in models_path.glob("*.[xX][mM][lL]"):
                 models_to_compile.append((models_path, model.name))
             for model in user_dir.glob("*.[xX][mM][lL]"):
                 models_to_compile.append((user_dir, model.name))
+        else:
+            if (models_path / model_name).is_file():
+                models_to_compile.append((models_path, model_name))
+            if (user_dir / model_name).is_file():
+                models_to_compile.append((user_dir, model_name))
 
         extension = ".dll" if os.name == "nt" else ".so"
         for current_models_path, current_model_name in models_to_compile:

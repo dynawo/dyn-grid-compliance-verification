@@ -119,7 +119,7 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
         manage_files.create_dir(user_models / "dictionary")
 
     # Determine the file path for the current script's parent directory
-    file_path = Path(__file__).resolve().parent.parent
+    file_path = Path(__file__).resolve().parent.parent.parent
 
     # Initiate the model precompilation process using DynawoSimulator
     DynawoSimulator().precompile_models(
