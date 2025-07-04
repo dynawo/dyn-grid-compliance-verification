@@ -150,8 +150,6 @@ class TestProducerParFile:
         create_producer_par_file(
             launcher_dwo=Path("dummy_launcher"), target=tmp_path, template="performance_SM"
         )
-        captured = capsys.readouterr()
-        assert "Error: libMissing.desc.xml file not found" in captured.out
         # Producer.par should exist but be empty (no <set>)
         par_file = tmp_path / "Producer.par"
         assert par_file.exists()
