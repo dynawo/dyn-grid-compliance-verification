@@ -11,10 +11,8 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-
-PAR_FILE = "Producer.par"
 
 PERFORMANCE_SM = 1
 PERFORMANCE_PPM = 2
@@ -123,7 +121,7 @@ def _add_blackbox(
     ns: str,
     id: str,
     lib: str,
-    par_file: str,
+    par_filename: str,
     par_id: str,
     show_comment: bool = False,
 ):
@@ -135,7 +133,7 @@ def _add_blackbox(
         f"{{{ns}}}blackBoxModel",
         id=id,
         lib=lib,
-        parFile=par_file,
+        parFile=par_filename,
         parId=par_id,
     )
 
@@ -165,7 +163,7 @@ def _add_connection(
     )
 
 
-def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
     if validation_type == PERFORMANCE_SM:
         gen_id = SM_ID
         gen_lib = SM_DYNAMIC_MODEL
@@ -178,13 +176,15 @@ def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int):
         gen_id = BESS_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, PAR_FILE, gen_id, True)
+    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
+    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
     _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
 
 
-def _create_saux_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_saux_topology(
+    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
+):
     if validation_type == PERFORMANCE_SM:
         gen_id = SM_ID
         gen_lib = SM_DYNAMIC_MODEL
@@ -197,17 +197,17 @@ def _create_saux_topology(dyd_root: etree.Element, ns: str, validation_type: int
         gen_id = BESS_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_AUX_ID, True)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, PAR_FILE, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_ID)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, PAR_FILE, gen_id, True)
+    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID, True)
+    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
+    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
     _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
     _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
 
 
-def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
     if validation_type == PERFORMANCE_SM:
         gen_id = SM_ID
         gen_lib = SM_DYNAMIC_MODEL
@@ -220,17 +220,19 @@ def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int):
         gen_id = BESS_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, PAR_FILE, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, PAR_FILE, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, PAR_FILE, gen_id, True)
+    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
+    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
+    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
 
 
-def _create_sauxi_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_sauxi_topology(
+    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
+):
     if validation_type == PERFORMANCE_SM:
         gen_id = SM_ID
         gen_lib = SM_DYNAMIC_MODEL
@@ -243,12 +245,12 @@ def _create_sauxi_topology(dyd_root: etree.Element, ns: str, validation_type: in
         gen_id = BESS_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, PAR_FILE, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, PAR_FILE, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_AUX_ID, True)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, PAR_FILE, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_ID)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, PAR_FILE, gen_id, True)
+    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
+    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID, True)
+    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
+    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
@@ -257,7 +259,7 @@ def _create_sauxi_topology(dyd_root: etree.Element, ns: str, validation_type: in
     _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
 
 
-def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
     if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
         gen1_id = PPM1_ID
         gen2_id = PPM2_ID
@@ -268,12 +270,12 @@ def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int):
         gen2_id = BESS2_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, PAR_FILE, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, PAR_FILE, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, PAR_FILE, gen2_id)
+    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
+    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
+    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
+    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
+    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
     _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
@@ -282,7 +284,9 @@ def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int):
     _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
 
 
-def _create_maux_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_maux_topology(
+    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
+):
     if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
         gen1_id = PPM1_ID
         gen2_id = PPM2_ID
@@ -293,14 +297,14 @@ def _create_maux_topology(dyd_root: etree.Element, ns: str, validation_type: int
         gen2_id = BESS2_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, PAR_FILE, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_AUX_ID)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, PAR_FILE, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, PAR_FILE, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, PAR_FILE, gen2_id)
+    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
+    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID)
+    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
+    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
+    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
+    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
     _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
@@ -311,7 +315,7 @@ def _create_maux_topology(dyd_root: etree.Element, ns: str, validation_type: int
     _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
 
 
-def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
     if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
         gen1_id = PPM1_ID
         gen2_id = PPM2_ID
@@ -322,13 +326,13 @@ def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int):
         gen2_id = BESS2_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, PAR_FILE, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, PAR_FILE, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, PAR_FILE, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, PAR_FILE, gen2_id)
+    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
+    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
+    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
+    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
+    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
+    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
     _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
@@ -338,7 +342,9 @@ def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int):
     _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
 
 
-def _create_mauxi_topology(dyd_root: etree.Element, ns: str, validation_type: int):
+def _create_mauxi_topology(
+    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
+):
     if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
         gen1_id = PPM1_ID
         gen2_id = PPM2_ID
@@ -349,15 +355,15 @@ def _create_mauxi_topology(dyd_root: etree.Element, ns: str, validation_type: in
         gen2_id = BESS2_ID
         gen_lib = BESS_DYNAMIC_MODEL
         gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, PAR_FILE, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, PAR_FILE, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR_AUX_ID)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, PAR_FILE, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, PAR_FILE, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, PAR_FILE, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, PAR_FILE, gen2_id)
+    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
+    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
+    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID)
+    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
+    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
+    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
+    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
+    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
     _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
@@ -369,7 +375,7 @@ def _create_mauxi_topology(dyd_root: etree.Element, ns: str, validation_type: in
     _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
 
 
-def _check_dynamic_models(target: Path) -> bool:
+def _check_dynamic_models(target: Path, filename: str) -> bool:
     placeholders = (
         dynawo_translator.get_bus_models()
         + dynawo_translator.get_synchronous_machine_models()
@@ -380,9 +386,7 @@ def _check_dynamic_models(target: Path) -> bool:
         + dynawo_translator.get_transformer_models()
     )
 
-    producer_dyd_tree = etree.parse(
-        target / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
-    )
+    producer_dyd_tree = etree.parse(target / filename, etree.XMLParser(remove_blank_text=True))
     producer_dyd_root = producer_dyd_tree.getroot()
 
     success = True
@@ -403,31 +407,37 @@ def _check_dynamic_models(target: Path) -> bool:
 
 def _create_producer_dyd_file(
     target: Path,
+    filename: str,
     topology: str,
     validation_type: int,
 ) -> None:
+
+    if (target / "Producer.dyd").exists():
+        (target / "Producer.dyd").unlink()
+
     ns = "http://www.rte-france.com/dynawo"
     etree.register_namespace("dyn", "http://www.rte-france.com/dynawo")
     dyd_root = etree.Element(f"{{{ns}}}dynamicModelsArchitecture")
     comment = etree.Comment(f"Topology: {topology}")
     dyd_root.append(comment)
 
+    par_filename = filename.replace(".dyd", ".par")
     if "S".casefold() == topology.casefold():
-        _create_s_topology(dyd_root, ns, validation_type)
+        _create_s_topology(dyd_root, ns, validation_type, par_filename)
     elif "S+i".casefold() == topology.casefold():
-        _create_si_topology(dyd_root, ns, validation_type)
+        _create_si_topology(dyd_root, ns, validation_type, par_filename)
     elif "S+Aux".casefold() == topology.casefold():
-        _create_saux_topology(dyd_root, ns, validation_type)
+        _create_saux_topology(dyd_root, ns, validation_type, par_filename)
     elif "S+Aux+i".casefold() == topology.casefold():
-        _create_sauxi_topology(dyd_root, ns, validation_type)
+        _create_sauxi_topology(dyd_root, ns, validation_type, par_filename)
     elif "M".casefold() == topology.casefold():
-        _create_m_topology(dyd_root, ns, validation_type)
+        _create_m_topology(dyd_root, ns, validation_type, par_filename)
     elif "M+i".casefold() == topology.casefold():
-        _create_mi_topology(dyd_root, ns, validation_type)
+        _create_mi_topology(dyd_root, ns, validation_type, par_filename)
     elif "M+Aux".casefold() == topology.casefold():
-        _create_maux_topology(dyd_root, ns, validation_type)
+        _create_maux_topology(dyd_root, ns, validation_type, par_filename)
     elif "M+Aux+i".casefold() == topology.casefold():
-        _create_mauxi_topology(dyd_root, ns, validation_type)
+        _create_mauxi_topology(dyd_root, ns, validation_type, par_filename)
     else:
         raise ValueError(
             "Select one of the 8 available topologies:\n"
@@ -444,9 +454,7 @@ def _create_producer_dyd_file(
     dyd_tree = etree.ElementTree(
         etree.fromstring(etree.tostring(dyd_root), etree.XMLParser(remove_blank_text=True))
     )
-    dyd_tree.write(
-        target / "Producer.dyd", encoding="utf-8", pretty_print=True, xml_declaration=True
-    )
+    dyd_tree.write(target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True)
 
 
 def create_producer_dyd_file(
@@ -476,14 +484,18 @@ def create_producer_dyd_file(
             validation_type = PERFORMANCE_PPM
         elif template == "performance_BESS":
             validation_type = PERFORMANCE_BESS
-        _create_producer_dyd_file(target, topology, validation_type)
+        _create_producer_dyd_file(target, "Producer.dyd", topology, validation_type)
 
     elif template.startswith("model"):
         validation_type = VALIDATION_PPM
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
-        _create_producer_dyd_file(target / "Zone1", "S", validation_type)
-        _create_producer_dyd_file(target / "Zone3", topology, validation_type)
+        if topology.casefold().startswith("m"):
+            _create_producer_dyd_file(target / "Zone1", "Producer_G1.dyd", "S", validation_type)
+            _create_producer_dyd_file(target / "Zone1", "Producer_G2.dyd", "S", validation_type)
+        else:
+            _create_producer_dyd_file(target / "Zone1", "Producer.dyd", "S", validation_type)
+        _create_producer_dyd_file(target / "Zone3", "Producer.dyd", topology, validation_type)
 
     else:
         raise ValueError("Unsupported template name")
@@ -511,8 +523,11 @@ def check_dynamic_models(target: Path, template: str) -> bool:
     """
 
     if template.startswith("model"):
-        check_zone1 = _check_dynamic_models(target / "Zone1")
-        check_zone3 = _check_dynamic_models(target / "Zone3")
-        return check_zone1 and check_zone3
+        dyd_files = list((target / "Zone1").glob("*.[dD][yY][dD]"))
+        for dyd_file in dyd_files:
+            if not _check_dynamic_models(target / "Zone1", dyd_file.name):
+                return False
+        check_zone3 = _check_dynamic_models(target / "Zone3", "Producer.dyd")
+        return check_zone3
     else:
-        return _check_dynamic_models(target)
+        return _check_dynamic_models(target, "Producer.dyd")

@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import configparser
 import math
 from pathlib import Path
 from typing import Optional
@@ -22,7 +23,7 @@ from typing import Optional
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.dynawo.translator import dynawo_translator, get_generator_family_level
+from dycov.curves.dynawo.translator import dynawo_translator, get_generator_family_level
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import (
     Gen_params,
@@ -35,33 +36,51 @@ from dycov.model.parameters import (
 )
 
 
-def _get_generator_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
+def _get_generator_values(
+    dyd_root: etree.Element, par_root: etree.Element, producer_ini: configparser.ConfigParser
+) -> list:
     generators = []
     # Generators
     for model_parameter in find_bbmodel_by_type(dyd_root, "GeneratorSynchronous"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
     # WindTurbine Parks
     for model_parameter in find_bbmodel_by_type(dyd_root, "IECWPP"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
     for model_parameter in find_bbmodel_by_type(dyd_root, "WTG4"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
     # WindTurbines
     for model_parameter in find_bbmodel_by_type(dyd_root, "IECWT"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
     for model_parameter in find_bbmodel_by_type(dyd_root, "WT4"):
         if "IECWT" in model_parameter.get("lib"):
             continue
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
     # Photovoltaics
     for model_parameter in find_bbmodel_by_type(dyd_root, "PhotovoltaicsWecc"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
     # BESS
     for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
-        _append_generator(dyd_root, par_root, model_parameter, generators)
+        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+
+    if generators:
+        total_p = sum(g.P for g in generators)
+        total_q = sum(q.Q for q in generators)
+
+        if not math.isclose(total_p, 1.0):
+            dycov_logging.get_logger("Model Parameters").error(
+                "Generator P flows do not add up to 1"
+            )
+            raise ValueError("Generator P flows do not add up to 1")
+
+        if not math.isclose(total_q, 1.0):
+            dycov_logging.get_logger("Model Parameters").error(
+                "Generator Q flows do not add up to 1"
+            )
+            raise ValueError("Generator Q flows do not add up to 1")
 
     return generators
 
@@ -70,6 +89,7 @@ def _append_generator(
     dyd_root: etree.Element,
     par_root: etree.Element,
     model_parameter: etree.Element,
+    producer_ini: configparser.ConfigParser,
     generators: list,
 ):
     gen_id = model_parameter.get("id")
@@ -97,12 +117,43 @@ def _append_generator(
     else:
         imax = None
 
-    sign, generator_P = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
-    p0pu = parset.find(f"{{{ns}}}par[@name='{generator_P}']")
-    P = float(p0pu.get("value")) * sign
-    sign, generator_Q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
-    q0pu = parset.find(f"{{{ns}}}par[@name='{generator_Q}']")
-    Q = float(q0pu.get("value")) * sign
+    default_section = "DEFAULT"
+
+    if producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
+        P_sharing = producer_ini.get(default_section, f"P_sharing_{gen_id}")
+        P = float(P_sharing)
+    elif (
+        producer_ini.has_option(default_section, "topology")
+        and str(producer_ini.get(default_section, "topology"))[0] == "S"
+    ):
+        P = 1
+        dycov_logging.get_logger("Model Parameters").warning(
+            "A P flow of 1 has been automatically defined."
+        )
+        raise Warning("A P flow of 1 has been automatically defined.")
+    else:
+        dycov_logging.get_logger("Model Parameters").error(
+            "It is mandatory to define the distribution of P flows for multi-topology generators"
+        )
+        raise ValueError("Generator P flows not defined")
+
+    if producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
+        Q_sharing = producer_ini.get(default_section, f"Q_sharing_{gen_id}")
+        Q = float(Q_sharing)
+    elif (
+        producer_ini.has_option(default_section, "topology")
+        and str(producer_ini.get(default_section, "topology"))[0] == "S"
+    ):
+        Q = 1
+        dycov_logging.get_logger("Model Parameters").warning(
+            "A Q flow of 1 has been automatically defined."
+        )
+        raise Warning("A Q flow of 1 has been automatically defined.")
+    else:
+        dycov_logging.get_logger("Model Parameters").error(
+            "It is mandatory to define the distribution of Q flows for multi-topology generators"
+        )
+        raise ValueError("Generator Q flows not defined")
 
     _, generator_VoltageDroop = dynawo_translator.get_dynawo_variable(lib, "VoltageDroop")
     if generator_VoltageDroop is not None:
@@ -428,9 +479,10 @@ def _set_voltage_droop(
 
     if force_voltage_droop:
         # Check if the configured voltage droop is valid
-        if not dynawo_translator.is_valid_control_mode(
+        is_valid, _ = dynawo_translator.is_valid_control_mode(
             generator, "VoltageDroop", voltage_droop_parameters
-        ):
+        )
+        if not is_valid:
             dycov_logging.get_logger("Model Parameters").warning(
                 f"{generator.lib} voltage droop mode will be changed"
             )
@@ -441,9 +493,10 @@ def _set_voltage_droop(
                 f"Default Voltage Droop Mode: {default_voltage_droop_parameters} "
                 f"for {generator_control_mode}"
             )
-            if dynawo_translator.is_valid_control_mode(
+            is_valid, _ = dynawo_translator.is_valid_control_mode(
                 generator, "VoltageDroop", default_voltage_droop_parameters
-            ):
+            )
+            if is_valid:
                 _set_parameters(generator, parset, ns, default_voltage_droop_parameters)
             else:
                 dycov_logging.get_logger("Model Parameters").error(
@@ -455,6 +508,7 @@ def _set_voltage_droop(
 
 
 def _set_control_mode(generator, parset, ns, generator_control_mode, force_voltage_droop) -> str:
+    # Get the generator control mode parameters from the producer PAR file.
     control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
     dycov_logging.get_logger("Model Parameters").debug(
         f"Generator {generator.id} Control Mode: {control_mode_parameters}"
@@ -464,32 +518,30 @@ def _set_control_mode(generator, parset, ns, generator_control_mode, force_volta
         return
 
     # Check if the configured control mode is valid
-    control_mode_name = dynawo_translator.is_valid_control_mode(
+    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
         generator, generator_control_mode, control_mode_parameters
     )
-    if generator_control_mode == "USetpoint" or generator_control_mode == "QSetpoint":
-        # Get the generator control mode parameters from the producer PAR file.
-        if not control_mode_name:
-            dycov_logging.get_logger("Model Parameters").warning(
-                f"{generator.lib} control mode will be changed"
+    if generator_control_mode != "Others" and not is_valid:
+        dycov_logging.get_logger("Model Parameters").warning(
+            f"{generator.lib} control mode will be changed"
+        )
+        default_control_mode_parameters = _get_default_control_mode_parameters(
+            generator, generator_control_mode
+        )
+        dycov_logging.get_logger("Model Parameters").debug(
+            f"Default Control Mode: {default_control_mode_parameters} "
+            f"for {generator_control_mode}"
+        )
+        is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
+            generator, generator_control_mode, default_control_mode_parameters
+        )
+        if is_valid:
+            _set_parameters(generator, parset, ns, default_control_mode_parameters)
+        else:
+            dycov_logging.get_logger("Model Parameters").error(
+                f"{generator.lib} executed with wrong control mode"
             )
-            default_control_mode_parameters = _get_default_control_mode_parameters(
-                generator, generator_control_mode
-            )
-            dycov_logging.get_logger("Model Parameters").debug(
-                f"Default Control Mode: {default_control_mode_parameters} "
-                f"for {generator_control_mode}"
-            )
-            control_mode_name = dynawo_translator.is_valid_control_mode(
-                generator, generator_control_mode, default_control_mode_parameters
-            )
-            if control_mode_name:
-                _set_parameters(generator, parset, ns, default_control_mode_parameters)
-            else:
-                dycov_logging.get_logger("Model Parameters").error(
-                    f"{generator.lib} executed with wrong control mode"
-                )
-                raise ValueError(f"{generator.lib} executed with wrong control mode")
+            raise ValueError(f"{generator.lib} executed with wrong control mode")
 
     return control_mode_name
 
@@ -568,6 +620,11 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     if par is not None:
         parameters["VFlag"] = par.get("value")
 
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["PFlag"] = par.get("value")
+
     _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "QFlag")
     par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
@@ -577,6 +634,11 @@ def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
     if par is not None:
         parameters["RefFlag"] = par.get("value")
+
+    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "FreqFlag")
+    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
+    if par is not None:
+        parameters["FreqFlag"] = par.get("value")
 
     return parameters
 
@@ -692,6 +754,7 @@ def get_connected_to_pdr(producer_dyd: Path) -> list:
 def get_producer_values(
     producer_dyd: Path,
     producer_par: Path,
+    producer_ini: configparser.ConfigParser,
     s_nref: float,
 ) -> tuple[list, list, Load_params, Xfmr_params, Xfmr_params, Line_params]:
     """Gets the equipment parameters of the producer model.
@@ -702,6 +765,8 @@ def get_producer_values(
         Path to the producer DYD file
     producer_par: Path
         Path to the producer PAR file
+    producer_ini: ConfigParser
+        producer INI file
     s_nref: float
         Nominal Apparent Power
 
@@ -727,7 +792,7 @@ def get_producer_values(
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
 
-    generators = _get_generator_values(producer_dyd_root, producer_par_root)
+    generators = _get_generator_values(producer_dyd_root, producer_par_root, producer_ini)
     transformers = _get_transformer_values(producer_dyd_root, producer_par_root, s_nref)
 
     loads = _get_load_values(producer_dyd_root, producer_par_root)

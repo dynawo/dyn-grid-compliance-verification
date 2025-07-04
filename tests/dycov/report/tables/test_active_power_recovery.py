@@ -6,6 +6,7 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 import pytest
 
 from dycov.report.tables.active_power_recovery import create_map
