@@ -23,11 +23,11 @@ FAMILY_LEVEL_MAP = {
     "Wecc": {
         "family": "WECC",
         "types": {
-            "WTG": "Plant",
-            "WT": "Turbine",
+            "NoPlantControl": "Turbine",
+            "WT4": "Turbine",
+            "WTG4": "Plant",
             "Photovoltaics": "Plant",
             "BESS": "Plant",
-            "NoPlantControl": "Turbine",
         },
     },
     "IEC": {"family": "IEC", "types": {"IECWPP": "Plant", "IECWT": "Turbine"}},
@@ -363,12 +363,8 @@ class Translator:
 
     def is_valid_control_mode(
         self, generator: Gen_params, generator_control_mode: str, control_mode_parameters: dict
-    ) -> str:
-        """
-        Checks if the provided generator control mode and its parameters are valid.
-
-        This method iterates through valid control modes for the given generator type
-        and control mode, comparing the provided parameters against predefined valid sets.
+    ) -> tuple[bool, str]:
+        """Check if the control mode is valid for the generator.
 
         Parameters
         ----------
@@ -382,17 +378,23 @@ class Translator:
         Returns
         -------
         bool
-            True if a valid control mode and its parameters are found, False otherwise.
+            The control mode is valid for the generator
+        str
+            Valid control mode name or empty string if not valid
         """
         valid_control_modes = self._get_control_modes_by_generator(
             generator, generator_control_mode
         )
+
+        if not valid_control_modes:
+            return True, ""  # No control modes defined for this generator
+
         for control_mode in valid_control_modes:
             valid_parameters = self._get_control_mode_parameters(control_mode)
             if _is_valid_control_mode_parameters(control_mode_parameters, valid_parameters):
-                return control_mode
+                return True, control_mode
 
-        return ""
+        return False, ""
 
     def is_reactive_control_mode(self, generator: Gen_params, control_mode_name: str) -> bool:
         """Check if the control mode is a reactive control mode.
