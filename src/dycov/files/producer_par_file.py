@@ -101,7 +101,9 @@ def _create_producer_par_file(
         if not model_desc:
             model_desc = _search_ddb_model_file(value["lib"], ddb_dynawo_path)
             if not model_desc:
-                print("Error: " + value["lib"] + ".desc.xml file not found")
+                dycov_logging.get_logger("Create PAR input").error(
+                    f"Error: {value['lib']}.desc.xml file not found"
+                )
                 continue
 
         params_list = _get_desc_xml_params(model_desc)

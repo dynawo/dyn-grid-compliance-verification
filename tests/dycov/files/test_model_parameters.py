@@ -170,7 +170,7 @@ def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch)
             return {"MwpqMode": "3"}
 
         def is_valid_control_mode(self, generator, generator_control_mode, parameters):
-            return True
+            return True, ""
 
         def get_dynawo_variable(self, lib, name):
             return (1, name)
