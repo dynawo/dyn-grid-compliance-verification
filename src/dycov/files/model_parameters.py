@@ -428,9 +428,10 @@ def _set_voltage_droop(
 
     if force_voltage_droop:
         # Check if the configured voltage droop is valid
-        if not dynawo_translator.is_valid_control_mode(
+        is_valid, _ = dynawo_translator.is_valid_control_mode(
             generator, "VoltageDroop", voltage_droop_parameters
-        ):
+        )
+        if not is_valid:
             dycov_logging.get_logger("Model Parameters").warning(
                 f"{generator.lib} voltage droop mode will be changed"
             )
@@ -441,9 +442,10 @@ def _set_voltage_droop(
                 f"Default Voltage Droop Mode: {default_voltage_droop_parameters} "
                 f"for {generator_control_mode}"
             )
-            if dynawo_translator.is_valid_control_mode(
+            is_valid, _ = dynawo_translator.is_valid_control_mode(
                 generator, "VoltageDroop", default_voltage_droop_parameters
-            ):
+            )
+            if is_valid:
                 _set_parameters(generator, parset, ns, default_voltage_droop_parameters)
             else:
                 dycov_logging.get_logger("Model Parameters").error(
@@ -465,10 +467,10 @@ def _set_control_mode(generator, parset, ns, generator_control_mode, force_volta
         return
 
     # Check if the configured control mode is valid
-    control_mode_name = dynawo_translator.is_valid_control_mode(
+    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
         generator, generator_control_mode, control_mode_parameters
     )
-    if generator_control_mode != "Others" and not control_mode_name:
+    if generator_control_mode != "Others" and not is_valid:
         dycov_logging.get_logger("Model Parameters").warning(
             f"{generator.lib} control mode will be changed"
         )
@@ -479,10 +481,10 @@ def _set_control_mode(generator, parset, ns, generator_control_mode, force_volta
             f"Default Control Mode: {default_control_mode_parameters} "
             f"for {generator_control_mode}"
         )
-        control_mode_name = dynawo_translator.is_valid_control_mode(
+        is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
             generator, generator_control_mode, default_control_mode_parameters
         )
-        if control_mode_name:
+        if is_valid:
             _set_parameters(generator, parset, ns, default_control_mode_parameters)
         else:
             dycov_logging.get_logger("Model Parameters").error(

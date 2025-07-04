@@ -127,4 +127,3 @@ def create_input_template(launcher_dwo: Path, target: Path, topology: str, templ
     _create_ini_template(target, topology, template)
 
     _create_curves_template(target, topology, template)
-    print("Done")
