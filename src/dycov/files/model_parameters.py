@@ -15,10 +15,10 @@
 
 from __future__ import annotations
 
+import configparser
 import math
 from pathlib import Path
 from typing import Optional
-import configparser
 
 from lxml import etree
 
@@ -66,16 +66,21 @@ def _get_generator_values(
     for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
         _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
 
-    total_p = sum(g.P for g in generators)
-    total_q = sum(q.Q for q in generators)
+    if generators:
+        total_p = sum(g.P for g in generators)
+        total_q = sum(q.Q for q in generators)
 
-    if not math.isclose(total_p, 1.0):
-        dycov_logging.get_logger("Model Parameters").error("Generator P flows do not add up to 1")
-        raise ValueError("Generator P flows do not add up to 1")
+        if not math.isclose(total_p, 1.0):
+            dycov_logging.get_logger("Model Parameters").error(
+                "Generator P flows do not add up to 1"
+            )
+            raise ValueError("Generator P flows do not add up to 1")
 
-    if not math.isclose(total_q, 1.0):
-        dycov_logging.get_logger("Model Parameters").error("Generator Q flows do not add up to 1")
-        raise ValueError("Generator Q flows do not add up to 1")
+        if not math.isclose(total_q, 1.0):
+            dycov_logging.get_logger("Model Parameters").error(
+                "Generator Q flows do not add up to 1"
+            )
+            raise ValueError("Generator Q flows do not add up to 1")
 
     return generators
 
@@ -738,7 +743,7 @@ def get_connected_to_pdr(producer_dyd: Path) -> list:
 def get_producer_values(
     producer_dyd: Path,
     producer_par: Path,
-    producer_ini,
+    producer_ini: configparser.ConfigParser,
     s_nref: float,
 ) -> tuple[list, list, Load_params, Xfmr_params, Xfmr_params, Line_params]:
     """Gets the equipment parameters of the producer model.
@@ -749,6 +754,8 @@ def get_producer_values(
         Path to the producer DYD file
     producer_par: Path
         Path to the producer PAR file
+    producer_ini: ConfigParser
+        producer INI file
     s_nref: float
         Nominal Apparent Power
 
