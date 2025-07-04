@@ -36,6 +36,10 @@ def _create_producer_ini_file(
         f"q_max =\n"
         f"# q_min is the minimum reactive power of all generating units (in MVar)\n"
         f"q_min =\n"
+        f"# Active power sharing per generator unit (%).  Values must be between 0 and 1.\n"
+        f"P_sharing_[GEN_ID] =\n"
+        f"# Reactive power sharing per generator unit (%).  Values must be between 0 and 1.\n"
+        f"Q_sharing_[GEN_ID] =\n"
         f"# topology\n"
         f"topology = {topology}\n"
     )

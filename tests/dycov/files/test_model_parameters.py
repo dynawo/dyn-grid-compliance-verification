@@ -7,6 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import configparser
+
 import pytest
 from lxml import etree
 
@@ -126,8 +128,9 @@ def test_no_matching_equipment_models(tmp_path):
     etree.ElementTree(par_root).write(
         str(par_path), pretty_print=True, xml_declaration=True, encoding="utf-8"
     )
+    ini_file = configparser.ConfigParser()
     s_nref = 90.0
-    result = model_parameters.get_producer_values(dyd_path, par_path, s_nref)
+    result = model_parameters.get_producer_values(dyd_path, par_path, ini_file, s_nref)
     generators, stepup_xfmrs, aux_load, auxload_xfmr, ppm_xfmr, intline = result
     assert generators == []
     assert stepup_xfmrs == []
