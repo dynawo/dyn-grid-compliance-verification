@@ -24,7 +24,7 @@ def test_parameters():
 
     launcher_dwo = Path("/tmp/launcher_dwo")
     producer_model = None
-    producer_curves_path = path
+    producer_curves_path = path / "curves"
     reference_curves_path = None
     selected_pcs = "selected_pcs"
     output_dir = Path("/tmp/output_dir")
@@ -43,9 +43,10 @@ def test_parameters():
             verification_type,
         )
 
-        assert parameters.get_launcher_dwo() == launcher_dwo
-        assert parameters.get_selected_pcs() == selected_pcs
-        assert parameters.get_output_dir() == output_dir
-        assert parameters.get_only_dtr() == only_dtr
-    finally:
-        shutil.rmtree(path)
+    assert pytest_wrapped_e.type == FileNotFoundError
+    assert (
+        str(pytest_wrapped_e.value) == "[Errno 2] No such file or directory: "
+        "'Curves files for Producer are not present in the curves path.'"
+    )
+
+    shutil.rmtree(path)

@@ -490,6 +490,7 @@ def _save_plot(
     unit: str,
     ymin: float,
     ymax: float,
+    log_title: str,
 ) -> None:
 
     # Plot later the reference curves
@@ -507,12 +508,12 @@ def _save_plot(
         try:
             plt.xlim(time_range["min"], time_range["max"])
         except UserWarning as uw:
-            dycov_logging.get_logger("PDFLatex").warning("X-axis warning: " + uw)
+            dycov_logging.get_logger("Figures").warning(f"{log_title}: X-axis warning {uw}")
     if ymin is not None:
         try:
             plt.ylim(ymin, ymax)
         except UserWarning as uw:
-            dycov_logging.get_logger("PDFLatex").warning("Y-axis warning: " + uw)
+            dycov_logging.get_logger("Figures").warning(f"{log_title}: Y-axis warning {uw}")
 
     plt.xlabel("t(s)", fontsize=16)
     plt.ylabel(unit, fontsize=16)
@@ -560,6 +561,7 @@ def get_common_time_range(
     unit_characteristics: dict,
     figures_description: dict,
     results: dict,
+    log_title: str,
 ) -> tuple[float, float]:
     """For a set of given curves, it obtains the minimum temporal range necessary to visualize all
     variations.
@@ -589,8 +591,8 @@ def get_common_time_range(
     )
 
     if xmin == 99999 and xmax == -99999:
-        dycov_logging.get_logger("PDFLatex").warning(
-            f"All curves appear to be flat in {operating_condition};"
+        dycov_logging.get_logger("Figures").warning(
+            f"{log_title}: All curves appear to be flat in {operating_condition};"
             " something must be wrong with the simulation"
         )
 
@@ -620,6 +622,7 @@ def create_plot(
     additional_curves: list,
     results: dict,
     unit: str,
+    log_title: str,
 ) -> None:
     """Draw a figure.
 
@@ -674,7 +677,16 @@ def create_plot(
     _plot_exclusion_windows(results)
     _plot_mxe(curve_name, results)
     _save_plot(
-        time, curves, time_reference, curves_reference, time_range, output_file, unit, ymin, ymax
+        time,
+        curves,
+        time_reference,
+        curves_reference,
+        time_range,
+        output_file,
+        unit,
+        ymin,
+        ymax,
+        log_title,
     )
 
 

@@ -12,29 +12,31 @@ from pathlib import Path
 from dycov.core.parameters import Parameters
 from dycov.validate.producer import ModelProducer
 
+LOGGER = dycov_logging.get_logger("Execution Parameters")
+
 
 class ValidationParameters(Parameters):
     """Parameters to define the validation of a model.
 
-    Args
+    Attributes
     ----
     launcher_dwo: Path
-        Dynawo launcher
+        Dynawo launcher.
     producer_model: Path
-        Producer Model directory
+        Producer Model directory.
     producer_curves_path: Path
-        Producer curves directory
+        Producer curves directory.
     reference_curves_path: Path
-        Reference curves directory
+        Reference curves directory.
     selected_pcs: str
-        Individual PCS to validate
+        Individual PCS to validate.
     output_dir: Path
-        User output directory
+        User output directory.
     only_dtr: bool
-        option to validate a model using only the PCS defined in the DTR
+        Option to validate a model using only the PCS defined in the DTR.
     verification_type: int
-        0 if it is an electrical performance verification
-        1 if it is a model validation
+        0 if it is an electrical performance verification.
+        10 if it is a model validation.
     """
 
     def __init__(
@@ -57,17 +59,17 @@ class ValidationParameters(Parameters):
         )
 
     def get_sim_type(self) -> int:
-        """Get the executed validation type:
-            * 0 if it is an electrical performance for Synchronous Machine Model
-            * 1 if it is an electrical performance for Power Park Module Model
-            * 2 if it is an electrical performance for Storage Model
-            * 10 if it is a model validation for Power Park Module Model
-            * 11 if it is a model validation for Storage Model
+        """Get the executed validation type.
 
         Returns
         -------
         int
-            Validation type
+            Validation type:
+            * 1: Electrical performance for Synchronous Machine Model.
+            * 2: Electrical performance for Power Park Module Model.
+            * 3: Electrical performance for Storage Model.
+            * 11: Model validation for Power Park Module Model.
+            * 12: Model validation for Storage Model.
         """
         return self._producer.get_sim_type()
 
@@ -77,49 +79,49 @@ class ValidationParameters(Parameters):
         Returns
         -------
         bool
-            True if the Dynawo model is valid, False otherwise
+            True if the Dynawo model is valid, False otherwise.
         """
         return self._producer.is_dynawo_model()
 
     def is_user_curves_valid(self) -> bool:
-        """Checks if the user curves are valid.
+        """Checks if the user-provided curves are valid.
 
         Returns
         -------
         bool
-            True if the user curves are valid, False otherwise
+            True if the user curves are valid, False otherwise.
         """
         return self._producer.is_user_curves()
 
-    def is_valid(self) -> bool:
-        """Checks if the execution of the tool is valid,
-        for this the tool must have the dynamic model of the user or, failing that, the
-        curves file.
-
-        Returns
-        -------
-        bool
-            True if it is a valid execution, False otherwise
-        """
-        return self.is_dynawo_model_valid() or self.is_user_curves_valid()
-
     def has_reference_curves_path(self) -> bool:
-        """Check if there are reference curves directory.
+        """Check if a reference curves directory is provided.
 
         Returns
         -------
         bool
-            True if has a reference curves directory, False otherwise
+            True if a reference curves directory exists, False otherwise.
         """
         return self._producer.has_reference_curves_path()
 
-    def is_complete(self) -> bool:
-        """Checks if the execution of the tool is complete,
-        for this the tool must have the dynamic model of the user and the curves file.
+    def is_valid(self) -> bool:
+        """Checks if the execution of the tool is valid.
+        The tool requires either a valid dynamic model or valid user curves.
 
         Returns
         -------
         bool
-            True if it is a complete execution, False otherwise
+            True if it is a valid execution, False otherwise.
+        """
+        return self.is_dynawo_model_valid() or self.is_user_curves_valid()
+
+    def is_complete(self) -> bool:
+        """Checks if the execution of the tool is complete.
+        For a complete execution, both a valid dynamic model (or user curves) and
+        reference curves must be available.
+
+        Returns
+        -------
+        bool
+            True if it is a complete execution, False otherwise.
         """
         return self.is_valid() and self.has_reference_curves_path()

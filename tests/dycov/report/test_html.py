@@ -6,6 +6,7 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 import tempfile
 from pathlib import Path
 
@@ -102,14 +103,15 @@ def test_create_html_success():
         template_path = templates_dir / "template.html"
         template_path.write_text("{{ figures|length }} figures rendered")
         # Prepare figures
+        producer = "producer"
         figures = ["<div>figure1</div>", "<div>figure2</div>"]
         operating_condition = "test_condition"
         # Patch __file__ to point to this test file for template resolution
         orig_file = html.__file__
         html.__file__ = str(Path(__file__))
         try:
-            html.create_html(figures, operating_condition, output_path)
-            output_html = html_dir / f"{operating_condition}.html"
+            html.create_html(producer, figures, operating_condition, output_path)
+            output_html = html_dir / f"{producer}.{operating_condition}.html"
             assert output_html.exists()
             content = output_html.read_text()
             assert "2 figures rendered" in content
@@ -266,13 +268,14 @@ def test_create_html_missing_template():
         template_path = templates_dir / "template.html"
         if template_path.exists():
             template_path.unlink()
+        producer = "producer"
         figures = ["<div>figure1</div>"]
         operating_condition = "missing_template"
         orig_file = html.__file__
         html.__file__ = str(Path(__file__))
         try:
             with pytest.raises(FileNotFoundError):
-                html.create_html(figures, operating_condition, output_path)
+                html.create_html(producer, figures, operating_condition, output_path)
         finally:
             html.__file__ = orig_file
 

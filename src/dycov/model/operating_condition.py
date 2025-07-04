@@ -17,6 +17,7 @@ from dycov.core.validator import Validator
 from dycov.curves.curves import get_cfg_oc_name
 from dycov.gfm.gfm import GridForming
 from dycov.logging.logging import dycov_logging
+from dycov.model.producer import Producer
 
 
 class OperatingCondition:
@@ -28,6 +29,8 @@ class OperatingCondition:
     ----
     parameters: Parameters
         Tool parameters
+    producer: Producer
+        The producer object containing configuration and producer information.
     pcs_name: str
         Name of the current pcs
     oc_name: str
@@ -37,11 +40,14 @@ class OperatingCondition:
     def __init__(
         self,
         parameters: Parameters,
+        producer: Producer,
         pcs_name: str,
         bm_name: str,
         oc_name: str,
     ):
         self._parameters = parameters
+        self._working_dir = parameters.get_working_dir()
+        self._producer = producer
         self._pcs_name = pcs_name
         self._bm_name = bm_name
         self._name = oc_name

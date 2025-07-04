@@ -6,6 +6,7 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 import inspect
 import shutil
 from pathlib import Path
@@ -413,7 +414,24 @@ def plotly_figures(
     reference_curves: pd.DataFrame,
     results: dict,
 ) -> str:
+    """Create plotly figures for the curves.
 
+    Parameters
+    ----------
+    figure_description: list
+        List of figure description
+    calculated_curves: DataFrame
+        DataFrame with the calculated curves
+    reference_curves: DataFrame
+        DataFrame with the reference curves
+    results: dict
+        Dictionary with the results of the simulation
+
+    Returns
+    -------
+    str
+        HTML string of the plotly figures
+    """
     curve_names = _get_curve_names(figure_description[1], calculated_curves)
 
     fig = go.Figure()
@@ -459,7 +477,20 @@ def plotly_all_curves(
     plotted_curves: list,
     results: dict,
 ) -> list:
+    """Create plotly figures for all curves.
 
+    Parameters
+    ----------
+    plotted_curves: list
+        List of curves to be plotted
+    results: dict
+        Dictionary with the results of the simulation
+
+    Returns
+    -------
+    list
+        List of HTML strings of the plotly figures
+    """
     calculated_curves = results["curves"]
     if "reference_curves" in results:
         reference_curves = results["reference_curves"]
@@ -500,7 +531,20 @@ def plotly_all_curves(
     return figures
 
 
-def create_html(figures: list, operating_condition: str, output_path: Path) -> None:
+def create_html(producer: str, figures: list, operating_condition: str, output_path: Path) -> None:
+    """Create the HTML report using Jinja2.
+
+    Parameters
+    ----------
+    producer: str
+        Producer name
+    figures: list
+        List of figure HTML strings
+    operating_condition: str
+        Operating condition for the report
+    output_path: Path
+        Path to the output directory
+    """
     html_output_dir = output_path / "HTML"
     if not html_output_dir.exists():
         html_output_dir.mkdir()
@@ -515,7 +559,7 @@ def create_html(figures: list, operating_condition: str, output_path: Path) -> N
 
     # Instantiate the HTML file using Jinja
     plotly_jinja_data = {"figures": figures}
-    output_html = html_output_dir / (operating_condition + ".html")
+    output_html = html_output_dir / f"{producer}.{operating_condition}.html"
     input_template = Path(__file__).resolve().parent / "templates" / "template.html"
     with open(output_html, "w", encoding="utf-8") as output_file:
         with open(input_template) as template_file:

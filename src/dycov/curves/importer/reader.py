@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 from __future__ import annotations
 
 import array
@@ -7,7 +16,6 @@ from typing import TextIO
 
 import pandas as pd
 from comtrade import Comtrade
-
 
 UNLIMITED_COLUMNS = -1
 
