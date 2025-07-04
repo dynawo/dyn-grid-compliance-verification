@@ -103,7 +103,6 @@ class Translator:
         """
         family, level = get_generator_family_level(generator)
         option = f"{generator_control_mode}_{family}_{level}"
-        print(f"Looking for control modes with option: {option}")
         if self._control_modes.has_option("ControlModes", option):
             return self._control_modes.get("ControlModes", option).split(",")
         else:
@@ -274,7 +273,7 @@ class Translator:
 
     def is_valid_control_mode(
         self, generator: Gen_params, generator_control_mode: str, control_mode_parameters: dict
-    ) -> str:
+    ) -> tuple[bool, str]:
         """Check if the control mode is valid for the generator.
 
         Parameters
@@ -288,6 +287,8 @@ class Translator:
 
         Returns
         -------
+        bool
+            The control mode is valid for the generator
         str
             Valid control mode name or empty string if not valid
         """
@@ -295,16 +296,16 @@ class Translator:
         valid_control_modes = self._get_control_modes_by_generator(
             generator, generator_control_mode
         )
-        print(f"Valid control modes for {generator_control_mode}: {valid_control_modes}")
+
         if not valid_control_modes:
-            return True  # No control modes defined for this generator
+            return True, ""  # No control modes defined for this generator
 
         for control_mode in valid_control_modes:
             valid_parameters = self._get_control_mode_parameters(control_mode)
             if _is_valid_control_mode_parameters(control_mode_parameters, valid_parameters):
-                return control_mode
+                return True, control_mode
 
-        return ""
+        return False, ""
 
     def is_reactive_control_mode(self, generator: Gen_params, control_mode_name: str) -> bool:
         """Check if the control mode is a reactive control mode.
