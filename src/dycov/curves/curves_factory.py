@@ -13,12 +13,14 @@ from pathlib import Path
 from dycov.configuration.cfg import config
 from dycov.core.execution_parameters import Parameters
 from dycov.curves.curves import ProducerCurves
+from dycov.curves.dynawo.curves import DynawoCurves
 from dycov.curves.importer.curves import ImportedCurves
-from dycov.dynawo.curves import DynawoCurves
+from dycov.model.producer import Producer
 
 
 def get_producer(
     parameters: Parameters,
+    producer: Producer,
     pcs_benchmark_name: str,
     stable_time: float,
     lib_path: Path,
@@ -31,6 +33,8 @@ def get_producer(
     ----------
     parameters: Parameters
         Tool parameters
+    producer: Producer
+        The producer object containing configuration and producer information.
     pcs_benchmark_name : str
         Composite name, pcs + Benchmark name.
     stable_time: float
@@ -48,7 +52,6 @@ def get_producer(
         Object for obtaining the producer curves, these can be generated using the Dynawo
         simulator, or they can be imported from files.
     """
-    producer = parameters.get_producer()
     if producer.is_dynawo_model():
         job_name = config.get_value(pcs_benchmark_name, "job_name")
         rte_model = config.get_value(pcs_benchmark_name, "TSO_model")
@@ -64,6 +67,7 @@ def get_producer(
 
         return DynawoCurves(
             parameters,
+            producer,
             pcs_name,
             model_path,
             omega_path,
@@ -72,24 +76,24 @@ def get_producer(
             stable_time,
         )
     elif producer.is_user_curves():
-        return ImportedCurves(parameters)
+        return ImportedCurves(producer)
 
     raise ValueError("Unsupported producer curves")
 
 
 def get_reference(
-    parameters: Parameters,
+    producer: Producer,
 ) -> ImportedCurves:
     """Gets the reference curve generator.
 
     Parameters
     ----------
-    parameters: Parameters
-        Tool parameters
+    producer: Producer
+        The producer object containing configuration and producer information.
 
     Returns
     -------
     ImportedCurves
         Object for obtaining reference curves, these must be imported from files.
     """
-    return ImportedCurves(parameters)
+    return ImportedCurves(producer)

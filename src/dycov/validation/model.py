@@ -13,9 +13,9 @@ import numpy as np
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
+from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
 from dycov.validation.checks import (
     calculate_curves_errors,
@@ -72,11 +72,15 @@ class ModelValidator(Validator):
         self,
         curves_manager: CurvesManager,
         pcs_bm_name: str,
-        parameters: Parameters,
+        producer: Producer,
         validations: list,
         is_field_measurements: bool,
+        pcs_name: str,
+        bm_name: str,
     ):
-        super().__init__(curves_manager, parameters, validations, is_field_measurements)
+        super().__init__(
+            curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
+        )
         self._pcs_bm_name = pcs_bm_name
 
     def __active_power_recovery_error(
@@ -380,6 +384,7 @@ class ModelValidator(Validator):
                 list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
                 list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
                 start_event,
+                self._get_log_title(),
             ),
         }
 

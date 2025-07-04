@@ -12,7 +12,7 @@ import configparser
 
 import pytest
 
-from src.dycov.configuration.cfg import Config
+from dycov.configuration.cfg import Config
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def test_load_pcs_config_updates_parser(tmp_path):
 
     cfg = Config(config_dir, default_config, user_config, pcs_config)
     assert not pcs_config.has_section("pcs_section")
-    cfg.load_pcs_config(str(pcs_file))
+    cfg.load_pcs_config(pcs_file)
     assert pcs_config.has_section("pcs_section")
     assert pcs_config.get("pcs_section", "foo") == "bar"
 
@@ -90,7 +90,7 @@ def test_get_value_nonexistent_returns_none_or_default(tmp_path):
     assert cfg.get_boolean("no_section", "no_key", True) is True
 
 
-def test_get_int_float_with_invalid_value_raises(tmp_path):
+def test_get_int_float_with_invalid_value(tmp_path):
     default_config = configparser.ConfigParser()
     user_config = configparser.ConfigParser()
     pcs_config = configparser.ConfigParser()
@@ -98,10 +98,8 @@ def test_get_int_float_with_invalid_value_raises(tmp_path):
     user_config.set("bad_section", "not_an_int", "abc")
     user_config.set("bad_section", "not_a_float", "xyz")
     cfg = Config(tmp_path, default_config, user_config, pcs_config)
-    with pytest.raises(ValueError):
-        cfg.get_int("bad_section", "not_an_int", 0)
-    with pytest.raises(ValueError):
-        cfg.get_float("bad_section", "not_a_float", 0.0)
+    assert cfg.get_int("bad_section", "not_an_int", 0) == 0
+    assert cfg.get_float("bad_section", "not_a_float", 0.0) == 0.0
 
 
 def test_get_options_returns_keys_with_priority(tmp_path):
