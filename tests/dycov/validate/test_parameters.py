@@ -46,9 +46,10 @@ def test_parameters():
         )
 
     assert pytest_wrapped_e.type == FileNotFoundError
+    print(pytest_wrapped_e.value)
     assert (
         str(pytest_wrapped_e.value) == "[Errno 2] No such file or directory: "
-        "'Curves files for Producer are not present in the curves path.'"
+        "'Configuration file is not present in the curves path.'"
     )
 
     shutil.rmtree(path)

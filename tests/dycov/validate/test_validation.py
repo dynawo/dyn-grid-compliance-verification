@@ -162,7 +162,8 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
         output_dir=temp_dirs[0], selected_pcs="PCS2", sim_type=ELECTRIC_PERFORMANCE_PPM
     )
     monkeypatch.setattr(
-        "dycov.validate.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.validate.validation.Pcs",
+        lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     validation = Validation(parameters)
@@ -175,7 +176,8 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     # Patch check_output_dir to simulate user not wanting to overwrite
     monkeypatch.setattr("dycov.files.manage_files.check_output_dir", lambda path: True)
     monkeypatch.setattr(
-        "dycov.validate.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.validate.validation.Pcs",
+        lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     with pytest.raises(SystemExit):
         Validation(parameters)
@@ -189,7 +191,8 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
         copied.append((str(source_path), str(target_path), pcs_name))
 
     monkeypatch.setattr(
-        "dycov.validate.validation.Pcs", lambda name, params: make_valid_pcs(name, params)
+        "dycov.validate.validation.Pcs",
+        lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     monkeypatch.setattr("dycov.files.manage_files.copy_output_files", fake_copy_output_files)
