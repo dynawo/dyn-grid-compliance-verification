@@ -40,7 +40,7 @@ class GFMGeneration:
         self._validation_pcs = validation_pcs
 
         # Prepare the environment to execute the tool
-        pcs_list = [Pcs(pcs_name, parameters) for pcs_name in self._validation_pcs]
+        pcs_list = [Pcs("Producer", pcs_name, parameters) for pcs_name in self._validation_pcs]
         self._pcs_list = sorted(pcs_list, key=attrgetter("_id", "_zone"))
 
     def __initialize_working_environment(self) -> None:
@@ -78,9 +78,9 @@ class GFMGeneration:
 
         for pcs in self._pcs_list:
             manage_files.copy_output_files(
-                pcs.get_name(),
                 self._parameters.get_working_dir(),
                 self._parameters.get_output_dir(),
+                pcs.get_name(),
             )
 
         manage_files.remove_dir(self._parameters.get_working_dir())

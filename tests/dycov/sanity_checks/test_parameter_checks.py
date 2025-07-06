@@ -81,7 +81,7 @@ def test_generators():
     )
     ppm = parameters.Gen_params(
         id=None,
-        lib="WTG4AWeccCurrentSource",
+        lib="WTG4AWeccCurrentSource1",
         connectedXmfr="",
         SNom=90,
         IMax=100.0,

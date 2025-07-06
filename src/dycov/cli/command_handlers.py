@@ -50,9 +50,7 @@ def handle_generate_envelopes_command(
     emt = args.emt
     if args.producer_csv:
         producer_csv = Path(args.producer_csv)
-        output_dir = (
-            producer_csv.parent / "Results" if args.output_dir is None else Path(args.output_dir)
-        )
+        output_dir = producer_csv.parent / "Results" if args.output is None else Path(args.output)
 
     if not producer_csv:
         _LOGGER.error("Missing arguments for 'generateEnvelopes' command.")
@@ -201,7 +199,7 @@ def handle_generate_command(
     _LOGGER.info("Handling 'generate' command.")
     try:
         # Initialize Parameters for the tool
-        params = Parameters()
+        params = ValidationParameters()
         params.init_tool(dwo_launcher)
         params.set_topology_path(args.topology)
         params.set_validation_path(args.validation)
@@ -373,7 +371,7 @@ def _run_verification(
 
 
 def _generate_envelopes(dwo_launcher: Path, output_dir: Path, producer_csv: Path, emt: bool):
-    _LOGGER.info(f"Running generation of envelopes")
+    _LOGGER.info("Running generation of envelopes")
     try:
         params = GFMParameters(dwo_launcher, producer_csv, None, output_dir, True, emt)
 
@@ -381,14 +379,12 @@ def _generate_envelopes(dwo_launcher: Path, output_dir: Path, producer_csv: Path
         if not params.is_valid():
             return -1
 
-        gfm = GFMGeneration(
+        gfm = GFMGeneration(params)
         start_time = time.time()
         gfm.generate()
         end_time = time.time()
 
-        _LOGGER.info(
-            f"Generation completed in {end_time - start_time:.2f} seconds."
-        )
+        _LOGGER.info(f"Generation completed in {end_time - start_time:.2f} seconds.")
         return 0
     except Exception as e:
         _LOGGER.exception(f"Error during generation: {e}")

@@ -111,7 +111,9 @@ class Benchmark:
     def __create_operating_condition_working_paths(self, oc_names: list):
         # Create a specific folder by operating condition
         for oc_name in oc_names:
-            working_oc_dir = self._working_dir / self._pcs_name / self._name / oc_name
+            working_oc_dir = (
+                self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
+            )
             manage_files.create_dir(working_oc_dir)
 
     def __get_log_title(self):

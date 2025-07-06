@@ -18,7 +18,6 @@ from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
 from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.model.producer import Producer
-from dycov.validate.producer import ModelProducer
 
 
 def get_cfg_oc_name(pcs_name: str, bm_name: str, oc_name: str) -> str:
@@ -117,7 +116,7 @@ class ProducerCurves:
             "line_XPu": self._line_Xpu,
         }
 
-    def get_producer(self) -> ModelProducer:
+    def get_producer(self) -> Producer:
         """Get the producer instance.
 
         Returns

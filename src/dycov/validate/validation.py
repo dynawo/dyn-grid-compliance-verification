@@ -116,7 +116,9 @@ def _validate_pcs(pcs_args) -> tuple:
         return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
 
-def _prepare_report_pcs(pcs_results: dict, parameters: Parameters, path_latex_files: Path) -> None:
+def _prepare_report_pcs(
+    pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
+) -> None:
     """Prepare the report for the PCS validation.
 
     Parameters

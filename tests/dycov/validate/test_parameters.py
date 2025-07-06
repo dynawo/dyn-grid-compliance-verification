@@ -11,6 +11,8 @@
 import shutil
 from pathlib import Path
 
+import pytest
+
 from dycov.validate.parameters import ValidationParameters
 
 
@@ -31,8 +33,8 @@ def test_parameters():
     only_dtr = True
     verification_type = 0
 
-    try:
-        parameters = ValidationParameters(
+    with pytest.raises(FileNotFoundError) as pytest_wrapped_e:
+        ValidationParameters(
             launcher_dwo,
             producer_model,
             producer_curves_path,
