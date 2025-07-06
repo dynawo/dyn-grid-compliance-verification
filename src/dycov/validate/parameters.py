@@ -10,6 +10,7 @@
 from pathlib import Path
 
 from dycov.core.parameters import Parameters
+from dycov.logging.logging import dycov_logging
 from dycov.validate.producer import ModelProducer
 
 LOGGER = dycov_logging.get_logger("Execution Parameters")

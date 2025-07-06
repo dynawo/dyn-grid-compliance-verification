@@ -94,7 +94,9 @@ class CurvesManager:
         bm_name: str,
         oc_name: str,
     ):
-        working_oc_dir = self._working_dir / self._pcs_name / bm_name / oc_name
+        working_oc_dir = (
+            self._working_dir / self._producer_name / self._pcs_name / bm_name / oc_name
+        )
 
         reference_event_start_time = None
         if self.__has_reference_curves():

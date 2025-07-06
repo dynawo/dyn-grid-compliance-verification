@@ -18,6 +18,7 @@ from dycov.cli.command_handlers import (
     handle_anonymize_command,
     handle_compile_command,
     handle_generate_command,
+    handle_generate_envelopes_command,
     handle_performance_command,
     handle_validate_command,
 )
@@ -105,7 +106,7 @@ class DycovCLI:
         """
         self.logger.info(f"Dispatching command: {args.command}")
         if args.command == "generateEnvelopes":
-            handle_validate_command(parser, args, dynawo_launcher_path)
+            handle_generate_envelopes_command(parser, args, dynawo_launcher_path)
         elif args.command == "validate":
             handle_validate_command(parser, args, dynawo_launcher_path)
         elif args.command == "generate":

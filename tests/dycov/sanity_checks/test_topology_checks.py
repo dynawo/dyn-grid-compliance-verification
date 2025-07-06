@@ -254,7 +254,7 @@ def test_check_topology_m():
     generators = [
         parameters.Gen_params(
             id="Wind_Turbine1",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=100.0,
@@ -266,7 +266,7 @@ def test_check_topology_m():
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=120.0,
@@ -323,7 +323,7 @@ def test_check_topology_mi():
     generators = [
         parameters.Gen_params(
             id="Wind_Turbine1",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=100.0,
@@ -335,7 +335,7 @@ def test_check_topology_mi():
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=120.0,
@@ -393,7 +393,7 @@ def test_check_topology_maux():
     generators = [
         parameters.Gen_params(
             id="Wind_Turbine1",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=100.0,
@@ -405,7 +405,7 @@ def test_check_topology_maux():
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=120.0,
@@ -476,7 +476,7 @@ def test_check_topology_mauxi():
     generators = [
         parameters.Gen_params(
             id="Wind_Turbine1",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=100.0,
@@ -488,7 +488,7 @@ def test_check_topology_mauxi():
         ),
         parameters.Gen_params(
             id="Wind_Turbine2",
-            lib="WTG4AWeccCurrentSource",
+            lib="WTG4AWeccCurrentSource1",
             connectedXmfr="",
             SNom=90,
             IMax=120.0,
