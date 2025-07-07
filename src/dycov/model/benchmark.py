@@ -657,6 +657,10 @@ class Benchmark:
 
     def generate(self):
         for op_cond in self._oc_list:
+            dycov_logging.get_logger("Benchmark").info(
+                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, "
+                f"OPER. COND.: {op_cond.get_name()}"
+            )
             working_dir = self._working_dir / self._pcs_name / self._name / op_cond.get_name()
             op_cond.generate(working_dir)
 

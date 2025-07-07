@@ -196,6 +196,12 @@ class PhaseJump:
             p_down_final = pdown_limited
             p_pcc_final = p_pcc
 
+        # If P_up is less than P_down, then the curves are exchanged.
+        if p_up_final[-1] < p_down_final[-1]:
+            p_temp = p_down_final
+            p_down_final = p_up_final
+            p_up_final = p_temp
+
         # Return the final calculated power signals.
         return p_pcc_final, p_up_final, p_down_final
 

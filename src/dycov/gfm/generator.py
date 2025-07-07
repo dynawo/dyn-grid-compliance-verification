@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 
+import sys
 from operator import attrgetter
 from pathlib import Path
 
@@ -47,6 +48,16 @@ class GFMGeneration:
         """Create the tool's working directory."""
         # prepare tool folders
         manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
+
+        # Check if results path exists to avoid overwriting if the user does not
+        # want to lose the files
+        if manage_files.check_output_dir(self._parameters.get_output_dir()):
+            dycov_logging.get_logger("Envelopes").warning(
+                "Exiting. Please rename your current Results directory, otherwise it will be "
+                "erased and a new one will be created."
+            )
+            sys.exit()
+        manage_files.create_dir(self._parameters.get_output_dir())
 
     def __populate_validation_pcs(
         self, validation_pcs: set, validation_key: str, validation_path: str
