@@ -30,7 +30,7 @@ class GFMCalculator:
     # Critically damped systems are grouped with overdamped.
     _EPSILON_THRESHOLD = 1.0
 
-    def __init__(self, gfm_params: GFM_Params, debug: bool = False):
+    def __init__(self, gfm_params: GFM_Params):
         """
         Initializes the GFMCalculator with system parameters.
 
@@ -38,11 +38,8 @@ class GFMCalculator:
         ----------
         gfm_params: GFM_Params
             An object containing all necessary parameters for GFM phase jump calculations.
-        debug: bool, optional
-            If True, enables debug print statements. Defaults to False.
         """
         self._gfm_params = gfm_params  # Stores GFM system parameters
-        self._debug = debug  # Flag to control debug output
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float

@@ -18,12 +18,12 @@ from matplotlib import pyplot as plt
 def save_results_to_csv(
     path: Path,
     time_array: np.ndarray,
-    p_pcc: np.ndarray,
-    p_down: np.ndarray,
-    p_up: np.ndarray,
+    pcc: np.ndarray,
+    down: np.ndarray,
+    up: np.ndarray,
 ) -> None:
     """
-    Save the calculated results (P_PCC, P_down, P_up) to a CSV file.
+    Save the calculated results (PCC,down,up) to a CSV file.
 
     Parameters
     ----------
@@ -31,19 +31,19 @@ def save_results_to_csv(
         The file path where the CSV file will be saved.
     time_array : np.ndarray
         The time array corresponding to the power signals.
-    p_pcc : np.ndarray
+    pcc : np.ndarray
         The calculated power at the point of common coupling.
-    p_down : np.ndarray
+    down : np.ndarray
         The lower power envelope.
-    p_up : np.ndarray
+    up : np.ndarray
         The upper power envelope.
     """
     df = pd.DataFrame(
         {
             "Time (s)": time_array,
-            "P_PCC (pu)": p_pcc,
-            "P_down (pu)": p_down,
-            "P_up (pu)": p_up,
+            "PCC (pu)": pcc,
+            "down (pu)": down,
+            "up (pu)": up,
         }
     )
     # Save the DataFrame to a CSV file without including the index.
@@ -56,9 +56,9 @@ def plot_results(
     time: np.ndarray,
     event_time: float,
     shift_time: float,
-    p_pcc: np.ndarray,
-    p_down: np.ndarray,
-    p_up: np.ndarray,
+    pcc: np.ndarray,
+    down: np.ndarray,
+    up: np.ndarray,
 ) -> None:
     """
     Plot the results of the GFM phase jump: theoretical response,
@@ -77,25 +77,25 @@ def plot_results(
         for plotting purposes.
     title : str
         The title of the plot, which will also be used as the filename.
-    p_pcc : np.ndarray
+    pcc : np.ndarray
         The calculated power at the point of common coupling.
-    p_down : np.ndarray
+    down : np.ndarray
         The lower power envelope.
-    p_up : np.ndarray
+    up : np.ndarray
         The upper power envelope.
     """
     plt.figure(figsize=(8, 5))  # Create a new figure with a specified size.
     # Plot the theoretical power response.
     plt.plot(
         time,
-        p_pcc,
+        pcc,
         label="Theoretical response from VSM",
         linewidth="3",
     )
     # Plot the lower power envelope.
-    plt.plot(time, p_down, label="Pdown", linewidth=2)
+    plt.plot(time, down, label="Pdown", linewidth=2)
     # Plot the upper power envelope.
-    plt.plot(time, p_up, label="Pup", linewidth=2)
+    plt.plot(time, up, label="Pup", linewidth=2)
     plt.xlabel("sec")  # Set x-axis label.
     plt.ylabel("P at PCC (pu)")  # Set y-axis label.
     plt.title(title)  # Set the plot title.

@@ -11,21 +11,23 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
+from dycov.logging.logging import dycov_logging
 
 
 class PhaseJump(GFMCalculator):
     """
     Class to calculate the GFM phase jump response.
-    This class handles all core calculations for delta_p and power envelopes,
-    differentiating between overdamped and underdamped system responses.
+    This class handles all core calculations for delta_p and active power
+    envelopes, differentiating between overdamped and underdamped system
+    responses.
     """
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
     ) -> tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates the change in power (delta_p) and power envelopes (PCC, upper, and lower)
-        based on damping characteristics for a phase jump event.
+        Calculates the change in power (delta_p) and active power envelopes (PCC,
+        upper, and lower) based on damping characteristics for a phase jump event.
 
         Parameters
         ----------
@@ -45,9 +47,10 @@ class PhaseJump(GFMCalculator):
         tuple[bool, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
             - is_overdamped: True if the initial system is overdamped, False otherwise.
-            - p_pcc_final: The final calculated power at the point of common coupling.
-            - p_up_final: The final upper power envelope.
-            - p_down_final: The final lower power envelope.
+            - p_pcc_final: The final calculated active power at the point of common
+              coupling.
+            - p_up_final: The final upper active power envelope.
+            - p_down_final: The final lower active power envelope.
         """
         (
             is_overdamped,
@@ -78,8 +81,9 @@ class PhaseJump(GFMCalculator):
         self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
     ) -> tuple[bool, list, np.ndarray, np.ndarray, list, list]:
         """
-        Calculates the change in power (delta_p) and related parameters based on damping
-        characteristics, considering variations for nominal, minimum, and maximum parameters.
+        Calculates the change in active power (delta_p) and related parameters based
+        on damping characteristics, considering variations for nominal, minimum, and
+        maximum parameters.
 
         Parameters
         ----------
@@ -99,11 +103,16 @@ class PhaseJump(GFMCalculator):
         tuple[bool, list, np.ndarray, np.ndarray, list, list]
             A tuple containing:
             - is_overdamped: True if the initial system is overdamped, False otherwise.
-            - delta_p_array: List of delta_p arrays for original, min, and max parameter variations.
-            - delta_p_min: delta_p array specifically calculated for the minimum parameter case.
-            - delta_p_max: delta_p array specifically calculated for the maximum parameter case.
-            - p_peak_array: List of p_peak values for original, min, and max parameter variations.
-            - epsilon_array: List of epsilon values for original, min, and max parameter variations.
+            - delta_p_array: List of delta_p arrays for original, min, and max parameter
+              variations.
+            - delta_p_min: delta_p array specifically calculated for the minimum
+              parameter case.
+            - delta_p_max: delta_p array specifically calculated for the maximum
+              parameter case.
+            - p_peak_array: List of p_peak values for original, min, and max parameter
+              variations.
+            - epsilon_array: List of epsilon values for original, min, and max parameter
+              variations.
         """
         x_gr = 1 / self._gfm_params.SCR  # Grid reactance derived from SCR
         x_total_initial = (
@@ -143,16 +152,21 @@ class PhaseJump(GFMCalculator):
             delta_p_min = self._get_underdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_underdamped_delta_p_max(D, H, Xeff, time_array, event_time)
 
-        if self._debug:
-            # Print debug information for delta_p values.
-            print(f"DeltaP Nom {delta_p_array[self._ORIGINAL_PARAMS_IDX]}")
-            print(f"DeltaP Min {delta_p_array[self._MINIMUM_PARAMS_IDX]}")
-            print(f"DeltaP Max {delta_p_array[self._MAXIMUM_PARAMS_IDX]}")
-            print(f"P Min {delta_p_min}")
-            print(f"P Max {delta_p_max}")
+        # Print debug information for delta_p values.
+        dycov_logging.get_logger("PhaseJump").debug(
+            f"DeltaP Nom {delta_p_array[self._ORIGINAL_PARAMS_IDX]}"
+        )
+        dycov_logging.get_logger("PhaseJump").debug(
+            f"DeltaP Min {delta_p_array[self._MINIMUM_PARAMS_IDX]}"
+        )
+        dycov_logging.get_logger("PhaseJump").debug(
+            f"DeltaP Max {delta_p_array[self._MAXIMUM_PARAMS_IDX]}"
+        )
+        dycov_logging.get_logger("PhaseJump").debug(f"P Min {delta_p_min}")
+        dycov_logging.get_logger("PhaseJump").debug(f"P Max {delta_p_max}")
 
-        # Return all calculated delta_p arrays, p_peak values, and damping information.
-        # The boolean indicates if the initial system is overdamped.
+        # Return all calculated delta_p arrays, p_peak values, and damping
+        # information. The boolean indicates if the initial system is overdamped.
         return (
             epsilon_initial_check > self._EPSILON_THRESHOLD,
             delta_p_array,
@@ -172,9 +186,10 @@ class PhaseJump(GFMCalculator):
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates and limits the final power envelopes (PCC power, upper envelope, lower envelope).
-        This involves combining various delta_p calculations, applying a time-dependent tunnel effect,
-        and enforcing operational limits.
+        Calculates and limits the final active power envelopes (PCC power, upper
+        envelope, lower envelope). This involves combining various delta_p
+        calculations, applying a time-dependent tunnel effect, and enforcing
+        operational limits.
 
         Parameters
         ----------
@@ -195,11 +210,13 @@ class PhaseJump(GFMCalculator):
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - p_pcc_final: The final calculated power at the point of common coupling.
-            - p_up_final: The final upper power envelope.
-            - p_down_final: The final lower power envelope.
+            - p_pcc_final: The final calculated active power at the point of common
+              coupling.
+            - p_up_final: The final upper active power envelope.
+            - p_down_final: The final lower active power envelope.
         """
-        # Extract the original (nominal) delta_p and p_peak values from the provided lists.
+        # Extract the original (nominal) delta_p and p_peak values from the provided
+        # lists.
         delta_p = delta_p_array[self._ORIGINAL_PARAMS_IDX]
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
 
@@ -209,37 +226,36 @@ class PhaseJump(GFMCalculator):
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
 
-        # Calculate the theoretical power at the Point of Common Coupling (PCC).
+        # Calculate the theoretical active power at the point of Common Coupling (PCC).
         # This is based on the initial power (P0) and delta_p, adjusted by the sign
         # of delta_theta to reflect the direction of power change.
         p_pcc = self._gfm_params.P0 + delta_p * -(
             self._gfm_params.delta_theta / np.abs(self._gfm_params.delta_theta)
         )
-        # Clip the calculated PCC power to stay within defined minimum and maximum power limits.
+        # Clip the calculated PCC power to stay within defined minimum and maximum
+        # power limits.
         p_pcc = self._cut_signal(self._gfm_params.PMin, p_pcc, self._gfm_params.PMax)
 
-        # Combine all relevant delta_p arrays into a single list for envelope calculations.
-        # This includes nominal, min/max D/H variations, and the specific min/max delta_p.
+        # Combine all relevant delta_p arrays into a single list for envelope
+        # calculations. This includes nominal, min/max D/H variations, and the
+        # specific min/max delta_p.
         list_of_arrays = delta_p_array + [delta_p_min, delta_p_max]
 
-        # Calculate initial unlimited power envelopes (down and up) by considering
-        # the minimum/maximum of all delta_p arrays and applying the time-dependent tunnel.
+        # Calculate initial unlimited active power envelopes (down and up) by
+        # considering the minimum/maximum of all delta_p arrays and applying the
+        # time-dependent tunnel.
         pdown_no_p0, pup_no_p0 = self._calculate_unlimited_power_envelopes(
             list_of_arrays, tunnel_time_dep
         )
-        if self._debug:
-            print(f"Pdown No P0 {pdown_no_p0}")
-            print(f"Pup No P0 {pup_no_p0}")
 
-        # Apply final operational limits to the power envelopes using a constant tunnel value.
+        # Apply final operational limits to the active power envelopes using a
+        # constant tunnel value.
         pdown_limited, pup_limited = self._limit_power_envelopes(
             pdown_no_p0, pup_no_p0, self._get_tunnel(p_peak_array)
         )
-        if self._debug:
-            print(f"Pdown Limited {pdown_limited}")
-            print(f"Pup Limited {pup_limited}")
 
-        # If EMT simulation flag is true, apply a small delay to the final power signals.
+        # If EMT simulation flag is true, apply a small delay to the final power
+        # signals.
         if self._gfm_params.EMT:
             p_up_final = self._apply_delay(0.02, pup_limited[0], time_array, pup_limited)
             p_down_final = self._apply_delay(0.02, pdown_limited[0], time_array, pdown_limited)
@@ -250,14 +266,15 @@ class PhaseJump(GFMCalculator):
             p_down_final = pdown_limited
             p_pcc_final = p_pcc
 
-        # Ensure that the upper envelope is always greater than or equal to the lower envelope
-        # at the end of the simulation. If not, swap them.
+        # Ensure that the upper envelope is always greater than or equal to the
+        # lower envelope at the end of the simulation. If not, swap them.
         if p_up_final[-1] < p_down_final[-1]:
             p_temp = p_down_final
             p_down_final = p_up_final
             p_up_final = p_temp
 
-        # Return the final calculated power signals for PCC, upper envelope, and lower envelope.
+        # Return the final calculated power signals for PCC, upper envelope, and
+        # lower envelope.
         return p_pcc_final, p_up_final, p_down_final
 
     def _calculate_common_params(self, D: float, H: float, Xeff: float) -> tuple:
@@ -294,7 +311,8 @@ class PhaseJump(GFMCalculator):
 
         # Calculate damping ratio (epsilon) based on D, H, and reactances/voltages.
         epsilon = D / 2 * np.sqrt(x_total_initial / (2 * H * self._gfm_params.Wb * u_prod))
-        # Calculate natural frequency (wn) based on H, reactances/voltages, and base frequency.
+        # Calculate natural frequency (wn) based on H, reactances/voltages, and base
+        # frequency.
         wn = np.sqrt(self._gfm_params.Wb * u_prod / (2 * H * x_total_initial))
 
         # Convert delta_theta from degrees to radians and calculate peak power.
@@ -385,8 +403,8 @@ class PhaseJump(GFMCalculator):
     ) -> tuple[np.ndarray, float, float]:
         """
         Calculates the fundamental delta_p waveform and related parameters for
-        an overdamped system response, without applying event time conditions or margins.
-        This represents the raw dynamic behavior.
+        an overdamped system response, without applying event time conditions or
+        margins. This represents the raw dynamic behavior.
 
         Parameters
         ----------
@@ -407,7 +425,8 @@ class PhaseJump(GFMCalculator):
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        # Calculate common parameters like epsilon, natural frequency (wn), and peak power (p_peak).
+        # Calculate common parameters like epsilon, natural frequency (wn), and peak
+        # power (p_peak).
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         # Calculate the damped natural frequency specific to an overdamped system.
         wd = wn * np.sqrt(epsilon**2 - 1)
@@ -455,11 +474,13 @@ class PhaseJump(GFMCalculator):
         -------
         tuple[np.ndarray, float, float]
             A tuple containing:
-            - delta_p: The delta_p array for the overdamped system, with pre-event values zeroed.
+            - delta_p: The delta_p array for the overdamped system, with pre-event
+              values zeroed.
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        # Get the base delta_p waveform, peak power, and damping ratio for an overdamped system.
+        # Get the base delta_p waveform, peak power, and damping ratio for an
+        # overdamped system.
         delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         # Set delta_p to 0 for all time points occurring before the event_time.
         delta_p = np.where(time_array < event_time, 0, delta_p1)
@@ -470,7 +491,8 @@ class PhaseJump(GFMCalculator):
     ) -> np.ndarray:
         """
         Calculates the minimum delta_p for an overdamped system, by applying
-        a lower margin to the base delta_p waveform and setting pre-event values to zero.
+        a lower margin to the base delta_p waveform and setting pre-event values to
+        zero.
 
         Parameters
         ----------
@@ -538,8 +560,8 @@ class PhaseJump(GFMCalculator):
     ) -> tuple[np.ndarray, float, float]:
         """
         Calculates the fundamental delta_p waveform and related parameters for
-        an underdamped system response, without applying event time conditions or margins.
-        This represents the raw dynamic behavior including oscillations.
+        an underdamped system response, without applying event time conditions or
+        margins. This represents the raw dynamic behavior including oscillations.
 
         Parameters
         ----------
@@ -560,13 +582,15 @@ class PhaseJump(GFMCalculator):
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        # Calculate common parameters like epsilon, natural frequency (wn), and peak power (p_peak).
+        # Calculate common parameters like epsilon, natural frequency (wn), and peak
+        # power (p_peak).
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         # Calculate the damped natural frequency specific to an underdamped system.
         wd = wn * np.sqrt(1 - epsilon**2)
 
         # Calculate individual terms of the delta_p1 equation, which involves
-        # exponential decay and sinusoidal oscillation characteristic of an underdamped system.
+        # exponential decay and sinusoidal oscillation characteristic of an
+        # underdamped system.
         term1 = np.exp(-epsilon * wn * time_array)
         term2 = np.cos(wd * time_array)
         term3 = np.sin(wd * time_array)
@@ -599,11 +623,13 @@ class PhaseJump(GFMCalculator):
         -------
         tuple[np.ndarray, float, float]
             A tuple containing:
-            - delta_p: The delta_p array for the underdamped system, with pre-event values zeroed.
+            - delta_p: The delta_p array for the underdamped system, with pre-event
+              values zeroed.
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        # Get the base delta_p waveform, peak power, and damping ratio for an underdamped system.
+        # Get the base delta_p waveform, peak power, and damping ratio for an
+        # underdamped system.
         delta_p1, p_peak, epsilon = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         # Set delta_p to 0 for all time points occurring before the event_time.
         delta_p = np.where(time_array < event_time, 0, delta_p1)
@@ -614,8 +640,8 @@ class PhaseJump(GFMCalculator):
     ) -> np.ndarray:
         """
         Calculates the minimum delta_p for an underdamped system, by applying
-        a lower margin and an exponential decay, then setting pre-event values to zero.
-        This represents the lower bound of the oscillating response.
+        a lower margin and an exponential decay, then setting pre-event values to
+        zero. This represents the lower bound of the oscillating response.
 
         Parameters
         ----------
@@ -639,7 +665,8 @@ class PhaseJump(GFMCalculator):
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         # Calculate the decay rate (sigma) for the exponential envelope.
         sigma = D / (4 * H)
-        # Apply the lower margin and an exponential decay to the peak power to get the margined delta_p.
+        # Apply the lower margin and an exponential decay to the peak power to get
+        # the margined delta_p.
         delta_p_margined = p_peak * (1 - self._gfm_params.MarginLow) * np.exp(-sigma * time_array)
         # Apply a small delay to the margined delta_p.
         delta_p_delayed = self._apply_delay(0.01, 0, time_array, delta_p_margined)
@@ -652,8 +679,8 @@ class PhaseJump(GFMCalculator):
     ) -> np.ndarray:
         """
         Calculates the maximum delta_p for an underdamped system, by applying
-        an upper margin and an exponential decay, then setting pre-event values to zero.
-        This represents the upper bound of the oscillating response.
+        an upper margin and an exponential decay, then setting pre-event values to
+        zero. This represents the upper bound of the oscillating response.
 
         Parameters
         ----------
@@ -677,10 +704,11 @@ class PhaseJump(GFMCalculator):
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         # Calculate the decay rate (sigma) for the exponential envelope.
         sigma = D / (4 * H)
-        # Apply the upper margin and an exponential decay to the peak power to get the margined delta_p.
+        # Apply the upper margin and an exponential decay to the peak power to get
+        # the margined delta_p.
         delta_p_margined = p_peak * (1 + self._gfm_params.MarginHigh) * np.exp(-sigma * time_array)
-        # Apply a small delay to the margined delta_p, using the first value of the margined signal
-        # as the fill value for the delay period.
+        # Apply a small delay to the margined delta_p, using the first value of the
+        # margined signal as the fill value for the delay period.
         delta_p_delayed = self._apply_delay(
             0.01, delta_p_margined[0], time_array, delta_p_margined
         )
@@ -699,17 +727,21 @@ class PhaseJump(GFMCalculator):
         Parameters
         ----------
         list_of_arrays : list[np.ndarray]
-            A list of delta_p arrays (e.g., nominal, min/max D/H variations, specific min/max delta_p)
-            to be used for determining the overall minimum and maximum response.
+            A list of delta_p arrays (e.g., nominal, min/max D/H variations, specific
+            min/max delta_p) to be used for determining the overall minimum and maximum
+            response.
         tunnel : np.ndarray
-            The time-dependent tunnel response array, which defines the dynamic width of the band.
+            The time-dependent tunnel response array, which defines the dynamic width of
+            the band.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             A tuple containing:
-            - pdown_no_p0: The calculated lower power envelope, without considering the initial power (P0).
-            - pup_no_p0: The calculated upper power envelope, without considering the initial power (P0).
+            - pdown_no_p0: The calculated lower power envelope, without considering the
+              initial power (P0).
+            - pup_no_p0: The calculated upper power envelope, without considering the
+              initial power (P0).
         """
         # Calculate the lower envelope by taking the minimum across all delta_p arrays
         # and then subtracting the time-dependent tunnel.
@@ -728,7 +760,8 @@ class PhaseJump(GFMCalculator):
         """
         Applies final operational limits to the calculated power down and power up
         envelopes. This involves incorporating the initial power (P0) and clipping
-        the signals based on system-defined minimum/maximum power and a constant tunnel value.
+        the signals based on system-defined minimum/maximum power and a constant
+        tunnel value.
 
         Parameters
         ----------
@@ -737,7 +770,8 @@ class PhaseJump(GFMCalculator):
         pup_no_p0 : np.ndarray
             The unlimited power up signal, not yet adjusted by initial power P0.
         tunnel_value : float
-            The constant tunnel value used for final limiting, defining the static band width.
+            The constant tunnel value used for final limiting, defining the static
+            band width.
 
         Returns
         -------
@@ -765,7 +799,8 @@ class PhaseJump(GFMCalculator):
         # Limit the upper power envelope (pup_limited):
         # 1. Adjust the 'pup_no_p0' by adding the initial power P0 and applying
         #    the delta_theta_sign. Note the multiplication by -1, which effectively
-        #    flips the direction of the change for the upper envelope in this context.
+        #    flips the direction of the change for the upper envelope in this
+        #    context.
         # 2. Ensure the resulting signal stays within the global PMin and PMax limits.
         pup_limited = np.minimum(
             np.maximum(
@@ -795,10 +830,11 @@ class PhaseJump(GFMCalculator):
         """
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
         # The tunnel value is the greater of a fixed minimum (FinalAllowedTunnelPn)
-        # or a value proportional to the peak power (FinalAllowedTunnelVariation * p_peak).
+        # or a value proportional to the peak power (FinalAllowedTunnelVariation *
+        # p_peak).
         return max(
             self._gfm_params.FinalAllowedTunnelPn,  # Fixed power component
-            self._gfm_params.FinalAllowedTunnelVariation * p_peak,  # Proportional component
+            self._gfm_params.FinalAllowedTunnelVariation * p_peak,
         )
 
     def _get_time_tunnel(
@@ -806,8 +842,9 @@ class PhaseJump(GFMCalculator):
     ) -> np.ndarray:
         """
         Calculates a time-dependent "tunnel" array. This array represents
-        a dynamic band around the power response that expands over time after an event.
-        It starts at zero before the event and increases exponentially towards a final magnitude.
+        a dynamic band around the power response that expands over time after an
+        event. It starts at zero before the event and increases exponentially
+        towards a final magnitude.
 
         Parameters
         ----------
@@ -829,13 +866,14 @@ class PhaseJump(GFMCalculator):
             self._gfm_params.FinalAllowedTunnelPn,
             self._gfm_params.FinalAllowedTunnelVariation * p_peak,
         )
-        # Calculate the exponential component that defines the tunnel's growth over time.
-        # The (time_array - 0.02) term effectively shifts the exponential start, and 0.3
-        # controls the rate of growth.
+        # Calculate the exponential component that defines the tunnel's growth over
+        # time. The (time_array - 0.02) term effectively shifts the exponential start,
+        # and 0.3 controls the rate of growth.
         tunnel_exp = 1 - np.exp((-time_array + 0.02) / 0.3)
         # Scale the exponential component by the final tunnel value.
         tunnel = t_val * tunnel_exp
-        # Ensure that the tunnel value is zero for all time points before the event_time.
+        # Ensure that the tunnel value is zero for all time points before the
+        # event_time.
         return np.where(time_array < event_time, 0, tunnel)
 
     def _apply_delay(
@@ -853,7 +891,8 @@ class PhaseJump(GFMCalculator):
         delayed_value : float
             The constant value to fill the signal during the delay period.
         time_array : np.ndarray
-            The time array corresponding to the `signal`. Assumed to have a constant time step.
+            The time array corresponding to the `signal`. Assumed to have a constant
+            time step.
         signal : np.ndarray
             The original signal (waveform) to be delayed.
 
@@ -863,8 +902,9 @@ class PhaseJump(GFMCalculator):
             The delayed signal, which has the same length as the original `signal`.
         """
         if len(time_array) < 2:
-            # If there are fewer than 2 time points, a sampling frequency cannot be determined,
-            # so return the original signal as no delay can be applied meaningfully.
+            # If there are fewer than 2 time points, a sampling frequency cannot be
+            # determined, so return the original signal as no delay can be applied
+            # meaningfully.
             return signal
         fs = time_array[1] - time_array[0]  # Calculate the sampling interval (time step).
 

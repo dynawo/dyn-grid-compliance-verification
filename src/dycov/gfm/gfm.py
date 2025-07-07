@@ -35,7 +35,9 @@ class GridForming:
         dycov_logging.get_logger("GridForming").debug(
             f"Input Params D={damping_constant} H={inertia_constant} Xeff {x_eff}"
         )
-        calculator = calculator_factory.get_calculator(gfm_params, pcs_name, bm_name)
+        calculator = calculator_factory.get_calculator(
+            self._parameters.get_calculator_name(pcs_name, bm_name), gfm_params
+        )
         title, p_pcc, p_up, p_down = self._calculate_envelopes(
             calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
         )
@@ -69,7 +71,8 @@ class GridForming:
         )
 
         title = f"{self._pcs_name}.{self._bm_name}.{self._oc_name}"
-        title += f".{'Overdamped' if is_overdamped else 'Underdamped'}"
+        if is_overdamped is not None:
+            title += f".{'Overdamped' if is_overdamped else 'Underdamped'}"
         return title, p_pcc, p_up, p_down
 
     def _export_csv(self, working_path, title, time_array, p_pcc, p_down, p_up):
