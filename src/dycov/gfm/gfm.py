@@ -36,7 +36,7 @@ class GridForming:
             f"Input Params D={damping_constant} H={inertia_constant} Xeff {x_eff}"
         )
         calculator = calculator_factory.get_calculator(gfm_params, pcs_name, bm_name)
-        title, p_pcc, p_up, p_down = self._calculate(
+        title, p_pcc, p_up, p_down = self._calculate_envelopes(
             calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
         )
         self._export_csv(working_path, title, time_array, p_pcc, p_down, p_up)
@@ -51,30 +51,19 @@ class GridForming:
 
         return time_array, event_time
 
-    def _calculate(
+    def _calculate_envelopes(
         self, calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
     ):
 
         (
             is_overdamped,
-            delta_p_array,
-            delta_p_min,
-            delta_p_max,
-            p_peak_array,
-            _,
-        ) = calculator.get_delta_p(
+            p_pcc,
+            p_up,
+            p_down,
+        ) = calculator.calculate_envelopes(
             D=damping_constant,
             H=inertia_constant,
             Xeff=x_eff,
-            time_array=time_array,
-            event_time=event_time,
-        )
-
-        p_pcc, p_up, p_down = calculator.get_envelopes(
-            delta_p_array=delta_p_array,
-            delta_p_min=delta_p_min,
-            delta_p_max=delta_p_max,
-            p_peak_array=p_peak_array,
             time_array=time_array,
             event_time=event_time,
         )
