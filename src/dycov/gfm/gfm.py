@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from dycov.gfm.calculators.phase_jump import PhaseJump
+from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
@@ -35,8 +35,9 @@ class GridForming:
         dycov_logging.get_logger("GridForming").debug(
             f"Input Params D={damping_constant} H={inertia_constant} Xeff {x_eff}"
         )
-        title, p_pcc, p_up, p_down = self._phase_jump(
-            gfm_params, time_array, event_time, damping_constant, inertia_constant, x_eff
+        calculator = calculator_factory.get_calculator(gfm_params, pcs_name, bm_name)
+        title, p_pcc, p_up, p_down = self._calculate(
+            calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
         )
         self._export_csv(working_path, title, time_array, p_pcc, p_down, p_up)
         self._plot(working_path, title, time_array, event_time, p_pcc, p_down, p_up)
@@ -50,11 +51,10 @@ class GridForming:
 
         return time_array, event_time
 
-    def _phase_jump(
-        self, gfm_params, time_array, event_time, damping_constant, inertia_constant, x_eff
+    def _calculate(
+        self, calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
     ):
 
-        phase_jump = PhaseJump(gfm_params=gfm_params)
         (
             is_overdamped,
             delta_p_array,
@@ -62,7 +62,7 @@ class GridForming:
             delta_p_max,
             p_peak_array,
             _,
-        ) = phase_jump.get_delta_p(
+        ) = calculator.get_delta_p(
             D=damping_constant,
             H=inertia_constant,
             Xeff=x_eff,
@@ -70,7 +70,7 @@ class GridForming:
             event_time=event_time,
         )
 
-        p_pcc, p_up, p_down = phase_jump.get_envelopes(
+        p_pcc, p_up, p_down = calculator.get_envelopes(
             delta_p_array=delta_p_array,
             delta_p_min=delta_p_min,
             delta_p_max=delta_p_max,
