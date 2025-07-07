@@ -12,9 +12,9 @@ from pathlib import Path
 
 import numpy as np
 
+from dycov.gfm.calculators.phase_jump import PhaseJump
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.gfm.phase_jump import PhaseJump
 from dycov.logging.logging import dycov_logging
 
 

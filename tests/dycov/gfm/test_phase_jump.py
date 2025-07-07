@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from dycov.gfm.phase_jump import GFM_Params, PhaseJump
+from dycov.gfm.calculators.phase_jump import GFM_Params, PhaseJump
 
 # Float tolerance
 epsilon = 1e-3
