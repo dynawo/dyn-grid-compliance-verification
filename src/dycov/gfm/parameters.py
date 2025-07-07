@@ -92,6 +92,10 @@ class GFMParameters(Parameters):
         """
         return self._producer.is_gfm()
 
+    def get_calculator_name(self, pcs_name: str, bm_name: str) -> str:
+        section = f"{pcs_name}.{bm_name}"
+        return config.get_value(section, "calculator")
+
     def get_effective_reactance(self, pcs_name: str, bm_name: str, oc_name: str) -> float:
         section = f"{pcs_name}.{bm_name}.{oc_name}"
         x_eff = self.__get_effective_reactance(section)
