@@ -17,7 +17,6 @@ from dycov.core.validator import Validator
 from dycov.curves.curves import get_cfg_oc_name
 from dycov.gfm.gfm import GridForming
 from dycov.logging.logging import dycov_logging
-from dycov.model.producer import Producer
 
 
 class OperatingCondition:
