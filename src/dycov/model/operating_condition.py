@@ -137,7 +137,7 @@ class OperatingCondition:
         self,
         working_path: Path,
     ):
-        gfm = GridForming(self._parameters)
+        gfm = GridForming(self._parameters, self._pcs_name, self._bm_name, self._name)
         gfm.generate(working_path, self._pcs_name, self._bm_name, self._name)
 
     def get_name(self) -> str:
