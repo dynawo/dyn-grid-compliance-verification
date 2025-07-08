@@ -11,7 +11,6 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
-from dycov.logging.logging import dycov_logging
 
 
 class AmplitudeStep(GFMCalculator):
@@ -22,8 +21,8 @@ class AmplitudeStep(GFMCalculator):
     """
 
     def calculate_envelopes(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+    ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates the change in power (delta_q) and reactive power envelopes
         (PCC, upper, and lower) based on damping characteristics for an
@@ -37,17 +36,16 @@ class AmplitudeStep(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points for simulation.
         event_time : float
             The time (in seconds) at which the amplitude step event occurs.
 
         Returns
         -------
-        tuple[bool, np.ndarray, np.ndarray, np.ndarray]
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - is_overdamped: True if the initial system is overdamped, False
-              otherwise.
+            - magnitude: Name of the calculated magnitude.
             - q_pcc_final: The final calculated reactive power at the point of
               common coupling.
             - q_up_final: The final upper reactive power envelope.
@@ -73,10 +71,10 @@ class AmplitudeStep(GFMCalculator):
             event_time=event_time,
             Xeff=Xeff,
         )
-        return None, q_pcc, q_up, q_down
+        return "Q", q_pcc, q_up, q_down
 
     def _get_delta_q(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list, np.ndarray, np.ndarray]:
         """
         Calculates the change in reactive power (delta_q) and related
@@ -91,7 +89,7 @@ class AmplitudeStep(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points for simulation.
         event_time : float
             The time (in seconds) at which the amplitude step event occurs.
@@ -129,19 +127,6 @@ class AmplitudeStep(GFMCalculator):
         delta_q_min = self._get_delta_q_min(D, H, Xeff, time_array, event_time)
         delta_q_max = self._get_delta_q_max(D, H, Xeff, time_array, event_time)
 
-        # Print debug information for delta_q values.
-        dycov_logging.get_logger("AmplitudeStep").debug(
-            f"DeltaQ Nom {delta_q_array[self._ORIGINAL_PARAMS_IDX]}"
-        )
-        dycov_logging.get_logger("AmplitudeStep").debug(
-            f"DeltaQ Min {delta_q_array[self._MINIMUM_PARAMS_IDX]}"
-        )
-        dycov_logging.get_logger("AmplitudeStep").debug(
-            f"DeltaQ Max {delta_q_array[self._MAXIMUM_PARAMS_IDX]}"
-        )
-        dycov_logging.get_logger("AmplitudeStep").debug(f"Q Min {delta_q_min}")
-        dycov_logging.get_logger("AmplitudeStep").debug(f"Q Max {delta_q_max}")
-
         # Return all calculated delta_q arrays, p_peak values, and damping
         # information. The boolean indicates if the initial system is overdamped.
         return (
@@ -155,7 +140,7 @@ class AmplitudeStep(GFMCalculator):
         delta_q_array: list,
         delta_q_min: np.ndarray,
         delta_q_max: np.ndarray,
-        time_array: np.array,
+        time_array: np.ndarray,
         event_time: float,
         Xeff: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -173,7 +158,7 @@ class AmplitudeStep(GFMCalculator):
             delta_q array calculated with minimum parameters.
         delta_q_max : np.ndarray
             delta_q array calculated with maximum parameters.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -217,12 +202,11 @@ class AmplitudeStep(GFMCalculator):
         if self._gfm_params.EMT:
             q_up_final = self._apply_delay(0.02, q_up[0], time_array, q_up)
             q_down_final = self._apply_delay(0.02, q_down[0], time_array, q_down)
-            q_pcc_final = self._apply_delay(0.02, q_pcc[0], time_array, q_pcc)
         else:
             # Otherwise, the limited envelopes are the final envelopes.
             q_up_final = q_up
             q_down_final = q_down
-            q_pcc_final = q_pcc
+        q_pcc_final = q_pcc
 
         # Ensure that the upper envelope is always greater than or equal to the
         # lower envelope at the end of the simulation. If not, swap them.
@@ -236,7 +220,7 @@ class AmplitudeStep(GFMCalculator):
         return q_pcc_final, q_up_final, q_down_final
 
     def _get_delta_q_base(
-        self, D: float, H: float, Xeff: float, time_array: np.array
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> np.ndarray:
         """
         Calculates the fundamental delta_q waveform for an overdamped system
@@ -251,7 +235,7 @@ class AmplitudeStep(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
 
         Returns
@@ -280,7 +264,7 @@ class AmplitudeStep(GFMCalculator):
         D: float,
         H: float,
         Xeff: float,
-        time_array: np.array,
+        time_array: np.ndarray,
         event_time: float,
     ) -> np.ndarray:
         """
@@ -295,7 +279,7 @@ class AmplitudeStep(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -312,7 +296,7 @@ class AmplitudeStep(GFMCalculator):
         return delta_q
 
     def _get_delta_q_min(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the minimum delta_q for an overdamped system, by applying
@@ -327,7 +311,7 @@ class AmplitudeStep(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -356,7 +340,7 @@ class AmplitudeStep(GFMCalculator):
         return delta_q
 
     def _get_delta_q_max(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the maximum delta_q for an overdamped system, by applying
@@ -371,7 +355,7 @@ class AmplitudeStep(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -431,83 +415,3 @@ class AmplitudeStep(GFMCalculator):
             self._gfm_params.FinalAllowedTunnelPn,  # Fixed power component
             self._gfm_params.FinalAllowedTunnelVariation * delta_iq,
         )
-
-    def _apply_delay(
-        self, delay: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
-    ) -> np.ndarray:
-        """
-        Applies a time delay to a given signal. The delay is implemented by
-        prepending a constant `delayed_value` for the duration of the `delay`
-        time. The output signal is truncated to the original signal's length.
-
-        Parameters
-        ----------
-        delay : float
-            The desired delay time in seconds.
-        delayed_value : float
-            The constant value to fill the signal during the delay period.
-        time_array : np.ndarray
-            The time array corresponding to the `signal`. Assumed to have a
-            constant time step.
-        signal : np.ndarray
-            The original signal (waveform) to be delayed.
-
-        Returns
-        -------
-        np.ndarray
-            The delayed signal, which has the same length as the original
-            `signal`.
-        """
-        if len(time_array) < 2:
-            # If there are fewer than 2 time points, a sampling frequency
-            # cannot be determined, so return the original signal as no delay
-            # can be applied meaningfully.
-            return signal
-        # Calculate the sampling interval.
-        fs = time_array[1] - time_array[0]
-
-        # Calculate the number of samples corresponding to the desired delay.
-        # Rounding is used to get an integer number of samples.
-        delay_samples = int(round(delay / fs))
-
-        if delay_samples >= len(time_array):
-            # If the calculated delay in samples is greater than or equal to
-            # the length of the original signal, the entire signal will
-            # effectively be replaced by the `delayed_value`.
-            return np.full_like(signal, delayed_value)
-
-        # Create an array filled with `delayed_value` for the duration of
-        # the delay.
-        sample = np.full(delay_samples, delayed_value)
-        # Concatenate this delay 'prefix' with the original signal.
-        # Then, truncate the combined array to the original signal's length,
-        # effectively shifting the signal values.
-        return np.concatenate((sample, signal))[: len(time_array)]
-
-    def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
-        """
-        Clips the values of a given signal array to ensure they stay
-        within a specified minimum (`value_min`) and maximum (`value_max`)
-        range. Values below `value_min` are set to `value_min`, and values
-        above `value_max` are set to `value_max`.
-
-        Parameters
-        ----------
-        value_min : float
-            The minimum allowed value for the signal.
-        signal : np.ndarray
-            The input signal array whose values need to be clipped.
-        value_max : float
-            The maximum allowed value for the signal.
-
-        Returns
-        -------
-        np.ndarray
-            The signal with its values clipped within the specified limits.
-        """
-        # Use np.where to efficiently apply the clipping.
-        # First, ensure no value is below value_min.
-        signal = np.where(signal < value_min, value_min, signal)
-        # Second, ensure no value is above value_max.
-        signal = np.where(signal > value_max, value_max, signal)
-        return signal
