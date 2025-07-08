@@ -661,8 +661,14 @@ class Benchmark:
                 f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, "
                 f"OPER. COND.: {op_cond.get_name()}"
             )
-            working_dir = self._working_dir / self._pcs_name / self._name / op_cond.get_name()
-            op_cond.generate(working_dir)
+            working_oc_dir = (
+                self._working_dir
+                / self._producer_name
+                / self._pcs_name
+                / self._name
+                / op_cond.get_name()
+            )
+            op_cond.generate(working_oc_dir)
 
     def get_name(self) -> str:
         """Get the benchmark name.
