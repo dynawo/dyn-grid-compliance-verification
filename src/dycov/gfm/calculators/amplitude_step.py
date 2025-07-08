@@ -1,4 +1,4 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # (c) 2025 RTE
@@ -96,10 +96,8 @@ class AmplitudeStep(GFMCalculator):
 
         Returns
         -------
-        tuple[bool, list, np.ndarray, np.ndarray, list, list]
+        tuple[list, np.ndarray, np.ndarray]
             A tuple containing:
-            - is_overdamped: True if the initial system is overdamped, False
-              otherwise.
             - delta_q_array: List of delta_q arrays for original, min, and max
               parameter variations.
             - delta_q_min: delta_q array specifically calculated for the minimum
@@ -107,28 +105,20 @@ class AmplitudeStep(GFMCalculator):
             - delta_q_max: delta_q array specifically calculated for the maximum
               parameter case.
         """
-        # Prepare arrays for D (damping factor) and H (inertia constant)
-        # parameters, including nominal, minimum, and maximum variations.
         d_array = np.array([D, D * self._gfm_params.RatioMin, D * self._gfm_params.RatioMax])
         h_array = np.array([H, H / self._gfm_params.RatioMin, H / self._gfm_params.RatioMax])
 
-        # Stores delta_q for nominal, min, max D/H variations.
         delta_q_array = []
 
-        # Loop through parameter variations (nominal, min, max) to calculate
-        # delta_q, p_peak, and epsilon for each.
         for i in range(len(d_array)):
             delta_q = self._calculate_delta_q_for_damping(
                 d_array[i], h_array[i], Xeff, time_array, event_time
             )
             delta_q_array.append(delta_q)
 
-        # Calculate specific delta_q for min and max parameter cases.
         delta_q_min = self._get_delta_q_min(D, H, Xeff, time_array, event_time)
         delta_q_max = self._get_delta_q_max(D, H, Xeff, time_array, event_time)
 
-        # Return all calculated delta_q arrays, p_peak values, and damping
-        # information. The boolean indicates if the initial system is overdamped.
         return (
             delta_q_array,
             delta_q_min,
@@ -174,7 +164,6 @@ class AmplitudeStep(GFMCalculator):
             - q_up_final: The final upper reactive power envelope.
             - q_down_final: The final lower reactive power envelope.
         """
-        # Extract the original (nominal) delta_q from the provided lists.
         delta_q = delta_q_array[self._ORIGINAL_PARAMS_IDX]
 
         # Calculate the theoretical reactive power at the Point of Common
@@ -184,8 +173,6 @@ class AmplitudeStep(GFMCalculator):
         q_pcc = self._gfm_params.Q0 + delta_q * -(
             self._gfm_params.voltage_step / np.abs(self._gfm_params.voltage_step)
         )
-        # Clip the calculated PCC power to stay within defined minimum and
-        # maximum power limits.
         q_pcc = self._cut_signal(self._gfm_params.QMin, q_pcc, self._gfm_params.QMax)
 
         q_up = self._gfm_params.Q0 + np.minimum(
@@ -203,7 +190,6 @@ class AmplitudeStep(GFMCalculator):
             q_up_final = self._apply_delay(0.02, q_up[0], time_array, q_up)
             q_down_final = self._apply_delay(0.02, q_down[0], time_array, q_down)
         else:
-            # Otherwise, the limited envelopes are the final envelopes.
             q_up_final = q_up
             q_down_final = q_down
         q_pcc_final = q_pcc
@@ -215,8 +201,6 @@ class AmplitudeStep(GFMCalculator):
             q_down_final = q_up_final
             q_up_final = q_temp
 
-        # Return the final calculated power signals for PCC, upper envelope,
-        # and lower envelope.
         return q_pcc_final, q_up_final, q_down_final
 
     def _get_delta_q_base(
@@ -243,9 +227,7 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The base delta_q waveform.
         """
-        # Grid reactance, calculated from Short Circuit Ratio (SCR).
         x_gr = 1 / self._gfm_params.SCR
-        # Sum of effective reactance and grid reactance.
         x_total_initial = Xeff + x_gr
 
         voltage_step = self._gfm_params.voltage_step / 100.0
@@ -255,7 +237,6 @@ class AmplitudeStep(GFMCalculator):
 
         tau = -self._gfm_params.TimeTo90 / np.log(0.1)
 
-        # Calculate individual terms of the delta_q1 equation.
         delta_q1 = delta_iq * (1 - np.exp(-time_array / tau))
         return delta_q1
 
@@ -289,9 +270,7 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The delta_q array for the system, with pre-event values zeroed.
         """
-        # Get the base delta_q waveform.
         delta_q1 = self._get_delta_q_base(D, H, Xeff, time_array)
-        # Set delta_q to 0 for all time points occurring before the event_time.
         delta_q = np.where(time_array < event_time, 0, delta_q1)
         return delta_q
 
@@ -321,9 +300,7 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The minimum delta_q array for the overdamped system.
         """
-        # Grid reactance, calculated from Short Circuit Ratio (SCR).
         x_gr = 1 / self._gfm_params.SCR
-        # Sum of effective reactance and grid reactance.
         x_total_initial = Xeff + x_gr
 
         voltage_step = self._gfm_params.voltage_step / 100.0
@@ -366,9 +343,7 @@ class AmplitudeStep(GFMCalculator):
             The maximum delta_q array for the overdamped system.
         """
         ttunnel = self._gfm_params.TimeForTunnel
-        # Grid reactance, calculated from Short Circuit Ratio (SCR).
         x_gr = 1 / self._gfm_params.SCR
-        # Sum of effective reactance and grid reactance.
         x_total_initial = Xeff + x_gr
 
         voltage_step = self._gfm_params.voltage_step / 100.0
@@ -401,9 +376,7 @@ class AmplitudeStep(GFMCalculator):
         float
             The calculated constant tunnel value.
         """
-        # Grid reactance, calculated from Short Circuit Ratio (SCR).
         x_gr = 1 / self._gfm_params.SCR
-        # Sum of effective reactance and grid reactance.
         x_total_initial = Xeff + x_gr
 
         voltage_step = self._gfm_params.voltage_step / 100.0

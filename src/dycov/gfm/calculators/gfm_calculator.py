@@ -39,16 +39,13 @@ class GFMCalculator:
         gfm_params: GFM_Params
             An object containing all necessary parameters for GFM phase jump calculations.
         """
-        self._gfm_params = gfm_params  # Stores GFM system parameters
+        self._gfm_params = gfm_params
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
         Abstract method to be implemented by subclasses for calculating power envelopes.
-
-        This method is intended to calculate the power at the point of common coupling (PCC)
-        and its upper and lower envelopes based on specific event characteristics.
 
         Parameters
         ----------
@@ -67,56 +64,43 @@ class GFMCalculator:
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - magnitude: Name of the calculated magnitude.
-            - p_pcc_final: The final calculated power at the point of common coupling.
-            - p_up_final: The final upper power envelope.
-            - p_down_final: The final lower power envelope.
+            - str: Name of the calculated magnitude (e.g., "P", "Q").
+            - np.ndarray: The PCC (Point of Common Coupling) power data.
+            - np.ndarray: The upper envelope data.
+            - np.ndarray: The lower envelope data.
         """
-        pass  # This method is a placeholder and should be overridden by child classes.
+        raise NotImplementedError
 
     def _apply_delay(
-        self, delay: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
+        self, delay_time: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
     ) -> np.ndarray:
         """
-        Applies a time delay to a given signal. The delay is implemented by prepending
-        a constant `delayed_value` for the duration of the `delay` time. The output
-        signal is truncated to the original signal's length.
+        Applies a time delay to a given signal.
+
+        This method shifts the signal in time, filling the initial part of
+        the array with a specified `delayed_value` for the duration of the delay.
 
         Parameters
         ----------
-        delay : float
-            The desired delay time in seconds.
+        delay_time : float
+            The amount of time (in seconds) by which to delay the signal.
         delayed_value : float
-            The constant value to fill the signal during the delay period.
+            The value to use for the signal during the delay period.
         time_array : np.ndarray
-            The time array corresponding to the `signal`. Assumed to have a constant
-            time step.
+            The original time array of the signal.
         signal : np.ndarray
-            The original signal (waveform) to be delayed.
+            The input signal array to be delayed.
 
         Returns
         -------
         np.ndarray
-            The delayed signal, which has the same length as the original `signal`.
+            The delayed signal array, truncated to the original length.
         """
-        if len(time_array) < 2:
-            # If there are fewer than 2 time points, a sampling frequency cannot be
-            # determined, so return the original signal as no delay can be applied
-            # meaningfully.
-            return signal
-        fs = time_array[1] - time_array[0]  # Calculate the sampling interval (time step).
-
-        # Calculate the number of samples corresponding to the desired delay.
-        # Rounding is used to get an integer number of samples.
-        delay_samples = int(round(delay / fs))
-
-        if delay_samples >= len(time_array):
-            # If the calculated delay in samples is greater than or equal to the
-            # length of the original signal, the entire signal will effectively
-            # be replaced by the `delayed_value`.
-            return np.full_like(signal, delayed_value)
-
-        # Create an array filled with `delayed_value` for the duration of the delay.
+        # Calculate the number of samples corresponding to the delay time.
+        # Ensure at least one sample for the delay.
+        delay_samples = max(1, int(delay_time / (time_array[1] - time_array[0])))
+        # Create a 'prefix' array filled with `delayed_value` for the duration
+        # of the delay.
         sample = np.full(delay_samples, delayed_value)
         # Concatenate this delay 'prefix' with the original signal.
         # Then, truncate the combined array to the original signal's length,
@@ -144,9 +128,6 @@ class GFMCalculator:
         np.ndarray
             The signal with its values clipped within the specified limits.
         """
-        # Use np.where to efficiently apply the clipping.
-        # First, ensure no value is below value_min.
         signal = np.where(signal < value_min, value_min, signal)
-        # Second, ensure no value is above value_max.
         signal = np.where(signal > value_max, value_max, signal)
         return signal
