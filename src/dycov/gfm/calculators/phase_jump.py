@@ -23,8 +23,8 @@ class PhaseJump(GFMCalculator):
     """
 
     def calculate_envelopes(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+    ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates the change in power (delta_p) and active power envelopes (PCC,
         upper, and lower) based on damping characteristics for a phase jump event.
@@ -37,23 +37,22 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points for simulation.
         event_time : float
             The time (in seconds) at which the phase jump event occurs.
 
         Returns
         -------
-        tuple[bool, np.ndarray, np.ndarray, np.ndarray]
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - is_overdamped: True if the initial system is overdamped, False otherwise.
+            - magnitude: Name of the calculated magnitude.
             - p_pcc_final: The final calculated active power at the point of common
               coupling.
             - p_up_final: The final upper active power envelope.
             - p_down_final: The final lower active power envelope.
         """
         (
-            is_overdamped,
             delta_p_array,
             delta_p_min,
             delta_p_max,
@@ -75,11 +74,11 @@ class PhaseJump(GFMCalculator):
             time_array=time_array,
             event_time=event_time,
         )
-        return is_overdamped, p_pcc, p_up, p_down
+        return "P", p_pcc, p_up, p_down
 
     def _get_delta_p(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> tuple[bool, list, np.ndarray, np.ndarray, list, list]:
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+    ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]:
         """
         Calculates the change in active power (delta_p) and related parameters based
         on damping characteristics, considering variations for nominal, minimum, and
@@ -93,16 +92,15 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points for simulation.
         event_time : float
             The time (in seconds) at which the phase jump event occurs.
 
         Returns
         -------
-        tuple[bool, list, np.ndarray, np.ndarray, list, list]
+        tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]
             A tuple containing:
-            - is_overdamped: True if the initial system is overdamped, False otherwise.
             - delta_p_array: List of delta_p arrays for original, min, and max parameter
               variations.
             - delta_p_min: delta_p array specifically calculated for the minimum
@@ -118,23 +116,26 @@ class PhaseJump(GFMCalculator):
         x_total_initial = (
             Xeff + x_gr
         )  # Total initial reactance, sum of effective and grid reactances.
-        # Calculate initial epsilon to determine damping type (overdamped/underdamped).
-        epsilon_initial_check = self._calculate_epsilon_initial_check(D, H, x_total_initial)
 
         # Prepare arrays for D (damping factor) and H (inertia constant) parameters,
         # including nominal, minimum, and maximum variations.
         d_array = np.array([D, D * self._gfm_params.RatioMin, D * self._gfm_params.RatioMax])
         h_array = np.array([H, H / self._gfm_params.RatioMin, H / self._gfm_params.RatioMax])
 
-        delta_p_array = []  # Stores delta_p for nominal, min, max D/H variations
-        p_peak_array = []  # Stores p_peak for nominal, min, max D/H variations
-        epsilon_array = []  # Stores epsilon for nominal, min, max D/H variations
+        # Calculate initial epsilon to determine damping type (overdamped/underdamped).
+        epsilon_initial_check = self._calculate_epsilon_initial_check(
+            d_array, h_array, x_total_initial
+        )
+
+        delta_p_array: list[np.ndarray] = []  # Stores delta_p for nominal, min, max D/H variations
+        p_peak_array: list[float] = []  # Stores p_peak for nominal, min, max D/H variations
+        epsilon_array: list[float] = []  # Stores epsilon for nominal, min, max D/H variations
 
         # Loop through parameter variations (nominal, min, max) to calculate
         # delta_p, p_peak, and epsilon for each.
         for i in range(len(d_array)):
             delta_p, p_peak, epsilon = self._calculate_delta_p_for_damping(
-                d_array[i], h_array[i], Xeff, time_array, event_time, epsilon_initial_check
+                d_array[i], h_array[i], Xeff, time_array, event_time, epsilon_initial_check[i]
             )
             delta_p_array.append(delta_p)
             p_peak_array.append(p_peak)
@@ -143,7 +144,7 @@ class PhaseJump(GFMCalculator):
         # Calculate specific delta_p for min and max parameter cases using the
         # appropriate damping model (overdamped or underdamped) determined by
         # epsilon_initial_check.
-        if epsilon_initial_check > self._EPSILON_THRESHOLD:
+        if epsilon_initial_check[self._ORIGINAL_PARAMS_IDX] > self._EPSILON_THRESHOLD:
             # If overdamped, use overdamped specific min/max delta_p calculations.
             delta_p_min = self._get_overdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_overdamped_delta_p_max(D, H, Xeff, time_array, event_time)
@@ -152,23 +153,9 @@ class PhaseJump(GFMCalculator):
             delta_p_min = self._get_underdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_underdamped_delta_p_max(D, H, Xeff, time_array, event_time)
 
-        # Print debug information for delta_p values.
-        dycov_logging.get_logger("PhaseJump").debug(
-            f"DeltaP Nom {delta_p_array[self._ORIGINAL_PARAMS_IDX]}"
-        )
-        dycov_logging.get_logger("PhaseJump").debug(
-            f"DeltaP Min {delta_p_array[self._MINIMUM_PARAMS_IDX]}"
-        )
-        dycov_logging.get_logger("PhaseJump").debug(
-            f"DeltaP Max {delta_p_array[self._MAXIMUM_PARAMS_IDX]}"
-        )
-        dycov_logging.get_logger("PhaseJump").debug(f"P Min {delta_p_min}")
-        dycov_logging.get_logger("PhaseJump").debug(f"P Max {delta_p_max}")
-
         # Return all calculated delta_p arrays, p_peak values, and damping
-        # information. The boolean indicates if the initial system is overdamped.
+        # information.
         return (
-            epsilon_initial_check > self._EPSILON_THRESHOLD,
             delta_p_array,
             delta_p_min,
             delta_p_max,
@@ -178,11 +165,11 @@ class PhaseJump(GFMCalculator):
 
     def _get_envelopes(
         self,
-        delta_p_array: list,
+        delta_p_array: list[np.ndarray],
         delta_p_min: np.ndarray,
         delta_p_max: np.ndarray,
-        p_peak_array: list,
-        time_array: np.array,
+        p_peak_array: list[float],
+        time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -193,15 +180,15 @@ class PhaseJump(GFMCalculator):
 
         Parameters
         ----------
-        delta_p_array : list
+        delta_p_array : list[np.ndarray]
             List of delta_p arrays for original, min, and max parameters.
         delta_p_min : np.ndarray
             delta_p array calculated with minimum parameters.
         delta_p_max : np.ndarray
             delta_p array calculated with maximum parameters.
-        p_peak_array : list
+        p_peak_array : list[float]
             List of p_peak values for original, min, and max parameters.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -239,7 +226,7 @@ class PhaseJump(GFMCalculator):
         # Combine all relevant delta_p arrays into a single list for envelope
         # calculations. This includes nominal, min/max D/H variations, and the
         # specific min/max delta_p.
-        list_of_arrays = delta_p_array + [delta_p_min, delta_p_max]
+        list_of_arrays: list[np.ndarray] = delta_p_array + [delta_p_min, delta_p_max]
 
         # Calculate initial unlimited active power envelopes (down and up) by
         # considering the minimum/maximum of all delta_p arrays and applying the
@@ -277,7 +264,9 @@ class PhaseJump(GFMCalculator):
         # lower envelope.
         return p_pcc_final, p_up_final, p_down_final
 
-    def _calculate_common_params(self, D: float, H: float, Xeff: float) -> tuple:
+    def _calculate_common_params(
+        self, D: float, H: float, Xeff: float
+    ) -> tuple[float, float, float, float]:
         """
         Calculates common parameters required for delta_p calculations,
         such as total initial reactance (x_total_initial), damping ratio (epsilon),
@@ -294,7 +283,7 @@ class PhaseJump(GFMCalculator):
 
         Returns
         -------
-        tuple
+        tuple[float, float, float, float]
             A tuple containing:
             - x_total_initial: Total initial reactance.
             - epsilon: Damping ratio.
@@ -322,7 +311,7 @@ class PhaseJump(GFMCalculator):
         return x_total_initial, epsilon, wn, p_peak_calc
 
     def _calculate_epsilon_initial_check(
-        self, D: float, H: float, x_total_initial: float
+        self, D: np.ndarray, H: np.ndarray, x_total_initial: float
     ) -> float:
         """
         Calculates the initial damping ratio (epsilon) to determine
@@ -359,7 +348,7 @@ class PhaseJump(GFMCalculator):
         D: float,
         H: float,
         Xeff: float,
-        time_array: np.array,
+        time_array: np.ndarray,
         event_time: float,
         epsilon_initial_check: float,
     ) -> tuple[np.ndarray, float, float]:
@@ -376,7 +365,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -399,7 +388,7 @@ class PhaseJump(GFMCalculator):
             return self._get_underdamped_delta_p(D, H, Xeff, time_array, event_time)
 
     def _get_overdamped_delta_p_base(
-        self, D: float, H: float, Xeff: float, time_array: np.array
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
         """
         Calculates the fundamental delta_p waveform and related parameters for
@@ -414,7 +403,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
 
         Returns
@@ -451,7 +440,7 @@ class PhaseJump(GFMCalculator):
         return delta_p1, p_peak, epsilon
 
     def _get_overdamped_delta_p(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
         """
         Calculates delta_p, p_peak, and epsilon for an overdamped system response,
@@ -465,7 +454,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -487,7 +476,7 @@ class PhaseJump(GFMCalculator):
         return delta_p, p_peak, epsilon
 
     def _get_overdamped_delta_p_min(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the minimum delta_p for an overdamped system, by applying
@@ -502,7 +491,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -521,7 +510,7 @@ class PhaseJump(GFMCalculator):
         return delta_p
 
     def _get_overdamped_delta_p_max(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the maximum delta_p for an overdamped system, by applying
@@ -535,7 +524,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -556,7 +545,7 @@ class PhaseJump(GFMCalculator):
         return delta_p
 
     def _get_underdamped_delta_p_base(
-        self, D: float, H: float, Xeff: float, time_array: np.array
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
         """
         Calculates the fundamental delta_p waveform and related parameters for
@@ -571,7 +560,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
 
         Returns
@@ -600,7 +589,7 @@ class PhaseJump(GFMCalculator):
         return delta_p1, p_peak, epsilon
 
     def _get_underdamped_delta_p(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
         """
         Calculates delta_p, p_peak, and epsilon for an underdamped system response,
@@ -614,7 +603,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -636,7 +625,7 @@ class PhaseJump(GFMCalculator):
         return delta_p, p_peak, epsilon
 
     def _get_underdamped_delta_p_min(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the minimum delta_p for an underdamped system, by applying
@@ -651,7 +640,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -675,7 +664,7 @@ class PhaseJump(GFMCalculator):
         return delta_p
 
     def _get_underdamped_delta_p_max(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the maximum delta_p for an underdamped system, by applying
@@ -690,7 +679,7 @@ class PhaseJump(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
@@ -811,7 +800,7 @@ class PhaseJump(GFMCalculator):
         )
         return pdown_limited, pup_limited
 
-    def _get_tunnel(self, p_peak_array: list) -> float:
+    def _get_tunnel(self, p_peak_array: list[float]) -> float:
         """
         Calculates a constant "tunnel" value. This value defines a static band
         around the power response. It is determined as the maximum of a fixed
@@ -819,7 +808,7 @@ class PhaseJump(GFMCalculator):
 
         Parameters
         ----------
-        p_peak_array : list
+        p_peak_array : list[float]
             List of p_peak values, where the first element (`_ORIGINAL_PARAMS_IDX`)
             is assumed to be the nominal p_peak.
 
@@ -875,80 +864,3 @@ class PhaseJump(GFMCalculator):
         # Ensure that the tunnel value is zero for all time points before the
         # event_time.
         return np.where(time_array < event_time, 0, tunnel)
-
-    def _apply_delay(
-        self, delay: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
-    ) -> np.ndarray:
-        """
-        Applies a time delay to a given signal. The delay is implemented by prepending
-        a constant `delayed_value` for the duration of the `delay` time. The output
-        signal is truncated to the original signal's length.
-
-        Parameters
-        ----------
-        delay : float
-            The desired delay time in seconds.
-        delayed_value : float
-            The constant value to fill the signal during the delay period.
-        time_array : np.ndarray
-            The time array corresponding to the `signal`. Assumed to have a constant
-            time step.
-        signal : np.ndarray
-            The original signal (waveform) to be delayed.
-
-        Returns
-        -------
-        np.ndarray
-            The delayed signal, which has the same length as the original `signal`.
-        """
-        if len(time_array) < 2:
-            # If there are fewer than 2 time points, a sampling frequency cannot be
-            # determined, so return the original signal as no delay can be applied
-            # meaningfully.
-            return signal
-        fs = time_array[1] - time_array[0]  # Calculate the sampling interval (time step).
-
-        # Calculate the number of samples corresponding to the desired delay.
-        # Rounding is used to get an integer number of samples.
-        delay_samples = int(round(delay / fs))
-
-        if delay_samples >= len(time_array):
-            # If the calculated delay in samples is greater than or equal to the
-            # length of the original signal, the entire signal will effectively
-            # be replaced by the `delayed_value`.
-            return np.full_like(signal, delayed_value)
-
-        # Create an array filled with `delayed_value` for the duration of the delay.
-        sample = np.full(delay_samples, delayed_value)
-        # Concatenate this delay 'prefix' with the original signal.
-        # Then, truncate the combined array to the original signal's length,
-        # effectively shifting the signal values.
-        return np.concatenate((sample, signal))[: len(time_array)]
-
-    def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
-        """
-        Clips the values of a given signal array to ensure they stay
-        within a specified minimum (`value_min`) and maximum (`value_max`) range.
-        Values below `value_min` are set to `value_min`, and values above `value_max`
-        are set to `value_max`.
-
-        Parameters
-        ----------
-        value_min : float
-            The minimum allowed value for the signal.
-        signal : np.ndarray
-            The input signal array whose values need to be clipped.
-        value_max : float
-            The maximum allowed value for the signal.
-
-        Returns
-        -------
-        np.ndarray
-            The signal with its values clipped within the specified limits.
-        """
-        # Use np.where to efficiently apply the clipping.
-        # First, ensure no value is below value_min.
-        signal = np.where(signal < value_min, value_min, signal)
-        # Second, ensure no value is above value_max.
-        signal = np.where(signal > value_max, value_max, signal)
-        return signal

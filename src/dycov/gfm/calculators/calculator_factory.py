@@ -8,6 +8,14 @@
 #     demiguelm@aia.es
 #
 
+"""
+Factory module for creating GFM calculator instances.
+
+This module provides a function to dynamically instantiate the correct GFM calculator
+(e.g., PhaseJump or AmplitudeStep) based on a given name, ensuring the proper
+GFM parameters are passed during initialization.
+"""
+
 from typing import Optional
 
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
@@ -17,7 +25,25 @@ from dycov.gfm.parameters import GFMParameters
 
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
+    """
+    Returns an instance of a GFMCalculator subclass based on the provided name.
 
+    This factory function maps string names to corresponding GFM calculator classes
+    and instantiates them with the given GFM parameters.
+
+    Parameters
+    ----------
+    name : str
+        The name of the calculator to retrieve (e.g., "PhaseJump", "AmplitudeStep").
+    gfm_params : GFMParameters
+        An object containing all necessary parameters for the GFM calculation.
+
+    Returns
+    -------
+    Optional[GFMCalculator]
+        An instance of the specified GFMCalculator subclass if the name is recognized,
+        otherwise None.
+    """
     if name == "PhaseJump":
         return PhaseJump(gfm_params=gfm_params)
     if name == "AmplitudeStep":

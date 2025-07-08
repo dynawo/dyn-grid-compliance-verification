@@ -22,6 +22,28 @@ class Producer:
         self._sim_type = None
 
     def get_producer_path(self) -> Path:
+        """Get the Producer directory.
+
+        Returns
+        -------
+        Path
+            Producer directory
+        """
+        pass
+
+    def get_filenames(self, zone: int = 0) -> list[str]:
+        """Get the filenames of the producer model.
+
+        Parameters
+        ----------
+        zone: int
+            Zone to test, only applies to model validation
+
+        Returns
+        -------
+        list[str]
+            List of filenames.
+        """
         pass
 
     def is_gfm(self) -> bool:

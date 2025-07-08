@@ -23,7 +23,7 @@ def save_results_to_csv(
     up: np.ndarray,
 ) -> None:
     """
-    Save the calculated results (PCC,down,up) to a CSV file.
+    Save the calculated results (PCC, down, up) to a CSV file.
 
     Parameters
     ----------
@@ -53,6 +53,7 @@ def save_results_to_csv(
 def plot_results(
     path: Path,
     title: str,
+    magnitude: str,
     time: np.ndarray,
     event_time: float,
     shift_time: float,
@@ -68,6 +69,10 @@ def plot_results(
     ----------
     path : Path
         The file path where the plot image will be saved.
+    title : str
+        The title of the plot, which will also be used as the filename.
+    magnitude : str
+        Name of the plotted mangnitude.
     time : np.ndarray
         The time array for the x-axis.
     event_time : float
@@ -75,8 +80,6 @@ def plot_results(
     shift_time : float
         A time shift (in milliseconds) to adjust the event time marker
         for plotting purposes.
-    title : str
-        The title of the plot, which will also be used as the filename.
     pcc : np.ndarray
         The calculated power at the point of common coupling.
     down : np.ndarray
@@ -90,14 +93,14 @@ def plot_results(
         time,
         pcc,
         label="Theoretical response from VSM",
-        linewidth="3",
+        linewidth=3,
     )
     # Plot the lower power envelope.
     plt.plot(time, down, label="Pdown", linewidth=2)
     # Plot the upper power envelope.
     plt.plot(time, up, label="Pup", linewidth=2)
     plt.xlabel("sec")  # Set x-axis label.
-    plt.ylabel("P at PCC (pu)")  # Set y-axis label.
+    plt.ylabel(f"{magnitude} at PCC (pu)")  # Set y-axis label.
     plt.title(title)  # Set the plot title.
     # Add a vertical line to mark the event time.
     plt.axvline(

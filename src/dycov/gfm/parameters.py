@@ -52,23 +52,8 @@ GFM_Params = namedtuple(
 
 
 class GFMParameters(Parameters):
-    """Parameters to define the validation of a model.
-
-    Args
-    ----
-    launcher_dwo: Path
-        Dynawo launcher
-    producer_csv: Path
-        Producer Model directory
-    selected_pcs: str
-        Individual PCS to validate
-    output_dir: Path
-        User output directory
-    only_dtr: bool
-        option to validate a model using only the PCS defined in the DTR
-    emt: bool
-        option to set the EMT simulation engine
-
+    """
+    Parameters to define the validation of a model.
     """
 
     def __init__(
@@ -79,7 +64,26 @@ class GFMParameters(Parameters):
         output_dir: Path,
         only_dtr: bool,
         emt: bool,
-    ):
+    ) -> None:
+        """
+        Initializes the GFMParameters class.
+
+        Parameters
+        ----------
+        launcher_dwo : Path
+            Dynawo launcher.
+        producer_csv : Path
+            Producer Model directory.
+        selected_pcs : str
+            Individual PCS to validate.
+        output_dir : Path
+            User output directory.
+        only_dtr : bool
+            Option to validate a model using only the PCS
+            defined in the DTR.
+        emt : bool
+            Option to set the EMT simulation engine.
+        """
         # Inputs parameters
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
         self._emt = emt
@@ -88,21 +92,54 @@ class GFMParameters(Parameters):
         self._producer = CSVProducer(producer_csv)
 
     def is_valid(self) -> bool:
-        """Checks if the execution of the tool is valid,
-        for this the tool must have the CSV model of the user.
+        """
+        Checks if the execution of the tool is valid.
+        For this, the tool must have the CSV model of the user.
 
         Returns
         -------
         bool
-            True if it is a valid execution, False otherwise
+            True if it is a valid execution, False otherwise.
         """
         return self._producer.is_gfm()
 
     def get_calculator_name(self, pcs_name: str, bm_name: str) -> str:
+        """
+        Gets the calculator name for a given PCS and benchmark.
+
+        Parameters
+        ----------
+        pcs_name : str
+            The name of the PCS.
+        bm_name : str
+            The name of the benchmark.
+
+        Returns
+        -------
+        str
+            The calculator name.
+        """
         section = f"{pcs_name}.{bm_name}"
         return config.get_value(section, "calculator")
 
     def get_effective_reactance(self, pcs_name: str, bm_name: str, oc_name: str) -> float:
+        """
+        Gets the effective reactance.
+
+        Parameters
+        ----------
+        pcs_name : str
+            The name of the PCS.
+        bm_name : str
+            The name of the benchmark.
+        oc_name : str
+            The name of the operating condition.
+
+        Returns
+        -------
+        float
+            The effective reactance.
+        """
         section = f"{pcs_name}.{bm_name}"
         x_eff = self.__get_effective_reactance(section)
         if x_eff:
@@ -110,13 +147,47 @@ class GFMParameters(Parameters):
 
         return self._producer.get_effective_reactance()
 
-    def get_damping_constant(self):
+    def get_damping_constant(self) -> float:
+        """
+        Gets the damping constant from the producer.
+
+        Returns
+        -------
+        float
+            The damping constant.
+        """
         return self._producer.get_damping_constant()
 
-    def get_inertia_constant(self):
+    def get_inertia_constant(self) -> float:
+        """
+        Gets the inertia constant from the producer.
+
+        Returns
+        -------
+        float
+            The inertia constant.
+        """
         return self._producer.get_inertia_constant()
 
     def pcs_configuration(self, pcs_name: str, bm_name: str, oc_name: str) -> GFM_Params:
+        """
+        Retrieves the GFM parameters for a specific PCS, benchmark,
+        and operating condition.
+
+        Parameters
+        ----------
+        pcs_name : str
+            The name of the PCS.
+        bm_name : str
+            The name of the benchmark.
+        oc_name : str
+            The name of the operating condition.
+
+        Returns
+        -------
+        GFM_Params
+            A named tuple containing the GFM parameters.
+        """
 
         default_section = "DEFAULT"
         producer_config = self.__read_producer_ini()
@@ -124,6 +195,7 @@ class GFMParameters(Parameters):
             float(producer_config.get(default_section, "p_max_injection")) / self._producer._s_nref
         )
         qmax = float(producer_config.get(default_section, "q_max")) / self._producer._s_nref
+        qmin = float(producer_config.get(default_section, "q_min")) / self._producer._s_nref
 
         pcs_section = pcs_name
         bm_section = f"{pcs_name}.{bm_name}"
@@ -133,7 +205,7 @@ class GFMParameters(Parameters):
             RatioMin=self.__get_min_ratio(pcs_section),
             RatioMax=self.__get_max_ratio(pcs_section),
             P0=self.__get_initial_active_power(oc_section, pmax),
-            Q0=self.__get_initial_reactive_power(oc_section, qmax),
+            Q0=self.__get_initial_reactive_power(oc_section, qmax, qmin),
             delta_theta=self.__get_delta_phase(bm_section),
             voltage_step=self.__get_voltage_step(bm_section),
             SCR=self.__get_scr(bm_section),
@@ -153,11 +225,41 @@ class GFMParameters(Parameters):
             QMin=float(producer_config.get(default_section, "q_min")) / self._producer._s_nref,
         )
 
-    def __read_producer_ini(self):
-        def __get_producer_ini(path: Path, pattern: str) -> Path:
+    def __read_producer_ini(self) -> configparser.ConfigParser:
+        """
+        Reads the producer INI file.
+
+        Returns
+        -------
+        configparser.ConfigParser
+            The parsed configuration.
+        """
+
+        def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
+            """
+            Helper function to get the producer INI file path.
+
+            Parameters
+            ----------
+            path : Path
+                The directory path to search in.
+            pattern : re.Pattern
+                The regex pattern to match the filename.
+
+            Returns
+            -------
+            Path
+                The full path to the producer INI file.
+
+            Raises
+            ------
+            FileNotFoundError
+                If the producer INI file is not found.
+            """
             for file in path.resolve().iterdir():
                 if pattern.match(str(file)):
                     return path.resolve() / file
+            raise FileNotFoundError("Producer INI file not found.")
 
         pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
         producer_ini = __get_producer_ini(self._producer.get_producer_path(), pattern_ini)
@@ -171,49 +273,240 @@ class GFMParameters(Parameters):
         return producer_config
 
     def __get_initial_active_power(self, section: str, p_max: float) -> float:
+        """
+        Gets the initial active power.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+        p_max : float
+            Maximum active power.
+
+        Returns
+        -------
+        float
+            Initial active power.
+        """
         p0_definition = config.get_value(section, "P0")
         return model_parameters.extract_defined_value(p0_definition, "Pmax", p_max, 1)
 
-    def __get_initial_reactive_power(self, section: str, q_max: float) -> float:
+    def __get_initial_reactive_power(self, section: str, q_max: float, q_min: float) -> float:
+        """
+        Gets the initial reactive power.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+        q_max : float
+            Maximum reactive power.
+        q_min : float
+            Minimum reactive power.
+
+        Returns
+        -------
+        float
+            Initial reactive power.
+        """
         q0_definition = config.get_value(section, "Q0")
+        if "Qmin" in q0_definition:
+            return model_parameters.extract_defined_value(q0_definition, "Qmin", q_min, 1)
         return model_parameters.extract_defined_value(q0_definition, "Qmax", q_max, 1)
 
     def __get_initial_voltage(self, section: str) -> float:
+        """
+        Gets the initial voltage.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Initial voltage.
+        """
         return config.get_float(section, "U0", 1)
 
     def __get_grid_voltage(self, section: str) -> float:
+        """
+        Gets the grid voltage.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Grid voltage.
+        """
         return config.get_float(section, "Ugr", 1)
 
     def __get_time_to_90(self, section: str) -> float:
+        """
+        Gets the time to 90%.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Time to 90%.
+        """
         return config.get_float(section, "TimeTo90", 0.0)
 
     def __get_time_for_tunnel(self, section: str) -> float:
+        """
+        Gets the time for tunnel.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Time for tunnel.
+        """
         return config.get_float(section, "TimeforTunnel", 0.0)
 
     def __get_final_allowed_tunnel_pn(self, section: str) -> float:
+        """
+        Gets the final allowed tunnel Pn.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Final allowed tunnel Pn.
+        """
         return config.get_float(section, "FinalAllowedTunnelPn", 0.0)
 
     def __get_final_allowed_tunnel_variation(self, section: str) -> float:
+        """
+        Gets the final allowed tunnel variation.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Final allowed tunnel variation.
+        """
         return config.get_float(section, "FinalAllowedTunnelVariation", 0.0)
 
     def __get_margin_low(self, section: str) -> float:
+        """
+        Gets the lower margin for power envelopes.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Lower margin.
+        """
         return config.get_float(section, "MarginLow", 0.0)
 
     def __get_margin_high(self, section: str) -> float:
+        """
+        Gets the upper margin for power envelopes.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Upper margin.
+        """
         return config.get_float(section, "MarginHigh", 0.0)
 
     def __get_min_ratio(self, section: str) -> float:
+        """
+        Gets the minimum ratio for parameter variations.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Minimum ratio.
+        """
         return config.get_float(section, "RatioMin", 1.0)
 
     def __get_max_ratio(self, section: str) -> float:
+        """
+        Gets the maximum ratio for parameter variations.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Maximum ratio.
+        """
         return config.get_float(section, "RatioMax", 1.0)
 
     def __get_base_angular_frequency(self, section: str) -> float:
+        """
+        Gets the base angular frequency.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Base angular frequency.
+        """
         return config.get_float(section, "Wb", 0.0)
 
     def __get_delta_phase(self, section: str) -> float:
-        "For now this parameter contains the following options:"
-        "    ±0.3*(Xeff+Xgrid)"
+        """
+        Gets the phase angle jump magnitude (degrees).
+
+        For now this parameter contains the following options:
+            ±0.3*(Xeff+Xgrid)
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Phase angle jump magnitude in degrees.
+        """
         if not config.has_key(section, "DeltaPhase"):
             return 0.0
         value_definition = config.get_value(section, "DeltaPhase")
@@ -228,8 +521,22 @@ class GFMParameters(Parameters):
         return delta_rad * 180 / np.pi
 
     def __get_voltage_step(self, section: str) -> float:
-        "For now this parameter contains the following options:"
-        "    ±0.15∗(Xeff+Xgrid)"
+        """
+        Gets the voltage step magnitude (per unit - pu).
+
+        For now this parameter contains the following options:
+            ±0.15∗(Xeff+Xgrid)
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            Voltage step magnitude in pu.
+        """
         if not config.has_key(section, "VoltageStep"):
             return 0.0
         value_definition = config.get_value(section, "VoltageStep")
@@ -237,19 +544,58 @@ class GFMParameters(Parameters):
             parts = value_definition.split("*")
             term1 = float(parts[0])
 
-        delta_rad = term1 * (
+        voltage_step = term1 * (
             self.__get_effective_reactance(section) + self.__get_grid_reactance(section)
         )
 
-        return delta_rad * 180 / np.pi
+        return voltage_step * 100
 
     def __get_effective_reactance(self, section: str) -> Optional[float]:
+        """
+        Gets the effective reactance from the configuration.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        Optional[float]
+            The effective reactance, or None if not found.
+        """
         if config.has_key(section, "Xeff"):
             return config.get_float(section, "Xeff", 0.0)
         return None
 
     def __get_grid_reactance(self, section: str) -> float:
+        """
+        Gets the grid reactance.
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            The grid reactance.
+        """
         return 1 / self.__get_scr(section)
 
     def __get_scr(self, section: str) -> float:
+        """
+        Gets the Short Circuit Ratio (SCR).
+
+        Parameters
+        ----------
+        section : str
+            The configuration section.
+
+        Returns
+        -------
+        float
+            The Short Circuit Ratio.
+        """
         return config.get_float(section, "SCR", 0.0)
