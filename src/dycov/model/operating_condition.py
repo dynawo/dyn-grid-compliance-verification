@@ -30,7 +30,7 @@ class OperatingCondition:
         Tool parameters
     pcs_name: str
         Name of the current pcs
-    pcs_name: str
+    bm_name: str
         Name of the current benchmark
     oc_name: str
         Name of the current OperatingCondition
@@ -136,8 +136,14 @@ class OperatingCondition:
         self,
         working_path: Path,
     ):
-        gfm = GridForming(self._parameters, self._pcs_name, self._bm_name, self._name)
-        gfm.generate(working_path, self._pcs_name, self._bm_name, self._name)
+        gfm = GridForming()
+        gfm.generate(
+            working_path,
+            self._parameters,
+            self._pcs_name,
+            self._bm_name,
+            self._name,
+        )
 
     def get_name(self) -> str:
         """Get the OperatingCondition name.
