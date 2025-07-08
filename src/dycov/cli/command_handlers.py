@@ -379,9 +379,12 @@ def _generate_envelopes(dwo_launcher: Path, output_dir: Path, producer_csv: Path
         if not params.is_valid():
             return -1
 
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        num_processes = config.get_int("Global", "parallel_num_processes", 4)
+
         gfm = GFMGeneration(params)
         start_time = time.time()
-        gfm.generate()
+        gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
         end_time = time.time()
 
         _LOGGER.info(f"Generation completed in {end_time - start_time:.2f} seconds.")
