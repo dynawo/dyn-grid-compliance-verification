@@ -39,8 +39,8 @@ GFM_Params = namedtuple(
         "Ugr",  # Grid RMS voltage (pu)
         "MarginHigh",  # Upper margin for power envelopes
         "MarginLow",  # Lower margin for power envelopes
-        "FinalAllowedTunnelVariation",  # Parameter for tunnel function
-        "FinalAllowedTunnelPn",  # Parameter for tunnel function
+        "FinalAllowedTunnelVariation",
+        "FinalAllowedTunnelPn",
         "TimeTo90",  # Time to 90%
         "TimeForTunnel",  # Time for tunnel
         "PMax",  # Maximum allowed active power (pu)
@@ -54,6 +54,7 @@ GFM_Params = namedtuple(
 class GFMParameters(Parameters):
     """
     Parameters to define the validation of a model.
+    Inherits from the base Parameters class.
     """
 
     def __init__(
@@ -71,35 +72,35 @@ class GFMParameters(Parameters):
         Parameters
         ----------
         launcher_dwo : Path
-            Dynawo launcher.
+            Path to the Dynawo launcher.
         producer_csv : Path
-            Producer Model directory.
+            Directory containing the Producer Model CSV files.
         selected_pcs : str
-            Individual PCS to validate.
+            Name of the individual PCS to validate.
         output_dir : Path
-            User output directory.
+            User-specified output directory for results.
         only_dtr : bool
             Option to validate a model using only the PCS
             defined in the DTR.
         emt : bool
-            Option to set the EMT simulation engine.
+            Option to set the EMT (Electro-Magnetic Transients)
+            simulation engine.
         """
-        # Inputs parameters
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
         self._emt = emt
 
-        # Read producer inputs
         self._producer = CSVProducer(producer_csv)
 
     def is_valid(self) -> bool:
         """
         Checks if the execution of the tool is valid.
-        For this, the tool must have the CSV model of the user.
+        For GFM, the tool must have the CSV model of the user.
 
         Returns
         -------
         bool
-            True if it is a valid execution, False otherwise.
+            True if it is a valid execution (i.e., producer is GFM),
+            False otherwise.
         """
         return self._producer.is_gfm()
 
@@ -110,14 +111,14 @@ class GFMParameters(Parameters):
         Parameters
         ----------
         pcs_name : str
-            The name of the PCS.
+            The name of the PCS (Power Conversion System).
         bm_name : str
             The name of the benchmark.
 
         Returns
         -------
         str
-            The calculator name.
+            The name of the calculator to be used.
         """
         section = f"{pcs_name}.{bm_name}"
         return config.get_value(section, "calculator")
@@ -138,7 +139,7 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The effective reactance.
+            The effective reactance value.
         """
         section = f"{pcs_name}.{bm_name}"
         x_eff = self.__get_effective_reactance(section)
@@ -154,7 +155,7 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The damping constant.
+            The damping constant value.
         """
         return self._producer.get_damping_constant()
 
@@ -165,7 +166,7 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The inertia constant.
+            The inertia constant value.
         """
         return self._producer.get_inertia_constant()
 
@@ -186,11 +187,12 @@ class GFMParameters(Parameters):
         Returns
         -------
         GFM_Params
-            A named tuple containing the GFM parameters.
+            A named tuple containing the GFM parameters for the specified
+            configuration.
         """
-
         default_section = "DEFAULT"
         producer_config = self.__read_producer_ini()
+
         pmax = (
             float(producer_config.get(default_section, "p_max_injection")) / self._producer._s_nref
         )
@@ -200,6 +202,7 @@ class GFMParameters(Parameters):
         pcs_section = pcs_name
         bm_section = f"{pcs_name}.{bm_name}"
         oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
+
         return GFM_Params(
             EMT=self._emt,
             RatioMin=self.__get_min_ratio(pcs_section),
@@ -232,12 +235,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         configparser.ConfigParser
-            The parsed configuration.
+            The parsed configuration object containing producer settings.
         """
 
         def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
             """
             Helper function to get the producer INI file path.
+            It iterates through the directory to find a file matching the pattern.
 
             Parameters
             ----------
@@ -254,7 +258,7 @@ class GFMParameters(Parameters):
             Raises
             ------
             FileNotFoundError
-                If the producer INI file is not found.
+                If the producer INI file is not found in the specified path.
             """
             for file in path.resolve().iterdir():
                 if pattern.match(str(file)):
@@ -265,6 +269,8 @@ class GFMParameters(Parameters):
         producer_ini = __get_producer_ini(self._producer.get_producer_path(), pattern_ini)
 
         default_section = "DEFAULT"
+        # Read the content of the INI file, prepending a default section header
+        # to ensure it's parsed correctly by ConfigParser.
         with open(producer_ini, "r") as f:
             producer_ini_txt = "[" + default_section + "]\n" + f.read()
 
@@ -274,49 +280,50 @@ class GFMParameters(Parameters):
 
     def __get_initial_active_power(self, section: str, p_max: float) -> float:
         """
-        Gets the initial active power.
+        Gets the initial active power (P0) from the configuration.
 
         Parameters
         ----------
         section : str
-            The configuration section.
+            The configuration section (e.g., "PCS.Benchmark.OperatingCondition").
         p_max : float
-            Maximum active power.
+            Maximum active power, used if P0 is defined relative to Pmax.
 
         Returns
         -------
         float
-            Initial active power.
+            Initial active power value.
         """
         p0_definition = config.get_value(section, "P0")
         return model_parameters.extract_defined_value(p0_definition, "Pmax", p_max, 1)
 
     def __get_initial_reactive_power(self, section: str, q_max: float, q_min: float) -> float:
         """
-        Gets the initial reactive power.
+        Gets the initial reactive power (Q0) from the configuration.
 
         Parameters
         ----------
         section : str
             The configuration section.
         q_max : float
-            Maximum reactive power.
+            Maximum reactive power, used for relative definitions.
         q_min : float
-            Minimum reactive power.
+            Minimum reactive power, used for relative definitions.
 
         Returns
         -------
         float
-            Initial reactive power.
+            Initial reactive power value.
         """
         q0_definition = config.get_value(section, "Q0")
+        # If "Qmin" is in the definition, extract relative to Qmin.
         if "Qmin" in q0_definition:
             return model_parameters.extract_defined_value(q0_definition, "Qmin", q_min, 1)
         return model_parameters.extract_defined_value(q0_definition, "Qmax", q_max, 1)
 
     def __get_initial_voltage(self, section: str) -> float:
         """
-        Gets the initial voltage.
+        Gets the initial voltage (U0) from the configuration.
 
         Parameters
         ----------
@@ -326,13 +333,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Initial voltage.
+            Initial voltage value.
         """
         return config.get_float(section, "U0", 1)
 
     def __get_grid_voltage(self, section: str) -> float:
         """
-        Gets the grid voltage.
+        Gets the grid voltage (Ugr) from the configuration.
 
         Parameters
         ----------
@@ -342,13 +349,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Grid voltage.
+            Grid voltage value.
         """
         return config.get_float(section, "Ugr", 1)
 
     def __get_time_to_90(self, section: str) -> float:
         """
-        Gets the time to 90%.
+        Gets the 'TimeTo90' parameter from the configuration.
 
         Parameters
         ----------
@@ -358,13 +365,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Time to 90%.
+            The 'TimeTo90' value, defaulting to 0.0 if not found.
         """
         return config.get_float(section, "TimeTo90", 0.0)
 
     def __get_time_for_tunnel(self, section: str) -> float:
         """
-        Gets the time for tunnel.
+        Gets the 'TimeForTunnel' parameter from the configuration.
 
         Parameters
         ----------
@@ -374,13 +381,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Time for tunnel.
+            The 'TimeForTunnel' value, defaulting to 0.0 if not found.
         """
         return config.get_float(section, "TimeforTunnel", 0.0)
 
     def __get_final_allowed_tunnel_pn(self, section: str) -> float:
         """
-        Gets the final allowed tunnel Pn.
+        Gets the 'FinalAllowedTunnelPn' parameter from the configuration.
 
         Parameters
         ----------
@@ -390,13 +397,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Final allowed tunnel Pn.
+            The 'FinalAllowedTunnelPn' value, defaulting to 0.0 if not found.
         """
         return config.get_float(section, "FinalAllowedTunnelPn", 0.0)
 
     def __get_final_allowed_tunnel_variation(self, section: str) -> float:
         """
-        Gets the final allowed tunnel variation.
+        Gets the 'FinalAllowedTunnelVariation' parameter from the configuration.
 
         Parameters
         ----------
@@ -406,13 +413,15 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Final allowed tunnel variation.
+            The 'FinalAllowedTunnelVariation' value, defaulting to 0.0
+            if not found.
         """
         return config.get_float(section, "FinalAllowedTunnelVariation", 0.0)
 
     def __get_margin_low(self, section: str) -> float:
         """
-        Gets the lower margin for power envelopes.
+        Gets the lower margin for power envelopes ('MarginLow')
+        from the configuration.
 
         Parameters
         ----------
@@ -422,13 +431,14 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Lower margin.
+            The 'MarginLow' value, defaulting to 0.0 if not found.
         """
         return config.get_float(section, "MarginLow", 0.0)
 
     def __get_margin_high(self, section: str) -> float:
         """
-        Gets the upper margin for power envelopes.
+        Gets the upper margin for power envelopes ('MarginHigh')
+        from the configuration.
 
         Parameters
         ----------
@@ -438,13 +448,14 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Upper margin.
+            The 'MarginHigh' value, defaulting to 0.0 if not found.
         """
         return config.get_float(section, "MarginHigh", 0.0)
 
     def __get_min_ratio(self, section: str) -> float:
         """
-        Gets the minimum ratio for parameter variations.
+        Gets the minimum ratio for parameter variations ('RatioMin')
+        from the configuration.
 
         Parameters
         ----------
@@ -454,13 +465,14 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Minimum ratio.
+            The 'RatioMin' value, defaulting to 1.0 if not found.
         """
         return config.get_float(section, "RatioMin", 1.0)
 
     def __get_max_ratio(self, section: str) -> float:
         """
-        Gets the maximum ratio for parameter variations.
+        Gets the maximum ratio for parameter variations ('RatioMax')
+        from the configuration.
 
         Parameters
         ----------
@@ -470,13 +482,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Maximum ratio.
+            The 'RatioMax' value, defaulting to 1.0 if not found.
         """
         return config.get_float(section, "RatioMax", 1.0)
 
     def __get_base_angular_frequency(self, section: str) -> float:
         """
-        Gets the base angular frequency.
+        Gets the base angular frequency ('Wb') from the configuration.
 
         Parameters
         ----------
@@ -486,16 +498,15 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            Base angular frequency.
+            The 'Wb' value, defaulting to 0.0 if not found.
         """
         return config.get_float(section, "Wb", 0.0)
 
     def __get_delta_phase(self, section: str) -> float:
         """
-        Gets the phase angle jump magnitude (degrees).
+        Gets the phase angle jump magnitude (in degrees).
 
-        For now this parameter contains the following options:
-            ±0.3*(Xeff+Xgrid)
+        Currently, this parameter supports definitions like "±0.3*(Xeff+Xgrid)".
 
         Parameters
         ----------
@@ -522,10 +533,9 @@ class GFMParameters(Parameters):
 
     def __get_voltage_step(self, section: str) -> float:
         """
-        Gets the voltage step magnitude (per unit - pu).
+        Gets the voltage step magnitude (in per unit - pu).
 
-        For now this parameter contains the following options:
-            ±0.15∗(Xeff+Xgrid)
+        Currently, this parameter supports definitions like "±0.15∗(Xeff+Xgrid)".
 
         Parameters
         ----------
@@ -552,7 +562,7 @@ class GFMParameters(Parameters):
 
     def __get_effective_reactance(self, section: str) -> Optional[float]:
         """
-        Gets the effective reactance from the configuration.
+        Gets the effective reactance ('Xeff') from the configuration.
 
         Parameters
         ----------
@@ -562,7 +572,7 @@ class GFMParameters(Parameters):
         Returns
         -------
         Optional[float]
-            The effective reactance, or None if not found.
+            The effective reactance value, or None if the key is not found.
         """
         if config.has_key(section, "Xeff"):
             return config.get_float(section, "Xeff", 0.0)
@@ -571,6 +581,7 @@ class GFMParameters(Parameters):
     def __get_grid_reactance(self, section: str) -> float:
         """
         Gets the grid reactance.
+        It is calculated as the inverse of the Short Circuit Ratio (SCR).
 
         Parameters
         ----------
@@ -580,13 +591,13 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The grid reactance.
+            The calculated grid reactance.
         """
         return 1 / self.__get_scr(section)
 
     def __get_scr(self, section: str) -> float:
         """
-        Gets the Short Circuit Ratio (SCR).
+        Gets the Short Circuit Ratio (SCR) from the configuration.
 
         Parameters
         ----------
@@ -596,6 +607,6 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The Short Circuit Ratio.
+            The Short Circuit Ratio value.
         """
         return config.get_float(section, "SCR", 0.0)

@@ -44,18 +44,22 @@ class GridForming:
         parameters : GFMParameters
             An object containing the GFM simulation parameters.
         pcs_name : str
-            The name of the PCS.
+            The name of the PCS (Power Conversion System).
         bm_name : str
             The name of the benchmark.
         oc_name : str
             The name of the operating condition.
         """
         gfm_params = parameters.pcs_configuration(pcs_name, bm_name, oc_name)
+        # Log the retrieved GFM parameters for debugging purposes.
         dycov_logging.get_logger("GridForming").debug(f"GFM Params {gfm_params}")
+
         time_array, event_time = self._get_time()
+
         damping_constant = parameters.get_damping_constant()
         inertia_constant = parameters.get_inertia_constant()
         x_eff = parameters.get_effective_reactance(pcs_name, bm_name, oc_name)
+        # Log the input parameters for debugging.
         dycov_logging.get_logger("GridForming").debug(
             f"Input Params D={damping_constant} H={inertia_constant} Xeff {x_eff}"
         )
@@ -63,12 +67,13 @@ class GridForming:
         calculator = calculator_factory.get_calculator(
             parameters.get_calculator_name(pcs_name, bm_name), gfm_params
         )
+
         magnitude, pcc, up, down = self._calculate_envelopes(
             calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
         )
 
         title = f"{pcs_name}.{bm_name}.{oc_name}"
-        self._export_csv(working_path, title, time_array, pcc, down, up)
+        self._export_csv(working_path, title, magnitude, time_array, pcc, down, up)
         self._plot(working_path, title, magnitude, time_array, event_time, pcc, down, up)
 
     def _get_time(self) -> tuple[np.ndarray, float]:
@@ -78,7 +83,8 @@ class GridForming:
         Returns
         -------
         tuple[np.ndarray, float]
-            A tuple containing the time array and the event time.
+            A tuple containing the time array (numpy array) and the event time
+            (float).
         """
         start_time = 0
         end_time = 2
@@ -104,29 +110,32 @@ class GridForming:
         Parameters
         ----------
         calculator : GFMCalculator
-            The envelopes calculator.
+            The envelopes calculator object, which performs the core calculations.
         time_array : np.ndarray
             The time array for the simulation.
         event_time : float
             The time of the event.
         damping_constant : float
-            The damping constant (D).
+            The damping constant (D) used in the GFM model.
         inertia_constant : float
-            The inertia constant (H).
+            The inertia constant (H) used in the GFM model.
         x_eff : float
-            The effective reactance (Xeff).
+            The effective reactance (Xeff) used in the GFM model.
 
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing the plot magnitude name, PCC power, upper envelope,
-            and lower envelope.
+            A tuple containing:
+            - str: The name of the plot magnitude (e.g., "Power", "Current").
+            - np.ndarray: The PCC (Point of Common Coupling) power data.
+            - np.ndarray: The lower envelope data.
+            - np.ndarray: The upper envelope data.
         """
         (
-            magnitude,
-            pcc,
-            up,
-            down,
+            magnitude,  # Name of the magnitude being plotted (e.g., 'Power')
+            pcc,  # Point of Common Coupling power
+            up,  # Upper envelope
+            down,  # Lower envelope
         ) = calculator.calculate_envelopes(
             D=damping_constant,
             H=inertia_constant,
@@ -141,6 +150,7 @@ class GridForming:
         self,
         csv_path: Path,
         title: str,
+        magnitude: str,
         time_array: np.ndarray,
         pcc: np.ndarray,
         down: np.ndarray,
@@ -152,11 +162,14 @@ class GridForming:
         Parameters
         ----------
         csv_path : Path
-            The base path for saving the CSV file.
+            The base path for saving the CSV file. The filename will be
+            constructed using the title.
         title : str
             The title to be used for the CSV filename.
+        magnitude : str
+            The name of the magnitude being plotted (e.g., "Power", "Current").
         time_array : np.ndarray
-            The time array.
+            The time array data.
         pcc : np.ndarray
             The PCC power data.
         down : np.ndarray
@@ -164,7 +177,7 @@ class GridForming:
         up : np.ndarray
             The upper envelope data.
         """
-        save_results_to_csv(csv_path / f"{title}.csv", time_array, pcc, down, up)
+        save_results_to_csv(csv_path / f"{title}.csv", magnitude, time_array, pcc, down, up)
 
     def _plot(
         self,
@@ -183,19 +196,22 @@ class GridForming:
         Parameters
         ----------
         png_path : Path
-            The base path for saving the plot image.
+            The base path for saving the plot image. The filename will be
+            constructed using the title.
         title : str
             The title for the plot and image filename.
+        magnitude : str
+            The name of the magnitude being plotted (e.g., "Power", "Current").
         time_array : np.ndarray
-            The time array.
+            The time array data.
         event_time : float
-            The time of the event.
+            The time of the event, used to mark on the plot.
         pcc : np.ndarray
-            The PCC power data.
+            The PCC power data to be plotted.
         down : np.ndarray
-            The lower envelope data.
+            The lower envelope data to be plotted.
         up : np.ndarray
-            The upper envelope data.
+            The upper envelope data to be plotted.
         """
         plot_results(
             png_path / f"{title}.png",
@@ -203,7 +219,7 @@ class GridForming:
             magnitude,
             time_array,
             event_time,
-            0,
+            0,  # This parameter might represent a y-axis offset or reference.
             pcc,
             down,
             up,

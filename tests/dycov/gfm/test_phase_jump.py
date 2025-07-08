@@ -114,7 +114,7 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
     time_array = np.linspace(start_time, end_time, nb_points)
 
     phase_jump = PhaseJump(gfm_params=gfm_overdamped_params)
-    _, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
+    magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
@@ -123,9 +123,11 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["down (pu)"] - p_down)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+    )
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
 def test_phase_jump_overdamped_envelopes_event_at_200ms():
@@ -137,7 +139,7 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
     time_array = np.linspace(start_time, end_time, nb_points)
 
     phase_jump = PhaseJump(gfm_params=gfm_overdamped_params)
-    _, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
+    magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
@@ -146,9 +148,11 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["down (pu)"] - p_down)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+    )
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
 def test_phase_jump_underdamped_envelopes_event_at_0s():
@@ -160,7 +164,7 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
     time_array = np.linspace(start_time, end_time, nb_points)
 
     phase_jump = PhaseJump(gfm_params=gfm_underdamped_params)
-    _, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
+    magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=200.0, H=10.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
@@ -169,9 +173,11 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["down (pu)"] - p_down)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+    )
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
 def test_phase_jump_underdamped_envelopes_event_at_200ms():
@@ -183,7 +189,7 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
     time_array = np.linspace(start_time, end_time, nb_points)
 
     phase_jump = PhaseJump(gfm_params=gfm_underdamped_params)
-    _, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
+    magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=200.0, H=10.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
@@ -192,9 +198,11 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["down (pu)"] - p_down)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+    )
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
 def test_s_vol_ang_step_1_phase_jump():
@@ -206,7 +214,7 @@ def test_s_vol_ang_step_1_phase_jump():
     time_array = np.linspace(start_time, end_time, nb_points)
 
     phase_jump = PhaseJump(gfm_params=s_vol_ang_step_1_params)
-    overdamped, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
+    magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=133.0, H=10.0, Xeff=0.25, time_array=time_array, event_time=event_time
     )
 
@@ -215,6 +223,8 @@ def test_s_vol_ang_step_1_phase_jump():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["down (pu)"] - p_down)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data["up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+    )
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
