@@ -30,7 +30,7 @@ class GFMCalculator:
     # Critically damped systems are grouped with overdamped.
     _EPSILON_THRESHOLD = 1.0
 
-    def __init__(self, gfm_params: GFM_Params, debug: bool = False):
+    def __init__(self, gfm_params: GFM_Params) -> None:
         """
         Initializes the GFMCalculator with system parameters.
 
@@ -38,20 +38,14 @@ class GFMCalculator:
         ----------
         gfm_params: GFM_Params
             An object containing all necessary parameters for GFM phase jump calculations.
-        debug: bool, optional
-            If True, enables debug print statements. Defaults to False.
         """
-        self._gfm_params = gfm_params  # Stores GFM system parameters
-        self._debug = debug  # Flag to control debug output
+        self._gfm_params = gfm_params
 
     def calculate_envelopes(
-        self, D: float, H: float, Xeff: float, time_array: np.array, event_time: float
-    ) -> tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
+        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+    ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
         Abstract method to be implemented by subclasses for calculating power envelopes.
-
-        This method is intended to calculate the power at the point of common coupling (PCC)
-        and its upper and lower envelopes based on specific event characteristics.
 
         Parameters
         ----------
@@ -61,18 +55,79 @@ class GFMCalculator:
             Inertia constant.
         Xeff : float
             Effective reactance.
-        time_array : np.array
+        time_array : np.ndarray
             Array of time points for simulation.
         event_time : float
             The time (in seconds) at which the event occurs.
 
         Returns
         -------
-        tuple[bool, np.ndarray, np.ndarray, np.ndarray]
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - is_overdamped: True if the initial system is overdamped, False otherwise.
-            - p_pcc_final: The final calculated power at the point of common coupling.
-            - p_up_final: The final upper power envelope.
-            - p_down_final: The final lower power envelope.
+            - str: Name of the calculated magnitude (e.g., "P", "Q").
+            - np.ndarray: The PCC (Point of Common Coupling) power data.
+            - np.ndarray: The upper envelope data.
+            - np.ndarray: The lower envelope data.
         """
-        pass  # This method is a placeholder and should be overridden by child classes.
+        raise NotImplementedError
+
+    def _apply_delay(
+        self, delay_time: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
+    ) -> np.ndarray:
+        """
+        Applies a time delay to a given signal.
+
+        This method shifts the signal in time, filling the initial part of
+        the array with a specified `delayed_value` for the duration of the delay.
+
+        Parameters
+        ----------
+        delay_time : float
+            The amount of time (in seconds) by which to delay the signal.
+        delayed_value : float
+            The value to use for the signal during the delay period.
+        time_array : np.ndarray
+            The original time array of the signal.
+        signal : np.ndarray
+            The input signal array to be delayed.
+
+        Returns
+        -------
+        np.ndarray
+            The delayed signal array, truncated to the original length.
+        """
+        # Calculate the number of samples corresponding to the delay time.
+        # Ensure at least one sample for the delay.
+        delay_samples = max(1, int(delay_time / (time_array[1] - time_array[0])))
+        # Create a 'prefix' array filled with `delayed_value` for the duration
+        # of the delay.
+        sample = np.full(delay_samples, delayed_value)
+        # Concatenate this delay 'prefix' with the original signal.
+        # Then, truncate the combined array to the original signal's length,
+        # effectively shifting the signal values.
+        return np.concatenate((sample, signal))[: len(time_array)]
+
+    def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
+        """
+        Clips the values of a given signal array to ensure they stay
+        within a specified minimum (`value_min`) and maximum (`value_max`) range.
+        Values below `value_min` are set to `value_min`, and values above `value_max`
+        are set to `value_max`.
+
+        Parameters
+        ----------
+        value_min : float
+            The minimum allowed value for the signal.
+        signal : np.ndarray
+            The input signal array whose values need to be clipped.
+        value_max : float
+            The maximum allowed value for the signal.
+
+        Returns
+        -------
+        np.ndarray
+            The signal with its values clipped within the specified limits.
+        """
+        signal = np.where(signal < value_min, value_min, signal)
+        signal = np.where(signal > value_max, value_max, signal)
+        return signal
