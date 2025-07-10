@@ -41,6 +41,7 @@ class TestProducerIniFile:
             target = Path(tmpdir)
             ini_file = target / "Producer.ini"
             ini_content = (
+                "[DEFAULT]\n"
                 "# p_{max_unite} as defined by the DTR in MW\n"
                 "p_max = 100\n"
                 "# u_nom is the nominal voltage in the PDR Bus (in kV)\n"
@@ -63,6 +64,7 @@ class TestProducerIniFile:
             target = Path(tmpdir)
             ini_file = target / "Producer.ini"
             ini_content = (
+                "[DEFAULT]\n"
                 "# p_{max_unite} as defined by the DTR in MW\n"
                 "p_max =\n"
                 "# u_nom is the nominal voltage in the PDR Bus (in kV)\n"

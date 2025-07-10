@@ -307,12 +307,8 @@ class ModelProducer(Producer):
             pattern_ini = re.compile(rf".*.{self._filename}.[iI][nN][iI]")
         producer_ini = self.__get_file_by_pattern(pattern_ini)
 
-        default_section = "DEFAULT"
-        with open(producer_ini, "r") as f:
-            producer_ini_txt = "[" + default_section + "]\n" + f.read()
-
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        producer_config.read_string(producer_ini_txt)
+        producer_config.read(producer_ini)
         return producer_config
 
     def __init_parameters(self):

@@ -8,75 +8,99 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 import math
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from dycov.configuration.cfg import config
+from dycov.core.parameters import Parameters
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
-from dycov.gfm.parameters import GFM_Params
+from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.producer import GFMProducer
 
 # Float tolerance
 epsilon = 1e-3
 
-gfm_params = GFM_Params(
-    P0=0.0,
-    Q0=0.2,
-    delta_theta=0.0,
-    voltage_step=2.0,
-    SCR=10.0,
-    EMT=True,
-    RatioMin=0.9,
-    RatioMax=1.1,
-    Wb=0,
-    Ucv=1.0,
-    Ugr=1.0,
-    MarginHigh=0.3,
-    MarginLow=0.0,
-    FinalAllowedTunnelVariation=0.05,
-    FinalAllowedTunnelPn=0.02,
-    TimeTo90=0.01,
-    TimeForTunnel=0.06,
-    PMax=1.1,
-    PMin=-1.1,
-    QMax=0.35,
-    QMin=-0.35,
-)
+
+gfm_params = """
+[DEFAULT]
+P0=0.0
+Q0=0.2
+DeltaPhase=0.0
+VoltageStep=2.0
+SCR=10.0
+RatioMin=0.9
+RatioMax=1.1
+Wb=0
+U0=1.0
+Ugr=1.0
+MarginHigh=0.3
+MarginLow=0.0
+FinalAllowedTunnelVariation=0.05
+FinalAllowedTunnelPn=0.02
+TimeTo90=0.01
+TimeForTunnel=0.06
+p_max_injection=1.1
+p_min_injection=-1.1
+q_max=0.35
+q_min=-0.35
+"""
+
+s_vol_ang_step_1_params = """
+[DEFAULT]
+P0=0.0
+Q0=0.0
+DeltaPhase=0.0
+VoltageStep=3.0
+SCR=10.0
+RatioMin=0.9
+RatioMax=1.1
+Wb=0
+U0=1.0
+Ugr=1.0
+MarginHigh=0.3
+MarginLow=0.0
+FinalAllowedTunnelVariation=0.05
+FinalAllowedTunnelPn=0.02
+TimeTo90=0.01
+TimeForTunnel=0.06
+p_max_injection=1.1
+p_min_injection=-1.1
+q_max=0.4
+q_min=-0.4
+"""
 
 
-s_vol_ang_step_1_params = GFM_Params(
-    P0=0.0,
-    Q0=0.0,
-    delta_theta=0.0,
-    voltage_step=3.0,
-    SCR=10.0,
-    EMT=True,
-    RatioMin=0.9,
-    RatioMax=1.1,
-    Wb=0,
-    Ucv=1.0,
-    Ugr=1.0,
-    MarginHigh=0.3,
-    MarginLow=0.0,
-    FinalAllowedTunnelVariation=0.05,
-    FinalAllowedTunnelPn=0.02,
-    TimeTo90=0.01,
-    TimeForTunnel=0.06,
-    PMax=1.1,
-    PMin=-1.1,
-    QMax=0.4,
-    QMin=-0.4,
-)
+class TestProducer(GFMProducer):
+    def __init__(self, config_str: str):
+        self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        self._config.read_string(config_str)
+        self._s_nref = 1.0
 
 
-def test_phase_jump_initialization():
-    phase_jump = AmplitudeStep(gfm_params=gfm_params)
+class TestParameters(GFMParameters):
+    def __init__(self, config_str: str):
+        Parameters.__init__(self, None, "", None, False)
+        self._emt = True
+        self._producer = TestProducer(config_str)
+        self._pcs_section = "DEFAULT"
+        self._bm_section = "DEFAULT"
+        self._oc_section = "DEFAULT"
 
-    assert phase_jump._gfm_params == gfm_params
+        config._pcs_config.read_string(config_str)
 
 
-def test_phase_jump_envelopes_event_at_0s():
+def test_amplitude_step_initialization():
+    test_params = TestParameters(gfm_params)
+    amplitude_step = AmplitudeStep(gfm_params=test_params)
+
+    assert amplitude_step._gfm_params == test_params
+
+
+def test_amplitude_step_envelopes_event_at_0s():
 
     start_time = 0
     end_time = 1.315
@@ -84,8 +108,10 @@ def test_phase_jump_envelopes_event_at_0s():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = AmplitudeStep(gfm_params=gfm_params)
-    magnitude, q_pcc, q_up, q_down = phase_jump.calculate_envelopes(
+    test_params = TestParameters(gfm_params)
+    test_params = TestParameters(gfm_params)
+    amplitude_step = AmplitudeStep(gfm_params=test_params)
+    magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
@@ -101,7 +127,7 @@ def test_phase_jump_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - q_up)), 0, abs_tol=epsilon)
 
 
-def test_phase_jump_envelopes_event_at_200ms():
+def test_amplitude_step_envelopes_event_at_200ms():
 
     start_time = 0
     end_time = 1.315
@@ -109,8 +135,9 @@ def test_phase_jump_envelopes_event_at_200ms():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = AmplitudeStep(gfm_params=gfm_params)
-    magnitude, q_pcc, q_up, q_down = phase_jump.calculate_envelopes(
+    test_params = TestParameters(gfm_params)
+    amplitude_step = AmplitudeStep(gfm_params=test_params)
+    magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
 
@@ -126,7 +153,7 @@ def test_phase_jump_envelopes_event_at_200ms():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - q_up)), 0, abs_tol=epsilon)
 
 
-def test_s_vol_ang_step_1_phase_jump():
+def test_s_vol_ang_step_1_amplitude_step():
 
     start_time = 0
     end_time = 10
@@ -134,8 +161,9 @@ def test_s_vol_ang_step_1_phase_jump():
     nb_points = 2000
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = AmplitudeStep(gfm_params=s_vol_ang_step_1_params)
-    magnitude, q_pcc, q_up, q_down = phase_jump.calculate_envelopes(
+    test_params = TestParameters(s_vol_ang_step_1_params)
+    amplitude_step = AmplitudeStep(gfm_params=test_params)
+    magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
         D=133.0, H=10.0, Xeff=0.25, time_array=time_array, event_time=event_time
     )
 

@@ -44,21 +44,21 @@ def handle_generate_envelopes_command(
         Path to the Dynawo launcher.
     """
     _LOGGER.info("Handling 'generateEnvelopes' command.")
-    producer_csv: Optional[Path] = None
+    producer_ini: Optional[Path] = None
     output_dir: Optional[Path] = None
 
     emt = args.emt
-    if args.producer_csv:
-        producer_csv = Path(args.producer_csv)
-        output_dir = producer_csv.parent / "Results" if args.output is None else Path(args.output)
+    if args.producer_ini:
+        producer_ini = Path(args.producer_ini)
+        output_dir = producer_ini.parent / "Results" if args.output is None else Path(args.output)
 
-    if not producer_csv:
+    if not producer_ini:
         _LOGGER.error("Missing arguments for 'generateEnvelopes' command.")
         parser.error("Missing arguments. Try 'dycov generateEnvelopes -h' for more information.")
         return
 
     result_code = _generate_envelopes(
-        dwo_launcher=dwo_launcher, output_dir=output_dir, producer_csv=producer_csv, emt=emt
+        dwo_launcher=dwo_launcher, output_dir=output_dir, producer_ini=producer_ini, emt=emt
     )
 
     if result_code != 0:
@@ -370,10 +370,10 @@ def _run_verification(
         return 1
 
 
-def _generate_envelopes(dwo_launcher: Path, output_dir: Path, producer_csv: Path, emt: bool):
+def _generate_envelopes(dwo_launcher: Path, output_dir: Path, producer_ini: Path, emt: bool):
     _LOGGER.info("Running generation of envelopes")
     try:
-        params = GFMParameters(dwo_launcher, producer_csv, None, output_dir, True, emt)
+        params = GFMParameters(dwo_launcher, producer_ini, None, output_dir, True, emt)
 
         # Determine if the parameters are valid.
         if not params.is_valid():

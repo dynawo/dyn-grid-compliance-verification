@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from dycov.gfm.parameters import GFM_Params
+from dycov.gfm.parameters import GFMParameters
 
 
 class GFMCalculator:
@@ -30,13 +30,13 @@ class GFMCalculator:
     # Critically damped systems are grouped with overdamped.
     _EPSILON_THRESHOLD = 1.0
 
-    def __init__(self, gfm_params: GFM_Params) -> None:
+    def __init__(self, gfm_params: GFMParameters) -> None:
         """
         Initializes the GFMCalculator with system parameters.
 
         Parameters
         ----------
-        gfm_params: GFM_Params
+        gfm_params: GFMParameters
             An object containing all necessary parameters for GFM phase jump calculations.
         """
         self._gfm_params = gfm_params

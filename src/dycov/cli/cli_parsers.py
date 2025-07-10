@@ -156,12 +156,12 @@ def _add_launcher_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _add_csv_argument(
+def _add_ini_argument(
     parser: argparse.ArgumentParser,
     explain: str = "",
     is_required: bool = False,
 ) -> None:
-    """Adds the '--producer_csv' argument to the given parser.
+    """Adds the '--producer_ini' argument to the given parser.
 
     Parameters
     ----------
@@ -177,8 +177,8 @@ def _add_csv_argument(
         help_msg += f" {explain}"
     _add_argument(
         parser,
-        "-p",
-        "--producer_csv",
+        "-i",
+        "--producer_ini",
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
@@ -540,7 +540,7 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
         help="create all the envelopes based on the description of the different test cases",
     )
     _add_debug_argument(envelops)
-    _add_csv_argument(envelops, is_required=True)
+    _add_ini_argument(envelops, is_required=True)
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
     _LOGGER.debug("Added 'generateEnvelopes' subparser.")

@@ -13,10 +13,10 @@ from typing import Optional
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.calculators.phase_jump import PhaseJump
-from dycov.gfm.parameters import GFM_Params
+from dycov.gfm.parameters import GFMParameters
 
 
-def get_calculator(name: str, gfm_params: GFM_Params) -> Optional[GFMCalculator]:
+def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
     """
     Returns an instance of a GFMCalculator subclass based on the provided name.
 

@@ -8,101 +8,135 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 import math
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from dycov.configuration.cfg import config
+from dycov.core.parameters import Parameters
 from dycov.gfm.calculators.phase_jump import PhaseJump
-from dycov.gfm.parameters import GFM_Params
+from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.producer import GFMProducer
 
 # Float tolerance
 epsilon = 1e-3
 
-gfm_overdamped_params = GFM_Params(
-    P0=0.5,
-    Q0=0.0,
-    delta_theta=-5.0,
-    voltage_step=0.0,
-    SCR=2.0,
-    EMT=True,
-    RatioMin=0.9,
-    RatioMax=1.1,
-    Wb=314,
-    Ucv=1.0,
-    Ugr=1.0,
-    MarginHigh=0.5,
-    MarginLow=0.5,
-    FinalAllowedTunnelVariation=0.05,
-    FinalAllowedTunnelPn=0.02,
-    TimeTo90=0.0,
-    TimeForTunnel=0.0,
-    PMax=1.1,
-    PMin=-1.1,
-    QMax=0.4,
-    QMin=-0.4,
-)
+gfm_overdamped_params = """
+[DEFAULT]
+P0=0.5
+Q0=0.0
+DeltaPhase=-0.08726646259971647
+VoltageStep=0.0
+SCR=2.0
+D=152
+H=3
+Xeff=0.06
+RatioMin=0.9
+RatioMax=1.1
+Wb=314
+U0=1.0
+Ugr=1.0
+MarginHigh=0.5
+MarginLow=0.5
+FinalAllowedTunnelVariation=0.05
+FinalAllowedTunnelPn=0.02
+TimeTo90=0.0
+TimeForTunnel=0.0
+p_max_injection=1.1
+p_min_injection=-1.1
+q_max=0.4
+q_min=-0.4
+"""
 
 
-gfm_underdamped_params = GFM_Params(
-    P0=0.8,
-    Q0=0.0,
-    delta_theta=-8.0,
-    voltage_step=0.0,
-    SCR=10.0,
-    EMT=True,
-    RatioMin=0.8,
-    RatioMax=1.2,
-    Wb=314,
-    Ucv=1.0,
-    Ugr=1.0,
-    MarginHigh=0.2,
-    MarginLow=0.5,
-    FinalAllowedTunnelVariation=0.05,
-    FinalAllowedTunnelPn=0.02,
-    TimeTo90=0.0,
-    TimeForTunnel=0.0,
-    PMax=1.1,
-    PMin=-1.1,
-    QMax=0.4,
-    QMin=-0.4,
-)
+gfm_underdamped_params = """
+[DEFAULT]
+P0=0.8
+Q0=0.0
+DeltaPhase=-0.13962634015954636
+VoltageStep=0.0
+SCR=10.0
+D=152
+H=3
+Xeff=0.06
+RatioMin=0.8
+RatioMax=1.2
+Wb=314
+U0=1.0
+Ugr=1.0
+MarginHigh=0.2
+MarginLow=0.5
+FinalAllowedTunnelVariation=0.05
+FinalAllowedTunnelPn=0.02
+TimeTo90=0.0
+TimeForTunnel=0.0
+p_max_injection=1.1
+p_min_injection=-1.1
+q_max=0.4
+q_min=-0.4
+"""
 
 
-s_vol_ang_step_1_params = GFM_Params(
-    P0=0.55,  # 0.5*PMax
-    Q0=0.0,
-    delta_theta=6.016,  # +θ_jump
-    voltage_step=0.0,
-    SCR=10.0,  # SCR_max
-    EMT=True,
-    RatioMin=0.9,
-    RatioMax=1.1,
-    Wb=314,
-    Ucv=1.0,
-    Ugr=1.0,
-    MarginHigh=0.5,
-    MarginLow=0.5,
-    FinalAllowedTunnelVariation=0.05,
-    FinalAllowedTunnelPn=0.02,
-    TimeTo90=0.0,
-    TimeForTunnel=0.0,
-    PMax=1.1,
-    PMin=-1.1,
-    QMax=0.4,
-    QMin=-0.4,
-)
+s_vol_ang_step_1_params = """
+[DEFAULT]
+P0=0.55  # 0.5*p_max_injection
+Q0=0.0
+DeltaPhase=0.10499900779997887  # +θ_jump
+VoltageStep=0.0
+SCR=10.0  # SCR_max
+D=152
+H=3
+Xeff=0.06
+RatioMin=0.9
+RatioMax=1.1
+Wb=314
+U0=1.0
+Ugr=1.0
+MarginHigh=0.5
+MarginLow=0.5
+FinalAllowedTunnelVariation=0.05
+FinalAllowedTunnelPn=0.02
+TimeTo90=0.0
+TimeForTunnel=0.0
+p_max_injection=1.1
+p_min_injection=-1.1
+q_max=0.4
+q_min=-0.4
+"""
+
+
+class TestProducer(GFMProducer):
+    def __init__(self, config_str: str):
+        self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        self._config.read_string(config_str)
+        self._s_nref = 1.0
+
+
+class TestParameters(GFMParameters):
+    def __init__(self, config_str: str):
+        Parameters.__init__(self, None, "", None, False)
+        self._emt = True
+        self._producer = TestProducer(config_str)
+        self._pcs_section = "DEFAULT"
+        self._bm_section = "DEFAULT"
+        self._oc_section = "DEFAULT"
+
+        config._pcs_config.read_string(config_str)
 
 
 def test_phase_jump_initialization():
-    phase_jump = PhaseJump(gfm_params=gfm_overdamped_params)
+    test_params = TestParameters(gfm_overdamped_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
 
-    assert phase_jump._gfm_params == gfm_overdamped_params
+    assert phase_jump._gfm_params == test_params
 
-    phase_jump = PhaseJump(gfm_params=gfm_underdamped_params)
+    test_params = TestParameters(gfm_underdamped_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
 
-    assert phase_jump._gfm_params == gfm_underdamped_params
+    assert phase_jump._gfm_params == test_params
 
 
 def test_phase_jump_overdamped_envelopes_event_at_0s():
@@ -113,7 +147,8 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = PhaseJump(gfm_params=gfm_overdamped_params)
+    test_params = TestParameters(gfm_overdamped_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
@@ -138,7 +173,8 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = PhaseJump(gfm_params=gfm_overdamped_params)
+    test_params = TestParameters(gfm_overdamped_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
@@ -163,7 +199,8 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = PhaseJump(gfm_params=gfm_underdamped_params)
+    test_params = TestParameters(gfm_underdamped_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=200.0, H=10.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
@@ -188,7 +225,8 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = PhaseJump(gfm_params=gfm_underdamped_params)
+    test_params = TestParameters(gfm_underdamped_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=200.0, H=10.0, Xeff=0.06, time_array=time_array, event_time=event_time
     )
@@ -213,7 +251,8 @@ def test_s_vol_ang_step_1_phase_jump():
     nb_points = 2000
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    phase_jump = PhaseJump(gfm_params=s_vol_ang_step_1_params)
+    test_params = TestParameters(s_vol_ang_step_1_params)
+    phase_jump = PhaseJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = phase_jump.calculate_envelopes(
         D=133.0, H=10.0, Xeff=0.25, time_array=time_array, event_time=event_time
     )
