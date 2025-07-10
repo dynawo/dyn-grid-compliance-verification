@@ -15,10 +15,10 @@ from dycov.configuration.cfg import config
 
 class Producer:
 
-    def __init__(self, producer_model: Path, producer_csv: Path):
+    def __init__(self, producer_model: Path, producer_ini: Path):
         self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
         self._producer_model_path = producer_model
-        self._producer_csv_path = producer_csv.parent if producer_csv else None
+        self._producer_ini_path = producer_ini.parent if producer_ini else None
         self._sim_type = None
 
     def get_producer_path(self) -> Path:

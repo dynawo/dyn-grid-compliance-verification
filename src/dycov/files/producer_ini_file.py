@@ -52,11 +52,8 @@ def _create_producer_ini_file(
 def _check_ini_parameters(target: Path, filename: str) -> bool:
 
     default_section = "DEFAULT"
-    with open(target / filename, "r") as f:
-        producer_ini_txt = "[" + default_section + "]\n" + f.read()
-
     producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    producer_config.read_string(producer_ini_txt)
+    producer_config.read(target / filename)
 
     success = True
     empty_values = []

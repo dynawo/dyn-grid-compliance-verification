@@ -50,22 +50,19 @@ class GridForming:
         oc_name : str
             The name of the operating condition.
         """
-        gfm_params = parameters.pcs_configuration(pcs_name, bm_name, oc_name)
-        # Log the retrieved GFM parameters for debugging purposes.
-        dycov_logging.get_logger("GridForming").debug(f"GFM Params {gfm_params}")
-
         time_array, event_time = self._get_time()
 
+        parameters.set_section(pcs_name, bm_name, oc_name)
         damping_constant = parameters.get_damping_constant()
         inertia_constant = parameters.get_inertia_constant()
-        x_eff = parameters.get_effective_reactance(pcs_name, bm_name, oc_name)
+        x_eff = parameters.get_effective_reactance()
         # Log the input parameters for debugging.
         dycov_logging.get_logger("GridForming").debug(
             f"Input Params D={damping_constant} H={inertia_constant} Xeff {x_eff}"
         )
 
         calculator = calculator_factory.get_calculator(
-            parameters.get_calculator_name(pcs_name, bm_name), gfm_params
+            parameters.get_calculator_name(), parameters
         )
 
         magnitude, pcc, up, down = self._calculate_envelopes(
@@ -87,9 +84,9 @@ class GridForming:
             (float).
         """
         start_time = 0
-        end_time = 2
+        end_time = 10
         event_time = 0
-        nb_points = 400
+        nb_points = 2000
         time_array = np.linspace(start_time, end_time, nb_points)
 
         return time_array, event_time

@@ -9,44 +9,43 @@
 #
 
 
+import configparser
 import re
 from pathlib import Path
-
-import pandas as pd
 
 from dycov.model.producer import Producer
 
 
-class CSVProducer(Producer):
+class GFMProducer(Producer):
     """
-    A class used to represent a producer from a CSV file.
+    A class used to represent a producer from a INI file.
 
     This class extends the Producer class and provides methods to
-    access producer-related data stored in a CSV file.
+    access producer-related data stored in a INI file.
     """
 
-    def __init__(self, producer_csv: Path) -> None:
+    def __init__(self, producer_ini: Path) -> None:
         """
-        Initializes the CSVProducer with the path to the producer CSV file.
+        Initializes the GFMProducer with the path to the producer INI file.
 
         Parameters
         ----------
-        producer_csv : Path
-            The path to the producer CSV file.
+        producer_ini : Path
+            The path to the producer INI file.
         """
-        super().__init__(None, producer_csv)
-        self._data = pd.read_csv(producer_csv, sep=";")
+        super().__init__(None, producer_ini)
+        self._config = self.__read_producer_ini()
 
     def get_producer_path(self) -> Path:
         """
-        Get the path to the producer CSV file.
+        Get the path to the producer INI file.
 
         Returns
         -------
         Path
-            The path to the producer CSV file.
+            The path to the producer INI file.
         """
-        return self._producer_csv_path
+        return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
@@ -62,11 +61,11 @@ class CSVProducer(Producer):
         list[str]
             List of filenames.
         """
-        pattern = re.compile(r".*.[cC][sS][vV]")
+        pattern = re.compile(r".*.[iI][nN][iI]")
         return sorted(
             [
                 file.stem
-                for file in self._producer_csv_path.resolve().iterdir()
+                for file in self._producer_ini_path.resolve().iterdir()
                 if pattern.match(str(file))
             ]
         )
@@ -82,57 +81,57 @@ class CSVProducer(Producer):
         """
         return "gfm"
 
-    def get_effective_reactance(self) -> float:
+    def get_config(self) -> configparser.ConfigParser:
         """
-        Get the effective reactance from the producer data.
+        Gets the producer settings for the GFM calculations
 
         Returns
         -------
-        float
-            The effective reactance.
+        configparser.ConfigParser
+            The parsed configuration object containing producer settings.
         """
-        return self._data["Xeff"][0]
+        return self._config
 
-    def get_damping_constant(self) -> float:
+    def __read_producer_ini(self) -> configparser.ConfigParser:
         """
-        Get the damping constant from the producer data.
-
-        Returns
-        -------
-        float
-            The damping constant.
-        """
-        return self._data["D"][0]
-
-    def get_inertia_constant(self) -> float:
-        """
-        Get the inertia constant from the producer data.
+        Reads the producer INI file.
 
         Returns
         -------
-        float
-            The inertia constant.
+        configparser.ConfigParser
+            The parsed configuration object containing producer settings.
         """
-        return self._data["H"][0]
 
-    def get_nominal_voltage(self) -> float:
-        """
-        Get the nominal voltage from the producer data.
+        def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
+            """
+            Helper function to get the producer INI file path.
+            It iterates through the directory to find a file matching the pattern.
 
-        Returns
-        -------
-        float
-            The nominal voltage.
-        """
-        return self._data["Unom"][0]
+            Parameters
+            ----------
+            path : Path
+                The directory path to search in.
+            pattern : re.Pattern
+                The regex pattern to match the filename.
 
-    def get_nominal_apparent_power(self) -> float:
-        """
-        Get the nominal apparent power from the producer data.
+            Returns
+            -------
+            Path
+                The full path to the producer INI file.
 
-        Returns
-        -------
-        float
-            The nominal apparent power.
-        """
-        return self._data["Snom"][0]
+            Raises
+            ------
+            FileNotFoundError
+                If the producer INI file is not found in the specified path.
+            """
+            for file in path.resolve().iterdir():
+                if pattern.match(str(file)):
+                    return path.resolve() / file
+            raise FileNotFoundError("Producer INI file not found.")
+
+        pattern_ini = re.compile(r".*.[iI][nN][iI]")
+        producer_ini = __get_producer_ini(self.get_producer_path(), pattern_ini)
+
+        producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        producer_config.read(producer_ini)
+        return producer_config
