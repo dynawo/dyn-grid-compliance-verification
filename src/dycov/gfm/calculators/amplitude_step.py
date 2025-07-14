@@ -11,6 +11,7 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
+from dycov.logging.logging import dycov_logging
 
 
 class AmplitudeStep(GFMCalculator):
@@ -51,6 +52,15 @@ class AmplitudeStep(GFMCalculator):
             - q_up_final: The final upper reactive power envelope.
             - q_down_final: The final lower reactive power envelope.
         """
+        # Log the input parameters for debugging.
+        dycov_logging.get_logger("AmplitudeStep").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
+        dycov_logging.get_logger("AmplitudeStep").debug(
+            f"Input Params ΔVoltage={self._gfm_params.get_voltage_step()} "
+            f"SCR={self._gfm_params.get_scr()} "
+            f"Q0={self._gfm_params.get_initial_reactive_power()} "
+            f"QMin={self._gfm_params.get_min_reactive_power()} "
+            f"QMax={self._gfm_params.get_max_reactive_power()}"
+        )
         (
             delta_q_array,
             delta_q_min,
@@ -177,25 +187,23 @@ class AmplitudeStep(GFMCalculator):
         q_pcc = self._gfm_params.get_initial_reactive_power() + delta_q * -(
             self._gfm_params.get_voltage_step() / np.abs(self._gfm_params.get_voltage_step())
         )
-        q_pcc = self._cut_signal(
-            self._gfm_params.get_min_reactive_power(),
-            q_pcc,
-            self._gfm_params.get_max_reactive_power(),
-        )
 
-        q_up = self._gfm_params.get_initial_reactive_power() + np.minimum(
+        q_up_raw = self._gfm_params.get_initial_reactive_power() + np.minimum(
             delta_q_max,
             self._gfm_params.get_max_reactive_power()
             - self._gfm_params.get_initial_reactive_power(),
         ) * -(self._gfm_params.get_voltage_step() / np.abs(self._gfm_params.get_voltage_step()))
 
         tunnel = self._get_tunnel(Xeff)
-        q_down = self._gfm_params.get_initial_reactive_power() + np.minimum(
+        q_down_raw = self._gfm_params.get_initial_reactive_power() + np.minimum(
             delta_q_min,
             self._gfm_params.get_max_reactive_power()
             - self._gfm_params.get_initial_reactive_power()
             - tunnel,
         ) * -(self._gfm_params.get_voltage_step() / np.abs(self._gfm_params.get_voltage_step()))
+
+        q_up = np.maximum(q_up_raw, q_down_raw)
+        q_down = np.minimum(q_up_raw, q_down_raw)
 
         # If EMT simulation flag is true, apply a small delay to the final
         # power signals.
@@ -206,13 +214,6 @@ class AmplitudeStep(GFMCalculator):
             q_up_final = q_up
             q_down_final = q_down
         q_pcc_final = q_pcc
-
-        # Ensure that the upper envelope is always greater than or equal to the
-        # lower envelope at the end of the simulation. If not, swap them.
-        if q_up_final[-1] < q_down_final[-1]:
-            q_temp = q_down_final
-            q_down_final = q_up_final
-            q_up_final = q_temp
 
         return q_pcc_final, q_up_final, q_down_final
 
