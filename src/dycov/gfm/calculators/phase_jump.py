@@ -11,6 +11,7 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
+from dycov.logging.logging import dycov_logging
 
 
 class PhaseJump(GFMCalculator):
@@ -51,6 +52,16 @@ class PhaseJump(GFMCalculator):
             - p_up_final: The final upper active power envelope.
             - p_down_final: The final lower active power envelope.
         """
+        # Log the input parameters for debugging.
+        dycov_logging.get_logger("PhaseJump").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
+        dycov_logging.get_logger("PhaseJump").debug(
+            f"Input Params ΔPhase={self._gfm_params.get_delta_phase()} "
+            f"SCR={self._gfm_params.get_scr()} "
+            f"P0={self._gfm_params.get_initial_active_power()} "
+            f"PMin={self._gfm_params.get_min_active_power()} "
+            f"PMax={self._gfm_params.get_max_active_power()}"
+        )
+
         (
             delta_p_array,
             delta_p_min,
@@ -124,6 +135,7 @@ class PhaseJump(GFMCalculator):
         epsilon_initial_check = self._calculate_epsilon_initial_check(
             d_array, h_array, x_total_initial
         )
+        dycov_logging.get_logger("PhaseJump").debug(f"Epsilon={epsilon_initial_check}")
 
         delta_p_array: list[np.ndarray] = []
         p_peak_array: list[float] = []
@@ -201,9 +213,6 @@ class PhaseJump(GFMCalculator):
         p_pcc = self._gfm_params.get_initial_active_power() + delta_p * -(
             self._gfm_params.get_delta_phase() / np.abs(self._gfm_params.get_delta_phase())
         )
-        p_pcc = self._cut_signal(
-            self._gfm_params.get_min_active_power(), p_pcc, self._gfm_params.get_max_active_power()
-        )
 
         list_of_arrays: list[np.ndarray] = delta_p_array + [delta_p_min, delta_p_max]
 
@@ -223,11 +232,6 @@ class PhaseJump(GFMCalculator):
             p_up_final = pup_limited
             p_down_final = pdown_limited
             p_pcc_final = p_pcc
-
-        if p_up_final[-1] < p_down_final[-1]:
-            p_temp = p_down_final
-            p_down_final = p_up_final
-            p_up_final = p_temp
 
         return p_pcc_final, p_up_final, p_down_final
 
@@ -666,7 +670,7 @@ class PhaseJump(GFMCalculator):
         """
         pdown_no_p0 = np.minimum.reduce(list_of_arrays) - tunnel
         pup_no_p0 = np.maximum.reduce(list_of_arrays) + tunnel
-        return pdown_no_p0, pup_no_p0
+        return np.minimum(pdown_no_p0, pup_no_p0), np.maximum(pdown_no_p0, pup_no_p0)
 
     def _limit_power_envelopes(
         self,

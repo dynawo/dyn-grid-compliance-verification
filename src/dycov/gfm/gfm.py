@@ -16,7 +16,6 @@ from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging.logging import dycov_logging
 
 
 class GridForming:
@@ -56,10 +55,6 @@ class GridForming:
         damping_constant = parameters.get_damping_constant()
         inertia_constant = parameters.get_inertia_constant()
         x_eff = parameters.get_effective_reactance()
-        # Log the input parameters for debugging.
-        dycov_logging.get_logger("GridForming").debug(
-            f"Input Params D={damping_constant} H={inertia_constant} Xeff {x_eff}"
-        )
 
         calculator = calculator_factory.get_calculator(
             parameters.get_calculator_name(), parameters
@@ -84,9 +79,9 @@ class GridForming:
             (float).
         """
         start_time = 0
-        end_time = 10
+        end_time = 1.3
         event_time = 0
-        nb_points = 2000
+        nb_points = 260
         time_array = np.linspace(start_time, end_time, nb_points)
 
         return time_array, event_time
