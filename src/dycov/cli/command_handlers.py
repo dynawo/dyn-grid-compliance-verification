@@ -58,7 +58,12 @@ def handle_generate_envelopes_command(
         return
 
     result_code = _generate_envelopes(
-        dwo_launcher=dwo_launcher, output_dir=output_dir, producer_ini=producer_ini, emt=emt
+        dwo_launcher=dwo_launcher,
+        output_dir=output_dir,
+        producer_ini=producer_ini,
+        emt=emt,
+        user_pcs=args.pcs,
+        only_dtr=args.only_dtr,
     )
 
     if result_code != 0:
@@ -284,8 +289,6 @@ def _run_verification(
     only_dtr: bool,
     testing: bool,
     verification_type: int,
-    validation_file: Optional[Path] = None,
-    validation_type: Optional[str] = None,
 ) -> int:
     """Initializes and runs a model validation or performance verification.
 
@@ -370,10 +373,24 @@ def _run_verification(
         return 1
 
 
-def _generate_envelopes(dwo_launcher: Path, output_dir: Path, producer_ini: Path, emt: bool):
+def _generate_envelopes(
+    dwo_launcher: Path,
+    output_dir: Path,
+    producer_ini: Path,
+    emt: bool,
+    user_pcs: bool,
+    only_dtr: bool,
+):
     _LOGGER.info("Running generation of envelopes")
     try:
-        params = GFMParameters(dwo_launcher, producer_ini, None, output_dir, True, emt)
+        params = GFMParameters(
+            launcher_dwo=dwo_launcher,
+            producer_ini=producer_ini,
+            selected_pcs=user_pcs,
+            output_dir=output_dir,
+            only_dtr=only_dtr,
+            emt=emt,
+        )
 
         # Determine if the parameters are valid.
         if not params.is_valid():

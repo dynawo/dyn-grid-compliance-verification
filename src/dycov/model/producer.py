@@ -17,6 +17,7 @@ class Producer:
 
     def __init__(self, producer_model: Path, producer_ini: Path):
         self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
+        self._f_nom = config.get_float("GridCode", "f_nom", 50.0)
         self._producer_model_path = producer_model
         self._producer_ini_path = producer_ini.parent if producer_ini else None
         self._sim_type = None
