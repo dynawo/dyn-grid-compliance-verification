@@ -543,6 +543,8 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
     _add_ini_argument(envelops, is_required=True)
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
+    _add_pcs_argument(envelops)
+    _add_only_dtr_argument(envelops)
     _LOGGER.debug("Added 'generateEnvelopes' subparser.")
 
 

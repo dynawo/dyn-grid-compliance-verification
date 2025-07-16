@@ -79,9 +79,9 @@ class GridForming:
             (float).
         """
         start_time = 0
-        end_time = 1.3
+        end_time = 5
         event_time = 0
-        nb_points = 260
+        nb_points = 1000
         time_array = np.linspace(start_time, end_time, nb_points)
 
         return time_array, event_time
