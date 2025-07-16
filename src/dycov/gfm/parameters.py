@@ -421,6 +421,50 @@ class GFMParameters(Parameters):
 
         return voltage_step
 
+    def get_change_frequency(self) -> float:
+        """
+        Gets the rate of change of frequency (in per unit - pu).
+
+        Returns
+        -------
+        float
+            rate of change of frequency in pu.
+        """
+        return self.__get_float_value("RoCoF", 0.0) / self._producer._f_nom
+
+    def get_initial_frequency(self) -> float:
+        """
+        Gets the rate of change of frequency (in per unit - pu).
+
+        Returns
+        -------
+        float
+            rate of change of frequency in pu.
+        """
+        return self.__get_float_value("Phase0", 0.0) / self._producer._f_nom
+
+    def get_t_expo_decrease(self) -> float:
+        """
+        Gets the exponential decrease time constant.
+
+        Returns
+        -------
+        float
+            The exponential decrease time constant.
+        """
+        return self.__get_float_value("TimeExponentialDecrease", 0.0)
+
+    def get_pll_time_constant(self) -> float:
+        """
+        Gets the PLL time constant.
+
+        Returns
+        -------
+        float
+            The PLL time constant.
+        """
+        return self.__get_float_value("Tpll", 0.0)
+
     def get_grid_reactance(self) -> float:
         """
         Gets the grid reactance.
