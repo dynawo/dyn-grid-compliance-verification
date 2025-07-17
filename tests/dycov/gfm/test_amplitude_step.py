@@ -27,48 +27,30 @@ epsilon = 1e-3
 
 gfm_params = """
 [DEFAULT]
-P0=0.0
 Q0=0.2
-DeltaPhase=0.0
 VoltageStep=2.0
 SCR=10.0
 RatioMin=0.9
 RatioMax=1.1
-Wb=0
-U0=1.0
-Ugr=1.0
-MarginHigh=0.3
-MarginLow=0.0
 FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 TimeTo90=0.01
 TimeForTunnel=0.06
-p_max_injection=1.1
-p_min_injection=-1.1
 q_max=0.35
 q_min=-0.35
 """
 
 s_vol_ang_step_1_params = """
 [DEFAULT]
-P0=0.0
 Q0=0.0
-DeltaPhase=0.0
 VoltageStep=3.0
 SCR=10.0
 RatioMin=0.9
 RatioMax=1.1
-Wb=0
-U0=1.0
-Ugr=1.0
-MarginHigh=0.3
-MarginLow=0.0
 FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 TimeTo90=0.01
 TimeForTunnel=0.06
-p_max_injection=1.1
-p_min_injection=-1.1
 q_max=0.4
 q_min=-0.4
 """
@@ -112,7 +94,7 @@ def test_amplitude_step_envelopes_event_at_0s():
     test_params = TestParameters(gfm_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
     magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
-        D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
+        D=152.0, H=3.0, Xeff=0.26, time_array=time_array, event_time=event_time
     )
 
     title = "AmplitudeStep_DeltaP_0s"
@@ -138,7 +120,7 @@ def test_amplitude_step_envelopes_event_at_200ms():
     test_params = TestParameters(gfm_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
     magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
-        D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
+        D=152.0, H=3.0, Xeff=0.26, time_array=time_array, event_time=event_time
     )
 
     title = "AmplitudeStep_DeltaP_event"
