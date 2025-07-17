@@ -27,9 +27,7 @@ epsilon = 1e-3
 gfm_overdamped_params = """
 [DEFAULT]
 P0=0.5
-Q0=0.0
 DeltaPhase=-0.08726646259971647
-VoltageStep=0.0
 SCR=2.0
 D=152
 H=3
@@ -43,21 +41,15 @@ MarginHigh=0.5
 MarginLow=0.5
 FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
-TimeTo90=0.0
-TimeForTunnel=0.0
 p_max_injection=1.1
 p_min_injection=-1.1
-q_max=0.4
-q_min=-0.4
 """
 
 
 gfm_underdamped_params = """
 [DEFAULT]
 P0=0.8
-Q0=0.0
 DeltaPhase=-0.13962634015954636
-VoltageStep=0.0
 SCR=10.0
 D=152
 H=3
@@ -71,21 +63,15 @@ MarginHigh=0.2
 MarginLow=0.5
 FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
-TimeTo90=0.0
-TimeForTunnel=0.0
 p_max_injection=1.1
 p_min_injection=-1.1
-q_max=0.4
-q_min=-0.4
 """
 
 
 s_vol_ang_step_1_params = """
 [DEFAULT]
 P0=0.55  # 0.5*p_max_injection
-Q0=0.0
 DeltaPhase=0.10499900779997887  # +θ_jump
-VoltageStep=0.0
 SCR=10.0  # SCR_max
 D=152
 H=3
@@ -99,12 +85,8 @@ MarginHigh=0.5
 MarginLow=0.5
 FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
-TimeTo90=0.0
-TimeForTunnel=0.0
 p_max_injection=1.1
 p_min_injection=-1.1
-q_max=0.4
-q_min=-0.4
 """
 
 
