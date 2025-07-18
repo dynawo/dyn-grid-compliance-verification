@@ -11,6 +11,7 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
+from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 
 
@@ -21,6 +22,16 @@ class PhaseJump(GFMCalculator):
     envelopes, differentiating between overdamped and underdamped system
     responses.
     """
+
+    def __init__(
+        self,
+        gfm_params: GFMParameters,
+    ) -> None:
+        super().__init__(gfm_params=gfm_params)
+        self._delta_phase = gfm_params.get_delta_phase()
+        self._initial_active_power = gfm_params.get_initial_active_power()
+        self._min_active_power = gfm_params.get_min_active_power()
+        self._max_active_power = gfm_params.get_max_active_power()
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -55,11 +66,11 @@ class PhaseJump(GFMCalculator):
         # Log the input parameters for debugging.
         dycov_logging.get_logger("PhaseJump").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         dycov_logging.get_logger("PhaseJump").debug(
-            f"Input Params ΔPhase={self._gfm_params.get_delta_phase()} "
-            f"SCR={self._gfm_params.get_scr()} "
-            f"P0={self._gfm_params.get_initial_active_power()} "
-            f"PMin={self._gfm_params.get_min_active_power()} "
-            f"PMax={self._gfm_params.get_max_active_power()}"
+            f"Input Params ΔPhase={self._delta_phase} "
+            f"SCR={self._scr} "
+            f"P0={self._initial_active_power} "
+            f"PMin={self._min_active_power} "
+            f"PMax={self._max_active_power}"
         )
 
         (
@@ -122,15 +133,11 @@ class PhaseJump(GFMCalculator):
             - epsilon_array: List of epsilon values for original, min, and max parameter
               variations.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
-        d_array = np.array(
-            [D, D * self._gfm_params.get_min_ratio(), D * self._gfm_params.get_max_ratio()]
-        )
-        h_array = np.array(
-            [H, H / self._gfm_params.get_min_ratio(), H / self._gfm_params.get_max_ratio()]
-        )
+        d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
+        h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
 
         epsilon_initial_check = self._calculate_epsilon_initial_check(
             d_array, h_array, x_total_initial
@@ -210,8 +217,8 @@ class PhaseJump(GFMCalculator):
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
 
-        p_pcc = self._gfm_params.get_initial_active_power() + delta_p * -(
-            self._gfm_params.get_delta_phase() / np.abs(self._gfm_params.get_delta_phase())
+        p_pcc = self._initial_active_power + delta_p * -(
+            self._delta_phase / np.abs(self._delta_phase)
         )
 
         list_of_arrays: list[np.ndarray] = delta_p_array + [delta_p_min, delta_p_max]
@@ -224,7 +231,7 @@ class PhaseJump(GFMCalculator):
             pdown_no_p0, pup_no_p0, self._get_tunnel(p_peak_array)
         )
 
-        if self._gfm_params.is_emt():
+        if self._is_emt_flag:
             p_up_final = self._apply_delay(0.02, pup_limited[0], time_array, pup_limited)
             p_down_final = self._apply_delay(0.02, pdown_limited[0], time_array, pdown_limited)
             p_pcc_final = self._apply_delay(0.02, p_pcc[0], time_array, p_pcc)
@@ -261,22 +268,16 @@ class PhaseJump(GFMCalculator):
             - wn: Natural frequency.
             - p_peak_calc: Calculated peak power.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
-        u_prod = self._gfm_params.get_initial_voltage() * self._gfm_params.get_grid_voltage()
+        u_prod = self._initial_voltage * self._grid_voltage
 
         epsilon = (
-            D
-            / 2
-            * np.sqrt(
-                x_total_initial / (2 * H * self._gfm_params.get_base_angular_frequency() * u_prod)
-            )
+            D / 2 * np.sqrt(x_total_initial / (2 * H * self._base_angular_frequency * u_prod))
         )
-        wn = np.sqrt(
-            self._gfm_params.get_base_angular_frequency() * u_prod / (2 * H * x_total_initial)
-        )
+        wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total_initial))
 
-        delta_theta_rad = np.abs(self._gfm_params.get_delta_phase() * np.pi / 180)
+        delta_theta_rad = np.abs(self._delta_phase * np.pi / 180)
         p_peak_calc = delta_theta_rad * u_prod / x_total_initial
 
         return x_total_initial, epsilon, wn, p_peak_calc
@@ -311,9 +312,9 @@ class PhaseJump(GFMCalculator):
                 / (
                     2
                     * H
-                    * self._gfm_params.get_base_angular_frequency()
-                    * self._gfm_params.get_initial_voltage()
-                    * self._gfm_params.get_grid_voltage()
+                    * self._base_angular_frequency
+                    * self._initial_voltage
+                    * self._grid_voltage
                 )
             )
         )
@@ -464,7 +465,7 @@ class PhaseJump(GFMCalculator):
             The minimum delta_p array for the overdamped system.
         """
         delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        delta_p1_margined = (1 + self._gfm_params.get_margin_low()) * delta_p1
+        delta_p1_margined = (1 + self._margin_low) * delta_p1
         delta_p = np.where(time_array < event_time, 0, delta_p1_margined)
         return delta_p
 
@@ -494,7 +495,7 @@ class PhaseJump(GFMCalculator):
             The maximum delta_p array for the overdamped system.
         """
         delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        delta_p1_margined = self._gfm_params.get_margin_high() * delta_p1
+        delta_p1_margined = self._margin_high * delta_p1
         delta_p1_delayed = self._apply_delay(0.01, 0, time_array, delta_p1_margined)
         delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
         return delta_p
@@ -597,9 +598,7 @@ class PhaseJump(GFMCalculator):
         """
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)
-        delta_p_margined = (
-            p_peak * (1 - self._gfm_params.get_margin_low()) * np.exp(-sigma * time_array)
-        )
+        delta_p_margined = p_peak * (1 - self._margin_low) * np.exp(-sigma * time_array)
         delta_p_delayed = self._apply_delay(0.01, 0, time_array, delta_p_margined)
         delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
         return delta_p
@@ -632,9 +631,7 @@ class PhaseJump(GFMCalculator):
         """
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)
-        delta_p_margined = (
-            p_peak * (1 + self._gfm_params.get_margin_high()) * np.exp(-sigma * time_array)
-        )
+        delta_p_margined = p_peak * (1 + self._margin_high) * np.exp(-sigma * time_array)
         delta_p_delayed = self._apply_delay(
             0.01, delta_p_margined[0], time_array, delta_p_margined
         )
@@ -701,21 +698,21 @@ class PhaseJump(GFMCalculator):
             - pdown_limited: The final, limited power down envelope.
             - pup_limited: The final, limited power up envelope.
         """
-        delta_theta_sign = 1 if self._gfm_params.get_delta_phase() > 0 else -1
+        delta_theta_sign = 1 if self._delta_phase > 0 else -1
 
         pdown_limited = np.minimum(
             np.maximum(
-                self._gfm_params.get_initial_active_power() - delta_theta_sign * pdown_no_p0,
+                self._initial_active_power - delta_theta_sign * pdown_no_p0,
                 -1 + tunnel_value,
             ),
             1 - tunnel_value,
         )
         pup_limited = np.minimum(
             np.maximum(
-                self._gfm_params.get_initial_active_power() - 1 * delta_theta_sign * pup_no_p0,
-                self._gfm_params.get_min_active_power(),
+                self._initial_active_power - 1 * delta_theta_sign * pup_no_p0,
+                self._min_active_power,
             ),
-            self._gfm_params.get_max_active_power(),
+            self._max_active_power,
         )
         return pdown_limited, pup_limited
 
@@ -738,8 +735,8 @@ class PhaseJump(GFMCalculator):
         """
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
         return max(
-            self._gfm_params.get_final_allowed_tunnel_pn(),
-            self._gfm_params.get_final_allowed_tunnel_variation() * p_peak,
+            self._final_allowed_tunnel_pn,
+            self._final_allowed_tunnel_variation * p_peak,
         )
 
     def _get_time_tunnel(
@@ -766,8 +763,8 @@ class PhaseJump(GFMCalculator):
             The time-dependent tunnel array.
         """
         t_val = max(
-            self._gfm_params.get_final_allowed_tunnel_pn(),
-            self._gfm_params.get_final_allowed_tunnel_variation() * p_peak,
+            self._final_allowed_tunnel_pn,
+            self._final_allowed_tunnel_variation * p_peak,
         )
         tunnel_exp = 1 - np.exp((-time_array + 0.02) / 0.3)
         tunnel = t_val * tunnel_exp

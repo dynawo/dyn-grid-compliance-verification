@@ -11,6 +11,7 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
+from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 
 
@@ -21,6 +22,18 @@ class RoCoF(GFMCalculator):
     envelopes, differentiating between overdamped and underdamped system
     responses.
     """
+
+    def __init__(
+        self,
+        gfm_params: GFMParameters,
+    ) -> None:
+        super().__init__(gfm_params=gfm_params)
+        self._change_frequency = gfm_params.get_change_frequency()
+        self._initial_active_power = gfm_params.get_initial_active_power()
+        self._min_active_power = gfm_params.get_min_active_power()
+        self._max_active_power = gfm_params.get_max_active_power()
+        self._pll_time_constant = gfm_params.get_pll_time_constant()
+        self._t_expo_decrease = gfm_params.get_t_expo_decrease()
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -55,11 +68,11 @@ class RoCoF(GFMCalculator):
         # Log the input parameters for debugging.
         dycov_logging.get_logger("RoCoF").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         dycov_logging.get_logger("RoCoF").debug(
-            f"Input Params Δfrequency={self._gfm_params.get_change_frequency()} "
-            f"SCR={self._gfm_params.get_scr()} "
-            f"P0={self._gfm_params.get_initial_active_power()} "
-            f"PMin={self._gfm_params.get_min_active_power()} "
-            f"PMax={self._gfm_params.get_max_active_power()}"
+            f"Input Params Δfrequency={self._change_frequency} "
+            f"SCR={self._scr} "
+            f"P0={self._initial_active_power} "
+            f"PMin={self._min_active_power} "
+            f"PMax={self._max_active_power}"
         )
 
         (
@@ -124,21 +137,17 @@ class RoCoF(GFMCalculator):
             - epsilon_array: List of epsilon values for original, min, and max parameter
               variations.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
-        t_pll = self._gfm_params.get_pll_time_constant()
+        t_pll = self._pll_time_constant
 
-        d_array = np.array(
-            [D, D * self._gfm_params.get_min_ratio(), D * self._gfm_params.get_max_ratio()]
-        )
-        h_array = np.array(
-            [H, H / self._gfm_params.get_min_ratio(), H / self._gfm_params.get_max_ratio()]
-        )
+        d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
+        h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
         t_pll_array = np.array(
             [
                 t_pll,
-                t_pll / self._gfm_params.get_min_ratio(),
-                t_pll / self._gfm_params.get_max_ratio(),
+                t_pll / self._min_ratio,
+                t_pll / self._max_ratio,
             ]
         )
 
@@ -165,7 +174,7 @@ class RoCoF(GFMCalculator):
             p_peak_array.append(p_peak)
             epsilon_array.append(epsilon)
 
-        copouding_value = np.exp(-time_array / self._gfm_params.get_t_expo_decrease())
+        copouding_value = np.exp(-time_array / self._t_expo_decrease)
         delta_p_array[self._MINIMUM_PARAMS_IDX] = delta_p_array[
             self._MINIMUM_PARAMS_IDX
         ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
@@ -248,9 +257,8 @@ class RoCoF(GFMCalculator):
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
 
-        p_pcc = self._gfm_params.get_initial_active_power() + delta_p * -(
-            self._gfm_params.get_change_frequency()
-            / np.abs(self._gfm_params.get_change_frequency())
+        p_pcc = self._initial_active_power + delta_p * -(
+            self._change_frequency / np.abs(self._change_frequency)
         )
 
         list_of_arrays: list[np.ndarray] = [
@@ -264,15 +272,12 @@ class RoCoF(GFMCalculator):
             list_of_arrays, tunnel_time_dep
         )
 
-        expected_delta_p = np.abs(
-            -(2 * H + D * self._gfm_params.get_pll_time_constant())
-            * self._gfm_params.get_change_frequency()
-        )
+        expected_delta_p = np.abs(-(2 * H + D * self._pll_time_constant) * self._change_frequency)
         pdown_limited, pup_limited = self._limit_power_envelopes(
             pdown_no_p0, pup_no_p0, self._get_tunnel(expected_delta_p)
         )
 
-        if self._gfm_params.is_emt():
+        if self._is_emt_flag:
             p_up_final = self._apply_delay(0.02, pup_limited[0], time_array, pup_limited)
             p_down_final = self._apply_delay(0.02, pdown_limited[0], time_array, pdown_limited)
             p_pcc_final = self._apply_delay(0.02, p_pcc[0], time_array, p_pcc)
@@ -309,22 +314,16 @@ class RoCoF(GFMCalculator):
             - wn: Natural frequency.
             - p_peak_calc: Calculated peak power.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
-        u_prod = self._gfm_params.get_initial_voltage() * self._gfm_params.get_grid_voltage()
+        u_prod = self._initial_voltage * self._grid_voltage
 
         epsilon = (
-            D
-            / 2
-            * np.sqrt(
-                x_total_initial / (2 * H * self._gfm_params.get_base_angular_frequency() * u_prod)
-            )
+            D / 2 * np.sqrt(x_total_initial / (2 * H * self._base_angular_frequency * u_prod))
         )
-        wn = np.sqrt(
-            self._gfm_params.get_base_angular_frequency() * u_prod / (2 * H * x_total_initial)
-        )
+        wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total_initial))
 
-        delta_theta_rad = np.abs(self._gfm_params.get_change_frequency() * np.pi / 180)
+        delta_theta_rad = np.abs(self._change_frequency * np.pi / 180)
         p_peak_calc = delta_theta_rad * u_prod / x_total_initial
 
         return x_total_initial, epsilon, wn, p_peak_calc
@@ -359,9 +358,9 @@ class RoCoF(GFMCalculator):
                 / (
                     2
                     * H
-                    * self._gfm_params.get_base_angular_frequency()
-                    * self._gfm_params.get_initial_voltage()
-                    * self._gfm_params.get_grid_voltage()
+                    * self._base_angular_frequency
+                    * self._initial_voltage
+                    * self._grid_voltage
                 )
             )
         )
@@ -441,13 +440,11 @@ class RoCoF(GFMCalculator):
             - epsilon: The damping ratio.
         """
         x_total_initial, _, wn, p_peak = self._calculate_common_params(D, H, Xeff)
-        u_prod = self._gfm_params.get_initial_voltage() * self._gfm_params.get_grid_voltage()
-        xi = (
-            wn * D * x_total_initial / (1 * self._gfm_params.get_base_angular_frequency() * u_prod)
-        )
+        u_prod = self._initial_voltage * self._grid_voltage
+        xi = wn * D * x_total_initial / (1 * self._base_angular_frequency * u_prod)
 
         # Common terms
-        alpha = 2 * H * t_pll * np.abs(self._gfm_params.get_change_frequency())
+        alpha = 2 * H * t_pll * np.abs(self._change_frequency)
         beta = (2 * H + D * t_pll) / (2 * H * t_pll)
 
         A_coeff = alpha * beta
@@ -565,7 +562,7 @@ class RoCoF(GFMCalculator):
             The minimum delta_p array for the overdamped system.
         """
         delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
-        delta_p1_margined = (1 + self._gfm_params.get_margin_low()) * delta_p1
+        delta_p1_margined = (1 + self._margin_low) * delta_p1
         delta_p = np.where(time_array < event_time, 0, delta_p1_margined)
         return delta_p
 
@@ -603,7 +600,7 @@ class RoCoF(GFMCalculator):
             The maximum delta_p array for the overdamped system.
         """
         delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
-        delta_p1_margined = self._gfm_params.get_margin_high() * delta_p1
+        delta_p1_margined = self._margin_high * delta_p1
         delta_p1_delayed = self._apply_delay(0.01, 0, time_array, delta_p1_margined)
         delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
         return delta_p
@@ -641,7 +638,7 @@ class RoCoF(GFMCalculator):
         wd = wn * np.sqrt(1 - epsilon**2)
 
         # Common terms
-        alpha = 2 * H * t_pll * np.abs(self._gfm_params.get_change_frequency())
+        alpha = 2 * H * t_pll * np.abs(self._change_frequency)
         beta = (2 * H + D * t_pll) / (2 * H * t_pll)
 
         A_coeff = alpha * beta
@@ -754,9 +751,9 @@ class RoCoF(GFMCalculator):
         np.ndarray
             The minimum delta_p array for the underdamped system.
         """
-        expected_delta_p = np.abs(-(2 * H + D * t_pll) * self._gfm_params.get_change_frequency())
+        expected_delta_p = np.abs(-(2 * H + D * t_pll) * self._change_frequency)
         delta_p1, _, _ = self._get_underdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
-        delta_p1_margined = (1 + self._gfm_params.get_margin_low()) * delta_p1
+        delta_p1_margined = (1 + self._margin_low) * delta_p1
 
         delta_p1_diff = np.diff(delta_p1_margined)
         index_decrease = np.where(delta_p1_diff < 0)[0][0]
@@ -769,7 +766,7 @@ class RoCoF(GFMCalculator):
             expected_delta_p
             - tunnel
             + (max_value - expected_delta_p + tunnel)
-            * np.exp(-(time_array - min_time) / self._gfm_params.get_t_expo_decrease())
+            * np.exp(-(time_array - min_time) / self._t_expo_decrease)
         )
 
         delta_p = delta_p1_margined
@@ -812,9 +809,9 @@ class RoCoF(GFMCalculator):
         np.ndarray
             The maximum delta_p array for the underdamped system.
         """
-        expected_delta_p = np.abs(-(2 * H + D * t_pll) * self._gfm_params.get_change_frequency())
+        expected_delta_p = np.abs(-(2 * H + D * t_pll) * self._change_frequency)
         delta_p1, _, _ = self._get_underdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
-        delta_p1_margined = (1 + self._gfm_params.get_margin_high()) * delta_p1
+        delta_p1_margined = (1 + self._margin_high) * delta_p1
 
         delta_p1_diff = np.diff(delta_p1_margined)
         index_decrease = np.where(delta_p1_diff < 0)[0][0]
@@ -825,7 +822,7 @@ class RoCoF(GFMCalculator):
         min_value = np.min(delta_p1[index_increase + 1 :])
 
         delta_p2 = expected_delta_p + (min_value - expected_delta_p) * np.exp(
-            -(time_array - min_time) / self._gfm_params.get_t_expo_decrease()
+            -(time_array - min_time) / self._t_expo_decrease
         )
 
         delta_p = delta_p1_margined
@@ -894,21 +891,21 @@ class RoCoF(GFMCalculator):
             - pdown_limited: The final, limited power down envelope.
             - pup_limited: The final, limited power up envelope.
         """
-        rocof_sign = 1 if self._gfm_params.get_change_frequency() > 0 else -1
+        rocof_sign = 1 if self._change_frequency > 0 else -1
 
         pdown_limited = np.minimum(
             np.maximum(
-                self._gfm_params.get_initial_active_power() - rocof_sign * pdown_no_p0,
+                self._initial_active_power - rocof_sign * pdown_no_p0,
                 -1 + tunnel_value,
             ),
             1 - tunnel_value,
         )
         pup_limited = np.minimum(
             np.maximum(
-                self._gfm_params.get_initial_active_power() - 1 * rocof_sign * pup_no_p0,
-                self._gfm_params.get_min_active_power(),
+                self._initial_active_power - 1 * rocof_sign * pup_no_p0,
+                self._min_active_power,
             ),
-            self._gfm_params.get_max_active_power(),
+            self._max_active_power,
         )
         return pdown_limited, pup_limited
 
@@ -929,8 +926,8 @@ class RoCoF(GFMCalculator):
             The calculated constant tunnel value.
         """
         return max(
-            self._gfm_params.get_final_allowed_tunnel_pn(),
-            self._gfm_params.get_final_allowed_tunnel_variation() * expected_delta_p,
+            self._final_allowed_tunnel_pn,
+            self._final_allowed_tunnel_variation * expected_delta_p,
         )
 
     def _get_time_tunnel(
@@ -957,8 +954,8 @@ class RoCoF(GFMCalculator):
             The time-dependent tunnel array.
         """
         t_val = max(
-            self._gfm_params.get_final_allowed_tunnel_pn(),
-            self._gfm_params.get_final_allowed_tunnel_variation() * p_peak,
+            self._final_allowed_tunnel_pn,
+            self._final_allowed_tunnel_variation * p_peak,
         )
         tunnel_exp = 1 - np.exp((-time_array + 0.02) / 0.3)
         tunnel = t_val * tunnel_exp

@@ -123,12 +123,12 @@ def test_rocof_initialization():
     test_params = TestParameters(gfm_overdamped_params)
     rocof = RoCoF(gfm_params=test_params)
 
-    assert rocof._gfm_params == test_params
+    assert rocof._change_frequency == test_params.get_change_frequency()
 
     test_params = TestParameters(gfm_underdamped_params)
     rocof = RoCoF(gfm_params=test_params)
 
-    assert rocof._gfm_params == test_params
+    assert rocof._change_frequency == test_params.get_change_frequency()
 
 
 def test_rocof_overdamped_envelopes_event_at_0s():

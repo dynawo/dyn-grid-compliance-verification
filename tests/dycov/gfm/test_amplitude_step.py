@@ -79,7 +79,7 @@ def test_amplitude_step_initialization():
     test_params = TestParameters(gfm_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
 
-    assert amplitude_step._gfm_params == test_params
+    assert amplitude_step._voltage_step == test_params.get_voltage_step()
 
 
 def test_amplitude_step_envelopes_event_at_0s():

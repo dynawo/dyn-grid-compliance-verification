@@ -113,12 +113,12 @@ def test_phase_jump_initialization():
     test_params = TestParameters(gfm_overdamped_params)
     phase_jump = PhaseJump(gfm_params=test_params)
 
-    assert phase_jump._gfm_params == test_params
+    assert phase_jump._delta_phase == test_params.get_delta_phase()
 
     test_params = TestParameters(gfm_underdamped_params)
     phase_jump = PhaseJump(gfm_params=test_params)
 
-    assert phase_jump._gfm_params == test_params
+    assert phase_jump._delta_phase == test_params.get_delta_phase()
 
 
 def test_phase_jump_overdamped_envelopes_event_at_0s():
