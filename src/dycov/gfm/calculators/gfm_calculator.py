@@ -37,9 +37,19 @@ class GFMCalculator:
         Parameters
         ----------
         gfm_params: GFMParameters
-            An object containing all necessary parameters for GFM phase jump calculations.
+            An object containing all necessary parameters for GFM calculations.
         """
-        self._gfm_params = gfm_params
+        self._scr = gfm_params.get_scr()
+        self._min_ratio = gfm_params.get_min_ratio()
+        self._max_ratio = gfm_params.get_max_ratio()
+        self._is_emt_flag = gfm_params.is_emt()
+        self._initial_voltage = gfm_params.get_initial_voltage()
+        self._grid_voltage = gfm_params.get_grid_voltage()
+        self._base_angular_frequency = gfm_params.get_base_angular_frequency()
+        self._margin_low = gfm_params.get_margin_low()
+        self._margin_high = gfm_params.get_margin_high()
+        self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
+        self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float

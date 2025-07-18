@@ -11,6 +11,7 @@
 import numpy as np
 
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
+from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 
 
@@ -20,6 +21,18 @@ class AmplitudeStep(GFMCalculator):
     This class handles all core calculations for delta_q and reactive power
     envelopes.
     """
+
+    def __init__(
+        self,
+        gfm_params: GFMParameters,
+    ) -> None:
+        super().__init__(gfm_params=gfm_params)
+        self._voltage_step = gfm_params.get_voltage_step()
+        self._initial_reactive_power = gfm_params.get_initial_reactive_power()
+        self._min_reactive_power = gfm_params.get_min_reactive_power()
+        self._max_reactive_power = gfm_params.get_max_reactive_power()
+        self._time_for_tunnel = gfm_params.get_time_for_tunnel()
+        self._time_to_90 = gfm_params.get_time_to_90()
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -55,11 +68,11 @@ class AmplitudeStep(GFMCalculator):
         # Log the input parameters for debugging.
         dycov_logging.get_logger("AmplitudeStep").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         dycov_logging.get_logger("AmplitudeStep").debug(
-            f"Input Params ΔVoltage={self._gfm_params.get_voltage_step()} "
-            f"SCR={self._gfm_params.get_scr()} "
-            f"Q0={self._gfm_params.get_initial_reactive_power()} "
-            f"QMin={self._gfm_params.get_min_reactive_power()} "
-            f"QMax={self._gfm_params.get_max_reactive_power()}"
+            f"Input Params ΔVoltage={self._voltage_step} "
+            f"SCR={self._scr} "
+            f"Q0={self._initial_reactive_power} "
+            f"QMin={self._min_reactive_power} "
+            f"QMax={self._max_reactive_power}"
         )
         (
             delta_q_array,
@@ -115,12 +128,8 @@ class AmplitudeStep(GFMCalculator):
             - delta_q_max: delta_q array specifically calculated for the maximum
               parameter case.
         """
-        d_array = np.array(
-            [D, D * self._gfm_params.get_min_ratio(), D * self._gfm_params.get_max_ratio()]
-        )
-        h_array = np.array(
-            [H, H / self._gfm_params.get_min_ratio(), H / self._gfm_params.get_max_ratio()]
-        )
+        d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
+        h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
 
         delta_q_array = []
 
@@ -184,30 +193,27 @@ class AmplitudeStep(GFMCalculator):
         # Coupling (PCC). This is based on the initial power (Q0) and delta_q,
         # adjusted by the sign of voltage_step to reflect the direction of
         # power change.
-        q_pcc = self._gfm_params.get_initial_reactive_power() + delta_q * -(
-            self._gfm_params.get_voltage_step() / np.abs(self._gfm_params.get_voltage_step())
+        q_pcc = self._initial_reactive_power + delta_q * -(
+            self._voltage_step / np.abs(self._voltage_step)
         )
 
-        q_up_raw = self._gfm_params.get_initial_reactive_power() + np.minimum(
+        q_up_raw = self._initial_reactive_power + np.minimum(
             delta_q_max,
-            self._gfm_params.get_max_reactive_power()
-            - self._gfm_params.get_initial_reactive_power(),
-        ) * -(self._gfm_params.get_voltage_step() / np.abs(self._gfm_params.get_voltage_step()))
+            self._max_reactive_power - self._initial_reactive_power,
+        ) * -(self._voltage_step / np.abs(self._voltage_step))
 
         tunnel = self._get_tunnel(Xeff)
-        q_down_raw = self._gfm_params.get_initial_reactive_power() + np.minimum(
+        q_down_raw = self._initial_reactive_power + np.minimum(
             delta_q_min,
-            self._gfm_params.get_max_reactive_power()
-            - self._gfm_params.get_initial_reactive_power()
-            - tunnel,
-        ) * -(self._gfm_params.get_voltage_step() / np.abs(self._gfm_params.get_voltage_step()))
+            self._max_reactive_power - self._initial_reactive_power - tunnel,
+        ) * -(self._voltage_step / np.abs(self._voltage_step))
 
         q_up = np.maximum(q_up_raw, q_down_raw)
         q_down = np.minimum(q_up_raw, q_down_raw)
 
         # If EMT simulation flag is true, apply a small delay to the final
         # power signals.
-        if self._gfm_params.is_emt():
+        if self._is_emt_flag:
             q_up_final = self._apply_delay(0.02, q_up[0], time_array, q_up)
             q_down_final = self._apply_delay(0.02, q_down[0], time_array, q_down)
         else:
@@ -241,15 +247,15 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The base delta_q waveform.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
-        voltage_step = self._gfm_params.get_voltage_step() / 100.0
+        voltage_step = self._voltage_step / 100.0
 
         delta_v_inf = -np.abs(voltage_step * x_total_initial / Xeff)
         delta_iq = np.abs(delta_v_inf / x_total_initial)
 
-        tau = -self._gfm_params.get_time_to_90() / np.log(0.1)
+        tau = -self._time_to_90 / np.log(0.1)
 
         delta_q1 = delta_iq * (1 - np.exp(-time_array / tau))
         return delta_q1
@@ -314,10 +320,10 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The minimum delta_q array for the overdamped system.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
-        voltage_step = self._gfm_params.get_voltage_step() / 100.0
+        voltage_step = self._voltage_step / 100.0
 
         delta_v_inf = np.abs(voltage_step * x_total_initial / Xeff)
         delta_iq = np.abs(delta_v_inf / x_total_initial)
@@ -356,11 +362,11 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The maximum delta_q array for the overdamped system.
         """
-        ttunnel = self._gfm_params.get_time_for_tunnel()
-        x_gr = 1 / self._gfm_params.get_scr()
+        ttunnel = self._time_for_tunnel
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
-        voltage_step = self._gfm_params.get_voltage_step() / 100.0
+        voltage_step = self._voltage_step / 100.0
 
         delta_v_inf = np.abs(voltage_step * x_total_initial / Xeff)
         delta_iq = np.abs(delta_v_inf / x_total_initial)
@@ -368,9 +374,7 @@ class AmplitudeStep(GFMCalculator):
         tunnel = self._get_tunnel(Xeff)
 
         delta_q1 = (
-            delta_iq
-            + self._gfm_params.get_margin_high() * delta_iq * np.exp(-time_array / (ttunnel / 3))
-            + tunnel
+            delta_iq + self._margin_high * delta_iq * np.exp(-time_array / (ttunnel / 3)) + tunnel
         )
         delta_q1_margined = np.where(time_array < ttunnel, delta_q1, delta_iq + tunnel)
         delta_q = np.where(time_array < event_time, 0, delta_q1_margined)
@@ -390,15 +394,15 @@ class AmplitudeStep(GFMCalculator):
         float
             The calculated constant tunnel value.
         """
-        x_gr = 1 / self._gfm_params.get_scr()
+        x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
-        voltage_step = self._gfm_params.get_voltage_step() / 100.0
+        voltage_step = self._voltage_step / 100.0
 
         delta_v_inf = np.abs(voltage_step * x_total_initial / Xeff)
         delta_iq = np.abs(delta_v_inf / x_total_initial)
 
         return max(
-            self._gfm_params.get_final_allowed_tunnel_pn(),  # Fixed power component
-            self._gfm_params.get_final_allowed_tunnel_variation() * delta_iq,
+            self._final_allowed_tunnel_pn,  # Fixed power component
+            self._final_allowed_tunnel_variation * delta_iq,
         )
