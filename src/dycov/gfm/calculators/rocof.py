@@ -252,14 +252,13 @@ class RoCoF(GFMCalculator):
         """
         delta_p = delta_p_array[self._ORIGINAL_PARAMS_IDX]
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
+        sign = self._change_frequency / np.abs(self._change_frequency)
 
         tunnel_time_dep = self._get_time_tunnel(
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
 
-        p_pcc = self._initial_active_power + delta_p * -(
-            self._change_frequency / np.abs(self._change_frequency)
-        )
+        p_pcc = self._initial_active_power + delta_p * -(sign)
 
         list_of_arrays: list[np.ndarray] = [
             delta_p_array[self._MINIMUM_PARAMS_IDX],
@@ -274,7 +273,13 @@ class RoCoF(GFMCalculator):
 
         expected_delta_p = np.abs(-(2 * H + D * self._pll_time_constant) * self._change_frequency)
         pdown_limited, pup_limited = self._limit_power_envelopes(
-            pdown_no_p0, pup_no_p0, self._get_tunnel(expected_delta_p)
+            pdown_no_p0,
+            pup_no_p0,
+            self._get_tunnel(expected_delta_p),
+            self._initial_active_power,
+            self._max_active_power,
+            self._min_active_power,
+            sign,
         )
 
         if self._is_emt_flag:
@@ -327,43 +332,6 @@ class RoCoF(GFMCalculator):
         p_peak_calc = delta_theta_rad * u_prod / x_total_initial
 
         return x_total_initial, epsilon, wn, p_peak_calc
-
-    def _calculate_epsilon_initial_check(
-        self, D: np.ndarray, H: np.ndarray, x_total_initial: float
-    ) -> float:
-        """
-        Calculates the initial damping ratio (epsilon) to determine
-        whether the system's response is overdamped or underdamped.
-        This calculation uses base values to determine the overall system behavior.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        x_total_initial : float
-            Total initial reactance of the system.
-
-        Returns
-        -------
-        float
-            The calculated initial damping ratio (epsilon).
-        """
-        return (
-            D
-            / 2
-            * np.sqrt(
-                x_total_initial
-                / (
-                    2
-                    * H
-                    * self._base_angular_frequency
-                    * self._initial_voltage
-                    * self._grid_voltage
-                )
-            )
-        )
 
     def _calculate_delta_p_for_damping(
         self,
@@ -831,84 +799,6 @@ class RoCoF(GFMCalculator):
         delta_p = np.where(time_array < event_time, 0, delta_p)
         return delta_p
 
-    def _calculate_unlimited_power_envelopes(
-        self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Calculates the initial (unlimited) power down and power up envelopes.
-        This is done by finding the minimum and maximum across various delta_p arrays
-        and adjusting them by the time-dependent tunnel, effectively creating a band.
-
-        Parameters
-        ----------
-        list_of_arrays : list[np.ndarray]
-            A list of delta_p arrays (e.g., nominal, min/max D/H variations, specific
-            min/max delta_p) to be used for determining the overall minimum and maximum
-            response.
-        tunnel : np.ndarray
-            The time-dependent tunnel response array, which defines the dynamic width of
-            the band.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            A tuple containing:
-            - pdown_no_p0: The calculated lower power envelope, without considering the
-              initial power (P0).
-            - pup_no_p0: The calculated upper power envelope, without considering the
-              initial power (P0).
-        """
-        pdown_no_p0 = np.minimum.reduce(list_of_arrays) - tunnel
-        pup_no_p0 = np.maximum.reduce(list_of_arrays) + tunnel
-        return np.minimum(pdown_no_p0, pup_no_p0), np.maximum(pdown_no_p0, pup_no_p0)
-
-    def _limit_power_envelopes(
-        self,
-        pdown_no_p0: np.ndarray,
-        pup_no_p0: np.ndarray,
-        tunnel_value: float,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Applies final operational limits to the calculated power down and power up
-        envelopes. This involves incorporating the initial power (P0) and clipping
-        the signals based on system-defined minimum/maximum power and a constant
-        tunnel value.
-
-        Parameters
-        ----------
-        pdown_no_p0 : np.ndarray
-            The unlimited power down signal, not yet adjusted by initial power P0.
-        pup_no_p0 : np.ndarray
-            The unlimited power up signal, not yet adjusted by initial power P0.
-        tunnel_value : float
-            The constant tunnel value used for final limiting, defining the static
-            band width.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            A tuple containing:
-            - pdown_limited: The final, limited power down envelope.
-            - pup_limited: The final, limited power up envelope.
-        """
-        rocof_sign = 1 if self._change_frequency > 0 else -1
-
-        pdown_limited = np.minimum(
-            np.maximum(
-                self._initial_active_power - rocof_sign * pdown_no_p0,
-                -1 + tunnel_value,
-            ),
-            1 - tunnel_value,
-        )
-        pup_limited = np.minimum(
-            np.maximum(
-                self._initial_active_power - 1 * rocof_sign * pup_no_p0,
-                self._min_active_power,
-            ),
-            self._max_active_power,
-        )
-        return pdown_limited, pup_limited
-
     def _get_tunnel(self, expected_delta_p: float) -> float:
         """
         Calculates a constant "tunnel" value. This value defines a static band
@@ -929,34 +819,3 @@ class RoCoF(GFMCalculator):
             self._final_allowed_tunnel_pn,
             self._final_allowed_tunnel_variation * expected_delta_p,
         )
-
-    def _get_time_tunnel(
-        self, p_peak: float, time_array: np.ndarray, event_time: float
-    ) -> np.ndarray:
-        """
-        Calculates a time-dependent "tunnel" array. This array represents
-        a dynamic band around the power response that expands over time after an
-        event. It starts at zero before the event and increases exponentially
-        towards a final magnitude.
-
-        Parameters
-        ----------
-        p_peak : float
-            The peak power value, used to determine the final magnitude of the tunnel.
-        time_array : np.ndarray
-            The array of time points for the simulation.
-        event_time : float
-            The time at which the event occurs, before which the tunnel is zero.
-
-        Returns
-        -------
-        np.ndarray
-            The time-dependent tunnel array.
-        """
-        t_val = max(
-            self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * p_peak,
-        )
-        tunnel_exp = 1 - np.exp((-time_array + 0.02) / 0.3)
-        tunnel = t_val * tunnel_exp
-        return np.where(time_array < event_time, 0, tunnel)
