@@ -74,7 +74,9 @@ class DycovCLI:
 
         # Determine Dynawo launcher availability and initialize components.
         # The 'anonymize' command does not require a Dynawo launcher.
-        if args.command != "anonymize":
+        # The 'generateEnvelopes' command does not require a Dynawo launcher.
+        simple_commands = ["anonymize", "generateEnvelopes"]
+        if args.command not in simple_commands:
             dynawo_launcher_name = get_dynawo_launcher_name(parser, args)
             check_dynawo_launcher_availability(dynawo_launcher_name)
             dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
