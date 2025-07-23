@@ -432,6 +432,17 @@ class GFMParameters(Parameters):
         """
         return self.__get_float_value("RoCoF", 0.0) / self._producer._f_nom
 
+    def get_change_frequency_duration(self) -> float:
+        """
+        Gets the duration of the rate of change of frequency (s).
+
+        Returns
+        -------
+        float
+            duration of the rate of change of frequency in s.
+        """
+        return self.__get_float_value("RoCoFDuration", 0.0)
+
     def get_initial_frequency(self) -> float:
         """
         Gets the rate of change of frequency (in per unit - pu).

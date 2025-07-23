@@ -147,6 +147,8 @@ class DycovInitializer:
             for model in models:
                 self._template_cmd_config(category_path / subdir / model)
 
+        self._template_cmd_config(category_path / "gfm")
+
     def _configure_templates(self, tool_path: Path):
         """
         Sets up the overall template directory structure and copies necessary template files.
