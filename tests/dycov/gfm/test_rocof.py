@@ -29,23 +29,21 @@ gfm_overdamped_params = """
 P0=0.5
 Q0=0.0
 SCR=2.0
-RoCoF=0.2
-D=152
-H=3
-Xeff=0.06
-RatioMin=0.8
-RatioMax=1.2
+RoCoF=-0.05
+RoCoFDuration=0.5
+RatioMin=0.9
+RatioMax=1.1
 Wb=314
 U0=1.0
 Ugr=1.0
 Tpll=0.01
 TimeExponentialDecrease=0.3
-MarginHigh=0.3
-MarginLow=0.5
+MarginHigh=0.5
+MarginLow=0.1
 FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
-p_max_injection=1.1
-p_min_injection=-1.1
+p_max_injection=1.2
+p_min_injection=-1.2
 """
 
 
@@ -55,9 +53,6 @@ P0=0.9
 Q0=0.0
 SCR=20.0
 RoCoF=0.2
-D=250
-H=10
-Xeff=0.06
 RatioMin=0.8
 RatioMax=1.2
 Wb=314
@@ -80,9 +75,6 @@ P0=0.9
 Q0=0.0
 SCR=20.0
 RoCoF=0.2
-D=250
-H=10
-Xeff=0.06
 RatioMin=0.8
 RatioMax=1.2
 Wb=314
@@ -133,16 +125,16 @@ def test_rocof_initialization():
 
 def test_rocof_overdamped_envelopes_event_at_0s():
 
-    start_time = 0
-    end_time = 1.315
+    start_time = -1
+    end_time = 8.0
     event_time = 0
-    nb_points = 264
+    nb_points = 900
     time_array = np.linspace(start_time, end_time, nb_points)
 
     test_params = TestParameters(gfm_overdamped_params)
     rocof = RoCoF(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = rocof.calculate_envelopes(
-        D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
+        D=200.0, H=7.0, Xeff=0.25, time_array=time_array, event_time=event_time
     )
 
     title = "Overdamped_RoCoF_DeltaP_0s"
@@ -159,16 +151,16 @@ def test_rocof_overdamped_envelopes_event_at_0s():
 
 def test_rocof_overdamped_envelopes_event_at_200ms():
 
-    start_time = 0
-    end_time = 1.315
+    start_time = -1.0
+    end_time = 8.0
     event_time = 0.2
-    nb_points = 264
+    nb_points = 900
     time_array = np.linspace(start_time, end_time, nb_points)
 
     test_params = TestParameters(gfm_overdamped_params)
     rocof = RoCoF(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = rocof.calculate_envelopes(
-        D=152.0, H=3.0, Xeff=0.06, time_array=time_array, event_time=event_time
+        D=200.0, H=7.0, Xeff=0.25, time_array=time_array, event_time=event_time
     )
 
     title = "Overdamped_RoCoF_DeltaP_event"

@@ -29,6 +29,7 @@ class RoCoF(GFMCalculator):
     ) -> None:
         super().__init__(gfm_params=gfm_params)
         self._change_frequency = gfm_params.get_change_frequency()
+        self._change_frequency_duration = gfm_params.get_change_frequency_duration()
         self._initial_active_power = gfm_params.get_initial_active_power()
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
@@ -80,7 +81,7 @@ class RoCoF(GFMCalculator):
             delta_p_min,
             delta_p_max,
             p_peak_array,
-            _,
+            epsilon_array,
         ) = self._get_delta_p(
             D=D,
             H=H,
@@ -94,6 +95,7 @@ class RoCoF(GFMCalculator):
             delta_p_min=delta_p_min,
             delta_p_max=delta_p_max,
             p_peak_array=p_peak_array,
+            epsilon_array=epsilon_array,
             time_array=time_array,
             event_time=event_time,
             D=D,
@@ -174,27 +176,42 @@ class RoCoF(GFMCalculator):
             p_peak_array.append(p_peak)
             epsilon_array.append(epsilon)
 
-        copouding_value = np.exp(-time_array / self._t_expo_decrease)
-        delta_p_array[self._MINIMUM_PARAMS_IDX] = delta_p_array[
-            self._MINIMUM_PARAMS_IDX
-        ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
-        delta_p_array[self._MAXIMUM_PARAMS_IDX] = delta_p_array[
-            self._MAXIMUM_PARAMS_IDX
-        ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
-
         if epsilon_initial_check[self._ORIGINAL_PARAMS_IDX] > self._EPSILON_THRESHOLD:
-            delta_p_min = self._get_overdamped_delta_p_min(
-                D, H, Xeff, t_pll, time_array, event_time
-            )
-            delta_p_max = self._get_overdamped_delta_p_max(
-                D, H, Xeff, t_pll, time_array, event_time
-            )
+            delta_p_min_array: list[np.ndarray] = []
+            delta_p_max_array: list[np.ndarray] = []
+            for i in range(len(d_array)):
+                delta_p_min_array.append(
+                    self._calculate_overdamped_envelope(
+                        delta_p_array[i], p_peak_array[i], time_array, event_time, "min"
+                    )
+                )
+                delta_p_max_array.append(
+                    self._calculate_overdamped_envelope(
+                        delta_p_array[i], p_peak_array[i], time_array, event_time, "max"
+                    )
+                )
+
+            stacked = np.vstack((delta_p_min_array))
+            delta_p_min = np.nanmin(stacked, axis=0)
+            stacked = np.vstack((delta_p_max_array))
+            delta_p_max = np.nanmax(stacked, axis=0)
         else:
+            copouding_value = np.exp(-time_array / self._t_expo_decrease)
+            delta_p_array[self._MINIMUM_PARAMS_IDX] = delta_p_array[
+                self._MINIMUM_PARAMS_IDX
+            ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
+            delta_p_array[self._MAXIMUM_PARAMS_IDX] = delta_p_array[
+                self._MAXIMUM_PARAMS_IDX
+            ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
+
+            # Optimization: Calculate the base waveform once to avoid redundant computations
+            base_delta_p, _, _ = self._get_underdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
+
             delta_p_min = self._get_underdamped_delta_p_min(
-                D, H, Xeff, t_pll, time_array, event_time
+                base_delta_p, D, H, t_pll, time_array, event_time
             )
             delta_p_max = self._get_underdamped_delta_p_max(
-                D, H, Xeff, t_pll, time_array, event_time
+                base_delta_p, D, H, t_pll, time_array, event_time
             )
 
         return (
@@ -211,6 +228,7 @@ class RoCoF(GFMCalculator):
         delta_p_min: np.ndarray,
         delta_p_max: np.ndarray,
         p_peak_array: list[float],
+        epsilon_array: list[float],
         time_array: np.ndarray,
         event_time: float,
         D: float,
@@ -218,9 +236,7 @@ class RoCoF(GFMCalculator):
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates and limits the final active power envelopes (PCC power, upper
-        envelope, lower envelope). This involves combining various delta_p
-        calculations, applying a time-dependent tunnel effect, and enforcing
-        operational limits.
+        envelope, lower envelope).
 
         Parameters
         ----------
@@ -260,27 +276,33 @@ class RoCoF(GFMCalculator):
 
         p_pcc = self._initial_active_power + delta_p * -(sign)
 
-        list_of_arrays: list[np.ndarray] = [
-            delta_p_array[self._MINIMUM_PARAMS_IDX],
-            delta_p_array[self._MAXIMUM_PARAMS_IDX],
-            delta_p_min,
-            delta_p_max,
-        ]
+        if epsilon_array[0] < self._EPSILON_THRESHOLD:
+            list_of_arrays: list[np.ndarray] = [
+                delta_p_array[self._MINIMUM_PARAMS_IDX],
+                delta_p_array[self._MAXIMUM_PARAMS_IDX],
+                delta_p_min,
+                delta_p_max,
+            ]
 
-        pdown_no_p0, pup_no_p0 = self._calculate_unlimited_power_envelopes(
-            list_of_arrays, tunnel_time_dep
-        )
+            pdown_no_p0, pup_no_p0 = self._calculate_unlimited_power_envelopes(
+                list_of_arrays, tunnel_time_dep
+            )
 
-        expected_delta_p = np.abs(-(2 * H + D * self._pll_time_constant) * self._change_frequency)
-        pdown_limited, pup_limited = self._limit_power_envelopes(
-            pdown_no_p0,
-            pup_no_p0,
-            self._get_tunnel(expected_delta_p),
-            self._initial_active_power,
-            self._max_active_power,
-            self._min_active_power,
-            sign,
-        )
+            expected_delta_p = np.abs(
+                -(2 * H + D * self._pll_time_constant) * self._change_frequency
+            )
+            pdown_limited, pup_limited = self._limit_power_envelopes(
+                pdown_no_p0,
+                pup_no_p0,
+                self._get_tunnel(expected_delta_p),
+                self._initial_active_power,
+                self._max_active_power,
+                self._min_active_power,
+                sign,
+            )
+        else:
+            pdown_limited = delta_p_min
+            pup_limited = delta_p_max
 
         if self._is_emt_flag:
             p_up_final = self._apply_delay(0.02, pup_limited[0], time_array, pup_limited)
@@ -356,14 +378,14 @@ class RoCoF(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
         event_time : float
-            The time at which the event occurs.
+            The time (in seconds) at which the phase jump event occurs.
         epsilon_initial_check : float
-            The pre-calculated initial damping ratio used to determine the damping type.
+            Initial check value for epsilon to determine damping type.
 
         Returns
         -------
@@ -388,16 +410,16 @@ class RoCoF(GFMCalculator):
 
         Parameters
         ----------
-        D_damping : float
+        D : float
             Damping factor.
         H : float
             Inertia constant.
         Xeff : float
             Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
 
         Returns
         -------
@@ -405,22 +427,19 @@ class RoCoF(GFMCalculator):
             A tuple containing:
             - delta_p1: The base delta_p waveform.
             - p_peak: The peak power.
-            - epsilon: The damping ratio.
+            - xi: The damping ratio.
         """
         x_total_initial, _, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         u_prod = self._initial_voltage * self._grid_voltage
-        xi = wn * D * x_total_initial / (1 * self._base_angular_frequency * u_prod)
+        xi = wn * D * x_total_initial / (2 * self._base_angular_frequency * u_prod)
 
-        # Common terms
-        alpha = 2 * H * t_pll * np.abs(self._change_frequency)
+        alpha = 2 * H * t_pll * self._change_frequency
         beta = (2 * H + D * t_pll) / (2 * H * t_pll)
 
+        # Coefficients for the analytical solution
         A_coeff = alpha * beta
-        B_coeff = (
-            alpha
-            * (2 * t_pll * beta * wn * xi - t_pll * wn**2 - beta)
-            / (1 - 2 * xi * wn * t_pll + wn**2 * t_pll**2)
-        )
+        common_denom = 1 - 2 * xi * wn * t_pll + wn**2 * t_pll**2
+        B_coeff = (alpha * (2 * t_pll * beta * wn * xi - t_pll * wn**2 - beta)) / common_denom
         C_coeff = (
             alpha
             * (
@@ -430,16 +449,12 @@ class RoCoF(GFMCalculator):
                 - 2 * beta * wn * xi
                 + wn**2
             )
-            / (1 - 2 * xi * wn * t_pll + wn**2 * t_pll**2)
-        )
-        D_coeff = (
-            (t_pll**2 * alpha * wn**2 * (t_pll * beta - 1))
-            / (1 - 2 * xi * wn * t_pll + wn**2 * t_pll**2)
-            * -1
-        )
+        ) / common_denom
+        D_coeff = (-1 * (t_pll**2 * alpha * wn**2 * (t_pll * beta - 1))) / common_denom
 
         alpha1 = wn * (xi + np.sqrt(xi**2 - 1))
         alpha2 = wn * (xi - np.sqrt(xi**2 - 1))
+
         term1 = np.exp(-alpha1 * time_array)
         term2 = np.exp(-alpha2 * time_array)
         term3 = np.exp(-time_array / t_pll)
@@ -462,8 +477,9 @@ class RoCoF(GFMCalculator):
         event_time: float,
     ) -> tuple[np.ndarray, float, float]:
         """
-        Calculates delta_p, p_peak, and epsilon for an overdamped system response,
-        ensuring that the delta_p values are zero before the specified event time.
+        Calculates delta_p, p_peak, and epsilon for an overdamped system response.
+        This optimized version avoids redundant calculations by computing the base
+        waveform once and applying it at the start and end of the event.
 
         Parameters
         ----------
@@ -473,105 +489,193 @@ class RoCoF(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
         event_time : float
-            The time at which the event occurs.
+            The time (in seconds) at which the phase jump event occurs.
 
         Returns
         -------
         tuple[np.ndarray, float, float]
             A tuple containing:
-            - delta_p: The delta_p array for the overdamped system, with pre-event
-              values zeroed.
+            - delta_p: The delta_p array for the overdamped system.
             - p_peak: The peak power.
             - epsilon: The damping ratio.
         """
-        delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(
-            D, H, Xeff, t_pll, time_array
+        # Calculate the base waveform shifted to the event start time
+        time_shifted_start = time_array - event_time
+        response_start, _, epsilon = self._get_overdamped_delta_p_base(
+            D, H, Xeff, t_pll, time_shifted_start
         )
-        delta_p = np.where(time_array < event_time, 0, delta_p1)
+
+        # Calculate the base waveform shifted to the event end time
+        event_end_time = event_time + self._change_frequency_duration
+        time_shifted_end = time_array - event_end_time
+        response_end, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, t_pll, time_shifted_end)
+
+        # Apply waveforms only after their respective event times
+        delta_p_start = np.where(time_array >= event_time, response_start, 0)
+        delta_p_end = np.where(time_array >= event_end_time, response_end, 0)
+
+        # The final delta_p is the superposition of the two responses
+        delta_p = (delta_p_start - delta_p_end) * -1
+
+        p_peak = delta_p[-1]
         return delta_p, p_peak, epsilon
 
-    def _get_overdamped_delta_p_min(
-        self,
-        D: float,
-        H: float,
-        Xeff: float,
-        t_pll: float,
-        time_array: np.ndarray,
-        event_time: float,
+    def _add_margin(
+        self, initial_margin: float, init_time: float, final_time: float, time_array: np.ndarray
     ) -> np.ndarray:
         """
-        Calculates the minimum delta_p for an overdamped system, by applying
-        a lower margin to the base delta_p waveform and setting pre-event values to
-        zero.
+        Adds a decaying margin to a signal over a specified time interval.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        t_pll: float
-            PLL time constant
+        initial_margin : float
+            The initial value of the margin.
+        init_time : float
+            The start time for applying the margin.
+        final_time : float
+            The end time for applying the margin.
         time_array : np.ndarray
             Array of time points.
-        event_time : float
-            The time at which the event occurs.
 
         Returns
         -------
         np.ndarray
-            The minimum delta_p array for the overdamped system.
+            The calculated margin array.
         """
-        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
-        delta_p1_margined = (1 + self._margin_low) * delta_p1
-        delta_p = np.where(time_array < event_time, 0, delta_p1_margined)
-        return delta_p
+        decay_rate = 0.36
+        mask = (final_time >= time_array) & (time_array >= init_time)
+        margin = (
+            np.where(time_array < init_time, 0, np.exp(-(time_array - init_time) * 1 / decay_rate))
+            * mask
+            * initial_margin
+        )
+        return margin
 
-    def _get_overdamped_delta_p_max(
-        self,
-        D: float,
-        H: float,
-        Xeff: float,
-        t_pll: float,
-        time_array: np.ndarray,
-        event_time: float,
-    ) -> np.ndarray:
+    def _get_value_at_time(
+        self, selected_time: float, signal: np.ndarray, time_array: np.ndarray
+    ) -> float:
         """
-        Calculates the maximum delta_p for an overdamped system, by applying
-        an upper margin, an additional delay, and setting pre-event values to zero.
+        Retrieves the value of a signal at a specific time.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        t_pll: float
-            PLL time constant
+        selected_time : float
+            The time at which to retrieve the signal value.
+        signal : np.ndarray
+            The signal array.
+        time_array : np.ndarray
+            Array of time points corresponding to the signal.
+
+        Returns
+        -------
+        float
+            The signal value at the selected time.
+        """
+        index = np.argmin(np.abs(time_array - (selected_time - 0.01)))
+        return signal[index]
+
+    def _calculate_overdamped_envelope(
+        self,
+        signal: np.ndarray,
+        p_peak: float,
+        time_array: np.ndarray,
+        event_time: float,
+        envelope_type: str,
+    ) -> np.ndarray:
+        """
+        Calculates the minimum or maximum delta_p envelope for an overdamped system.
+        This unified function replaces the duplicated logic from the original
+        _get_overdamped_delta_p_min and _get_overdamped_delta_p_max methods by
+        using an 'envelope_type' parameter to control the logic.
+
+        Parameters
+        ----------
+        signal : np.ndarray
+            The base signal array.
+        p_peak : float
+            Peak power value.
         time_array : np.ndarray
             Array of time points.
         event_time : float
             The time at which the event occurs.
+        envelope_type : str
+            Type of envelope to calculate ("min" or "max").
 
         Returns
         -------
         np.ndarray
-            The maximum delta_p array for the overdamped system.
+            The calculated envelope array.
         """
-        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
-        delta_p1_margined = self._margin_high * delta_p1
-        delta_p1_delayed = self._apply_delay(0.01, 0, time_array, delta_p1_margined)
-        delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
-        return delta_p
+        if envelope_type not in ["min", "max"]:
+            raise ValueError("envelope_type must be 'min' or 'max'")
+
+        sign_multiplier = 1.0 if envelope_type == "max" else -1.0
+        tunnel = max(0.02, 0.05 * p_peak)
+        event_end_time = event_time + self._change_frequency_duration
+
+        apply_margin_during_event = (self._change_frequency > 0 and envelope_type == "min") or (
+            self._change_frequency <= 0 and envelope_type == "max"
+        )
+
+        if apply_margin_during_event:
+            margin_start, margin_end = event_time, event_end_time
+            signal_start, signal_end = event_end_time, time_array[-1]
+        else:
+            margin_start, margin_end = event_end_time, time_array[-1]
+            signal_start, signal_end = event_time, event_end_time
+
+        margin = self._add_margin(self._margin_high, margin_start, margin_end, time_array)
+
+        ref_value_time = margin_end if margin_end <= time_array[-1] else margin_start
+        value_at_ref_time = self._get_value_at_time(
+            ref_value_time, signal + self._initial_active_power, time_array
+        )
+
+        envelope = np.full_like(time_array, self._initial_active_power)
+
+        mask_signal = (time_array >= signal_start) & (time_array < signal_end)
+        envelope = np.where(
+            mask_signal, signal + self._initial_active_power + (sign_multiplier * tunnel), envelope
+        )
+
+        mask_margin = (time_array >= margin_start) & (time_array < margin_end)
+        envelope = np.where(
+            mask_margin,
+            value_at_ref_time + (sign_multiplier * margin) + (sign_multiplier * tunnel),
+            envelope,
+        )
+
+        if margin_end >= time_array[-1]:
+            envelope[-1] = (
+                value_at_ref_time + (sign_multiplier * margin[-1]) + (sign_multiplier * tunnel)
+            )
+
+        delay_mask = (
+            (time_array >= signal_start)
+            if apply_margin_during_event
+            else (time_array < event_end_time)
+        )
+        envelope = np.where(
+            delay_mask, self._apply_delay(0.01, envelope[0], time_array, envelope), envelope
+        )
+
+        limit_value = (
+            (self._max_active_power * 0.95)
+            if envelope_type == "min"
+            else (self._min_active_power * 0.95)
+        )
+        limit_cond = (
+            (envelope > limit_value) if envelope_type == "min" else (envelope < limit_value)
+        )
+        condition = (time_array >= event_time) & limit_cond
+        envelope = np.where(condition, limit_value, envelope)
+
+        return self._cut_signal(self._min_active_power, envelope, self._max_active_power)
 
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, t_pll: float, time_array: np.ndarray
@@ -589,10 +693,10 @@ class RoCoF(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
 
         Returns
         -------
@@ -605,19 +709,13 @@ class RoCoF(GFMCalculator):
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(1 - epsilon**2)
 
-        # Common terms
         alpha = 2 * H * t_pll * np.abs(self._change_frequency)
         beta = (2 * H + D * t_pll) / (2 * H * t_pll)
 
         A_coeff = alpha * beta
-        B_coeff = -(t_pll**2 * alpha * wn**2 * (t_pll * beta - 1)) / (
-            1 - 2 * epsilon * wn * t_pll + wn**2 * t_pll**2
-        )
-        C_coeff = (
-            alpha
-            * (2 * t_pll * beta * epsilon * wn - t_pll * wn**2 - beta)
-            / (1 - 2 * epsilon * wn * t_pll + wn**2 * t_pll**2)
-        )
+        common_denom = 1 - 2 * epsilon * wn * t_pll + wn**2 * t_pll**2
+        B_coeff = -(t_pll**2 * alpha * wn**2 * (t_pll * beta - 1)) / common_denom
+        C_coeff = (alpha * (2 * t_pll * beta * epsilon * wn - t_pll * wn**2 - beta)) / common_denom
         D_coeff = (
             alpha
             * (
@@ -627,8 +725,7 @@ class RoCoF(GFMCalculator):
                 - 2 * beta * wn * epsilon
                 + wn**2
             )
-            / (1 - 2 * epsilon * wn * t_pll + wn**2 * t_pll**2)
-        )
+        ) / common_denom
 
         term2 = np.exp(-time_array / t_pll)
         term3 = np.exp(-epsilon * wn * time_array) * np.cos(wd * time_array)
@@ -663,12 +760,12 @@ class RoCoF(GFMCalculator):
             Inertia constant.
         Xeff : float
             Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
         event_time : float
-            The time at which the event occurs.
+            The time (in seconds) at which the phase jump event occurs.
 
         Returns
         -------
@@ -687,9 +784,9 @@ class RoCoF(GFMCalculator):
 
     def _get_underdamped_delta_p_min(
         self,
+        base_delta_p: np.ndarray,
         D: float,
         H: float,
-        Xeff: float,
         t_pll: float,
         time_array: np.ndarray,
         event_time: float,
@@ -701,26 +798,26 @@ class RoCoF(GFMCalculator):
 
         Parameters
         ----------
+        base_delta_p : np.ndarray
+            The base delta_p waveform.
         D : float
             Damping factor.
         H : float
             Inertia constant.
-        Xeff : float
-            Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
         event_time : float
-            The time at which the event occurs.
+            The time (in seconds) at which the phase jump event occurs.
 
         Returns
         -------
         np.ndarray
-            The minimum delta_p array for the underdamped system.
+            The minimum delta_p array.
         """
         expected_delta_p = np.abs(-(2 * H + D * t_pll) * self._change_frequency)
-        delta_p1, _, _ = self._get_underdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
+        delta_p1 = base_delta_p
         delta_p1_margined = (1 + self._margin_low) * delta_p1
 
         delta_p1_diff = np.diff(delta_p1_margined)
@@ -745,9 +842,9 @@ class RoCoF(GFMCalculator):
 
     def _get_underdamped_delta_p_max(
         self,
+        base_delta_p: np.ndarray,
         D: float,
         H: float,
-        Xeff: float,
         t_pll: float,
         time_array: np.ndarray,
         event_time: float,
@@ -759,26 +856,26 @@ class RoCoF(GFMCalculator):
 
         Parameters
         ----------
+        base_delta_p : np.ndarray
+            The base delta_p waveform.
         D : float
             Damping factor.
         H : float
             Inertia constant.
-        Xeff : float
-            Effective reactance.
-        t_pll: float
-            PLL time constant
+        t_pll : float
+            PLL time constant.
         time_array : np.ndarray
-            Array of time points.
+            Array of time points for simulation.
         event_time : float
-            The time at which the event occurs.
+            The time (in seconds) at which the phase jump event occurs.
 
         Returns
         -------
         np.ndarray
-            The maximum delta_p array for the underdamped system.
+            The maximum delta_p array.
         """
         expected_delta_p = np.abs(-(2 * H + D * t_pll) * self._change_frequency)
-        delta_p1, _, _ = self._get_underdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
+        delta_p1 = base_delta_p
         delta_p1_margined = (1 + self._margin_high) * delta_p1
 
         delta_p1_diff = np.diff(delta_p1_margined)
@@ -801,19 +898,17 @@ class RoCoF(GFMCalculator):
 
     def _get_tunnel(self, expected_delta_p: float) -> float:
         """
-        Calculates a constant "tunnel" value. This value defines a static band
-        around the power response. It is determined as the maximum of a fixed
-        power component and a component proportional to the peak power (p_peak).
+        Calculates a constant "tunnel" value.
 
         Parameters
         ----------
         expected_delta_p : float
-            Expected delta P.
+            The expected change in active power.
 
         Returns
         -------
         float
-            The calculated constant tunnel value.
+            The calculated tunnel value.
         """
         return max(
             self._final_allowed_tunnel_pn,
