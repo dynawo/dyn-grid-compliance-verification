@@ -155,17 +155,14 @@ def handle_generate_command(
     """
     _LOGGER.info("Handling 'generate' command.")
     try:
-        # Initialize Parameters for the tool
-        params = Parameters()
-        params.init_tool(dwo_launcher)
-        params.set_topology_path(args.topology)
-        params.set_validation_path(args.validation)
-        params.set_output_path(args.output)
-        _LOGGER.debug("Parameters initialized for generate command.")
-
         # Generate input templates
-        generator = InputTemplateGenerator(params)
-        generator.generate_templates()
+        generator = InputTemplateGenerator()
+        generator.create_input_template(
+            launcher_dwo=dwo_launcher,
+            target=Path(args.output),
+            topology=args.topology,
+            template=args.validation,
+        )
         _LOGGER.info("Input files generated successfully.")
     except Exception as e:
         _LOGGER.exception(f"Error generating input files: {e}")
@@ -219,11 +216,11 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
     _LOGGER.info("Handling 'anonymize' command.")
     try:
         anonymizer.anonymize(
-            output_folder=args.output,
+            output_folder=Path(args.output),
             noisestd=args.noisestd,
             frequency=args.frequency,
-            results=args.results,
-            curves_folder=args.curves,
+            results=Path(args.results) if args.results else None,
+            curves_folder=Path(args.curves) if args.curves else None,
         )
         _LOGGER.info("Anonymization completed successfully.")
     except Exception as e:
