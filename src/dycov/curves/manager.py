@@ -4,9 +4,8 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
+from dycov.core.parameters import Parameters
 from dycov.curves import curves_factory
-from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.model.producer import Producer
@@ -92,15 +91,12 @@ class CurvesManager:
 
     def __obtain_curve(
         self,
-        pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
     ):
-        # Create a specific folder by operational point
         working_oc_dir = (
             self._working_dir / self._producer_name / self._pcs_name / bm_name / oc_name
         )
-        manage_files.create_dir(working_oc_dir)
 
         reference_event_start_time = None
         if self.__has_reference_curves():
@@ -110,7 +106,8 @@ class CurvesManager:
             ) = self.__get_reference_curves_generator().obtain_reference_curve(
                 working_oc_dir,
                 self._producer_name,
-                pcs_bm_name,
+                self._pcs_name,
+                bm_name,
                 oc_name,
                 self.__get_reference_curves_path(),
             )
@@ -123,7 +120,7 @@ class CurvesManager:
         ) = self.__get_producer_curves_generator().obtain_simulated_curve(
             working_oc_dir,
             self._producer_name,
-            pcs_bm_name,
+            self._pcs_name,
             bm_name,
             oc_name,
             reference_event_start_time,
@@ -193,7 +190,6 @@ class CurvesManager:
     def has_required_curves(
         self,
         measurement_names: list,
-        pcs_bm_name: str,
         bm_name: str,
         oc_name: str,
     ) -> tuple[Path, Path, dict, Simulation_result, int]:
@@ -203,8 +199,6 @@ class CurvesManager:
         ----------
         measurement_names: list
             Measurement names
-        pcs_bm_name: str
-            Composite name, pcs + Benchmark name
         bm_name: str
             Benchmark name
         oc_name: str
@@ -232,7 +226,6 @@ class CurvesManager:
             event_params,
             simulation_result,
         ) = self.__obtain_curve(
-            pcs_bm_name,
             bm_name,
             oc_name,
         )
