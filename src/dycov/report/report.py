@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import logging
 import os
 import shutil
@@ -17,7 +18,6 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     CASE_SEPARATOR,
     ELECTRIC_PERFORMANCE_BESS,
@@ -31,7 +31,6 @@ from dycov.core.global_variables import (
 from dycov.curves.dynawo.dynawo import DynawoSimulator
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
-from dycov.model.producer import Producer
 from dycov.report import figure, html
 from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
@@ -46,6 +45,8 @@ from dycov.report.tables import (
     thresholds,
 )
 from dycov.templates.reports.create_figures import create_figures
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.producer import ModelProducer
 
 
 def _get_verification_type(sim_type: int) -> str:
@@ -108,7 +109,7 @@ def _get_reports(
 
 def _copy_pcs_latex_files(
     pcs_results: dict,
-    parameters: Parameters,
+    parameters: ValidationParameters,
     path_latex_files: Path,
     working_path: Path,
 ):
@@ -150,7 +151,7 @@ def _create_pcs_figures(
 
 
 def _pcs_replace(
-    working_path: Path, pcs_results: dict, report_name: str, producer: Producer
+    working_path: Path, pcs_results: dict, report_name: str, producer: ModelProducer
 ) -> int:
 
     # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
@@ -312,7 +313,7 @@ def _create_full_tex(
     output_path: Path,
     figures_description: dict,
     report_name: str,
-    producer: Producer,
+    producer: ModelProducer,
 ) -> int:
     """Creates the pcs LaTeX report.
 
@@ -420,7 +421,9 @@ def _summary_log(
     dycov_logging.get_logger("Report").info(f"{header_txt + body_txt}")
 
 
-def prepare_pcs_report(pcs_results: dict, parameters: Parameters, path_latex_files: Path):
+def prepare_pcs_report(
+    pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
+):
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 
@@ -446,7 +449,7 @@ def prepare_pcs_report(pcs_results: dict, parameters: Parameters, path_latex_fil
 def create_pdf(
     sorted_summary: list,
     report_results: dict,
-    parameters: Parameters,
+    parameters: ValidationParameters,
     path_latex_files: Path,
 ) -> None:
     """Creates the dycov final report.

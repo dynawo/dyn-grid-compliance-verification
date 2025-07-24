@@ -18,6 +18,7 @@ from dycov.cli.command_handlers import (
     handle_anonymize_command,
     handle_compile_command,
     handle_generate_command,
+    handle_generate_envelopes_command,
     handle_performance_command,
     handle_validate_command,
 )
@@ -73,7 +74,9 @@ class DycovCLI:
 
         # Determine Dynawo launcher availability and initialize components.
         # The 'anonymize' command does not require a Dynawo launcher.
-        if args.command != "anonymize":
+        # The 'generateEnvelopes' command does not require a Dynawo launcher.
+        simple_commands = ["anonymize", "generateEnvelopes"]
+        if args.command not in simple_commands:
             dynawo_launcher_name = get_dynawo_launcher_name(parser, args)
             check_dynawo_launcher_availability(dynawo_launcher_name)
             dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
@@ -104,7 +107,9 @@ class DycovCLI:
             Resolved path to the Dynawo launcher executable, if required.
         """
         self.logger.info(f"Dispatching command: {args.command}")
-        if args.command == "validate":
+        if args.command == "generateEnvelopes":
+            handle_generate_envelopes_command(parser, args, dynawo_launcher_path)
+        elif args.command == "validate":
             handle_validate_command(parser, args, dynawo_launcher_path)
         elif args.command == "generate":
             handle_generate_command(parser, args, dynawo_launcher_path)

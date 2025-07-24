@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import logging
 import operator
 import os
@@ -18,7 +19,6 @@ from operator import attrgetter
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     CASE_SEPARATOR,
     ELECTRIC_PERFORMANCE_BESS,
@@ -34,6 +34,7 @@ from dycov.logging.logging import dycov_logging
 from dycov.model.pcs import Pcs
 from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
+from dycov.validate.parameters import ValidationParameters
 
 LOGGER = dycov_logging.get_logger("Validation")
 
@@ -115,7 +116,9 @@ def _validate_pcs(pcs_args) -> tuple:
         return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
 
-def _prepare_report_pcs(pcs_results: dict, parameters: Parameters, path_latex_files: Path) -> None:
+def _prepare_report_pcs(
+    pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
+) -> None:
     """Prepare the report for the PCS validation.
 
     Parameters
@@ -153,7 +156,7 @@ class Validation:
 
     def __init__(
         self,
-        parameters: Parameters,
+        parameters: ValidationParameters,
     ):
         self._parameters = parameters
         self._is_testing = False  # Flag to avoid opening the report in the tests

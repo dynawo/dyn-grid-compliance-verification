@@ -85,7 +85,7 @@ class PerformanceValidator(Validator):
         pcs_name: str,
         bm_name: str,
     ):
-        super(PerformanceValidator, self).__init__(
+        super().__init__(
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
         self._stable_time = stable_time
