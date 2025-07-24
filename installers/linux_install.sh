@@ -42,7 +42,13 @@ set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
 # --------------------------------------------------------------------------------------------------------
-RELEASE_TAG="v0.8.1"
+RELEASE_TAG="v0.9.0"
+read -p "Do you wish to install Dynawo? " yn
+case $yn in
+    [Yy]* ) INSTALL_DYNAWO="yes";;
+    [Nn]* ) INSTALL_DYNAWO="no";;
+esac
+
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
 DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
@@ -155,34 +161,34 @@ color_msg "        tail -f $LOG"
 color_msg ""
 
 
-
 #####################################################################
 # Step 1: download Dynawo and unpack under the installation tree
 #####################################################################
-color_msg ""
-color_msg_nnl "Downloading Dynawo from the DyCoV repository (~ 150 MB)... "
-cd "$INSTALL_DIR"
-curl -O -L --fail "$DYNAWO_ZIP_URL"
-CHECKSUM=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
-if [ "$CHECKSUM" != "$DYNAWO_CHECKSUM" ]; then
-    color_err_msg "ERROR: Dynawo ZIP shasum does not match (got $CHECKSUM, expected $DYNAWO_CHECKSUM)"
-    exit 1
-fi
-unzip -q "$DYNAWO_ZIP_FILE" && rm "$DYNAWO_ZIP_FILE" 
-color_msg "Dynawo downloaded & installed OK."
+if [ "$INSTALL_DYNAWO" == "yes" ]; then
+    color_msg ""
+    color_msg_nnl "Downloading Dynawo from the DyCoV repository (~ 150 MB)... "
+    cd "$INSTALL_DIR"
+    curl -O -L --fail "$DYNAWO_ZIP_URL"
+    CHECKSUM=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
+    if [ "$CHECKSUM" != "$DYNAWO_CHECKSUM" ]; then
+        color_err_msg "ERROR: Dynawo ZIP shasum does not match (got $CHECKSUM, expected $DYNAWO_CHECKSUM)"
+        exit 1
+    fi
+    unzip -q "$DYNAWO_ZIP_FILE" && rm "$DYNAWO_ZIP_FILE" 
+    color_msg "Dynawo downloaded & installed OK."
 
-# This is a TEMPORARY FIX, needed until the Dynawo team releases Nightly binaries compiled under
-# more recent Ubuntu/Debian versions. As of February 2025, the releases are compiled under previous
-# versions, which use gcc 10/11, and as a consequence they include a Boost library header that is
-# incompatible with newer Linux versions, which use gcc 12 or higher. Since it's a very simple fix,
-# we do it here (if we detect it's necessary):
-GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
-if [ "$GNU_MAJOR" -gt 11 ]; then
-   echo "Patching header file thread_data.hpp..."
-   BOOSTLIB_PTHREAD_HEADERFILE=./dynawo/include/boost/thread/pthread/thread_data.hpp
-   sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOSTLIB_PTHREAD_HEADERFILE"
+    # This is a TEMPORARY FIX, needed until the Dynawo team releases Nightly binaries compiled under
+    # more recent Ubuntu/Debian versions. As of February 2025, the releases are compiled under previous
+    # versions, which use gcc 10/11, and as a consequence they include a Boost library header that is
+    # incompatible with newer Linux versions, which use gcc 12 or higher. Since it's a very simple fix,
+    # we do it here (if we detect it's necessary):
+    GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
+    if [ "$GNU_MAJOR" -gt 11 ]; then
+    echo "Patching header file thread_data.hpp..."
+    BOOSTLIB_PTHREAD_HEADERFILE=./dynawo/include/boost/thread/pthread/thread_data.hpp
+    sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOSTLIB_PTHREAD_HEADERFILE"
+    fi
 fi
-
 
 
 ##################################################################################

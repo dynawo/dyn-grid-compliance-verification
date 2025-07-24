@@ -1,0 +1,14 @@
+2025-07-24 12:3801: 
+2025-07-24 12:3801: Beginning the installation of the DyCoV tool under: /home/dgcv/dycov_repo/dycov
+2025-07-24 12:3801:    * Base Python version is Python 3.10.12, python command is: "python3"
+2025-07-24 12:3801:    * The installation will download ~900 MB, use up to ~2.2GB, and end up taking ~1.6 GB of disk space
+2025-07-24 12:3801:    * To view the progress of the installation in detail, open another term and execute:
+2025-07-24 12:3801:         tail -f /home/dgcv/dycov_repo/dycov/installation_20250724_123801.log
+2025-07-24 12:3801: 
+2025-07-24 12:3801: 
+2025-07-24 12:3801: Downloading Dynawo from the DyCoV repository (~ 150 MB)... 
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     9    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+curl: (22) The requested URL returned error: 404
+2025-07-24 12:3802: ERROR: exit status (22) occurred on Line 171. Check the installation log for details.
