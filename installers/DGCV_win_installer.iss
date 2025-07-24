@@ -67,10 +67,10 @@ StatusMsg: "Installing the project examples..."; Components: examples; Filename:
 StatusMsg: "Creating virtual environment..."; Components: dycov; Filename: "{code:GetPythonPath}"; Parameters: "-m venv dycov_venv"; WorkingDir: "{app}"; Flags: runhidden
 
 ; Install build module for Python
-StatusMsg: "Installing Python build module..."; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
+StatusMsg: "Installing Python build module..."; Components: dycov; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install --upgrade pip build"; Flags: runhidden
 
 ; Compile the project using build
-StatusMsg: "Compiling the project..."; Components: dycov; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden; Components: dycov
+StatusMsg: "Compiling the project..."; Components: dycov; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m build --wheel"; WorkingDir: "{tmp}\dyn-grid-compliance-verification\"; Flags: runhidden
 
 ; Install the built package in the virtual environment
 StatusMsg: "Installing project package in virtual environment..."; Components: dycov; Filename: "{app}\dycov_venv\Scripts\python.exe"; Parameters: "-m pip install {tmp}\dyn-grid-compliance-verification\dist\dycov-{#DyCoVVersion}-py3-none-any.whl";  WorkingDir: "{app}"; Flags: runhidden
