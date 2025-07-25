@@ -263,7 +263,6 @@ def _response_charact_traces(fig, results, curve_name):
 
 
 def _mxe_traces(fig, results, curve_name):
-
     measurement_type = _get_measurement_type(curve_name)
     if "setpoint_tracking_controlled_magnitude_name" in results:
         measurement_type = "tc_controlled_magnitude"

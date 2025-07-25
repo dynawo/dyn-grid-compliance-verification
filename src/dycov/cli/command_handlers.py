@@ -69,7 +69,7 @@ def handle_generate_envelopes_command(
     if result_code != 0:
         _LOGGER.critical("Validation failed. Check logs for details.")
         parser.error(
-            "It is not possible to find the producer model or the producer curves. " "Exiting."
+            "It is not possible to find the producer model or the producer curves. Exiting."
         )
 
 
@@ -128,7 +128,7 @@ def handle_validate_command(
     if result_code != 0:
         _LOGGER.critical("Validation failed. Check logs for details.")
         parser.error(
-            "It is not possible to find the producer model or the producer curves. " "Exiting."
+            "It is not possible to find the producer model or the producer curves. Exiting."
         )
 
 
@@ -181,7 +181,7 @@ def handle_performance_command(
     if result_code != 0:
         _LOGGER.critical("Performance analysis failed. Check logs for details.")
         parser.error(
-            "It is not possible to find the producer model or the producer curves. " "Exiting."
+            "It is not possible to find the producer model or the producer curves. Exiting."
         )
 
 
