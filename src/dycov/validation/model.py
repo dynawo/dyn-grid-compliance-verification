@@ -216,7 +216,6 @@ class ModelValidator(Validator):
         freq_peak: float,
         results: dict,
     ) -> None:
-
         if compliance_list.contains_key(["ramp_time_lag"], self._validations):
             ramp_time_lag = common.get_time_lag(
                 list(self._get_calculated_curve_by_name(("time"))),

@@ -83,7 +83,6 @@ class Pcs:
         dycov_logging.get_logger("PCS").warning(f"{self.__get_log_title()} {message}")
 
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
-
         # It checks if the PCS configuration file exists in the tool and reads it.
         pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
         self.__debug(f"PCS Path {pcs_path}")

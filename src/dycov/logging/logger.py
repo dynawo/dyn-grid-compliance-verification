@@ -72,7 +72,6 @@ class DycovLogger(logging.getLoggerClass()):
         disable_console: bool = False,
         disable_file: bool = False,
     ) -> None:
-
         self.setLevel(console_log_level)
         if file_log_level < console_log_level:
             self.setLevel(file_log_level)

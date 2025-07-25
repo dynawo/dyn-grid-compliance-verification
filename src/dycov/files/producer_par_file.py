@@ -69,7 +69,6 @@ def _get_desc_xml_params(model_desc: Path):
 
 
 def _write_params_par_file(producer_par_root: etree.Element, params_list: list, parId: str):
-
     xml_set = etree.SubElement(producer_par_root, "set", id=f"{parId}")
     for param in params_list:
         etree.SubElement(
@@ -86,7 +85,6 @@ def _create_producer_par_file(
     target: Path,
     filename: str,
 ) -> None:
-
     ddb_dynawo_path = _get_ddb_model_path(launcher_dwo)
     ddb_local_config_path = config.get_config_dir() / "ddb"
     producer_par_root = etree.fromstring(
@@ -135,7 +133,7 @@ def _check_parameters(target: Path, filename: str) -> bool:
 
     if not success:
         dycov_logging.get_logger("Create PAR input").error(
-            f"The PAR file contains parameters without value.\n" f"Please fix {empty_values}."
+            f"The PAR file contains parameters without value.\nPlease fix {empty_values}."
         )
     return success
 
