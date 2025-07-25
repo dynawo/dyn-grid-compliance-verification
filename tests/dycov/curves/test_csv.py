@@ -19,7 +19,6 @@ def _get_resources_path():
 
 
 def test_csv():
-
     path = _get_resources_path() / "tmp"
     shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
