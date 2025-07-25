@@ -540,7 +540,6 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
         help="create all the envelopes based on the description of the different test cases",
     )
     _add_debug_argument(envelops)
-    _add_launcher_argument(envelops)
     _add_ini_argument(envelops, is_required=True)
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
