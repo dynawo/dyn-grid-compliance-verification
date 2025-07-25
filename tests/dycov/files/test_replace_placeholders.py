@@ -22,7 +22,6 @@ from dycov.files.replace_placeholders import (
 
 
 class TestReplacePlaceholders:
-
     def test_dump_file_renders_and_writes_template(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
