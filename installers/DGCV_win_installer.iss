@@ -1,7 +1,7 @@
 [CustomMessages]
 #define PythonVersion "11"
 #define PythonSubVersion "6"
-#define DyCoVVersion "0.9.0"
+#define DyCoVVersion "0.9.1"
 #define CMakeVersion "3.31.1"
 #define MiktexVersion "24.1"
 #define SourceDir "..\.."
