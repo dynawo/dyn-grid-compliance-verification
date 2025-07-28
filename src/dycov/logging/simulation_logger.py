@@ -25,7 +25,6 @@ class SimulationLogger(logging.getLoggerClass()):
         file_max_bytes: int,
         log_dir: Path,
     ) -> None:
-
         self.setLevel(file_log_level)
 
         log_name = "dycov.log"

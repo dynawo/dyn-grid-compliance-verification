@@ -153,7 +153,6 @@ def _create_pcs_figures(
 def _pcs_replace(
     working_path: Path, pcs_results: dict, report_name: str, producer: ModelProducer
 ) -> int:
-
     # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
     #  eliminating potentially problematic characters and unnecessary information.
     producer_name = pcs_results["producer"].replace("_", "")
@@ -394,7 +393,7 @@ def _summary_log(
     model_template: str,
     reference_template: str,
 ) -> None:
-    header_txt = "\nSummary Report\n" "==============\n\n" f"***Run on {timestamp}***\n"
+    header_txt = f"\nSummary Report\n==============\n\n***Run on {timestamp}***\n"
     if dynawo_version:
         header_txt += f"***Dynawo version: {dynawo_version}***\n"
     if model_template:

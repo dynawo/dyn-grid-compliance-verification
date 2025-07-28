@@ -64,7 +64,6 @@ def _get_windows_times(
     fault_duration: float,
     exclusion_zones: Exclusion_zones,
 ) -> tuple[float, float, float, float, float, float]:
-
     if fault_duration > time_values[-1]:
         fault_duration = 0.0
 
@@ -97,7 +96,6 @@ def _get_filter_windows_times(
     t_fault: float,
     fault_duration: float,
 ) -> tuple[float, float, float, float, float, float]:
-
     if fault_duration > time_values[-1]:
         fault_duration = 0.0
 

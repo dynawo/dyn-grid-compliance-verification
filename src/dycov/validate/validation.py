@@ -108,7 +108,6 @@ def _validate_pcs(pcs_args) -> tuple:
         _prepare_report_pcs(pcs_results, parameters, path_latex_files)
         return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
     except (FileNotFoundError, IOError, ValueError) as e:
-
         if dycov_logging.getEffectiveLevel() == logging.DEBUG:
             LOGGER.exception(f"Aborted execution for {pcs.get_name()}. {e}")
         else:
@@ -134,8 +133,7 @@ def _prepare_report_pcs(
         report.prepare_pcs_report(pcs_results, parameters, Path(path_latex_files))
     except LatexReportException as e:
         LOGGER.error(
-            f"An error occurred while preparing the report "
-            f"for {pcs_results['pcs'].get_name()}."
+            f"An error occurred while preparing the report for {pcs_results['pcs'].get_name()}."
         )
         _aborted_execution(e)
     except (FileNotFoundError, IOError, ValueError) as e:
@@ -327,7 +325,7 @@ class Validation:
             LOGGER.error(
                 f"An error occurred while generating the report, "
                 f"look for the {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log file "
-                f"under {self._parameters.get_output_dir()/'Reports'}"
+                f"under {self._parameters.get_output_dir() / 'Reports'}"
             )
             _aborted_execution(e)
         except (FileNotFoundError, IOError, ValueError) as e:

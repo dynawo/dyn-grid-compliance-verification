@@ -19,7 +19,6 @@ def _create_producer_ini_file(
     filename: str,
     topology: str,
 ) -> None:
-
     if (target / "Producer.ini").exists():
         (target / "Producer.ini").rename(target / filename)
 
@@ -50,7 +49,6 @@ def _create_producer_ini_file(
 
 
 def _check_ini_parameters(target: Path, filename: str) -> bool:
-
     default_section = "DEFAULT"
     producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     producer_config.read(target / filename)
@@ -64,7 +62,7 @@ def _check_ini_parameters(target: Path, filename: str) -> bool:
 
     if not success:
         dycov_logging.get_logger("Create INI input").error(
-            f"The INI file contains parameters without value.\n" f"Please fix {empty_values}."
+            f"The INI file contains parameters without value.\nPlease fix {empty_values}."
         )
     return success
 
