@@ -411,7 +411,6 @@ def _create_producer_dyd_file(
     topology: str,
     validation_type: int,
 ) -> None:
-
     if (target / "Producer.dyd").exists():
         (target / "Producer.dyd").unlink()
 

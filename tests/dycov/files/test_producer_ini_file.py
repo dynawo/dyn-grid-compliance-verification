@@ -18,7 +18,6 @@ from dycov.files.producer_ini_file import check_ini_parameters, create_producer_
 
 
 class TestProducerIniFile:
-
     def test_create_producer_ini_file_performance_template_success(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir)

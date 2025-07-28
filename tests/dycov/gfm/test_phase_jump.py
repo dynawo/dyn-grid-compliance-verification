@@ -113,7 +113,6 @@ def test_phase_jump_initialization():
 
 
 def test_phase_jump_overdamped_envelopes_event_at_0s():
-
     start_time = 0
     end_time = 1.315
     event_time = 0
@@ -139,7 +138,6 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
 
 
 def test_phase_jump_overdamped_envelopes_event_at_200ms():
-
     start_time = 0
     end_time = 1.315
     event_time = 0.2
@@ -165,7 +163,6 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
 
 
 def test_phase_jump_underdamped_envelopes_event_at_0s():
-
     start_time = 0
     end_time = 1.315
     event_time = 0
@@ -191,7 +188,6 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
 
 
 def test_phase_jump_underdamped_envelopes_event_at_200ms():
-
     start_time = 0
     end_time = 1.315
     event_time = 0.2
@@ -217,7 +213,6 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
 
 
 def test_s_vol_ang_step_1_phase_jump():
-
     start_time = 0
     end_time = 10
     event_time = 0

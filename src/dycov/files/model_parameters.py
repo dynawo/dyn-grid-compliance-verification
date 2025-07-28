@@ -529,8 +529,7 @@ def _set_control_mode(generator, parset, ns, generator_control_mode, force_volta
             generator, generator_control_mode
         )
         dycov_logging.get_logger("Model Parameters").debug(
-            f"Default Control Mode: {default_control_mode_parameters} "
-            f"for {generator_control_mode}"
+            f"Default Control Mode: {default_control_mode_parameters} for {generator_control_mode}"
         )
         is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
             generator, generator_control_mode, default_control_mode_parameters

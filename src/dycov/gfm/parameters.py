@@ -499,6 +499,28 @@ class GFMParameters(Parameters):
         """
         return self.__get_float_value("SCR", 0.0)
 
+    def get_initial_scr(self) -> float:
+        """
+        Gets the rate of change of frequency (in per unit - pu).
+
+        Returns
+        -------
+        float
+            rate of change of frequency in pu.
+        """
+        return self.__get_float_value("SCRinitial", 0.0)
+
+    def get_final_scr(self) -> float:
+        """
+        Gets the rate of change of frequency (in per unit - pu).
+
+        Returns
+        -------
+        float
+            rate of change of frequency in pu.
+        """
+        return self.__get_float_value("SCRfinal", 0.0)
+
     def __get_value(self, option: str) -> float:
         if config.has_key(self._oc_section, option):
             return config.get_value(self._oc_section, option)

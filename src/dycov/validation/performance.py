@@ -153,7 +153,6 @@ class PerformanceValidator(Validator):
             key for key in self._get_calculated_curves().keys() if key.endswith("_InternalAngle")
         ]
         for key in internal_angle_keys:
-
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
                 self.__curve_list("time"),
                 self.__curve_list(key),
