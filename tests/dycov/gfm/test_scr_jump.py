@@ -18,7 +18,7 @@ import pandas as pd
 # Assuming the classes are in the same project structure
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
-from dycov.gfm.calculators.scrjump import SCRJump
+from dycov.gfm.calculators.scr_jump import SCRJump
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
 
