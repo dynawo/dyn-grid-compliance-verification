@@ -42,7 +42,7 @@ set -o errexit -o pipefail
 
 # Configuration vars that depend on the release:
 # --------------------------------------------------------------------------------------------------------
-RELEASE_TAG="v0.9.0"
+RELEASE_TAG="v0.9.1"
 read -p "Do you wish to install Dynawo? " yn
 case $yn in
     [Yy]* ) INSTALL_DYNAWO="yes";;
