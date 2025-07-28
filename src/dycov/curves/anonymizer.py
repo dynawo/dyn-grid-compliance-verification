@@ -66,7 +66,7 @@ def anonymize(
 
     if results:
         _LOGGER.info(
-            f"Copying curves_calculated.csv and dycov.log from {results} to " f"{curves_folder}"
+            f"Copying curves_calculated.csv and dycov.log from {results} to {curves_folder}"
         )
         _copy_files_from_pipeline(results, curves_folder)
 
@@ -466,6 +466,5 @@ def _process_curves(
             _LOGGER.info(f"Saved updated dictionary file to {output_dict_path}")
         else:
             _LOGGER.warning(
-                f"No 'Curves-Dictionary' section found in {dict_file}. "
-                "Skipping curve processing."
+                f"No 'Curves-Dictionary' section found in {dict_file}. Skipping curve processing."
             )

@@ -124,7 +124,6 @@ def test_rocof_initialization():
 
 
 def test_rocof_overdamped_envelopes_event_at_0s():
-
     start_time = -1
     end_time = 8.0
     event_time = 0
@@ -150,7 +149,6 @@ def test_rocof_overdamped_envelopes_event_at_0s():
 
 
 def test_rocof_overdamped_envelopes_event_at_200ms():
-
     start_time = -1.0
     end_time = 8.0
     event_time = 0.2
@@ -176,7 +174,6 @@ def test_rocof_overdamped_envelopes_event_at_200ms():
 
 
 def test_rocof_underdamped_envelopes_event_at_0s():
-
     start_time = 0
     end_time = 1.315
     event_time = 0
@@ -202,7 +199,6 @@ def test_rocof_underdamped_envelopes_event_at_0s():
 
 
 def test_rocof_underdamped_envelopes_event_at_200ms():
-
     start_time = 0
     end_time = 1.315
     event_time = 0.2
@@ -228,7 +224,6 @@ def test_rocof_underdamped_envelopes_event_at_200ms():
 
 
 def test_s_rocof_1_rocof():
-
     start_time = 0
     end_time = 10
     event_time = 0

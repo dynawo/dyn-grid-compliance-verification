@@ -10,7 +10,6 @@ from dycov.report.tables.results import _iterate_variables, create_map
 
 
 class TestResultsTable:
-
     def test_create_map_time_values_formatting(self):
         # Only time keys present
         results = {
