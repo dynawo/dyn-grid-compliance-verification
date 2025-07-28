@@ -214,7 +214,6 @@ class ComtradeReader(CurvesReader):
 
 
 class CsvReader(CurvesReader):
-
     def __read(self, data: pd.DataFrame) -> None:
         """Read and import the data from the file.
 
@@ -251,7 +250,6 @@ class CsvReader(CurvesReader):
 
 
 class EurostagReader(CurvesReader):
-
     def __read(self, data: TextIO) -> None:
         """Read and import the data from the file.
 

@@ -14,7 +14,6 @@ from dycov.configuration.cfg import config
 
 
 class Producer:
-
     def __init__(self, producer_model: Path, producer_ini: Path):
         self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
         self._f_nom = config.get_float("GridCode", "f_nom", 50.0)

@@ -55,7 +55,7 @@ class DycovCLI:
             self.logger.error(
                 "Please provide a command. Use 'dycov --help' for available commands."
             )
-            parser.error("Please provide a command. " "Use 'dycov --help' for available commands.")
+            parser.error("Please provide a command. Use 'dycov --help' for available commands.")
             return
 
         self._execute_command(parser, args)
