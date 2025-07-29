@@ -1027,7 +1027,7 @@ class DynawoSimulator:
 
         # Ensure fault_duration does not exceed the simulation time
         # if fault_duration == 9999.0 there is no fault
-        if fault_start + fault_duration > time_values[-1] and fault_duration != 9999.0:
+        if fault_start + fault_duration > time_values[-1]:
             self.logger.warning(
                 "Fault duration extends beyond simulation time. Adjusting fault_duration "
                 f"from {fault_duration} to {time_values[-1] - fault_start:.4f}."
