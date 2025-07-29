@@ -81,7 +81,11 @@
     <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
     <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
     <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="0"/>
- </set>
+    <par type="BOOL" name="photovoltaics_Lvplsw" value="false"/>
+    <par type="DOUBLE" name="photovoltaics_zerox" value="0.1"/>
+    <par type="DOUBLE" name="photovoltaics_brkpt" value="0.05"/>
+    <par type="DOUBLE" name="photovoltaics_lvpl1" value="1.22"/>
+  </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>

@@ -8,8 +8,8 @@
 ; SourceDir directory should contain the following items:
 ;   * dycov_repo: tool directory (https://github.com/dynawo/dyn-grid-compliance-verification)
 ;   * manual: compiled user manual of the tool (PDF & HTML)
-;   * dynawo: Directory with the installation for Windows systems of Dynawo (https://github.com/dynawo/dynawo/releases)
-;       After installing Dynawo applies the following corrections:
+; 
+; Before share Dynawo applies the following corrections:
 ;		- Edit the file share\cmake\FindSundials.cmake removing the lines:
 ;			if(MSVC)
 ;				set(LIBRARY_DIR bin)

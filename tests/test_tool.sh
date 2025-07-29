@@ -69,8 +69,8 @@ launch_validate() {
    fi
    if [ "$wecc_models" = true ]; then
       color_msg "INFO: Including WECC models for validation."
-      wind_models+=("WECCA" "WECCB")
-      photo_models+=("WECCCurrentSource" "WECCVoltageSourceA" "WECCVoltageSourceB")
+      wind_models+=("WECCA" "WECCB" "WECC")
+      photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2")
       bess_models+=("WECC")
    fi
 
@@ -150,12 +150,46 @@ launch_performance() {
    color_msg "INFO: All performance verification processes completed."
 }
 
+# Function to execute a performance command and record time
+run_dycov_generate() {
+    local model_path=$1
+    local output_path=$2
+    local model_name=$3
+
+    # Full command to execute (for logging purposes)
+    local command_to_execute="dycov generateEnvelopes -i \"$model_path\" -e -o \"$output_path\" --testing"
+
+    start=$(date +%s)
+    # Execute the command
+    dycov generateEnvelopes -i "$model_path" -e -o "$output_path" --testing
+    end=$(date +%s)
+    echo "$(date '+%Y-%m-%d %H:%M:%S')     | Verify: $model_name Elapsed Time: $(($end-$start)) seconds"
+}
+# Export the function for xargs to use in subshells
+export -f run_dycov_generate
+
+launch_generate() {
+   declare -a models=("GFM_Overdamped" "GFM_Underdamped")
+
+   local -a generate_commands=()
+
+   for model in "${models[@]}"
+   do
+      local cmd="run_dycov_generate \"$examples_path/$model/Producer.ini\" \"$results_path/Envelopes/$model\" \"$model\""
+      generate_commands+=("$cmd")
+   done
+
+   color_msg "INFO: Starting parallel envelope generation with max 4 processes..."
+   printf '%s\n' "${generate_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
+   color_msg "INFO: All envelope generation processes completed."
+}
 
 launcher="dynawo.sh"
 iec_models=true # by default, add IEC models
 wecc_models=true # by default, add WECC models
 validate=true  # by default, validate the models
 performance=true  # by default, verify the performance
+generate=true  # by default, generate the envelopes
 remove=false # by default, remove Results path
 examples_path="./examples"
 results_path="../Results"
@@ -172,9 +206,16 @@ while (($#)); do
          ;;
       -v|--validate)
          performance=false
+         generate=false
          shift
          ;;
       -p|--performance)
+         validate=false
+         generate=false
+         shift
+         ;;
+      -g|--generate)
+         performance=false
          validate=false
          shift
          ;;
@@ -231,6 +272,10 @@ fi
 if [ "$performance" = true ]; then
    color_msg "Starting performance verification phase..."
    launch_performance
+fi
+if [ "$generate" = true ]; then
+   color_msg "Starting envelope generation phase..."
+   launch_generate
 fi
 launch_end=$(date +%s)
 color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
