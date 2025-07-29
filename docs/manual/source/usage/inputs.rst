@@ -155,9 +155,9 @@ Currently supported models:
         Wind Turbine Type 4B model from IEC 61400-27-1:2020 standard : measurement, PLL, protection,
         PControl, QControl, limiters, electrical, generator and mechanical modules
 * WECC Storage models:
-    * BESScbWeccCurrentSource
+    * BESSWeccCurrentSource
         WECC Storage model
-    * BESScbWeccCurrentSourceNoPlantControl
+    * BESSWeccCurrentSourceNoPlantControl
         WECC Storage model without the plant controller
 * Lines:
     * Line

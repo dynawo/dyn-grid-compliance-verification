@@ -81,7 +81,11 @@
     <par type="DOUBLE" name="WT4A_Hg" value="1"/>
     <par type="DOUBLE" name="WT4A_Ht" value="5"/>
     <par type="DOUBLE" name="WT4A_Kshaft" value="200"/>
-</set>
+    <par type="BOOL" name="WT4A_Lvplsw" value="false"/>
+    <par type="DOUBLE" name="WT4A_zerox" value="0.1"/>
+    <par type="DOUBLE" name="WT4A_brkpt" value="0.05"/>
+    <par type="DOUBLE" name="WT4A_lvpl1" value="1.22"/>
+  </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
