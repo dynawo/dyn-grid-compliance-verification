@@ -105,6 +105,10 @@
     <par type="DOUBLE" name="WTG4A_Hg" value="1"/>
     <par type="DOUBLE" name="WTG4A_Ht" value="5"/>
     <par type="DOUBLE" name="WTG4A_Kshaft" value="200"/>
+    <par type="BOOL" name="WTG4A_Lvplsw" value="false"/>
+    <par type="DOUBLE" name="WTG4A_zerox" value="0.1"/>
+    <par type="DOUBLE" name="WTG4A_brkpt" value="0.05"/>
+    <par type="DOUBLE" name="WTG4A_lvpl1" value="1.22"/>
   </set>
   <set id="Wind_Turbine2">
     <par type="DOUBLE" name="WTG4B_P0Pu" value="-0.1"/>
@@ -206,6 +210,10 @@
     <par type="DOUBLE" name="WTG4B_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="WTG4B_IqFrzPu" value="0"/>
     <par type="BOOL" name="WTG4B_PFlag" value="true"/>
+    <par type="BOOL" name="WTG4B_Lvplsw" value="false"/>
+    <par type="DOUBLE" name="WTG4B_zerox" value="0.1"/>
+    <par type="DOUBLE" name="WTG4B_brkpt" value="0.05"/>
+    <par type="DOUBLE" name="WTG4B_lvpl1" value="1.22"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr1">
