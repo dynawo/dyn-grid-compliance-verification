@@ -77,6 +77,10 @@
     <par type="DOUBLE" name="WT4B_tHoldIq" value="0"/>
     <par type="DOUBLE" name="WT4B_IqFrzPu" value="0"/>
     <par type="BOOL" name="WT4B_PFlag" value="true"/>
+    <par type="BOOL" name="WT4B_Lvplsw" value="false"/>
+    <par type="DOUBLE" name="WT4B_zerox" value="0.1"/>
+    <par type="DOUBLE" name="WT4B_brkpt" value="0.05"/>
+    <par type="DOUBLE" name="WT4B_lvpl1" value="1.22"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">

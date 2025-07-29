@@ -111,6 +111,28 @@ def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
     target_folder: Path
         The destination folder where the files will be copied.
     """
+    for producer_path in results.iterdir():
+        if producer_path.is_dir() and producer_path.name != "Reports":
+            _LOGGER.debug(f"Processing producer directory: {producer_path}")
+            manage_files.create_dir(target_folder / producer_path.name)
+            # Copy files from the producer directory
+            _copy_files_from_producer(
+                producer_path,
+                target_folder / producer_path.name,
+            )
+
+
+def _copy_files_from_producer(results: Path, target_folder: Path) -> None:
+    """Copies 'curves_calculated.csv' and 'dycov.log' files from the producer results
+    directory to the producer target folder, renaming them based on their relative path.
+
+    Parameters
+    ----------
+    results: Path
+        The root directory containing the simulation results.
+    target_folder: Path
+        The destination folder where the files will be copied.
+    """
     # Define file types to copy and their target suffixes
     files_to_copy = {
         "curves_calculated.csv": ".csv",
