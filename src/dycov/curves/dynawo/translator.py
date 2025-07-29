@@ -154,8 +154,9 @@ class Translator:
         """
         family, level = get_generator_family_level(generator)
         option = f"{generator_control_mode}_{family}_{level}"
-        if self._control_modes.has_option("ControlModes", option):
-            return self._control_modes.get("ControlModes", option).split(",")
+        control_modes = self._control_modes.get("ControlModes", option, fallback="")
+        if control_modes:
+            return control_modes.split(",")
         else:
             return []
 

@@ -48,7 +48,7 @@ BESS2_ID = "Storage_2"
 
 SM_TERMINAL = "generator_terminal"
 PPM_TERMINAL = "PPM_TERMINAL"
-BESS_TERMINAL = "BESScb_terminal"
+BESS_TERMINAL = "BESS_terminal"
 BUS_TERMINAL = "bus_terminal"
 LOAD_TERMINAL = "load_terminal"
 XFMR_TERMINAL1 = "transformer_terminal1"
