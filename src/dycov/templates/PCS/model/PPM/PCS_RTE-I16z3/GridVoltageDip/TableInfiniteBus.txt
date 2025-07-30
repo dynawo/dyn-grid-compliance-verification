@@ -7,10 +7,12 @@ double TableUPhase(2,2)
 {{simulation_start}} 0.0
 {{simulation_stop}} 0.0
 
-double TableUPu(6,2)
-{{simulation_start}} 1.0
-{{start_event}} 1.0
-{{start_event}} {{u_fault}}
-{{end_event}} {{u_fault}}
-{{delta_t_rec2}} 0.85
-{{simulation_stop}} 0.85
+double TableUPu(8,2)
+{{simulation_start}} {{u_start}}
+{{start_event}} {{u_start}}
+{{start_event}} {{u_ret}}
+{{delta_t_clear}} {{u_ret}}
+{{delta_t_rec2}} {{u_rec2}}
+{{delta_t_rec3}} {{u_rec2}}
+{{delta_t_rec3}} {{u_start}}
+{{simulation_stop}} {{u_start}}

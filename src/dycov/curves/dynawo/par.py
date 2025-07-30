@@ -89,8 +89,8 @@ class ParFile(FileVariables):
         variables_dict["line_XPu"] = line_xpu
         variables_dict["line_RPu"] = line_rpu
 
-        # Update generator initialization parameters. Note: 'infiniteBus_U0Pu' and 'gen_U0Pu'
-        # intentionally use 'rte_gen.U0' as per original script's logic.
+        # Update the TSO initialization parameters. Note: Depending on the test, only
+        # "infiniteBus_U0Pu" (infinite bus) or "gen_U0Pu" (generator) are available.
         variables_dict["infiniteBus_U0Pu"] = rte_gen.U0
         variables_dict["gen_P0Pu"] = rte_gen.P0
         variables_dict["gen_Q0Pu"] = rte_gen.Q0
