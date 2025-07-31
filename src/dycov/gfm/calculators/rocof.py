@@ -27,6 +27,14 @@ class RoCoF(GFMCalculator):
         self,
         gfm_params: GFMParameters,
     ) -> None:
+        """
+        Initializes the RoCoF calculator with GFM parameters.
+
+        Parameters
+        ----------
+        gfm_params : GFMParameters
+            An object containing all necessary parameters for the GFM calculations.
+        """
         super().__init__(gfm_params=gfm_params)
         self._change_frequency = gfm_params.get_change_frequency()
         self._change_frequency_duration = gfm_params.get_change_frequency_duration()
@@ -60,7 +68,7 @@ class RoCoF(GFMCalculator):
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - magnitude: Name of the calculated magnitude.
+            - magnitude: Name of the calculated magnitude ("P").
             - p_pcc_final: The final calculated active power at the point of common
               coupling.
             - p_up_final: The final upper active power envelope.
@@ -128,16 +136,16 @@ class RoCoF(GFMCalculator):
         -------
         tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]
             A tuple containing:
-            - delta_p_array: List of delta_p arrays for original, min, and max parameter
-              variations.
+            - delta_p_array: List of delta_p arrays for original, min, and max
+              parameter variations.
             - delta_p_min: delta_p array specifically calculated for the minimum
               parameter case.
             - delta_p_max: delta_p array specifically calculated for the maximum
               parameter case.
-            - p_peak_array: List of p_peak values for original, min, and max parameter
-              variations.
-            - epsilon_array: List of epsilon values for original, min, and max parameter
-              variations.
+            - p_peak_array: List of p_peak values for original, min, and max
+              parameter variations.
+            - epsilon_array: List of epsilon values for original, min, and max
+              parameter variations.
         """
         x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
@@ -176,35 +184,19 @@ class RoCoF(GFMCalculator):
             p_peak_array.append(p_peak)
             epsilon_array.append(epsilon)
 
-        if epsilon_initial_check[self._ORIGINAL_PARAMS_IDX] > self._EPSILON_THRESHOLD:
-            delta_p_min_array: list[np.ndarray] = []
-            delta_p_max_array: list[np.ndarray] = []
-            for i in range(len(d_array)):
-                delta_p_min_array.append(
-                    self._calculate_overdamped_envelope(
-                        delta_p_array[i], p_peak_array[i], time_array, event_time, "min"
-                    )
-                )
-                delta_p_max_array.append(
-                    self._calculate_overdamped_envelope(
-                        delta_p_array[i], p_peak_array[i], time_array, event_time, "max"
-                    )
-                )
-
-            stacked = np.vstack((delta_p_min_array))
-            delta_p_min = np.nanmin(stacked, axis=0)
-            stacked = np.vstack((delta_p_max_array))
-            delta_p_max = np.nanmax(stacked, axis=0)
-        else:
-            copouding_value = np.exp(-time_array / self._t_expo_decrease)
+        delta_p_min = np.array([])
+        delta_p_max = np.array([])
+        if epsilon_initial_check[self._ORIGINAL_PARAMS_IDX] < self._EPSILON_THRESHOLD:
+            coupling_value = np.exp(-time_array / self._t_expo_decrease)
             delta_p_array[self._MINIMUM_PARAMS_IDX] = delta_p_array[
                 self._MINIMUM_PARAMS_IDX
-            ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
+            ] * coupling_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - coupling_value)
             delta_p_array[self._MAXIMUM_PARAMS_IDX] = delta_p_array[
                 self._MAXIMUM_PARAMS_IDX
-            ] * copouding_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - copouding_value)
+            ] * coupling_value + delta_p_array[self._ORIGINAL_PARAMS_IDX] * (1 - coupling_value)
 
-            # Optimization: Calculate the base waveform once to avoid redundant computations
+            # Optimization: Calculate the base waveform once to avoid redundant
+            # computations
             base_delta_p, _, _ = self._get_underdamped_delta_p_base(D, H, Xeff, t_pll, time_array)
 
             delta_p_min = self._get_underdamped_delta_p_min(
@@ -221,6 +213,127 @@ class RoCoF(GFMCalculator):
             p_peak_array,
             epsilon_array,
         )
+
+    def _calculate_overdamped_envelope(
+        self,
+        deltap: np.ndarray,
+        signal: np.ndarray,
+        time_array: np.ndarray,
+        event_time: float,
+        tunnel: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Calculates the upper and lower active power envelopes for an overdamped
+        system response.
+
+        Parameters
+        ----------
+        deltap : np.ndarray
+            The delta_p array for the system.
+        signal : np.ndarray
+            The base power signal, typically p_pcc.
+        time_array : np.ndarray
+            Array of time points for the simulation.
+        event_time : float
+            The time (in seconds) at which the event starts.
+        tunnel : float
+            A tunnel value used for margin calculations.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            A tuple containing the lower and upper envelope arrays.
+        """
+        event_end_time = event_time + self._change_frequency_duration
+        response_time = 1.5
+        if self._change_frequency > 0:
+            mask = (time_array >= event_time) & (time_array <= event_end_time)
+            margin = deltap * (1 + self._margin_high) * mask
+            lower_envelope_segment_1 = (margin + self._initial_active_power - tunnel) * mask
+            margin = deltap * (1 - self._margin_high) * mask
+            upper_envelope_segment_1 = (margin + self._initial_active_power + tunnel) * mask
+
+            mask = (event_end_time >= time_array) & (time_array >= event_time + response_time)
+            lower_envelope_segment_1 = np.where(mask, signal - tunnel, lower_envelope_segment_1)
+            upper_envelope_segment_1 = np.where(mask, signal + tunnel, upper_envelope_segment_1)
+
+            mask = (time_array > event_end_time) & (time_array <= time_array[-1])
+            lower_envelope_segment_2 = (
+                deltap * (1 + self._margin_low) + self._initial_active_power - tunnel
+            ) * mask
+            upper_envelope_segment_2 = (
+                deltap * (1 - self._margin_low) + self._initial_active_power + tunnel
+            ) * mask
+
+            p_threshold_up_after_rocof_stop = self._get_value_at_time(
+                event_end_time, time_array, lower_envelope_segment_1
+            )
+            lower_envelope_segment_2 = (
+                self._cut_signal(
+                    p_threshold_up_after_rocof_stop,
+                    lower_envelope_segment_2,
+                    self._max_active_power * 2,
+                )
+                * mask
+            )
+
+            mask = time_array < event_time
+            lower_envelope_segment_0 = (self._initial_active_power - tunnel) * mask
+            upper_envelope_segment_0 = (self._initial_active_power + tunnel) * mask
+
+            lower_envelope = (
+                lower_envelope_segment_0 + lower_envelope_segment_2 + lower_envelope_segment_1
+            )
+            upper_envelope = (
+                upper_envelope_segment_0 + upper_envelope_segment_2 + upper_envelope_segment_1
+            )
+        else:
+            mask = (time_array >= event_time) & (time_array <= event_end_time)
+            margin = deltap * (1 + self._margin_high) * mask
+            upper_envelope_segment_1 = (margin + self._initial_active_power + tunnel) * mask
+
+            margin = deltap * (1 - self._margin_low) * mask
+            lower_envelope_segment_1 = (margin - tunnel + self._initial_active_power) * mask
+
+            mask = (event_end_time >= time_array) & (time_array >= event_time + response_time)
+            upper_envelope_segment_1 = np.where(mask, signal + tunnel, upper_envelope_segment_1)
+            lower_envelope_segment_1 = np.where(mask, signal - tunnel, lower_envelope_segment_1)
+
+            mask = (time_array > event_end_time) & (time_array <= time_array[-1])
+            upper_envelope_segment_2 = (
+                deltap * (1 + self._margin_high) + self._initial_active_power + tunnel
+            ) * mask
+            lower_envelope_segment_2 = (
+                deltap * (1 - self._margin_high) + self._initial_active_power - tunnel
+            ) * mask
+
+            p_threshold_up_after_rocof_stop = self._get_value_at_time(
+                event_end_time, upper_envelope_segment_1, time_array
+            )
+            upper_envelope_segment_2 = (
+                self._cut_signal(-2, upper_envelope_segment_2, p_threshold_up_after_rocof_stop)
+                * mask
+            )
+
+            # third envelop from t<event_time
+            mask = time_array < event_time
+            upper_envelope_segment_0 = (self._initial_active_power + tunnel) * mask
+            lower_envelope_segment_0 = (self._initial_active_power - tunnel) * mask
+
+            upper_envelope = (
+                upper_envelope_segment_0 + upper_envelope_segment_1 + upper_envelope_segment_2
+            )
+            lower_envelope = (
+                lower_envelope_segment_0 + lower_envelope_segment_1 + lower_envelope_segment_2
+            )
+
+            lower_envelope = np.where(
+                time_array < event_end_time,
+                self._apply_delay(0.01, lower_envelope[0], time_array, lower_envelope),
+                lower_envelope,
+            )
+
+        return lower_envelope, upper_envelope
 
     def _get_envelopes(
         self,
@@ -248,6 +361,8 @@ class RoCoF(GFMCalculator):
             delta_p array calculated with maximum parameters.
         p_peak_array : list[float]
             List of p_peak values for original, min, and max parameters.
+        epsilon_array : list[float]
+            List of epsilon values for original, min, and max parameters.
         time_array : np.ndarray
             Array of time points.
         event_time : float
@@ -274,9 +389,9 @@ class RoCoF(GFMCalculator):
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
 
-        p_pcc = self._initial_active_power + delta_p * -(sign)
-
         if epsilon_array[0] < self._EPSILON_THRESHOLD:
+            p_pcc = self._initial_active_power + delta_p * -(sign)
+
             list_of_arrays: list[np.ndarray] = [
                 delta_p_array[self._MINIMUM_PARAMS_IDX],
                 delta_p_array[self._MAXIMUM_PARAMS_IDX],
@@ -284,7 +399,7 @@ class RoCoF(GFMCalculator):
                 delta_p_max,
             ]
 
-            pdown_no_p0, pup_no_p0 = self._calculate_unlimited_power_envelopes(
+            pdown_unlimited, pup_unlimited = self._calculate_unlimited_power_envelopes(
                 list_of_arrays, tunnel_time_dep
             )
 
@@ -292,8 +407,8 @@ class RoCoF(GFMCalculator):
                 -(2 * H + D * self._pll_time_constant) * self._change_frequency
             )
             pdown_limited, pup_limited = self._limit_power_envelopes(
-                pdown_no_p0,
-                pup_no_p0,
+                pdown_unlimited,
+                pup_unlimited,
                 self._get_tunnel(expected_delta_p),
                 self._initial_active_power,
                 self._max_active_power,
@@ -301,8 +416,29 @@ class RoCoF(GFMCalculator):
                 sign,
             )
         else:
-            pdown_limited = delta_p_min
-            pup_limited = delta_p_max
+            p_pcc = self._initial_active_power + delta_p
+
+            all_traces_up = []
+            all_traces_down = []
+
+            for i in range(len(delta_p_array)):
+                pdown_trace, pup_trace = self._calculate_overdamped_envelope(
+                    delta_p_array[i],
+                    p_pcc,
+                    time_array,
+                    event_time,
+                    tunnel_time_dep[self._ORIGINAL_PARAMS_IDX],
+                )
+                all_traces_up.append(pup_trace)
+                all_traces_down.append(pdown_trace)
+
+            pup_unlimited = np.maximum.reduce(all_traces_up)
+            pdown_unlimited = np.minimum.reduce(all_traces_down)
+
+            pup_limited = np.clip(pup_unlimited, self._min_active_power, self._max_active_power)
+            pdown_limited = np.clip(
+                pdown_unlimited, self._min_active_power, self._max_active_power
+            )
 
         if self._is_emt_flag:
             p_up_final = self._apply_delay(0.02, pup_limited[0], time_array, pup_limited)
@@ -437,10 +573,10 @@ class RoCoF(GFMCalculator):
         beta = (2 * H + D * t_pll) / (2 * H * t_pll)
 
         # Coefficients for the analytical solution
-        A_coeff = alpha * beta
+        a_coeff = alpha * beta
         common_denom = 1 - 2 * xi * wn * t_pll + wn**2 * t_pll**2
-        B_coeff = (alpha * (2 * t_pll * beta * wn * xi - t_pll * wn**2 - beta)) / common_denom
-        C_coeff = (
+        b_coeff = (alpha * (2 * t_pll * beta * wn * xi - t_pll * wn**2 - beta)) / (common_denom)
+        c_coeff = (
             alpha
             * (
                 4 * t_pll * beta * wn**2 * xi**2
@@ -450,7 +586,7 @@ class RoCoF(GFMCalculator):
                 + wn**2
             )
         ) / common_denom
-        D_coeff = (-1 * (t_pll**2 * alpha * wn**2 * (t_pll * beta - 1))) / common_denom
+        d_coeff = (-1 * (t_pll**2 * alpha * wn**2 * (t_pll * beta - 1))) / common_denom
 
         alpha1 = wn * (xi + np.sqrt(xi**2 - 1))
         alpha2 = wn * (xi - np.sqrt(xi**2 - 1))
@@ -460,10 +596,10 @@ class RoCoF(GFMCalculator):
         term3 = np.exp(-time_array / t_pll)
 
         delta_p1 = (
-            A_coeff
-            + (B_coeff * alpha1 - C_coeff) * term1 / (alpha1 - alpha2)
-            - (B_coeff * alpha2 - C_coeff) * term2 / (alpha1 - alpha2)
-            + D_coeff * term3 / t_pll
+            a_coeff
+            + (b_coeff * alpha1 - c_coeff) * term1 / (alpha1 - alpha2)
+            - (b_coeff * alpha2 - c_coeff) * term2 / (alpha1 - alpha2)
+            + d_coeff * term3 / t_pll
         )
         return delta_p1, p_peak, xi
 
@@ -516,8 +652,8 @@ class RoCoF(GFMCalculator):
         response_end, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, t_pll, time_shifted_end)
 
         # Apply waveforms only after their respective event times
-        delta_p_start = np.where(time_array >= event_time, response_start, 0)
-        delta_p_end = np.where(time_array >= event_end_time, response_end, 0)
+        delta_p_start = np.where(time_array > event_time, response_start, 0)
+        delta_p_end = np.where(time_array > event_end_time, response_end, 0)
 
         # The final delta_p is the superposition of the two responses
         delta_p = (delta_p_start - delta_p_end) * -1
@@ -557,7 +693,7 @@ class RoCoF(GFMCalculator):
         return margin
 
     def _get_value_at_time(
-        self, selected_time: float, signal: np.ndarray, time_array: np.ndarray
+        self, selected_time: float, time_array: np.ndarray, signal: np.ndarray
     ) -> float:
         """
         Retrieves the value of a signal at a specific time.
@@ -566,10 +702,10 @@ class RoCoF(GFMCalculator):
         ----------
         selected_time : float
             The time at which to retrieve the signal value.
-        signal : np.ndarray
-            The signal array.
         time_array : np.ndarray
             Array of time points corresponding to the signal.
+        signal : np.ndarray
+            The signal array.
 
         Returns
         -------
@@ -578,104 +714,6 @@ class RoCoF(GFMCalculator):
         """
         index = np.argmin(np.abs(time_array - (selected_time - 0.01)))
         return signal[index]
-
-    def _calculate_overdamped_envelope(
-        self,
-        signal: np.ndarray,
-        p_peak: float,
-        time_array: np.ndarray,
-        event_time: float,
-        envelope_type: str,
-    ) -> np.ndarray:
-        """
-        Calculates the minimum or maximum delta_p envelope for an overdamped system.
-        This unified function replaces the duplicated logic from the original
-        _get_overdamped_delta_p_min and _get_overdamped_delta_p_max methods by
-        using an 'envelope_type' parameter to control the logic.
-
-        Parameters
-        ----------
-        signal : np.ndarray
-            The base signal array.
-        p_peak : float
-            Peak power value.
-        time_array : np.ndarray
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-        envelope_type : str
-            Type of envelope to calculate ("min" or "max").
-
-        Returns
-        -------
-        np.ndarray
-            The calculated envelope array.
-        """
-        if envelope_type not in ["min", "max"]:
-            raise ValueError("envelope_type must be 'min' or 'max'")
-
-        sign_multiplier = 1.0 if envelope_type == "max" else -1.0
-        tunnel = max(0.02, 0.05 * p_peak)
-        event_end_time = event_time + self._change_frequency_duration
-
-        apply_margin_during_event = (self._change_frequency > 0 and envelope_type == "min") or (
-            self._change_frequency <= 0 and envelope_type == "max"
-        )
-
-        if apply_margin_during_event:
-            margin_start, margin_end = event_time, event_end_time
-            signal_start, signal_end = event_end_time, time_array[-1]
-        else:
-            margin_start, margin_end = event_end_time, time_array[-1]
-            signal_start, signal_end = event_time, event_end_time
-
-        margin = self._add_margin(self._margin_high, margin_start, margin_end, time_array)
-
-        ref_value_time = margin_end if margin_end <= time_array[-1] else margin_start
-        value_at_ref_time = self._get_value_at_time(
-            ref_value_time, signal + self._initial_active_power, time_array
-        )
-
-        envelope = np.full_like(time_array, self._initial_active_power)
-
-        mask_signal = (time_array >= signal_start) & (time_array < signal_end)
-        envelope = np.where(
-            mask_signal, signal + self._initial_active_power + (sign_multiplier * tunnel), envelope
-        )
-
-        mask_margin = (time_array >= margin_start) & (time_array < margin_end)
-        envelope = np.where(
-            mask_margin,
-            value_at_ref_time + (sign_multiplier * margin) + (sign_multiplier * tunnel),
-            envelope,
-        )
-
-        if margin_end >= time_array[-1]:
-            envelope[-1] = (
-                value_at_ref_time + (sign_multiplier * margin[-1]) + (sign_multiplier * tunnel)
-            )
-
-        delay_mask = (
-            (time_array >= signal_start)
-            if apply_margin_during_event
-            else (time_array < event_end_time)
-        )
-        envelope = np.where(
-            delay_mask, self._apply_delay(0.01, envelope[0], time_array, envelope), envelope
-        )
-
-        limit_value = (
-            (self._max_active_power * 0.95)
-            if envelope_type == "min"
-            else (self._min_active_power * 0.95)
-        )
-        limit_cond = (
-            (envelope > limit_value) if envelope_type == "min" else (envelope < limit_value)
-        )
-        condition = (time_array >= event_time) & limit_cond
-        envelope = np.where(condition, limit_value, envelope)
-
-        return self._cut_signal(self._min_active_power, envelope, self._max_active_power)
 
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, t_pll: float, time_array: np.ndarray
@@ -712,11 +750,13 @@ class RoCoF(GFMCalculator):
         alpha = 2 * H * t_pll * np.abs(self._change_frequency)
         beta = (2 * H + D * t_pll) / (2 * H * t_pll)
 
-        A_coeff = alpha * beta
+        a_coeff = alpha * beta
         common_denom = 1 - 2 * epsilon * wn * t_pll + wn**2 * t_pll**2
-        B_coeff = -(t_pll**2 * alpha * wn**2 * (t_pll * beta - 1)) / common_denom
-        C_coeff = (alpha * (2 * t_pll * beta * epsilon * wn - t_pll * wn**2 - beta)) / common_denom
-        D_coeff = (
+        b_coeff = -(t_pll**2 * alpha * wn**2 * (t_pll * beta - 1)) / common_denom
+        c_coeff = (alpha * (2 * t_pll * beta * epsilon * wn - t_pll * wn**2 - beta)) / (
+            common_denom
+        )
+        d_coeff = (
             alpha
             * (
                 4 * t_pll * beta * wn**2 * epsilon**2
@@ -732,10 +772,10 @@ class RoCoF(GFMCalculator):
         term4 = np.exp(-epsilon * wn * time_array) * np.sin(wd * time_array)
 
         delta_p1 = (
-            A_coeff
-            + B_coeff / t_pll * term2
-            + C_coeff * term3
-            + C_coeff * (D_coeff / C_coeff - epsilon * wn) / wd * term4
+            a_coeff
+            + b_coeff / t_pll * term2
+            + c_coeff * term3
+            + c_coeff * (d_coeff / c_coeff - epsilon * wn) / wd * term4
         )
         return delta_p1, p_peak, epsilon
 
