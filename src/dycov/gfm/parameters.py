@@ -195,7 +195,7 @@ class GFMParameters(Parameters):
         """
         return (
             float(self._producer._config.get("DEFAULT", "p_min_injection"))
-            / self._producer._s_nref
+            / self.get_nominal_apparent_power()
         )
 
     def get_max_active_power(self) -> float:
@@ -209,7 +209,7 @@ class GFMParameters(Parameters):
         """
         return (
             float(self._producer._config.get("DEFAULT", "p_max_injection"))
-            / self._producer._s_nref
+            / self.get_nominal_apparent_power()
         )
 
     def get_initial_reactive_power(self) -> float:
@@ -238,7 +238,10 @@ class GFMParameters(Parameters):
         float
             Minimum reactive power value.
         """
-        return float(self._producer._config.get("DEFAULT", "q_min")) / self._producer._s_nref
+        return (
+            float(self._producer._config.get("DEFAULT", "q_min"))
+            / self.get_nominal_apparent_power()
+        )
 
     def get_max_reactive_power(self) -> float:
         """
@@ -249,7 +252,10 @@ class GFMParameters(Parameters):
         float
             Maximum reactive power value.
         """
-        return float(self._producer._config.get("DEFAULT", "q_max")) / self._producer._s_nref
+        return (
+            float(self._producer._config.get("DEFAULT", "q_max"))
+            / self.get_nominal_apparent_power()
+        )
 
     def get_initial_voltage(self) -> float:
         """
