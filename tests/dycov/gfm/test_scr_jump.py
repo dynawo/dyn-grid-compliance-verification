@@ -41,6 +41,8 @@ FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 p_max_injection=1.2
 p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
 """
 
 gfm_overdamped_params = """
@@ -59,6 +61,8 @@ FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 p_max_injection=1.2
 p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
 """
 
 s_scrup1_oc1_params = """
@@ -78,6 +82,8 @@ FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 p_max_injection=1.2
 p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
 """
 
 
@@ -86,7 +92,6 @@ class TestProducer(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._s_nref = 1.0
         self._f_nom = 1.0
 
 
