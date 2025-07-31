@@ -38,6 +38,8 @@ TimeTo90=0.01
 TimeForTunnel=0.06
 q_max=0.35
 q_min=-0.35
+[GFM Parameters]
+Snom=1.0
 """
 
 s_vol_ang_step_1_params = """
@@ -53,6 +55,8 @@ TimeTo90=0.01
 TimeForTunnel=0.06
 q_max=0.4
 q_min=-0.4
+[GFM Parameters]
+Snom=1.0
 """
 
 
@@ -60,7 +64,6 @@ class TestProducer(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._s_nref = 1.0
 
 
 class TestParameters(GFMParameters):
