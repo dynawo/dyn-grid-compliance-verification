@@ -121,10 +121,6 @@ class GFMParameters(Parameters):
         float
             The effective reactance value.
         """
-        x_eff = self.__get_float_value("Xeff", 0.0)
-        if x_eff:
-            return x_eff
-
         return float(self._producer._config.get("GFM Parameters", "Xeff"))
 
     def get_damping_constant(self) -> float:
@@ -415,7 +411,7 @@ class GFMParameters(Parameters):
         float
             Voltage step magnitude in pu.
         """
-        value_definition = self.__get_value("VoltageStep")
+        value_definition = self.__get_value("VoltageStepAtPDR")
         if "*" in value_definition:
             parts = value_definition.split("*")
             term1 = float(parts[0])
@@ -503,7 +499,10 @@ class GFMParameters(Parameters):
         float
             The Short Circuit Ratio value.
         """
-        return self.__get_float_value("SCR", 0.0)
+        scr = self.__get_value("SCR")
+        if scr:
+            return config.get_float("GFM", scr, 0.0)
+        return config.get_float("GFM", "SCRmax", 0.0)
 
     def get_initial_scr(self) -> float:
         """
@@ -534,7 +533,7 @@ class GFMParameters(Parameters):
             return config.get_value(self._bm_section, option)
         elif config.has_key(self._pcs_section, option):
             return config.get_value(self._pcs_section, option)
-        return config.get_float("DEFAULT", option)
+        return config.get_value("DEFAULT", option)
 
     def __get_float_value(self, option: str, default_value: float) -> float:
         if config.has_key(self._oc_section, option):
