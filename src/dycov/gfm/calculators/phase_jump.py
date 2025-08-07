@@ -212,8 +212,7 @@ class PhaseJump(GFMCalculator):
         """
         delta_p = delta_p_array[self._ORIGINAL_PARAMS_IDX]
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
-        sign = self._delta_phase / np.abs(self._delta_phase)
-
+        sign = np.sign(self._delta_phase)
         tunnel_time_dep = self._get_time_tunnel(
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
@@ -234,6 +233,7 @@ class PhaseJump(GFMCalculator):
             self._max_active_power,
             self._min_active_power,
             sign,
+            True,
         )
 
         if self._is_emt_flag:

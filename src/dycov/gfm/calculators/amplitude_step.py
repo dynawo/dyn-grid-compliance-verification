@@ -247,6 +247,7 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The base delta_iq waveform.
         """
+
         x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
@@ -257,7 +258,16 @@ class AmplitudeStep(GFMCalculator):
 
         tau = -self._time_to_90 / np.log(0.1)
 
-        delta_iq1 = delta_iq * (1 - np.exp(-time_array / tau))
+        exponential_part = delta_iq * (1 - np.exp(-time_array / tau))
+
+        tunnel = self._get_tunnel(Xeff)
+
+        tunnel_part = delta_iq - tunnel
+        minimum_value = np.minimum(exponential_part, tunnel_part)
+
+        condition = time_array < self._time_to_90
+        delta_iq1 = np.where(condition, 0, minimum_value)
+
         return delta_iq1
 
     def _calculate_delta_iq_for_damping(
