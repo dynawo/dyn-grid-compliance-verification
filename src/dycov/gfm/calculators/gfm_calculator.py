@@ -250,6 +250,7 @@ class GFMCalculator:
         max_power: float,
         min_power: float,
         sign: int,
+        use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Applies final operational limits to the calculated power down and power up
@@ -274,18 +275,51 @@ class GFMCalculator:
             - pdown_limited: The final, limited power down envelope.
             - pup_limited: The final, limited power up envelope.
         """
-        pdown_limited = np.minimum(
-            np.maximum(
-                initial_power - sign * pdown_no_p0,
-                -1 + tunnel_value,
-            ),
-            1 - tunnel_value,
-        )
-        pup_limited = np.minimum(
-            np.maximum(
-                initial_power - 1 * sign * pup_no_p0,
-                min_power,
-            ),
-            max_power,
-        )
+
+        if use_opposite_signs:
+            # This checks if the initial power and the angle change have opposite signs.
+            condition = np.sign(initial_power) * sign == -1
+
+            # Define the two possible calculation logics
+            # Logic A: MIN(MAX(P0 - sign * pdown_no_p0, -1 + Tunnel), 1 - Tunnel)
+            tunnel_logic_calc = np.minimum(
+                np.maximum(
+                    initial_power - sign * pdown_no_p0,
+                    -1 + tunnel_value,
+                ),
+                1 - tunnel_value,
+            )
+
+            # Logic B: MIN(MAX(P0 - sign * pup_no_p0, -Pmax), Pmax)
+            power_limit_calc = np.minimum(
+                np.maximum(
+                    initial_power - sign * pup_no_p0,
+                    min_power,
+                ),
+                max_power,
+            )
+
+            # For pdown_limited:
+            # =SI(condition, Logic A, Logic B)
+            pdown_limited = np.where(condition, tunnel_logic_calc, power_limit_calc)
+
+            # For pup_limited:
+            # =SI(condition, Logic B, Logic A)
+            pup_limited = np.where(condition, power_limit_calc, tunnel_logic_calc)
+        else:
+            pdown_limited = np.minimum(
+                np.maximum(
+                    initial_power - sign * pdown_no_p0,
+                    -1 + tunnel_value,
+                ),
+                1 - tunnel_value,
+            )
+            pup_limited = np.minimum(
+                np.maximum(
+                    initial_power - 1 * sign * pup_no_p0,
+                    min_power,
+                ),
+                max_power,
+            )
+
         return pdown_limited, pup_limited
