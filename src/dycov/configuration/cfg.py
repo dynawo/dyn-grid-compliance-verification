@@ -107,7 +107,32 @@ class Config:
         """
         LOGGER.info("Loading PCS configuration from: %s", pcs_path)
         try:
-            self._pcs_config.read(pcs_path)
+            self._pcs_config.read(pcs_path, encoding="utf-8")
+
+            tool_path = Path(__file__).resolve().parent.parent
+            aliases_files = [str(p) for p in tool_path.rglob("*aliases*") if p.is_file()]
+
+            aliases_config = configparser.ConfigParser()
+            aliases_config.optionxform = str
+            aliases_config.read(aliases_files, encoding="utf-8")
+
+            for section_to_modify in list(self._pcs_config.sections()):
+                if self._pcs_config.has_option(section_to_modify, "inherit"):
+                    alias_section_name = self._pcs_config.get(section_to_modify, "inherit")
+                    if aliases_config.has_section(alias_section_name):
+                        for key_to_inherit, value_to_inherit in aliases_config.items(
+                            alias_section_name
+                        ):
+                            if not self._pcs_config.has_option(section_to_modify, key_to_inherit):
+                                self._pcs_config.set(
+                                    section_to_modify, key_to_inherit, value_to_inherit
+                                )
+                        self._pcs_config.remove_option(section_to_modify, "inherit")
+                    else:
+                        LOGGER.warning(
+                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found in the alias files."
+                        )
+
             LOGGER.info("Successfully loaded PCS configuration.")
         except Exception as e:
             LOGGER.error("Error loading PCS configuration from %s: %s", pcs_path, e)
