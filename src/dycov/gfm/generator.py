@@ -171,6 +171,10 @@ class GFMGeneration:
                 manage_files.list_directories(tool_path / self._templates_path / validation_path)
             )
 
+        for item in list(validation_pcs):
+            if "aliases" in item:
+                validation_pcs.remove(item)
+
     def __prepare_pcs_list(self) -> list[tuple[GFMParameters, str, str]]:
         """
         Prepares the list of PCS and their associated producers for validation.
