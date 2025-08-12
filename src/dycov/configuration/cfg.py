@@ -98,7 +98,13 @@ class Config:
         return None
 
     def load_pcs_config(self, pcs_path: str) -> None:
-        """Load the Performance Checking Sheet (PCS) configuration file.
+        """Load the Performance Checking Sheet (PCS) configuration file. It
+        also implements an inheritance mechanism using alias files.
+        It searches for any file named "*aliases*" located two levels above the
+        pcs path. If a section in the main config contains an "inherit" key,
+        it will load the key-value pairs from the corresponding section in the
+        alias files. This allows for shared, default configurations.
+        Values already present in the main config section will NOT be overwritten.
 
         Parameters
         ----------
@@ -109,8 +115,8 @@ class Config:
         try:
             self._pcs_config.read(pcs_path, encoding="utf-8")
 
-            tool_path = Path(__file__).resolve().parent.parent
-            aliases_files = [str(p) for p in tool_path.rglob("*aliases*") if p.is_file()]
+            pcs_aliases_path = Path(pcs_path).resolve().parent.parent
+            aliases_files = [str(p) for p in pcs_aliases_path.rglob("*aliases*") if p.is_file()]
 
             aliases_config = configparser.ConfigParser()
             aliases_config.optionxform = str
