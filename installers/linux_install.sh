@@ -11,19 +11,20 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail
 
-# --- Default Configuration Variables ---
+# Default Configuration Variables
 RELEASE_TAG="v0.8.1"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
 
-# --- Script State Variables ---
+# Script State Variables
 INSTALL_DIR="$PWD/dycov"
 NON_INTERACTIVE=false
 CUSTOM_ZIP_USED=false
 DIRECT_URL="" # Variable for direct source code download.
+INSTALL_DYNAWO=true # Controls the optional installation of Dynawo.
 
-# --- Helper Functions ---
+# Helper Functions
 RED="\\033[1;31m"
 GREEN="\\033[1;32m"
 NC="\\033[0m"
@@ -116,7 +117,7 @@ usage() {
     exit 0
 }
 
-# --- Command-Line Argument Parsing ---
+# Command-Line Argument Parsing
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -130,7 +131,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# --- Definition of Dependent Variables ---
+# Definition of Dependent Variables
 TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
 VENV="dycov_venv"
 DATETIME=$(date '+%Y%m%d_%H%M%S')
@@ -144,8 +145,6 @@ DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/relea
 
 # 1. Directory and Log Preparation
 if [ -d "$INSTALL_DIR" ]; then
-    # The directory exists. We'll use the 'confirm_and_delete' helper function.
-    # It will prompt the user, handle non-interactive mode, and exit if the user declines.
     echo -e "\n${RED}ERROR: The installation directory already exists: $INSTALL_DIR${NC}" >&6
     confirm_and_delete "$INSTALL_DIR"
 fi
@@ -189,31 +188,55 @@ color_msg ""
 # 3. Download and Extraction of Dynawo
 color_msg "Step 1: Downloading and extracting Dynawo..."
 cd "$INSTALL_DIR"
-curl -O -L --fail "$DYNAWO_ZIP_URL"
 
-if [[ "$CUSTOM_ZIP_USED" == true ]]; then
-    color_msg "NOTICE: Skipping checksum verification for custom Dynawo ZIP file."
+# Ask the user only if non-interactive mode is disabled.
+if [[ "$NON_INTERACTIVE" == false ]]; then
+    echo -n -e "\nDo you want to download and install Dynawo? (Required for some examples) [Y/n] " >&6
+    read -r response <&6
+    
+    case "$response" in
+        [nN][oO] | [nN])
+            INSTALL_DYNAWO=false
+            color_msg "User chose not to install Dynawo. Skipping."
+            ;;
+        *)
+            # Any other response (including Enter) is considered a 'Yes'.
+            INSTALL_DYNAWO=true
+            color_msg "User confirmed Dynawo installation."
+            ;;
+    esac
 else
-    color_msg "Verifying Dynawo ZIP file checksum..."
-    CHECKSUM_CALCULATED=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
-    if [ "$CHECKSUM_CALCULATED" != "$DYNAWO_CHECKSUM" ]; then
-        color_err_msg "FATAL ERROR: Checksum mismatch. Expected: '$DYNAWO_CHECKSUM', Got: '$CHECKSUM_CALCULATED'. Aborting for security."
-        exit 1
-    fi
-    color_msg "Checksum verified successfully."
+    color_msg "Non-interactive mode enabled, proceeding with Dynawo installation automatically."
 fi
 
-unzip -q "$DYNAWO_ZIP_FILE"
-rm -rf "$DYNAWO_ZIP_FILE"
-color_msg "Dynawo downloaded and installed."
+# Run the Dynawo installation block only if the variable is true.
+if [[ "$INSTALL_DYNAWO" == true ]]; then
+    curl -O -L --fail "$DYNAWO_ZIP_URL"
 
-# Temporary patch for Boost
-GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
-if [ "$GNU_MAJOR" -gt 11 ]; then
-    BOOST_HEADER=./dynawo/include/boost/thread/pthread/thread_data.hpp
-    if [ -f "$BOOST_HEADER" ] && grep -q '#if PTHREAD_STACK_MIN > 0$' "$BOOST_HEADER"; then
-        color_msg "Applying compatibility patch for Boost and GCC > 11..."
-        sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOST_HEADER"
+    if [[ "$CUSTOM_ZIP_USED" == true ]]; then
+        color_msg "NOTICE: Skipping checksum verification for custom Dynawo ZIP file."
+    else
+        color_msg "Verifying Dynawo ZIP file checksum..."
+        CHECKSUM_CALCULATED=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
+        if [ "$CHECKSUM_CALCULATED" != "$DYNAWO_CHECKSUM" ]; then
+            color_err_msg "FATAL ERROR: Checksum mismatch. Expected: '$DYNAWO_CHECKSUM', Got: '$CHECKSUM_CALCULATED'. Aborting for security."
+            exit 1
+        fi
+        color_msg "Checksum verified successfully."
+    fi
+
+    unzip -q "$DYNAWO_ZIP_FILE"
+    rm -rf "$DYNAWO_ZIP_FILE"
+    color_msg "Dynawo downloaded and installed."
+
+    # Temporary patch for Boost
+    GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
+    if [ "$GNU_MAJOR" -gt 11 ]; then
+        BOOST_HEADER=./dynawo/include/boost/thread/pthread/thread_data.hpp
+        if [ -f "$BOOST_HEADER" ] && grep -q '#if PTHREAD_STACK_MIN > 0$' "$BOOST_HEADER"; then
+            color_msg "Applying compatibility patch for Boost and GCC > 11..."
+            sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOST_HEADER"
+        fi
     fi
 fi
 
@@ -223,10 +246,8 @@ if [ -d "$TMP_LOCAL_REPO" ]; then
 fi
 
 if [ -n "$DIRECT_URL" ]; then
-    # --- NEW LOGIC: Download from Direct URL ---
     color_msg "Step 2: Downloading DyCoV source code from direct URL..."
     
-    # Extract the filename from the URL (e.g., GFM-changes.zip)
     SOURCE_ZIP_FILENAME="${DIRECT_URL##*/}"
     color_msg "Downloading as: $SOURCE_ZIP_FILENAME"
 
@@ -234,7 +255,6 @@ if [ -n "$DIRECT_URL" ]; then
     unzip -q "$SOURCE_ZIP_FILENAME"
     confirm_and_delete "$SOURCE_ZIP_FILENAME"
     
-    # Find the name of the unzipped directory and rename it
     UNZIPPED_DIR=$(find . -mindepth 1 -maxdepth 1 -type d ! -name 'dynawo')
     if [ -z "$UNZIPPED_DIR" ] || [ "$(echo "$UNZIPPED_DIR" | wc -l)" -ne 1 ]; then
         color_err_msg "ERROR: Could not determine the unzipped source directory. Expected a single directory."
@@ -243,7 +263,6 @@ if [ -n "$DIRECT_URL" ]; then
     mv "$UNZIPPED_DIR" "$TMP_LOCAL_REPO"
     color_msg "Source code downloaded and prepared."
 else
-    # --- ORIGINAL LOGIC: Clone with Git ---
     color_msg "Step 2: Cloning the DyCoV repository (tag: $RELEASE_TAG)..."
     git clone --depth 1 --branch "$RELEASE_TAG" "$REPO_URL" "$TMP_LOCAL_REPO"
     color_msg "Repository cloned."
@@ -261,8 +280,18 @@ color_msg "Virtual environment created and application installed."
 # 6. Customize the Activation Script
 color_msg "Step 4: Customizing the environment activation script..."
 ACTIVATE_SCRIPT="$INSTALL_DIR/$VENV"/bin/activate
-USER_PATH="$INSTALL_DIR/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
+
+# Conditionally define the user's PATH.
+# The dynawo directory is only added if it was installed.
+if [[ "$INSTALL_DYNAWO" == true ]]; then
+    USER_PATH="$INSTALL_DIR/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
+    color_msg "Adding Dynawo to PATH."
+else
+    USER_PATH="\$VIRTUAL_ENV/bin:\$PATH"
+    color_msg "Dynawo not installed, skipping its addition to PATH."
+fi
 sed -E --in-place=.ORIG -e "s%^PATH=.*%PATH=\"$USER_PATH\"%" "$ACTIVATE_SCRIPT"
+
 cp "$ACTIVATE_SCRIPT" "$INSTALL_DIR"/activate_dycov
 
 # shellcheck source=/dev/null
@@ -283,7 +312,7 @@ cd "$TMP_LOCAL_REPO"/docs/manual
 make latexpdf > /dev/null
 make html > /dev/null
 deactivate
-mkdir "$INSTALL_DIR"/manual
+mkdir -p "$INSTALL_DIR"/manual
 mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
 mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
 color_msg "Examples and manuals are ready."
