@@ -393,13 +393,13 @@ def _summary_log(
     model_template: str,
     reference_template: str,
 ) -> None:
-    header_txt = f"\nSummary Report\n==============\n\n***Run on {timestamp}***\n"
+    header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
     if dynawo_version:
         header_txt += f"***Dynawo version: {dynawo_version}***\n"
     if model_template:
-        header_txt += f"***Model: {model_template}***\n"
+        header_txt += f"***Model dir: {model_template}***\n"
     if reference_template:
-        header_txt += f"***Reference: {reference_template}***\n"
+        header_txt += f"***Reference curves dir: {reference_template}***\n"
 
     header_txt += (
         "\n\n"
@@ -481,7 +481,7 @@ def create_pdf(
     summary_description = ""
     now = time.time()
     timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(now))
-    summary_description += f"Run on {timestamp} \\\\"
+    summary_description += f"Run on: {timestamp} \\\\"
 
     producer = parameters.get_producer()
     dynawo_version = None
@@ -492,12 +492,12 @@ def create_pdf(
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
     model_template = str(producer.get_producer_path()).replace("\\", "\\\\")
-    summary_description += f"Model: {model_template} \\\\"
+    summary_description += f"Model dir: {model_template} \\\\"
 
     reference_template = None
     if producer.has_reference_curves_path():
         reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
-        summary_description += f"Reference: {reference_template} \\\\"
+        summary_description += f"Reference curves dir: {reference_template} \\\\"
 
     _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
     summary_map = summary.create_map(sorted_summary)
