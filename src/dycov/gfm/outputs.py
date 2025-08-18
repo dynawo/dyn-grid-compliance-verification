@@ -62,10 +62,11 @@ def plot_results(
     pcc: np.ndarray,
     down: np.ndarray,
     up: np.ndarray,
+    params_list: list = None,
 ) -> None:
     """
     Plot the results of the GFM phase jump: theoretical response,
-    upper envelope, and lower envelope.
+    upper envelope, and lower envelope. Also displays a list of informational params.
 
     Parameters
     ----------
@@ -74,7 +75,7 @@ def plot_results(
     title : str
         The title of the plot, which will also be used as the filename.
     magnitude : str
-        Name of the plotted mangnitude.
+        Name of the plotted magnitude.
     time : np.ndarray
         The time array for the x-axis.
     event_time : float
@@ -88,6 +89,8 @@ def plot_results(
         The lower power envelope.
     up : np.ndarray
         The upper power envelope.
+    params_list : list, optional
+        A list of strings to display on the plot. Defaults to None.
     """
     plt.figure(figsize=(8, 5))
 
@@ -109,6 +112,21 @@ def plot_results(
         linestyle="--",
         label="t at Event Time",
     )
+
+    if params_list:
+        full_text = "\n".join(params_list)
+
+        plt.text(
+            0.98,
+            0.98,
+            full_text,
+            transform=plt.gca().transAxes,
+            fontsize=9,
+            verticalalignment="top",
+            horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
+        )
+
     plt.legend(loc="lower right")
     plt.grid(True)
     plt.savefig(path, bbox_inches="tight", dpi=300)
