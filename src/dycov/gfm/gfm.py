@@ -56,9 +56,19 @@ class GridForming:
         inertia_constant = parameters.get_inertia_constant()
         x_eff = parameters.get_effective_reactance()
 
-        calculator = calculator_factory.get_calculator(
-            parameters.get_calculator_name(), parameters
-        )
+        calculator_name = parameters.get_calculator_name()
+        calculator = calculator_factory.get_calculator(calculator_name, parameters)
+
+        if calculator_name == "PhaseJump":
+            params_list = ["P0", "Q0", "DeltaPhase", "SCR", "Xeff"]
+        elif calculator_name == "AmplitudeStep":
+            params_list = ["P0", "Q0", "VoltageStepAtPDR", "SCR", "TimeTo90", "Xeff"]
+        elif calculator_name == "SCRJump":
+            params_list = ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff"]
+        elif calculator_name == "RoCoF":
+            params_list = ["P0", "Q0", "Phase0", "RoCoF", "RoCoFDuration", "SCR", "Xeff"]
+        else:
+            params_list = None
 
         magnitude, pcc, up, down = self._calculate_envelopes(
             calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
@@ -66,7 +76,18 @@ class GridForming:
 
         title = f"{pcs_name}.{bm_name}.{oc_name}"
         self._export_csv(working_path, title, magnitude, time_array, pcc, down, up)
-        self._plot(working_path, title, magnitude, time_array, event_time, pcc, down, up)
+        self._plot(
+            working_path,
+            title,
+            magnitude,
+            time_array,
+            event_time,
+            pcc,
+            down,
+            up,
+            parameters,
+            params_list,
+        )
 
     def _get_time(self) -> tuple[np.ndarray, float]:
         """
@@ -171,6 +192,81 @@ class GridForming:
         """
         save_results_to_csv(csv_path / f"{title}.csv", magnitude, time_array, pcc, down, up)
 
+    def _get_params_plot_info(self, parameters: GFMParameters, params_list: list):
+        """
+        Generates a list of formatted strings with parameter information.
+
+        This helper function selectively extracts parameter values from a
+        GFMParameters object based on a provided list of names and formats
+        them into human-readable strings suitable for plotting.
+
+        Parameters
+        ----------
+        parameters : GFMParameters
+            An object containing the GFM simulation parameters and methods to
+            access them.
+        params_list : List[str]
+            A list of strings specifying which parameters to extract.
+
+        Returns
+        -------
+        List[str]
+            A list of formatted strings, where each string represents a
+            requested parameter and its value.
+        """
+        text_params_info = []
+
+        if "P0" in params_list:
+            value = parameters.get_initial_active_power()
+            text_params_info.append(f"P0 = {value:.2f}")
+        if "Q0" in params_list:
+            value = parameters.get_initial_reactive_power()
+            text_params_info.append(f"Q0 = {value:.2f}")
+        if "TimeTo90" in params_list:
+            value = parameters.get_time_to_90()
+            text_params_info.append(f"TimeTo90 = {value:.2f}")
+        if "Pmax" in params_list:
+            value = parameters.get_max_active_power()
+            text_params_info.append(f"Pmax = {value:.2f}")
+        if "Qmax" in params_list:
+            value = parameters.get_max_reactive_power()
+            text_params_info.append(f"Qmax = {value:.2f}")
+        if "Pmin" in params_list:
+            value = parameters.get_min_active_power()
+            text_params_info.append(f"Pmin = {value:.2f}")
+        if "Qmin" in params_list:
+            value = parameters.get_min_reactive_power()
+            text_params_info.append(f"Qmin = {value:.2f}")
+        if "DeltaPhase" in params_list:
+            value = parameters.get_delta_phase()
+            text_params_info.append(f"DeltaPhase = {value:.2f}")
+        if "SCR" in params_list:
+            value = parameters.get_scr()
+            text_params_info.append(f"SCR = {value:.2f}")
+        if "VoltageStepAtPDR" in params_list:
+            value = parameters.get_voltage_step()
+            text_params_info.append(f"VoltageStepAtPDR = {value:.2f}")
+        if "SCRinitial" in params_list:
+            value = parameters.get_initial_scr()
+            text_params_info.append(f"SCRinitial = {value:.2f}")
+        if "SCRfinal" in params_list:
+            value = parameters.get_final_scr()
+            text_params_info.append(f"SCRfinal = {value:.2f}")
+        if "Phase0" in params_list:
+            value = parameters.get_initial_frequency()
+            text_params_info.append(f"Phase0 = {value:.2f}")
+        if "RoCoF" in params_list:
+            value = parameters.get_change_frequency()
+            text_params_info.append(f"RoCoF = {value:.2f}")
+        if "RoCoFDuration" in params_list:
+            value = parameters.get_change_frequency_duration()
+            text_params_info.append(f"RoCoFDuration = {value:.2f}")
+        if "Xeff" in params_list:
+            value = parameters.get_effective_reactance()
+            text_params_info.append(f"Xeff = {value:.2f}")
+
+        return text_params_info
+
     def _plot(
         self,
         png_path: Path,
@@ -181,6 +277,8 @@ class GridForming:
         pcc: np.ndarray,
         down: np.ndarray,
         up: np.ndarray,
+        parameters: GFMParameters,
+        params_list: list,
     ) -> None:
         """
         Generates and saves a plot of the simulation results.
@@ -205,6 +303,7 @@ class GridForming:
         up : np.ndarray
             The upper envelope data to be plotted.
         """
+
         plot_results(
             png_path / f"{title}.png",
             title,
@@ -215,4 +314,5 @@ class GridForming:
             pcc,
             down,
             up,
+            self._get_params_plot_info(parameters, params_list),
         )
