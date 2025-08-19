@@ -60,13 +60,13 @@ class GridForming:
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
 
         if calculator_name == "PhaseJump":
-            params_list = ["P0", "Q0", "DeltaPhase", "SCR", "Xeff"]
+            params_list = ["P0", "Q0", "DeltaPhase", "SCR", "Xeff", "D", "H"]
         elif calculator_name == "AmplitudeStep":
-            params_list = ["P0", "Q0", "VoltageStepAtPDR", "SCR", "TimeTo90", "Xeff"]
+            params_list = ["P0", "Q0", "VoltageStepAtPDR", "SCR", "TimeTo90", "Xeff", "D", "H"]
         elif calculator_name == "SCRJump":
-            params_list = ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff"]
+            params_list = ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
         elif calculator_name == "RoCoF":
-            params_list = ["P0", "Q0", "Phase0", "RoCoF", "RoCoFDuration", "SCR", "Xeff"]
+            params_list = ["P0", "Q0", "Phase0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
         else:
             params_list = None
 
@@ -224,7 +224,7 @@ class GridForming:
             text_params_info.append(f"Q0 = {value:.2f}")
         if "TimeTo90" in params_list:
             value = parameters.get_time_to_90()
-            text_params_info.append(f"TimeTo90 = {value:.2f}")
+            text_params_info.append(f"tt90 = {value:.2f}")
         if "Pmax" in params_list:
             value = parameters.get_max_active_power()
             text_params_info.append(f"Pmax = {value:.2f}")
@@ -239,19 +239,19 @@ class GridForming:
             text_params_info.append(f"Qmin = {value:.2f}")
         if "DeltaPhase" in params_list:
             value = parameters.get_delta_phase()
-            text_params_info.append(f"DeltaPhase = {value:.2f}")
+            text_params_info.append(f"Δθ = {value:.2f}")
         if "SCR" in params_list:
             value = parameters.get_scr()
             text_params_info.append(f"SCR = {value:.2f}")
         if "VoltageStepAtPDR" in params_list:
             value = parameters.get_voltage_step()
-            text_params_info.append(f"VoltageStepAtPDR = {value:.2f}")
+            text_params_info.append(f"ΔVPcc = {value:.2f}")
         if "SCRinitial" in params_list:
             value = parameters.get_initial_scr()
-            text_params_info.append(f"SCRinitial = {value:.2f}")
+            text_params_info.append(f"SCRini = {value:.2f}")
         if "SCRfinal" in params_list:
             value = parameters.get_final_scr()
-            text_params_info.append(f"SCRfinal = {value:.2f}")
+            text_params_info.append(f"SCRfin = {value:.2f}")
         if "Phase0" in params_list:
             value = parameters.get_initial_frequency()
             text_params_info.append(f"Phase0 = {value:.2f}")
@@ -264,6 +264,12 @@ class GridForming:
         if "Xeff" in params_list:
             value = parameters.get_effective_reactance()
             text_params_info.append(f"Xeff = {value:.2f}")
+        if "D" in params_list:
+            value = parameters.get_damping_constant()
+            text_params_info.append(f"D = {value:.2f}")
+        if "H" in params_list:
+            value = parameters.get_inertia_constant()
+            text_params_info.append(f"H = {value:.2f}")
 
         return text_params_info
 
