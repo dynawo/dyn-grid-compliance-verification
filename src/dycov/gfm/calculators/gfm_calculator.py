@@ -278,34 +278,38 @@ class GFMCalculator:
 
         if use_opposite_signs:
             # This checks if the initial power and the angle change have opposite signs.
-            condition = np.sign(initial_power) * sign == -1
+            if np.sign(initial_power) * sign == -1:
+                pdown_limited = np.minimum(
+                    np.maximum(
+                        initial_power - sign * pdown_no_p0,
+                        -1 + tunnel_value,
+                    ),
+                    1 - tunnel_value,
+                )
+                pup_limited = np.minimum(
+                    np.maximum(
+                        initial_power - sign * pup_no_p0,
+                        -max_power,
+                    ),
+                    max_power,
+                )
 
-            # Define the two possible calculation logics
-            # Logic A: MIN(MAX(P0 - sign * pdown_no_p0, -1 + Tunnel), 1 - Tunnel)
-            tunnel_logic_calc = np.minimum(
-                np.maximum(
-                    initial_power - sign * pdown_no_p0,
-                    -1 + tunnel_value,
-                ),
-                1 - tunnel_value,
-            )
+            else:
+                pdown_limited = np.minimum(
+                    np.maximum(
+                        initial_power - sign * pdown_no_p0,
+                        -max_power,
+                    ),
+                    max_power,
+                )
+                pup_limited = np.minimum(
+                    np.maximum(
+                        initial_power - sign * pup_no_p0,
+                        -1 + tunnel_value,
+                    ),
+                    1 - tunnel_value,
+                )
 
-            # Logic B: MIN(MAX(P0 - sign * pup_no_p0, -Pmax), Pmax)
-            power_limit_calc = np.minimum(
-                np.maximum(
-                    initial_power - sign * pup_no_p0,
-                    min_power,
-                ),
-                max_power,
-            )
-
-            # For pdown_limited:
-            # =SI(condition, Logic A, Logic B)
-            pdown_limited = np.where(condition, tunnel_logic_calc, power_limit_calc)
-
-            # For pup_limited:
-            # =SI(condition, Logic B, Logic A)
-            pup_limited = np.where(condition, power_limit_calc, tunnel_logic_calc)
         else:
             pdown_limited = np.minimum(
                 np.maximum(
