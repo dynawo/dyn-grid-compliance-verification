@@ -102,7 +102,7 @@ def plot_results(
     )
     plt.plot(time, down, label=f"{magnitude} envelopes", linewidth=2, color="red")
     plt.plot(time, up, linewidth=2, color="red")
-    plt.xlabel("(s)")
+    plt.xlabel("t (s)")
     plt.ylabel(f"{magnitude} (pu)")
     plt.title(title)
 
