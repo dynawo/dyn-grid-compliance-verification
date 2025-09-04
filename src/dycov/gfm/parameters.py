@@ -454,7 +454,7 @@ class GFMParameters(Parameters):
         float
             rate of change of frequency in pu.
         """
-        return self.__get_float_value("Phase0", 0.0) / self._producer._f_nom
+        return self.__get_float_value("Frequency0", 0.0) / self._producer._f_nom
 
     def get_t_expo_decrease(self) -> float:
         """
