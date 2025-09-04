@@ -66,7 +66,17 @@ class GridForming:
         elif calculator_name == "SCRJump":
             params_list = ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
         elif calculator_name == "RoCoF":
-            params_list = ["P0", "Q0", "Phase0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
+            params_list = [
+                "P0",
+                "Q0",
+                "Frequency0",
+                "RoCoF",
+                "RoCoFDuration",
+                "SCR",
+                "Xeff",
+                "D",
+                "H",
+            ]
         else:
             params_list = None
 
@@ -252,9 +262,9 @@ class GridForming:
         if "SCRfinal" in params_list:
             value = parameters.get_final_scr()
             text_params_info.append(f"SCRfin = {value:.2f}")
-        if "Phase0" in params_list:
+        if "Frequency0" in params_list:
             value = parameters.get_initial_frequency()
-            text_params_info.append(f"Phase0 = {value:.2f}")
+            text_params_info.append(f"Frequency0 = {value:.2f}")
         if "RoCoF" in params_list:
             value = parameters.get_change_frequency()
             text_params_info.append(f"RoCoF = {value:.2f}")
@@ -320,5 +330,6 @@ class GridForming:
             pcc,
             down,
             up,
+            "png&html",
             self._get_params_plot_info(parameters, params_list),
         )

@@ -282,6 +282,56 @@ class SCRJump(GFMCalculator):
 
         return p_up_trace, p_down_trace
 
+    def _apply_initial_limiting(
+        self,
+        p_up: np.ndarray,
+        p_down: np.ndarray,
+        delta_p: np.ndarray,
+        time_array: np.ndarray,
+        event_time: float,
+        tunnel: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Applies an initial limit to the envelopes to prevent unrealistic
+        reverse power excursions during the first 100 ms of the event.
+
+        Parameters
+        ----------
+        p_up : np.ndarray
+            The unlimited upper envelope.
+        p_down : np.ndarray
+            The unlimited lower envelope.
+        delta_p : np.ndarray
+            The power change array to determine the event's direction.
+        time_array : np.ndarray
+            The simulation's time array.
+        event_time : float
+            The time at which the event occurs.
+        tunnel : float
+            The tolerance tunnel value.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            The upper and lower envelopes with the initial limit applied.
+        """
+        # Determine the direction of the power change right after the event
+        delta_p_at_event = delta_p[np.where(time_array >= event_time + 0.01)[0][1]]
+
+        # Create a mask for the first 100 ms after the event
+        mask = (time_array >= event_time) & (time_array <= event_time + 0.1)
+
+        if delta_p_at_event > 0:
+            # If power increases, the lower envelope is limited to prevent it from dropping too low.
+            condition = mask & (p_down < (self._initial_active_power - tunnel))
+            p_down = np.where(condition, self._initial_active_power - tunnel, p_down)
+        else:
+            # If power decreases, the upper envelope is limited to prevent it from rising too high.
+            condition = mask & (p_up > (self._initial_active_power + tunnel))
+            p_up = np.where(condition, self._initial_active_power + tunnel, p_up)
+
+        return p_up, p_down
+
     def _get_envelopes(
         self,
         delta_p_array: list[np.ndarray],
@@ -353,6 +403,15 @@ class SCRJump(GFMCalculator):
 
         p_up_unlimited = np.maximum.reduce(all_traces_up)
         p_down_unlimited = np.minimum.reduce(all_traces_down)
+
+        p_up_unlimited, p_down_unlimited = self._apply_initial_limiting(
+            p_up=p_up_unlimited,
+            p_down=p_down_unlimited,
+            delta_p=delta_p,
+            time_array=time_array,
+            event_time=event_time,
+            tunnel=tunnel,
+        )
 
         p_up_limited = np.clip(p_up_unlimited, self._min_active_power, self._max_active_power)
         p_down_limited = np.clip(p_down_unlimited, self._min_active_power, self._max_active_power)
