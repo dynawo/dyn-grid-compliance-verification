@@ -467,7 +467,11 @@ def plotly_figures(
             linecolor="black",
             showgrid=False,
         )
-        return curve_names, curve_names[0], fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_names[0])
+        return (
+            curve_names,
+            curve_names[0],
+            fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_names[0])
+        )
 
     return curve_names, "", ""
 
@@ -525,12 +529,22 @@ def plotly_all_curves(
             linecolor="black",
             showgrid=False,
         )
-        figures.append((curve_name, fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_name)))
+        figures.append(
+            (
+                curve_name,
+                fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_name)
+            )
+        )
 
     return figures
 
 
-def create_html(producer: str, figures_to_plot: list, operating_condition: str, output_path: Path) -> None:
+def create_html(
+    producer: str,
+    figures_to_plot: list,
+    operating_condition: str,
+    output_path: Path
+) -> None:
     """Create the HTML report using Jinja2.
 
     Parameters
