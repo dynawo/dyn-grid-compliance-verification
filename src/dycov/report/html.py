@@ -467,9 +467,9 @@ def plotly_figures(
             linecolor="black",
             showgrid=False,
         )
-        return curve_names, fig.to_html(full_html=False, include_plotlyjs="directory")
+        return curve_names, curve_names[0], fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_names[0])
 
-    return curve_names, ""
+    return curve_names, "", ""
 
 
 def plotly_all_curves(
@@ -525,12 +525,12 @@ def plotly_all_curves(
             linecolor="black",
             showgrid=False,
         )
-        figures.append(fig.to_html(full_html=False, include_plotlyjs="directory"))
+        figures.append((curve_name, fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_name)))
 
     return figures
 
 
-def create_html(producer: str, figures: list, operating_condition: str, output_path: Path) -> None:
+def create_html(producer: str, figures_to_plot: list, operating_condition: str, output_path: Path) -> None:
     """Create the HTML report using Jinja2.
 
     Parameters
@@ -556,8 +556,17 @@ def create_html(producer: str, figures: list, operating_condition: str, output_p
             html_output_dir,
         )
 
+    sync_charts_js = html_output_dir / "sync_charts.js"
+    if not sync_charts_js.exists():
+        shutil.copy(
+            Path(__file__).resolve().parent / "templates" / "sync_charts.js",
+            html_output_dir,
+        )
+
     # Instantiate the HTML file using Jinja
-    plotly_jinja_data = {"figures": figures}
+    chart_ids = [fig[0] for fig in figures_to_plot]
+    figures = [fig[1] for fig in figures_to_plot]
+    plotly_jinja_data = {"chart_ids": chart_ids, "figures": figures}
     output_html = html_output_dir / f"{producer}.{operating_condition}.html"
     input_template = Path(__file__).resolve().parent / "templates" / "template.html"
     with open(output_html, "w", encoding="utf-8") as output_file:
