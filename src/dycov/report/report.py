@@ -288,12 +288,12 @@ def _generate_figures(
         )
 
         try:
-            html_curves, html_figure = html.plotly_figures(
+            html_curves, div_id, html_figure = html.plotly_figures(
                 figure_description, curves, reference_curves, oc_results
             )
             plotted_curves.extend(html_curves)
             if html_figure:
-                figures.append(html_figure)
+                figures.append((div_id, html_figure))
         except Exception as e:
             dycov_logging.get_logger("Report").error(
                 f"{figure_description[0]}.{operating_condition}: "
