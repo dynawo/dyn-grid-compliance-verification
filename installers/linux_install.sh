@@ -19,6 +19,7 @@ REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
 
 # Script State Variables
 INSTALL_DIR="$PWD/dycov"
+LOG_FILE_NAME="" # Will be set later
 NON_INTERACTIVE=false
 CUSTOM_ZIP_USED=false
 DIRECT_URL="" # Variable for direct source code download.
@@ -45,10 +46,17 @@ color_err_msg() {
     echo -e "\n\n${RED}$1${NC}" >&6
 }
 
-# Cleans up the installation directory in case of an error.
+# Cleans up the installation directory in case of an error, preserving the log file.
 cleanup_on_error() {
     color_err_msg "An error occurred. Cleaning up the installation directory..."
     if [ -d "$INSTALL_DIR" ]; then
+        local log_path="$INSTALL_DIR/$LOG_FILE_NAME"
+        if [ -f "$log_path" ]; then
+            local parent_dir
+            parent_dir=$(dirname "$INSTALL_DIR")
+            mv "$log_path" "$parent_dir/"
+            color_err_msg "Log file preserved at: $parent_dir/$LOG_FILE_NAME"
+        fi
         rm -rf "$INSTALL_DIR"
         color_err_msg "Installation directory $INSTALL_DIR has been removed."
     fi
@@ -91,17 +99,30 @@ confirm_and_delete() {
     esac
 }
 
-# Searches for a compatible Python interpreter (3.9+).
+# Searches for the newest compatible Python interpreter (3.9+).
 find_python_cmd() {
-    for INTERPRETER in python python3 python3.12 python3.11 python3.10 python3.9; do
-        if which $INTERPRETER > /dev/null; then
-            if $INTERPRETER --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-3].)'; then
-                python_cmd="$INTERPRETER"
-                return
+    local best_interpreter=""
+    local available_interpreters=()
+
+    # Find all available and compatible interpreters
+    for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
+        if which "$interpreter" > /dev/null; then
+            if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
+                # Store the full path to avoid ambiguity
+                available_interpreters+=("$(which "$interpreter")")
             fi
         fi
     done
-    python_cmd=""
+
+    # If we found any, sort them by version and pick the best one.
+    if [ ${#available_interpreters[@]} -gt 0 ]; then
+        # Get unique paths, get versions, sort, and extract the path of the newest one
+        best_interpreter=$(printf "%s\n" "${available_interpreters[@]}" | sort -u | while read -r interp; do
+            echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
+        done | sort -V -r | head -n 1 | awk '{print $2}')
+    fi
+    
+    python_cmd="$best_interpreter"
 }
 
 # Displays the script's help message.
@@ -135,193 +156,6 @@ done
 TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
 VENV="dycov_venv"
 DATETIME=$(date '+%Y%m%d_%H%M%S')
-LOG=$INSTALL_DIR/installation_$DATETIME.log
-DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
-
-
-#######################################
-# START OF THE INSTALLATION LOGIC
-#######################################
-
-# 1. Directory and Log Preparation
-if [ -d "$INSTALL_DIR" ]; then
-    echo -e "\n${RED}ERROR: The installation directory already exists: $INSTALL_DIR${NC}" >&6
-    confirm_and_delete "$INSTALL_DIR"
-fi
-mkdir -p "$INSTALL_DIR"
-
-# Now, redirect stdout and stderr to the log file.
-# Messages for the user will continue to be sent to the console via FD 6.
-exec >"$LOG"
-exec 7>&2
-exec 2>&1
-
-# 2. System Dependency Check
-color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake pdflatex latexmk git; do
-    if ! which "$cmd" > /dev/null; then
-        color_err_msg "ERROR: Required command not found: $cmd. Please install it."
-        exit 1
-    fi
-done
-find_python_cmd
-if [ -z "$python_cmd" ]; then
-    color_err_msg "ERROR: No valid Python interpreter found (3.9+ required)."
-    exit 1
-fi
-color_msg "Dependencies verified successfully."
-
-color_msg ""
-color_msg "Starting the installation of the DyCoV tool in: $INSTALL_DIR"
-if [ -n "$DIRECT_URL" ]; then
-    color_msg "    * Installation Method: Direct URL"
-    color_msg "    * Source URL: $DIRECT_URL"
-else
-    color_msg "    * Installation Method: Git Clone"
-    color_msg "    * Using Release Tag: $RELEASE_TAG"
-fi
-color_msg "    * Using Dynawo ZIP file: $DYNAWO_ZIP_FILE"
-color_msg "    * Python Interpreter: $($python_cmd --version) (command: \"$python_cmd\")"
-color_msg "    * To view detailed progress: tail -f $LOG"
-color_msg ""
-
-# 3. Download and Extraction of Dynawo
-color_msg "Step 1: Downloading and extracting Dynawo..."
-cd "$INSTALL_DIR"
-
-# Ask the user only if non-interactive mode is disabled.
-if [[ "$NON_INTERACTIVE" == false ]]; then
-    echo -n -e "\nDo you want to download and install Dynawo? (Required for some examples) [Y/n] " >&6
-    read -r response <&6
-    
-    case "$response" in
-        [nN][oO] | [nN])
-            INSTALL_DYNAWO=false
-            color_msg "User chose not to install Dynawo. Skipping."
-            ;;
-        *)
-            # Any other response (including Enter) is considered a 'Yes'.
-            INSTALL_DYNAWO=true
-            color_msg "User confirmed Dynawo installation."
-            ;;
-    esac
-else
-    color_msg "Non-interactive mode enabled, proceeding with Dynawo installation automatically."
-fi
-
-# Run the Dynawo installation block only if the variable is true.
-if [[ "$INSTALL_DYNAWO" == true ]]; then
-    curl -O -L --fail "$DYNAWO_ZIP_URL"
-
-    if [[ "$CUSTOM_ZIP_USED" == true ]]; then
-        color_msg "NOTICE: Skipping checksum verification for custom Dynawo ZIP file."
-    else
-        color_msg "Verifying Dynawo ZIP file checksum..."
-        CHECKSUM_CALCULATED=$(shasum "$DYNAWO_ZIP_FILE" | cut -d" " -f1)
-        if [ "$CHECKSUM_CALCULATED" != "$DYNAWO_CHECKSUM" ]; then
-            color_err_msg "FATAL ERROR: Checksum mismatch. Expected: '$DYNAWO_CHECKSUM', Got: '$CHECKSUM_CALCULATED'. Aborting for security."
-            exit 1
-        fi
-        color_msg "Checksum verified successfully."
-    fi
-
-    unzip -q "$DYNAWO_ZIP_FILE"
-    rm -rf "$DYNAWO_ZIP_FILE"
-    color_msg "Dynawo downloaded and installed."
-
-    # Temporary patch for Boost
-    GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
-    if [ "$GNU_MAJOR" -gt 11 ]; then
-        BOOST_HEADER=./dynawo/include/boost/thread/pthread/thread_data.hpp
-        if [ -f "$BOOST_HEADER" ] && grep -q '#if PTHREAD_STACK_MIN > 0$' "$BOOST_HEADER"; then
-            color_msg "Applying compatibility patch for Boost and GCC > 11..."
-            sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOST_HEADER"
-        fi
-    fi
-fi
-
-# 4. Get the DyCoV Source Code
-if [ -d "$TMP_LOCAL_REPO" ]; then
-    confirm_and_delete "$TMP_LOCAL_REPO"
-fi
-
-if [ -n "$DIRECT_URL" ]; then
-    color_msg "Step 2: Downloading DyCoV source code from direct URL..."
-    
-    SOURCE_ZIP_FILENAME="${DIRECT_URL##*/}"
-    color_msg "Downloading as: $SOURCE_ZIP_FILENAME"
-
-    curl -L --fail "$DIRECT_URL" -o "$SOURCE_ZIP_FILENAME"
-    unzip -q "$SOURCE_ZIP_FILENAME"
-    confirm_and_delete "$SOURCE_ZIP_FILENAME"
-    
-    UNZIPPED_DIR=$(find . -mindepth 1 -maxdepth 1 -type d ! -name 'dynawo')
-    if [ -z "$UNZIPPED_DIR" ] || [ "$(echo "$UNZIPPED_DIR" | wc -l)" -ne 1 ]; then
-        color_err_msg "ERROR: Could not determine the unzipped source directory. Expected a single directory."
-        exit 1
-    fi
-    mv "$UNZIPPED_DIR" "$TMP_LOCAL_REPO"
-    color_msg "Source code downloaded and prepared."
-else
-    color_msg "Step 2: Cloning the DyCoV repository (tag: $RELEASE_TAG)..."
-    git clone --depth 1 --branch "$RELEASE_TAG" "$REPO_URL" "$TMP_LOCAL_REPO"
-    color_msg "Repository cloned."
-fi
-
-# 5. Create Virtual Environment and Install
-color_msg "Step 3: Creating virtual environment and installing the application..."
-if [ -d "${INSTALL_DIR}/$VENV" ]; then
-    confirm_and_delete "${INSTALL_DIR}/$VENV"
-fi
-cd "$INSTALL_DIR"
-"$TMP_LOCAL_REPO"/build_and_install.sh
-color_msg "Virtual environment created and application installed."
-
-# 6. Customize the Activation Script
-color_msg "Step 4: Customizing the environment activation script..."
-ACTIVATE_SCRIPT="$INSTALL_DIR/$VENV"/bin/activate
-
-# Conditionally define the user's PATH.
-# The dynawo directory is only added if it was installed.
-if [[ "$INSTALL_DYNAWO" == true ]]; then
-    USER_PATH="$INSTALL_DIR/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
-    color_msg "Adding Dynawo to PATH."
-else
-    USER_PATH="\$VIRTUAL_ENV/bin:\$PATH"
-    color_msg "Dynawo not installed, skipping its addition to PATH."
-fi
-sed -E --in-place=.ORIG -e "s%^PATH=.*%PATH=\"$USER_PATH\"%" "$ACTIVATE_SCRIPT"
-
-cp "$ACTIVATE_SCRIPT" "$INSTALL_DIR"/activate_dycov
-
-# shellcheck source=/dev/null
-source "$INSTALL_DIR"/activate_dycov
-echo -e "\n\n--- LIST OF PACKAGES INSTALLED IN THE VIRTUAL ENVIRONMENT ---"
-pip list
-echo -e "---------------------------------------------------------\n\n"
-deactivate
-color_msg "Activation script customized."
-
-# 7. Copy Examples and Build the Manual
-color_msg "Step 5: Installing examples and building the manual..."
-cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
-# shellcheck source=/dev/null
-source "$INSTALL_DIR"/activate_dycov
-pip install sphinx
-cd "$TMP_LOCAL_REPO"/docs/manual
-make latexpdf > /dev/null
-make html > /dev/null
-deactivate
-mkdir -p "$INSTALL_DIR"/manual
-mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
-mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
-color_msg "Examples and manuals are ready."
-
-# 8. Final Cleanup
-color_msg "Step 6: Performing final cleanup..."
-confirm_and_delete "$TMP_LOCAL_REPO"
-color_msg "Final cleanup finished."
-color_msg ""
-color_msg "INSTALLATION COMPLETED SUCCESSFULLY!"
-color_msg "To start using the tool, run: source $INSTALL_DIR/activate_dycov"
-color_msg ""
+LOG_FILE_NAME="installation_$DATETIME.log" # Assign the name here to be used by the error handler
+LOG="$INSTALL_DIR/$LOG_FILE_NAME"
+DYNAWO_ZIP_URL
