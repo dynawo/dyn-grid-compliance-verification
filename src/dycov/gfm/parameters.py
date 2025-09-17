@@ -423,6 +423,33 @@ class GFMParameters(Parameters):
 
         return voltage_step
 
+    def get_delta_step(self) -> float:
+        """
+        Calculates the magnitude of the angle step at the PCC (in per unit - pu).
+
+        This parameter can be defined in two ways:
+        1. As a direct numerical value (e.g., "0.05").
+        2. As an expression based on the system reactances, following the formula:
+        Δθ_pcc = (Xeff / (Xeff + Xgrid)) * Δθ_IF
+
+        Returns
+        -------
+        float
+            The angle step magnitude in pu.
+        """
+
+        x_grid = self.get_grid_reactance()
+        x_eff = self.get_effective_reactance()
+
+        delta_theta_if = self.get_delta_phase()
+
+        if (x_eff + x_grid) == 0:
+            return 0.0
+
+        delta_step = (x_eff / (x_eff + x_grid)) * delta_theta_if
+
+        return delta_step
+
     def get_change_frequency(self) -> float:
         """
         Gets the rate of change of frequency (in per unit - pu).
