@@ -108,7 +108,8 @@ def plot_results(
             )
 
         plt.legend(loc="lower right")
-        plt.grid(True)
+        plt.grid(True, linestyle="--", alpha=0.6)
+
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
