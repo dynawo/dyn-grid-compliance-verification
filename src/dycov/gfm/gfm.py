@@ -60,7 +60,7 @@ class GridForming:
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
 
         if calculator_name == "PhaseJump":
-            params_list = ["P0", "Q0", "DeltaPhase", "SCR", "Xeff", "D", "H"]
+            params_list = ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H"]
         elif calculator_name == "AmplitudeStep":
             params_list = ["P0", "Q0", "VoltageStepAtPDR", "SCR", "TimeTo90", "Xeff", "D", "H"]
         elif calculator_name == "SCRJump":
@@ -256,6 +256,9 @@ class GridForming:
         if "VoltageStepAtPDR" in params_list:
             value = parameters.get_voltage_step()
             text_params_info.append(f"ΔVPcc = {value:.2f}")
+        if "AngleStepAtPDR" in params_list:
+            value = parameters.get_delta_step()
+            text_params_info.append(f"ΔθPcc = {value:.2f}")
         if "SCRinitial" in params_list:
             value = parameters.get_initial_scr()
             text_params_info.append(f"SCRini = {value:.2f}")
