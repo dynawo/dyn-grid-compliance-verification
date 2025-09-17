@@ -46,7 +46,6 @@ color_err_msg() {
     echo -e "\n\n${RED}$1${NC}" >&6
 }
 
-### MODIFICATION START: Preserve log file on error ###
 # Cleans up the installation directory in case of an error, preserving the log file.
 cleanup_on_error() {
     color_err_msg "An error occurred. Cleaning up the installation directory..."
@@ -62,7 +61,6 @@ cleanup_on_error() {
         color_err_msg "Installation directory $INSTALL_DIR has been removed."
     fi
 }
-### MODIFICATION END ###
 
 # Error handler activated by trap.
 error_handler() {
@@ -101,7 +99,6 @@ confirm_and_delete() {
     esac
 }
 
-### MODIFICATION START: Find the newest available Python version ###
 # Searches for the newest compatible Python interpreter (3.9+).
 find_python_cmd() {
     local best_interpreter=""
@@ -127,7 +124,6 @@ find_python_cmd() {
     
     python_cmd="$best_interpreter"
 }
-### MODIFICATION END ###
 
 # Displays the script's help message.
 usage() {
