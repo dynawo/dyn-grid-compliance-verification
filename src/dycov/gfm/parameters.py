@@ -400,7 +400,7 @@ class GFMParameters(Parameters):
 
         return delta_rad * 180 / np.pi
 
-    def get_voltage_step(self) -> float:
+    def get_voltage_step_at_grid(self) -> float:
         """
         Gets the voltage step magnitude (in per unit - pu).
 
@@ -411,7 +411,7 @@ class GFMParameters(Parameters):
         float
             Voltage step magnitude in pu.
         """
-        value_definition = self.__get_value("VoltageStepAtPDR")
+        value_definition = self.__get_value("VoltageStepAtGrid")
         if "*" in value_definition:
             parts = value_definition.split("*")
             term1 = float(parts[0])
@@ -422,6 +422,22 @@ class GFMParameters(Parameters):
             voltage_step = float(value_definition)
 
         return voltage_step
+
+    def get_voltage_step_at_pdr(self) -> float:
+        """
+        Gets the voltage step at PDR
+
+        Returns
+        -------
+        float
+            Voltage step magnitude in pu.
+        """
+
+        return (
+            self.get_voltage_step_at_grid()
+            * self.get_effective_reactance()
+            / (self.get_grid_reactance() + self.get_effective_reactance())
+        )
 
     def get_delta_step(self) -> float:
         """
