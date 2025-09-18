@@ -62,7 +62,17 @@ class GridForming:
         if calculator_name == "PhaseJump":
             params_list = ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H"]
         elif calculator_name == "AmplitudeStep":
-            params_list = ["P0", "Q0", "VoltageStepAtPDR", "SCR", "TimeTo90", "Xeff", "D", "H"]
+            params_list = [
+                "P0",
+                "Q0",
+                "VoltageStepAtGrid",
+                "VoltageStepAtPDR",
+                "SCR",
+                "TimeTo90",
+                "Xeff",
+                "D",
+                "H",
+            ]
         elif calculator_name == "SCRJump":
             params_list = ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
         elif calculator_name == "RoCoF":
@@ -253,8 +263,11 @@ class GridForming:
         if "SCR" in params_list:
             value = parameters.get_scr()
             text_params_info.append(f"SCR = {value:.2f}")
+        if "VoltageStepAtGrid" in params_list:
+            value = parameters.get_voltage_step_at_grid()
+            text_params_info.append(f"ΔVGrid = {value:.2f}")
         if "VoltageStepAtPDR" in params_list:
-            value = parameters.get_voltage_step()
+            value = parameters.get_voltage_step_at_pdr()
             text_params_info.append(f"ΔVPcc = {value:.2f}")
         if "AngleStepAtPDR" in params_list:
             value = parameters.get_delta_step()

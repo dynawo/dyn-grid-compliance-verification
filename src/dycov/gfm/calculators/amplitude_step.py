@@ -27,7 +27,7 @@ class AmplitudeStep(GFMCalculator):
         gfm_params: GFMParameters,
     ) -> None:
         super().__init__(gfm_params=gfm_params)
-        self._voltage_step = gfm_params.get_voltage_step()
+        self._voltage_step = gfm_params.get_voltage_step_at_grid()
         self._initial_reactive_power = gfm_params.get_initial_reactive_power()
         self._min_reactive_power = gfm_params.get_min_reactive_power()
         self._max_reactive_power = gfm_params.get_max_reactive_power()
