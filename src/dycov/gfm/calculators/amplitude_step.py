@@ -27,7 +27,7 @@ class AmplitudeStep(GFMCalculator):
         gfm_params: GFMParameters,
     ) -> None:
         super().__init__(gfm_params=gfm_params)
-        self._voltage_step = gfm_params.get_voltage_step_at_grid()
+        self._voltage_step = gfm_params.get_voltage_step_at_pdr()
         self._initial_reactive_power = gfm_params.get_initial_reactive_power()
         self._min_reactive_power = gfm_params.get_min_reactive_power()
         self._max_reactive_power = gfm_params.get_max_reactive_power()
@@ -91,7 +91,6 @@ class AmplitudeStep(GFMCalculator):
             delta_iq_min=delta_iq_min,
             delta_iq_max=delta_iq_max,
             time_array=time_array,
-            event_time=event_time,
             Xeff=Xeff,
         )
         return "Iq", iq_pcc, iq_up, iq_down
@@ -139,8 +138,8 @@ class AmplitudeStep(GFMCalculator):
             )
             delta_iq_array.append(delta_iq)
 
-        delta_iq_min = self._get_delta_iq_min(D, H, Xeff, time_array, event_time)
-        delta_iq_max = self._get_delta_iq_max(D, H, Xeff, time_array, event_time)
+        delta_iq_min = self._get_delta_iq_min(Xeff, time_array, event_time)
+        delta_iq_max = self._get_delta_iq_max(Xeff, time_array, event_time)
 
         return (
             delta_iq_array,
@@ -154,7 +153,6 @@ class AmplitudeStep(GFMCalculator):
         delta_iq_min: np.ndarray,
         delta_iq_max: np.ndarray,
         time_array: np.ndarray,
-        event_time: float,
         Xeff: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -223,9 +221,7 @@ class AmplitudeStep(GFMCalculator):
 
         return q_pcc_final, q_up_final, q_down_final
 
-    def _get_delta_iq_base(
-        self, D: float, H: float, Xeff: float, time_array: np.ndarray
-    ) -> np.ndarray:
+    def _get_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
         """
         Calculates the fundamental delta_iq waveform for an overdamped system
         response, without applying event time conditions or margins. This
@@ -247,14 +243,9 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The base delta_iq waveform.
         """
-
-        x_gr = 1 / self._scr
-        x_total_initial = Xeff + x_gr
-
         voltage_step = self._voltage_step / 100.0
 
-        delta_v_inf = -np.abs(voltage_step * x_total_initial / Xeff)
-        delta_iq = np.abs(delta_v_inf / x_total_initial)
+        delta_iq = voltage_step / Xeff
 
         tau = -self._time_to_90 / np.log(0.1)
 
@@ -300,12 +291,12 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The delta_iq array for the system, with pre-event values zeroed.
         """
-        delta_iq1 = self._get_delta_iq_base(D, H, Xeff, time_array)
+        delta_iq1 = self._get_delta_iq_base(Xeff, time_array)
         delta_iq = np.where(time_array < event_time, 0, delta_iq1)
         return delta_iq
 
     def _get_delta_iq_min(
-        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+        self, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the minimum delta_iq for an overdamped system, by applying
@@ -330,24 +321,20 @@ class AmplitudeStep(GFMCalculator):
         np.ndarray
             The minimum delta_iq array for the overdamped system.
         """
-        x_gr = 1 / self._scr
-        x_total_initial = Xeff + x_gr
-
         voltage_step = self._voltage_step / 100.0
 
-        delta_v_inf = np.abs(voltage_step * x_total_initial / Xeff)
-        delta_iq = np.abs(delta_v_inf / x_total_initial)
+        delta_iq = voltage_step / Xeff
 
         tunnel = self._get_tunnel(Xeff)
 
-        delta_iq1 = self._get_delta_iq_base(D, H, Xeff, time_array)
+        delta_iq1 = self._get_delta_iq_base(Xeff, time_array)
         delta_iq1_margined = np.minimum(delta_iq1, delta_iq - tunnel)
         delta_iq1_delayed = self._apply_delay(0.01, 0, time_array, delta_iq1_margined)
         delta_iq = np.where(time_array < event_time, 0, delta_iq1_delayed)
         return delta_iq
 
     def _get_delta_iq_max(
-        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+        self, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
         Calculates the maximum delta_iq for an overdamped system, by applying
@@ -373,13 +360,10 @@ class AmplitudeStep(GFMCalculator):
             The maximum delta_iq array for the overdamped system.
         """
         ttunnel = self._time_for_tunnel
-        x_gr = 1 / self._scr
-        x_total_initial = Xeff + x_gr
 
         voltage_step = self._voltage_step / 100.0
 
-        delta_v_inf = np.abs(voltage_step * x_total_initial / Xeff)
-        delta_iq = np.abs(delta_v_inf / x_total_initial)
+        delta_iq = voltage_step / Xeff
 
         tunnel = self._get_tunnel(Xeff)
 
@@ -404,13 +388,8 @@ class AmplitudeStep(GFMCalculator):
         float
             The calculated constant tunnel value.
         """
-        x_gr = 1 / self._scr
-        x_total_initial = Xeff + x_gr
-
         voltage_step = self._voltage_step / 100.0
-
-        delta_v_inf = np.abs(voltage_step * x_total_initial / Xeff)
-        delta_iq = np.abs(delta_v_inf / x_total_initial)
+        delta_iq = voltage_step / Xeff
 
         return max(
             self._final_allowed_tunnel_pn,  # Fixed current component
