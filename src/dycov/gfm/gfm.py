@@ -265,10 +265,10 @@ class GridForming:
             text_params_info.append(f"SCR = {value:.2f}")
         if "VoltageStepAtGrid" in params_list:
             value = parameters.get_voltage_step_at_grid()
-            text_params_info.append(f"ΔVGrid = {value:.2f} pu")
+            text_params_info.append(f"ΔVGrid = {value / 100:.2f} pu")
         if "VoltageStepAtPDR" in params_list:
             value = parameters.get_voltage_step_at_pdr()
-            text_params_info.append(f"ΔVPcc = {value:.2f} pu")
+            text_params_info.append(f"ΔVPcc = {value / 100:.2f} pu")
         if "AngleStepAtPDR" in params_list:
             value = parameters.get_delta_step()
             text_params_info.append(f"ΔθPcc = {value:.2f} °")
