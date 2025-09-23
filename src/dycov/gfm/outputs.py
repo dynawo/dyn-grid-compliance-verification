@@ -53,6 +53,49 @@ def save_results_to_csv(
     df.to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
+def find_trim_index(
+    pcc: np.ndarray,
+    down: np.ndarray,
+    up: np.ndarray,
+    tolerance: float = 1e-5,
+    buffer_points: int = 10,
+) -> int:
+    """
+    Find the index to trim trailing stable data from signals.
+
+    This function iterates backward from the end of the signals and finds the
+    last point where there is a significant change in any of the signals.
+
+    Args:
+        pcc: The main signal array.
+        down: The lower envelope signal array.
+        up: The upper envelope signal array.
+        tolerance: The minimum change between two consecutive points to be
+                   considered a variation.
+        buffer_points: Number of data points to keep after the last detected
+                       change to provide some context.
+
+    Returns:
+        The index up to which the data should be kept.
+    """
+    # Start from the second-to-last point and go backward
+    for i in range(len(pcc) - 1, 0, -1):
+        # Check if the absolute difference in any signal is greater than the tolerance
+        pcc_changed = abs(pcc[i] - pcc[i - 1]) > tolerance
+        down_changed = abs(down[i] - down[i - 1]) > tolerance
+        up_changed = abs(up[i] - up[i - 1]) > tolerance
+
+        if pcc_changed or down_changed or up_changed:
+            # Last significant change found at index i.
+            # We determine the trim index by adding a small buffer.
+            # Ensure the index does not exceed the array bounds.
+            trim_index = min(i + buffer_points, len(pcc))
+            return trim_index
+
+    # If no significant change is found, return the original length (no trimming)
+    return len(pcc)
+
+
 def plot_results(
     path: Path,
     title: str,
@@ -67,27 +110,39 @@ def plot_results(
     params_list: list = None,
 ) -> None:
     """
-    Plot the results of the GFM phase jump using Plotly.
+    Plot the results, trimming any stable/redundant data at the end.
 
     The interactive plot is saved as a self-contained HTML file, and a
     static version is saved as a PNG image.
     """
+    # 1. Find the optimal index to trim the data
+    trim_index = find_trim_index(pcc, down, up)
+
+    # 2. Slice the arrays to remove redundant data
+    time_trimmed = time[:trim_index]
+    pcc_trimmed = pcc[:trim_index]
+    down_trimmed = down[:trim_index]
+    up_trimmed = up[:trim_index]
+
+    # --- Plotting with Matplotlib (for PNG) ---
     if "png" in format:
         plt.figure(figsize=(8, 5))
         plt.plot(
-            time,
-            pcc,
+            time_trimmed,
+            pcc_trimmed,
             label=f"{magnitude} at PCC",
             linewidth=3,
         )
-        plt.plot(time, down, label=f"{magnitude} envelopes", linewidth=2, color="red")
-        plt.plot(time, up, linewidth=2, color="red")
+        plt.plot(
+            time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
+        )
+        plt.plot(time_trimmed, up_trimmed, linewidth=2, color="red")
         plt.xlabel("t (s)")
         plt.ylabel(f"{magnitude} (pu)")
         plt.title(title)
 
         plt.axvline(
-            x=event_time + shift_time / 1000,  # Convert ms to seconds
+            x=event_time + shift_time / 1000,
             color="black",
             linestyle="--",
             label="t at Event Time",
@@ -95,7 +150,6 @@ def plot_results(
 
         if params_list:
             full_text = "\n".join(params_list)
-
             plt.text(
                 0.98,
                 0.98,
@@ -109,18 +163,19 @@ def plot_results(
 
         plt.legend(loc="lower right")
         plt.grid(True, linestyle="--", alpha=0.6)
+        plt.xlim(time_trimmed[0], time_trimmed[-1])  # Ensure x-axis is trimmed too
 
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
+    # --- Plotting with Plotly (for HTML) ---
     if "html" in format:
         fig = go.Figure()
 
-        # Add envelope traces
         fig.add_trace(
             go.Scatter(
-                x=time,
-                y=up,
+                x=time_trimmed,
+                y=up_trimmed,
                 mode="lines",
                 line=dict(color="red", width=2),
                 name=f"{magnitude} envelopes",
@@ -128,26 +183,23 @@ def plot_results(
         )
         fig.add_trace(
             go.Scatter(
-                x=time,
-                y=down,
+                x=time_trimmed,
+                y=down_trimmed,
                 mode="lines",
                 line=dict(color="red", width=2),
-                showlegend=False,  # Avoid duplicating the legend entry for the envelope
+                showlegend=False,
             )
         )
-
-        # Add main PCC trace
         fig.add_trace(
             go.Scatter(
-                x=time,
-                y=pcc,
+                x=time_trimmed,
+                y=pcc_trimmed,
                 mode="lines",
                 line=dict(color="blue", width=3),
                 name=f"{magnitude} at PCC",
             )
         )
 
-        # Add vertical line for the event time
         event_time_sec = event_time + shift_time / 1000
         fig.add_vline(
             x=event_time_sec,
@@ -155,20 +207,18 @@ def plot_results(
             line_dash="dash",
             line_color="black",
         )
-        # Trick to add a legend entry for the vertical line
         fig.add_trace(
             go.Scatter(
                 x=[event_time_sec, event_time_sec],
-                y=[np.min(down), np.max(up)],
+                y=[np.min(down_trimmed), np.max(up_trimmed)],
                 mode="lines",
                 line=dict(color="black", dash="dash"),
                 name="t at Event Time",
             )
         )
 
-        # Add annotation box if parameters are provided
         if params_list:
-            full_text = "<br>".join(params_list)  # Plotly uses <br> for line breaks
+            full_text = "<br>".join(params_list)
             fig.add_annotation(
                 xref="paper",
                 yref="paper",
@@ -182,7 +232,6 @@ def plot_results(
                 borderpad=10,
             )
 
-        # Configure plot layout
         fig.update_layout(
             title_text=title,
             xaxis_title="t (s)",
@@ -191,5 +240,4 @@ def plot_results(
             template="plotly_white",
         )
 
-        # Save output files
         fig.write_html(path.with_suffix(".html"))
