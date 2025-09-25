@@ -2,6 +2,7 @@
 #
 # This script automatically installs the DyCoV tool for end-users
 # in Linux environments. It does not need root permissions.
+# This version is optimized to use 'uv' for faster package installation.
 #
 # (c) Rte 2024
 #     Developed by Grupo AIA
@@ -19,34 +20,29 @@ REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
 
 # Script State Variables
 INSTALL_DIR="$PWD/dycov"
-LOG_FILE_NAME="" # Will be set later
+LOG_FILE_NAME=""
 NON_INTERACTIVE=false
 CUSTOM_ZIP_USED=false
-DIRECT_URL="" # Variable for direct source code download.
-INSTALL_DYNAWO=true # Controls the optional installation of Dynawo.
+DIRECT_URL=""
+INSTALL_DYNAWO=true
 
 # Helper Functions
 RED="\\033[1;31m"
 GREEN="\\033[1;32m"
 NC="\\033[0m"
 
-# Make a copy of the original stdout for writing to the console later.
-# This must be done before any function uses >&6.
-exec 6>&1
+exec 6>&1 # Preserve original stdout
 
-# Displays a message on the console and saves it to the log.
 color_msg() {
     echo -e "$(date '+%Y-%m-%d %H:%M:%S'): $1"
     echo -e "${GREEN}$1${NC}" >&6
 }
 
-# Displays an error message on the console and saves it to the log.
 color_err_msg() {
     echo -e "$(date '+%Y-%m-%d %H:%M:%S'): $1"
     echo -e "\n\n${RED}$1${NC}" >&6
 }
 
-# Cleans up the installation directory in case of an error, preserving the log file.
 cleanup_on_error() {
     color_err_msg "An error occurred. Cleaning up the installation directory..."
     if [ -d "$INSTALL_DIR" ]; then
@@ -73,29 +69,19 @@ error_handler() {
 # Activates the error handler for any script failure.
 trap 'error_handler $? $LINENO' ERR
 
-# Asks for confirmation before deleting, unless --yes mode is active.
 confirm_and_delete() {
     local target="$1"
-    
     if [[ "$NON_INTERACTIVE" == true ]]; then
         color_msg "Non-interactive mode: deleting $target without prompting."
         rm -rf "$target"
         return
     fi
-    
     local response
-    echo -n -e "\n${RED}WARNING:${NC} This will permanently delete: ${target}. Are you sure you want to continue? [y/N] " >&6
+    echo -n -e "\n${RED}WARNING:${NC} This will permanently delete: ${target}. Are you sure? [y/N] " >&6
     read -r response <&6
-    
     case "$response" in
-        [yY][eE][sS] | [yY])
-            color_msg "User confirmed deletion of: $target. Deleting..."
-            rm -rf "$target"
-            ;;
-        *)
-            color_err_msg "Operation cancelled by user. Aborting script."
-            exit 1
-            ;;
+        [yY][eE][sS] | [yY]) rm -rf "$target" ;;
+        *) color_err_msg "Operation cancelled by user. Aborting script."; exit 1 ;;
     esac
 }
 
@@ -125,7 +111,6 @@ find_python_cmd() {
     python_cmd="$best_interpreter"
 }
 
-# Displays the script's help message.
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo "Options:"
@@ -138,7 +123,7 @@ usage() {
     exit 0
 }
 
-# Command-Line Argument Parsing
+# Argument parsing
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -152,14 +137,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Definition of Dependent Variables
+# Variable definitions
 TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
 VENV="dycov_venv"
 DATETIME=$(date '+%Y%m%d_%H%M%S')
-LOG_FILE_NAME="installation_$DATETIME.log" # Assign the name here to be used by the error handler
+LOG_FILE_NAME="installation_$DATETIME.log"
 LOG="$INSTALL_DIR/$LOG_FILE_NAME"
 DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
-
 
 #######################################
 # START OF THE INSTALLATION LOGIC
@@ -171,10 +155,7 @@ if [ -d "$INSTALL_DIR" ]; then
     confirm_and_delete "$INSTALL_DIR"
 fi
 mkdir -p "$INSTALL_DIR"
-
-exec >"$LOG"
-exec 7>&2
-exec 2>&1
+exec >"$LOG" 2>&1
 
 # 2. System Dependency Check
 color_msg "Step 0: Verifying system dependencies..."
@@ -288,15 +269,27 @@ else
     color_msg "Repository cloned."
 fi
 
-# 5. Create Virtual Environment and Install
-color_msg "Step 3: Creating virtual environment and installing the application..."
+# 5. Create Virtual Environment and Install using uv
+color_msg "Step 3: Creating virtual environment and installing the application with uv..."
 if [ -d "${INSTALL_DIR}/$VENV" ]; then
     confirm_and_delete "${INSTALL_DIR}/$VENV"
 fi
 cd "$INSTALL_DIR"
-# The original script assumes build_and_install.sh is in the repo, so we call it from its location.
-"$TMP_LOCAL_REPO"/build_and_install.sh
-color_msg "Virtual environment created and application installed."
+
+# 1. Create a standard venv first
+"$python_cmd" -m venv "$VENV"
+
+# 2. Activate it and install uv into it
+# shellcheck source=/dev/null
+source "$VENV"/bin/activate
+pip install -q uv
+
+# 3. Use uv to install the application from the cloned repo
+uv pip install -q "$TMP_LOCAL_REPO"
+
+# 4. Deactivate for subsequent steps
+deactivate
+color_msg "Virtual environment created and application installed successfully."
 
 # 6. Customize the Activation Script
 color_msg "Step 4: Customizing the environment activation script..."
@@ -306,19 +299,16 @@ ACTIVATE_SCRIPT="$INSTALL_DIR/$VENV"/bin/activate
 # The dynawo directory is only added if it was installed.
 if [[ "$INSTALL_DYNAWO" == true ]]; then
     USER_PATH="$INSTALL_DIR/dynawo:\$VIRTUAL_ENV/bin:\$PATH"
-    color_msg "Adding Dynawo to PATH."
 else
     USER_PATH="\$VIRTUAL_ENV/bin:\$PATH"
-    color_msg "Dynawo not installed, skipping its addition to PATH."
 fi
 sed -E --in-place=.ORIG -e "s%^PATH=.*%PATH=\"$USER_PATH\"%" "$ACTIVATE_SCRIPT"
-
 cp "$ACTIVATE_SCRIPT" "$INSTALL_DIR"/activate_dycov
 
 # shellcheck source=/dev/null
 source "$INSTALL_DIR"/activate_dycov
 echo -e "\n\n--- LIST OF PACKAGES INSTALLED IN THE VIRTUAL ENVIRONMENT ---"
-pip list
+uv pip list
 echo -e "---------------------------------------------------------\n\n"
 deactivate
 color_msg "Activation script customized."
@@ -328,10 +318,10 @@ color_msg "Step 5: Installing examples and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
 # shellcheck source=/dev/null
 source "$INSTALL_DIR"/activate_dycov
-pip install sphinx
+uv pip install -q sphinx
 cd "$TMP_LOCAL_REPO"/docs/manual
-make latexpdf > /dev/null
-make html > /dev/null
+make latexpdf > /dev/null 2>&1
+make html > /dev/null 2>&1
 deactivate
 mkdir -p "$INSTALL_DIR"/manual
 mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
@@ -340,7 +330,6 @@ color_msg "Examples and manuals are ready."
 
 # 8. Final Cleanup
 color_msg "Step 6: Performing final cleanup..."
-# confirm_and_delete is not needed here as it's a temp directory
 rm -rf "$TMP_LOCAL_REPO"
 color_msg "Final cleanup finished."
 color_msg ""
