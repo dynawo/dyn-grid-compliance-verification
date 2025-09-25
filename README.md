@@ -578,118 +578,88 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 
 # For developers
 
-## Build and install on Linux
+## Build and install on Linux (using uv)
 
-1. Clone the repository via: 
-   ```bash
-   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-   ```
-   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
+1.  Clone the repository:
+    ```bash
+    git clone [https://github.com/dynawo/dyn-grid-compliance-verification](https://github.com/dynawo/dyn-grid-compliance-verification) dycov_repo
+    cd dycov_repo
+    ```
+
+2.  Ensure you have `uv` installed. If not, you can install it via pipx (recommended) or pip:
+    ```bash
+    # With pipx
+    pipx install uv
+
+    # Or with pip
+    pip install uv
+    ```
+
+3.  Create a virtual environment and install the package in editable mode with all development dependencies.
+    ```bash
+    # Create the virtual environment (named dycov_venv for consistency)
+    uv venv dycov_venv
+
+    # Activate the environment
+    source dycov_venv/bin/activate
+
+    # Install the package and all dev/test dependencies
+    uv pip install -e .[dev,test]
+    ```
+    *Alternatively, you can run the simplified `build_and_install.sh` script which automates these steps.*
+
+4.  Quickly check that your installation is working by running the help option:
+    ```bash
+    dycov -h
+    ```
+
+5.  Compile the internal Modelica models. This is required on first use.
+    ```bash
+    dycov compile
+    ```
    
-2. Get into the repository and run the shell script named `build_and_install.sh`.
-   This builds the Python package, creates a Python virtual environment under
-   the subdirectory `dycov_venv`, and installs the package into it (together with
-   all the necessary library dependencies, such as NumPy, etc.).
+The DyCoV application is now ready for development.
 
-3. Next, you must activate the virtual environment that has just been created: 
-   ```bash
-   source dycov_venv/bin/activate
-   ```
+## Build and install on Windows (using uv)
 
-4. The tool is used via a single command `dycov` having several subcommands. Quickly
-   check that your installation is working by running the help option, which will show
-   you all available subcommands:
-   ```bash
-   dycov -h
-   ```
+1.  Clone the Repository using your favorite Git client (e.g., GitHub Desktop or `git-scm`).
+    ```bash
+    git clone [https://github.com/dynawo/dyn-grid-compliance-verification](https://github.com/dynawo/dyn-grid-compliance-verification) dycov_repo
+    cd dycov_repo
+    ```
 
-5. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```bash
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
-   
-The DyCoV application is now ready to use.
+2.  Ensure you have `uv` installed. You can install it via pip:
+    ```bash
+    pip install uv
+    ```
 
-## Build and install on Windows
+3.  Set up the virtual environment and install dependencies.
+    - Open a **CMD terminal** or **PowerShell**.
+    - Navigate to the root folder of the cloned repository.
+    - Create a new virtual environment:
+      ```batch
+      uv venv dycov_venv
+      ```
+    - Activate the virtual environment:
+      ```batch
+      dycov_venv\Scripts\activate
+      ```
+    - Install the package in editable mode with all development and test dependencies:
+      ```batch
+      uv pip install -e .[dev,test]
+      ```
 
-1. Clone the Repository
-   The first step is to clone the repository to your local machine. Using GitHub Desktop:
-   - Open GitHub Desktop and click **File** > **Clone repository**.
-   - Enter the following URL to clone the repository:
-         
-   ```winbatch
-     git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-   ```
-   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
+4.  Verify Installation. This should display the help message for the tool.
+    ```batch
+    dycov -h
+    ```
 
-   - Choose a local directory where you want to save the repository and click **Clone**.
+5.  Pre-Execution Compilation. Before running the tool for the first time, compile the tool's resources:
+    ```batch
+    dycov compile
+    ```
 
-2. Set Up Virtual Environment
-   A virtual environment is recommended to manage dependencies for the project. This ensures that the package uses the correct Python version and dependencies without affecting other projects on your system.
-   - Open a **CMD terminal** (Command Prompt) as administrator.
-   - Navigate to the root folder of the cloned repository using the `cd` command:
-         
-   ```winbatch
-     cd dycov_repo
-   ```
-
-   - Create a new virtual environment with:
-         
-   ```winbatch
-     python.exe -m venv dycov_venv
-   ```
-     
-   - This will create a directory `dycov_venv` in your repository folder.
-   
-3. Build the Package
-   The next step is to compile the package into a distributable format:
-       
-   ```winbatch
-   	python.exe -m build
-   ```
-   
-   - This command will create the necessary build files in the `dist` folder of the repository. The build process might take a few minutes to complete.
-
-4. Activate the Virtual Environment
-   Now that the virtual environment is created, activate it to use the isolated environment:
-       
-   ```winbatch
-   	dycov_venv\Scripts\activate
-   ```
-   
-   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dycov_venv)` at the beginning of the prompt).
-
-5. Install the Package
-   Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
-       
-   ```winbatch
-   	python.exe -m pip install dist\dycov....whl
-   ```
-   
-   - This will install the package into your active virtual environment.
-
-6. Verify Installation
-   After installation, verify that the tool was installed correctly by running the following command:
-       
-   ```winbatch
-   	dycov -h
-   ```
-   
-   - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
-
-7. Pre-Execution Compilation
-   Before running the tool for the first time, it's recommended to compile the tool's resources:
-       
-   ```winbatch
-   	dycov compile
-   ```
-   
-   - This step ensures that all necessary files are generated and compiled for optimal performance.
-
-The DyCoV application is now ready to use.
+The DyCoV application is now ready for development.
 
 Finally, if you want to further _develop_ the source code of this tool, consult
 the [Developer Manual](docs/manual_dev).
