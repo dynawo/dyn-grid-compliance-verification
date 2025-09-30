@@ -122,7 +122,7 @@ class GridForming:
         start_time = 0
         end_time = 5
         event_time = 0
-        nb_points = 1000
+        nb_points = 3000
         time_array = np.linspace(start_time, end_time, nb_points)
 
         return time_array, event_time
