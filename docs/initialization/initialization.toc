@@ -1,0 +1,17 @@
+\contentsline {section}{\numberline {1}Overview}{1}{section.1}%
+\contentsline {section}{\numberline {2}Allowed topology variants}{1}{section.2}%
+\contentsline {section}{\numberline {3}Strategy for the calculation}{2}{section.3}%
+\contentsline {section}{\numberline {4}LF calculations for Topologies S and S+i}{3}{section.4}%
+\contentsline {subsection}{\numberline {4.1}First LF: RTE's side}{3}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Second LF: the producer's ``internal network'' (case S+i)}{4}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Third LF: the generating unit}{4}{subsection.4.3}%
+\contentsline {section}{\numberline {5}LF calculations for Topologies S+Aux, S+Aux+i}{5}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Third LF: the auxiliary load circuit}{5}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Fourth LF: the generator circuit}{6}{subsection.5.2}%
+\contentsline {section}{\numberline {6}LF calculations for Topologies M and M+i}{6}{section.6}%
+\contentsline {section}{\numberline {7}LF calculations for Topologies M+Aux and M+Aux+i}{7}{section.7}%
+\contentsline {section}{Appendices}{8}{section*.5}%
+\contentsline {section}{\numberline {A}Pi-model equivalent parameters}{8}{appendix.A}%
+\contentsline {subsection}{\numberline {A.1}Single line}{8}{subsection.A.1}%
+\contentsline {subsection}{\numberline {A.2}Multiple parallel lines}{8}{subsection.A.2}%
+\contentsline {subsection}{\numberline {A.3}Transformers}{8}{subsection.A.3}%
