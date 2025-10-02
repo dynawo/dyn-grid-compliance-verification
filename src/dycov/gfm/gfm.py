@@ -49,7 +49,6 @@ class GridForming:
         oc_name : str
             The name of the operating condition.
         """
-        time_array, event_time = self._get_time()
 
         parameters.set_section(pcs_name, bm_name, oc_name)
         damping_constant = parameters.get_damping_constant()
@@ -58,6 +57,8 @@ class GridForming:
 
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
+
+        time_array, event_time = self._get_time(calculator_name)
 
         if calculator_name == "PhaseJump":
             params_list = ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H"]
@@ -109,7 +110,7 @@ class GridForming:
             params_list,
         )
 
-    def _get_time(self) -> tuple[np.ndarray, float]:
+    def _get_time(self, calculator_name) -> tuple[np.ndarray, float]:
         """
         Generates the time array and defines the event time for the simulation.
 
@@ -119,7 +120,11 @@ class GridForming:
             A tuple containing the time array (numpy array) and the event time
             (float).
         """
-        start_time = 0
+        if calculator_name == "SCRJump" or calculator_name == "RoCoF":
+            start_time = -1
+        else:
+            start_time = 0
+        
         end_time = 5
         event_time = 0
         nb_points = 3000

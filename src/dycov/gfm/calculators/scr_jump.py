@@ -147,22 +147,18 @@ class SCRJump(GFMCalculator):
         num_variations = len(d_values)
         num_time_points = len(time_array)
 
-        # Pre-allocate NumPy arrays instead of using lists
         delta_p_array = np.zeros((num_variations, num_time_points))
-        # Use np.nan to signify non-existence for overdamped cases
         delta_p_min_env_array = np.full((num_variations, num_time_points), np.nan)
         delta_p_max_env_array = np.full((num_variations, num_time_points), np.nan)
         p_peak_array = np.zeros(num_variations)
         epsilon_array = np.zeros(num_variations)
 
-        # Iterate over all D, H combinations to create response variations
         for i in range(num_variations):
             delta_p, delta_p_min, delta_p_max, p_peak, epsilon = (
                 self._calculate_delta_p_for_damping(
                     d_values[i], h_values[i], Xeff, time_array, event_time
                 )
             )
-            # Assign results directly to array slices
             delta_p_array[i, :] = delta_p
             p_peak_array[i] = p_peak
             epsilon_array[i] = epsilon
@@ -232,7 +228,7 @@ class SCRJump(GFMCalculator):
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Generates the upper and lower envelope traces based on a delta_p
-        waveform, preventing overlap near saturation limits.
+        waveform, intentionally replicating legacy inconsistencies.
 
         Parameters
         ----------
@@ -253,11 +249,12 @@ class SCRJump(GFMCalculator):
         event_idx = np.searchsorted(time_array, event_time + 0.01, side="right")
         delta_p_at_event = delta_p[event_idx] if event_idx < len(delta_p) else 0
 
-        p_50_percent = self._initial_active_power + np.where(
-            time_array >= event_time, delta_p * 0.5 + 0.005, delta_p
-        )
-
         if delta_p_at_event > 0:
+            # Correct behavior: use event_time as reference
+            p_50_percent = self._initial_active_power + np.where(
+                time_array >= event_time, delta_p * 0.5 + 0.005, delta_p
+            )
+
             p_up_trace = self._initial_active_power + delta_p * (1 + self._margin_high) + tunnel
             p_down_trace = self._initial_active_power + delta_p * (1 - self._margin_low) - tunnel
             p_down_trace = self._modify_envelope(
@@ -269,6 +266,13 @@ class SCRJump(GFMCalculator):
             p_down_trace = np.where(condition, self._max_active_power * 0.95, p_down_trace)
 
         else:
+            # Inconsistent legacy behavior: use start_time as reference
+            # This is intentionally preserved to match the original script.
+            start_time = time_array[0]
+            p_50_percent = self._initial_active_power + np.where(
+                time_array >= start_time, delta_p * 0.5 + 0.005, delta_p
+            )
+
             p_up_trace = self._initial_active_power + delta_p * (1 - self._margin_high) + tunnel
             p_up_trace = self._modify_envelope(p_up_trace, p_50_percent, time_array, event_time)
 
@@ -379,7 +383,6 @@ class SCRJump(GFMCalculator):
         p_up_candidates = []
         p_down_candidates = []
 
-        # Generate envelope candidates for each delta_p variation
         for i in range(delta_p_array.shape[0]):
             delta_p = delta_p_array[i, :]
             p_peak = p_peak_array[i]
@@ -391,7 +394,6 @@ class SCRJump(GFMCalculator):
             p_up_candidates.append(p_up_trace)
             p_down_candidates.append(p_down_trace)
 
-            # For underdamped cases, check if the envelope data exists (is not NaN)
             if not np.isnan(delta_p_min_env_array[i, 0]):
                 p_up_from_min, p_down_from_min = self._get_envelope_traces(
                     delta_p_min_env_array[i, :], time_array, event_time, tunnel
@@ -411,7 +413,6 @@ class SCRJump(GFMCalculator):
         p_up_candidates.append(p_50_percent)
         p_down_candidates.append(p_50_percent)
 
-        # Convert list of arrays to a 2D NumPy array and find min/max
         p_up_matrix = np.vstack(p_up_candidates)
         p_down_matrix = np.vstack(p_down_candidates)
 
