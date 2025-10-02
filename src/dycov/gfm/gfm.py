@@ -124,7 +124,7 @@ class GridForming:
             start_time = -1
         else:
             start_time = 0
-        
+
         end_time = 5
         event_time = 0
         nb_points = 3000
