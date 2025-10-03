@@ -11,6 +11,7 @@
 import numpy as np
 
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm import constants
 
 
 class GFMCalculator:
@@ -18,8 +19,8 @@ class GFMCalculator:
     Base class for Grid Forming (GFM) calculations.
 
     This class provides common attributes and an abstract method for calculating
-    power envelopes in GFM systems. It defines constants for parameter indexing
-    and a threshold for damping classification.
+    response envelopes in GFM systems. It defines constants for parameter
+    indexing and a threshold for damping classification.
     """
 
     # Constants for indexing parameter arrays: original, minimum, and maximum values.
@@ -51,11 +52,24 @@ class GFMCalculator:
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
 
+    def get_plot_parameter_names(self) -> list[str]:
+        """
+        Abstract method to get the list of parameter names relevant for plotting.
+        This method must be implemented by each concrete calculator subclass.
+
+        Returns
+        -------
+        list[str]
+            A list of parameter names (as strings) to be displayed on the plot.
+        """
+        raise NotImplementedError
+
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Abstract method to be implemented by subclasses for calculating power envelopes.
+        Abstract method to be implemented by subclasses for calculating
+        response envelopes.
 
         Parameters
         ----------
@@ -66,7 +80,7 @@ class GFMCalculator:
         Xeff : float
             Effective reactance.
         time_array : np.ndarray
-            Array of time points for simulation.
+            Array of time points for the simulation.
         event_time : float
             The time (in seconds) at which the event occurs.
 
@@ -74,10 +88,10 @@ class GFMCalculator:
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - str: Name of the calculated magnitude (e.g., "P", "Q").
-            - np.ndarray: The PCC (Point of Common Coupling) power data.
-            - np.ndarray: The upper envelope data.
-            - np.ndarray: The lower envelope data.
+            - str: Name of the calculated magnitude (e.g., "P", "Iq").
+            - np.ndarray: The calculated signal at the PCC (Point of Common Coupling).
+            - np.ndarray: The upper envelope of the signal.
+            - np.ndarray: The lower envelope of the signal.
         """
         raise NotImplementedError
 
@@ -109,8 +123,7 @@ class GFMCalculator:
         # Calculate the number of samples corresponding to the delay time.
         # Ensure at least one sample for the delay.
         delay_samples = max(1, int(delay_time / (time_array[1] - time_array[0])))
-        # Create a 'prefix' array filled with `delayed_value` for the duration
-        # of the delay.
+        # Create a 'prefix' array filled with `delayed_value`.
         sample = np.full(delay_samples, delayed_value)
         # Concatenate this delay 'prefix' with the original signal.
         # Then, truncate the combined array to the original signal's length,
@@ -119,10 +132,8 @@ class GFMCalculator:
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
         """
-        Clips the values of a given signal array to ensure they stay
-        within a specified minimum (`value_min`) and maximum (`value_max`) range.
-        Values below `value_min` are set to `value_min`, and values above `value_max`
-        are set to `value_max`.
+        Clips the values of a signal array to ensure they stay within a
+        specified minimum (`value_min`) and maximum (`value_max`) range.
 
         Parameters
         ----------
@@ -144,25 +155,24 @@ class GFMCalculator:
 
     def _calculate_epsilon_initial_check(
         self, D: np.ndarray, H: np.ndarray, x_total_initial: float
-    ) -> float:
+    ) -> np.ndarray:
         """
         Calculates the initial damping ratio (epsilon) to determine
         whether the system's response is overdamped or underdamped.
-        This calculation uses base values to determine the overall system behavior.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
+        D : np.ndarray
+            Array of damping factors.
+        H : np.ndarray
+            Array of inertia constants.
         x_total_initial : float
             Total initial reactance of the system.
 
         Returns
         -------
-        float
-            The calculated initial damping ratio (epsilon).
+        np.ndarray
+            The array of calculated damping ratios (epsilon).
         """
         return (
             D
@@ -183,10 +193,11 @@ class GFMCalculator:
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
-        Calculates a time-dependent "tunnel" array. This array represents
-        a dynamic band around the power response that expands over time after an
-        event. It starts at zero before the event and increases exponentially
-        towards a final magnitude.
+        Calculates a time-dependent "tunnel" array.
+
+        This array represents a dynamic band around the power response that
+        expands over time after an event. It starts at zero before the event
+        and increases exponentially towards a final magnitude.
 
         Parameters
         ----------
@@ -206,7 +217,9 @@ class GFMCalculator:
             self._final_allowed_tunnel_pn,
             self._final_allowed_tunnel_variation * p_peak,
         )
-        tunnel_exp = 1 - np.exp((-time_array + 0.02) / 0.3)
+        tunnel_exp = 1 - np.exp(
+            (-time_array + constants.TIME_TUNNEL_START_OFFSET) / constants.TIME_TUNNEL_EXP_TAU
+        )
         tunnel = t_val * tunnel_exp
         return np.where(time_array < event_time, 0, tunnel)
 
@@ -215,36 +228,33 @@ class GFMCalculator:
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Calculates the initial (unlimited) power down and power up envelopes.
+
         This is done by finding the minimum and maximum across various delta_p arrays
-        and adjusting them by the time-dependent tunnel, effectively creating a band.
+        and adjusting them by the time-dependent tunnel.
 
         Parameters
         ----------
         list_of_arrays : list[np.ndarray]
-            A list of delta_p arrays (e.g., nominal, min/max D/H variations, specific
-            min/max delta_p) to be used for determining the overall minimum and maximum
-            response.
+            A list of delta_p arrays (e.g., nominal, min/max variations) to be
+            used for determining the overall minimum and maximum response.
         tunnel : np.ndarray
-            The time-dependent tunnel response array, which defines the dynamic width of
-            the band.
+            The time-dependent tunnel response array.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             A tuple containing:
-            - pdown_no_p0: The calculated lower power envelope, without considering the
-              initial power (P0).
-            - pup_no_p0: The calculated upper power envelope, without considering the
-              initial power (P0).
+            - lower_env: The calculated lower envelope.
+            - upper_env: The calculated upper envelope.
         """
-        pdown_no_p0 = np.minimum.reduce(list_of_arrays) - tunnel
-        pup_no_p0 = np.maximum.reduce(list_of_arrays) + tunnel
-        return np.minimum(pdown_no_p0, pup_no_p0), np.maximum(pdown_no_p0, pup_no_p0)
+        lower_env = np.minimum.reduce(list_of_arrays) - tunnel
+        upper_env = np.maximum.reduce(list_of_arrays) + tunnel
+        return np.minimum(lower_env, upper_env), np.maximum(lower_env, upper_env)
 
     def _limit_power_envelopes(
         self,
-        pdown_no_p0: np.ndarray,
-        pup_no_p0: np.ndarray,
+        lower_envelope_unlimited: np.ndarray,
+        upper_envelope_unlimited: np.ndarray,
         tunnel_value: float,
         initial_power: float,
         max_power: float,
@@ -253,77 +263,86 @@ class GFMCalculator:
         use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Applies final operational limits to the calculated power down and power up
-        envelopes. This involves incorporating the initial power (P0) and clipping
-        the signals based on system-defined minimum/maximum power and a constant
-        tunnel value.
+        Applies final operational limits to the calculated power envelopes.
+
+        This involves incorporating the initial power (P0) and clipping
+        the signals based on system-defined minimum/maximum power.
 
         Parameters
         ----------
-        pdown_no_p0 : np.ndarray
-            The unlimited power down signal, not yet adjusted by initial power P0.
-        pup_no_p0 : np.ndarray
-            The unlimited power up signal, not yet adjusted by initial power P0.
+        lower_envelope_unlimited : np.ndarray
+            The unlimited lower envelope signal, not yet adjusted by initial power P0.
+        upper_envelope_unlimited : np.ndarray
+            The unlimited upper envelope signal, not yet adjusted by initial power P0.
         tunnel_value : float
-            The constant tunnel value used for final limiting, defining the static
-            band width.
+            The constant tunnel value used for final limiting.
+        initial_power : float
+            The initial active or reactive power.
+        max_power : float
+            The maximum power limit.
+        min_power : float
+            The minimum power limit.
+        sign : int
+            The sign of the disturbance (e.g., of the phase jump).
+        use_opposite_signs : bool
+            A flag for a specific clipping logic.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             A tuple containing:
-            - pdown_limited: The final, limited power down envelope.
-            - pup_limited: The final, limited power up envelope.
+            - lower_envelope_limited: The final, limited lower envelope.
+            - upper_envelope_limited: The final, limited upper envelope.
         """
 
         if use_opposite_signs:
             # This checks if the initial power and the angle change have opposite signs.
             if np.sign(initial_power) * sign == -1:
-                pdown_limited = np.minimum(
+                lower_envelope_limited = np.minimum(
                     np.maximum(
-                        initial_power - sign * pdown_no_p0,
+                        initial_power - sign * lower_envelope_unlimited,
                         -1 + tunnel_value,
                     ),
                     1 - tunnel_value,
                 )
-                pup_limited = np.minimum(
+                upper_envelope_limited = np.minimum(
                     np.maximum(
-                        initial_power - sign * pup_no_p0,
+                        initial_power - sign * upper_envelope_unlimited,
                         -max_power,
                     ),
                     max_power,
                 )
 
             else:
-                pdown_limited = np.minimum(
+                lower_envelope_limited = np.minimum(
                     np.maximum(
-                        initial_power - sign * pdown_no_p0,
+                        initial_power - sign * lower_envelope_unlimited,
                         -max_power,
                     ),
                     max_power,
                 )
-                pup_limited = np.minimum(
+                upper_envelope_limited = np.minimum(
                     np.maximum(
-                        initial_power - sign * pup_no_p0,
+                        initial_power - sign * upper_envelope_unlimited,
                         -1 + tunnel_value,
                     ),
                     1 - tunnel_value,
                 )
 
         else:
-            pdown_limited = np.minimum(
+            lower_envelope_limited = np.minimum(
                 np.maximum(
-                    initial_power - sign * pdown_no_p0,
+                    initial_power - sign * lower_envelope_unlimited,
                     -1 + tunnel_value,
                 ),
                 1 - tunnel_value,
             )
-            pup_limited = np.minimum(
+            upper_envelope_limited = np.minimum(
                 np.maximum(
-                    initial_power - 1 * sign * pup_no_p0,
+                    initial_power - 1 * sign * upper_envelope_unlimited,
                     min_power,
                 ),
                 max_power,
             )
 
-        return pdown_limited, pup_limited
+        return lower_envelope_limited, upper_envelope_limited
