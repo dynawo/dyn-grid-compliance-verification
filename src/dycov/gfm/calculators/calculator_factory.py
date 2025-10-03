@@ -29,13 +29,14 @@ def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculat
     ----------
     name : str
         The name of the calculator to retrieve (e.g., "PhaseJump", "AmplitudeStep").
-    gfm_params : GFM_Params
+    gfm_params : GFMParameters
         An object containing all necessary parameters for the GFM calculation.
 
     Returns
-    -------\n    Optional[GFMCalculator]
-        An instance of the specified GFMCalculator subclass if the name is recognized,
-        otherwise None.
+    -------
+    Optional[GFMCalculator]
+        An instance of the specified GFMCalculator subclass if the name is
+        recognized, otherwise None.
     """
     if name == "PhaseJump":
         return PhaseJump(gfm_params=gfm_params)

@@ -185,7 +185,7 @@ def _pcs_replace(
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
-        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", "\_")}
+        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
         subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
         subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
         subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
@@ -517,7 +517,7 @@ def create_pdf(
         {
             "commonz1": commonz1_include,
             "commonz3": commonz3_include,
-            "summary_description": summary_description.replace("_", "\_"),
+            "summary_description": summary_description.replace("_", r"\_"),
             "summaryReport": summary_map,
             "reports": reports,
             "verificationtype": _get_verification_type(producer.get_sim_type()),
