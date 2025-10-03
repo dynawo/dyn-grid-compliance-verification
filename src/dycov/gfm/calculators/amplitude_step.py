@@ -13,11 +13,13 @@ import numpy as np
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
+from dycov.gfm import constants
 
 
 class AmplitudeStep(GFMCalculator):
     """
     Class to calculate the GFM amplitude step response.
+
     This class handles all core calculations for delta_iq and reactive current
     envelopes.
     """
@@ -26,6 +28,14 @@ class AmplitudeStep(GFMCalculator):
         self,
         gfm_params: GFMParameters,
     ) -> None:
+        """
+        Initializes the AmplitudeStep calculator with GFM parameters.
+
+        Parameters
+        ----------
+        gfm_params : GFMParameters
+            An object containing all necessary parameters for GFM calculations.
+        """
         super().__init__(gfm_params=gfm_params)
         self._voltage_step = gfm_params.get_voltage_step_at_grid()
         self._initial_reactive_power = gfm_params.get_initial_reactive_power()
@@ -34,13 +44,26 @@ class AmplitudeStep(GFMCalculator):
         self._time_for_tunnel = gfm_params.get_time_for_tunnel()
         self._time_to_90 = gfm_params.get_time_to_90()
 
+    def get_plot_parameter_names(self) -> list[str]:
+        """Returns the list of parameter names relevant for AmplitudeStep plots."""
+        return [
+            "P0",
+            "Q0",
+            "VoltageStepAtGrid",
+            "VoltageStepAtPDR",
+            "SCR",
+            "TimeTo90",
+            "Xeff",
+            "D",
+            "H",
+        ]
+
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates the change in current (delta_iq) and reactive current envelopes
-        (PCC, upper, and lower) based on damping characteristics for an
-        amplitude step event.
+        Calculates the change in current (delta_iq) and reactive current
+        envelopes (PCC, upper, and lower) for an amplitude step event.
 
         Parameters
         ----------
@@ -59,15 +82,14 @@ class AmplitudeStep(GFMCalculator):
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - magnitude: Name of the calculated magnitude.
-            - iq_pcc_final: The final calculated reactive current at the point of
-              common coupling.
-            - iq_up_final: The final upper reactive current envelope.
-            - iq_down_final: The final lower reactive current envelope.
+            - magnitude_name: The name of the calculated magnitude ("Iq").
+            - pcc_signal: The final calculated reactive current at the PCC.
+            - upper_envelope: The final upper reactive current envelope.
+            - lower_envelope: The final lower reactive current envelope.
         """
-        # Log the input parameters for debugging.
-        dycov_logging.get_logger("AmplitudeStep").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
-        dycov_logging.get_logger("AmplitudeStep").debug(
+        logger = dycov_logging.get_logger("AmplitudeStep")
+        logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
+        logger.debug(
             f"Input Params ΔVoltage={self._voltage_step} "
             f"SCR={self._scr} "
             f"Q0={self._initial_reactive_power} "
@@ -87,46 +109,46 @@ class AmplitudeStep(GFMCalculator):
         )
 
         if self._is_emt_flag:
-            iq_up = self._apply_delay(0.02, delta_iq_min[0], time_array, delta_iq_min)
-            iq_down = self._apply_delay(0.02, delta_iq_max[0], time_array, delta_iq_max)
+            upper_env = self._apply_delay(
+                constants.EMT_FINAL_DELAY_S, delta_iq_min[0], time_array, delta_iq_min
+            )
+            lower_env = self._apply_delay(
+                constants.EMT_FINAL_DELAY_S, delta_iq_max[0], time_array, delta_iq_max
+            )
         else:
-            iq_up = delta_iq_min
-            iq_down = delta_iq_max
-        iq_pcc = delta_iq_array[self._ORIGINAL_PARAMS_IDX]
+            upper_env = delta_iq_min
+            lower_env = delta_iq_max
 
-        return "Iq", iq_pcc, iq_up, iq_down
+        pcc_signal = delta_iq_array[self._ORIGINAL_PARAMS_IDX]
+        magnitude_name = "Iq"
+
+        return magnitude_name, pcc_signal, upper_env, lower_env
 
     def _get_delta_iq(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list, np.ndarray, np.ndarray]:
         """
-        Calculates the change in reactive current (delta_iq) and related
-        parameters based on damping characteristics, considering variations
-        for nominal, minimum, and maximum parameters.
+        Calculates the change in reactive current (delta_iq), considering
+        variations for nominal, minimum, and maximum parameters.
 
         Parameters
         ----------
         D : float
-            Damping factor.
+            Nominal damping factor.
         H : float
-            Inertia constant.
+            Nominal inertia constant.
         Xeff : float
             Effective reactance.
         time_array : np.ndarray
             Array of time points for simulation.
         event_time : float
-            The time (in seconds) at which the amplitude step event occurs.
+            The time at which the event occurs.
 
         Returns
         -------
         tuple[list, np.ndarray, np.ndarray]
-            A tuple containing:
-            - delta_iq_array: List of delta_iq arrays for original, min, and max
-              parameter variations.
-            - delta_iq_min: delta_iq array specifically calculated for the minimum
-              parameter case.
-            - delta_iq_max: delta_iq array specifically calculated for the maximum
-              parameter case.
+            A tuple containing a list of delta_iq variations, the min envelope,
+            and the max envelope.
         """
         d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
         h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
@@ -157,17 +179,13 @@ class AmplitudeStep(GFMCalculator):
         event_time: float,
     ) -> np.ndarray:
         """
-        Calculates delta_iq for an overdamped system response, ensuring that
-        the delta_iq values are zero before the specified event time.
+        Calculates delta_iq for a first-order system response, ensuring that
+        the values are zero before the specified event time.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H: float, Xeff: float
+            System parameters for the variation.
         time_array : np.ndarray
             Array of time points.
         event_time : float
@@ -198,16 +216,10 @@ class AmplitudeStep(GFMCalculator):
         self, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
-        Calculates the minimum delta_iq for an overdamped system, by applying
-        a lower margin to the base delta_iq and setting pre-event
-        values to zero.
+        Calculates the minimum delta_iq envelope, applying margins and tunnel.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
         Xeff : float
             Effective reactance.
         time_array : np.ndarray
@@ -218,7 +230,7 @@ class AmplitudeStep(GFMCalculator):
         Returns
         -------
         np.ndarray
-            The minimum delta_iq array for the overdamped system.
+            The minimum delta_iq envelope array.
         """
         voltage_step = self._voltage_step / 100
         delta_iq = voltage_step / Xeff
@@ -241,12 +253,12 @@ class AmplitudeStep(GFMCalculator):
         result_if_negative_vstep = np.where(relative_time < ttunnel, decay_curve, constant_value)
 
         # Combine Path A and Path B based on the primary condition
-        calculated_delta_iq_ = np.where(
+        calculated_delta_iq = np.where(
             voltage_step > 0, result_if_positive_vstep, result_if_negative_vstep
         )
 
-        # Ensure all pre-event values are zero and assign to the final variable name
-        delta_iq_min = np.where(time_array < event_time, 0, calculated_delta_iq_)
+        # Ensure all pre-event values are zero
+        delta_iq_min = np.where(time_array < event_time, 0, calculated_delta_iq)
 
         return delta_iq_min
 
@@ -254,16 +266,10 @@ class AmplitudeStep(GFMCalculator):
         self, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
-        Calculates the maximum delta_iq for an overdamped system, by applying
-        an upper margin, an additional delay, and setting pre-event values to
-        zero.
+        Calculates the maximum delta_iq envelope, applying margins and tunnel.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
         Xeff : float
             Effective reactance.
         time_array : np.ndarray
@@ -274,9 +280,8 @@ class AmplitudeStep(GFMCalculator):
         Returns
         -------
         np.ndarray
-            The maximum delta_iq array for the overdamped system.
+            The maximum delta_iq envelope array.
         """
-
         voltage_step = self._voltage_step / 100.0
         delta_iq = voltage_step / Xeff
         tunnel = self._get_tunnel(Xeff)
@@ -293,10 +298,10 @@ class AmplitudeStep(GFMCalculator):
         # Value if 'relative_time >= ttunnel' (Constant Phase)
         constant_value = delta_iq + tunnel
 
-        calculated_delta_iq_ = np.where(relative_time < ttunnel, decay_curve, constant_value)
+        calculated_delta_iq = np.where(relative_time < ttunnel, decay_curve, constant_value)
 
         # Ensure that pre-event values are zero
-        delta_iq_max = np.where(time_array < event_time, 0, calculated_delta_iq_)
+        delta_iq_max = np.where(time_array < event_time, 0, calculated_delta_iq)
 
         return delta_iq_max
 
@@ -318,6 +323,6 @@ class AmplitudeStep(GFMCalculator):
         delta_iq = voltage_step / Xeff
 
         return max(
-            self._final_allowed_tunnel_pn,  # Fixed current component
+            self._final_allowed_tunnel_pn,
             self._final_allowed_tunnel_variation * delta_iq,
         )

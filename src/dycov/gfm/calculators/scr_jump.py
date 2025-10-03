@@ -13,6 +13,7 @@ import numpy as np
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
+from dycov.gfm import constants
 
 # Configure logger for this module
 logger = dycov_logging.get_logger(__name__)
@@ -21,6 +22,7 @@ logger = dycov_logging.get_logger(__name__)
 class SCRJump(GFMCalculator):
     """
     Class to calculate the GFM response to an SCR (Short-Circuit Ratio) Jump.
+
     This class handles all core calculations for delta_p and active power
     envelopes, differentiating between overdamped and underdamped system
     responses.
@@ -53,13 +55,16 @@ class SCRJump(GFMCalculator):
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
 
+    def get_plot_parameter_names(self) -> list[str]:
+        """Returns the list of parameter names relevant for SCRJump plots."""
+        return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
+
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates the change in power (delta_p) and active power envelopes
-        (PCC, upper, and lower) based on damping characteristics for an SCR
-        jump event.
+        (PCC, upper, and lower) for an SCR jump event.
 
         Parameters
         ----------
@@ -78,10 +83,10 @@ class SCRJump(GFMCalculator):
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - magnitude: Name of the calculated magnitude ("P").
-            - p_pcc_final: The final calculated active power at the PCC.
-            - p_up_final: The final upper active power envelope.
-            - p_down_final: The final lower active power envelope.
+            - magnitude_name: The name of the calculated magnitude ("P").
+            - pcc_signal: The final calculated active power at the PCC.
+            - upper_envelope: The final upper active power envelope.
+            - lower_envelope: The final lower active power envelope.
         """
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
@@ -109,7 +114,9 @@ class SCRJump(GFMCalculator):
             time_array=time_array,
             event_time=event_time,
         )
-        return "P", p_pcc, p_up, p_down
+
+        magnitude_name = "P"
+        return magnitude_name, p_pcc, p_up, p_down
 
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -129,17 +136,14 @@ class SCRJump(GFMCalculator):
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-            A tuple of arrays containing:
-            - delta_p_array: Calculated delta_p waveforms for each D,H pair.
-            - delta_p_min_env_array: Exponential min envelopes (underdamped only).
-            - delta_p_max_env_array: Exponential max envelopes (underdamped only).
-            - p_peak_array: Calculated peak power change for each D,H pair.
-            - epsilon_array: Calculated damping ratio for each D,H pair.
+            A tuple of arrays containing: delta_p waveforms, min exponential
+            envelopes, max exponential envelopes, peak power changes, and
+            damping ratios for each D,H pair.
         """
         d_values = np.array([D, D * self._min_ratio, D * self._max_ratio])
         h_values = np.array([H, H / self._min_ratio, H / self._max_ratio])
@@ -196,15 +200,16 @@ class SCRJump(GFMCalculator):
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
 
         Returns
         -------
         np.ndarray
             The modified envelope signal.
         """
-        delta = 0.03
-        mask = (time_array >= event_time) & (time_array <= event_time + delta)
+        mask = (time_array >= event_time) & (
+            time_array <= event_time + constants.SCRJUMP_MODIFY_ENVELOPE_S
+        )
         signal = np.where(mask, p_50_percent, signal)
 
         signal = np.where(
@@ -237,7 +242,7 @@ class SCRJump(GFMCalculator):
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
         tunnel : float
             The tolerance tunnel value to be applied.
 
@@ -308,7 +313,7 @@ class SCRJump(GFMCalculator):
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
         tunnel : float
             The tolerance tunnel value.
 
@@ -320,7 +325,9 @@ class SCRJump(GFMCalculator):
         event_idx = np.searchsorted(time_array, event_time + 0.01, side="right")
         delta_p_at_event = delta_p[event_idx] if event_idx < len(delta_p) else 0
 
-        mask = (time_array >= event_time) & (time_array <= event_time + 0.1)
+        mask = (time_array >= event_time) & (
+            time_array <= event_time + constants.SCRJUMP_INITIAL_LIMITING_S
+        )
 
         if delta_p_at_event > 0:
             condition = mask & (p_down < (self._initial_active_power - tunnel))
@@ -373,7 +380,7 @@ class SCRJump(GFMCalculator):
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
 
         Returns
         -------
@@ -423,10 +430,9 @@ class SCRJump(GFMCalculator):
 
         p_up_limited = self._limit_signal(p_up_combined)
         p_down_limited = self._limit_signal(p_down_combined)
-        p_pcc_final = p_pcc
 
         tunnel_nominal = self._get_tunnel(p_peak_array[0])
-        p_up_final, p_down_final = self._apply_initial_limiting(
+        upper_envelope, lower_envelope = self._apply_initial_limiting(
             p_up_limited,
             p_down_limited,
             delta_p_nominal,
@@ -436,12 +442,15 @@ class SCRJump(GFMCalculator):
         )
 
         if self._is_emt_flag:
-            delay_s = 0.020
-            p_up_final = self._apply_delay(delay_s, p_up_final[0], time_array, p_up_final)
-            p_down_final = self._apply_delay(delay_s, p_down_final[0], time_array, p_down_final)
-            p_pcc_final = self._apply_delay(delay_s, p_pcc_final[0], time_array, p_pcc_final)
+            upper_envelope = self._apply_delay(
+                constants.EMT_FINAL_DELAY_S, upper_envelope[0], time_array, upper_envelope
+            )
+            lower_envelope = self._apply_delay(
+                constants.EMT_FINAL_DELAY_S, lower_envelope[0], time_array, lower_envelope
+            )
+            p_pcc = self._apply_delay(constants.EMT_FINAL_DELAY_S, p_pcc[0], time_array, p_pcc)
 
-        return p_pcc_final, p_up_final, p_down_final
+        return p_pcc, upper_envelope, lower_envelope
 
     def _calculate_common_params(
         self, D: float, H: float, Xeff: float
@@ -461,11 +470,8 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[float, float, float, float]
-            A tuple containing:
-            - x_total_initial: Total initial reactance.
-            - epsilon: Damping ratio.
-            - wn: Natural frequency.
-            - p_peak_calc: Calculated peak power change.
+            A tuple containing: total initial reactance, damping ratio,
+            natural frequency, and calculated peak power change.
         """
         x_total_initial = Xeff + 1 / self._final_scr
         u_prod = self._initial_voltage * self._grid_voltage
@@ -507,12 +513,9 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]
-            A tuple containing:
-            - delta_p: The calculated change in power waveform.
-            - delta_p_min_env: The min exponential envelope (None if overdamped).
-            - delta_p_max_env: The max exponential envelope (None if overdamped).
-            - p_peak: The peak power change.
-            - epsilon: The damping ratio.
+            A tuple containing: the delta_p waveform, min envelope (None if
+            overdamped), max envelope (None if overdamped), peak power change,
+            and damping ratio.
         """
         _, epsilon, _, _ = self._calculate_common_params(D, H, Xeff)
 
@@ -527,7 +530,6 @@ class SCRJump(GFMCalculator):
             )
             return delta_p, delta_p_min, delta_p_max, p_peak, epsilon_calc
 
-    # --- OVERDAMPED CALCULATION FLOW ---
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
@@ -587,16 +589,12 @@ class SCRJump(GFMCalculator):
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H: float, Xeff: float
+            System parameters.
         time_array : np.ndarray
             The full time array for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
 
         Returns
         -------
@@ -612,7 +610,6 @@ class SCRJump(GFMCalculator):
 
         return delta_p, p_peak, epsilon
 
-    # --- UNDERDAMPED CALCULATION FLOW ---
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
@@ -660,16 +657,12 @@ class SCRJump(GFMCalculator):
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H: float, Xeff: float
+            System parameters.
         time_array : np.ndarray
             The full time array for the simulation.
         event_time : float
-            The time (in seconds) at which the event occurs.
+            The time at which the event occurs.
 
         Returns
         -------

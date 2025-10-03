@@ -20,7 +20,7 @@ from dycov.gfm.producer import GFMProducer
 
 class GFMParameters(Parameters):
     """
-    Parameters to define the validation of a model.
+    Parameters to define the validation of a GFM model.
     Inherits from the base Parameters class.
     """
 
@@ -55,7 +55,6 @@ class GFMParameters(Parameters):
         """
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
         self._emt = emt
-
         self._producer = GFMProducer(producer_ini)
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
@@ -71,7 +70,6 @@ class GFMParameters(Parameters):
             The name of the benchmark.
         oc_name : str
             The name of the operating condition.
-
         """
         self._pcs_section = pcs_name
         self._bm_section = f"{pcs_name}.{bm_name}"
@@ -91,13 +89,12 @@ class GFMParameters(Parameters):
 
     def is_emt(self) -> bool:
         """
-        Checks it is an EMT system.
+        Checks if it is an EMT system.
 
         Returns
         -------
         bool
-            True if it is an EMT system,
-            False otherwise.
+            True if it is an EMT system, False otherwise.
         """
         return self._emt
 
@@ -114,7 +111,7 @@ class GFMParameters(Parameters):
 
     def get_effective_reactance(self) -> float:
         """
-        Gets the effective reactance.
+        Gets the effective reactance (in pu).
 
         Returns
         -------
@@ -136,7 +133,7 @@ class GFMParameters(Parameters):
 
     def get_inertia_constant(self) -> float:
         """
-        Gets the inertia constant from the producer.
+        Gets the inertia constant from the producer (in s).
 
         Returns
         -------
@@ -147,7 +144,7 @@ class GFMParameters(Parameters):
 
     def get_nominal_apparent_power(self) -> float:
         """
-        Gets the nominal apparent power from the producer.
+        Gets the nominal apparent power from the producer (in MVA).
 
         Returns
         -------
@@ -158,7 +155,7 @@ class GFMParameters(Parameters):
 
     def get_nominal_voltage(self) -> float:
         """
-        Gets the nominal voltage from the producer.
+        Gets the nominal voltage from the producer (in kV).
 
         Returns
         -------
@@ -169,7 +166,7 @@ class GFMParameters(Parameters):
 
     def get_initial_active_power(self) -> float:
         """
-        Gets the initial active power (P0) from the configuration.
+        Gets the initial active power (P0) from the configuration (in pu).
 
         Returns
         -------
@@ -182,7 +179,7 @@ class GFMParameters(Parameters):
 
     def get_min_active_power(self) -> float:
         """
-        Gets the minimum active power (PMin) from the configuration.
+        Gets the minimum active power (PMin) from the configuration (in pu).
 
         Returns
         -------
@@ -196,7 +193,7 @@ class GFMParameters(Parameters):
 
     def get_max_active_power(self) -> float:
         """
-        Gets the maximum active power (PMax) from the configuration.
+        Gets the maximum active power (PMax) from the configuration (in pu).
 
         Returns
         -------
@@ -210,7 +207,7 @@ class GFMParameters(Parameters):
 
     def get_initial_reactive_power(self) -> float:
         """
-        Gets the initial reactive power (Q0) from the configuration.
+        Gets the initial reactive power (Q0) from the configuration (in pu).
 
         Returns
         -------
@@ -227,7 +224,7 @@ class GFMParameters(Parameters):
 
     def get_min_reactive_power(self) -> float:
         """
-        Gets the minimum reactive power (QMin) from the configuration.
+        Gets the minimum reactive power (QMin) from the configuration (in pu).
 
         Returns
         -------
@@ -241,7 +238,7 @@ class GFMParameters(Parameters):
 
     def get_max_reactive_power(self) -> float:
         """
-        Gets the maximum reactive power (QMax) from the configuration.
+        Gets the maximum reactive power (QMax) from the configuration (in pu).
 
         Returns
         -------
@@ -255,7 +252,7 @@ class GFMParameters(Parameters):
 
     def get_initial_voltage(self) -> float:
         """
-        Gets the initial voltage (U0) from the configuration.
+        Gets the initial voltage (U0) from the configuration (in pu).
 
         Returns
         -------
@@ -266,7 +263,7 @@ class GFMParameters(Parameters):
 
     def get_grid_voltage(self) -> float:
         """
-        Gets the grid voltage (Ugr) from the configuration.
+        Gets the grid voltage (Ugr) from the configuration (in pu).
 
         Returns
         -------
@@ -277,7 +274,7 @@ class GFMParameters(Parameters):
 
     def get_time_to_90(self) -> float:
         """
-        Gets the 'TimeTo90' parameter from the configuration.
+        Gets the 'TimeTo90' parameter from the configuration (in s).
 
         Returns
         -------
@@ -288,7 +285,7 @@ class GFMParameters(Parameters):
 
     def get_time_for_tunnel(self) -> float:
         """
-        Gets the 'TimeForTunnel' parameter from the configuration.
+        Gets the 'TimeForTunnel' parameter from the configuration (in s).
 
         Returns
         -------
@@ -299,7 +296,7 @@ class GFMParameters(Parameters):
 
     def get_final_allowed_tunnel_pn(self) -> float:
         """
-        Gets the 'FinalAllowedTunnelPn' parameter from the configuration.
+        Gets the 'FinalAllowedTunnelPn' parameter from the configuration (in pu).
 
         Returns
         -------
@@ -322,8 +319,7 @@ class GFMParameters(Parameters):
 
     def get_margin_low(self) -> float:
         """
-        Gets the lower margin for power envelopes ('MarginLow')
-        from the configuration.
+        Gets the lower margin for envelopes ('MarginLow') from the configuration.
 
         Returns
         -------
@@ -334,8 +330,7 @@ class GFMParameters(Parameters):
 
     def get_margin_high(self) -> float:
         """
-        Gets the upper margin for power envelopes ('MarginHigh')
-        from the configuration.
+        Gets the upper margin for envelopes ('MarginHigh') from the configuration.
 
         Returns
         -------
@@ -370,7 +365,7 @@ class GFMParameters(Parameters):
 
     def get_base_angular_frequency(self) -> float:
         """
-        Gets the base angular frequency ('Wb') from the configuration.
+        Gets the base angular frequency ('Wb') from the configuration (in rad/s).
 
         Returns
         -------
@@ -382,8 +377,6 @@ class GFMParameters(Parameters):
     def get_delta_phase(self) -> float:
         """
         Gets the phase angle jump magnitude (in degrees).
-
-        Currently, this parameter supports definitions like "±0.3*(Xeff+Xgrid)".
 
         Returns
         -------
@@ -402,9 +395,7 @@ class GFMParameters(Parameters):
 
     def get_voltage_step_at_grid(self) -> float:
         """
-        Gets the voltage step magnitude (in per unit - pu).
-
-        Currently, this parameter supports definitions like "±0.15∗(Xeff+Xgrid)".
+        Gets the voltage step magnitude at the grid (in pu).
 
         Returns
         -------
@@ -425,7 +416,7 @@ class GFMParameters(Parameters):
 
     def get_voltage_step_at_pdr(self) -> float:
         """
-        Gets the voltage step at PDR
+        Gets the voltage step at PDR (Point of Delivery) (in pu).
 
         Returns
         -------
@@ -441,17 +432,12 @@ class GFMParameters(Parameters):
 
     def get_delta_step(self) -> float:
         """
-        Calculates the magnitude of the angle step at the PCC (in per unit - pu).
-
-        This parameter can be defined in two ways:
-        1. As a direct numerical value (e.g., "0.05").
-        2. As an expression based on the system reactances, following the formula:
-        Δθ_pcc = (Xeff / (Xeff + Xgrid)) * Δθ_IF
+        Calculates the magnitude of the angle step at the PCC (in degrees).
 
         Returns
         -------
         float
-            The angle step magnitude in pu.
+            The angle step magnitude in degrees.
         """
 
         x_grid = self.get_grid_reactance()
@@ -468,40 +454,40 @@ class GFMParameters(Parameters):
 
     def get_change_frequency(self) -> float:
         """
-        Gets the rate of change of frequency (in per unit - pu).
+        Gets the rate of change of frequency (in pu/s).
 
         Returns
         -------
         float
-            rate of change of frequency in pu.
+            Rate of change of frequency in pu/s.
         """
         return self.__get_float_value("RoCoF", 0.0) / self._producer._f_nom
 
     def get_change_frequency_duration(self) -> float:
         """
-        Gets the duration of the rate of change of frequency (s).
+        Gets the duration of the rate of change of frequency (in s).
 
         Returns
         -------
         float
-            duration of the rate of change of frequency in s.
+            Duration of the rate of change of frequency in s.
         """
         return self.__get_float_value("RoCoFDuration", 0.0)
 
     def get_initial_frequency(self) -> float:
         """
-        Gets the rate of change of frequency (in per unit - pu).
+        Gets the initial frequency (in pu).
 
         Returns
         -------
         float
-            rate of change of frequency in pu.
+            Initial frequency in pu.
         """
         return self.__get_float_value("Frequency0", 0.0) / self._producer._f_nom
 
     def get_t_expo_decrease(self) -> float:
         """
-        Gets the exponential decrease time constant.
+        Gets the exponential decrease time constant (in s).
 
         Returns
         -------
@@ -512,7 +498,7 @@ class GFMParameters(Parameters):
 
     def get_pll_time_constant(self) -> float:
         """
-        Gets the PLL time constant.
+        Gets the PLL time constant (in s).
 
         Returns
         -------
@@ -523,7 +509,7 @@ class GFMParameters(Parameters):
 
     def get_grid_reactance(self) -> float:
         """
-        Gets the grid reactance.
+        Gets the grid reactance (in pu).
         It is calculated as the inverse of the Short Circuit Ratio (SCR).
 
         Returns
@@ -549,27 +535,40 @@ class GFMParameters(Parameters):
 
     def get_initial_scr(self) -> float:
         """
-        Gets the rate of change of frequency (in per unit - pu).
+        Gets the initial Short Circuit Ratio (SCR) for an SCR jump event.
 
         Returns
         -------
         float
-            rate of change of frequency in pu.
+            The initial SCR value.
         """
         return self.__get_float_value("SCRinitial", 0.0)
 
     def get_final_scr(self) -> float:
         """
-        Gets the rate of change of frequency (in per unit - pu).
+        Gets the final Short Circuit Ratio (SCR) for an SCR jump event.
 
         Returns
         -------
         float
-            rate of change of frequency in pu.
+            The final SCR value.
         """
         return self.__get_float_value("SCRfinal", 0.0)
 
-    def __get_value(self, option: str) -> float:
+    def __get_value(self, option: str) -> str:
+        """
+        Helper to retrieve a string value from hierarchical config sections.
+
+        Parameters
+        ----------
+        option : str
+            The configuration option key to retrieve.
+
+        Returns
+        -------
+        str
+            The retrieved configuration value.
+        """
         if config.has_key(self._oc_section, option):
             return config.get_value(self._oc_section, option)
         elif config.has_key(self._bm_section, option):
@@ -579,6 +578,21 @@ class GFMParameters(Parameters):
         return config.get_value("DEFAULT", option)
 
     def __get_float_value(self, option: str, default_value: float) -> float:
+        """
+        Helper to retrieve a float value from hierarchical config sections.
+
+        Parameters
+        ----------
+        option : str
+            The configuration option key to retrieve.
+        default_value : float
+            The default value to return if the key is not found.
+
+        Returns
+        -------
+        float
+            The retrieved configuration value as a float.
+        """
         if config.has_key(self._oc_section, option):
             return config.get_float(self._oc_section, option, default_value)
         elif config.has_key(self._bm_section, option):

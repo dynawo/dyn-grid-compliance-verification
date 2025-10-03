@@ -16,12 +16,13 @@ from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm import constants
 
 
 class GridForming:
     """
     A class to handle the generation and analysis of Grid Forming (GFM)
-    model results.
+    model results for a single simulation case.
     """
 
     def generate(
@@ -49,7 +50,6 @@ class GridForming:
         oc_name : str
             The name of the operating condition.
         """
-
         parameters.set_section(pcs_name, bm_name, oc_name)
         damping_constant = parameters.get_damping_constant()
         inertia_constant = parameters.get_inertia_constant()
@@ -60,74 +60,60 @@ class GridForming:
 
         time_array, event_time = self._get_time(calculator_name)
 
-        if calculator_name == "PhaseJump":
-            params_list = ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H"]
-        elif calculator_name == "AmplitudeStep":
-            params_list = [
-                "P0",
-                "Q0",
-                "VoltageStepAtGrid",
-                "VoltageStepAtPDR",
-                "SCR",
-                "TimeTo90",
-                "Xeff",
-                "D",
-                "H",
-            ]
-        elif calculator_name == "SCRJump":
-            params_list = ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
-        elif calculator_name == "RoCoF":
-            params_list = [
-                "P0",
-                "Q0",
-                "Frequency0",
-                "RoCoF",
-                "RoCoFDuration",
-                "SCR",
-                "Xeff",
-                "D",
-                "H",
-            ]
-        else:
-            params_list = None
+        # OCP implemented: Get plot parameters directly from the calculator.
+        params_list = calculator.get_plot_parameter_names() if calculator else None
 
-        magnitude, pcc, up, down = self._calculate_envelopes(
+        magnitude_name, pcc_signal, upper_envelope, lower_envelope = self._calculate_envelopes(
             calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
         )
 
         title = f"{pcs_name}.{bm_name}.{oc_name}"
-        self._export_csv(working_path, title, magnitude, time_array, pcc, down, up)
+        self._export_csv(
+            working_path,
+            title,
+            magnitude_name,
+            time_array,
+            pcc_signal,
+            lower_envelope,
+            upper_envelope,
+        )
         self._plot(
             working_path,
             title,
-            magnitude,
+            magnitude_name,
             time_array,
             event_time,
-            pcc,
-            down,
-            up,
+            pcc_signal,
+            lower_envelope,
+            upper_envelope,
             parameters,
             params_list,
         )
 
-    def _get_time(self, calculator_name) -> tuple[np.ndarray, float]:
+    def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
         """
         Generates the time array and defines the event time for the simulation.
+
+        Note: SCRJump and RoCoF start earlier to establish a clear steady-state.
+
+        Parameters
+        ----------
+        calculator_name : str
+            The name of the calculator being used.
 
         Returns
         -------
         tuple[np.ndarray, float]
-            A tuple containing the time array (numpy array) and the event time
-            (float).
+            A tuple containing the time array and the event time (float).
         """
-        if calculator_name == "SCRJump" or calculator_name == "RoCoF":
-            start_time = -1
+        if calculator_name in ["SCRJump", "RoCoF"]:
+            start_time = constants.SIMULATION_START_TIME_EXTENDED
         else:
-            start_time = 0
+            start_time = constants.SIMULATION_START_TIME_DEFAULT
 
-        end_time = 5
-        event_time = 0
-        nb_points = 3000
+        end_time = constants.SIMULATION_END_TIME
+        event_time = constants.SIMULATION_EVENT_TIME
+        nb_points = constants.SIMULATION_POINTS
         time_array = np.linspace(start_time, end_time, nb_points)
 
         return time_array, event_time
@@ -142,57 +128,53 @@ class GridForming:
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates the power envelopes (PCC, upper, and lower) based on
-        the provided calculator and parameters.
+        Calculates the response envelopes using the provided calculator.
 
         Parameters
         ----------
         calculator : GFMCalculator
-            The envelopes calculator object, which performs the core calculations.
+            The envelopes calculator object.
         time_array : np.ndarray
             The time array for the simulation.
         event_time : float
             The time of the event.
         damping_constant : float
-            The damping constant (D) used in the GFM model.
+            The damping constant (D).
         inertia_constant : float
-            The inertia constant (H) used in the GFM model.
+            The inertia constant (H).
         x_eff : float
-            The effective reactance (Xeff) used in the GFM model.
+            The effective reactance (Xeff).
 
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - str: The name of the plot magnitude (e.g., "Power", "Current").
-            - np.ndarray: The PCC (Point of Common Coupling) power data.
-            - np.ndarray: The lower envelope data.
+            - str: The name of the plot magnitude (e.g., "P", "Iq").
+            - np.ndarray: The PCC signal data.
             - np.ndarray: The upper envelope data.
+            - np.ndarray: The lower envelope data.
         """
-        (
-            magnitude,  # Name of the magnitude being plotted (e.g., 'Power')
-            pcc,  # Point of Common Coupling power
-            up,  # Upper envelope
-            down,  # Lower envelope
-        ) = calculator.calculate_envelopes(
-            D=damping_constant,
-            H=inertia_constant,
-            Xeff=x_eff,
-            time_array=time_array,
-            event_time=event_time,
+        magnitude_name, pcc_signal, upper_envelope, lower_envelope = (
+            calculator.calculate_envelopes(
+                D=damping_constant,
+                H=inertia_constant,
+                Xeff=x_eff,
+                time_array=time_array,
+                event_time=event_time,
+            )
         )
 
-        return magnitude, pcc, up, down
+        return magnitude_name, pcc_signal, upper_envelope, lower_envelope
 
     def _export_csv(
         self,
         csv_path: Path,
         title: str,
-        magnitude: str,
+        magnitude_name: str,
         time_array: np.ndarray,
-        pcc: np.ndarray,
-        down: np.ndarray,
-        up: np.ndarray,
+        pcc_signal: np.ndarray,
+        lower_envelope: np.ndarray,
+        upper_envelope: np.ndarray,
     ) -> None:
         """
         Exports the simulation results to a CSV file.
@@ -200,45 +182,48 @@ class GridForming:
         Parameters
         ----------
         csv_path : Path
-            The base path for saving the CSV file. The filename will be
-            constructed using the title.
+            The base path for saving the CSV file.
         title : str
             The title to be used for the CSV filename.
-        magnitude : str
-            The name of the magnitude being plotted (e.g., "Power", "Current").
+        magnitude_name : str
+            The name of the magnitude being saved.
         time_array : np.ndarray
             The time array data.
-        pcc : np.ndarray
-            The PCC power data.
-        down : np.ndarray
+        pcc_signal : np.ndarray
+            The PCC signal data.
+        lower_envelope : np.ndarray
             The lower envelope data.
-        up : np.ndarray
+        upper_envelope : np.ndarray
             The upper envelope data.
         """
-        save_results_to_csv(csv_path / f"{title}.csv", magnitude, time_array, pcc, down, up)
+        save_results_to_csv(
+            path=csv_path / f"{title}.csv",
+            magnitude=magnitude_name,
+            time_array=time_array,
+            pcc_signal=pcc_signal,
+            lower_envelope=lower_envelope,
+            upper_envelope=upper_envelope,
+        )
 
-    def _get_params_plot_info(self, parameters: GFMParameters, params_list: list):
+    def _get_params_plot_info(self, parameters: GFMParameters, params_list: list) -> list[str]:
         """
-        Generates a list of formatted strings with parameter information.
-
-        This helper function selectively extracts parameter values from a
-        GFMParameters object based on a provided list of names and formats
-        them into human-readable strings suitable for plotting.
+        Generates a list of formatted strings with parameter information for plots.
 
         Parameters
         ----------
         parameters : GFMParameters
-            An object containing the GFM simulation parameters and methods to
-            access them.
-        params_list : List[str]
+            The GFM parameters object to query for values.
+        params_list : list
             A list of strings specifying which parameters to extract.
 
         Returns
         -------
-        List[str]
-            A list of formatted strings, where each string represents a
-            requested parameter and its value.
+        list[str]
+            A list of formatted strings, each representing a parameter and its value.
         """
+        if params_list is None:
+            return []
+
         text_params_info = []
 
         if "P0" in params_list:
@@ -246,10 +231,10 @@ class GridForming:
             text_params_info.append(f"P0 = {value:.2f} pu")
         if "Q0" in params_list:
             value = parameters.get_initial_reactive_power()
-            text_params_info.append(f"Q0 = {value:.2f}  pu")
+            text_params_info.append(f"Q0 = {value:.2f} pu")
         if "TimeTo90" in params_list:
             value = parameters.get_time_to_90()
-            text_params_info.append(f"tt90 = {value:.2f} s")
+            text_params_info.append(f"t_90% = {value:.2f} s")
         if "Pmax" in params_list:
             value = parameters.get_max_active_power()
             text_params_info.append(f"Pmax = {value:.2f} pu")
@@ -264,34 +249,34 @@ class GridForming:
             text_params_info.append(f"Qmin = {value:.2f} pu")
         if "DeltaPhase" in params_list:
             value = parameters.get_delta_phase()
-            text_params_info.append(f"Δθ = {value:.2f} °")
+            text_params_info.append(f"Δθ = {value:.2f}°")
         if "SCR" in params_list:
             value = parameters.get_scr()
             text_params_info.append(f"SCR = {value:.2f}")
         if "VoltageStepAtGrid" in params_list:
             value = parameters.get_voltage_step_at_grid()
-            text_params_info.append(f"ΔVGrid = {value / 100:.2f} pu")
+            text_params_info.append(f"ΔV_Grid = {value / 100:.2f} pu")
         if "VoltageStepAtPDR" in params_list:
             value = parameters.get_voltage_step_at_pdr()
-            text_params_info.append(f"ΔVPcc = {value / 100:.2f} pu")
+            text_params_info.append(f"ΔV_PCC = {value / 100:.2f} pu")
         if "AngleStepAtPDR" in params_list:
             value = parameters.get_delta_step()
-            text_params_info.append(f"ΔθPcc = {value:.2f} °")
+            text_params_info.append(f"Δθ_PCC = {value:.2f}°")
         if "SCRinitial" in params_list:
             value = parameters.get_initial_scr()
-            text_params_info.append(f"SCRini = {value:.2f}")
+            text_params_info.append(f"SCR_initial = {value:.2f}")
         if "SCRfinal" in params_list:
             value = parameters.get_final_scr()
-            text_params_info.append(f"SCRfin = {value:.2f}")
+            text_params_info.append(f"SCR_final = {value:.2f}")
         if "Frequency0" in params_list:
             value = parameters.get_initial_frequency()
-            text_params_info.append(f"Frequency0 = {(value * 50):.2f} Hz")
+            text_params_info.append(f"f0 = {(value * 50):.2f} Hz")
         if "RoCoF" in params_list:
             value = parameters.get_change_frequency()
             text_params_info.append(f"RoCoF = {(value * 50):.2f} Hz/s")
         if "RoCoFDuration" in params_list:
             value = parameters.get_change_frequency_duration()
-            text_params_info.append(f"RoCoFDuration = {value:.2f} s")
+            text_params_info.append(f"RoCoF Duration = {value:.2f} s")
         if "Xeff" in params_list:
             value = parameters.get_effective_reactance()
             text_params_info.append(f"Xeff = {value:.2f} pu")
@@ -308,12 +293,12 @@ class GridForming:
         self,
         png_path: Path,
         title: str,
-        magnitude: str,
+        magnitude_name: str,
         time_array: np.ndarray,
         event_time: float,
-        pcc: np.ndarray,
-        down: np.ndarray,
-        up: np.ndarray,
+        pcc_signal: np.ndarray,
+        lower_envelope: np.ndarray,
+        upper_envelope: np.ndarray,
         parameters: GFMParameters,
         params_list: list,
     ) -> None:
@@ -323,34 +308,36 @@ class GridForming:
         Parameters
         ----------
         png_path : Path
-            The base path for saving the plot image. The filename will be
-            constructed using the title.
+            The base path for saving the plot image.
         title : str
             The title for the plot and image filename.
-        magnitude : str
-            The name of the magnitude being plotted (e.g., "Power", "Current").
+        magnitude_name : str
+            The name of the magnitude being plotted.
         time_array : np.ndarray
             The time array data.
         event_time : float
             The time of the event, used to mark on the plot.
-        pcc : np.ndarray
-            The PCC power data to be plotted.
-        down : np.ndarray
+        pcc_signal : np.ndarray
+            The PCC signal data to be plotted.
+        lower_envelope : np.ndarray
             The lower envelope data to be plotted.
-        up : np.ndarray
+        upper_envelope : np.ndarray
             The upper envelope data to be plotted.
+        parameters : GFMParameters
+            The GFM parameters object.
+        params_list : list
+            The list of parameter names to display on the plot.
         """
-
         plot_results(
-            png_path / f"{title}.png",
-            title,
-            magnitude,
-            time_array,
-            event_time,
-            0,  # This parameter might represent a y-axis offset or reference.
-            pcc,
-            down,
-            up,
-            "png&html",
-            self._get_params_plot_info(parameters, params_list),
+            path=png_path / f"{title}.png",
+            title=title,
+            magnitude=magnitude_name,
+            time_array=time_array,
+            event_time=event_time,
+            shift_time=0,  # This parameter might represent a y-axis offset or reference.
+            pcc_signal=pcc_signal,
+            lower_envelope=lower_envelope,
+            upper_envelope=upper_envelope,
+            output_format="png&html",
+            params_list=self._get_params_plot_info(parameters, params_list),
         )
