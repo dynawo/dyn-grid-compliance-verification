@@ -80,6 +80,7 @@ starting with :ref:`get-started`.
    usage/inputs
    usage/results
    usage/configuration
+   usage/gfm_envelopes
 
 Reference
 =========
