@@ -5,6 +5,8 @@ They correspond to the envelopes obtained by using the following parameters for 
 
 * Nominal power: 100 MVA,
 * Nominal voltage: 225 kV,
+* Min and max active power: -/+ 120 MW
+* Min and max reactive power: -/+ 30 MVAr
 * Damping factor D: 200 (overdamped), 95 (underdamped)
 * Inertia constant H: 5,
 * Effective reactance Xeff: 0.27 pu
