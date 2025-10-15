@@ -197,7 +197,7 @@ class AmplitudeStep(GFMCalculator):
             The delta_iq array for the system, with pre-event values zeroed.
         """
         voltage_step = self._voltage_step / 100.0
-        delta_iq = voltage_step / Xeff
+        delta_iq = voltage_step / (Xeff + 1 / self._scr)
 
         tau = -self._time_to_90 / np.log(0.1)
 
@@ -233,7 +233,7 @@ class AmplitudeStep(GFMCalculator):
             The minimum delta_iq envelope array.
         """
         voltage_step = self._voltage_step / 100
-        delta_iq = voltage_step / Xeff
+        delta_iq = voltage_step / (Xeff + 1 / self._scr)
         tunnel = self._get_tunnel(Xeff)
         tau = -self._time_to_90 / np.log(0.1)
         ttunnel = self._time_for_tunnel
@@ -283,7 +283,7 @@ class AmplitudeStep(GFMCalculator):
             The maximum delta_iq envelope array.
         """
         voltage_step = self._voltage_step / 100.0
-        delta_iq = voltage_step / Xeff
+        delta_iq = voltage_step / (Xeff + 1 / self._scr)
         tunnel = self._get_tunnel(Xeff)
         ttunnel = self._time_for_tunnel
         margin_high = self._margin_high
@@ -320,7 +320,7 @@ class AmplitudeStep(GFMCalculator):
             The calculated constant tunnel value.
         """
         voltage_step = self._voltage_step / 100.0
-        delta_iq = voltage_step / Xeff
+        delta_iq = voltage_step / (Xeff + 1 / self._scr)
 
         return max(
             self._final_allowed_tunnel_pn,
