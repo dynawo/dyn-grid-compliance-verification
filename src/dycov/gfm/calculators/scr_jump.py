@@ -21,11 +21,11 @@ logger = dycov_logging.get_logger(__name__)
 
 class SCRJump(GFMCalculator):
     """
-    Class to calculate the GFM response to an SCR (Short-Circuit Ratio) Jump.
+    Calculates the GFM response to a Short-Circuit Ratio (SCR) jump.
 
-    This class handles all core calculations for delta_p and active power
-    envelopes, differentiating between overdamped and underdamped system
-    responses.
+    This class handles all core calculations for active power envelopes,
+    differentiating between overdamped and underdamped system responses
+    following an SCR event.
     """
 
     def __init__(self, gfm_params: GFMParameters) -> None:
@@ -35,8 +35,7 @@ class SCRJump(GFMCalculator):
         Parameters
         ----------
         gfm_params : GFMParameters
-            An object containing all necessary parameters for the GFM
-            calculations.
+            An object containing all necessary parameters for GFM calculations.
         """
         super().__init__(gfm_params=gfm_params)
 
@@ -60,7 +59,12 @@ class SCRJump(GFMCalculator):
         return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
 
     def calculate_envelopes(
-        self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
+        self,
+        D: float,
+        H: float,
+        Xeff: float,
+        time_array: np.ndarray,
+        event_time: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates the change in power (delta_p) and active power envelopes
@@ -69,11 +73,11 @@ class SCRJump(GFMCalculator):
         Parameters
         ----------
         D : float
-            Damping factor.
+            Damping factor (D) of the system.
         H : float
-            Inertia constant.
+            Inertia constant (H) of the system.
         Xeff : float
-            Effective reactance.
+            Effective reactance (Xeff) of the system.
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
@@ -90,12 +94,12 @@ class SCRJump(GFMCalculator):
         """
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
-        # Step 1: Calculate DeltaP for different D and H variations
+        # Step 1: Calculate DeltaP for different D and H variations.
         (
-            delta_p_array,
-            delta_p_min_env,
-            delta_p_max_env,
-            p_peak_array,
+            delta_p_results,
+            min_envelope_results,
+            max_envelope_results,
+            peak_power_results,
             _,
         ) = self._get_delta_p(
             D=D,
@@ -105,18 +109,18 @@ class SCRJump(GFMCalculator):
             event_time=event_time,
         )
 
-        # Step 2: Generate final envelopes from all DeltaP candidates
-        p_pcc, p_up, p_down = self._get_envelopes(
-            delta_p_array=delta_p_array,
-            delta_p_min_env_array=delta_p_min_env,
-            delta_p_max_env_array=delta_p_max_env,
-            p_peak_array=p_peak_array,
+        # Step 2: Generate the final envelopes from all DeltaP candidate traces.
+        power_at_pcc, upper_envelope, lower_envelope = self._get_envelopes(
+            delta_p_array=delta_p_results,
+            delta_p_min_env_array=min_envelope_results,
+            delta_p_max_env_array=max_envelope_results,
+            p_peak_array=peak_power_results,
             time_array=time_array,
             event_time=event_time,
         )
 
         magnitude_name = "P"
-        return magnitude_name, p_pcc, p_up, p_down
+        return magnitude_name, power_at_pcc, upper_envelope, lower_envelope
 
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -127,12 +131,8 @@ class SCRJump(GFMCalculator):
 
         Parameters
         ----------
-        D : float
-            Nominal damping factor.
-        H : float
-            Nominal inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H : float, Xeff : float
+            Nominal system parameters.
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
@@ -141,49 +141,52 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-            A tuple of arrays containing: delta_p waveforms, min exponential
-            envelopes, max exponential envelopes, peak power changes, and
-            damping ratios for each D,H pair.
+            A tuple of arrays containing: delta_p waveforms, min/max exponential
+            envelopes, peak power changes, and damping ratios for each D,H pair.
         """
-        d_values = np.array([D, D * self._min_ratio, D * self._max_ratio])
-        h_values = np.array([H, H / self._min_ratio, H / self._max_ratio])
+        # Create arrays for Damping and Inertia with nominal, max, and min variations.
+        damping_variations = np.array([D, D * self._max_ratio, D * self._min_ratio])
+        inertia_variations = np.array([H, H / self._max_ratio, H / self._min_ratio])
 
-        num_variations = len(d_values)
+        num_variations = len(damping_variations)
         num_time_points = len(time_array)
 
-        delta_p_array = np.zeros((num_variations, num_time_points))
-        delta_p_min_env_array = np.full((num_variations, num_time_points), np.nan)
-        delta_p_max_env_array = np.full((num_variations, num_time_points), np.nan)
-        p_peak_array = np.zeros(num_variations)
-        epsilon_array = np.zeros(num_variations)
+        # Initialize arrays to store the results for each parameter variation.
+        delta_p_results = np.zeros((num_variations, num_time_points))
+        min_envelope_results = np.full((num_variations, num_time_points), np.nan)
+        max_envelope_results = np.full((num_variations, num_time_points), np.nan)
+        peak_power_results = np.zeros(num_variations)
+        epsilon_results = np.zeros(num_variations)
 
+        # Calculate the response for each combination of parameters.
         for i in range(num_variations):
             delta_p, delta_p_min, delta_p_max, p_peak, epsilon = (
                 self._calculate_delta_p_for_damping(
-                    d_values[i], h_values[i], Xeff, time_array, event_time
+                    damping_variations[i], inertia_variations[i], Xeff, time_array, event_time
                 )
             )
-            delta_p_array[i, :] = delta_p
-            p_peak_array[i] = p_peak
-            epsilon_array[i] = epsilon
+            delta_p_results[i, :] = delta_p
+            peak_power_results[i] = p_peak
+            epsilon_results[i] = epsilon
 
+            # Min/max envelopes only exist for underdamped cases.
             if delta_p_min is not None:
-                delta_p_min_env_array[i, :] = delta_p_min
+                min_envelope_results[i, :] = delta_p_min
             if delta_p_max is not None:
-                delta_p_max_env_array[i, :] = delta_p_max
+                max_envelope_results[i, :] = delta_p_max
 
         return (
-            delta_p_array,
-            delta_p_min_env_array,
-            delta_p_max_env_array,
-            p_peak_array,
-            epsilon_array,
+            delta_p_results,
+            min_envelope_results,
+            max_envelope_results,
+            peak_power_results,
+            epsilon_results,
         )
 
     def _modify_envelope(
         self,
-        signal: np.ndarray,
-        p_50_percent: np.ndarray,
+        envelope_signal: np.ndarray,
+        power_at_50_percent: np.ndarray,
         time_array: np.ndarray,
         event_time: float,
     ) -> np.ndarray:
@@ -193,9 +196,9 @@ class SCRJump(GFMCalculator):
 
         Parameters
         ----------
-        signal : np.ndarray
+        envelope_signal : np.ndarray
             The original envelope signal to be modified.
-        p_50_percent : np.ndarray
+        power_at_50_percent : np.ndarray
             The signal representing 50% of the expected power change.
         time_array : np.ndarray
             Array of time points for the simulation.
@@ -207,33 +210,41 @@ class SCRJump(GFMCalculator):
         np.ndarray
             The modified envelope signal.
         """
-        mask = (time_array >= event_time) & (
+        # Create a boolean mask for the first 30 ms post-event.
+        modification_mask = (time_array >= event_time) & (
             time_array <= event_time + constants.SCRJUMP_MODIFY_ENVELOPE_S
         )
-        signal = np.where(mask, p_50_percent, signal)
+        # Apply the 50% power value within the masked time window.
+        modified_signal = np.where(modification_mask, power_at_50_percent, envelope_signal)
 
-        signal = np.where(
-            signal * mask < self._min_active_power,
+        # Additional logic to adjust the signal within the mask.
+        modified_signal = np.where(
+            modified_signal * modification_mask < self._min_active_power,
             self._min_active_power + 0.2,
-            signal,
+            modified_signal,
         )
-        signal = np.where(
-            signal * mask > self._max_active_power,
+        modified_signal = np.where(
+            modified_signal * modification_mask > self._max_active_power,
             self._max_active_power - 0.2,
-            signal,
+            modified_signal,
         )
-        return signal
+        return modified_signal
 
     def _get_envelope_traces(
         self,
         delta_p: np.ndarray,
         time_array: np.ndarray,
         event_time: float,
-        tunnel: float,
+        tunnel_value: float,
+        is_overdamped: bool,
+        delta_p_at_event: float,
+        delta_p_base: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Generates the upper and lower envelope traces based on a delta_p
-        waveform, intentionally replicating legacy inconsistencies.
+        Generates upper and lower envelope traces from a delta_p waveform.
+
+        Note: This method intentionally replicates legacy logic to ensure result
+        consistency with previous versions.
 
         Parameters
         ----------
@@ -243,60 +254,94 @@ class SCRJump(GFMCalculator):
             Array of time points for the simulation.
         event_time : float
             The time at which the event occurs.
-        tunnel : float
+        tunnel_value : float
             The tolerance tunnel value to be applied.
+        is_overdamped : bool
+            Flag indicating if the system response is overdamped.
+        delta_p_at_event : float
+            Value of delta_p right after the event to determine direction.
+        delta_p_base : np.ndarray
+            The nominal delta_p waveform.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             A tuple containing the upper and lower envelope traces.
         """
-        event_idx = np.searchsorted(time_array, event_time + 0.01, side="right")
-        delta_p_at_event = delta_p[event_idx] if event_idx < len(delta_p) else 0
-
         if delta_p_at_event > 0:
-            # Correct behavior: use event_time as reference
-            p_50_percent = self._initial_active_power + np.where(
-                time_array >= event_time, delta_p * 0.5 + 0.005, delta_p
+            # Case 1: Power increases (positive delta_p).
+            upper_trace = (
+                self._initial_active_power + delta_p * (1 + self._margin_high) + tunnel_value
+            )
+            lower_trace = (
+                self._initial_active_power + delta_p * (1 - self._margin_low) - tunnel_value
             )
 
-            p_up_trace = self._initial_active_power + delta_p * (1 + self._margin_high) + tunnel
-            p_down_trace = self._initial_active_power + delta_p * (1 - self._margin_low) - tunnel
-            p_down_trace = self._modify_envelope(
-                p_down_trace, p_50_percent, time_array, event_time
+            power_at_50_percent = self._initial_active_power + np.where(
+                time_array >= event_time, delta_p_base * 0.5 + 0.005, delta_p
             )
 
-            mask = time_array >= event_time
-            condition = mask & (p_down_trace > self._max_active_power * 0.95)
-            p_down_trace = np.where(condition, self._max_active_power * 0.95, p_down_trace)
+            time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
+            condition = time_mask & (lower_trace > self._max_active_power * constants.MOIS_TUNNEL)
 
+            if is_overdamped:
+                lower_trace = self._modify_envelope(
+                    lower_trace, power_at_50_percent, time_array, event_time
+                )
+                lower_trace = np.where(
+                    condition, self._max_active_power * constants.MOIS_TUNNEL, lower_trace
+                )
+            else:  # Underdamped case
+                lower_trace = np.where(
+                    condition, self._max_active_power * constants.MOIS_TUNNEL, lower_trace
+                )
+                lower_trace = self._modify_envelope(
+                    lower_trace, power_at_50_percent, time_array, event_time
+                )
         else:
-            # Inconsistent legacy behavior: use start_time as reference
-            # This is intentionally preserved to match the original script.
-            start_time = time_array[0]
-            p_50_percent = self._initial_active_power + np.where(
-                time_array >= start_time, delta_p * 0.5 + 0.005, delta_p
+            # Case 2: Power decreases (negative delta_p).
+            upper_trace = (
+                self._initial_active_power + delta_p * (1 - self._margin_high) + tunnel_value
+            )
+            lower_trace = (
+                self._initial_active_power + delta_p * (1 + self._margin_low) - tunnel_value
             )
 
-            p_up_trace = self._initial_active_power + delta_p * (1 - self._margin_high) + tunnel
-            p_up_trace = self._modify_envelope(p_up_trace, p_50_percent, time_array, event_time)
+            power_at_50_percent = self._initial_active_power + np.where(
+                time_array >= event_time, delta_p_base * 0.5 + 0.005, delta_p
+            )
 
-            mask = time_array >= event_time
-            condition = mask & (p_up_trace < self._min_active_power * 0.95)
-            p_up_trace = np.where(condition, self._min_active_power * 0.95, p_up_trace)
+            time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
+            condition = time_mask & (upper_trace < self._min_active_power * constants.MOIS_TUNNEL)
 
-            p_down_trace = self._initial_active_power + delta_p * (1 + self._margin_low) - tunnel
+            if is_overdamped:
+                upper_trace = self._modify_envelope(
+                    upper_trace, power_at_50_percent, time_array, event_time
+                )
+                upper_trace = np.where(
+                    condition, self._min_active_power * constants.MOIS_TUNNEL, upper_trace
+                )
+            else:  # Underdamped case
+                upper_trace = np.where(
+                    condition, self._min_active_power * constants.MOIS_TUNNEL, upper_trace
+                )
+                upper_trace = self._modify_envelope(
+                    upper_trace, power_at_50_percent, time_array, event_time
+                )
 
-        return p_up_trace, p_down_trace
+        # Ensure final traces are within the operational power limits.
+        final_upper_trace = self._limit_signal(upper_trace)
+        final_lower_trace = self._limit_signal(lower_trace)
+        return final_upper_trace, final_lower_trace
 
     def _apply_initial_limiting(
         self,
-        p_up: np.ndarray,
-        p_down: np.ndarray,
-        delta_p: np.ndarray,
+        upper_envelope: np.ndarray,
+        lower_envelope: np.ndarray,
+        delta_p_nominal: np.ndarray,
         time_array: np.ndarray,
         event_time: float,
-        tunnel: float,
+        tunnel_value: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Applies a limit to the envelopes for the first 100 ms to prevent
@@ -304,17 +349,17 @@ class SCRJump(GFMCalculator):
 
         Parameters
         ----------
-        p_up : np.ndarray
+        upper_envelope : np.ndarray
             The upper envelope signal.
-        p_down : np.ndarray
+        lower_envelope : np.ndarray
             The lower envelope signal.
-        delta_p : np.ndarray
+        delta_p_nominal : np.ndarray
             The nominal change in power waveform to determine event direction.
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
             The time at which the event occurs.
-        tunnel : float
+        tunnel_value : float
             The tolerance tunnel value.
 
         Returns
@@ -322,21 +367,35 @@ class SCRJump(GFMCalculator):
         tuple[np.ndarray, np.ndarray]
             A tuple containing the limited upper and lower envelopes.
         """
-        event_idx = np.searchsorted(time_array, event_time + 0.01, side="right")
-        delta_p_at_event = delta_p[event_idx] if event_idx < len(delta_p) else 0
+        # Find the index right after the event to determine the direction of power change.
+        event_index = np.searchsorted(time_array, event_time + 0.01, side="right")
+        delta_p_at_event = (
+            delta_p_nominal[event_index] if event_index < len(delta_p_nominal) else 0
+        )
 
-        mask = (time_array >= event_time) & (
+        # Create a boolean mask for the initial limiting period (first 100 ms).
+        limit_mask = (time_array >= event_time) & (
             time_array <= event_time + constants.SCRJUMP_INITIAL_LIMITING_S
         )
 
         if delta_p_at_event > 0:
-            condition = mask & (p_down < (self._initial_active_power - tunnel))
-            p_down = np.where(condition, self._initial_active_power - tunnel, p_down)
+            # If power increases, prevent the lower envelope from dipping below the initial power.
+            limit_condition = limit_mask & (
+                lower_envelope < (self._initial_active_power - tunnel_value)
+            )
+            lower_envelope = np.where(
+                limit_condition, self._initial_active_power - tunnel_value, lower_envelope
+            )
         else:
-            condition = mask & (p_up > (self._initial_active_power + tunnel))
-            p_up = np.where(condition, self._initial_active_power + tunnel, p_up)
+            # If power decreases, prevent the upper envelope from spiking above the initial power.
+            limit_condition = limit_mask & (
+                upper_envelope > (self._initial_active_power + tunnel_value)
+            )
+            upper_envelope = np.where(
+                limit_condition, self._initial_active_power + tunnel_value, upper_envelope
+            )
 
-        return p_up, p_down
+        return upper_envelope, lower_envelope
 
     def _limit_signal(self, signal: np.ndarray) -> np.ndarray:
         """
@@ -385,53 +444,102 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing the final PCC, upper, and lower power signals.
+            A tuple containing the final PCC signal, upper, and lower envelopes.
         """
-        p_up_candidates = []
-        p_down_candidates = []
-
-        for i in range(delta_p_array.shape[0]):
-            delta_p = delta_p_array[i, :]
-            p_peak = p_peak_array[i]
-            tunnel = self._get_tunnel(p_peak)
-
-            p_up_trace, p_down_trace = self._get_envelope_traces(
-                delta_p, time_array, event_time, tunnel
-            )
-            p_up_candidates.append(p_up_trace)
-            p_down_candidates.append(p_down_trace)
-
-            if not np.isnan(delta_p_min_env_array[i, 0]):
-                p_up_from_min, p_down_from_min = self._get_envelope_traces(
-                    delta_p_min_env_array[i, :], time_array, event_time, tunnel
-                )
-                p_up_candidates.append(p_up_from_min)
-                p_down_candidates.append(p_down_from_min)
-
-            if not np.isnan(delta_p_max_env_array[i, 0]):
-                p_up_from_max, p_down_from_max = self._get_envelope_traces(
-                    delta_p_max_env_array[i, :], time_array, event_time, tunnel
-                )
-                p_up_candidates.append(p_up_from_max)
-                p_down_candidates.append(p_down_from_max)
+        upper_trace_candidates = []
+        lower_trace_candidates = []
+        upper_traces_from_max_env = []
+        lower_traces_from_max_env = []
+        upper_traces_from_min_env = []
+        lower_traces_from_min_env = []
 
         delta_p_nominal = delta_p_array[0, :]
-        p_50_percent = self._initial_active_power + delta_p_nominal * 0.5
-        p_up_candidates.append(p_50_percent)
-        p_down_candidates.append(p_50_percent)
+        event_index = np.searchsorted(time_array, event_time, side="right")
+        delta_p_at_event = (
+            delta_p_nominal[event_index] if event_index < len(delta_p_nominal) else 0
+        )
 
-        p_up_matrix = np.vstack(p_up_candidates)
-        p_down_matrix = np.vstack(p_down_candidates)
+        # Generate envelope traces for each parameter variation.
+        for i in range(delta_p_array.shape[0]):
+            current_delta_p = delta_p_array[i, :]
+            current_peak_power = p_peak_array[i]
+            tunnel_value = self._get_tunnel(current_peak_power)
 
-        p_up_combined = np.nanmax(p_up_matrix, axis=0)
-        p_down_combined = np.nanmin(p_down_matrix, axis=0)
+            # Generate traces from the main delta_p waveform.
+            upper_trace, lower_trace = self._get_envelope_traces(
+                delta_p=current_delta_p,
+                time_array=time_array,
+                event_time=event_time,
+                tunnel_value=tunnel_value,
+                is_overdamped=np.isnan(delta_p_min_env_array[i, 0]),
+                delta_p_at_event=delta_p_at_event,
+                delta_p_base=delta_p_nominal,
+            )
+            upper_trace_candidates.append(upper_trace)
+            lower_trace_candidates.append(lower_trace)
 
-        p_pcc = self._initial_active_power + delta_p_nominal
+            # Generate traces from the max envelope (for underdamped cases).
+            if not np.isnan(delta_p_max_env_array[i, 0]):
+                upper_from_max, lower_from_max = self._get_envelope_traces(
+                    delta_p=delta_p_max_env_array[i, :],
+                    time_array=time_array,
+                    event_time=event_time,
+                    tunnel_value=tunnel_value,
+                    is_overdamped=np.isnan(delta_p_max_env_array[i, 0]),
+                    delta_p_at_event=delta_p_at_event,
+                    delta_p_base=delta_p_nominal,
+                )
+                upper_traces_from_max_env.append(upper_from_max)
+                lower_traces_from_max_env.append(lower_from_max)
 
-        p_up_limited = self._limit_signal(p_up_combined)
-        p_down_limited = self._limit_signal(p_down_combined)
+            # Generate traces from the min envelope (for underdamped cases).
+            if not np.isnan(delta_p_min_env_array[i, 0]):
+                upper_from_min, lower_from_min = self._get_envelope_traces(
+                    delta_p=delta_p_min_env_array[i, :],
+                    time_array=time_array,
+                    event_time=event_time,
+                    tunnel_value=tunnel_value,
+                    is_overdamped=np.isnan(delta_p_min_env_array[i, 0]),
+                    delta_p_at_event=delta_p_at_event,
+                    delta_p_base=delta_p_nominal,
+                )
+                upper_traces_from_min_env.append(upper_from_min)
+                lower_traces_from_min_env.append(lower_from_min)
 
+        # Calculate the nominal power signal at the PCC.
+        power_at_pcc = self._initial_active_power + delta_p_nominal
+        power_at_pcc = self._limit_signal(power_at_pcc)
+
+        # Signal representing 50% of the power change.
+        power_at_50_percent = self._initial_active_power + np.where(
+            time_array >= time_array[0], current_delta_p * 0.5, current_delta_p
+        )
+        power_at_50_percent = self._limit_signal(power_at_50_percent)
+
+        # Combine all candidate traces to find the final envelopes.
+        if np.isnan(delta_p_max_env_array[i, 0]):
+            upper_matrix = np.vstack(upper_trace_candidates)
+            combined_upper_envelope = np.nanmax(upper_matrix, axis=0)
+        else:
+            upper_matrix = np.vstack(
+                (upper_trace_candidates, [power_at_50_percent], upper_traces_from_max_env)
+            )
+        combined_upper_envelope = np.nanmax(upper_matrix, axis=0)
+
+        if np.isnan(delta_p_min_env_array[i, 0]):
+            lower_matrix = np.vstack(lower_trace_candidates)
+        else:
+            lower_matrix = np.vstack(
+                (lower_trace_candidates, [power_at_50_percent], lower_traces_from_min_env)
+            )
+        combined_lower_envelope = np.nanmin(lower_matrix, axis=0)
+
+        # The following block was commented out in the original code.
+        # It seems intended for applying initial limiting, which might be handled
+        # elsewhere or was deemed unnecessary.
+        """
         tunnel_nominal = self._get_tunnel(p_peak_array[0])
+        
         upper_envelope, lower_envelope = self._apply_initial_limiting(
             p_up_limited,
             p_down_limited,
@@ -440,71 +548,90 @@ class SCRJump(GFMCalculator):
             event_time,
             tunnel_nominal,
         )
+        """
 
+        upper_envelope = combined_upper_envelope
+        lower_envelope = combined_lower_envelope
+
+        # Apply a final delay for EMT-type simulations.
         if self._is_emt_flag:
+            # Safely get initial values, handling both arrays and scalars.
+            initial_upper_val = (
+                upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
+            )
+            initial_lower_val = (
+                lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
+            )
+            initial_pcc_val = power_at_pcc[0] if not np.isscalar(power_at_pcc) else power_at_pcc
+
             upper_envelope = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, upper_envelope[0], time_array, upper_envelope
+                constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, upper_envelope
             )
             lower_envelope = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, lower_envelope[0], time_array, lower_envelope
+                constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, lower_envelope
             )
-            p_pcc = self._apply_delay(constants.EMT_FINAL_DELAY_S, p_pcc[0], time_array, p_pcc)
+            power_at_pcc = self._apply_delay(
+                constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+            )
 
-        return p_pcc, upper_envelope, lower_envelope
+        return power_at_pcc, upper_envelope, lower_envelope
 
     def _calculate_common_params(
         self, D: float, H: float, Xeff: float
     ) -> tuple[float, float, float, float]:
         """
-        Calculates common parameters: total reactance, epsilon, wn, and p_peak.
+        Calculates common parameters used in power response calculations.
 
         Parameters
         ----------
         D : float
-            Damping factor.
+            Damping factor (D).
         H : float
-            Inertia constant.
+            Inertia constant (H).
         Xeff : float
-            Effective reactance.
+            Effective reactance (Xeff).
 
         Returns
         -------
         tuple[float, float, float, float]
-            A tuple containing: total initial reactance, damping ratio,
-            natural frequency, and calculated peak power change.
+            A tuple containing: total reactance, damping ratio (epsilon),
+            natural frequency (wn), and calculated peak power change.
         """
-        x_total_initial = Xeff + 1 / self._final_scr
-        u_prod = self._initial_voltage * self._grid_voltage
-        wb = self._base_angular_frequency
+        total_reactance = Xeff + 1 / self._final_scr
+        voltage_product = self._initial_voltage * self._grid_voltage
+        base_angular_freq = self._base_angular_frequency
 
-        if H <= 0 or x_total_initial <= 0:
-            wn = 0
-            epsilon = float("inf")
+        if H <= 0 or total_reactance <= 0:
+            natural_frequency = 0
+            damping_ratio = float("inf")
         else:
-            wn = np.sqrt(wb * u_prod / (2 * H * x_total_initial))
-            epsilon = D / (4 * H * wn) if wn > 0 else float("inf")
+            # Natural frequency of oscillation (rad/s)
+            natural_frequency = np.sqrt(
+                base_angular_freq * voltage_product / (2 * H * total_reactance)
+            )
+            # Damping ratio (dimensionless)
+            damping_ratio = (
+                D / (4 * H * natural_frequency) if natural_frequency > 0 else float("inf")
+            )
 
-        p_peak_calc = (
-            self._delta_impedance * self._initial_active_power / x_total_initial
-            if x_total_initial > 0
+        # Theoretical peak power change
+        peak_power_change = (
+            self._delta_impedance * self._initial_active_power / total_reactance
+            if total_reactance > 0
             else 0
         )
-        return x_total_initial, epsilon, wn, p_peak_calc
+        return total_reactance, damping_ratio, natural_frequency, peak_power_change
 
     def _calculate_delta_p_for_damping(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]:
         """
-        Selects the delta_p calculation method based on the damping ratio (epsilon).
+        Selects the delta_p calculation method based on the damping ratio.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H : float, Xeff : float
+            System parameters for the current variation.
         time_array : np.ndarray
             Array of time points for the simulation.
         event_time : float
@@ -513,37 +640,35 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]
-            A tuple containing: the delta_p waveform, min envelope (None if
-            overdamped), max envelope (None if overdamped), peak power change,
-            and damping ratio.
+            A tuple containing: the delta_p waveform, min/max envelopes (or None),
+            peak power change, and damping ratio.
         """
-        _, epsilon, _, _ = self._calculate_common_params(D, H, Xeff)
+        _, damping_ratio, _, _ = self._calculate_common_params(D, H, Xeff)
 
-        if epsilon >= 1:
-            delta_p, p_peak, epsilon_calc = self._get_overdamped_delta_p(
+        # Epsilon >= 1 corresponds to an overdamped or critically damped system.
+        if damping_ratio >= 1:
+            delta_p, p_peak, calculated_epsilon = self._get_overdamped_delta_p(
                 D, H, Xeff, time_array, event_time
             )
-            return delta_p, None, None, p_peak, epsilon_calc
-        else:
-            delta_p, delta_p_min, delta_p_max, p_peak, epsilon_calc = (
+            return delta_p, None, None, p_peak, calculated_epsilon
+        else:  # Epsilon < 1 corresponds to an underdamped system.
+            delta_p, delta_p_min, delta_p_max, p_peak, calculated_epsilon = (
                 self._get_underdamped_delta_p(D, H, Xeff, time_array, event_time)
             )
-            return delta_p, delta_p_min, delta_p_max, p_peak, epsilon_calc
+            return delta_p, delta_p_min, delta_p_max, p_peak, calculated_epsilon
 
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
         """
-        Calculates the base delta_p waveform for an overdamped system.
+        Calculates the base delta_p waveform for an overdamped system response.
+
+        This solves the second-order differential equation for the system.
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H: float, Xeff: float
+            System parameters.
         time_array : np.ndarray
             Time array for the simulation, starting from t=0 at the event.
 
@@ -552,40 +677,44 @@ class SCRJump(GFMCalculator):
         tuple[np.ndarray, float, float]
             A tuple containing the base delta_p, peak power, and epsilon.
         """
-        x_total, epsilon, _, p_peak = self._calculate_common_params(D, H, Xeff)
+        total_reactance, epsilon, _, peak_power = self._calculate_common_params(D, H, Xeff)
 
-        alpha_val = D / (2 * H)
-        beta_val = self._base_angular_frequency / (2 * H * x_total)
+        # Coefficients from the characteristic equation of the system's DE
+        alpha_coeff = D / (2 * H)
+        beta_coeff = self._base_angular_frequency / (2 * H * total_reactance)
 
-        sqrt_term = alpha_val**2 - 4 * beta_val
-        if sqrt_term < 0:
+        sqrt_term_val = alpha_coeff**2 - 4 * beta_coeff
+        if sqrt_term_val < 0:
             logger.warning(
                 "Negative sqrt term in overdamped calc, may be misclassified. Clamping to 0."
             )
-            sqrt_term = 0
+            sqrt_term_val = 0
 
-        p1 = (alpha_val - np.sqrt(sqrt_term)) / 2
-        p2 = (alpha_val + np.sqrt(sqrt_term)) / 2
+        # Roots of the characteristic equation
+        p1 = (alpha_coeff - np.sqrt(sqrt_term_val)) / 2
+        p2 = (alpha_coeff + np.sqrt(sqrt_term_val)) / 2
 
-        if abs(p2 - p1) < 1e-9:
+        # Calculate integration constants A and B for the solution
+        if abs(p2 - p1) < 1e-9:  # Critically damped case
             A = 0.5
             B = 0.5
         else:
             A = (2 * H * (-p1) + D) / ((p2 - p1) * (2 * H))
             B = (2 * H * (-p2) + D) / ((p1 - p2) * (2 * H))
 
+        # Full solution is of the form: p_peak * (A*e^(-p1*t) + B*e^(-p2*t))
         term1 = A * np.exp(-p1 * time_array)
         term2 = B * np.exp(-p2 * time_array)
+        delta_p_base = peak_power * (term1 + term2)
 
-        delta_p_base = p_peak * (term1 + term2)
-
-        return delta_p_base, p_peak, epsilon
+        return delta_p_base, peak_power, epsilon
 
     def _get_overdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
         """
-        Calculates final delta_p for an overdamped system by applying event time.
+        Calculates the final delta_p for an overdamped system by applying the
+        event time (response is zero before the event).
 
         Parameters
         ----------
@@ -599,13 +728,15 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[np.ndarray, float, float]
-            A tuple containing the final delta_p, p_peak, and epsilon.
+            A tuple containing the final delta_p, peak power, and epsilon.
         """
+        # Time relative to the event start
         time_since_event = np.maximum(0, time_array - event_time)
         delta_p_base, p_peak, epsilon = self._get_overdamped_delta_p_base(
             D, H, Xeff, time_since_event
         )
 
+        # The response is zero before the event and has an inverted sign.
         delta_p = np.where(time_array < event_time, 0, delta_p_base * -1)
 
         return delta_p, p_peak, epsilon
@@ -618,42 +749,47 @@ class SCRJump(GFMCalculator):
 
         Parameters
         ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
+        D : float, H: float, Xeff: float
+            System parameters.
         time_array : np.ndarray
             Time array for the simulation, starting from t=0 at the event.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray, float, float]
-            A tuple containing delta_p, min/max envelopes, p_peak, and epsilon.
+            A tuple containing delta_p, min/max envelopes, peak power, and epsilon.
         """
-        _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
+        _, epsilon, natural_frequency, peak_power = self._calculate_common_params(D, H, Xeff)
 
-        wd = wn * np.sqrt(1 - epsilon**2)
+        # Damped natural frequency
+        damped_frequency = natural_frequency * np.sqrt(1 - epsilon**2)
 
-        exp_term = np.exp(-epsilon * wn * time_array)
-        cos_term = np.cos(wd * time_array)
-        sin_term = np.sin(wd * time_array)
-        sin_coeff = (D / (2 * H) - epsilon * wn) / wd if wd > 0 else 0
+        # Components of the underdamped solution
+        exp_term = np.exp(-epsilon * natural_frequency * time_array)
+        cos_term = np.cos(damped_frequency * time_array)
+        sin_term = np.sin(damped_frequency * time_array)
+        sin_coeff = (
+            (D / (2 * H) - epsilon * natural_frequency) / damped_frequency
+            if damped_frequency > 0
+            else 0
+        )
 
-        delta_p_base = p_peak * -1 * (exp_term * cos_term + sin_coeff * exp_term * sin_term)
+        # Full solution is an exponentially decaying sinusoid
+        delta_p_base = peak_power * -1 * (exp_term * cos_term + sin_coeff * exp_term * sin_term)
 
+        # The envelopes are determined by the amplitude of the oscillation
         amplitude_envelope = np.sqrt(1 + sin_coeff**2)
-        delta_p_max_env = np.abs(amplitude_envelope * p_peak * exp_term)
+        delta_p_max_env = np.abs(amplitude_envelope * peak_power * exp_term)
         delta_p_min_env = -1 * delta_p_max_env
 
-        return delta_p_base, delta_p_min_env, delta_p_max_env, p_peak, epsilon
+        return delta_p_base, delta_p_min_env, delta_p_max_env, peak_power, epsilon
 
     def _get_underdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
         """
-        Calculates final delta_p and envelopes for an underdamped system.
+        Calculates final delta_p and envelopes for an underdamped system,
+        applying the event time.
 
         Parameters
         ----------
@@ -667,27 +803,32 @@ class SCRJump(GFMCalculator):
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray, float, float]
-            A tuple containing delta_p, min/max envelopes, p_peak, and epsilon.
+            A tuple containing delta_p, min/max envelopes, peak power, and epsilon.
         """
+        # Time relative to the event start
         time_since_event = np.maximum(0, time_array - event_time)
 
         delta_p_base, min_env_base, max_env_base, p_peak, epsilon = (
             self._get_underdamped_delta_p_base(D, H, Xeff, time_since_event)
         )
 
+        # Response is zero before the event.
         delta_p = np.where(time_array < event_time, 0, delta_p_base)
         delta_p_min_env = np.where(time_array < event_time, 0, min_env_base)
         delta_p_max_env = np.where(time_array < event_time, 0, max_env_base)
 
         return delta_p, delta_p_min_env, delta_p_max_env, p_peak, epsilon
 
-    def _get_tunnel(self, p_peak: float) -> float:
+    def _get_tunnel(self, peak_power: float) -> float:
         """
         Calculates the tolerance "tunnel" value.
 
+        The tunnel defines a static band around the power response, determined by
+        a fixed value or a percentage of the peak power change.
+
         Parameters
         ----------
-        p_peak : float
+        peak_power : float
             The peak change in active power.
 
         Returns
@@ -697,5 +838,5 @@ class SCRJump(GFMCalculator):
         """
         return max(
             self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * np.abs(p_peak),
+            self._final_allowed_tunnel_variation * np.abs(peak_power),
         )
