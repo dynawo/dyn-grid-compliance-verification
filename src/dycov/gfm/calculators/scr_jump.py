@@ -605,14 +605,29 @@ class SCRJump(GFMCalculator):
             natural_frequency = 0
             damping_ratio = float("inf")
         else:
-            # Natural frequency of oscillation (rad/s)
-            natural_frequency = np.sqrt(
-                base_angular_freq * voltage_product / (2 * H * total_reactance)
-            )
-            # Damping ratio (dimensionless)
-            damping_ratio = (
-                D / (4 * H * natural_frequency) if natural_frequency > 0 else float("inf")
-            )
+            alpha = D / (2 * H)
+            betha = base_angular_freq / (2 * H * total_reactance)
+
+            if (alpha**2 - 4 * betha) < 0:  # Underdamped
+                # Natural frequency of oscillation (rad/s)
+                natural_frequency = np.sqrt(
+                    base_angular_freq * voltage_product / (2 * H * total_reactance)
+                )
+                # Damping ratio (dimensionless)
+                damping_ratio = (
+                    D / (4 * H * natural_frequency) if natural_frequency > 0 else float("inf")
+                )
+            else:  # Overdamped
+                sqrt_term_val = alpha**2 - 4 * betha
+                p1 = (alpha - np.sqrt(sqrt_term_val)) / 2
+                p2 = (alpha + np.sqrt(sqrt_term_val)) / 2
+
+                # Natural frequency of oscillation (rad/s)
+                natural_frequency = np.sqrt(
+                    base_angular_freq * voltage_product / (2 * H * total_reactance)
+                )
+                # Damping ratio (dimensionless)
+                damping_ratio = (p1 + p2) / (2 * np.sqrt(p1 * p2))
 
         # Theoretical peak power change
         peak_power_change = (
