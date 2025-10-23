@@ -53,6 +53,8 @@ class SCRJump(GFMCalculator):
         # Envelope Calculation Parameters
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
+        self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
+        self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for SCRJump plots."""
@@ -175,6 +177,21 @@ class SCRJump(GFMCalculator):
             if delta_p_max is not None:
                 max_envelope_results[i, :] = delta_p_max
 
+        # Check if all scenarios (nominal, min, max) have the same damping type
+        is_overdamped = epsilon_results >= 1
+        if not np.all(is_overdamped == is_overdamped[0]):
+            # The parameter variations result in different damping behaviors
+            # (e.g., nominal is overdamped, but max variation is underdamped).
+            msg = (
+                f"Inconsistent damping behavior across parameter variations. "
+                f"Calculated epsilon values (damping ratios): {epsilon_results}. "
+                f"Is Overdamped (>=1): {is_overdamped}. "
+                f"D values: {damping_variations}. H values: {inertia_variations}. "
+                f"This case is invalid as variations must maintain the same "
+                f"damping type (all overdamped or all underdamped)."
+            )
+            logger.warning(msg)
+
         return (
             delta_p_results,
             min_envelope_results,
@@ -282,18 +299,18 @@ class SCRJump(GFMCalculator):
             )
 
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
-            condition = time_mask & (lower_trace > self._max_active_power * constants.MOIS_TUNNEL)
+            condition = time_mask & (lower_trace > self._max_active_power * self._pmax_mois_tunnel)
 
             if is_overdamped:
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
                 )
                 lower_trace = np.where(
-                    condition, self._max_active_power * constants.MOIS_TUNNEL, lower_trace
+                    condition, self._max_active_power * self._pmax_mois_tunnel, lower_trace
                 )
             else:  # Underdamped case
                 lower_trace = np.where(
-                    condition, self._max_active_power * constants.MOIS_TUNNEL, lower_trace
+                    condition, self._max_active_power * self._pmax_mois_tunnel, lower_trace
                 )
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
@@ -312,18 +329,18 @@ class SCRJump(GFMCalculator):
             )
 
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
-            condition = time_mask & (upper_trace < self._min_active_power * constants.MOIS_TUNNEL)
+            condition = time_mask & (upper_trace < self._min_active_power * self._pmin_mois_tunnel)
 
             if is_overdamped:
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time
                 )
                 upper_trace = np.where(
-                    condition, self._min_active_power * constants.MOIS_TUNNEL, upper_trace
+                    condition, self._min_active_power * self._pmin_mois_tunnel, upper_trace
                 )
             else:  # Underdamped case
                 upper_trace = np.where(
-                    condition, self._min_active_power * constants.MOIS_TUNNEL, upper_trace
+                    condition, self._min_active_power * self._pmin_mois_tunnel, upper_trace
                 )
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time

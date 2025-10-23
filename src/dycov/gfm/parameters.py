@@ -339,6 +339,28 @@ class GFMParameters(Parameters):
         """
         return self.__get_float_value("MarginHigh", 0.0)
 
+    def get_pmax_mois_tunnel(self) -> float:
+        """
+        Gets the 'PmaxMOISTunnel' parameter from the configuration.
+
+        Returns
+        -------
+        float
+            The 'PmaxMOISTunnel' value, defaulting to 0.95 if not found.
+        """
+        return self.__get_float_value("PmaxMOISTunnel", 0.95)
+
+    def get_pmin_mois_tunnel(self) -> float:
+        """
+        Gets the 'PminMOISTunnel' parameter from the configuration.
+
+        Returns
+        -------
+        float
+            The 'PminMOISTunnel' value, defaulting to 0.95 if not found.
+        """
+        return self.__get_float_value("PminMOISTunnel", 0.95)
+
     def get_min_ratio(self) -> float:
         """
         Gets the minimum ratio for parameter variations ('RatioMin')
