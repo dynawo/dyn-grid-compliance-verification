@@ -56,6 +56,10 @@ class SCRJump(GFMCalculator):
         self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
+        # Flag for inconsistent damping behavior
+        self._is_inconsistent = False
+        self._disclaimer_message: str | None = None
+
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for SCRJump plots."""
         return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
@@ -182,15 +186,22 @@ class SCRJump(GFMCalculator):
         if not np.all(is_overdamped == is_overdamped[0]):
             # The parameter variations result in different damping behaviors
             # (e.g., nominal is overdamped, but max variation is underdamped).
+            # Format numbers for the message
+            eps_str = np.array2string(epsilon_results, precision=2)
+            d_str = np.array2string(damping_variations, precision=2)
+            h_str = np.array2string(inertia_variations, precision=2)
+
             msg = (
-                f"Inconsistent damping behavior across parameter variations. "
-                f"Calculated epsilon values (damping ratios): {epsilon_results}. "
-                f"Is Overdamped (>=1): {is_overdamped}. "
-                f"D values: {damping_variations}. H values: {inertia_variations}. "
-                f"This case is invalid as variations must maintain the same "
-                f"damping type (all overdamped or all underdamped)."
+                f"Inconsistent damping behavior across parameter variations.\n"
+                f"Epsilon values: {eps_str}.\n"
+                f"Is Overdamped (>=1): {is_overdamped}.\n"
+                f"D values: {d_str}. H values: {h_str}.\n"
+                f"Variations must maintain the same damping type (all overdamped or all underdamped)."
             )
             logger.warning(msg)
+            # Set the flag and the message for the plot
+            self._is_inconsistent = True
+            self._disclaimer_message = msg
 
         return (
             delta_p_results,
