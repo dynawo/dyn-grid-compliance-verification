@@ -67,6 +67,10 @@ class GridForming:
             calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
         )
 
+        # Check if the calculator flagged an inconsistent damping issue
+        is_inconsistent = getattr(calculator, "_is_inconsistent", False)
+        disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
+
         title = f"{pcs_name}.{bm_name}.{oc_name}"
         self._export_csv(
             working_path,
@@ -88,6 +92,8 @@ class GridForming:
             upper_envelope,
             parameters,
             params_list,
+            is_inconsistent,
+            disclaimer_msg,  # Pass the message
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
@@ -301,32 +307,38 @@ class GridForming:
         upper_envelope: np.ndarray,
         parameters: GFMParameters,
         params_list: list,
+        is_inconsistent: bool = False,
+        disclaimer_msg: str | None = None,  # New parameter
     ) -> None:
         """
-        Generates and saves a plot of the simulation results.
+                Generates and saves a plot of the simulation results.
 
-        Parameters
+                Parameters
         ----------
-        png_path : Path
-            The base path for saving the plot image.
-        title : str
-            The title for the plot and image filename.
-        magnitude_name : str
-            The name of the magnitude being plotted.
-        time_array : np.ndarray
-            The time array data.
-        event_time : float
-            The time of the event, used to mark on the plot.
-        pcc_signal : np.ndarray
-            The PCC signal data to be plotted.
-        lower_envelope : np.ndarray
-            The lower envelope data to be plotted.
-        upper_envelope : np.ndarray
-            The upper envelope data to be plotted.
-        parameters : GFMParameters
-            The GFM parameters object.
-        params_list : list
-            The list of parameter names to display on the plot.
+                png_path : Path
+                    The base path for saving the plot image.
+                title : str
+                    The title for the plot and image filename.
+                magnitude_name : str
+                    The name of the magnitude being plotted.
+                time_array : np.ndarray
+                    The time array data.
+                event_time : float
+                    The time of the event, used to mark on the plot.
+                pcc_signal : np.ndarray
+                    The PCC signal data to be plotted.
+                lower_envelope : np.ndarray
+                    The lower envelope data to be plotted.
+                upper_envelope : np.ndarray
+                    The upper envelope data to be plotted.
+                parameters : GFMParameters
+                    The GFM parameters object.
+                params_list : list
+                    The list of parameter names to display on the plot.
+                is_inconsistent : bool
+                    Flag to show a disclaimer for inconsistent damping.
+                disclaimer_msg : str | None
+                    The detailed message for the disclaimer.
         """
         plot_results(
             path=png_path / f"{title}.png",
@@ -340,4 +352,6 @@ class GridForming:
             upper_envelope=upper_envelope,
             output_format="png&html",
             params_list=self._get_params_plot_info(parameters, params_list),
+            show_disclaimer=is_inconsistent,
+            disclaimer_message=disclaimer_msg,  # Pass the message
         )
