@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-# start_dycov.sh: the entrypoint for the Dynamic grid Compliance Verification tool
+# start_dycov.sh: the entrypoint for the Dycov tool
 # Docker container. It creates the user:group specified when launching
 # the container, and then execs a shell as such user.
 #
@@ -26,7 +26,6 @@ echo "CREATED user $dycov_USER"
 
 
 # Leave the user in an interactive shell
-echo -e "\nNow running the Dynamic grid Compliance Verification tool under the docker container 'dycov'"
+echo -e "\nNow running the Dycov tool under the docker container 'dycov'"
 echo -e "To quit the container, just type exit at the command prompt.\n"
 exec su - "$dycov_USER"
-
