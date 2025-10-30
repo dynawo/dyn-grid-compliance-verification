@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # run_dycov_docker.sh: A simple wrapper script to launch the Docker
-# container for the Dynamic grid Compliance Verification tool. It facilitates the
+# container for the Dycov tool. It facilitates the
 # mapping of the working directory and the user/group to use inside
 # the container.
 # 
@@ -154,4 +154,3 @@ exec docker run --rm -it \
      -e dycov_USER="$dycov_USER" -e dycov_GROUP="$dycov_GROUP" -e dycov_UID="$dycov_UID" -e dycov_GID="$dycov_GID" \
      --entrypoint /start_dycov.sh \
      --name dycov --hostname dycov "$DOCKER_IMAGE"
-
