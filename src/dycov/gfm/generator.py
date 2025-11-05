@@ -45,7 +45,7 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
         pcs.generate()
     except (FileNotFoundError, IOError, ValueError) as e:
         # Catch specific exceptions that might occur during file operations or value errors.
-        if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+        if LOGGER.getEffectiveLevel() == logging.DEBUG:
             LOGGER.exception(f"Aborted execution for {pcs.get_name()}. {e}")
         else:
             LOGGER.error(f"Aborted execution for {pcs.get_name()}. {e}")
