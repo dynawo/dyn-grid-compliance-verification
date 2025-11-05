@@ -79,7 +79,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-dcgv = ["report/templates", "templates", "model_lib", "*.ini", "dynawo/Vsx64.cmd"]
+dycov = ["src/dycov/report/templates", "templates", "src/dycov/model_lib", "src/dycov/*.ini", "dynawo/Vsx64.cmd"]
 
 
 # Entry points and automatic script creation:
