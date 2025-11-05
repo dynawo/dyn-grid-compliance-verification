@@ -153,6 +153,8 @@ def plot_results(
     upper_envelope: np.ndarray,
     output_format: str,
     params_list: list = None,
+    show_disclaimer: bool = False,
+    disclaimer_message: str | None = None,  # New parameter
 ) -> None:
     """
     Plot the results, trimming stable data at the start and end.
@@ -183,6 +185,10 @@ def plot_results(
         The desired output format(s), e.g., "png&html".
     params_list : list, optional
         A list of formatted strings containing simulation parameters to display.
+    show_disclaimer : bool
+        If True, adds a warning disclaimer to the plot.
+    disclaimer_message : str | None
+        The detailed message for the disclaimer.
     """
     # 1. Find the optimal indices to trim the data.
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
@@ -193,6 +199,17 @@ def plot_results(
     pcc_trimmed = pcc_signal[start_index:end_index]
     down_trimmed = lower_envelope[start_index:end_index]
     up_trimmed = upper_envelope[start_index:end_index]
+
+    # 3. Prepare disclaimer text if needed
+    disclaimer_text_mpl = ""
+    disclaimer_text_html = ""
+    if show_disclaimer:
+        default_msg = "Inconsistent damping. Envelopes may be unreliable."
+        # Format for Matplotlib (uses \n)
+        disclaimer_text_mpl = "Disclaimer:\n" + (disclaimer_message or default_msg)
+        # Format for Plotly (uses <br>)
+        html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
+        disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
 
     # --- Plotting with Matplotlib (for PNG) ---
     if "png" in output_format:
@@ -229,6 +246,19 @@ def plot_results(
                 verticalalignment="top",
                 horizontalalignment="right",
                 bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
+            )
+
+        if show_disclaimer:
+            plt.text(
+                0.02,
+                0.02,
+                disclaimer_text_mpl,
+                transform=plt.gca().transAxes,
+                fontsize=8,  # Adjusted fontsize to fit potentially long text
+                color="red",
+                verticalalignment="bottom",
+                horizontalalignment="left",
+                bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
             )
 
         plt.legend(loc="lower right")
@@ -304,6 +334,23 @@ def plot_results(
                 align="right",
                 valign="top",
                 bgcolor="rgba(245, 222, 179, 0.7)",
+                borderpad=10,
+            )
+
+        if show_disclaimer:
+            fig.add_annotation(
+                xref="paper",
+                yref="paper",
+                x=0.02,
+                y=0.02,
+                text=disclaimer_text_html,
+                showarrow=False,
+                align="left",
+                valign="bottom",
+                font=dict(color="red", size=10),  # Adjusted fontsize
+                bgcolor="rgba(255, 255, 255, 0.8)",
+                bordercolor="red",
+                borderwidth=1,
                 borderpad=10,
             )
 
