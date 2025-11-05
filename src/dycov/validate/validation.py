@@ -48,7 +48,7 @@ def _aborted_execution(e: Exception) -> None:
         The exception that caused the abortion.
     """
 
-    if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+    if LOGGER.getEffectiveLevel() == logging.DEBUG:
         LOGGER.exception(f"Aborted execution. {e}")
     else:
         LOGGER.error(f"Aborted execution. {e}")
@@ -108,7 +108,7 @@ def _validate_pcs(pcs_args) -> tuple:
         _prepare_report_pcs(pcs_results, parameters, path_latex_files)
         return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
     except (FileNotFoundError, IOError, ValueError) as e:
-        if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+        if LOGGER.getEffectiveLevel() == logging.DEBUG:
             LOGGER.exception(f"Aborted execution for {pcs.get_name()}. {e}")
         else:
             LOGGER.error(f"Aborted execution for {pcs.get_name()}. {e}")
@@ -403,7 +403,7 @@ class Validation:
             LOGGER.warning(f"Report file does not exist: {report_file}")
 
         compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
-        if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+        if LOGGER.getEffectiveLevel() == logging.DEBUG:
             return compliance_list
 
         manage_files.remove_dir(self._parameters.get_working_dir())
