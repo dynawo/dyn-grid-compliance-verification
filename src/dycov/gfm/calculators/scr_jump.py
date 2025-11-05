@@ -196,7 +196,8 @@ class SCRJump(GFMCalculator):
                 f"Epsilon values: {eps_str}.\n"
                 f"Is Overdamped (>=1): {is_overdamped}.\n"
                 f"D values: {d_str}. H values: {h_str}.\n"
-                f"Variations must maintain the same damping type (all overdamped or all underdamped)."
+                f"Variations must maintain the same damping type"
+                " (all overdamped or all underdamped)."
             )
             logger.warning(msg)
             # Set the flag and the message for the plot
@@ -567,7 +568,7 @@ class SCRJump(GFMCalculator):
         # elsewhere or was deemed unnecessary.
         """
         tunnel_nominal = self._get_tunnel(p_peak_array[0])
-        
+
         upper_envelope, lower_envelope = self._apply_initial_limiting(
             p_up_limited,
             p_down_limited,
