@@ -139,7 +139,8 @@ class Config:
                         self._pcs_config.remove_option(section_to_modify, "inherit")
                     else:
                         LOGGER.warning(
-                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found in the alias files."
+                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found"
+                            " in the alias files."
                         )
 
             LOGGER.info("Successfully loaded PCS configuration.")

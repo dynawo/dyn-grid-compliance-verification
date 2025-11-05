@@ -50,6 +50,8 @@ from dycov.validation import common
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
 
+LOGGER = dycov_logging.get_logger("ProducerCurves")
+
 
 class DynawoCurves(ProducerCurves):
     """
@@ -172,9 +174,7 @@ class DynawoCurves(ProducerCurves):
         message : str
             The debug message.
         """
-        dycov_logging.get_logger("ProducerCurves").debug(
-            f"{self.__get_log_title(bm_name, oc_name)} {message}"
-        )
+        LOGGER.debug(f"{self.__get_log_title(bm_name, oc_name)} {message}")
 
     def __warning(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -189,9 +189,7 @@ class DynawoCurves(ProducerCurves):
         message : str
             The warning message.
         """
-        dycov_logging.get_logger("ProducerCurves").warning(
-            f"{self.__get_log_title(bm_name, oc_name)} {message}"
-        )
+        LOGGER.warning(f"{self.__get_log_title(bm_name, oc_name)} {message}")
 
     def __error(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -206,9 +204,7 @@ class DynawoCurves(ProducerCurves):
         message : str
             The error message.
         """
-        dycov_logging.get_logger("ProducerCurves").error(
-            f"{self.__get_log_title(bm_name, oc_name)} {message}"
-        )
+        LOGGER.error(f"{self.__get_log_title(bm_name, oc_name)} {message}")
 
     def __log(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -308,7 +304,7 @@ class DynawoCurves(ProducerCurves):
 
         # Initialize logging handlers for the simulation
         file_log_level = config.get_value("Global", "file_log_level")
-        if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+        if LOGGER.getEffectiveLevel() == logging.DEBUG:
             file_log_level = logging.DEBUG
 
         self._logger.init_handlers(
@@ -390,9 +386,7 @@ class DynawoCurves(ProducerCurves):
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:
-            dycov_logging.get_logger("ProducerCurves").error(
-                "Uinf cannot be equal to Udip to avoid division by zero."
-            )
+            LOGGER.error("Uinf cannot be equal to Udip to avoid division by zero.")
             raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
         Zv = (Udip * Zcc) / (Uinf - Udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
@@ -1360,7 +1354,7 @@ class DynawoCurves(ProducerCurves):
                     abs(dip),
                 )
 
-                if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+                if LOGGER.getEffectiveLevel() == logging.DEBUG:
                     target_dir_name = (
                         "bisection_last_success" if success else "bisection_last_failure"
                     )
@@ -1783,7 +1777,7 @@ class DynawoCurves(ProducerCurves):
             else:
                 max_val = time
 
-            if dycov_logging.getEffectiveLevel() == logging.DEBUG:
+            if LOGGER.getEffectiveLevel() == logging.DEBUG:
                 target_dir_name = (
                     "bisection_last_success" if steady_state else "bisection_last_failure"
                 )
