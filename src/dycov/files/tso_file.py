@@ -28,7 +28,6 @@ def _connect_generator_to_setpoint(
 def _create_model(
     dyd_root: etree.Element, ns: str, id: str, lib: str, par_file: str, par_id: str
 ) -> None:
-
     dyd_root.append(
         etree.Element(
             f"{{{ns}}}blackBoxModel",
@@ -43,7 +42,6 @@ def _create_model(
 def _connect_generator(
     dyd_root: etree.Element, ns: str, id1: str, var1: str, id2: str, var2: str
 ) -> None:
-
     dyd_root.append(
         etree.Element(
             f"{{{ns}}}connect",

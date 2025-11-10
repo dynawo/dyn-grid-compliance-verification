@@ -32,11 +32,11 @@ def create_map(results: dict) -> list:
         if type(value[0]) is float:
             conf_value = f"{value[0]:.3g}".strip()
         else:
-            conf_value = str(value[0]).replace("_", "\_")
+            conf_value = str(value[0]).replace("_", r"\_")
         if type(value[1]) is float:
             default_value = f"{value[1]:.3g}".strip()
         else:
-            default_value = str(value[1]).replace("_", "\_")
-        solver_parameters.append([key.replace("_", "\_"), f"{conf_value} ({default_value})"])
+            default_value = str(value[1]).replace("_", r"\_")
+        solver_parameters.append([key.replace("_", r"\_"), f"{conf_value} ({default_value})"])
 
     return solver_parameters

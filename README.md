@@ -724,5 +724,7 @@ Below are the major development axis identified for DyCoV in the next few months
 
 # Contact
 
-In case of any question or feedback, please feel free to contact us at the following e-mail adress: rte-r-d-raccordement@rte-france.com
+For any questions or feedback, please reach out to the appropriate contact below:
+* For inquiries related to electrical modeling, please contact RTE at: rte-r-d-raccordement@rte-france.com
+* For any software-related issues or questions, please contact AIA at: dycov@aia.es
 

@@ -11,6 +11,7 @@
 This module provides functions for validating the presence, structure, and consistency
 of various files related to Dynawo models and curves.
 """
+
 import errno
 import os
 import re

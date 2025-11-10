@@ -44,20 +44,33 @@ Usage: $0 [OPTIONS]
 EOF
 }
 
+# Searches for the newest compatible Python interpreter (3.9+).
 find_python_cmd()
 {
-    # PEP394-compliant environments should define "python" or "python3", but here we will be
-    # permissive; we'll use the first Python found from this list:
-    for INTERPRETER in python python3 python3.12 python3.11 python3.10 python3.9; do
-        if which $INTERPRETER > /dev/null; then
-            # But making sure it's version 3.9 or above: 
-            if $INTERPRETER --version | grep -Eq '(Python 3\.9\.|Python 3\.1[0-3].)'; then
-                python_cmd="$INTERPRETER"
-                break
+    local best_interpreter=""
+    local available_interpreters=()
+
+    # Find all available and compatible interpreters
+    for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
+        if which "$interpreter" > /dev/null; then
+            if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
+                # Store the full path to avoid ambiguity
+                available_interpreters+=("$(which "$interpreter")")
             fi
         fi
     done
+
+    # If we found any, sort them by version and pick the best one.
+    if [ ${#available_interpreters[@]} -gt 0 ]; then
+        # Get unique paths, get versions, sort, and extract the path of the newest one
+        best_interpreter=$(printf "%s\n" "${available_interpreters[@]}" | sort -u | while read -r interp; do
+            echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
+        done | sort -V -r | head -n 1 | awk '{print $2}')
+    fi
+    
+    python_cmd="$best_interpreter"
 }
+
 
 #######################################
 # getopt-like input option processing
@@ -114,8 +127,8 @@ fi
 
 
 find_python_cmd
-if [ "$python_cmd" = "" ]; then
-    echo "ERROR: no valid python interpreter found."
+if [ -z "$python_cmd" ]; then
+    echo "ERROR: no valid python interpreter found (3.9+ required)."
     exit 1
 fi
 
@@ -143,7 +156,7 @@ colormsg "OK."
 # Step 2: build
 echo
 colormsg "Building the DyCoV Tool package... "
-if [ $EDITABLE = "y" ]; then
+if [ "$EDITABLE" = "y" ]; then
     colormsg "   SKIPPING (installing the DyCoV Tool as an editable Python package)."
 else
     cd "$MY_LOCAL_REPO" && rm -rf build dist && python -m build --wheel
@@ -154,9 +167,10 @@ fi
 # Step 3: install the package
 echo
 colormsg "Uninstalling the previous version of the DyCoV Tool... (if it exists)"
-pip uninstall "$PKG"
+# Add a '|| true' to prevent script exit if the package is not already installed
+pip uninstall -y "$PKG" || true
 colormsg "Installing the DyCoV Tool package and all its dependencies... "
-if [ $EDITABLE = "y" ]; then
+if [ "$EDITABLE" = "y" ]; then
     cd "$MY_LOCAL_REPO" && pip install -e .
 else
     pip install "$MY_LOCAL_REPO"/dist/*.whl
@@ -172,10 +186,10 @@ echo
 
 
 # Step 5 (OPTIONAL): install additional packages used only by developers
-if [ $DEVELOPER = "y" ]; then
+if [ "$DEVELOPER" = "y" ]; then
     echo
     colormsg "Installing additional Python packages for developers... "
-    pip install --upgrade-strategy eager -U pipdeptree black isort flake8 pytest pytest-cov sphinx jupyter
+    pip install --upgrade-strategy eager -U pipdeptree black isort flake8 pytest pytest-cov pytest-mock sphinx jupyter
     colormsg "OK."
     echo
 fi
@@ -183,6 +197,6 @@ fi
 # Step 6: Clean
 echo
 colormsg "Cleaning up build directories... "
-rm -rf build dist
+rm -rf "$MY_LOCAL_REPO"/build "$MY_LOCAL_REPO"/dist
 colormsg "OK."
 echo

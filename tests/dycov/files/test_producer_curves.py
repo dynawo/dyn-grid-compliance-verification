@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import shutil
 import tempfile
 from pathlib import Path
@@ -18,7 +19,7 @@ from dycov.files.producer_curves import check_curves, create_producer_curves
 
 
 def _write_producer_dyd(
-    path: Path, transformer_ids=None, generator_ids=None, lib_type="WTG4AWeccCurrentSource"
+    path: Path, transformer_ids=None, generator_ids=None, lib_type="WTG4AWeccCurrentSource1"
 ):
     """
     Helper to write a minimal Producer.dyd file with given transformer and generator ids.
@@ -43,7 +44,7 @@ def temp_model_dir():
 
 def test_check_curves_all_values_and_files_exist(temp_model_dir):
     # Write CurvesFiles.ini with all values and create referenced files
-    ini_content = "[Curves-Files]\n" "curve1 = file1.txt\n" "curve2 = file2.txt\n"
+    ini_content = "[Curves-Files]\ncurve1 = file1.txt\ncurve2 = file2.txt\n"
     (temp_model_dir / "CurvesFiles.ini").write_text(ini_content)
     (temp_model_dir / "file1.txt").write_text("dummy")
     (temp_model_dir / "file2.txt").write_text("dummy")
@@ -52,7 +53,7 @@ def test_check_curves_all_values_and_files_exist(temp_model_dir):
 
 def test_check_curves_missing_parameter_values(temp_model_dir):
     # Write CurvesFiles.ini with an empty value
-    ini_content = "[Curves-Files]\n" "curve1 = file1.txt\n" "curve2 = \n"
+    ini_content = "[Curves-Files]\ncurve1 = file1.txt\ncurve2 = \n"
     (temp_model_dir / "CurvesFiles.ini").write_text(ini_content)
     (temp_model_dir / "file1.txt").write_text("dummy")
     # Patch dycov_logging to capture error logs
@@ -76,7 +77,7 @@ def test_check_curves_missing_parameter_values(temp_model_dir):
 
 def test_check_curves_missing_files(temp_model_dir):
     # Write CurvesFiles.ini referencing a missing file
-    ini_content = "[Curves-Files]\n" "curve1 = file1.txt\n" "curve2 = file2.txt\n"
+    ini_content = "[Curves-Files]\ncurve1 = file1.txt\ncurve2 = file2.txt\n"
     (temp_model_dir / "CurvesFiles.ini").write_text(ini_content)
     (temp_model_dir / "file1.txt").write_text("dummy")
     # Patch dycov_logging to capture error logs

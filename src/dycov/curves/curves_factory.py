@@ -11,7 +11,7 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
+from dycov.core.parameters import Parameters
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.curves import DynawoCurves
 from dycov.curves.importer.curves import ImportedCurves

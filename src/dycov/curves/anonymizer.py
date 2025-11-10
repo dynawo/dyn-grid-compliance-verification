@@ -66,7 +66,7 @@ def anonymize(
 
     if results:
         _LOGGER.info(
-            f"Copying curves_calculated.csv and dycov.log from {results} to " f"{curves_folder}"
+            f"Copying curves_calculated.csv and dycov.log from {results} to {curves_folder}"
         )
         _copy_files_from_pipeline(results, curves_folder)
 
@@ -103,6 +103,28 @@ def _get_files(path: Path, extensions: List[str]) -> List[Path]:
 def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
     """Copies 'curves_calculated.csv' and 'dycov.log' files from the results
     directory to the target folder, renaming them based on their relative path.
+
+    Parameters
+    ----------
+    results: Path
+        The root directory containing the simulation results.
+    target_folder: Path
+        The destination folder where the files will be copied.
+    """
+    for producer_path in results.iterdir():
+        if producer_path.is_dir() and producer_path.name != "Reports":
+            _LOGGER.debug(f"Processing producer directory: {producer_path}")
+            manage_files.create_dir(target_folder / producer_path.name)
+            # Copy files from the producer directory
+            _copy_files_from_producer(
+                producer_path,
+                target_folder / producer_path.name,
+            )
+
+
+def _copy_files_from_producer(results: Path, target_folder: Path) -> None:
+    """Copies 'curves_calculated.csv' and 'dycov.log' files from the producer results
+    directory to the producer target folder, renaming them based on their relative path.
 
     Parameters
     ----------
@@ -466,6 +488,5 @@ def _process_curves(
             _LOGGER.info(f"Saved updated dictionary file to {output_dict_path}")
         else:
             _LOGGER.warning(
-                f"No 'Curves-Dictionary' section found in {dict_file}. "
-                "Skipping curve processing."
+                f"No 'Curves-Dictionary' section found in {dict_file}. Skipping curve processing."
             )

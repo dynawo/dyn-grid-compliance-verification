@@ -98,7 +98,13 @@ class Config:
         return None
 
     def load_pcs_config(self, pcs_path: str) -> None:
-        """Load the Performance Checking Sheet (PCS) configuration file.
+        """Load the Performance Checking Sheet (PCS) configuration file. It
+        also implements an inheritance mechanism using alias files.
+        It searches for any file named "*aliases*" located two levels above the
+        pcs path. If a section in the main config contains an "inherit" key,
+        it will load the key-value pairs from the corresponding section in the
+        alias files. This allows for shared, default configurations.
+        Values already present in the main config section will NOT be overwritten.
 
         Parameters
         ----------
@@ -107,7 +113,36 @@ class Config:
         """
         LOGGER.info("Loading PCS configuration from: %s", pcs_path)
         try:
-            self._pcs_config.read(pcs_path)
+            self._pcs_config.read(pcs_path, encoding="utf-8")
+
+            single_pcs_config = configparser.ConfigParser()
+            single_pcs_config.read(pcs_path, encoding="utf-8")
+
+            pcs_aliases_path = Path(pcs_path).resolve().parent.parent
+            aliases_files = [str(p) for p in pcs_aliases_path.rglob("*aliases*") if p.is_file()]
+
+            aliases_config = configparser.ConfigParser()
+            aliases_config.optionxform = str
+            aliases_config.read(aliases_files, encoding="utf-8")
+
+            for section_to_modify in list(self._pcs_config.sections()):
+                if self._pcs_config.has_option(section_to_modify, "inherit"):
+                    alias_section_name = self._pcs_config.get(section_to_modify, "inherit")
+                    if aliases_config.has_section(alias_section_name):
+                        for key_to_inherit, value_to_inherit in aliases_config.items(
+                            alias_section_name
+                        ):
+                            if not single_pcs_config.has_option(section_to_modify, key_to_inherit):
+                                self._pcs_config.set(
+                                    section_to_modify, key_to_inherit, value_to_inherit
+                                )
+                        self._pcs_config.remove_option(section_to_modify, "inherit")
+                    else:
+                        LOGGER.warning(
+                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found"
+                            " in the alias files."
+                        )
+
             LOGGER.info("Successfully loaded PCS configuration.")
         except Exception as e:
             LOGGER.error("Error loading PCS configuration from %s: %s", pcs_path, e)

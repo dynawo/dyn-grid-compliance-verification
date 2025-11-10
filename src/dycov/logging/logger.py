@@ -22,7 +22,7 @@ colorama.init()
 class DycovLogger(logging.getLoggerClass()):
     def __init__(self, name: str) -> None:
         super(DycovLogger, self).__init__(name)
-        self.setLevel(logging.DEBUG)
+        self.setLevel(logging.INFO)
 
     def _add_console_handler(
         self,
@@ -72,7 +72,6 @@ class DycovLogger(logging.getLoggerClass()):
         disable_console: bool = False,
         disable_file: bool = False,
     ) -> None:
-
         self.setLevel(console_log_level)
         if file_log_level < console_log_level:
             self.setLevel(file_log_level)

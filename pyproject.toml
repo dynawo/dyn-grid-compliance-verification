@@ -62,6 +62,7 @@ dependencies = [
     "plotly>=5.20.0",		# MIT License
     "SciPy>=1.9.3",		# BSD License
     "colorama>=0.4.6",		# BSD License
+    "kaleido>=1.0.0",       # MIT License
 ]
 
 

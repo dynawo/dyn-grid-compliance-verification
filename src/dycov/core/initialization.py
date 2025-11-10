@@ -147,6 +147,8 @@ class DycovInitializer:
             for model in models:
                 self._template_cmd_config(category_path / subdir / model)
 
+        self._template_cmd_config(category_path / "gfm")
+
     def _configure_templates(self, tool_path: Path):
         """
         Sets up the overall template directory structure and copies necessary template files.
@@ -182,24 +184,33 @@ class DycovInitializer:
         """
         Copies dummy sample files from the tool's templates to the user's configuration directory.
         """
-        categories = ["performance", "model"]
+        categories = ["performance", "model", "gfm"]
         models = ["SM", "PPM", "BESS"]
         for category in categories:
-            for model in models:
-                src = tool_path / "templates" / source / category / model / ".DummySample"
-                dest = (
-                    config.get_config_dir()
-                    / "templates"
-                    / source
-                    / category
-                    / model
-                    / ".DummySample"
-                )
+            if category == "gfm":
+                src = tool_path / "templates" / source / category / ".DummySample"
+                dest = config.get_config_dir() / "templates" / source / category / ".DummySample"
                 if src.exists():
                     try:
                         manage_files.copy_path(src, dest, dirs_exist_ok=True)
                     except Exception as e:
                         LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
+            else:
+                for model in models:
+                    src = tool_path / "templates" / source / category / model / ".DummySample"
+                    dest = (
+                        config.get_config_dir()
+                        / "templates"
+                        / source
+                        / category
+                        / model
+                        / ".DummySample"
+                    )
+                    if src.exists():
+                        try:
+                            manage_files.copy_path(src, dest, dirs_exist_ok=True)
+                        except Exception as e:
+                            LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
 
     def _configure_user_models(self):
         """

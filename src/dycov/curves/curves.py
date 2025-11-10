@@ -20,14 +20,16 @@ from dycov.model.parameters import Disconnection_Model, Simulation_result
 from dycov.model.producer import Producer
 
 
-def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
+def get_cfg_oc_name(pcs_name: str, bm_name: str, oc_name: str) -> str:
     """Generate a combined configuration operating condition name from PCS benchmark
     name and operating condition name.
 
     Parameters
     ----------
-    pcs_bm_name : str
-        The PCS benchmark name.
+    pcs_name : str
+        The PCS name.
+    bm_name : str
+        The benchmark name.
     oc_name : str
         The operating condition name.
 
@@ -36,6 +38,7 @@ def get_cfg_oc_name(pcs_bm_name: str, oc_name: str) -> str:
     str
         The combined configuration operating condition name.
     """
+    pcs_bm_name = pcs_name + CASE_SEPARATOR + bm_name
     if pcs_bm_name == oc_name:
         return oc_name
     return pcs_bm_name + CASE_SEPARATOR + oc_name
@@ -195,7 +198,9 @@ class ProducerCurves:
         self,
         working_oc_dir: Path,
         producer_name: str,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
+        oc_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
         """Obtain the reference curves.
@@ -206,8 +211,10 @@ class ProducerCurves:
             Temporal working path
         producer_name: str
             Producer name
-        pcs_bm_name: str
-            PCS.Benchmark name
+        pcs_name: str
+            PCS name
+        bm_name: str
+            Benchmark name
         oc_name: str
             Operating Condition name
         curves: Path
@@ -227,7 +234,7 @@ class ProducerCurves:
         self,
         working_oc_dir: Path,
         producer_name: str,
-        pcs_bm_name: str,
+        pcs_name: str,
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
@@ -240,8 +247,8 @@ class ProducerCurves:
             Temporal working path
         producer_name: str
             Producer name
-        pcs_bm_name: str
-            PCS.Benchmark name
+        pcs_name: str
+            PCS name
         bm_name: str
             Benchmark name
         oc_name: str

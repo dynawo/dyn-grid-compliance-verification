@@ -14,15 +14,63 @@ from pathlib import Path
 from typing import Optional
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
-from dycov.core.validation import Validation
 from dycov.curves import anonymizer
 from dycov.curves.dynawo import prepare_tool
+from dycov.gfm.generator import GFMGeneration
+from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.validation import Validation
 
 _LOGGER = dycov_logging.get_logger("CommandHandlers")
+
+
+def handle_generate_envelopes_command(
+    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> None:
+    """Handles the 'validate' command.
+
+    Initializes and runs a model validation based on the provided arguments.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The argument parser instance.
+    args: argparse.Namespace
+        Parsed command-line arguments.
+    dwo_launcher: Path
+        Path to the Dynawo launcher.
+    """
+    _LOGGER.info("Handling 'generateEnvelopes' command.")
+    producer_ini: Optional[Path] = None
+    output_dir: Optional[Path] = None
+
+    emt = args.emt
+    if args.producer_ini:
+        producer_ini = Path(args.producer_ini)
+        output_dir = producer_ini.parent / "Results" if args.output is None else Path(args.output)
+
+    if not producer_ini:
+        _LOGGER.error("Missing arguments for 'generateEnvelopes' command.")
+        parser.error("Missing arguments. Try 'dycov generateEnvelopes -h' for more information.")
+        return
+
+    result_code = _generate_envelopes(
+        dwo_launcher=dwo_launcher,
+        output_dir=output_dir,
+        producer_ini=producer_ini,
+        emt=emt,
+        user_pcs=args.pcs,
+        only_dtr=args.only_dtr,
+    )
+
+    if result_code != 0:
+        _LOGGER.critical("Validation failed. Check logs for details.")
+        parser.error(
+            "It is not possible to find the producer model or the producer curves. Exiting."
+        )
 
 
 def handle_validate_command(
@@ -80,7 +128,7 @@ def handle_validate_command(
     if result_code != 0:
         _LOGGER.critical("Validation failed. Check logs for details.")
         parser.error(
-            "It is not possible to find the producer model or the producer curves. " "Exiting."
+            "It is not possible to find the producer model or the producer curves. Exiting."
         )
 
 
@@ -133,7 +181,7 @@ def handle_performance_command(
     if result_code != 0:
         _LOGGER.critical("Performance analysis failed. Check logs for details.")
         parser.error(
-            "It is not possible to find the producer model or the producer curves. " "Exiting."
+            "It is not possible to find the producer model or the producer curves. Exiting."
         )
 
 
@@ -155,17 +203,14 @@ def handle_generate_command(
     """
     _LOGGER.info("Handling 'generate' command.")
     try:
-        # Initialize Parameters for the tool
-        params = Parameters()
-        params.init_tool(dwo_launcher)
-        params.set_topology_path(args.topology)
-        params.set_validation_path(args.validation)
-        params.set_output_path(args.output)
-        _LOGGER.debug("Parameters initialized for generate command.")
-
         # Generate input templates
-        generator = InputTemplateGenerator(params)
-        generator.generate_templates()
+        generator = InputTemplateGenerator()
+        generator.create_input_template(
+            launcher_dwo=dwo_launcher,
+            target=Path(args.output),
+            topology=args.topology,
+            template=args.validation,
+        )
         _LOGGER.info("Input files generated successfully.")
     except Exception as e:
         _LOGGER.exception(f"Error generating input files: {e}")
@@ -219,11 +264,11 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
     _LOGGER.info("Handling 'anonymize' command.")
     try:
         anonymizer.anonymize(
-            output_folder=args.output,
+            output_folder=Path(args.output),
             noisestd=args.noisestd,
             frequency=args.frequency,
-            results=args.results,
-            curves_folder=args.curves,
+            results=Path(args.results) if args.results else None,
+            curves_folder=Path(args.curves) if args.curves else None,
         )
         _LOGGER.info("Anonymization completed successfully.")
     except Exception as e:
@@ -241,8 +286,6 @@ def _run_verification(
     only_dtr: bool,
     testing: bool,
     verification_type: int,
-    validation_file: Optional[Path] = None,
-    validation_type: Optional[str] = None,
 ) -> int:
     """Initializes and runs a model validation or performance verification.
 
@@ -278,7 +321,7 @@ def _run_verification(
     _LOGGER.info(f"Running verification of type: {verification_type}")
     try:
         # Initialize Parameters for the tool
-        params = Parameters(
+        params = ValidationParameters(
             launcher_dwo=dwo_launcher,
             producer_model=producer_model,
             producer_curves_path=producer_curves,
@@ -324,4 +367,42 @@ def _run_verification(
         return 0
     except Exception as e:
         _LOGGER.exception(f"Error during verification: {e}")
+        return 1
+
+
+def _generate_envelopes(
+    dwo_launcher: Path,
+    output_dir: Path,
+    producer_ini: Path,
+    emt: bool,
+    user_pcs: bool,
+    only_dtr: bool,
+):
+    _LOGGER.info("Running generation of envelopes")
+    try:
+        params = GFMParameters(
+            launcher_dwo=dwo_launcher,
+            producer_ini=producer_ini,
+            selected_pcs=user_pcs,
+            output_dir=output_dir,
+            only_dtr=only_dtr,
+            emt=emt,
+        )
+
+        # Determine if the parameters are valid.
+        if not params.is_valid():
+            return -1
+
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        num_processes = config.get_int("Global", "parallel_num_processes", 4)
+
+        gfm = GFMGeneration(params)
+        start_time = time.time()
+        gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
+        end_time = time.time()
+
+        _LOGGER.info(f"Generation completed in {end_time - start_time:.2f} seconds.")
+        return 0
+    except Exception as e:
+        _LOGGER.exception(f"Error during generation: {e}")
         return 1

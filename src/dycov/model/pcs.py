@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Union
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import CASE_SEPARATOR
+from dycov.core.parameters import Parameters
 from dycov.logging.logging import dycov_logging
 from dycov.model.benchmark import Benchmark
 from dycov.model.producer import Producer
@@ -83,7 +83,6 @@ class Pcs:
         dycov_logging.get_logger("PCS").warning(f"{self.__get_log_title()} {message}")
 
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
-
         # It checks if the PCS configuration file exists in the tool and reads it.
         pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
         self.__debug(f"PCS Path {pcs_path}")
@@ -159,6 +158,10 @@ class Pcs:
             )
 
         return self._report_name, success, pcs_results
+
+    def generate(self):
+        for bm in self._bm_list:
+            bm.generate()
 
     def get_zone(self) -> int:
         """Get the zone of the PCS.
