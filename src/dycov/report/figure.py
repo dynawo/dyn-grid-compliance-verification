@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import math
 from pathlib import Path
 from typing import Optional, Union
@@ -222,7 +223,6 @@ def _plot_additional_curves(
     ymin: float,
     ymax: float,
 ) -> tuple[float, float]:
-
     _plot_additional_time_curves(additional_curves, results, last_val)
     ymin, ymax = _plot_additional_frequency_curves(additional_curves, ymin, ymax)
     _plot_additional_avr_curves(time, additional_curves, results)
@@ -296,7 +296,6 @@ def _plot_additional_frequency_curves(
     ymin: float,
     ymax: float,
 ) -> tuple[float, float]:
-
     f_nom = config.get_float("Global", "f_nom", 50.0)
 
     if "freq_1" in additional_curves:
@@ -491,7 +490,6 @@ def _save_plot(
     ymax: float,
     log_title: str,
 ) -> None:
-
     # Plot later the reference curves
     if time_reference is not None and curves_reference is not None:
         for curve_reference in curves_reference:
@@ -527,7 +525,6 @@ def _get_time_range(
     results: dict,
     time: list,
 ) -> tuple[float, float]:
-
     curves = results["curves"]
     xmin = 99999
     xmax = -99999

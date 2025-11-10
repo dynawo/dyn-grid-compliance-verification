@@ -10,7 +10,6 @@ from dycov.report.tables.steady_state_error import _steady_state_error, create_m
 
 
 class TestSteadyStateErrorTable:
-
     def test_steady_state_error_appends_row_on_valid_check(self):
         results = {
             "mae_voltage_1P_check": True,

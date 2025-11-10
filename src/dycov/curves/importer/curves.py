@@ -97,7 +97,8 @@ class ImportedCurves(ProducerCurves):
     def _get_common_curve_data(
         self,
         working_oc_dir: Path,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
         success: bool,
         is_reference: bool = False,
@@ -109,8 +110,10 @@ class ImportedCurves(ProducerCurves):
         ----------
         working_oc_dir : Path
             Temporal working path.
-        pcs_bm_name : str
-            PCS.Benchmark name.
+        pcs_name : str
+            PCS name.
+        bm_name : str
+            Benchmark name.
         oc_name : str
             Operating Condition name.
         success : bool
@@ -133,7 +136,7 @@ class ImportedCurves(ProducerCurves):
         df_imported_curves = pd.DataFrame()
 
         if success:
-            importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name))
+            importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_name, bm_name, oc_name))
             df_imported_curves = importer.get_curves_dataframe(self._producer.get_zone())
 
             if not df_imported_curves.empty:
@@ -205,15 +208,22 @@ class ImportedCurves(ProducerCurves):
         return generators
 
     def __process_event_parameters(
-        self, pcs_bm_name: str, oc_name: str, sim_t_event_start: float, fault_duration: float
+        self,
+        pcs_name: str,
+        bm_name: str,
+        oc_name: str,
+        sim_t_event_start: float,
+        fault_duration: float,
     ) -> dict:
         """
         Processes and constructs event parameters based on configuration.
 
         Parameters
         ----------
-        pcs_bm_name : str
-            PCS.Benchmark name.
+        pcs_name : str
+            PCS name.
+        bm_name : str
+            Benchmark name.
         oc_name : str
             Operating Condition name.
         sim_t_event_start : float
@@ -228,11 +238,11 @@ class ImportedCurves(ProducerCurves):
         """
         # Modify the PMax value depending on the PCS initialization:
         # PmaxInjection (default) or PmaxConsumption
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Model"
+        config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Model"
         pdr_p = config.get_value(config_section, "pdr_P")
         self.get_producer().set_consumption("PmaxConsumption" in pdr_p)
 
-        config_section = get_cfg_oc_name(pcs_bm_name, oc_name) + ".Event"
+        config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Event"
         connect_event_to = config.get_value(config_section, "connect_event_to")
         step_value = 0.0
         if config.has_key(config_section, "setpoint_step_value"):
@@ -252,7 +262,8 @@ class ImportedCurves(ProducerCurves):
         self,
         working_oc_dir: Path,
         producer_name: str,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
         curves_path: Path,
         is_reference: bool = False,
@@ -266,8 +277,10 @@ class ImportedCurves(ProducerCurves):
             Temporal working path.
         producer_name : str
             Producer name.
-        pcs_bm_name : str
-            PCS.Benchmark name.
+        pcs_name : str
+            PCS name.
+        bm_name : str
+            Benchmark name.
         oc_name : str
             Operating Condition name.
         curves_path : Path
@@ -286,17 +299,19 @@ class ImportedCurves(ProducerCurves):
         """
         # Copy base case and producers file
         success = manage_files.copy_base_curves_files(
-            curves_path / producer_name, working_oc_dir, get_cfg_oc_name(pcs_bm_name, oc_name)
+            curves_path / producer_name,
+            working_oc_dir,
+            get_cfg_oc_name(pcs_name, bm_name, oc_name),
         )
 
         has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves = (
             self._get_common_curve_data(
-                working_oc_dir, pcs_bm_name, oc_name, success, is_reference
+                working_oc_dir, pcs_name, bm_name, oc_name, success, is_reference
             )
         )
 
         event_params = self.__process_event_parameters(
-            pcs_bm_name, oc_name, sim_t_event_start, fault_duration
+            pcs_name, bm_name, oc_name, sim_t_event_start, fault_duration
         )
 
         return event_params, success, has_imported_curves, df_imported_curves
@@ -315,7 +330,8 @@ class ImportedCurves(ProducerCurves):
         self,
         working_oc_dir: Path,
         producer_name: str,
-        pcs_bm_name: str,
+        pcs_name: str,
+        bm_name: str,
         oc_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
@@ -327,8 +343,10 @@ class ImportedCurves(ProducerCurves):
             Temporal working path
         producer_name: str
             Producer name
-        pcs_bm_name: str
-            PCS.Benchmark name
+        pcs_name: str
+            PCS name
+        bm_name: str
+            Benchmark name
         oc_name: str
             Operating Condition name
         curves: Path
@@ -342,7 +360,7 @@ class ImportedCurves(ProducerCurves):
            Curves imported from the file
         """
         event_params, _, _, curves_df = self._obtain_curves(
-            working_oc_dir, producer_name, pcs_bm_name, oc_name, curves, is_reference=True
+            working_oc_dir, producer_name, pcs_name, bm_name, oc_name, curves, is_reference=True
         )
 
         return event_params["start_time"], curves_df
@@ -351,7 +369,7 @@ class ImportedCurves(ProducerCurves):
         self,
         working_oc_dir: Path,
         producer_name: str,
-        pcs_bm_name: str,
+        pcs_name: str,
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
@@ -364,10 +382,10 @@ class ImportedCurves(ProducerCurves):
             Temporal working path
         producer_name: str
             Producer name
-        pcs_bm_name: str
-            PCS.Benchmark name
+        pcs_name: str
+            PCS name
         bm_name: str
-            Benchmark name (not directly used but kept for interface consistency).
+            Benchmark name
         oc_name: str
             Operating Condition name
         reference_event_start_time: float
@@ -388,7 +406,8 @@ class ImportedCurves(ProducerCurves):
         event_params, success, has_imported_curves, curves_df = self._obtain_curves(
             working_oc_dir,
             producer_name,
-            pcs_bm_name,
+            pcs_name,
+            bm_name,
             oc_name,
             self.get_producer().get_producer_curves_path(),
         )

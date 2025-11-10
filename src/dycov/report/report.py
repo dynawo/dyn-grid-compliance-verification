@@ -7,8 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
 import logging
-import os
 import shutil
 import subprocess
 import time
@@ -17,7 +17,6 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from dycov.configuration.cfg import config
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import (
     CASE_SEPARATOR,
     ELECTRIC_PERFORMANCE_BESS,
@@ -31,7 +30,6 @@ from dycov.core.global_variables import (
 from dycov.curves.dynawo.dynawo import DynawoSimulator
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
-from dycov.model.producer import Producer
 from dycov.report import figure, html
 from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
@@ -46,6 +44,10 @@ from dycov.report.tables import (
     thresholds,
 )
 from dycov.templates.reports.create_figures import create_figures
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.producer import ModelProducer
+
+LOGGER = dycov_logging.get_logger("Report")
 
 
 def _get_verification_type(sim_type: int) -> str:
@@ -108,7 +110,7 @@ def _get_reports(
 
 def _copy_pcs_latex_files(
     pcs_results: dict,
-    parameters: Parameters,
+    parameters: ValidationParameters,
     path_latex_files: Path,
     working_path: Path,
 ):
@@ -118,13 +120,9 @@ def _copy_pcs_latex_files(
     )
 
     latex_user_path = config.get_config_dir() / latex_template_path
-    dycov_logging.get_logger("Report").debug(
-        f"{pcs.get_name()}: User LaTeX path:{latex_user_path}"
-    )
+    LOGGER.debug(f"{pcs.get_name()}: User LaTeX path:{latex_user_path}")
     latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
-    dycov_logging.get_logger("Report").debug(
-        f"{pcs.get_name()}: Tool LaTeX path:{latex_tool_path}"
-    )
+    LOGGER.debug(f"{pcs.get_name()}: Tool LaTeX path:{latex_tool_path}")
 
     if latex_user_path.exists():
         copy_latex_files(latex_user_path, working_path, pcs_results["producer"].replace("_", ""))
@@ -132,7 +130,7 @@ def _copy_pcs_latex_files(
         copy_latex_files(latex_tool_path, working_path, pcs_results["producer"].replace("_", ""))
 
     if not (latex_tool_path.exists() or latex_user_path.exists()):
-        dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
+        LOGGER.error(f"{pcs.get_name()}: Latex Template do not exist")
         return
 
 
@@ -150,9 +148,8 @@ def _create_pcs_figures(
 
 
 def _pcs_replace(
-    working_path: Path, pcs_results: dict, report_name: str, producer: Producer
+    working_path: Path, pcs_results: dict, report_name: str, producer: ModelProducer
 ) -> int:
-
     # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
     #  eliminating potentially problematic characters and unnecessary information.
     producer_name = pcs_results["producer"].replace("_", "")
@@ -185,7 +182,7 @@ def _pcs_replace(
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
-        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", "\_")}
+        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
         subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
         subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
         subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
@@ -288,20 +285,18 @@ def _generate_figures(
         )
 
         try:
-            html_curves, html_figure = html.plotly_figures(
+            html_curves, div_id, html_figure = html.plotly_figures(
                 figure_description, curves, reference_curves, oc_results
             )
             plotted_curves.extend(html_curves)
             if html_figure:
-                figures.append(html_figure)
+                figures.append((div_id, html_figure))
         except Exception as e:
-            dycov_logging.get_logger("Report").error(
+            LOGGER.error(
                 f"{figure_description[0]}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
-            dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: {e}"
-            )
+            LOGGER.error(f"{figure_description[0]}.{operating_condition}: {e}")
 
     return plotted_curves, figures
 
@@ -312,7 +307,7 @@ def _create_full_tex(
     output_path: Path,
     figures_description: dict,
     report_name: str,
-    producer: Producer,
+    producer: ModelProducer,
 ) -> int:
     """Creates the pcs LaTeX report.
 
@@ -338,7 +333,7 @@ def _create_full_tex(
 
         figure_key = operating_condition.rsplit(".", 1)[0]
         if figure_key not in figures_description:
-            dycov_logging.get_logger("Report").warning("Curves of " + figure_key + " do not exist")
+            LOGGER.warning("Curves of " + figure_key + " do not exist")
             continue
 
         if oc_results["curves"] is None:
@@ -377,11 +372,11 @@ def _create_full_tex(
                 figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
         except Exception as e:
-            dycov_logging.get_logger("Report").error(
+            LOGGER.error(
                 f"{operating_condition}: "
                 "A non fatal error occurred while generating the HTML report"
             )
-            dycov_logging.get_logger("Report").error(f"{operating_condition}: {e}")
+            LOGGER.error(f"{operating_condition}: {e}")
 
     return _pcs_replace(working_path, pcs_results, report_name, producer)
 
@@ -393,13 +388,13 @@ def _summary_log(
     model_template: str,
     reference_template: str,
 ) -> None:
-    header_txt = "\nSummary Report\n" "==============\n\n" f"***Run on {timestamp}***\n"
+    header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
     if dynawo_version:
         header_txt += f"***Dynawo version: {dynawo_version}***\n"
     if model_template:
-        header_txt += f"***Model: {model_template}***\n"
+        header_txt += f"***Model dir: {model_template}***\n"
     if reference_template:
-        header_txt += f"***Reference: {reference_template}***\n"
+        header_txt += f"***Reference curves dir: {reference_template}***\n"
 
     header_txt += (
         "\n\n"
@@ -417,10 +412,33 @@ def _summary_log(
         )
     body_txt += "\n"
     # Show the summary report on the console and save it to file
-    dycov_logging.get_logger("Report").info(f"{header_txt + body_txt}")
+    LOGGER.info(f"{header_txt + body_txt}")
 
 
-def prepare_pcs_report(pcs_results: dict, parameters: Parameters, path_latex_files: Path):
+def _clean(working_path: Path):
+    extensions_to_clean = [
+        "*.toc",
+        "*.aux",
+        "*.log",
+        "*.out",
+        "*.bbl",
+        "*.blg",
+        "*.run.xml",
+        "*.bcf",
+    ]
+    working_dir = Path(working_path)
+    for ext in extensions_to_clean:
+        # Busca los archivos con la extensión en el working_path
+        for file_to_delete in working_dir.glob(ext):
+            try:
+                file_to_delete.unlink()
+            except OSError as e:
+                LOGGER.warning(f"Error al eliminar {file_to_delete}: {e}")
+
+
+def prepare_pcs_report(
+    pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
+):
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 
@@ -446,7 +464,7 @@ def prepare_pcs_report(pcs_results: dict, parameters: Parameters, path_latex_fil
 def create_pdf(
     sorted_summary: list,
     report_results: dict,
-    parameters: Parameters,
+    parameters: ValidationParameters,
     path_latex_files: Path,
 ) -> None:
     """Creates the dycov final report.
@@ -467,11 +485,11 @@ def create_pdf(
     working_path = parameters.get_working_dir() / "Latex"
 
     latex_root_path = Path(__file__).resolve().parent.parent / path_latex_files
-    dycov_logging.get_logger("Report").debug(f"Root LaTeX path:{latex_root_path}")
+    LOGGER.debug(f"Root LaTeX path:{latex_root_path}")
     if latex_root_path.exists():
         shutil.copy(latex_root_path / REPORT_NAME, working_path)
     else:
-        dycov_logging.get_logger("Report").error("Latex Template do not exist")
+        LOGGER.error("Latex Template do not exist")
         return
 
     reports = _get_reports(sorted_summary, report_results, working_path)
@@ -479,7 +497,7 @@ def create_pdf(
     summary_description = ""
     now = time.time()
     timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(now))
-    summary_description += f"Run on {timestamp} \\\\"
+    summary_description += f"Run on: {timestamp} \\\\"
 
     producer = parameters.get_producer()
     dynawo_version = None
@@ -490,12 +508,12 @@ def create_pdf(
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
     model_template = str(producer.get_producer_path()).replace("\\", "\\\\")
-    summary_description += f"Model: {model_template} \\\\"
+    summary_description += f"Model dir: {model_template} \\\\"
 
     reference_template = None
     if producer.has_reference_curves_path():
         reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
-        summary_description += f"Reference: {reference_template} \\\\"
+        summary_description += f"Reference curves dir: {reference_template} \\\\"
 
     _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
     summary_map = summary.create_map(sorted_summary)
@@ -515,7 +533,7 @@ def create_pdf(
         {
             "commonz1": commonz1_include,
             "commonz3": commonz3_include,
-            "summary_description": summary_description.replace("_", "\_"),
+            "summary_description": summary_description.replace("_", r"\_"),
             "summaryReport": summary_map,
             "reports": reports,
             "verificationtype": _get_verification_type(producer.get_sim_type()),
@@ -537,45 +555,11 @@ def create_pdf(
         stderr=subprocess.PIPE,
     )
 
-    if dycov_logging.getEffectiveLevel() == logging.DEBUG:
-        if os.name == "nt":
-            proc = subprocess.run(
-                [
-                    "del",
-                    "*.toc",
-                    "*.aux",
-                    "*.log",
-                    "*.out",
-                    "*.bbl",
-                    "*.blg",
-                    "*.run.xml",
-                    "*.bcf",
-                ],
-                cwd=working_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        else:
-            proc = subprocess.run(
-                [
-                    "rm",
-                    "-f",
-                    "*.toc",
-                    "*.aux",
-                    "*.log",
-                    "*.out",
-                    "*.bbl",
-                    "*.blg",
-                    "*.run.xml",
-                    "*.bcf",
-                ],
-                cwd=working_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+    if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        _clean(working_path)
 
-    dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
+    LOGGER.debug(proc.stderr.decode("utf-8"))
     if move_report(working_path, output_path, REPORT_NAME):
-        dycov_logging.get_logger("Report").info("PDF done.")
+        LOGGER.info("PDF done.")
     else:
         raise LatexReportException("PDFLatex Error.")

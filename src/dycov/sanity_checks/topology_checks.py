@@ -11,6 +11,7 @@
 This module provides functions for validating Dynawo model topologies based on
 expected and actual components and their connections.
 """
+
 from typing import List
 
 from dycov.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params

@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from dycov.core.execution_parameters import Parameters
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
-from dycov.core.validation import Validation
 from dycov.model.compliance import Compliance
+from dycov.validate.parameters import ValidationParameters
+from dycov.validate.validation import Validation
 
 PERFORMANCE = "../../examples/Performance"
 MODEL = "../../examples/Model"
@@ -38,7 +38,7 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
             else:
                 sim_type = MODEL_VALIDATION
 
-        ep = Parameters(
+        params = ValidationParameters(
             Path(shutil.which("dynawo.sh")).resolve() if shutil.which("dynawo.sh") else None,
             testpath / producer_model_path if producer_model_path else None,
             testpath / producer_curves_path if producer_curves_path else None,
@@ -48,7 +48,7 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
             only_dtr,
             sim_type,
         )
-        md = Validation(ep)
+        md = Validation(params)
         md.set_testing(True)
         compliance = md.validate(use_parallel=False, num_processes=4)
     except Exception as e:
@@ -212,18 +212,18 @@ def test_model_validation_iec2015_curves():
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
-        Compliance.NonCompliant,  # 7
-        Compliance.NonCompliant,  # 8
-        Compliance.NonCompliant,  # 9
-        Compliance.NonCompliant,  # 10
-        Compliance.NonCompliant,  # 11
-        Compliance.NonCompliant,  # 12
-        Compliance.NonCompliant,  # 13
-        Compliance.NonCompliant,  # 14
+        Compliance.Compliant,  # 7
+        Compliance.Compliant,  # 8
+        Compliance.Compliant,  # 9
+        Compliance.InvalidTest,  # 10
+        Compliance.Compliant,  # 11
+        Compliance.Compliant,  # 12
+        Compliance.Compliant,  # 13
+        Compliance.Compliant,  # 14
         Compliance.Compliant,  # 15
-        Compliance.NonCompliant,  # 16
-        Compliance.NonCompliant,  # 17
-        Compliance.NonCompliant,  # 18
+        Compliance.Compliant,  # 16
+        Compliance.Compliant,  # 17
+        Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
         Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21

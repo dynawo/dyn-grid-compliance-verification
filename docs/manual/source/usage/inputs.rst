@@ -118,7 +118,7 @@ Currently supported models:
     * SynchronousMachineI8SM
         Ad-hoc machine model for the I8 PCS
 * WECC Wind models:
-    * WTG4AWeccCurrentSource
+    * WTG4AWeccCurrentSource1
         WECC Wind Turbine model with a simplified drive train model (dual-mass model) and with a
         current source as interface with the grid
     * WTG4BWeccCurrentSource
@@ -155,9 +155,9 @@ Currently supported models:
         Wind Turbine Type 4B model from IEC 61400-27-1:2020 standard : measurement, PLL, protection,
         PControl, QControl, limiters, electrical, generator and mechanical modules
 * WECC Storage models:
-    * BESScbWeccCurrentSource
+    * BESSWeccCurrentSource
         WECC Storage model
-    * BESScbWeccCurrentSourceNoPlantControl
+    * BESSWeccCurrentSourceNoPlantControl
         WECC Storage model without the plant controller
 * Lines:
     * Line

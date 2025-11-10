@@ -49,6 +49,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
 
+    _add_generate_envelopes_subparser(subparsers)
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
     _add_generate_subparser(subparsers)
@@ -152,6 +153,60 @@ def _add_launcher_argument(parser: argparse.ArgumentParser) -> None:
             "provided, the tool will try to find it from the PATH "
             "environment variable."
         ),
+    )
+
+
+def _add_ini_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the '--producer_ini' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "producer file describing the physical and control parameters of the installation."
+    if explain:
+        help_msg += f" {explain}"
+    _add_argument(
+        parser,
+        "-i",
+        "--producer_ini",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
+    )
+
+
+def _add_emt_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the '--emt' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    _add_argument(
+        parser,
+        "-e",
+        "--emt",
+        action="store_true",
+        help_msg="Enable the EMT simulation type.",
     )
 
 
@@ -470,6 +525,27 @@ def _add_results_argument(parser: argparse.ArgumentParser) -> None:
         help_msg="Path to a verification results directory. If provided,"
         " 'curves_calculated.csv' and 'dycov.log' files will be copied from here.",
     )
+
+
+def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'generateEnvelopes' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'generateEnvelopes' subparser will be added.
+    """
+    envelops = subparsers.add_parser(
+        "generateEnvelopes",
+        help="create all the envelopes based on the description of the different test cases",
+    )
+    _add_debug_argument(envelops)
+    _add_ini_argument(envelops, is_required=True)
+    _add_emt_argument(envelops)
+    _add_output_argument(envelops)
+    _add_pcs_argument(envelops)
+    _add_only_dtr_argument(envelops)
+    _LOGGER.debug("Added 'generateEnvelopes' subparser.")
 
 
 def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:

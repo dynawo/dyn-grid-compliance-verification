@@ -85,7 +85,7 @@ class PerformanceValidator(Validator):
         pcs_name: str,
         bm_name: str,
     ):
-        super(PerformanceValidator, self).__init__(
+        super().__init__(
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
         self._stable_time = stable_time
@@ -153,7 +153,6 @@ class PerformanceValidator(Validator):
             key for key in self._get_calculated_curves().keys() if key.endswith("_InternalAngle")
         ]
         for key in internal_angle_keys:
-
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
                 self.__curve_list("time"),
                 self.__curve_list(key),

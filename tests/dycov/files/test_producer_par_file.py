@@ -16,7 +16,6 @@ from dycov.logging.logging import dycov_logging
 
 
 class TestProducerParFile:
-
     def _write_dyd(self, path, bbmodels):
         ns = "http://www.rte-france.com/dynawo"
         root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})

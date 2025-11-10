@@ -33,7 +33,6 @@ def abc_to_psrms(abc, fs):
 
 
 def ensure_rms_signals(curves):
-
     time_step = np.mean(np.diff(curves["time"].to_numpy()))
     fs = 1 / time_step
 

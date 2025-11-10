@@ -11,6 +11,7 @@
 This module provides functions for checking the availability of external system
 executables required by the Dynawo validation tools.
 """
+
 import os
 import shutil
 from pathlib import Path
