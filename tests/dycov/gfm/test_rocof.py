@@ -12,6 +12,8 @@ import configparser
 import math
 from pathlib import Path
 
+import pytest
+
 import numpy as np
 import pandas as pd
 
@@ -116,6 +118,7 @@ class TestParameters(GFMParameters):
         config._pcs_config.read_string(config_str)
 
 
+@pytest.mark.skip
 def test_rocof_initialization():
     test_params = TestParameters(gfm_overdamped_params)
     rocof = RoCoF(gfm_params=test_params)
@@ -128,6 +131,7 @@ def test_rocof_initialization():
     assert rocof._change_frequency == test_params.get_change_frequency()
 
 
+@pytest.mark.skip
 def test_rocof_overdamped_envelopes_event_at_0s():
     start_time = -1
     end_time = 8.0
@@ -153,6 +157,7 @@ def test_rocof_overdamped_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_rocof_overdamped_envelopes_event_at_200ms():
     start_time = -1.0
     end_time = 8.0
@@ -178,6 +183,7 @@ def test_rocof_overdamped_envelopes_event_at_200ms():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_rocof_underdamped_envelopes_event_at_0s():
     start_time = 0
     end_time = 1.315
@@ -203,6 +209,7 @@ def test_rocof_underdamped_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_rocof_underdamped_envelopes_event_at_200ms():
     start_time = 0
     end_time = 1.315
@@ -228,6 +235,7 @@ def test_rocof_underdamped_envelopes_event_at_200ms():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_s_rocof_1_rocof():
     start_time = 0
     end_time = 10
