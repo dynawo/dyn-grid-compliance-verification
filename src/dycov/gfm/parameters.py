@@ -554,7 +554,7 @@ class GFMParameters(Parameters):
         if scr:
             try:
                 return float(scr)
-            except:
+            except Exception:
                 return config.get_float("GFM", scr, 0.0)
         return config.get_float("GFM", "SCRmax", 0.0)
 
