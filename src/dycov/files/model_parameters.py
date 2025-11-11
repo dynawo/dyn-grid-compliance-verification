@@ -8,11 +8,6 @@
 #     demiguelm@aia.es
 #
 
-# TODO: remove generator types ("GeneratorSynchronous", "IECWPP", "WTG4", etc. ==> we'll need
-#       entries in the master dictionary).
-#       The same goes for generator families ("IEC", "Wecc").
-#
-
 from __future__ import annotations
 
 import configparser
@@ -100,46 +95,39 @@ def _append_generator(
     dyn = etree.QName(dyd_root).namespace
     ns = etree.QName(par_root).namespace
 
-    dydset1 = dyd_root.find(f".//{{{dyn}}}connect[@id1='{gen_id}']")
-    dydset2 = dyd_root.find(f".//{{{dyn}}}connect[@id2='{gen_id}']")
-    if dydset1 is not None:
-        connectedXmfr = dydset1.get("id2")
-    elif dydset2 is not None:
-        connectedXmfr = dydset2.get("id1")
-    else:
-        connectedXmfr = None
+    connectedXmfr = None
 
-    # Parameter Set from which to extract the generator parameters we need
+    for connect in dyd_root.findall(f".//{{{dyn}}}connect"):
+        if connect.get("id1") == gen_id:
+            connectedXmfr = connect.get("id2")
+            break
+        elif connect.get("id2") == gen_id:
+            connectedXmfr = connect.get("id1")
+            break
+
     parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
+    if parset is None:
+        raise ValueError(f"No se encontró el conjunto de parámetros con id='{par_id}'")
 
-    sign, generator_imax = dynawo_translator.get_dynawo_variable(lib, "InjectedCurrentMax")
-    imaxpu = parset.find(f"{{{ns}}}par[@name='{generator_imax}']")
-    if imaxpu is not None:
-        imax = float(imaxpu.get("value")) * sign
-    else:
-        imax = None
+    # Use _get_parameter where applicable (it already centralizes variable lookup via the translator)
+    sign, imaxpu_element = _get_parameter(parset, ns, lib, "InjectedCurrentMax")
+    imax = float(imaxpu_element) * sign if imaxpu_element is not None else None
 
     default_section = "DEFAULT"
 
     if not producer_ini:
-        _, generator_p = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
-        if generator_p is not None:
-            gP = parset.find(f"{{{ns}}}par[@name='{generator_p}']")
-            P = float(gP.get("value"))
-        else:
-            P = 0
+        _, P_str = _get_parameter(parset, ns, lib, "ActivePower0Pu")
+        P = float(P_str) if P_str is not None else 0.0
     elif producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
         P_sharing = producer_ini.get(default_section, f"P_sharing_{gen_id}")
         P = float(P_sharing)
-    elif (
-        producer_ini.has_option(default_section, "topology")
-        and str(producer_ini.get(default_section, "topology"))[0] == "S"
-    ):
-        P = 1
+    elif producer_ini.has_option(default_section, "topology") and str(
+        producer_ini.get(default_section, "topology")
+    ).startswith("S"):
+        P = 1.0
         dycov_logging.get_logger("Model Parameters").warning(
-            "A P flow of 1 has been automatically defined."
+            "A P flow of 1.0 has been automatically defined."
         )
-        raise Warning("A P flow of 1 has been automatically defined.")
     else:
         dycov_logging.get_logger("Model Parameters").error(
             "It is mandatory to define the distribution of P flows for multi-topology generators"
@@ -147,43 +135,29 @@ def _append_generator(
         raise ValueError("Generator P flows not defined")
 
     if not producer_ini:
-        _, generator_q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
-        if generator_q is not None:
-            gQ = parset.find(f"{{{ns}}}par[@name='{generator_q}']")
-            Q = float(gQ.get("value"))
-        else:
-            Q = 0
+        _, Q_str = _get_parameter(parset, ns, lib, "ReactivePower0Pu")
+        Q = float(Q_str) if Q_str is not None else 0.0
     elif producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
         Q_sharing = producer_ini.get(default_section, f"Q_sharing_{gen_id}")
         Q = float(Q_sharing)
-    elif (
-        producer_ini.has_option(default_section, "topology")
-        and str(producer_ini.get(default_section, "topology"))[0] == "S"
-    ):
-        Q = 1
+    elif producer_ini.has_option(default_section, "topology") and str(
+        producer_ini.get(default_section, "topology")
+    ).startswith("S"):
+        Q = 1.0
         dycov_logging.get_logger("Model Parameters").warning(
-            "A Q flow of 1 has been automatically defined."
+            "A Q flow of 1.0 has been automatically defined."
         )
-        raise Warning("A Q flow of 1 has been automatically defined.")
     else:
         dycov_logging.get_logger("Model Parameters").error(
             "It is mandatory to define the distribution of Q flows for multi-topology generators"
         )
         raise ValueError("Generator Q flows not defined")
 
-    _, generator_VoltageDroop = dynawo_translator.get_dynawo_variable(lib, "VoltageDroop")
-    if generator_VoltageDroop is not None:
-        gVoltageDroop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDroop}']")
-        VoltageDroop = float(gVoltageDroop.get("value"))
-    else:
-        VoltageDroop = 0.0
+    _, VoltageDroop_str = _get_parameter(parset, ns, lib, "VoltageDroop")
+    droop_value = float(VoltageDroop_str) if VoltageDroop_str is not None else 0.0
 
-    _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
-    if generator_SNom is not None:
-        snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
-        s_nom = float(snom_par.get("value"))
-    else:
-        s_nom = 0
+    _, s_nom_str = _get_parameter(parset, ns, lib, "NominalApparentPower")
+    s_nom = float(s_nom_str) if s_nom_str is not None else 0.0
 
     generators.append(
         Gen_params(
@@ -195,7 +169,7 @@ def _append_generator(
             par_id=par_id,
             P=P,
             Q=Q,
-            VoltageDroop=VoltageDroop,
+            VoltageDroop=droop_value,
             UseVoltageDroop=False,
         )
     )
@@ -216,32 +190,29 @@ def _get_line_values(
         # Parameter Set from which to extract the line parameters
         parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
-        _, line_R = dynawo_translator.get_dynawo_variable(lib, "ResistancePu")
-        _, line_X = dynawo_translator.get_dynawo_variable(lib, "ReactancePu")
-        _, line_B = dynawo_translator.get_dynawo_variable(lib, "SusceptancePu")
-        _, line_G = dynawo_translator.get_dynawo_variable(lib, "ConductancePu")
-        r_par = parset.find(f"{{{ns}}}par[@name='{line_R}']")
-        x_par = parset.find(f"{{{ns}}}par[@name='{line_X}']")
-        b_par = parset.find(f"{{{ns}}}par[@name='{line_B}']")
-        g_par = parset.find(f"{{{ns}}}par[@name='{line_G}']")
+        # Use _get_parameter for all line parameters
+        _, r_str = _get_parameter(parset, ns, lib, "ResistancePu")
+        _, x_str = _get_parameter(parset, ns, lib, "ReactancePu")
+        _, b_str = _get_parameter(parset, ns, lib, "SusceptancePu")
+        _, g_str = _get_parameter(parset, ns, lib, "ConductancePu")
 
         if applied_line_rpu is None:
-            line_rpu = float(r_par.get("value"))
+            line_rpu = float(r_str)
         else:
             line_rpu = applied_line_rpu
 
         if applied_line_xpu is None:
-            line_xpu = float(x_par.get("value"))
+            line_xpu = float(x_str)
         else:
-            if "{{line_XPu}}" in x_par.get("value"):
+            if x_str and "{{line_XPu}}" in x_str:
                 line_xpu = applied_line_xpu
-            elif "{{line1_XPu}}" in x_par.get("value"):
+            elif x_str and "{{line1_XPu}}" in x_str:
                 line_xpu = applied_line_xpu * 0.01
-            elif "{{line99_XPu}}" in x_par.get("value"):
+            elif x_str and "{{line99_XPu}}" in x_str:
                 line_xpu = applied_line_xpu * 0.99
 
-        line_gpu = float(g_par.get("value"))
-        line_bpu = float(b_par.get("value"))
+        line_gpu = float(g_str) if g_str is not None else 0.0
+        line_bpu = float(b_str) if b_str is not None else 0.0
         connected = _are_connected(dyd_root, line_id, "BusPDR")
 
         lines.append(Line_params(line_id, lib, connected, line_rpu, line_xpu, line_bpu, line_gpu))
@@ -264,33 +235,30 @@ def _get_transformer_values(
         parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
         # Not all Transformer models provide their params in pu
-        _, transformer_R = dynawo_translator.get_dynawo_variable(lib, "Resistance")
-        _, transformer_X = dynawo_translator.get_dynawo_variable(lib, "Reactance")
-        _, transformer_B = dynawo_translator.get_dynawo_variable(lib, "Susceptance")
-        _, transformer_G = dynawo_translator.get_dynawo_variable(lib, "Conductance")
-        r_par = parset.find(f"{{{ns}}}par[@name='{transformer_R}']")
-        x_par = parset.find(f"{{{ns}}}par[@name='{transformer_X}']")
-        g_par = parset.find(f"{{{ns}}}par[@name='{transformer_G}']")
-        b_par = parset.find(f"{{{ns}}}par[@name='{transformer_B}']")
-        units_inPu = transformer_R.endswith("Pu")
+        _, r_str = _get_parameter(parset, ns, lib, "Resistance")
+        _, x_str = _get_parameter(parset, ns, lib, "Reactance")
+        _, g_str = _get_parameter(parset, ns, lib, "Conductance")
+        _, b_str = _get_parameter(parset, ns, lib, "Susceptance")
+        units_inPu = dynawo_translator.get_dynawo_variable(lib, "Resistance")[1].endswith("Pu")
+
         if not units_inPu:
-            _, transformer_SNom = dynawo_translator.get_dynawo_variable(lib, "SNom")
-            snom_par = parset.find(f"{{{ns}}}par[@name='{transformer_SNom}']")
-            s_nom = float(snom_par.get("value"))
-            xfmr_rpu = (s_nref / s_nom) * float(r_par.get("value")) / 100
-            xfmr_xpu = (s_nref / s_nom) * float(x_par.get("value")) / 100
-            xfmr_gpu = (s_nom / s_nref) * float(g_par.get("value")) / 100
-            xfmr_bpu = (s_nom / s_nref) * float(b_par.get("value")) / 100
+            _, snom_str = _get_parameter(parset, ns, lib, "SNom")
+            s_nom = float(snom_str)  # Asume que SNom no será None o fallará
+
+            # Conversión con valores obtenidos
+            xfmr_rpu = (s_nref / s_nom) * float(r_str) / 100
+            xfmr_xpu = (s_nref / s_nom) * float(x_str) / 100
+            xfmr_gpu = (s_nom / s_nref) * float(g_str) / 100
+            xfmr_bpu = (s_nom / s_nref) * float(b_str) / 100
         else:
-            xfmr_rpu = float(r_par.get("value"))
-            xfmr_xpu = float(x_par.get("value"))
-            xfmr_gpu = float(g_par.get("value"))
-            xfmr_bpu = float(b_par.get("value"))
+            xfmr_rpu = float(r_str)
+            xfmr_xpu = float(x_str)
+            xfmr_gpu = float(g_str)
+            xfmr_bpu = float(b_str)
 
         # If there's a regulating tap, get rTfo0Pu; otherwise get rTfoPu
-        _, transformer_rTfoPu = dynawo_translator.get_dynawo_variable(lib, "Rho")
-        tap_par = parset.find(f"{{{ns}}}par[@name='{transformer_rTfoPu}']")
-        xfmr_tapr = float(tap_par.get("value"))
+        _, rho_str = _get_parameter(parset, ns, lib, "Rho")
+        xfmr_tapr = float(rho_str)
 
         transformers.append(
             Xfmr_params(
@@ -320,36 +288,30 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
         # Parameter Set from which to extract the transformer parameters
         parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
 
-        sign_P, load_P0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0")
-        sign_Q, load_Q0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
-        _, load_U0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
-        _, load_Ph0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
-        _, load_alpha = dynawo_translator.get_dynawo_variable(lib, "Alpha")
-        _, load_beta = dynawo_translator.get_dynawo_variable(lib, "Beta")
-        p0_par = parset.find(f"{{{ns}}}par[@name='{load_P0}']")
-        q0_par = parset.find(f"{{{ns}}}par[@name='{load_Q0}']")
-        u0_par = parset.find(f"{{{ns}}}par[@name='{load_U0}']")
-        ph0_par = parset.find(f"{{{ns}}}par[@name='{load_Ph0}']")
-        alpha_value = None
-        if load_alpha is not None:
-            alpha_par = parset.find(f"{{{ns}}}par[@name='{load_alpha}']")
-            alpha_value = float(alpha_par.get("value"))
-        beta_value = None
-        if load_beta is not None:
-            beta_par = parset.find(f"{{{ns}}}par[@name='{load_beta}']")
-            beta_value = float(beta_par.get("value"))
+        sign_P, p0_value = _get_parameter(parset, ns, lib, "ActivePower0")
+        sign_Q, q0_value = _get_parameter(parset, ns, lib, "ReactivePower0")
+        _, u0_value = _get_parameter(parset, ns, lib, "Voltage0")
+        _, ph0_value = _get_parameter(parset, ns, lib, "Phase0")
+        _, alpha_value = _get_parameter(parset, ns, lib, "Alpha")
+        _, beta_value = _get_parameter(parset, ns, lib, "Beta")
 
         # Check if value contains a float or a placeholder
-        if "{" in p0_par.get("value"):
-            aux_ppu = p0_par.get("value").replace("{", "").replace("}", "") * sign_P
-            aux_qpu = q0_par.get("value").replace("{", "").replace("}", "") * sign_Q
-            aux_upu = u0_par.get("value").replace("{", "").replace("}", "")
-            aux_phpu = ph0_par.get("value").replace("{", "").replace("}", "")
-        else:
-            aux_ppu = float(p0_par.get("value")) * sign_P
-            aux_qpu = float(q0_par.get("value")) * sign_Q
-            aux_upu = float(u0_par.get("value"))
-            aux_phpu = float(ph0_par.get("value"))
+        # preserve original behavior: if string contains '{' then treat as placeholder
+        def _resolve_value(raw, sign):
+            if raw is None:
+                return None
+            if isinstance(raw, str) and raw.startswith("{") and raw.endswith("}"):
+                return raw.replace("{", "").replace("}", "")
+            try:
+                return float(raw) * sign
+            except (ValueError, TypeError):
+                # if cannot convert, return raw
+                return raw
+
+        aux_ppu = _resolve_value(p0_value, sign_P)
+        aux_qpu = _resolve_value(q0_value, sign_Q)
+        aux_upu = _resolve_value(u0_value, 1)
+        aux_phpu = _resolve_value(ph0_value, 1)
 
         loads.append(
             Load_params(
@@ -360,8 +322,8 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
                 aux_qpu,
                 aux_upu,
                 aux_phpu,
-                alpha_value,
-                beta_value,
+                None if alpha_value is None else float(alpha_value),
+                None if beta_value is None else float(beta_value),
             )
         )
 
@@ -628,35 +590,30 @@ def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
 
 def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
     parameters = {}
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PfFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["PfFlag"] = par.get("value")
+    # Use _get_parameter where it helps to centralize lookup
+    _, PfFlag = _get_parameter(parset, ns, generator.lib, "PfFlag")
+    if PfFlag is not None:
+        parameters["PfFlag"] = PfFlag
 
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "VFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["VFlag"] = par.get("value")
+    _, VFlag = _get_parameter(parset, ns, generator.lib, "VFlag")
+    if VFlag is not None:
+        parameters["VFlag"] = VFlag
 
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["PFlag"] = par.get("value")
+    _, PFlag = _get_parameter(parset, ns, generator.lib, "PFlag")
+    if PFlag is not None:
+        parameters["PFlag"] = PFlag
 
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "QFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["QFlag"] = par.get("value")
+    _, QFlag = _get_parameter(parset, ns, generator.lib, "QFlag")
+    if QFlag is not None:
+        parameters["QFlag"] = QFlag
 
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "RefFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["RefFlag"] = par.get("value")
+    _, RefFlag = _get_parameter(parset, ns, generator.lib, "RefFlag")
+    if RefFlag is not None:
+        parameters["RefFlag"] = RefFlag
 
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "FreqFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["FreqFlag"] = par.get("value")
+    _, FreqFlag = _get_parameter(parset, ns, generator.lib, "FreqFlag")
+    if FreqFlag is not None:
+        parameters["FreqFlag"] = FreqFlag
 
     return parameters
 
@@ -729,6 +686,15 @@ def _set_parameter(parset, ns, parameter_name, sign, parameter_value):
     parameter = parset.find(f"{{{ns}}}par[@name='{parameter_name}']")
     if parameter is not None:
         parameter.set("value", str(sign * parameter_value))
+
+
+def _get_parameter(parset, ns, lib, parameter_name):
+    sign, variable_name = dynawo_translator.get_dynawo_variable(lib, parameter_name)
+    if variable_name is not None:
+        variable = parset.find(f"{{{ns}}}par[@name='{variable_name}']")
+        return sign, variable.get("value")
+    else:
+        return None, None
 
 
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
