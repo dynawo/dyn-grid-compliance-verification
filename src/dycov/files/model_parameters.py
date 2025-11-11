@@ -37,38 +37,40 @@ from dycov.model.parameters import (
 
 
 def _get_generator_values(
-    dyd_root: etree.Element, par_root: etree.Element, producer_ini: configparser.ConfigParser
+    dyd_root: etree.Element,
+    par_root: etree.Element,
+    producer_ini: configparser.ConfigParser,
 ) -> list:
     generators = []
     # Generators
     for model_parameter in find_bbmodel_by_type(dyd_root, "GeneratorSynchronous"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
 
     # WindTurbine Parks
     for model_parameter in find_bbmodel_by_type(dyd_root, "IECWPP"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
     for model_parameter in find_bbmodel_by_type(dyd_root, "WTG4"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
 
     # WindTurbines
     for model_parameter in find_bbmodel_by_type(dyd_root, "IECWT"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
     for model_parameter in find_bbmodel_by_type(dyd_root, "WT4"):
         if "IECWT" in model_parameter.get("lib"):
             continue
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
 
     # Photovoltaics
     for model_parameter in find_bbmodel_by_type(dyd_root, "PhotovoltaicsWecc"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
 
     # BESS
     for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
 
     if generators:
         total_p = sum(g.P for g in generators)
-        total_q = sum(q.Q for q in generators)
+        total_q = sum(g.Q for g in generators)
 
         if not math.isclose(total_p, 1.0):
             dycov_logging.get_logger("Model Parameters").error(
@@ -89,8 +91,8 @@ def _append_generator(
     dyd_root: etree.Element,
     par_root: etree.Element,
     model_parameter: etree.Element,
-    producer_ini: configparser.ConfigParser,
     generators: list,
+    producer_ini: configparser.ConfigParser = None,
 ):
     gen_id = model_parameter.get("id")
     par_id = model_parameter.get("parId")
@@ -119,7 +121,14 @@ def _append_generator(
 
     default_section = "DEFAULT"
 
-    if producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
+    if not producer_ini:
+        _, generator_p = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
+        if generator_p is not None:
+            gP = parset.find(f"{{{ns}}}par[@name='{generator_p}']")
+            P = float(gP.get("value"))
+        else:
+            P = 0
+    elif producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
         P_sharing = producer_ini.get(default_section, f"P_sharing_{gen_id}")
         P = float(P_sharing)
     elif (
@@ -137,7 +146,14 @@ def _append_generator(
         )
         raise ValueError("Generator P flows not defined")
 
-    if producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
+    if not producer_ini:
+        _, generator_q = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
+        if generator_q is not None:
+            gQ = parset.find(f"{{{ns}}}par[@name='{generator_q}']")
+            Q = float(gQ.get("value"))
+        else:
+            Q = 0
+    elif producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
         Q_sharing = producer_ini.get(default_section, f"Q_sharing_{gen_id}")
         Q = float(Q_sharing)
     elif (
@@ -163,8 +179,11 @@ def _append_generator(
         VoltageDroop = 0.0
 
     _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
-    snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
-    s_nom = float(snom_par.get("value"))
+    if generator_SNom is not None:
+        snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
+        s_nom = float(snom_par.get("value"))
+    else:
+        s_nom = 0
 
     generators.append(
         Gen_params(
@@ -824,6 +843,33 @@ def get_producer_values(
         ppm_xfmr,
         intline,
     )
+
+
+def get_pcs_generators_params(pcs_dyd: Path, pcs_par: Path) -> list:
+    """Gets the generators parameters of the pcs model.
+
+    Parameters
+    ----------
+    pcs_dyd: Path
+        Path to the pcs DYD file
+    pcs_par: Path
+        Path to the pcs PAR file
+
+    Returns
+    -------
+    list
+        Generators parameters of the pcs model
+    """
+    pcs_dyd_tree = etree.parse(pcs_dyd, etree.XMLParser(remove_blank_text=True))
+    pcs_dyd_root = pcs_dyd_tree.getroot()
+
+    pcs_par_tree = etree.parse(pcs_par, etree.XMLParser(remove_blank_text=True))
+    pcs_par_root = pcs_par_tree.getroot()
+
+    generators = []
+    for model_parameter in find_bbmodel_by_type(pcs_dyd_root, "SynchronousMachineI8SM"):
+        _append_generator(pcs_dyd_root, pcs_par_root, model_parameter, generators, None)
+    return generators
 
 
 def get_pcs_load_params(pcs_dyd: Path, pcs_par: Path) -> list:

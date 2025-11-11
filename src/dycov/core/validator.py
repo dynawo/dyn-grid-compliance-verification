@@ -18,8 +18,6 @@ from dycov.model.parameters import Disconnection_Model
 from dycov.model.producer import Producer
 from dycov.validation import compliance_list
 
-LOGGER = dycov_logging.get_logger("Validator")
-
 
 class Validator(ABC):  # Inherit from ABC to define an abstract base class
     """
@@ -90,11 +88,11 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         """
         full_message = f"{self._get_log_title()} {message}"
         if level == "info":
-            LOGGER.info(full_message)
+            dycov_logging.get_logger("Validator").info(full_message)
         elif level == "debug":
-            LOGGER.debug(full_message)
+            dycov_logging.get_logger("Validator").debug(full_message)
         elif level == "warning":
-            LOGGER.warning(full_message)
+            dycov_logging.get_logger("Validator").warning(full_message)
 
     def _get_calculated_curves(self) -> dict:
         """

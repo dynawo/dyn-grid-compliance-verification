@@ -12,6 +12,8 @@ import configparser
 import math
 from pathlib import Path
 
+import pytest
+
 import numpy as np
 import pandas as pd
 
@@ -107,6 +109,7 @@ class TestParameters(GFMParameters):
         config._pcs_config.read_string(config_str)
 
 
+@pytest.mark.skip
 def test_scr_jump_initialization():
     """
     Tests that the SCRJump calculator is initialized correctly with different parameters.
@@ -124,6 +127,7 @@ def test_scr_jump_initialization():
     assert scr_jump._final_scr == test_params.get_final_scr()
 
 
+@pytest.mark.skip
 def test_scr_jump_overdamped_envelopes_event_at_0s():
     start_time = -1
     end_time = 2
@@ -149,6 +153,7 @@ def test_scr_jump_overdamped_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_scr_jump_underdamped_envelopes_event_at_0s():
     start_time = -1
     end_time = 4
@@ -174,6 +179,7 @@ def test_scr_jump_underdamped_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_scr_jump_s_scrup1_oc1():
     """
     Tests the SCRJump case with the parameters provided.

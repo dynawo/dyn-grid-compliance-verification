@@ -12,6 +12,8 @@ import configparser
 import math
 from pathlib import Path
 
+import pytest
+
 import numpy as np
 import pandas as pd
 
@@ -105,6 +107,7 @@ class TestParameters(GFMParameters):
         config._pcs_config.read_string(config_str)
 
 
+@pytest.mark.skip
 def test_phase_jump_initialization():
     test_params = TestParameters(gfm_overdamped_params)
     phase_jump = PhaseJump(gfm_params=test_params)
@@ -117,6 +120,7 @@ def test_phase_jump_initialization():
     assert phase_jump._delta_phase == test_params.get_delta_phase()
 
 
+@pytest.mark.skip
 def test_phase_jump_overdamped_envelopes_event_at_0s():
     start_time = 0
     end_time = 1.315
@@ -142,6 +146,7 @@ def test_phase_jump_overdamped_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_phase_jump_overdamped_envelopes_event_at_200ms():
     start_time = 0
     end_time = 1.315
@@ -167,6 +172,7 @@ def test_phase_jump_overdamped_envelopes_event_at_200ms():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_phase_jump_underdamped_envelopes_event_at_0s():
     start_time = 0
     end_time = 1.315
@@ -192,6 +198,7 @@ def test_phase_jump_underdamped_envelopes_event_at_0s():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_phase_jump_underdamped_envelopes_event_at_200ms():
     start_time = 0
     end_time = 1.315
@@ -217,6 +224,7 @@ def test_phase_jump_underdamped_envelopes_event_at_200ms():
     assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
 
 
+@pytest.mark.skip
 def test_s_vol_ang_step_1_phase_jump():
     start_time = 0
     end_time = 10

@@ -50,8 +50,6 @@ from dycov.validation import common
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
 
-LOGGER = dycov_logging.get_logger("ProducerCurves")
-
 
 class DynawoCurves(ProducerCurves):
     """
@@ -174,7 +172,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The debug message.
         """
-        LOGGER.debug(f"{self.__get_log_title(bm_name, oc_name)} {message}")
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"{self.__get_log_title(bm_name, oc_name)} {message}"
+        )
 
     def __warning(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -189,7 +189,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The warning message.
         """
-        LOGGER.warning(f"{self.__get_log_title(bm_name, oc_name)} {message}")
+        dycov_logging.get_logger("ProducerCurves").warning(
+            f"{self.__get_log_title(bm_name, oc_name)} {message}"
+        )
 
     def __error(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -204,7 +206,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The error message.
         """
-        LOGGER.error(f"{self.__get_log_title(bm_name, oc_name)} {message}")
+        dycov_logging.get_logger("ProducerCurves").error(
+            f"{self.__get_log_title(bm_name, oc_name)} {message}"
+        )
 
     def __log(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -304,7 +308,7 @@ class DynawoCurves(ProducerCurves):
 
         # Initialize logging handlers for the simulation
         file_log_level = config.get_value("Global", "file_log_level")
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
             file_log_level = logging.DEBUG
 
         self._logger.init_handlers(
@@ -386,7 +390,9 @@ class DynawoCurves(ProducerCurves):
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:
-            LOGGER.error("Uinf cannot be equal to Udip to avoid division by zero.")
+            dycov_logging.get_logger("ProducerCurves").error(
+                "Uinf cannot be equal to Udip to avoid division by zero."
+            )
             raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
         Zv = (Udip * Zcc) / (Uinf - Udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
@@ -582,12 +588,19 @@ class DynawoCurves(ProducerCurves):
         self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
 
+        # Read the generators parameters in the TSO network, if exists
+        rte_generators = model_parameters.get_pcs_generators_params(
+            working_oc_dir / "TSOModel.dyd",
+            working_oc_dir / "TSOModel.par",
+        )
+
         # Complete Omega and TSO files
+        dycov_logging.get_logger("ProducerCurves").debug("Complete omega file")
         omega_file.complete_omega(
             working_oc_dir,
             "Omega.dyd",
             "Omega.par",
-            self.get_producer().generators,
+            self.get_producer().generators + rte_generators,
         )
 
         tso_file.complete_setpoint(
@@ -1354,7 +1367,7 @@ class DynawoCurves(ProducerCurves):
                     abs(dip),
                 )
 
-                if LOGGER.getEffectiveLevel() == logging.DEBUG:
+                if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
                     target_dir_name = (
                         "bisection_last_success" if success else "bisection_last_failure"
                     )
@@ -1777,7 +1790,7 @@ class DynawoCurves(ProducerCurves):
             else:
                 max_val = time
 
-            if LOGGER.getEffectiveLevel() == logging.DEBUG:
+            if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
                 target_dir_name = (
                     "bisection_last_success" if steady_state else "bisection_last_failure"
                 )
