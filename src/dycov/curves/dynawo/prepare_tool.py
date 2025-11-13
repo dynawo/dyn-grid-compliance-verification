@@ -10,10 +10,8 @@
 from pathlib import Path
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dynawo import DynawoSimulator
+from dycov.logging.logging import dycov_logging
 from dycov.files import manage_files
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
@@ -63,11 +61,7 @@ def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
         )
         if option.strip().lower() in ("y", "yes", ""):
             return True
-        manage_files.remove_dir(ddb_dir)
-
-    # Ensure DDB directory exists
-    if not ddb_dir.is_dir():
-        manage_files.create_dir(ddb_dir, clean_first=False)
+        manage_files.create_dir(ddb_dir, clean_first=True)
 
     return False
 
@@ -97,11 +91,13 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
     modelica_path = Path(config.get_value("Global", "modelica_path"))
     file_path = Path(__file__).resolve().parent.parent.parent
     user_models = config.get_config_dir() / "user_models"
+    ddb_dir = config.get_config_dir() / "ddb"
 
     # Ensure required directories exist without deleting previous content
     manage_files.create_dir(config.get_config_dir(), clean_first=False)
     manage_files.create_dir(user_models, clean_first=False)
     manage_files.create_dir(user_models / "dictionary", clean_first=False)
+    manage_files.create_dir(ddb_dir, clean_first=False)
 
     # Helper to check XML files
     def has_xml_files(path: Path) -> bool:
@@ -109,11 +105,12 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
 
     # Skip precompilation if both directories have no XML files
     if not has_xml_files(file_path / modelica_path) and not has_xml_files(user_models):
-        logger.info("No XML files found in modelica_path or user_models. Skipping precompile.")
+        dycov_logging.get_logger("PrepareTool").info(
+            "No XML files found in modelica_path or user_models. Skipping precompile."
+        )
         return False
 
     # Prepare DDB directory
-    ddb_dir = config.get_config_dir() / "ddb"
     if _prepare_ddb_path(launcher_dwo, ddb_dir, force):
         return True
 
