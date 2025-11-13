@@ -297,10 +297,6 @@ An example of the console output:
 
 ``` 
 (dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI
-2024-02-01 11:52:16,161 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
-2024-02-01 11:52:16,164 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
-2024-02-01 11:55:11,153 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
-2024-02-01 11:55:11,154 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SynchronousMachineI8SM.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
 2024-02-01 11:56:27,637 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
 2024-02-01 11:56:40,688 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 2024-02-01 11:56:40,744 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
@@ -569,19 +565,6 @@ dycov$
 ├── config.ini_ADVANCED
 ├── config.ini_BASIC
 ├── ddb
-│   ├── compile.log
-│   ├── dynawo.version
-│   ├── SPOmega
-│   ├── SPOmega.desc.xml
-│   ├── SPOmega.extvar
-│   ├── SPOmega.mo
-│   ├── SPOmega.so
-│   ├── SynchronousMachineI8SM
-│   ├── SynchronousMachineI8SM.desc.xml
-│   ├── SynchronousMachineI8SM.extvar
-│   ├── SynchronousMachineI8SM_INIT.mo
-│   ├── SynchronousMachineI8SM.mo
-│   └── SynchronousMachineI8SM.so
 ├── log
 │   └── dycov.log
 ├── templates
