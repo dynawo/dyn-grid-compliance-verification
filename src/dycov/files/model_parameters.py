@@ -833,9 +833,7 @@ def get_pcs_generators_params(pcs_dyd: Path, pcs_par: Path) -> list:
     pcs_par_root = pcs_par_tree.getroot()
 
     generators = []
-    for model_parameter in find_bbmodel_by_type(
-        pcs_dyd_root, "GeneratorSynchronousThreeWindingsDTRI8"
-    ):
+    for model_parameter in find_bbmodel_by_type(pcs_dyd_root, "GeneratorSynchronous"):
         _append_generator(pcs_dyd_root, pcs_par_root, model_parameter, generators, None)
     return generators
 
