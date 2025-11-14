@@ -122,7 +122,7 @@ class GFMCalculator:
         """
         # Calculate the number of samples corresponding to the delay time.
         # Ensure at least one sample for the delay.
-        delay_samples = max(1, int(delay_time / (time_array[1] - time_array[0])))
+        delay_samples = max(1, int(delay_time / (time_array[1] - time_array[0])) + 1)
         # Create a 'prefix' array filled with `delayed_value`.
         sample = np.full(delay_samples, delayed_value)
         # Concatenate this delay 'prefix' with the original signal.
