@@ -552,7 +552,10 @@ class GFMParameters(Parameters):
         """
         scr = self.__get_value("SCR")
         if scr:
-            return config.get_float("GFM", scr, 0.0)
+            try:
+                return float(scr)
+            except Exception:
+                return config.get_float("GFM", scr, 0.0)
         return config.get_float("GFM", "SCRmax", 0.0)
 
     def get_initial_scr(self) -> float:
