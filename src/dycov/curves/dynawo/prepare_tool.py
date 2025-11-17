@@ -8,18 +8,20 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dynawo import DynawoSimulator
-from dycov.logging.logging import dycov_logging
 from dycov.files import manage_files
+from dycov.logging.logging import dycov_logging
 
 
 def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
     """
-    Prepare the Dynawo database (DDB) path by checking version compatibility and handling recompilation.
+    Prepare the Dynawo database (DDB) path by checking version compatibility
+    and handling recompilation.
 
-    If Dynawo version differs from previous runs or `force` is True, the existing DDB is removed.
-    Prompts the user to abort if versions differ.
+    If Dynawo version differs from previous runs or `force` is True, the existing
+    DDB is removed. Prompts the user to abort if versions differ.
 
     Parameters
     ----------

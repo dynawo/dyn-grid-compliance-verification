@@ -702,7 +702,7 @@ class DynawoCurves(ProducerCurves):
 
         # Optimized: Determine fault_duration more concisely
         fault_duration = 0.0
-        if config.has_key(config_section, "fault_duration"):
+        if config.has_option(config_section, "fault_duration"):
             fault_duration = config.get_float(config_section, "fault_duration", 0.0)
         else:
             generator_type = generator_variables.get_generator_type(self.get_producer().u_nom)
@@ -713,7 +713,7 @@ class DynawoCurves(ProducerCurves):
 
         # Optimized: Determine step_value more concisely
         step_value = 0.0
-        if config.has_key(config_section, "setpoint_step_value"):
+        if config.has_option(config_section, "setpoint_step_value"):
             step_value = self.obtain_value(
                 str(config.get_value(config_section, "setpoint_step_value"))
             )
@@ -757,7 +757,7 @@ class DynawoCurves(ProducerCurves):
         self._has_line = False  # Reset flag
 
         # Optimized: Consolidated logic for line parameter calculation
-        if config.has_key(config_section, "line_XPu"):
+        if config.has_option(config_section, "line_XPu"):
             self._has_line = True
             line_xpu_definition = config.get_value(config_section, "line_XPu")
             self.__log(bm_name, oc_name, f"\tline_XPu={line_xpu_definition}")
@@ -787,7 +787,7 @@ class DynawoCurves(ProducerCurves):
             else:
                 line_rpu = 0.0
 
-        elif config.has_key(config_section, "SCR"):
+        elif config.has_option(config_section, "SCR"):
             self._has_line = True
             scr = config.get_float(config_section, "SCR", 0.0)
             self.__log(bm_name, oc_name, f"\tSCR={scr}")
@@ -799,7 +799,7 @@ class DynawoCurves(ProducerCurves):
             # else: line_xpu and line_rpu remain 0, _has_line remains False
             # (as initialized or explicitly set)
 
-        elif config.has_key(config_section, "Zcc"):
+        elif config.has_option(config_section, "Zcc"):
             self._has_line = True
             scc = generator_variables.get_scc(self.get_producer().u_nom)
             udim = generator_variables.get_generator_u_dim(self.get_producer().u_nom)

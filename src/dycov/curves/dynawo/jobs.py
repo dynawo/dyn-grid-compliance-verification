@@ -9,7 +9,6 @@
 #
 from pathlib import Path
 
-from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.file_variables import FileVariables
 from dycov.files import replace_placeholders
@@ -40,7 +39,6 @@ class JobsFile(FileVariables):
         tool_variables = [
             "solver_lib",
             "solver_id",
-            "dycov_ddb_path",
             "producer_dyd",
         ]
         super().__init__(
@@ -74,8 +72,6 @@ class JobsFile(FileVariables):
         variables_dict["solver_lib"] = solver_lib
         variables_dict["solver_id"] = solver_id
 
-        # Set the path to the DyCoV DDB directory using the global configuration
-        variables_dict["dycov_ddb_path"] = config.get_config_dir() / "ddb"
         # Get the name of the producer's DYD file from the Dynawo curves
         variables_dict["producer_dyd"] = self._dynawo_curves.get_producer().get_producer_dyd().name
 
