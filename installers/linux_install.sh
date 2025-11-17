@@ -3,6 +3,19 @@
 # This script automatically installs the DyCoV tool for end-users
 # in Linux environments. It does not need root permissions.
 #
+# How it works:
+#   * Creates a root dir ("dycov") under the $PWD. Everything, temporary or permanent, will go in there.
+#   * Downloads Dynawo (our own validated Nightly release) and unpacks it under $PWD/dycov/dynawo.
+#   * Shallow-clones the DyCoV repo under a temporary subdir, $PWD/dycov/repo_dycov.
+#   * Builds & installs the app (and all of its Python dependencies) in a venv, under $PWD/dycov/dycov_venv.
+#     (Note: it also edits the venv activation script to make sure this Dynawo is the first in the $PATH).
+#   * Copies the examples under $PWD/dycov/examples.
+#   * Also builds the User Manual and leaves it under $PWD/dycov/user_manual.
+#   * Then deletes the temporarily cloned repo.
+#
+# The tool is then ready to be used, by sourcing $PWD/dycov/activate_dycov.
+#
+#
 # (c) Rte 2024
 #     Developed by Grupo AIA
 #
@@ -11,28 +24,41 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail
 
-# Default Configuration Variables
-RELEASE_TAG="v0.9.1"
-DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
-DYNAWO_SHA256SUM="fbba80aa7ac6a990928b601e339a43ec49d538b956c97a51d038d1dcdea48768"
+################################################################################
+# Config variables
+################################################################################
+
+# DyCoV and Dynawo versions to install
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
+DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/Dynawo_omc_v1.8.0.zip"
+DYNAWO_SHA256SUM="d0236481e73bce24c2e830aee4c8e15e68dec7aafda895fd22da3403a50654b2"
+# Edit these at Release time:
+RELEASE_TAG="master"
+DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
+#DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
+#DYNAWO_SHA256SUM="fbba80aa7ac6a990928b601e339a43ec49d538b956c97a51d038d1dcdea48768"
 
-# Script State Variables
-INSTALL_DIR="$PWD/dycov"
-LOG_FILE_NAME="" # Will be set later
+# Script state
 NON_INTERACTIVE=false
-CUSTOM_ZIP_USED=false
-DIRECT_URL=""       # Variable for direct source code download.
-INSTALL_DYNAWO=true # Controls the optional installation of Dynawo.
+CUSTOM_ZIP_USED=false # for direct download of dycov source-code zip/tarball
+DIRECT_URL=""
+INSTALL_DYNAWO=true # Controls the optional installation of Dynawo
 
-# Helper Functions
+# Local paths and filenames
+INSTALL_DIR="$PWD/dycov"
+TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
+VENV="dycov_venv"
+DATETIME=$(date '+%Y%m%d_%H%M%S')
+LOG_FILE="installation_$DATETIME.log"
+
+# Console message colors
 RED='\033[1;31m'
 GREEN='\033[1;32m'
 NC='\033[0m'
 
-# Make a copy of the original stdout for writing to the console later.
-# This must be done before any function uses >&6.
-exec 6>&1
+################################################################################
+# Helper Functions
+################################################################################
 
 # Displays a message on the console and saves it to the log.
 color_msg() {
@@ -46,31 +72,29 @@ color_err_msg() {
     echo -e "\n\n${RED}$1${NC}" >&6
 }
 
-# Cleans up the installation directory in case of an error, preserving the log file.
+# Deletes the install directory in case of an error, preserving the log file.
 cleanup_on_error() {
     color_err_msg "An error occurred. Cleaning up the installation directory..."
     if [ -d "$INSTALL_DIR" ]; then
-        local log_path="$INSTALL_DIR/$LOG_FILE_NAME"
+        local log_path="$INSTALL_DIR/$LOG_FILE"
         if [ -f "$log_path" ]; then
             local parent_dir
             parent_dir=$(dirname "$INSTALL_DIR")
             mv "$log_path" "$parent_dir/"
-            color_err_msg "Log file preserved at: $parent_dir/$LOG_FILE_NAME"
+            color_err_msg "Log file preserved at: $parent_dir/$LOG_FILE"
         fi
         rm -rf "$INSTALL_DIR"
         color_err_msg "Installation directory $INSTALL_DIR has been removed."
     fi
 }
 
-# Error handler activated by trap.
+# Define and activate the error handler as early as possible
 error_handler() {
     local exit_status=$1
     local line_num=$2
     color_err_msg "ERROR: The script failed with status ($exit_status) on line $line_num."
     cleanup_on_error
 }
-
-# Activates the error handler for any script failure.
 trap 'error_handler $? $LINENO' ERR
 
 # Asks for confirmation before deleting, unless --yes mode is active.
@@ -138,7 +162,11 @@ usage() {
     exit 0
 }
 
-# Command-Line Argument Parsing
+################################################################################
+# SCRIPT STARTS HERE
+################################################################################
+
+# Command-line argument parsing
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -175,30 +203,27 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Definition of Dependent Variables
-TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
-VENV="dycov_venv"
-DATETIME=$(date '+%Y%m%d_%H%M%S')
-LOG_FILE_NAME="installation_$DATETIME.log" # Assign the name here to be used by the error handler
-LOG="$INSTALL_DIR/$LOG_FILE_NAME"
-DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
-
-#######################################
-# START OF THE INSTALLATION LOGIC
-#######################################
-
-# 1. Directory and Log Preparation
+################################################################################
+# Directory and log preparation
+################################################################################
 if [ -d "$INSTALL_DIR" ]; then
     echo -e "\n${RED}ERROR: The installation directory already exists: $INSTALL_DIR${NC}" >&6
     confirm_and_delete "$INSTALL_DIR"
 fi
 mkdir -p "$INSTALL_DIR"
 
-exec > "$LOG"
-exec 7>&2
-exec 2>&1
+# Now that the log file dir exists, set up redirections:
+exec 6>&1                       # Link file descriptor #6 with stdout. Saves stdout.
+exec > "$INSTALL_DIR/$LOG_FILE" # stdout redirected to the log file
+exec 7>&2                       # Link file descriptor #7 with stderr. Saves stderr.
+exec 2>&1                       # stderr redirected to the log file too
+# Reminder of how to restore stderr and stdout in case you need it elsewhere in the script:
+#exec 1>&6 6>&-    # Restore stdout and close fd 6
+#exec 2>&7 7>&-    # Restore stderr and close fd 7
 
-# 2. System Dependency Check
+################################################################################
+# Check if we have all the required system dependencies
+################################################################################
 color_msg "Step 0: Verifying system dependencies..."
 for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk; do
     if ! which "$cmd" > /dev/null; then
@@ -224,10 +249,12 @@ else
 fi
 color_msg "    * Using Dynawo ZIP file: $DYNAWO_ZIP_FILE"
 color_msg "    * Python Interpreter: $($python_cmd --version) (command: \"$python_cmd\")"
-color_msg "    * To view detailed progress: tail -f $LOG"
+color_msg "    * To view detailed progress: tail -f $INSTALL_DIR/$LOG_FILE"
 color_msg ""
 
-# 3. Download and Extraction of Dynawo
+################################################################################
+# Download and Extraction of Dynawo
+################################################################################
 color_msg "Step 1: Downloading and extracting Dynawo..."
 cd "$INSTALL_DIR"
 
@@ -254,7 +281,6 @@ fi
 # Run the Dynawo installation block only if the variable is true.
 if [[ "$INSTALL_DYNAWO" == true ]]; then
     curl -O -L --fail "$DYNAWO_ZIP_URL"
-
     if [[ "$CUSTOM_ZIP_USED" == true ]]; then
         color_msg "NOTICE: Skipping checksum verification for custom Dynawo ZIP file."
     else
@@ -271,7 +297,7 @@ if [[ "$INSTALL_DYNAWO" == true ]]; then
     rm -rf "$DYNAWO_ZIP_FILE"
     color_msg "Dynawo downloaded and installed."
 
-    # Temporary patch for Boost
+    # Temp patch for Boost pthreads header file (needed if gcc version is 12 or higher)
     GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1)
     if [ "$GNU_MAJOR" -gt 11 ]; then
         BOOST_HEADER=./dynawo/include/boost/thread/pthread/thread_data.hpp
@@ -282,7 +308,9 @@ if [[ "$INSTALL_DYNAWO" == true ]]; then
     fi
 fi
 
-# 4. Get the DyCoV Source Code
+################################################################################
+# Get the DyCoV Source Code
+################################################################################
 if [ -d "$TMP_LOCAL_REPO" ]; then
     confirm_and_delete "$TMP_LOCAL_REPO"
 fi
@@ -305,12 +333,14 @@ if [ -n "$DIRECT_URL" ]; then
     mv "$UNZIPPED_DIR" "$TMP_LOCAL_REPO"
     color_msg "Source code downloaded and prepared."
 else
-    color_msg "Step 2: Cloning the DyCoV repository (tag: $RELEASE_TAG)..."
+    color_msg "Step 2: Shallow-cloning the DyCoV repository (tag: $RELEASE_TAG)..."
     git clone --depth 1 --branch "$RELEASE_TAG" "$REPO_URL" "$TMP_LOCAL_REPO"
     color_msg "Repository cloned."
 fi
 
-# 5. Create Virtual Environment and Install
+################################################################################
+# Create Virtual Environment and Install
+################################################################################
 color_msg "Step 3: Creating virtual environment and installing the application..."
 if [ -d "${INSTALL_DIR}/$VENV" ]; then
     confirm_and_delete "${INSTALL_DIR}/$VENV"
@@ -320,7 +350,7 @@ cd "$INSTALL_DIR"
 "$TMP_LOCAL_REPO"/build_and_install.sh
 color_msg "Virtual environment created and application installed."
 
-# 6. Customize the Activation Script
+# Customize the Activation Script
 color_msg "Step 4: Customizing the environment activation script..."
 ACTIVATE_SCRIPT="$INSTALL_DIR/$VENV"/bin/activate
 
@@ -345,7 +375,9 @@ echo -e "---------------------------------------------------------\n\n"
 deactivate
 color_msg "Activation script customized."
 
-# 7. Copy Examples and Build the Manual
+################################################################################
+# Copy Examples and Build the Manual
+################################################################################
 color_msg "Step 5: Installing examples and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
 # shellcheck source=/dev/null
@@ -360,7 +392,9 @@ mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
 mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
 color_msg "Examples and manuals are ready."
 
-# 8. Final Cleanup
+################################################################################
+# Final Cleanup
+################################################################################
 color_msg "Step 6: Performing final cleanup..."
 # confirm_and_delete is not needed here as it's a temp directory
 rm -rf "$TMP_LOCAL_REPO"
