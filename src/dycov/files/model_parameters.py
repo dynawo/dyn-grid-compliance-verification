@@ -109,7 +109,6 @@ def _append_generator(
     if parset is None:
         raise ValueError(f"No se encontró el conjunto de parámetros con id='{par_id}'")
 
-    # Use _get_parameter where applicable (it already centralizes variable lookup via the translator)
     sign, imaxpu_element = _get_parameter(parset, ns, lib, "InjectedCurrentMax")
     imax = float(imaxpu_element) * sign if imaxpu_element is not None else None
 
