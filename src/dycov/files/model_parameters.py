@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import configparser
 import math
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Optional
 
 from lxml import etree
@@ -101,7 +101,6 @@ def _append_generator(
     if parset is None:
         raise ValueError(f"The parameter set with id='{par_id}' was not found")
 
-    # Use _get_parameter where applicable (it already centralizes variable lookup via the translator)
     sign, imaxpu_element = _get_parameter(parset, nsmap, lib, "InjectedCurrentMax")
     imax = float(imaxpu_element) * sign if imaxpu_element is not None else None
 
@@ -596,7 +595,7 @@ def _get_default_voltage_droop_parameters(generator, generator_voltage_droop) ->
     family, level = get_generator_family_level(generator)
     parameters = {}
     section = f"{generator_voltage_droop}_{family}_{level}"
-    if config.has_key(section, "control_option"):
+    if config.has_option(section, "control_option"):
         control_option = config.get_int(section, "control_option", 1)
         parameters = dynawo_translator.get_control_mode(section, control_option)
     else:
@@ -610,7 +609,7 @@ def _get_default_control_mode_parameters(generator, generator_control_mode) -> d
     family, level = get_generator_family_level(generator)
     parameters = {}
     section = f"{generator_control_mode}_{family}_{level}"
-    if config.has_key(section, "control_option"):
+    if config.has_option(section, "control_option"):
         control_option = config.get_int(section, "control_option", 1)
         parameters = dynawo_translator.get_control_mode(section, control_option)
     else:

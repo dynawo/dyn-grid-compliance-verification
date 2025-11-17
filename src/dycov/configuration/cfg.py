@@ -158,7 +158,7 @@ class Config:
         """
         return self._config_dir
 
-    def has_key(self, section: str, key: str) -> bool:
+    def has_option(self, section: str, key: str) -> bool:
         """Check if config contains the specified key within any configuration source.
 
         Parameters
