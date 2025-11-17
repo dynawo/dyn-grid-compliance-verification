@@ -15,8 +15,6 @@ from typing import Optional
 
 from dycov.logging.logging import dycov_logging
 
-_LOGGER = dycov_logging.get_logger("CliParsers")
-
 
 def setup_cli_parsers() -> argparse.ArgumentParser:
     """Sets up the command-line argument parsers for the DYCOV tool.
@@ -29,7 +27,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     argparse.ArgumentParser
         The configured argument parser.
     """
-    _LOGGER.info("Setting up CLI parsers.")
+    dycov_logging.get_logger("CliParsers").info("Setting up CLI parsers.")
     main_parser = argparse.ArgumentParser(
         prog="dycov",
         description="Dynamic grid Compliance Verification tool.",
@@ -53,7 +51,6 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
     _add_generate_subparser(subparsers)
-    _add_compile_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
 
     return main_parser
@@ -115,7 +112,9 @@ def _add_argument(
         kwargs["nargs"] = nargs
 
     parser.add_argument(*args, **kwargs)
-    _LOGGER.debug(f"Added argument {args} to parser with help: {help_msg}")
+    dycov_logging.get_logger("CliParsers").debug(
+        f"Added argument {args} to parser with help: {help_msg}"
+    )
 
 
 def _add_debug_argument(parser: argparse.ArgumentParser) -> None:
@@ -545,7 +544,7 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
     _add_output_argument(envelops)
     _add_pcs_argument(envelops)
     _add_only_dtr_argument(envelops)
-    _LOGGER.debug("Added 'generateEnvelopes' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'generateEnvelopes' subparser.")
 
 
 def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -570,7 +569,7 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
     _add_testing_argument(validate)
-    _LOGGER.debug("Added 'validate' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'validate' subparser.")
 
 
 def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -596,7 +595,7 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)
     _add_testing_argument(performance)
-    _LOGGER.debug("Added 'performance' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'performance' subparser.")
 
 
 def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -616,7 +615,7 @@ def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_output_argument(generate, is_required=True)
     _add_topology_argument(generate, is_required=True)
     _add_validation_argument(generate, is_required=True)
-    _LOGGER.debug("Added 'generate' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'generate' subparser.")
 
 
 def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -635,7 +634,7 @@ def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_launcher_argument(compile_model)
     _add_dynamic_model_argument(compile_model)
     _add_force_argument(compile_model)
-    _LOGGER.debug("Added 'compile' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'compile' subparser.")
 
 
 def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -657,4 +656,4 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_noisestd_argument(anonymize)
     _add_frequency_argument(anonymize)
     _add_results_argument(anonymize)
-    _LOGGER.debug("Added 'anonymize' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'anonymize' subparser.")

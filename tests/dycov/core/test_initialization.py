@@ -49,9 +49,6 @@ class TestDycovInitializer:
         # Ensure the mocked config directory exists for tests that need it
         (tmp_path / "user_config").mkdir(parents=True, exist_ok=True)
         (tmp_path / "user_config" / "templates").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "user_config" / "user_models" / "dictionary").mkdir(
-            parents=True, exist_ok=True
-        )
         (tmp_path / "user_config" / "log").mkdir(parents=True, exist_ok=True)
 
         # Mock the logger for initialization tests
@@ -192,32 +189,6 @@ class TestDycovInitializer:
                     dest = config_templates_dir / template / category / model / ".DummySample"
                     mock_copy_path.assert_any_call(src, dest, dirs_exist_ok=True)
 
-    def test_configure_user_models_creates_files(self, dycov_initializer, tmp_path):
-        """
-        Verifies that _configure_user_models creates the expected user model dictionary and files.
-        """
-        user_models_dict_path = (
-            self.mock_config.get_config_dir.return_value / "user_models" / "dictionary"
-        )
-        # Ensure the directory is clean before the test
-        if user_models_dict_path.exists():
-            shutil.rmtree(user_models_dict_path)
-
-        dycov_initializer._configure_user_models()
-
-        assert user_models_dict_path.is_dir()
-        expected_files = [
-            "Bus.ini",
-            "Line.ini",
-            "Load.ini",
-            "Power_Park.ini",
-            "Storage.ini",
-            "Synch_Gen.ini",
-            "Transformer.ini",
-        ]
-        for fname in expected_files:
-            assert (user_models_dict_path / fname).is_file()
-
     def test_is_valid_config_file_with_correct_version(self, dycov_initializer, tmp_path):
         """
         Tests _is_valid_config_file with a configuration file having the correct version.
@@ -301,21 +272,15 @@ class TestDycovInitializer:
         assert not user_config_file.exists()
         assert (self.mock_config.get_config_dir.return_value / "config.ini.OLD.1").is_file()
 
-    def test_setup_templates_and_models(
-        self, dycov_initializer, tmp_path, tool_path_fixture, mocker
-    ):
+    def test_setup_templates(self, dycov_initializer, tool_path_fixture, mocker):
         """
-        Tests that _setup_templates_and_models orchestrates the setup of templates and user models.
+        Tests that _setup_templates orchestrates the setup of templates.
         """
         mock_configure_templates = mocker.patch.object(dycov_initializer, "_configure_templates")
-        mock_configure_user_models = mocker.patch.object(
-            dycov_initializer, "_configure_user_models"
-        )
 
         dycov_initializer._setup_templates_and_models(tool_path_fixture)
 
         mock_configure_templates.assert_called_once_with(tool_path_fixture)
-        mock_configure_user_models.assert_called_once()
 
     def test_initialize_logger_debug_mode(self, dycov_initializer, tmp_path, mocker):
         """
