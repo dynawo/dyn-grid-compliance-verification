@@ -18,8 +18,6 @@ from dycov.curves.dynawo.prepare_tool import precompile
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
-LOGGER = dycov_logging.get_logger("Initialization")
-
 
 class DycovInitializer:
     """
@@ -49,11 +47,20 @@ class DycovInitializer:
         self._setup_user_config(tool_path)
         self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
-        LOGGER.info(f"Starting DyCoV - version {version('dycov')}")
+        dycov_logging.get_logger("Initialization").info(
+            f"Starting DyCoV - version {version('dycov')}"
+        )
 
-        # Precompile Modelica models if a Dynawo launcher is provided.
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as
+        the ability to compile them from within it.
+        Precompile Modelica models if a Dynawo launcher is provided.
+
+        Example:
         if launcher_dwo:
             self._prepare_dynawo_models(launcher_dwo)
+        """
 
     def _setup_user_config(self, tool_path: Path):
         """
@@ -94,7 +101,14 @@ class DycovInitializer:
         Sets up the template directories and user model dictionaries.
         """
         self._configure_templates(tool_path)
+
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as
+        the ability to compile them from within it.
+
         self._configure_user_models()
+        """
 
     def _initialize_logger(self, debug: bool):
         """
@@ -194,7 +208,9 @@ class DycovInitializer:
                     try:
                         manage_files.copy_path(src, dest, dirs_exist_ok=True)
                     except Exception as e:
-                        LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
+                        dycov_logging.get_logger("Initialization").error(
+                            f"Failed to copy {src} to {dest}: {e}"
+                        )
             else:
                 for model in models:
                     src = tool_path / "templates" / source / category / model / ".DummySample"
@@ -210,7 +226,9 @@ class DycovInitializer:
                         try:
                             manage_files.copy_path(src, dest, dirs_exist_ok=True)
                         except Exception as e:
-                            LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
+                            dycov_logging.get_logger("Initialization").error(
+                                f"Failed to copy {src} to {dest}: {e}"
+                            )
 
     def _configure_user_models(self):
         """
@@ -317,7 +335,7 @@ class DycovInitializer:
         Logs warnings for deprecated parameters found in the user's configuration file.
         """
         for parameter in deprecated_parameters:
-            LOGGER.warning(
+            dycov_logging.get_logger("Initialization").warning(
                 f"Deprecated in {file_name}: section {parameter['section']} "
                 f"key {parameter['key']} value {parameter['value']}"
             )

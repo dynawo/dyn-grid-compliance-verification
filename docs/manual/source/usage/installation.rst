@@ -70,9 +70,12 @@ To be more specific, we explicitly list here the packages to be installed:
 * Install Dynawo (v1.7.0 or later) and its required packages:
    Dynawo is a simulation platform required by this tool. Follow the steps outlined in the official Dynawo installation guide at `Dynawo Installation Guide <https://dynawo.github.io/install/>`_.
    - **Nightly Version**: Download the **Nightly version** of Dynawo from the repository to ensure you have the latest features and updates.
-   - During installation, you will also need the following tools:
-     - **CMake**: CMake is used to configure the build process for Dynawo. Download it from `cmake.org <https://cmake.org/download/>`_.
-     - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from `here <https://visualstudio.microsoft.com/vs/older-downloads/>`. During the installation, select the "Desktop development with C++" workload.
+
+   .. note::
+       On Windows, you can either run Dynaωo with distribution models, in this case, 
+       nothing additional is required. But if you want to add new models, you will need:
+       - **CMake**: CMake is used to configure the build process for Dynawo. Download it from `cmake.org <https://cmake.org/download/>`_.
+       - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from `here <https://visualstudio.microsoft.com/vs/older-downloads/>`. During the installation, select the "Desktop development with C++" workload.
 
 * Install these LaTeX packages:
    LaTeX is used for document processing. You can choose between two LaTeX distributions:
@@ -119,13 +122,6 @@ Linux
 
        dycov -h
 
-#. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
-
-    .. code-block:: console
-
-	dycov compile
-
- 
 .. note::
     The tool has a sanity check implemented to verify that all system requirements
     have been installed, notifying the user if any of them are missing.
@@ -176,12 +172,6 @@ __ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/
     .. code-block:: console
 
        dycov -h
-
-#. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
-
-    .. code-block:: console
-
-	dycov compile
 
 .. note::
     The installer will perform a basic installation of the **MiKTeX** distribution. The 

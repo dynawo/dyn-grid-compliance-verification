@@ -36,8 +36,6 @@ from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
 from dycov.validate.parameters import ValidationParameters
 
-LOGGER = dycov_logging.get_logger("Validation")
-
 
 def _aborted_execution(e: Exception) -> None:
     """Logs an aborted execution message with exception details.
@@ -48,10 +46,10 @@ def _aborted_execution(e: Exception) -> None:
         The exception that caused the abortion.
     """
 
-    if LOGGER.getEffectiveLevel() == logging.DEBUG:
-        LOGGER.exception(f"Aborted execution. {e}")
+    if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
+        dycov_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
     else:
-        LOGGER.error(f"Aborted execution. {e}")
+        dycov_logging.get_logger("Validation").error(f"Aborted execution. {e}")
 
 
 def _open_document(file: Path, is_testing: bool) -> None:
@@ -68,14 +66,14 @@ def _open_document(file: Path, is_testing: bool) -> None:
         return
 
     if os.name == "nt":
-        LOGGER.info(f"Opening the report: {file}")
+        dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
         subprocess.run(["start", file], shell=True)
     else:
         if shutil.which("open") and os.environ.get("DISPLAY"):
-            LOGGER.info(f"Opening the report: {file}")
+            dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
             subprocess.run(["open", file], check=True)
         else:
-            LOGGER.info(f"Report saved in: {file}")
+            dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
 
 
 def _validate_pcs(pcs_args) -> tuple:
@@ -97,7 +95,7 @@ def _validate_pcs(pcs_args) -> tuple:
     pcs_results = {}
     try:
         if not pcs.is_valid():
-            LOGGER.error(f"{pcs.get_name()} is not a valid PCS")
+            dycov_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
             return pcs.get_producer_name(), pcs.get_name(), False, {}
 
         report_name, success, pcs_results = pcs.validate(summary_list)
@@ -108,10 +106,14 @@ def _validate_pcs(pcs_args) -> tuple:
         _prepare_report_pcs(pcs_results, parameters, path_latex_files)
         return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
     except (FileNotFoundError, IOError, ValueError) as e:
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
-            LOGGER.exception(f"Aborted execution for {pcs.get_name()}. {e}")
+        if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
+            dycov_logging.get_logger("Validation").exception(
+                f"Aborted execution for {pcs.get_name()}. {e}"
+            )
         else:
-            LOGGER.error(f"Aborted execution for {pcs.get_name()}. {e}")
+            dycov_logging.get_logger("Validation").error(
+                f"Aborted execution for {pcs.get_name()}. {e}"
+            )
         return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
 
@@ -132,7 +134,7 @@ def _prepare_report_pcs(
     try:
         report.prepare_pcs_report(pcs_results, parameters, Path(path_latex_files))
     except LatexReportException as e:
-        LOGGER.error(
+        dycov_logging.get_logger("Validation").error(
             f"An error occurred while preparing the report for {pcs_results['pcs'].get_name()}."
         )
         _aborted_execution(e)
@@ -181,7 +183,7 @@ class Validation:
         # Check if results path exists to avoid overwriting if the user does not
         # want to lose the files
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
-            LOGGER.warning(
+            dycov_logging.get_logger("Validation").warning(
                 "Exiting. Please rename your current Results directory, otherwise it will be "
                 "erased and a new one will be created."
             )
@@ -231,10 +233,10 @@ class Validation:
         sim_type = self._parameters.get_sim_type()
         if sim_type in sim_type_mapping:
             log_message, config_key, template_path = sim_type_mapping[sim_type]
-            LOGGER.info(log_message)
+            dycov_logging.get_logger("Validation").info(log_message)
             self.__populate_validation_pcs(validation_pcs, config_key, template_path)
         else:
-            LOGGER.info(f"Unknown simulation type: {sim_type}")
+            dycov_logging.get_logger("Validation").info(f"Unknown simulation type: {sim_type}")
 
         return sorted(list(validation_pcs))
 
@@ -278,14 +280,18 @@ class Validation:
         pcs_list = []
         # Get all producer files regardless of zone initially
         all_producer_files = self._parameters.get_producer().get_filenames()
-        LOGGER.debug(f"Producer files: {' '.join(all_producer_files)}")
+        dycov_logging.get_logger("Validation").debug(
+            f"Producer files: {' '.join(all_producer_files)}"
+        )
 
         if self._parameters.get_sim_type() > MODEL_VALIDATION:
             # For MODEL_VALIDATION types, iterate through zones
             for zone in [1, 3]:
                 # Get producers specific to the current zone
                 producers_in_zone = self._parameters.get_producer().get_filenames(zone=zone)
-                LOGGER.debug(f"Zone{zone} files: {' '.join(producers_in_zone)}")
+                dycov_logging.get_logger("Validation").debug(
+                    f"Zone{zone} files: {' '.join(producers_in_zone)}"
+                )
                 for producer_name in producers_in_zone:
                     # Extend pcs_list with PCSs ending with the zone suffix
                     pcs_list.extend(
@@ -312,7 +318,7 @@ class Validation:
         report_results : dict
             A dictionary containing detailed PCS report results.
         """
-        LOGGER.debug(f"Sorted summary {summary_list}")
+        dycov_logging.get_logger("Validation").debug(f"Sorted summary {summary_list}")
 
         try:
             report.create_pdf(
@@ -322,7 +328,7 @@ class Validation:
                 Path(self._path_latex_files),
             )
         except LatexReportException as e:
-            LOGGER.error(
+            dycov_logging.get_logger("Validation").error(
                 f"An error occurred while generating the report, "
                 f"look for the {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log file "
                 f"under {self._parameters.get_output_dir() / 'Reports'}"
@@ -377,14 +383,16 @@ class Validation:
         report_results = {}
 
         if use_parallel:
-            LOGGER.info(f"Validating PCS in parallel using {num_processes} processes.")
+            dycov_logging.get_logger("Validation").info(
+                f"Validating PCS in parallel using {num_processes} processes."
+            )
             with Pool(processes=num_processes) as pool:
                 results = pool.map(_validate_pcs, self._pcs_list)
             for producer_name, pcs_name, summary, pcs_results in results:
                 summary_list.extend(summary)
                 report_results[f"{producer_name}_{pcs_name}"] = pcs_results
         else:
-            LOGGER.info("Validating PCS sequentially.")
+            dycov_logging.get_logger("Validation").info("Validating PCS sequentially.")
             for pcs_tuple in self._pcs_list:
                 producer_name, pcs_name, summary, pcs_results = _validate_pcs(pcs_tuple)
                 summary_list.extend(summary)
@@ -400,10 +408,12 @@ class Validation:
         if report_file.exists():
             _open_document(report_file, self._is_testing)
         else:
-            LOGGER.warning(f"Report file does not exist: {report_file}")
+            dycov_logging.get_logger("Validation").warning(
+                f"Report file does not exist: {report_file}"
+            )
 
         compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
             return compliance_list
 
         manage_files.remove_dir(self._parameters.get_working_dir())
