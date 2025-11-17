@@ -12,11 +12,11 @@ from pathlib import Path
 
 import numpy as np
 
+from dycov.gfm import constants
 from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.gfm import constants
 
 
 class GridForming:
@@ -308,7 +308,7 @@ class GridForming:
         parameters: GFMParameters,
         params_list: list,
         is_inconsistent: bool = False,
-        disclaimer_msg: str | None = None,  # New parameter
+        disclaimer_msg: Optional[str] = None,  # New parameter
     ) -> None:
         """
                 Generates and saves a plot of the simulation results.
@@ -337,7 +337,7 @@ class GridForming:
                     The list of parameter names to display on the plot.
                 is_inconsistent : bool
                     Flag to show a disclaimer for inconsistent damping.
-                disclaimer_msg : str | None
+                disclaimer_msg : Optional[str]
                     The detailed message for the disclaimer.
         """
         plot_results(
