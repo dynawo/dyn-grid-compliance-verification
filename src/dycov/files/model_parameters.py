@@ -19,7 +19,7 @@ from typing import Optional
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.translator import dynawo_translator, get_generator_family_level
+from dycov.curves.dynawo.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import (
     Gen_params,
@@ -592,7 +592,7 @@ def _get_control_mode_parameters_wecc(generator, parset, nsmap) -> dict:
 
 
 def _get_default_voltage_droop_parameters(generator, generator_voltage_droop) -> dict:
-    family, level = get_generator_family_level(generator)
+    family, level = dynawo_translator.get_generator_family_level(generator)
     parameters = {}
     section = f"{generator_voltage_droop}_{family}_{level}"
     if config.has_option(section, "control_option"):
@@ -606,7 +606,7 @@ def _get_default_voltage_droop_parameters(generator, generator_voltage_droop) ->
 
 
 def _get_default_control_mode_parameters(generator, generator_control_mode) -> dict:
-    family, level = get_generator_family_level(generator)
+    family, level = dynawo_translator.get_generator_family_level(generator)
     parameters = {}
     section = f"{generator_control_mode}_{family}_{level}"
     if config.has_option(section, "control_option"):
