@@ -8,12 +8,14 @@
 #     demiguelm@aia.es
 #
 
+from typing import Optional
+
 import numpy as np
 
+from dycov.gfm import constants
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
-from dycov.gfm import constants
 
 # Configure logger for this module
 logger = dycov_logging.get_logger(__name__)
@@ -668,7 +670,7 @@ class SCRJump(GFMCalculator):
 
     def _calculate_delta_p_for_damping(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]:
+    ) -> tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], float, float]:
         """
         Selects the delta_p calculation method based on the damping ratio.
 
@@ -683,7 +685,7 @@ class SCRJump(GFMCalculator):
 
         Returns
         -------
-        tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]
+        tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], float, float]
             A tuple containing: the delta_p waveform, min/max envelopes (or None),
             peak power change, and damping ratio.
         """
