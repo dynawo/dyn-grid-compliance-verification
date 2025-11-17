@@ -51,9 +51,16 @@ class DycovInitializer:
             f"Starting DyCoV - version {version('dycov')}"
         )
 
-        # Precompile Modelica models if a Dynawo launcher is provided.
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as 
+        the ability to compile them from within it.
+        Precompile Modelica models if a Dynawo launcher is provided.
+
+        Example:
         if launcher_dwo:
             self._prepare_dynawo_models(launcher_dwo)
+        """
 
     def _setup_user_config(self, tool_path: Path):
         """
@@ -94,7 +101,14 @@ class DycovInitializer:
         Sets up the template directories and user model dictionaries.
         """
         self._configure_templates(tool_path)
+
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as 
+        the ability to compile them from within it.
+
         self._configure_user_models()
+        """
 
     def _initialize_logger(self, debug: bool):
         """

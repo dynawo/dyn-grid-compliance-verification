@@ -51,7 +51,6 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
     _add_generate_subparser(subparsers)
-    _add_compile_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
 
     return main_parser
