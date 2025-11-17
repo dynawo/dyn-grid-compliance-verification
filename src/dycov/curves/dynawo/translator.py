@@ -8,7 +8,6 @@
 #     demiguelm@aia.es
 #
 import configparser
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional

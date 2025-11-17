@@ -53,7 +53,7 @@ class DycovInitializer:
 
         """
         IMPORTANT:
-        All dynamic models have been removed from the tool, as well as 
+        All dynamic models have been removed from the tool, as well as
         the ability to compile them from within it.
         Precompile Modelica models if a Dynawo launcher is provided.
 
@@ -104,7 +104,7 @@ class DycovInitializer:
 
         """
         IMPORTANT:
-        All dynamic models have been removed from the tool, as well as 
+        All dynamic models have been removed from the tool, as well as
         the ability to compile them from within it.
 
         self._configure_user_models()

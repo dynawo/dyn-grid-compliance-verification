@@ -13,7 +13,6 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.configuration.cfg import config
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
