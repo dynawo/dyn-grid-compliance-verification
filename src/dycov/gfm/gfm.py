@@ -9,14 +9,15 @@
 #
 
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 
+from dycov.gfm import constants
 from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.gfm import constants
 
 
 class GridForming:
@@ -234,64 +235,64 @@ class GridForming:
 
         if "P0" in params_list:
             value = parameters.get_initial_active_power()
-            text_params_info.append(f"P0 = {value:.2f} pu")
+            text_params_info.append(f"P0 = {value:.3f} pu")
         if "Q0" in params_list:
             value = parameters.get_initial_reactive_power()
-            text_params_info.append(f"Q0 = {value:.2f} pu")
+            text_params_info.append(f"Q0 = {value:.3f} pu")
         if "TimeTo90" in params_list:
             value = parameters.get_time_to_90()
-            text_params_info.append(f"t_90% = {value:.2f} s")
+            text_params_info.append(f"t_90% = {(value / 1000):.3f} ms")
         if "Pmax" in params_list:
             value = parameters.get_max_active_power()
-            text_params_info.append(f"Pmax = {value:.2f} pu")
+            text_params_info.append(f"Pmax = {value:.3f} pu")
         if "Qmax" in params_list:
             value = parameters.get_max_reactive_power()
-            text_params_info.append(f"Qmax = {value:.2f} pu")
+            text_params_info.append(f"Qmax = {value:.3f} pu")
         if "Pmin" in params_list:
             value = parameters.get_min_active_power()
-            text_params_info.append(f"Pmin = {value:.2f} pu")
+            text_params_info.append(f"Pmin = {value:.3f} pu")
         if "Qmin" in params_list:
             value = parameters.get_min_reactive_power()
-            text_params_info.append(f"Qmin = {value:.2f} pu")
+            text_params_info.append(f"Qmin = {value:.3f} pu")
         if "DeltaPhase" in params_list:
             value = parameters.get_delta_phase()
-            text_params_info.append(f"Δθ = {value:.2f}°")
+            text_params_info.append(f"Δθ = {value:.3f}°")
         if "SCR" in params_list:
             value = parameters.get_scr()
-            text_params_info.append(f"SCR = {value:.2f}")
+            text_params_info.append(f"SCR = {value:.3f}")
         if "VoltageStepAtGrid" in params_list:
             value = parameters.get_voltage_step_at_grid()
-            text_params_info.append(f"ΔV_Grid = {value / 100:.2f} pu")
+            text_params_info.append(f"ΔV_Grid = {value / 100:.3f} pu")
         if "VoltageStepAtPDR" in params_list:
             value = parameters.get_voltage_step_at_pdr()
-            text_params_info.append(f"ΔV_PCC = {value / 100:.2f} pu")
+            text_params_info.append(f"ΔV_PCC = {value / 100:.3f} pu")
         if "AngleStepAtPDR" in params_list:
             value = parameters.get_delta_step()
-            text_params_info.append(f"Δθ_PCC = {value:.2f}°")
+            text_params_info.append(f"Δθ_PCC = {value:.3f}°")
         if "SCRinitial" in params_list:
             value = parameters.get_initial_scr()
-            text_params_info.append(f"SCR_initial = {value:.2f}")
+            text_params_info.append(f"SCR_initial = {value:.3f}")
         if "SCRfinal" in params_list:
             value = parameters.get_final_scr()
-            text_params_info.append(f"SCR_final = {value:.2f}")
+            text_params_info.append(f"SCR_final = {value:.3f}")
         if "Frequency0" in params_list:
             value = parameters.get_initial_frequency()
-            text_params_info.append(f"f0 = {(value * 50):.2f} Hz")
+            text_params_info.append(f"f0 = {(value * 50):.3f} Hz")
         if "RoCoF" in params_list:
             value = parameters.get_change_frequency()
-            text_params_info.append(f"RoCoF = {(value * 50):.2f} Hz/s")
+            text_params_info.append(f"RoCoF = {(value * 50):.3f} Hz/s")
         if "RoCoFDuration" in params_list:
             value = parameters.get_change_frequency_duration()
-            text_params_info.append(f"RoCoF Duration = {value:.2f} s")
+            text_params_info.append(f"RoCoF Duration = {(value / 1000):.3f} ms")
         if "Xeff" in params_list:
             value = parameters.get_effective_reactance()
-            text_params_info.append(f"Xeff = {value:.2f} pu")
+            text_params_info.append(f"Xeff = {value:.3f} pu")
         if "D" in params_list:
             value = parameters.get_damping_constant()
-            text_params_info.append(f"D = {value:.2f}")
+            text_params_info.append(f"D = {value:.3f}")
         if "H" in params_list:
             value = parameters.get_inertia_constant()
-            text_params_info.append(f"H = {value:.2f} s")
+            text_params_info.append(f"H = {value:.3f} s")
 
         return text_params_info
 
@@ -308,7 +309,7 @@ class GridForming:
         parameters: GFMParameters,
         params_list: list,
         is_inconsistent: bool = False,
-        disclaimer_msg: str | None = None,  # New parameter
+        disclaimer_msg: Optional[str] = None,  # New parameter
     ) -> None:
         """
                 Generates and saves a plot of the simulation results.
@@ -337,7 +338,7 @@ class GridForming:
                     The list of parameter names to display on the plot.
                 is_inconsistent : bool
                     Flag to show a disclaimer for inconsistent damping.
-                disclaimer_msg : str | None
+                disclaimer_msg : Optional[str]
                     The detailed message for the disclaimer.
         """
         plot_results(
