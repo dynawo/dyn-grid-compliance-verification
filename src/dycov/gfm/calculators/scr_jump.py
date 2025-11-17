@@ -60,7 +60,7 @@ class SCRJump(GFMCalculator):
 
         # Flag for inconsistent damping behavior
         self._is_inconsistent = False
-        self._disclaimer_message: str | None = None
+        self._disclaimer_message: Optional[str] = None
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for SCRJump plots."""
