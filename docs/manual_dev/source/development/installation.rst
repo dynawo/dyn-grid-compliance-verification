@@ -74,9 +74,12 @@ Before installing the `dyn-grid-compliance-verification` package, you need to en
 * Install Dynawo
    Dynawo is a simulation platform required by this tool. Follow the steps outlined in the official Dynawo installation guide at `Dynawo Installation Guide <https://dynawo.github.io/install/>`_.
    - **Nightly Version**: Download the **Nightly version** of Dynawo from the repository to ensure you have the latest features and updates.
-   - During installation, you will also need the following tools:
-     - **CMake**: CMake is used to configure the build process for Dynawo. Download it from `cmake.org <https://cmake.org/download/>`_.
-     - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from `here <https://visualstudio.microsoft.com/vs/older-downloads/>`. During the installation, select the "Desktop development with C++" workload.
+
+   .. note::
+       On Windows, you can either run Dynaωo with distribution models, in this case, 
+       nothing additional is required. But if you want to add new models, you will need:
+       - **CMake**: CMake is used to configure the build process for Dynawo. Download it from `cmake.org <https://cmake.org/download/>`_.
+       - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from `here <https://visualstudio.microsoft.com/vs/older-downloads/>`. During the installation, select the "Desktop development with C++" workload.
 
 * Install GitHub Desktop
    GitHub Desktop provides an easy way to clone repositories directly to your machine. To install it:
@@ -120,12 +123,6 @@ Linux
 
        dycov -h
 
-#. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
-
-    .. code-block:: console
-
-	   dycov compile
- 
 .. note::
     The tool has a sanity check implemented to verify that all system requirements
     have been installed, notifying the user if any of them are missing.
@@ -199,15 +196,6 @@ Windows
    	dycov -h
    
    - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
-
-#. Pre-Execution Compilation
-   Before running the tool for the first time, it's recommended to compile the tool's resources:
-       
-   .. code-block:: console
-
-   	dycov compile
-   
-   - This step ensures that all necessary files are generated and compiled for optimal performance.
 
 Ready to Use
 ------------

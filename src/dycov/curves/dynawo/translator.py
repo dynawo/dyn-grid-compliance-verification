@@ -38,9 +38,6 @@ def _load_dictionary(filename: str, variables: configparser.ConfigParser):
     """
     Loads configuration from a dictionary file into a ConfigParser object.
 
-    It first attempts to load from the tool's dictionary directory and then
-    from a user-specific dictionary directory, allowing for overrides.
-
     Parameters
     ----------
     filename: str
@@ -49,17 +46,8 @@ def _load_dictionary(filename: str, variables: configparser.ConfigParser):
         The ConfigParser instance to load the dictionary into.
     """
     dictionary = Path(__file__).resolve().parent / "dictionary"
-    if os.name == "nt":
-        config_dir = Path.home() / "AppData/Local/dycov/user_models/dictionary"
-    else:
-        config_dir = Path.home() / ".config/dycov/user_models/dictionary"
-
     # Load the tool dictionary
     variables.read(dictionary / filename)
-
-    # Load the user dictionary, if it exists, to allow for custom overrides
-    if (config_dir / filename).exists():
-        variables.read(config_dir / filename)
 
 
 def _is_valid_control_mode_parameters(generator_parameters: dict, valid_parameters: dict) -> bool:

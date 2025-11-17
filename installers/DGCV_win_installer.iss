@@ -2,7 +2,6 @@
 #define PythonVersion "11"
 #define PythonSubVersion "6"
 #define DyCoVVersion "0.8.1"
-#define CMakeVersion "3.31.1"
 #define MiktexVersion "24.1"
 #define SourceDir "..\.."
 ; SourceDir directory should contain the following items:
@@ -26,14 +25,12 @@ AlwaysRestart=yes
 SetupLogging=yes
 
 [Types]
-Name: "full"; Description: "Full installation (Dycov + Dynawo + compilers)"
+Name: "full"; Description: "Full installation (Dycov + Dynawo + MiKTeX)"
 Name: "compact"; Description: "Compact installation (Dycov)"
 
 [Components]
 Name: "python"; Description: "Python installation"; Types: full compact
 Name: "miktex"; Description: "MiKTeX installation"; Types: full
-Name: "cmake"; Description: "CMake installation"; Types: full
-Name: "vs2019"; Description: "Visual Studio 2019 installation"; Types: full
 Name: "dynawo"; Description: "Dynawo installation"; Types: full
 Name: "examples"; Description: "Examples installation"; Types: full compact
 Name: "dycov"; Description: "Dycov installation"; Types: full compact
@@ -50,12 +47,6 @@ StatusMsg: "Installing Python..."; Components: python; Filename: "{tmp}\python-3
 
 ; Install MiKTeX if not found
 StatusMsg: "Installing MiKTeX..."; Components: miktex; Filename: "{tmp}\basic-miktex-{#MiktexVersion}-x64.exe"; Check: not IsMikTeXInstalled
-
-; Install CMake if not found
-StatusMsg: "Installing CMake..."; Components: cmake; Filename: "msiexec"; Parameters: "/i {tmp}\cmake-{#CMakeVersion}-windows-x86_64.msi /norestart"; Check: not IsCMakeInstalled
-
-; Install VS2019 if not found
-StatusMsg: "Installing Visual Studio 2019..."; Components: vs2019; Filename: "{tmp}\vs_BuildTools.exe"; Parameters: "--wait --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.VC.ASAN --add Microsoft.VisualStudio.Component.VC.CMake.Project --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041"; Check: not IsVSInstalled
 
 ; Install Dynawo 
 StatusMsg: "Installing Dynawo..."; Components: dynawo; Filename: "tar.exe"; Parameters: "xzvf {tmp}\Dynawo_omc_v1.8.0_win.tgz -C {app}"; Flags: runhidden
@@ -85,8 +76,6 @@ Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environmen
 [Code]
 const
   PYTHON_REGISTRY = 'SOFTWARE\Python\PythonCore';
-  CMAKE_REGISTRY = 'SOFTWARE\Kitware\CMake';
-  VS_REGISTRY = 'SOFTWARE\Microsoft\VisualStudio\14.0';
   MIKTEK_REGISTRY = 'SOFTWARE\MiKTeX.org\MiKTeX';
 
 var
@@ -145,24 +134,6 @@ begin
    
 end;
 
-function IsCMakeInstalled: Boolean;
-begin
-  Result := RegKeyExists(HKLM32, CMAKE_REGISTRY) 
-  or RegKeyExists(HKLM64, CMAKE_REGISTRY)
-  or RegKeyExists(HKCU32, CMAKE_REGISTRY)
-  or RegKeyExists(HKCU64, CMAKE_REGISTRY);
- 
-end;
-
-function IsVSInstalled: Boolean;
-begin
-  Result := RegKeyExists(HKLM32, VS_REGISTRY) 
-  or RegKeyExists(HKLM64, VS_REGISTRY)
-  or RegKeyExists(HKCU32, VS_REGISTRY)
-  or RegKeyExists(HKCU64, VS_REGISTRY);
-    
-end;
-
 function CreateBatch: boolean;
 var
   fileName : string;
@@ -191,12 +162,8 @@ begin
     DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/examples.tgz', 'examples.tgz', '');
     if WizardIsComponentSelected('python') and not IsPythonInstalled then 
       DownloadPage.Add('https://www.python.org/ftp/python/3.{#PythonVersion}.{#PythonSubVersion}/python-3.{#PythonVersion}.{#PythonSubVersion}-amd64.exe', 'python-3.{#PythonVersion}.{#PythonSubVersion}-amd64.exe', '');
-    if WizardIsComponentSelected('cmake') and not IsCMakeInstalled then 
-      DownloadPage.Add('https://github.com/Kitware/CMake/releases/download/v{#CMakeVersion}/cmake-{#CMakeVersion}-windows-x86_64.msi', 'cmake-{#CMakeVersion}-windows-x86_64.msi', '');
     if WizardIsComponentSelected('miktex') and not IsMikTeXInstalled then 
       DownloadPage.Add('https://miktex.org/download/ctan/systems/win32/miktex/setup/windows-x64/basic-miktex-{#MiktexVersion}-x64.exe', 'basic-miktex-{#MiktexVersion}-x64.exe', '');
-    if WizardIsComponentSelected('vs2019') and not IsVSInstalled then 
-      DownloadPage.Add('https://download.visualstudio.microsoft.com/download/pr/8497e528-d106-4143-95eb-3deb1b2f4851/d247112120128c790c6e2a89fe4c6acbf0f714a7a9f15df223c4722b861090fd/vs_BuildTools.exe', 'vs_BuildTools.exe', '');
     if WizardIsComponentSelected('dynawo') then
       DownloadPage.Add('https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v{#DyCoVVersion}/Dynawo_omc_v1.8.0_win.tgz', 'Dynawo_omc_v1.8.0_win.tgz', '');
     DownloadPage.Show;
