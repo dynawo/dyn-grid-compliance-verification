@@ -12,8 +12,6 @@ from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
 
-LOGGER = dycov_logging.get_logger("Curves Manager")
-
 
 def _fix_after_windows(
     calculated_windows: pd.DataFrame, reference_windows: pd.DataFrame
@@ -147,7 +145,9 @@ class CurvesManager:
         has_curves = True
         if review_curves_set:
             if curves.empty:
-                LOGGER.warning(f"Test without {curves_name} curves file")
+                dycov_logging.get_logger("Curves Manager").warning(
+                    f"Test without {curves_name} curves file"
+                )
                 has_curves = False
             else:
                 missed_curves = []
@@ -156,7 +156,9 @@ class CurvesManager:
                         missed_curves.append(key)
                         has_curves = False
                 if not has_curves:
-                    LOGGER.warning(f"Test without {curves_name} curve for keys {missed_curves}")
+                    dycov_logging.get_logger("Curves Manager").warning(
+                        f"Test without {curves_name} curve for keys {missed_curves}"
+                    )
         return has_curves
 
     def __save_curves(self, working_oc_dir: Path):
@@ -251,7 +253,7 @@ class CurvesManager:
         elif sim_curves and not ref_curves:
             has_curves = 2
         else:
-            LOGGER.warning("Test without curves")
+            dycov_logging.get_logger("Curves Manager").warning("Test without curves")
             has_curves = 3
 
         self.__save_curves(working_oc_dir)
@@ -367,7 +369,7 @@ class CurvesManager:
             list(before_calculated["BusPDR_BUS_Voltage"]),
         )
 
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if dycov_logging.get_logger("Curves Manager").getEffectiveLevel() == logging.DEBUG:
             calculated_curves.to_csv(working_path / "signal.csv", sep=";", float_format="%.3e")
             reference_curves.to_csv(working_path / "reference.csv", sep=";", float_format="%.3e")
 

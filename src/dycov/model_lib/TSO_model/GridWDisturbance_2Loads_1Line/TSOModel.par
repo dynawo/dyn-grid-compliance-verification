@@ -41,8 +41,10 @@
     <par type="DOUBLE" name="generator_Q0Pu" value="{{gen_Q0Pu}}"/>
     <par type="DOUBLE" name="generator_U0Pu" value="{{gen_U0Pu}}"/>
     <par type="DOUBLE" name="generator_UPhase0" value="{{gen_UPhase0}}"/>
-    <par type="DOUBLE" name="URef_ValueIn" value="0"/>
-    <par type="DOUBLE" name="Pm_ValueIn" value="0"/>
+    <par type="DOUBLE" name="governor_KGover" value="5"/>
+    <par type="DOUBLE" name="governor_tFirstOrderGover" value="2.5"/>
+    <par type="DOUBLE" name="voltageRegulator_Gain" value="15"/>
+    <par type="DOUBLE" name="voltageRegulator_tFirstOrderVR" value="0.3"/>
   </set>
   <set id="Load_EQ">
     <par type="DOUBLE" name="load_P0Pu" value="3000.000"/>

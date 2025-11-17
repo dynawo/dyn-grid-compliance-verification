@@ -85,10 +85,10 @@ class FileVariables:
         """
         # Prioritize key specific to generator type
         key_type = f"{key}_{generator_type}"
-        if config.has_key(section, key_type):
+        if config.has_option(section, key_type):
             return self.__obtain_value(config.get_value(section, key_type))
         # Fallback to general key if type-specific key is not found
-        elif config.has_key(section, key):
+        elif config.has_option(section, key):
             return self.__obtain_value(config.get_value(section, key))
         return None
 
@@ -130,7 +130,7 @@ class FileVariables:
                 return value
 
         # As a last resort, check the global 'Dynawo' section
-        if config.has_key("Dynawo", key):
+        if config.has_option("Dynawo", key):
             return self.__obtain_value(config.get_value("Dynawo", key))
 
         return None

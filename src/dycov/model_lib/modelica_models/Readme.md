@@ -1,0 +1,1 @@
+The subdirectory ``modelica_models`` has been created to contain the dynamic Modelica models that must be built for some PCS since there is no viable alternative among Dynawo's own models.
