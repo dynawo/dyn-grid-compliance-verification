@@ -653,32 +653,24 @@ def _adjust_load(
 
 
 def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value):
-    # Normalize parset to a single element
-    if isinstance(parset, list):
-        parset = parset[0] if parset else None
-    if not parset or not parameter_name:
+    # Validate parset contains exactly one element
+    if not isinstance(parset, list) or len(parset) != 1 or not parameter_name:
         return
-
-    # Find parameter element and update value
-    parameter = parset.xpath(f"ns:par[@name='{parameter_name}']", namespaces=nsmap)
+    ps = parset[0]
+    parameter = ps.xpath(f"ns:par[@name='{parameter_name}']", namespaces=nsmap)
     if parameter:
         parameter[0].set("value", str(sign * parameter_value))
 
 
 def _get_parameter(parset, nsmap, lib, parameter_name):
-    # Normalize parset to a single element
-    if isinstance(parset, list):
-        parset = parset[0] if parset else None
-    if not parset:
+    # Validate parset contains exactly one element
+    if not isinstance(parset, list) or len(parset) != 1:
         return None, None
-
-    # Get Dynawo variable name and sign
+    ps = parset[0]
     sign, variable_name = dynawo_translator.get_dynawo_variable(lib, parameter_name)
     if not variable_name:
         return None, None
-
-    # Find variable element and return value
-    variable = parset.xpath(f"ns:par[@name='{variable_name}']", namespaces=nsmap)
+    variable = ps.xpath(f"ns:par[@name='{variable_name}']", namespaces=nsmap)
     return (sign, variable[0].get("value")) if variable else (sign, None)
 
 
