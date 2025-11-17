@@ -72,7 +72,7 @@ To be more specific, we explicitly list here the packages to be installed:
    - **Nightly Version**: Download the **Nightly version** of Dynawo from the repository to ensure you have the latest features and updates.
 
    .. note::
-       On Windows, you can either run Dynaωo with distribution models, in this case, 
+       On Windows, you can either run Dynawo with distribution models, in this case, 
        nothing additional is required. But if you want to add new models, you will need:
        - **CMake**: CMake is used to configure the build process for Dynawo. Download it from `cmake.org <https://cmake.org/download/>`_.
        - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from `here <https://visualstudio.microsoft.com/vs/older-downloads/>`. During the installation, select the "Desktop development with C++" workload.
@@ -138,9 +138,9 @@ __ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/
    If the user is an administrator, there are no problems in unblocking the executable:
    
     .. image:: figs_installation/admin.png
-    :width: 70%
-    :alt: Unblocking Executable
-    :align: center
+       :width: 70%
+       :alt: Unblocking Executable
+       :align: center
 
 
 #. Next, execute the downloaded installer:
@@ -156,10 +156,11 @@ __ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/
     The MikTex installer allows you to select the configuration that you want to apply. 
     For the tool to work correctly, you must select the "Yes" or "Ask me first" option on the 
     following screen:
+
     .. image:: figs_installation/miktex_settings.png
-    :width: 70%
-    :alt: MikTex Installer Settings
-    :align: center
+       :width: 70%
+       :alt: MikTex Installer Settings
+       :align: center
 
 
 #. Next, you must activate the virtual environment that has just been created by double-clicking on the DyCoV.bat file that has been created on the desktop.
