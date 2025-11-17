@@ -9,6 +9,7 @@
 #
 
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -154,7 +155,7 @@ def plot_results(
     output_format: str,
     params_list: list = None,
     show_disclaimer: bool = False,
-    disclaimer_message: str | None = None,  # New parameter
+    disclaimer_message: Optional[str] = None,  # New parameter
 ) -> None:
     """
     Plot the results, trimming stable data at the start and end.
@@ -187,7 +188,7 @@ def plot_results(
         A list of formatted strings containing simulation parameters to display.
     show_disclaimer : bool
         If True, adds a warning disclaimer to the plot.
-    disclaimer_message : str | None
+    disclaimer_message : Optional[str]
         The detailed message for the disclaimer.
     """
     # 1. Find the optimal indices to trim the data.
