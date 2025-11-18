@@ -14,24 +14,6 @@ from typing import Optional
 
 from dycov.model.parameters import Gen_params
 
-# TODO: remove generator types ("WTG", "WT", "Photovoltaics", etc. ==> we'll need
-#       entries in the master dictionary).
-#       The same goes for generator families ("IEC", "Wecc").
-#
-FAMILY_LEVEL_MAP = {
-    "Wecc": {
-        "family": "WECC",
-        "types": {
-            "NoPlantControl": "Turbine",
-            "WT4": "Turbine",
-            "WTG4": "Plant",
-            "Photovoltaics": "Plant",
-            "BESS": "Plant",
-        },
-    },
-    "IEC": {"family": "IEC", "types": {"IECWPP": "Plant", "IECWT": "Turbine"}},
-}
-
 
 def _load_dictionary(filename: str, variables: configparser.ConfigParser):
     """
@@ -76,29 +58,29 @@ def _is_valid_control_mode_parameters(generator_parameters: dict, valid_paramete
     return True
 
 
-def get_generator_family_level(generator: Gen_params) -> tuple[str, str]:
+def _build_map(parsers: list[configparser.ConfigParser]) -> dict:
     """
-    Determines the family and level of a generator based on its library.
+    Build a family map dynamically from ini files that include 'family' and 'level' fields.
 
     Parameters
     ----------
-    generator: Gen_params
-        Generator parameters, including its library (lib).
+    parsers: list
+        List of parsers with allowed dynamic models
 
     Returns
     -------
-    tuple[str, str]
-        A tuple containing the generator family and level. Returns empty strings
-        if the family or type is not found in the `FAMILY_LEVEL_MAP`.
+    dict
+        Dictionary for classifying dynamic models by family and level.
     """
-    for key, value in FAMILY_LEVEL_MAP.items():
-        if key in generator.lib:
-            family = value["family"]
-            for type_key, level in value["types"].items():
-                if type_key in generator.lib:
-                    return family, level
-            return family, ""  # Return family if type is not found
-    return "", ""  # Return empty if family is not found
+    family_level_map = {}
+    for parser in parsers:
+        for section in parser.sections():
+            family = parser.get(section, "family", fallback="")
+            level = parser.get(section, "level", fallback="")
+
+            if family and level:
+                family_level_map[section] = {"family": family, "level": level}
+    return family_level_map
 
 
 @dataclass(frozen=True)
@@ -119,6 +101,28 @@ class Translator:
     _load: configparser.ConfigParser
     _transformer: configparser.ConfigParser
     _control_modes: configparser.ConfigParser
+    _family_level_map: dict
+
+    def get_generator_family_level(self, generator: Gen_params) -> tuple[str, str]:
+        """
+        Determines the family and level of a generator based on its library.
+
+        Parameters
+        ----------
+        generator: Gen_params
+            Generator parameters, including its library (lib).
+
+        Returns
+        -------
+        tuple[str, str]
+            A tuple containing the generator family and level. Returns empty strings
+            if the family or type is not found in the `FAMILY_LEVEL_MAP`.
+        """
+        if generator.lib in self._family_level_map:
+            family = self._family_level_map[generator.lib]["family"]
+            level = self._family_level_map[generator.lib]["level"]
+            return family, level
+        return "", ""  # Return empty if family is not found
 
     def _get_control_modes_by_generator(
         self, generator: Gen_params, generator_control_mode: str
@@ -139,7 +143,7 @@ class Translator:
             A list of valid control mode names (sections) that apply to the generator.
             Returns an empty list if no matching control modes are found.
         """
-        family, level = get_generator_family_level(generator)
+        family, level = self.get_generator_family_level(generator)
         option = f"{generator_control_mode}_{family}_{level}"
         control_modes = self._control_modes.get("ControlModes", option, fallback="")
         if control_modes:
@@ -440,9 +444,20 @@ def _get_instance() -> Translator:
     _load_dictionary("Load.ini", load)
     _load_dictionary("Transformer.ini", transformer)
     _load_dictionary("Control_Modes.ini", control_modes)
+    family_level_map = _build_map(
+        [bus, synchronous_machine, power_park, storage, line, load, transformer]
+    )
 
     return Translator(
-        bus, synchronous_machine, power_park, storage, line, load, transformer, control_modes
+        bus,
+        synchronous_machine,
+        power_park,
+        storage,
+        line,
+        load,
+        transformer,
+        control_modes,
+        family_level_map,
     )
 
 
