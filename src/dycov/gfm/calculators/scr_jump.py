@@ -62,7 +62,7 @@ class SCRJump(GFMCalculator):
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for SCRJump plots."""
-        return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
+        return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H", "Epsilon"]
 
     def calculate_envelopes(
         self,
@@ -664,6 +664,7 @@ class SCRJump(GFMCalculator):
             if total_reactance > 0
             else 0
         )
+        self._epsilon = damping_ratio
         return total_reactance, damping_ratio, natural_frequency, peak_power_change
 
     def _calculate_delta_p_for_damping(

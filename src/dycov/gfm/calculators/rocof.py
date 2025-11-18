@@ -47,7 +47,18 @@ class RoCoF(GFMCalculator):
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for RoCoF plots."""
-        return ["P0", "Q0", "Frequency0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
+        return [
+            "P0",
+            "Q0",
+            "Frequency0",
+            "RoCoF",
+            "RoCoFDuration",
+            "SCR",
+            "Xeff",
+            "D",
+            "H",
+            "Epsilon",
+        ]
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -202,6 +213,8 @@ class RoCoF(GFMCalculator):
 
         # 3. The final response is the difference between the two.
         delta_p = p1 - p2
+
+        self._epsilon = epsilon
 
         return delta_p, p_peak, t_response
 

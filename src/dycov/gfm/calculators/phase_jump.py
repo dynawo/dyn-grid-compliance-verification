@@ -45,7 +45,7 @@ class PhaseJump(GFMCalculator):
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for PhaseJump plots."""
-        return ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H"]
+        return ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H", "Epsilon"]
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -283,6 +283,8 @@ class PhaseJump(GFMCalculator):
 
         delta_theta_rad = np.abs(self._delta_phase * np.pi / 180)
         p_peak_calc = delta_theta_rad * u_prod / x_total_initial
+
+        self._epsilon = epsilon
 
         return x_total_initial, epsilon, wn, p_peak_calc
 

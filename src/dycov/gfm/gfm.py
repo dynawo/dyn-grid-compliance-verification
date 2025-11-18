@@ -92,6 +92,7 @@ class GridForming:
             upper_envelope,
             parameters,
             params_list,
+            calculator,
             is_inconsistent,
             disclaimer_msg,  # Pass the message
         )
@@ -211,7 +212,9 @@ class GridForming:
             upper_envelope=upper_envelope,
         )
 
-    def _get_params_plot_info(self, parameters: GFMParameters, params_list: list) -> list[str]:
+    def _get_params_plot_info(
+        self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
+    ) -> list[str]:
         """
         Generates a list of formatted strings with parameter information for plots.
 
@@ -292,6 +295,9 @@ class GridForming:
         if "H" in params_list:
             value = parameters.get_inertia_constant()
             text_params_info.append(f"H = {value:.3f} s")
+        if "Epsilon" in params_list:
+            value = calculator._epsilon
+            text_params_info.append(f"Epsilon = {value:.3f}")
 
         return text_params_info
 
@@ -307,6 +313,7 @@ class GridForming:
         upper_envelope: np.ndarray,
         parameters: GFMParameters,
         params_list: list,
+        calculator: GFMCalculator,
         is_inconsistent: bool = False,
         disclaimer_msg: str | None = None,  # New parameter
     ) -> None:
@@ -351,7 +358,7 @@ class GridForming:
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
             output_format="png&html",
-            params_list=self._get_params_plot_info(parameters, params_list),
+            params_list=self._get_params_plot_info(parameters, params_list, calculator),
             show_disclaimer=is_inconsistent,
             disclaimer_message=disclaimer_msg,  # Pass the message
         )
