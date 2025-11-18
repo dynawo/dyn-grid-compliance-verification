@@ -438,12 +438,12 @@ class PhaseJump(GFMCalculator):
         np.ndarray
             The maximum delta_p array for the overdamped system.
         """
-        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        delta_p1_margined = self._margin_high * delta_p1
-        delta_p1_delayed = self._apply_delay(
-            constants.OVERDAMPED_MAX_DELAY_S, 0, time_array, delta_p1_margined
+        delta_p, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
+        delta_p_margined = self._margin_high * delta_p
+        delta_p_delayed = self._apply_delay(
+            constants.OVERDAMPED_MAX_DELAY_S, 0, time_array, delta_p_margined
         )
-        delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
+        delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
         return delta_p
 
     def _get_underdamped_delta_p_base(
