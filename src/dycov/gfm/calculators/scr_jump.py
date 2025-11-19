@@ -583,25 +583,78 @@ class SCRJump(GFMCalculator):
         lower_envelope = combined_lower_envelope
 
         # Apply a final delay for EMT-type simulations.
-        if self._is_emt_flag:
-            # Safely get initial values, handling both arrays and scalars.
-            initial_upper_val = (
-                upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
-            )
-            initial_lower_val = (
-                lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
-            )
-            initial_pcc_val = power_at_pcc[0] if not np.isscalar(power_at_pcc) else power_at_pcc
+        if (self._initial_active_power > 0 and delta_p_at_event > 0) or (
+            self._initial_active_power < 0 and delta_p_at_event > 0
+        ):
+            if self._is_emt_flag:
+                # Safely get initial values, handling both arrays and scalars.
+                initial_upper_val = (
+                    np.max(upper_envelope) if not np.isscalar(upper_envelope) else upper_envelope
+                )
+                initial_lower_val = (
+                    lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
+                )
+                initial_pcc_val = (
+                    np.max(power_at_pcc) if not np.isscalar(power_at_pcc) else power_at_pcc
+                )
 
-            upper_envelope = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, upper_envelope
-            )
-            lower_envelope = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, lower_envelope
-            )
-            power_at_pcc = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
-            )
+                upper_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, upper_envelope
+                )
+                lower_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S + constants.SCR_BOUND_DELAY_S,
+                    initial_lower_val,
+                    time_array,
+                    lower_envelope,
+                )
+                power_at_pcc = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+                )
+            else:
+                initial_lower_val = (
+                    lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
+                )
+                lower_envelope = self._apply_delay(
+                    constants.SCR_BOUND_DELAY_S,
+                    initial_lower_val,
+                    time_array,
+                    lower_envelope,
+                )
+        else:
+            if self._is_emt_flag:
+                # Safely get initial values, handling both arrays and scalars.
+                initial_upper_val = (
+                    upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
+                )
+                initial_lower_val = (
+                    np.min(lower_envelope) if not np.isscalar(lower_envelope) else lower_envelope
+                )
+                initial_pcc_val = (
+                    np.min(power_at_pcc) if not np.isscalar(power_at_pcc) else power_at_pcc
+                )
+
+                upper_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S + constants.SCR_BOUND_DELAY_S,
+                    initial_upper_val,
+                    time_array,
+                    upper_envelope,
+                )
+                lower_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, lower_envelope
+                )
+                power_at_pcc = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+                )
+            else:
+                initial_upper_val = (
+                    upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
+                )
+                upper_envelope = self._apply_delay(
+                    constants.SCR_BOUND_DELAY_S,
+                    initial_upper_val,
+                    time_array,
+                    upper_envelope,
+                )
 
         return power_at_pcc, upper_envelope, lower_envelope
 
