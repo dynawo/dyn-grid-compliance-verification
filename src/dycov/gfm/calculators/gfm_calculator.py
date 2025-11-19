@@ -128,7 +128,7 @@ class GFMCalculator:
         # Concatenate this delay 'prefix' with the original signal.
         # Then, truncate the combined array to the original signal's length,
         # effectively shifting the signal values.
-        return np.concatenate((sample, signal))[: len(time_array)]
+        return np.concatenate((sample, signal))[:len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
         """

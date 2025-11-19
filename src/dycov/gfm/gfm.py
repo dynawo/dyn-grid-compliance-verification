@@ -243,7 +243,7 @@ class GridForming:
             text_params_info.append(f"Q0 = {value:.3f} pu")
         if "TimeTo90" in params_list:
             value = parameters.get_time_to_90()
-            text_params_info.append(f"t_90% = {(value / 1000):.3f} ms")
+            text_params_info.append(f"t_90% = {(value * 1000):.3f} ms")
         if "Pmax" in params_list:
             value = parameters.get_max_active_power()
             text_params_info.append(f"Pmax = {value:.3f} pu")
@@ -285,7 +285,7 @@ class GridForming:
             text_params_info.append(f"RoCoF = {(value * 50):.3f} Hz/s")
         if "RoCoFDuration" in params_list:
             value = parameters.get_change_frequency_duration()
-            text_params_info.append(f"RoCoF Duration = {(value / 1000):.3f} ms")
+            text_params_info.append(f"RoCoF Duration = {(value * 1000):.3f} ms")
         if "Xeff" in params_list:
             value = parameters.get_effective_reactance()
             text_params_info.append(f"Xeff = {value:.3f} pu")
