@@ -49,7 +49,7 @@ class Parameters:
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
         working_dir = Path(tempfile.gettempdir()) / f"{tmp_path}_{username}"
-        manage_files.create_dir(working_dir, clean_first=False, all=True)
+        manage_files.create_dir(working_dir, clean_first=False)
 
         # Remove old executions
         current_time = time.time()

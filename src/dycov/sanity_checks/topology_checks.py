@@ -54,7 +54,8 @@ def _check_topology_components(
     # "transformer and the PDR bus" or "transformer with id 'transformer' and the PDR bus"
 ) -> None:
     """
-    Validate the topology configuration by checking expected components, their count, and connections.
+    Validate the topology configuration by checking expected components, their count,
+    and connections.
 
     Raises:
         ValueError: If the topology does not meet expected requirements.
@@ -162,11 +163,20 @@ def _check_topology_components(
 
         # Add connection details
         if expected_gen_count == "single" and len(generators) == 1:
-            full_message += f"\n  - 'StepUp_Xfmr' connected between the generator and the {generator_bus_connection}"
+            full_message += (
+                f"\n  - 'StepUp_Xfmr' connected between the generator and the "
+                f"{generator_bus_connection}"
+            )
+
         if expect_aux_load and auxiliary_load:
-            full_message += f"\n  - 'AuxLoad_Xfmr' connected between the auxiliary load and the {aux_load_bus_connection}"
+            full_message += (
+                f"\n  - 'AuxLoad_Xfmr' connected between the auxiliary load and the "
+                f"{aux_load_bus_connection}"
+            )
+
         if expect_main_xfmr and main_transformer:
             full_message += f"\n  - 'Main_Xfmr' connected between the {main_xfmr_bus_connection}"
+
         if expect_internal_line and internal_line:
             full_message += (
                 f"\n  - 'IntNetwork_Line' connected between the {internal_line_bus_connection}"
