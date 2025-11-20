@@ -1371,7 +1371,9 @@ class DynawoCurves(ProducerCurves):
                     target_dir_name = (
                         "bisection_last_success" if success else "bisection_last_failure"
                     )
-                    manage_files.rename_dir(working_oc_dir_fault, working_oc_dir / target_dir_name)
+                    manage_files.rename_path(
+                        working_oc_dir_fault, working_oc_dir / target_dir_name
+                    )
 
                 if voltage_dip_check_result == 1:  # Required dip is greater than obtained
                     min_val = fault_xpu
@@ -1794,7 +1796,7 @@ class DynawoCurves(ProducerCurves):
                 target_dir_name = (
                     "bisection_last_success" if steady_state else "bisection_last_failure"
                 )
-                manage_files.rename_dir(working_oc_dir_fault, working_oc_dir / target_dir_name)
+                manage_files.rename_path(working_oc_dir_fault, working_oc_dir / target_dir_name)
 
             time = round(((max_val + min_val) / 2), BISECTION_ROUND)
 

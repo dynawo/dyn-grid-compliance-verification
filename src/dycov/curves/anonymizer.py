@@ -21,7 +21,6 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.sigpro.sigpro import lowpass_filter
 
-
 NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
 
@@ -66,7 +65,7 @@ def anonymize(
         dycov_logging.get_logger("Anonymizer").info(
             f"Copying curves_calculated.csv and dycov.log from {results} to {curves_folder}"
         )
-        _copy_files_from_pipeline(results, curves_folder)
+        _copy_from_path_from_pipeline(results, curves_folder)
 
     _create_curves_files_ini_if_not_exists(curves_folder)
 
@@ -98,7 +97,7 @@ def _get_files(path: Path, extensions: List[str]) -> List[Path]:
     return all_files
 
 
-def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
+def _copy_from_path_from_pipeline(results: Path, target_folder: Path) -> None:
     """Copies 'curves_calculated.csv' and 'dycov.log' files from the results
     directory to the target folder, renaming them based on their relative path.
 
@@ -116,13 +115,13 @@ def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
             )
             manage_files.create_dir(target_folder / producer_path.name)
             # Copy files from the producer directory
-            _copy_files_from_producer(
+            _copy_from_path_from_producer(
                 producer_path,
                 target_folder / producer_path.name,
             )
 
 
-def _copy_files_from_producer(results: Path, target_folder: Path) -> None:
+def _copy_from_path_from_producer(results: Path, target_folder: Path) -> None:
     """Copies 'curves_calculated.csv' and 'dycov.log' files from the producer results
     directory to the producer target folder, renaming them based on their relative path.
 

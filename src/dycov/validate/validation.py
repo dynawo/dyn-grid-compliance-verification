@@ -340,14 +340,14 @@ class Validation:
         for pcs_results in report_results.values():
             pcs = pcs_results["pcs"]
             producer_name = pcs_results["producer"]
-            manage_files.copy_output_files(
+            manage_files.copy_directory(
                 self._parameters.get_working_dir() / producer_name,
                 self._parameters.get_output_dir() / producer_name,
                 pcs.get_name(),
             )
 
         # Move output files to destination folder
-        manage_files.copy_output_files(
+        manage_files.copy_directory(
             self._parameters.get_working_dir(),
             self._parameters.get_output_dir(),
             "Reports",
