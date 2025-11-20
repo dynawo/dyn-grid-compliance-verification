@@ -14,6 +14,7 @@ import re
 import shutil
 from collections import namedtuple
 from pathlib import Path
+from typing import Iterable
 
 import pandas as pd
 
@@ -255,53 +256,42 @@ def copy_base_case_files(
         Target path
     """
 
+    # Copy main model files
     copy_files(model_files.model_path, target_path)
     copy_files(model_files.omega_path, target_path)
 
-    pattern = re.compile(r".*")
-    exclude_pattern1 = re.compile(r".*__init__.py")
-    exclude_pattern2 = re.compile(r".*__pycache__*")
-    exclude_pattern3 = re.compile(r".*.[iI][nN][iI]$")
-    exclude_pattern4 = re.compile(r".*.[cC][rR][vV]$")
-    for file in model_files.pcs_path.iterdir():
-        matching = pattern.match(str(file))
-        matching1 = exclude_pattern1.match(str(file))
-        matching2 = exclude_pattern2.match(str(file))
-        matching3 = exclude_pattern3.match(str(file))
-        matching4 = exclude_pattern4.match(str(file))
-        if (
-            matching
-            and not matching1
-            and not matching2
-            and not matching3
-            and not matching4
-            and not file.is_dir()
-        ):
-            copy_file(file, target_path / (file.stem + file.suffix.lower()))
+    # Define exclusion patterns
+    exclude_patterns = [
+        re.compile(r".*__init__.py"),
+        re.compile(r".*__pycache__.*"),
+        re.compile(r".*\.[iI][nN][iI]$"),
+        re.compile(r".*\.[cC][rR][vV]$"),
+    ]
 
+    def should_copy(file: Path) -> bool:
+        return file.is_file() and not any(p.match(str(file)) for p in exclude_patterns)
+
+    def copy_from_dir(
+        source: Path, destination: Path, extra_excludes: Iterable[re.Pattern] = ()
+    ) -> None:
+        for file in source.iterdir():
+            if should_copy(file) and not any(p.match(str(file)) for p in extra_excludes):
+                copy_file(file, destination / (file.stem + file.suffix.lower()))
+
+    # Copy PCS files
+    copy_from_dir(model_files.pcs_path, target_path)
+
+    # Copy benchmark files if exists
     benchmark_path = model_files.pcs_path / model_files.benchmark
     if benchmark_path.exists():
-        for file in benchmark_path.iterdir():
-            matching = pattern.match(str(file))
-            matching1 = exclude_pattern1.match(str(file))
-            matching2 = exclude_pattern2.match(str(file))
-            matching3 = exclude_pattern3.match(str(file))
-            if matching and not matching1 and not matching2 and not matching3 and not matching4:
-                copy_file(file, target_path / (file.stem + file.suffix.lower()))
+        copy_from_dir(benchmark_path, target_path)
 
-    # Copy the jobs and cvr TSOModel files and solvers.par
-    for file in (model_files.model_path / "../..").iterdir():
-        matching = pattern.match(str(file))
-        matching1 = exclude_pattern1.match(str(file))
-        matching2 = exclude_pattern2.match(str(file))
-        if matching and not matching1 and not matching2 and file.is_file():
-            copy_file(file, target_path / (file.stem + file.suffix.lower()))
+    # Copy TSOModel files and solvers.par
+    copy_from_dir(model_files.model_path.parent.parent, target_path)
 
-    # Copy the procuder files
-    producer_dyd = producer_files.producer_dyd
-    producer_par = producer_files.producer_par
-    copy_file(producer_dyd, target_path / (producer_dyd.stem + producer_dyd.suffix.lower()))
-    copy_file(producer_par, target_path / (producer_par.stem + producer_par.suffix.lower()))
+    # Copy producer files
+    for file in [producer_files.producer_dyd, producer_files.producer_par]:
+        copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
 
 def copy_base_curves_files(
