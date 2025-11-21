@@ -152,7 +152,7 @@ class SCRJump(GFMCalculator):
         """
         # Create arrays for Damping and Inertia with nominal, max, and min variations.
         damping_variations = np.array([D, D * self._max_ratio, D * self._min_ratio])
-        inertia_variations = np.array([H, H / self._max_ratio, H / self._min_ratio])
+        inertia_variations = np.array([H, H * self._max_ratio, H * self._min_ratio])
 
         num_variations = len(damping_variations)
         num_time_points = len(time_array)
