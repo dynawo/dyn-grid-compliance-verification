@@ -9,6 +9,7 @@
 #
 
 from pathlib import Path
+
 import numpy as np
 
 from dycov.gfm.calculators import calculator_factory
@@ -79,6 +80,9 @@ class GridForming:
         upper_envelope = np.array([])
         lower_envelope = np.array([])
 
+        # Dictionary to hold extra curves if 'save_all_envelopes' is True
+        extra_envelopes = None
+
         if hybrid_params:
             LOGGER.info(
                 f"Hybrid parameters detected for {pcs_name}. Running Merged Envelope generation."
@@ -103,6 +107,15 @@ class GridForming:
             pcc_signal = pcc_over
             magnitude_name = mag_name
 
+            # Check if user wants to save/plot all individual envelopes
+            if parameters.should_save_all_envelopes():
+                extra_envelopes = {
+                    "upper_overdamped": up_over,
+                    "lower_overdamped": low_over,
+                    "upper_underdamped": up_under,
+                    "lower_underdamped": low_under,
+                }
+
             # Update params_list to reflect hybrid mode in the plot
             if params_list:
                 # Remove generic D and H if they exist
@@ -126,11 +139,11 @@ class GridForming:
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # 3. Check calculator flags (e.g., inconsistent damping warning)
+        # Check calculator flags (e.g., inconsistent damping warning)
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
-        # 4. Export and Plot
+        # Export and Plot (passing extra_envelopes)
         title = f"{pcs_name}.{bm_name}.{oc_name}"
         self._export_csv(
             working_path,
@@ -140,6 +153,7 @@ class GridForming:
             pcc_signal,
             lower_envelope,
             upper_envelope,
+            extra_envelopes=extra_envelopes,
         )
         self._plot(
             working_path,
@@ -155,6 +169,7 @@ class GridForming:
             calculator,
             is_inconsistent,
             disclaimer_msg,
+            extra_envelopes=extra_envelopes,
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
@@ -242,6 +257,7 @@ class GridForming:
         pcc_signal: np.ndarray,
         lower_envelope: np.ndarray,
         upper_envelope: np.ndarray,
+        extra_envelopes: dict | None = None,
     ) -> None:
         """
         Exports the simulation results to a CSV file.
@@ -253,6 +269,7 @@ class GridForming:
             pcc_signal=pcc_signal,
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
+            extra_envelopes=extra_envelopes,
         )
 
     def _get_params_plot_info(
@@ -260,6 +277,18 @@ class GridForming:
     ) -> list[str]:
         """
         Generates a list of formatted strings with parameter information for plots.
+
+        Parameters
+        ----------
+        parameters : GFMParameters
+            The GFM parameters object to query for values.
+        params_list : list
+            A list of strings specifying which parameters to extract.
+
+        Returns
+        -------
+        list[str]
+            A list of formatted strings, each representing a parameter and its value.
         """
         if params_list is None:
             return []
@@ -347,6 +376,7 @@ class GridForming:
         calculator: GFMCalculator,
         is_inconsistent: bool = False,
         disclaimer_msg: str | None = None,
+        extra_envelopes: dict | None = None,
     ) -> None:
         """
         Generates and saves a plot of the simulation results.
@@ -357,7 +387,7 @@ class GridForming:
             magnitude=magnitude_name,
             time_array=time_array,
             event_time=event_time,
-            shift_time=0,
+            shift_time=0,  # This parameter might represent a y-axis offset or reference.
             pcc_signal=pcc_signal,
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
@@ -365,4 +395,5 @@ class GridForming:
             params_list=self._get_params_plot_info(parameters, params_list, calculator),
             show_disclaimer=is_inconsistent,
             disclaimer_message=disclaimer_msg,
+            extra_envelopes=extra_envelopes,
         )

@@ -23,33 +23,28 @@ def save_results_to_csv(
     pcc_signal: np.ndarray,
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
+    extra_envelopes: dict[str, np.ndarray] | None = None,
 ) -> None:
     """
     Save the calculated results to a CSV file.
 
-    Parameters
-    ----------
-    path : Path
-        The file path where the CSV file will be saved.
-    magnitude : str
-        Name of the magnitude (e.g., "P", "Iq").
-    time_array : np.ndarray
-        The time array corresponding to the signals.
-    pcc_signal : np.ndarray
-        The calculated signal at the point of common coupling.
-    lower_envelope : np.ndarray
-        The lower envelope of the signal.
-    upper_envelope : np.ndarray
-        The upper envelope of the signal.
+    If extra_envelopes are provided (for hybrid mode), they are added as new columns.
     """
-    df = pd.DataFrame(
-        {
-            "Time (s)": time_array,
-            f"{magnitude} PCC (pu)": pcc_signal,
-            f"{magnitude} lower (pu)": lower_envelope,
-            f"{magnitude} upper (pu)": upper_envelope,
-        }
-    )
+    data = {
+        "Time (s)": time_array,
+        f"{magnitude} PCC (pu)": pcc_signal,
+        f"{magnitude} lower (pu)": lower_envelope,
+        f"{magnitude} upper (pu)": upper_envelope,
+    }
+
+    # Add extra envelopes if requested (Hybrid mode detailed output)
+    if extra_envelopes:
+        for name, signal in extra_envelopes.items():
+            # Clean name for CSV header (e.g., "upper_overdamped" -> "P upper_overdamped (pu)")
+            col_name = f"{magnitude} {name} (pu)"
+            data[col_name] = signal
+
+    df = pd.DataFrame(data)
     df.to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
@@ -65,24 +60,6 @@ def find_start_trim_index(
 
     This function iterates forward from the start of the signals and finds the
     first point where there is a significant change in any of the signals.
-
-    Parameters
-    ----------
-    pcc_signal : np.ndarray
-        The main signal array.
-    lower_envelope : np.ndarray
-        The lower envelope signal array.
-    upper_envelope : np.ndarray
-        The upper envelope signal array.
-    tolerance : float
-        The minimum change between consecutive points to be considered a variation.
-    buffer_points : int
-        Number of data points to keep before the first detected change.
-
-    Returns
-    -------
-    int
-        The index from which the data should be kept.
     """
     for i in range(len(pcc_signal) - 1):
         pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
@@ -109,24 +86,6 @@ def find_end_trim_index(
 
     This function iterates backward from the end of the signals and finds the
     last point where there is a significant change in any of the signals.
-
-    Parameters
-    ----------
-    pcc_signal : np.ndarray
-        The main signal array.
-    lower_envelope : np.ndarray
-        The lower envelope signal array.
-    upper_envelope : np.ndarray
-        The upper envelope signal array.
-    tolerance : float
-        The minimum change between consecutive points to be considered a variation.
-    buffer_points : int
-        Number of data points to keep after the last detected change.
-
-    Returns
-    -------
-    int
-        The index up to which the data should be kept.
     """
     for i in range(len(pcc_signal) - 1, 0, -1):
         pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
@@ -154,43 +113,16 @@ def plot_results(
     output_format: str,
     params_list: list = None,
     show_disclaimer: bool = False,
-    disclaimer_message: str | None = None,  # New parameter
+    disclaimer_message: str | None = None,
+    extra_envelopes: dict[str, np.ndarray] | None = None,
 ) -> None:
     """
     Plot the results, trimming stable data at the start and end.
 
     Saves an interactive HTML file and a static PNG image.
-
-    Parameters
-    ----------
-    path : Path
-        The base file path for the output plots (extension will be added).
-    title : str
-        The title for the plot.
-    magnitude : str
-        The name of the magnitude being plotted (e.g., "P", "Iq").
-    time_array : np.ndarray
-        The full time array for the simulation.
-    event_time : float
-        The absolute time of the event.
-    shift_time : float
-        A time shift to apply to the event marker, if needed.
-    pcc_signal : np.ndarray
-        The main signal from the PCC.
-    lower_envelope : np.ndarray
-        The lower envelope signal.
-    upper_envelope : np.ndarray
-        The upper envelope signal.
-    output_format : str
-        The desired output format(s), e.g., "png&html".
-    params_list : list, optional
-        A list of formatted strings containing simulation parameters to display.
-    show_disclaimer : bool
-        If True, adds a warning disclaimer to the plot.
-    disclaimer_message : str | None
-        The detailed message for the disclaimer.
+    Includes optional extra envelopes for hybrid mode visualization.
     """
-    # 1. Find the optimal indices to trim the data.
+    # 1. Find the optimal indices to trim the data (based on main envelopes)
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
 
@@ -200,20 +132,47 @@ def plot_results(
     down_trimmed = lower_envelope[start_index:end_index]
     up_trimmed = upper_envelope[start_index:end_index]
 
+    # 2b. Slice extra envelopes if they exist
+    extra_trimmed = {}
+    if extra_envelopes:
+        for name, signal in extra_envelopes.items():
+            extra_trimmed[name] = signal[start_index:end_index]
+
     # 3. Prepare disclaimer text if needed
     disclaimer_text_mpl = ""
     disclaimer_text_html = ""
     if show_disclaimer:
         default_msg = "Inconsistent damping. Envelopes may be unreliable."
-        # Format for Matplotlib (uses \n)
         disclaimer_text_mpl = "Disclaimer:\n" + (disclaimer_message or default_msg)
-        # Format for Plotly (uses <br>)
         html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
         disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
 
     # --- Plotting with Matplotlib (for PNG) ---
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
+
+        # Plot Extra Envelopes first (behind the main lines) if they exist
+        if extra_trimmed:
+            colors = {"overdamped": "purple", "underdamped": "orange"}
+            for name, signal in extra_trimmed.items():
+                # Determine style based on name
+                style_color = "gray"
+                if "overdamped" in name:
+                    style_color = colors["overdamped"]
+                if "underdamped" in name:
+                    style_color = colors["underdamped"]
+
+                plt.plot(
+                    time_trimmed,
+                    signal,
+                    linestyle=":",
+                    linewidth=1,
+                    color=style_color,
+                    alpha=0.7,
+                    label=name.replace("_", " ").title(),
+                )
+
+        # Plot Main Envelopes and PCC
         plt.plot(
             time_trimmed,
             pcc_trimmed,
@@ -224,6 +183,7 @@ def plot_results(
             time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
         )
         plt.plot(time_trimmed, up_trimmed, linewidth=2, color="red")
+
         plt.xlabel("Time (s)")
         plt.ylabel(f"{magnitude} (pu)")
         plt.title(title)
@@ -254,17 +214,20 @@ def plot_results(
                 0.02,
                 disclaimer_text_mpl,
                 transform=plt.gca().transAxes,
-                fontsize=8,  # Adjusted fontsize to fit potentially long text
+                fontsize=8,
                 color="red",
                 verticalalignment="bottom",
                 horizontalalignment="left",
                 bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
             )
 
-        plt.legend(loc="lower right")
+        # Adjust legend to handle many items
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.xlim(time_trimmed[0], time_trimmed[-1])
 
+        # Tight layout to accommodate external legend
+        plt.tight_layout()
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
@@ -272,7 +235,7 @@ def plot_results(
     if "html" in output_format:
         fig = go.Figure()
 
-        # Add filled area for envelopes for better visualization
+        # Add filled area for envelopes
         fig.add_trace(
             go.Scatter(
                 x=np.concatenate([time_trimmed, time_trimmed[::-1]]),
@@ -284,6 +247,29 @@ def plot_results(
                 showlegend=False,
             )
         )
+
+        # Plot Extra Envelopes
+        if extra_trimmed:
+            colors = {"overdamped": "purple", "underdamped": "orange"}
+            for name, signal in extra_trimmed.items():
+                style_color = "gray"
+                if "overdamped" in name:
+                    style_color = colors["overdamped"]
+                if "underdamped" in name:
+                    style_color = colors["underdamped"]
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=time_trimmed,
+                        y=signal,
+                        mode="lines",
+                        line=dict(color=style_color, width=1, dash="dot"),
+                        name=name.replace("_", " ").title(),
+                        opacity=0.7,
+                    )
+                )
+
+        # Plot Main Lines
         fig.add_trace(
             go.Scatter(
                 x=time_trimmed,
@@ -347,7 +333,7 @@ def plot_results(
                 showarrow=False,
                 align="left",
                 valign="bottom",
-                font=dict(color="red", size=10),  # Adjusted fontsize
+                font=dict(color="red", size=10),
                 bgcolor="rgba(255, 255, 255, 0.8)",
                 bordercolor="red",
                 borderwidth=1,
@@ -358,8 +344,9 @@ def plot_results(
             title_text=title,
             xaxis_title="Time (s)",
             yaxis_title=f"{magnitude} (pu)",
-            legend=dict(x=0.99, y=0.01, xanchor="right", yanchor="bottom"),
+            legend=dict(x=1.02, y=0.5, xanchor="left", yanchor="middle"),
             template="plotly_white",
+            margin=dict(r=150),  # Add margin for external legend
         )
 
         fig.write_html(path.with_suffix(".html"))
