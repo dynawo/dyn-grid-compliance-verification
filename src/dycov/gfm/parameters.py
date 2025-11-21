@@ -625,3 +625,71 @@ class GFMParameters(Parameters):
         elif config.has_key(self._pcs_section, option):
             return config.get_float(self._pcs_section, option, default_value)
         return config.get_float("DEFAULT", option, default_value)
+
+    def get_hybrid_parameters(self) -> tuple[float, float, float, float] | None:
+        """
+        Attempts to retrieve the hybrid parameters (Overdamped/Underdamped).
+
+        Returns
+        -------
+        tuple[float, float, float, float] | None
+            A tuple (D_Over, H_Over, D_Under, H_Under) if all exist,
+            otherwise None.
+        """
+        d_over = self._get_optional_float("D_Overdamped")
+        h_over = self._get_optional_float("H_Overdamped")
+        d_under = self._get_optional_float("D_Underdamped")
+        h_under = self._get_optional_float("H_Underdamped")
+
+        if all(v is not None for v in [d_over, h_over, d_under, h_under]):
+            return d_over, h_over, d_under, h_under
+        return None
+
+    def get_standard_parameters(self) -> tuple[float, float] | None:
+        """
+        Attempts to retrieve the standard parameters D and H.
+
+        Returns
+        -------
+        tuple[float, float] | None
+            A tuple (D, H) if both exist, otherwise None.
+        """
+        d = self._get_optional_float("D")
+        h = self._get_optional_float("H")
+
+        if d is not None and h is not None:
+            return d, h
+        return None
+
+    def _get_optional_float(self, option: str) -> float | None:
+        """
+        Helper to retrieve a float value without a default fallback.
+        It checks the hierarchical config first, then the producer specific config.
+
+        Parameters
+        ----------
+        option : str
+            The configuration key to look for.
+
+        Returns
+        -------
+        float | None
+            The float value if found, None otherwise.
+        """
+        # Try getting from the standard hierarchical config (Sim parameters)
+        val_str = self.__get_value(option)
+
+        if val_str:
+            try:
+                return float(val_str)
+            except ValueError:
+                pass  # Proceed to check producer config
+
+        # Try getting directly from the Producer.ini (Physical parameters)
+        if self._producer._config.has_option("GFM Parameters", option):
+            try:
+                return float(self._producer._config.get("GFM Parameters", option))
+            except ValueError:
+                return None
+
+        return None
