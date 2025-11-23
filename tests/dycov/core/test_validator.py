@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 
@@ -264,35 +265,39 @@ def test_get_generator_u_dim_returns_correct_value():
 
 
 def test_complete_producer_sets_all_attributes():
-    curves_manager = DummyCurvesManager(
-        generator_u_dim=111.1,
-        time_cct=2.5,
-        generators_imax={"g1": 10.0},
-        disconnection_model=Disconnection_Model(
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        curves_manager = DummyCurvesManager(
+            generator_u_dim=111.1,
+            time_cct=2.5,
+            generators_imax={"g1": 10.0},
+            disconnection_model=Disconnection_Model(
+                auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
+            ),
+            setpoint_variation=0.99,
+        )
+        producer = DummyProducer(sim_type=0)
+        validator = CustomValidator(  # Use CustomValidator
+            curves_manager,
+            producer,
+            validations=["time_cct"],
+            is_field_measurements=False,
+            pcs_name="PCS",
+            bm_name="BM",
+        )
+        working_oc_dir = path / "oc"
+        jobs_output_dir = path / "jobs"
+        event_params = {"duration_time": 2.5}
+        cfg_oc_name = "cfg"
+        validator.complete_parameters(
+            working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC"
+        )
+        assert validator._time_cct == 2.5
+        assert validator._generators_imax == {"g1": 10.0}
+        assert validator._disconnection_model == Disconnection_Model(
             auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
-        ),
-        setpoint_variation=0.99,
-    )
-    producer = DummyProducer(sim_type=0)
-    validator = CustomValidator(  # Use CustomValidator
-        curves_manager,
-        producer,
-        validations=["time_cct"],
-        is_field_measurements=False,
-        pcs_name="PCS",
-        bm_name="BM",
-    )
-    working_oc_dir = Path("/tmp/oc")
-    jobs_output_dir = Path("/tmp/jobs")
-    event_params = {"duration_time": 2.5}
-    cfg_oc_name = "cfg"
-    validator.complete_parameters(working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC")
-    assert validator._time_cct == 2.5
-    assert validator._generators_imax == {"g1": 10.0}
-    assert validator._disconnection_model == Disconnection_Model(
-        auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
-    )
-    assert validator._setpoint_variation == 0.99
+        )
+        assert validator._setpoint_variation == 0.99
 
 
 def test_has_validations_returns_true_when_validations_exist():
@@ -347,34 +352,38 @@ def test_has_validations_returns_false_when_no_validations():
 
 
 def test_complete_producer_handles_missing_optional_producer():
-    curves_manager = DummyCurvesManager(
-        generators_imax={"g2": 20.0},
-        disconnection_model=Disconnection_Model(
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        curves_manager = DummyCurvesManager(
+            generators_imax={"g2": 20.0},
+            disconnection_model=Disconnection_Model(
+                auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
+            ),
+            setpoint_variation=0.0,
+        )
+        producer = DummyProducer(sim_type=0)
+        # No "time_cct" in validations, so set_time_cct should not be called
+        validator = CustomValidator(  # Use CustomValidator
+            curves_manager,
+            producer,
+            validations=[],
+            is_field_measurements=False,
+            pcs_name="PCS",
+            bm_name="BM",
+        )
+        working_oc_dir = path / "oc2"
+        jobs_output_dir = path / "jobs2"
+        event_params = {"duration_time": 1.0}
+        cfg_oc_name = "cfg2"
+        validator.complete_parameters(
+            working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC"
+        )
+        assert validator._time_cct is None
+        assert validator._generators_imax == {"g2": 20.0}
+        assert validator._disconnection_model == Disconnection_Model(
             auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
-        ),
-        setpoint_variation=0.0,
-    )
-    producer = DummyProducer(sim_type=0)
-    # No "time_cct" in validations, so set_time_cct should not be called
-    validator = CustomValidator(  # Use CustomValidator
-        curves_manager,
-        producer,
-        validations=[],
-        is_field_measurements=False,
-        pcs_name="PCS",
-        bm_name="BM",
-    )
-    working_oc_dir = Path("/tmp/oc2")
-    jobs_output_dir = Path("/tmp/jobs2")
-    event_params = {"duration_time": 1.0}
-    cfg_oc_name = "cfg2"
-    validator.complete_parameters(working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC")
-    assert validator._time_cct is None
-    assert validator._generators_imax == {"g2": 20.0}
-    assert validator._disconnection_model == Disconnection_Model(
-        auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
-    )
-    assert validator._setpoint_variation == 0.0
+        )
+        assert validator._setpoint_variation == 0.0
 
 
 def test_get_sim_type_returns_expected_value():
@@ -448,13 +457,15 @@ def test_validate_returns_compliance_results_dict():
         pcs_name="PCS",
         bm_name="BM",
     )
-    # Remove the extra 'fs' argument when calling validate
-    result = validator.validate("OC1", Path("/tmp/results"), "/tmp/sim", {"param": 1})
-    assert isinstance(result, dict)
-    assert "compliance" in result
-    assert result["compliance"] is True
-    assert "details" in result
-    assert result["details"]["oc_name"] == "OC1"
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        # Remove the extra 'fs' argument when calling validate
+        result = validator.validate("OC1", path / "results", "sim", {"param": 1})
+        assert isinstance(result, dict)
+        assert "compliance" in result
+        assert result["compliance"] is True
+        assert "details" in result
+        assert result["details"]["oc_name"] == "OC1"
 
 
 def test_get_measurement_names_returns_empty_when_no_validations():
