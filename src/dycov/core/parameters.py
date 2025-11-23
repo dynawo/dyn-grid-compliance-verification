@@ -9,14 +9,10 @@
 #
 
 import getpass
-import shutil
 import tempfile
-import time
-import uuid
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.files import manage_files
 from dycov.model.producer import Producer
 
 
