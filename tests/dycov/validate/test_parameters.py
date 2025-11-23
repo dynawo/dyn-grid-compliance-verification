@@ -26,12 +26,12 @@ def test_parameters():
         path = Path(tmp_dir)
         shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
-        launcher_dwo = Path("/tmp/launcher_dwo")
+        launcher_dwo = path / "launcher_dwo"
         producer_model = None
         producer_curves_path = path / "curves"
         reference_curves_path = None
         selected_pcs = "selected_pcs"
-        output_dir = Path("/tmp/output_dir")
+        output_dir = path / "output_dir"
         only_dtr = True
         verification_type = 0
 
