@@ -138,6 +138,7 @@ def init_calcs(
     pdr: mp.Pdr_params,
     grid_line: mp.Pimodel_params,
     grid_load: mp.Load_params,
+    reset_phase: bool = True,
 ) -> tuple[mp.Gen_init, tuple[mp.Gen_init, ...], mp.Load_init]:
     """Calculates initialization parameters for generators.
 
@@ -167,6 +168,8 @@ def init_calcs(
         Params of the equiv line on the grid side (zero-impedance if not used)
     grid_load: Load_params
         Params of the equiv load on the grid side (if not Inf Bus, as in Pcs I8)
+    reset_phase: bool
+        Whether to reset the global phase angle so that the grid bus is the reference
 
     Returns
     -------
@@ -194,14 +197,17 @@ def init_calcs(
             grid_line.Ytr, grid_line.Ysh1, grid_line.Ysh2, v_pdr, None, -pdr.S
         )
         # Re-set phase angle globally. The grid sets the reference now:
-        angle = cmath.phase(v_grid)
-        v_pdr = cmath.rect(abs(pdr.U), -angle)
-        v_grid = cmath.rect(abs(v_grid), 0)
+        if reset_phase:
+            angle = cmath.phase(v_grid)
+            v_pdr = cmath.rect(abs(pdr.U), -angle)
+            v_grid = cmath.rect(abs(v_grid), 0)
     # If the grid bus is not Inf (as in Pcs I8), calc also the PQ init params of the equiv gen
     if grid_load is not None:
         s_grid = s_grid - complex(grid_load.P, grid_load.Q)
     # We return both the grid bus voltage and PQ init params in one single object
-    grid_init = mp.Gen_init(id=None, P0=s_grid.real, Q0=s_grid.imag, U0=abs(v_grid), UPhase0=0)
+    grid_init = mp.Gen_init(
+        id=None, P0=s_grid.real, Q0=s_grid.imag, U0=abs(v_grid), UPhase0=cmath.phase(v_grid)
+    )
 
     ##########################################################################
     # Second loadflow: calculate voltage and current at the other side of the
