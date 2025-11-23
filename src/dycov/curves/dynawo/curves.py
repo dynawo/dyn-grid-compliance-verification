@@ -12,6 +12,7 @@ import logging
 import math
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 
@@ -49,8 +50,6 @@ from dycov.validation import common
 
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
-
-LOGGER = dycov_logging.get_logger("ProducerCurves")
 
 
 class DynawoCurves(ProducerCurves):
@@ -174,7 +173,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The debug message.
         """
-        LOGGER.debug(f"{self.__get_log_title(bm_name, oc_name)} {message}")
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"{self.__get_log_title(bm_name, oc_name)} {message}"
+        )
 
     def __warning(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -189,7 +190,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The warning message.
         """
-        LOGGER.warning(f"{self.__get_log_title(bm_name, oc_name)} {message}")
+        dycov_logging.get_logger("ProducerCurves").warning(
+            f"{self.__get_log_title(bm_name, oc_name)} {message}"
+        )
 
     def __error(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -204,7 +207,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The error message.
         """
-        LOGGER.error(f"{self.__get_log_title(bm_name, oc_name)} {message}")
+        dycov_logging.get_logger("ProducerCurves").error(
+            f"{self.__get_log_title(bm_name, oc_name)} {message}"
+        )
 
     def __log(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -304,7 +309,7 @@ class DynawoCurves(ProducerCurves):
 
         # Initialize logging handlers for the simulation
         file_log_level = config.get_value("Global", "file_log_level")
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
             file_log_level = logging.DEBUG
 
         self._logger.init_handlers(
@@ -386,7 +391,9 @@ class DynawoCurves(ProducerCurves):
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:
-            LOGGER.error("Uinf cannot be equal to Udip to avoid division by zero.")
+            dycov_logging.get_logger("ProducerCurves").error(
+                "Uinf cannot be equal to Udip to avoid division by zero."
+            )
             raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
         Zv = (Udip * Zcc) / (Uinf - Udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
@@ -582,12 +589,19 @@ class DynawoCurves(ProducerCurves):
         self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
 
+        # Read the generators parameters in the TSO network, if exists
+        rte_generators = model_parameters.get_pcs_generators_params(
+            working_oc_dir / "TSOModel.dyd",
+            working_oc_dir / "TSOModel.par",
+        )
+
         # Complete Omega and TSO files
+        dycov_logging.get_logger("ProducerCurves").debug("Complete omega file")
         omega_file.complete_omega(
             working_oc_dir,
             "Omega.dyd",
             "Omega.par",
-            self.get_producer().generators,
+            self.get_producer().generators + rte_generators,
         )
 
         tso_file.complete_setpoint(
@@ -689,7 +703,7 @@ class DynawoCurves(ProducerCurves):
 
         # Optimized: Determine fault_duration more concisely
         fault_duration = 0.0
-        if config.has_key(config_section, "fault_duration"):
+        if config.has_option(config_section, "fault_duration"):
             fault_duration = config.get_float(config_section, "fault_duration", 0.0)
         else:
             generator_type = generator_variables.get_generator_type(self.get_producer().u_nom)
@@ -700,7 +714,7 @@ class DynawoCurves(ProducerCurves):
 
         # Optimized: Determine step_value more concisely
         step_value = 0.0
-        if config.has_key(config_section, "setpoint_step_value"):
+        if config.has_option(config_section, "setpoint_step_value"):
             step_value = self.obtain_value(
                 str(config.get_value(config_section, "setpoint_step_value"))
             )
@@ -744,7 +758,7 @@ class DynawoCurves(ProducerCurves):
         self._has_line = False  # Reset flag
 
         # Optimized: Consolidated logic for line parameter calculation
-        if config.has_key(config_section, "line_XPu"):
+        if config.has_option(config_section, "line_XPu"):
             self._has_line = True
             line_xpu_definition = config.get_value(config_section, "line_XPu")
             self.__log(bm_name, oc_name, f"\tline_XPu={line_xpu_definition}")
@@ -774,7 +788,7 @@ class DynawoCurves(ProducerCurves):
             else:
                 line_rpu = 0.0
 
-        elif config.has_key(config_section, "SCR"):
+        elif config.has_option(config_section, "SCR"):
             self._has_line = True
             scr = config.get_float(config_section, "SCR", 0.0)
             self.__log(bm_name, oc_name, f"\tSCR={scr}")
@@ -786,7 +800,7 @@ class DynawoCurves(ProducerCurves):
             # else: line_xpu and line_rpu remain 0, _has_line remains False
             # (as initialized or explicitly set)
 
-        elif config.has_key(config_section, "Zcc"):
+        elif config.has_option(config_section, "Zcc"):
             self._has_line = True
             scc = generator_variables.get_scc(self.get_producer().u_nom)
             udim = generator_variables.get_generator_u_dim(self.get_producer().u_nom)
@@ -1309,7 +1323,6 @@ class DynawoCurves(ProducerCurves):
         max_val = config.get_float("Global", "maximum_hiz_fault", 10.0)
         min_val = config.get_float("Global", "minimum_hiz_fault", 1e-10)
         last_fault_xpu = min_val
-        working_oc_dirs_to_remove = []
         bisection_success = False
         hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 40.0)
         voltage_dip_check_result = None  # Initialize to None
@@ -1319,47 +1332,55 @@ class DynawoCurves(ProducerCurves):
             fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
             # Optimized: Using f-string for directory name
-            working_oc_dir_fault = manage_files.clone_as_subdirectory(
-                working_oc_dir, f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            )
-            working_oc_dirs_to_remove.append(working_oc_dir_fault)
+            with TemporaryDirectory(prefix="dynawo_") as temp_dir:
+                working_oc_dir_fault = (
+                    Path(temp_dir)
+                    / f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+                )
+                manage_files.copy_directory(working_oc_dir, working_oc_dir_fault)
 
-            fault_rpu = fault_xpu / fault_r_factor if fault_r_factor != 0.0 else 0.0
-            self.__debug(bm_name, oc_name, f"Bisection between {max_val} and {min_val}")
-            self.__debug(bm_name, oc_name, f"Fault XPU in {fault_xpu}")
-            self.__modify_fault(
-                working_oc_dir_fault,
-                fault_start,
-                fault_duration,
-                fault_xpu,
-                fault_rpu=fault_rpu,
-            )
-
-            success, _, _, curves_calculated = self.__simulate(
-                output_dir, working_oc_dir_fault, jobs_output_dir, bm_name, oc_name
-            )
-
-            self.__reset_solver()  # Restore the solver to the default values
-
-            if success:
-                bisection_success = True
-                last_fault_xpu = fault_xpu
-                voltage_dip_check_result = DynawoSimulator().check_voltage_dip(
-                    self._pcs_name,
-                    bm_name,
-                    oc_name,
-                    curves_calculated,
+                fault_rpu = fault_xpu / fault_r_factor if fault_r_factor != 0.0 else 0.0
+                self.__debug(bm_name, oc_name, f"Bisection between {max_val} and {min_val}")
+                self.__debug(bm_name, oc_name, f"Fault XPU in {fault_xpu}")
+                self.__modify_fault(
+                    working_oc_dir_fault,
                     fault_start,
                     fault_duration,
-                    abs(dip),
+                    fault_xpu,
+                    fault_rpu=fault_rpu,
                 )
 
-                if LOGGER.getEffectiveLevel() == logging.DEBUG:
-                    target_dir_name = (
-                        "bisection_last_success" if success else "bisection_last_failure"
-                    )
-                    manage_files.rename_dir(working_oc_dir_fault, working_oc_dir / target_dir_name)
+                success, _, _, curves_calculated = self.__simulate(
+                    output_dir, working_oc_dir_fault, jobs_output_dir, bm_name, oc_name
+                )
 
+                self.__reset_solver()  # Restore the solver to the default values
+
+                if success:
+                    bisection_success = True
+                    last_fault_xpu = fault_xpu
+                    voltage_dip_check_result = DynawoSimulator().check_voltage_dip(
+                        self._pcs_name,
+                        bm_name,
+                        oc_name,
+                        curves_calculated,
+                        fault_start,
+                        fault_duration,
+                        abs(dip),
+                    )
+
+                    if (
+                        dycov_logging.get_logger("ProducerCurves").getEffectiveLevel()
+                        == logging.DEBUG
+                    ):
+                        target_dir_name = (
+                            "bisection_last_success" if success else "bisection_last_failure"
+                        )
+                        manage_files.rename_path(
+                            working_oc_dir_fault, working_oc_dir / target_dir_name
+                        )
+
+            if success:
                 if voltage_dip_check_result == 1:  # Required dip is greater than obtained
                     min_val = fault_xpu
                 elif voltage_dip_check_result == -1:  # Required dip is less than obtained
@@ -1380,10 +1401,6 @@ class DynawoCurves(ProducerCurves):
 
             if self.__is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
                 break  # Exit loop if bisection is complete
-
-        # Remove all bisection directories
-        for dir_to_remove in working_oc_dirs_to_remove:
-            manage_files.remove_dir(dir_to_remove)
 
         if not bisection_success:
             self.__error(bm_name, oc_name, "The simulation fails with any value for the fault")
@@ -1744,7 +1761,6 @@ class DynawoCurves(ProducerCurves):
         # Perform bisection to find the maximum duration the fault admits without losing stability
         time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
-        working_oc_dirs_to_remove = []
         cct_rel_tol = 0.0001  # Defined directly for CCT bisection
 
         # Optimized: Use while loop with a break condition for clarity
@@ -1755,33 +1771,34 @@ class DynawoCurves(ProducerCurves):
                 f"Attempt {counter} to find clear time. Used fault time: {time}",
             )
 
-            current_attempt_dir_name = (
-                f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            )
-            working_oc_dir_fault = manage_files.clone_as_subdirectory(
-                working_oc_dir, current_attempt_dir_name
-            )
-            working_oc_dirs_to_remove.append(working_oc_dir_fault)
-
-            self.__debug(bm_name, oc_name, f"Run time CCT in {time}")
-            steady_state = self.__run_time_cct(
-                working_oc_dir_fault,
-                jobs_output_dir,
-                time,
-                bm_name,
-                oc_name,
-            )
-
-            if steady_state:
-                min_val = time
-            else:
-                max_val = time
-
-            if LOGGER.getEffectiveLevel() == logging.DEBUG:
-                target_dir_name = (
-                    "bisection_last_success" if steady_state else "bisection_last_failure"
+            with TemporaryDirectory(prefix="dynawo_") as temp_dir:
+                working_oc_dir_fault = (
+                    Path(temp_dir)
+                    / f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
                 )
-                manage_files.rename_dir(working_oc_dir_fault, working_oc_dir / target_dir_name)
+                manage_files.copy_directory(working_oc_dir, working_oc_dir_fault)
+
+                self.__debug(bm_name, oc_name, f"Run time CCT in {time}")
+                steady_state = self.__run_time_cct(
+                    working_oc_dir_fault,
+                    jobs_output_dir,
+                    time,
+                    bm_name,
+                    oc_name,
+                )
+
+                if steady_state:
+                    min_val = time
+                else:
+                    max_val = time
+
+                if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
+                    target_dir_name = (
+                        "bisection_last_success" if steady_state else "bisection_last_failure"
+                    )
+                    manage_files.rename_path(
+                        working_oc_dir_fault, working_oc_dir / target_dir_name
+                    )
 
             time = round(((max_val + min_val) / 2), BISECTION_ROUND)
 
@@ -1789,10 +1806,6 @@ class DynawoCurves(ProducerCurves):
                 break  # Exit loop if bisection is complete
 
             counter += 1
-
-        # Remove all bisection directories
-        for dir_to_remove in working_oc_dirs_to_remove:
-            manage_files.remove_dir(dir_to_remove)
 
         return time
 

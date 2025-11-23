@@ -18,18 +18,17 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
 from dycov.curves import anonymizer
 from dycov.curves.dynawo import prepare_tool
+from dycov.files import manage_files
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
 
-_LOGGER = dycov_logging.get_logger("CommandHandlers")
-
 
 def handle_generate_envelopes_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+) -> int:
     """Handles the 'validate' command.
 
     Initializes and runs a model validation based on the provided arguments.
@@ -43,7 +42,7 @@ def handle_generate_envelopes_command(
     dwo_launcher: Path
         Path to the Dynawo launcher.
     """
-    _LOGGER.info("Handling 'generateEnvelopes' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'generateEnvelopes' command.")
     producer_ini: Optional[Path] = None
     output_dir: Optional[Path] = None
 
@@ -53,7 +52,9 @@ def handle_generate_envelopes_command(
         output_dir = producer_ini.parent / "Results" if args.output is None else Path(args.output)
 
     if not producer_ini:
-        _LOGGER.error("Missing arguments for 'generateEnvelopes' command.")
+        dycov_logging.get_logger("CommandHandlers").error(
+            "Missing arguments for 'generateEnvelopes' command."
+        )
         parser.error("Missing arguments. Try 'dycov generateEnvelopes -h' for more information.")
         return
 
@@ -66,16 +67,19 @@ def handle_generate_envelopes_command(
         only_dtr=args.only_dtr,
     )
 
-    if result_code != 0:
-        _LOGGER.critical("Validation failed. Check logs for details.")
+    if result_code == -1:
+        dycov_logging.get_logger("CommandHandlers").critical(
+            "Validation failed. Check logs for details."
+        )
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
+    return result_code
 
 
 def handle_validate_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+) -> int:
     """Handles the 'validate' command.
 
     Initializes and runs a model validation based on the provided arguments.
@@ -89,7 +93,7 @@ def handle_validate_command(
     dwo_launcher: Path
         Path to the Dynawo launcher.
     """
-    _LOGGER.info("Handling 'validate' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'validate' command.")
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
     reference_curves: Optional[Path] = None
@@ -98,18 +102,20 @@ def handle_validate_command(
     if args.model:
         producer_model = Path(args.model)
         output_dir = args.output if args.output else producer_model.parent / "Results"
-        _LOGGER.debug(f"Producer model: {producer_model}")
+        dycov_logging.get_logger("CommandHandlers").debug(f"Producer model: {producer_model}")
     elif args.curves:
         producer_curves = Path(args.curves)
         output_dir = args.output if args.output else producer_curves.parent / "Results"
-        _LOGGER.debug(f"Producer curves: {producer_curves}")
+        dycov_logging.get_logger("CommandHandlers").debug(f"Producer curves: {producer_curves}")
 
     if args.reference:
         reference_curves = Path(args.reference)
-        _LOGGER.debug(f"Reference curves: {reference_curves}")
+        dycov_logging.get_logger("CommandHandlers").debug(f"Reference curves: {reference_curves}")
 
     if (not producer_model and not producer_curves) or not reference_curves:
-        _LOGGER.error("Missing arguments for 'validate' command.")
+        dycov_logging.get_logger("CommandHandlers").error(
+            "Missing arguments for 'validate' command."
+        )
         parser.error("Missing arguments. Try 'dycov validate -h' for more information.")
         return
 
@@ -125,16 +131,19 @@ def handle_validate_command(
         verification_type=MODEL_VALIDATION,
     )
 
-    if result_code != 0:
-        _LOGGER.critical("Validation failed. Check logs for details.")
+    if result_code == -1:
+        dycov_logging.get_logger("CommandHandlers").critical(
+            "Validation failed. Check logs for details."
+        )
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
+    return result_code
 
 
 def handle_performance_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+) -> int:
     """Handles the 'performance' command.
 
     Analyzes the performance of a Dynawo model or its results.
@@ -148,7 +157,7 @@ def handle_performance_command(
     dwo_launcher: Path
         Path to the Dynawo launcher.
     """
-    _LOGGER.info("Handling 'performance' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'performance' command.")
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
     output_dir: Optional[Path] = None
@@ -156,13 +165,15 @@ def handle_performance_command(
     if args.model:
         producer_model = Path(args.model)
         output_dir = args.output if args.output else producer_model.parent / "Results"
-        _LOGGER.debug(f"Producer model: {producer_model}")
+        dycov_logging.get_logger("CommandHandlers").debug(f"Producer model: {producer_model}")
     elif args.curves:
         producer_curves = Path(args.curves)
         output_dir = args.output if args.output else producer_curves.parent / "Results"
-        _LOGGER.debug(f"Producer curves: {producer_curves}")
+        dycov_logging.get_logger("CommandHandlers").debug(f"Producer curves: {producer_curves}")
     else:
-        _LOGGER.error("Missing model or output directory for 'performance' command.")
+        dycov_logging.get_logger("CommandHandlers").error(
+            "Missing model or output directory for 'performance' command."
+        )
         parser.error("Missing arguments. Try 'dycov performance -h' for more information.")
         return
 
@@ -178,16 +189,19 @@ def handle_performance_command(
         verification_type=ELECTRIC_PERFORMANCE,
     )
 
-    if result_code != 0:
-        _LOGGER.critical("Performance analysis failed. Check logs for details.")
+    if result_code == -1:
+        dycov_logging.get_logger("CommandHandlers").critical(
+            "Performance analysis failed. Check logs for details."
+        )
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
+    return result_code
 
 
 def handle_generate_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+) -> int:
     """Handles the 'generate' command.
 
     Creates necessary input files through a guided process.
@@ -201,25 +215,27 @@ def handle_generate_command(
     dwo_launcher: Path
         Path to the Dynawo launcher.
     """
-    _LOGGER.info("Handling 'generate' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'generate' command.")
     try:
         # Generate input templates
         generator = InputTemplateGenerator()
-        generator.create_input_template(
+        result_code = generator.create_input_template(
             launcher_dwo=dwo_launcher,
             target=Path(args.output),
             topology=args.topology,
             template=args.validation,
         )
-        _LOGGER.info("Input files generated successfully.")
+        dycov_logging.get_logger("CommandHandlers").info("Input files generated successfully.")
     except Exception as e:
-        _LOGGER.exception(f"Error generating input files: {e}")
+        dycov_logging.get_logger("CommandHandlers").exception(f"Error generating input files: {e}")
         parser.error(f"Failed to generate input files: {e}")
+        result_code = 1
+    return result_code
 
 
 def handle_compile_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> None:
+) -> int:
     """Handles the 'compile' command.
 
     Compiles custom Modelica models.
@@ -233,23 +249,27 @@ def handle_compile_command(
     dwo_launcher: Path
         Path to the Dynawo launcher.
     """
-    _LOGGER.info("Handling 'compile' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'compile' command.")
     model_name: Optional[str] = args.dynamic_model if args.dynamic_model else None
     force_recompile: bool = args.force
 
     try:
         if prepare_tool.precompile(dwo_launcher, model_name, force_recompile):
-            _LOGGER.info("Model compilation aborted by user.")
+            dycov_logging.get_logger("CommandHandlers").info("Model compilation aborted by user.")
             print("Compilation aborted by user.")
+            result_code = 1
         else:
-            _LOGGER.info("Model(s) compiled successfully.")
+            dycov_logging.get_logger("CommandHandlers").info("Model(s) compiled successfully.")
             print("Compilation finished successfully.")
+            result_code = 0
     except Exception as e:
-        _LOGGER.exception(f"Error compiling models: {e}")
+        dycov_logging.get_logger("CommandHandlers").exception(f"Error compiling models: {e}")
         parser.error(f"Failed to compile models: {e}")
+        result_code = 1
+    return result_code
 
 
-def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     """Handles the 'anonymize' command.
 
     Generates a new set of curves with generic variable names and optional noise.
@@ -261,7 +281,7 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
     args: argparse.Namespace
         Parsed command-line arguments.
     """
-    _LOGGER.info("Handling 'anonymize' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'anonymize' command.")
     try:
         anonymizer.anonymize(
             output_folder=Path(args.output),
@@ -270,10 +290,13 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
             results=Path(args.results) if args.results else None,
             curves_folder=Path(args.curves) if args.curves else None,
         )
-        _LOGGER.info("Anonymization completed successfully.")
+        dycov_logging.get_logger("CommandHandlers").info("Anonymization completed successfully.")
+        result_code = 0
     except Exception as e:
-        _LOGGER.exception(f"Error during anonymization: {e}")
+        dycov_logging.get_logger("CommandHandlers").exception(f"Error during anonymization: {e}")
         parser.error(f"Failed to anonymize curves: {e}")
+        result_code = 1
+    return result_code
 
 
 def _run_verification(
@@ -318,19 +341,21 @@ def _run_verification(
     int
         Result code of the verification (0 for success, non-zero for failure).
     """
-    _LOGGER.info(f"Running verification of type: {verification_type}")
+    dycov_logging.get_logger("CommandHandlers").info(
+        f"Running verification of type: {verification_type}"
+    )
+    # Initialize Parameters for the tool
+    params = ValidationParameters(
+        launcher_dwo=dwo_launcher,
+        producer_model=producer_model,
+        producer_curves_path=producer_curves,
+        reference_curves_path=reference_curves,
+        selected_pcs=user_pcs,
+        output_dir=output_dir,
+        only_dtr=only_dtr,
+        verification_type=verification_type,
+    )
     try:
-        # Initialize Parameters for the tool
-        params = ValidationParameters(
-            launcher_dwo=dwo_launcher,
-            producer_model=producer_model,
-            producer_curves_path=producer_curves,
-            reference_curves_path=reference_curves,
-            selected_pcs=user_pcs,
-            output_dir=output_dir,
-            only_dtr=only_dtr,
-            verification_type=verification_type,
-        )
 
         # Determine if the execution parameters are valid or complete based on the
         # verification type.
@@ -360,13 +385,19 @@ def _run_verification(
             if verification_type == ELECTRIC_PERFORMANCE
             else "Model Validation"
         )
-        _LOGGER.info(
+        dycov_logging.get_logger("CommandHandlers").info(
             f"{verification_name} completed in {end_time - start_time:.2f} seconds."
             f" ({parallel_status})"
         )
+
         return 0
+    except KeyboardInterrupt:
+        dycov_logging.get_logger("CommandHandlers").exception(f"Execution interrupted by user")
+        manage_files.remove_dir(params.get_working_dir())
+        return 130
     except Exception as e:
-        _LOGGER.exception(f"Error during verification: {e}")
+        dycov_logging.get_logger("CommandHandlers").exception(f"Error during verification: {e}")
+        manage_files.remove_dir(params.get_working_dir())
         return 1
 
 
@@ -378,7 +409,7 @@ def _generate_envelopes(
     user_pcs: bool,
     only_dtr: bool,
 ):
-    _LOGGER.info("Running generation of envelopes")
+    dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
     try:
         params = GFMParameters(
             launcher_dwo=dwo_launcher,
@@ -401,8 +432,10 @@ def _generate_envelopes(
         gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
         end_time = time.time()
 
-        _LOGGER.info(f"Generation completed in {end_time - start_time:.2f} seconds.")
+        dycov_logging.get_logger("CommandHandlers").info(
+            f"Generation completed in {end_time - start_time:.2f} seconds."
+        )
         return 0
     except Exception as e:
-        _LOGGER.exception(f"Error during generation: {e}")
+        dycov_logging.get_logger("CommandHandlers").exception(f"Error during generation: {e}")
         return 1

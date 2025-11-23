@@ -19,8 +19,6 @@ from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 from dycov.model.pcs import Pcs
 
-LOGGER = dycov_logging.get_logger("GFMGeneration")
-
 
 def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     """
@@ -39,16 +37,20 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     pcs = Pcs(producer_name, pcs_name, parameters)
     try:
         if not pcs.is_valid():
-            LOGGER.error(f"{pcs.get_name()} is not a valid PCS")
+            dycov_logging.get_logger("GFMGeneration").error(f"{pcs.get_name()} is not a valid PCS")
             return
 
         pcs.generate()
     except (FileNotFoundError, IOError, ValueError) as e:
         # Catch specific exceptions that might occur during file operations or value errors.
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
-            LOGGER.exception(f"Aborted execution for {pcs.get_name()}. {e}")
+        if dycov_logging.get_logger("GFMGeneration").getEffectiveLevel() == logging.DEBUG:
+            dycov_logging.get_logger("GFMGeneration").exception(
+                f"Aborted execution for {pcs.get_name()}. {e}"
+            )
         else:
-            LOGGER.error(f"Aborted execution for {pcs.get_name()}. {e}")
+            dycov_logging.get_logger("GFMGeneration").error(
+                f"Aborted execution for {pcs.get_name()}. {e}"
+            )
         return
 
 
@@ -86,7 +88,7 @@ class GFMGeneration:
 
         # Check if the results output path exists to prevent accidental overwriting.
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
-            LOGGER.warning(
+            dycov_logging.get_logger("GFMGeneration").warning(
                 "Exiting. Please rename your current Results directory, "
                 "otherwise it will be erased and a new one will be created."
             )
@@ -105,7 +107,7 @@ class GFMGeneration:
         list[str]
             A sorted list of PCS names for which to generate envelopes.
         """
-        LOGGER.info("DyCoV Envelopes Generation")
+        dycov_logging.get_logger("GFMGeneration").info("DyCoV Envelopes Generation")
         validation_pcs: set[str] = set()
         if self._parameters.get_selected_pcs():
             validation_pcs.add(self._parameters.get_selected_pcs())
@@ -185,16 +187,18 @@ class GFMGeneration:
             The number of processes to use if `use_parallel` is True. Defaults to 4.
         """
         if use_parallel:
-            LOGGER.info(f"Generating envelopes in parallel using {num_processes} processes.")
+            dycov_logging.get_logger("GFMGeneration").info(
+                f"Generating envelopes in parallel using {num_processes} processes."
+            )
             with Pool(processes=num_processes) as pool:
                 pool.map(_generate_pcs, self._pcs_list)
         else:
-            LOGGER.info("Generating envelopes sequentially.")
+            dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")
             for pcs_tuple in self._pcs_list:
                 _generate_pcs(pcs_tuple)
 
         for _, pcs_name, producer_name in self._pcs_list:
-            manage_files.copy_output_files(
+            manage_files.copy_directory(
                 self._parameters.get_working_dir() / producer_name,
                 self._parameters.get_output_dir(),
                 pcs_name,

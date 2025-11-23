@@ -21,9 +21,6 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.sigpro.sigpro import lowpass_filter
 
-# Initialize logger for the Anonymizer module
-_LOGGER = dycov_logging.get_logger("Anonymizer")
-
 NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
 
@@ -55,7 +52,7 @@ def anonymize(
         Path of a set of curves. If not provided, `output_folder` will be used
         as the source for curves. Defaults to None.
     """
-    _LOGGER.info(
+    dycov_logging.get_logger("Anonymizer").info(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
         f"and frequency {frequency} Hz"
     )
@@ -65,10 +62,10 @@ def anonymize(
     manage_files.create_dir(output_folder)
 
     if results:
-        _LOGGER.info(
+        dycov_logging.get_logger("Anonymizer").info(
             f"Copying curves_calculated.csv and dycov.log from {results} to {curves_folder}"
         )
-        _copy_files_from_pipeline(results, curves_folder)
+        _copy_from_path_from_pipeline(results, curves_folder)
 
     _create_curves_files_ini_if_not_exists(curves_folder)
 
@@ -100,7 +97,7 @@ def _get_files(path: Path, extensions: List[str]) -> List[Path]:
     return all_files
 
 
-def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
+def _copy_from_path_from_pipeline(results: Path, target_folder: Path) -> None:
     """Copies 'curves_calculated.csv' and 'dycov.log' files from the results
     directory to the target folder, renaming them based on their relative path.
 
@@ -113,16 +110,18 @@ def _copy_files_from_pipeline(results: Path, target_folder: Path) -> None:
     """
     for producer_path in results.iterdir():
         if producer_path.is_dir() and producer_path.name != "Reports":
-            _LOGGER.debug(f"Processing producer directory: {producer_path}")
+            dycov_logging.get_logger("Anonymizer").debug(
+                f"Processing producer directory: {producer_path}"
+            )
             manage_files.create_dir(target_folder / producer_path.name)
             # Copy files from the producer directory
-            _copy_files_from_producer(
+            _copy_from_path_from_producer(
                 producer_path,
                 target_folder / producer_path.name,
             )
 
 
-def _copy_files_from_producer(results: Path, target_folder: Path) -> None:
+def _copy_from_path_from_producer(results: Path, target_folder: Path) -> None:
     """Copies 'curves_calculated.csv' and 'dycov.log' files from the producer results
     directory to the producer target folder, renaming them based on their relative path.
 
@@ -146,7 +145,7 @@ def _copy_files_from_producer(results: Path, target_folder: Path) -> None:
             target_name = ".".join(map(str, relative_path.parts)) + target_suffix
             target_file_path = target_folder / target_name
             manage_files.copy_file(file, target_file_path)
-            _LOGGER.debug(f"Copied {file} to {target_file_path}")
+            dycov_logging.get_logger("Anonymizer").debug(f"Copied {file} to {target_file_path}")
 
 
 def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
@@ -163,7 +162,9 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
     """
     curves_files_ini_path = curves_folder / "CurvesFiles.ini"
     if curves_files_ini_path.exists():
-        _LOGGER.debug(f"{curves_files_ini_path} already exists. Skipping creation.")
+        dycov_logging.get_logger("Anonymizer").debug(
+            f"{curves_files_ini_path} already exists. Skipping creation."
+        )
         return
 
     curves_files_content: Dict[str, str] = {}
@@ -207,7 +208,9 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
                 else:
                     curves_ini.write(f"{key} = {value}\n")
             curves_ini.write("\n\n")
-    _LOGGER.info(f"Created CurvesFiles.ini at {curves_files_ini_path}")
+    dycov_logging.get_logger("Anonymizer").info(
+        f"Created CurvesFiles.ini at {curves_files_ini_path}"
+    )
 
 
 def _create_dict_files_if_not_exist(curves_folder: Path, metadata: Dict[str, Dict]) -> None:
@@ -249,7 +252,9 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
     """
     dict_file = csv_file.with_suffix(".dict")
     if dict_file.exists():
-        _LOGGER.debug(f"{dict_file} already exists. Skipping creation.")
+        dycov_logging.get_logger("Anonymizer").debug(
+            f"{dict_file} already exists. Skipping creation."
+        )
         return
 
     # Ensure metadata for this stem exists, provide defaults if not.
@@ -298,11 +303,11 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
                     if header:
                         dict_f.write(f"{header} = {header}\n")
         except FileNotFoundError:
-            _LOGGER.warning(
+            dycov_logging.get_logger("Anonymizer").warning(
                 f"CSV file {csv_file} not found when creating dictionary. "
                 "Headers will not be added."
             )
-    _LOGGER.info(f"Created dictionary file {dict_file}")
+    dycov_logging.get_logger("Anonymizer").info(f"Created dictionary file {dict_file}")
 
 
 def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
@@ -335,7 +340,9 @@ def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
                 elif "fault_duration" in line:
                     metadata[stem]["fault_duration"] = float(line.split("=")[-1])
         log_file.unlink()  # Delete the log file after extraction
-        _LOGGER.debug(f"Extracted metadata from {log_file} and deleted it.")
+        dycov_logging.get_logger("Anonymizer").debug(
+            f"Extracted metadata from {log_file} and deleted it."
+        )
     return metadata
 
 
@@ -370,14 +377,16 @@ def _apply_noise_to_curves(
     # Calculate resampling frequency from the time column in the DataFrame
     time_step = np.mean(np.diff(df_imported_curve["time"].to_numpy()))
     resampling_fs = 1 / time_step
-    _LOGGER.debug(f"Calculated resampling frequency: {resampling_fs} Hz")
+    dycov_logging.get_logger("Anonymizer").debug(
+        f"Calculated resampling frequency: {resampling_fs} Hz"
+    )
 
     for column in df_imported_curve.columns:
         if column == "time":
             continue
 
         list_col = df_imported_curve[column].tolist()
-        _LOGGER.debug(f"Applying noise to column: {column}")
+        dycov_logging.get_logger("Anonymizer").debug(f"Applying noise to column: {column}")
 
         # Determine indices for before, during, and after event periods
         before_event_idx = df_imported_curve[df_imported_curve["time"] <= noise_event_start].shape[
@@ -394,7 +403,9 @@ def _apply_noise_to_curves(
         # extremely large noise
         if abs(median_col) < MIN_SCALE:
             median_col = MIN_SCALE if median_col >= 0 else -MIN_SCALE
-            _LOGGER.debug(f"Adjusted median_col to {median_col} due to MIN_SCALE.")
+            dycov_logging.get_logger("Anonymizer").debug(
+                f"Adjusted median_col to {median_col} due to MIN_SCALE."
+            )
 
         # Apply reduced noise before the event
         noise_before = (
@@ -447,7 +458,7 @@ def _process_curves(
         "*.[dD][aA][tT]",
     ]
     for curves_path in _get_files(curves_folder, curve_extensions):
-        _LOGGER.info(f"Processing curve file: {curves_path.name}")
+        dycov_logging.get_logger("Anonymizer").info(f"Processing curve file: {curves_path.name}")
         dict_file = curves_path.parent / f"{curves_path.stem}.dict"
 
         curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -465,7 +476,9 @@ def _process_curves(
             df_imported_curve = importer.get_curves_dataframe(zone=0, remove_file=False)
 
             if noisestd is not None and noisestd > 0:
-                _LOGGER.debug(f"Applying noise to {curves_path.stem}")
+                dycov_logging.get_logger("Anonymizer").debug(
+                    f"Applying noise to {curves_path.stem}"
+                )
                 _apply_noise_to_curves(
                     df_imported_curve, noisestd, frequency, event_time, fault_duration
                 )
@@ -473,7 +486,9 @@ def _process_curves(
             df_imported_curve = df_imported_curve.set_index("time")
             output_csv_path = output_folder / f"{curves_path.stem}.csv"
             df_imported_curve.to_csv(output_csv_path, sep=";", float_format="%.3e")
-            _LOGGER.info(f"Saved anonymized curve to {output_csv_path}")
+            dycov_logging.get_logger("Anonymizer").info(
+                f"Saved anonymized curve to {output_csv_path}"
+            )
 
             with open(dict_file, "r") as file:
                 filedata = file.read()
@@ -485,8 +500,10 @@ def _process_curves(
             output_dict_path = output_folder / f"{curves_path.stem}.dict"
             with open(output_dict_path, "w") as file:
                 file.write(filedata)
-            _LOGGER.info(f"Saved updated dictionary file to {output_dict_path}")
+            dycov_logging.get_logger("Anonymizer").info(
+                f"Saved updated dictionary file to {output_dict_path}"
+            )
         else:
-            _LOGGER.warning(
+            dycov_logging.get_logger("Anonymizer").warning(
                 f"No 'Curves-Dictionary' section found in {dict_file}. Skipping curve processing."
             )

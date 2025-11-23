@@ -594,11 +594,11 @@ class GFMParameters(Parameters):
         str
             The retrieved configuration value.
         """
-        if config.has_key(self._oc_section, option):
+        if config.has_option(self._oc_section, option):
             return config.get_value(self._oc_section, option)
-        elif config.has_key(self._bm_section, option):
+        elif config.has_option(self._bm_section, option):
             return config.get_value(self._bm_section, option)
-        elif config.has_key(self._pcs_section, option):
+        elif config.has_option(self._pcs_section, option):
             return config.get_value(self._pcs_section, option)
         return config.get_value("DEFAULT", option)
 
@@ -618,10 +618,10 @@ class GFMParameters(Parameters):
         float
             The retrieved configuration value as a float.
         """
-        if config.has_key(self._oc_section, option):
+        if config.has_option(self._oc_section, option):
             return config.get_float(self._oc_section, option, default_value)
-        elif config.has_key(self._bm_section, option):
+        elif config.has_option(self._bm_section, option):
             return config.get_float(self._bm_section, option, default_value)
-        elif config.has_key(self._pcs_section, option):
+        elif config.has_option(self._pcs_section, option):
             return config.get_float(self._pcs_section, option, default_value)
         return config.get_float("DEFAULT", option, default_value)

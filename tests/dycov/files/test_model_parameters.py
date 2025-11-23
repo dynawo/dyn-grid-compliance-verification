@@ -155,7 +155,7 @@ def test_extract_defined_value_with_placeholders():
 
 
 def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch):
-    # Setup a minimal config and dynawo_translator for control mode logic
+    # Setup dummy config and translator
     class DummyConfig:
         def has_key(self, section, key):
             return section == "USetpoint_IEC_" and key == "control_option"
@@ -207,6 +207,6 @@ def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch)
 
     ns = "http://www.rte-france.com/dynawo"
     par_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
-    parset = etree.SubElement(par_root, f"{{{ns}}}set", id="parGen")
-    # Should not raise
-    model_parameters._set_control_mode(DummyGen(), parset, ns, "USetpoint", False)
+    parset_elem = etree.SubElement(par_root, f"{{{ns}}}set", id="parGen")
+    nsmap = {"ns": ns}
+    model_parameters._apply_control_mode(DummyGen(), parset_elem, nsmap, "USetpoint", False)
