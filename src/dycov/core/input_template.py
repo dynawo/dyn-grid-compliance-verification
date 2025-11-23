@@ -18,8 +18,6 @@ from dycov.files.producer_ini_file import check_ini_parameters, create_producer_
 from dycov.files.producer_par_file import check_parameters, create_producer_par_file
 from dycov.logging.logging import dycov_logging
 
-LOGGER = dycov_logging.get_logger("Input Template Generator")
-
 
 class InputTemplateGenerator:
     """
@@ -54,7 +52,7 @@ class InputTemplateGenerator:
             The name of the template to copy.
         """
         input_templates_path = config.get_value("Global", "input_templates_path")
-        manage_files.copy_path(
+        manage_files.copy_directory(
             Path(input_templates_path) / template.replace("_", "/"), target, dirs_exist_ok=True
         )
 
@@ -89,7 +87,9 @@ class InputTemplateGenerator:
         prompt_message: str
             The message to display to the user for editing instructions.
         """
-        LOGGER.info(f"Creating the input {file_type} file in {target}.")
+        dycov_logging.get_logger("Input Template Generator").info(
+            f"Creating the input {file_type} file in {target}."
+        )
         if file_type == "PAR":
             # _create_par_template requires an additional argument 'launcher_dwo'
             # This needs to be handled if we want to truly generalize; for now,
@@ -127,7 +127,9 @@ class InputTemplateGenerator:
         template: str
             The template name.
         """
-        LOGGER.info(f"Creating the input DYD file in {target}.")
+        dycov_logging.get_logger("Input Template Generator").info(
+            f"Creating the input DYD file in {target}."
+        )
         create_producer_dyd_file(target, topology, template)
         self._get_input(
             "Edit Producer.dyd to complete each equipment with a dynamic model. "
@@ -156,7 +158,9 @@ class InputTemplateGenerator:
         template: str
             The template name.
         """
-        LOGGER.info(f"Creating the input PAR file in {target}.")
+        dycov_logging.get_logger("Input Template Generator").info(
+            f"Creating the input PAR file in {target}."
+        )
         create_producer_par_file(launcher_dwo, target, topology, template)
         self._get_input(
             "Edit Producer.par to complete each parameter with a value. Press Enter when done."
@@ -180,7 +184,9 @@ class InputTemplateGenerator:
         template: str
             The template name.
         """
-        LOGGER.info(f"Creating the input INI file in {target}.")
+        dycov_logging.get_logger("Input Template Generator").info(
+            f"Creating the input INI file in {target}."
+        )
         create_producer_ini_file(target, topology, template)
         self._get_input(
             "Edit Producer.ini to complete each parameter with a value. Press Enter when done."
@@ -205,7 +211,9 @@ class InputTemplateGenerator:
             The template name.
         """
         ref_target = target / "ReferenceCurves"
-        LOGGER.info(f"Creating the reference curves files in {ref_target}.")
+        dycov_logging.get_logger("Input Template Generator").info(
+            f"Creating the reference curves files in {ref_target}."
+        )
         create_producer_curves(target, ref_target, template)
         self._get_input(
             "Edit CurvesFiles.ini to complete each parameter with a curves file. "
@@ -240,8 +248,10 @@ class InputTemplateGenerator:
         """
 
         if target.exists():
-            LOGGER.error("The output path already exists, please indicate a new path.")
-            return
+            dycov_logging.get_logger("Input Template Generator").error(
+                "The output path already exists, please indicate a new path."
+            )
+            return 1
 
         manage_files.create_dir(target)
         self._copy_input_templates(target, template)

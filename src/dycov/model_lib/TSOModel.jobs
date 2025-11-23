@@ -6,9 +6,7 @@
       <dyn:dynModels dydFile="TSOModel.dyd"/>
       <dyn:dynModels dydFile="Omega.dyd"/>
       <dyn:dynModels dydFile="{{producer_dyd}}"/>
-      <dyn:precompiledModels useStandardModels="true">
-        <dyn:directory path="{{dycov_ddb_path}}" recursive="false"/>
-      </dyn:precompiledModels>
+      <dyn:precompiledModels useStandardModels="true"/>
       <dyn:modelicaModels useStandardModels="true">
         <dyn:directory path="." recursive="false"/>
       </dyn:modelicaModels>

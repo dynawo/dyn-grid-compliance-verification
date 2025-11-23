@@ -8,12 +8,7 @@ and you simply have to check a new PCS.
         PCS. At a minimum, it should contain the .ini file with the external model required and 
         its configuration, and if necessary, the TableInfiniteBus.txt file.
 
-    2. If the external model is not modelled in the tool. Create a new directory in 
-        ~/.config/dycov/user_models called with a name that minimally describes the model. It must 
-        contain the necessary files to specify the part of the external network (not the 
-        producer's part). At a minimum, it should contain .dyd and .par files.
-
-    3. Create a directory with a Latex template in the user config directory (see Note2) to fill in 
+    2. Create a directory with a Latex template in the user config directory (see Note2) to fill in 
         the report of the different tests (observe how it is created in the other PCSs to replicate 
         the name of the variables to replace and their format). It must have its corresponding makefile.
 
