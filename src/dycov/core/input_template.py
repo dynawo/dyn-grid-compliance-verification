@@ -251,7 +251,7 @@ class InputTemplateGenerator:
             dycov_logging.get_logger("Input Template Generator").error(
                 "The output path already exists, please indicate a new path."
             )
-            return
+            return 1
 
         manage_files.create_dir(target)
         self._copy_input_templates(target, template)
