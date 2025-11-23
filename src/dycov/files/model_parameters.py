@@ -468,6 +468,7 @@ def adjust_producer_init(
             gen.Q0,
             gen.U0,
             gen.UPhase0,
+            pdr,
             generator_control_mode,
             force_voltage_droop,
         )
@@ -868,6 +869,7 @@ def _adjust_generator(
     generator_q0pu: float,
     generator_u0pu: float,
     generator_uphase0: float,
+    pdr: Pdr_params,
     generator_control_mode: str,
     force_voltage_droop: bool,
 ) -> None:
@@ -877,7 +879,9 @@ def _adjust_generator(
         return
 
     _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
+    _set_initial_pcc_power(parset, nsmap, generator.lib, pdr)
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
+    _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
     control_mode_name = _apply_control_mode(
         generator, parset, nsmap, generator_control_mode, force_voltage_droop
@@ -894,12 +898,27 @@ def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
     _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
 
 
+def _set_initial_pcc_power(parset, nsmap, lib, pdr):
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePowerPcc0Pu")
+    _set_parameter(parset, nsmap, active_power0, sign, pdr.P)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePowerPcc0Pu")
+    _set_parameter(parset, nsmap, reactive_power0, sign, pdr.Q)
+
+
 def _set_initial_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     sign = 1
     _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0Pu")
     _set_parameter(parset, nsmap, voltage0, sign, u0pu)
     _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
     _set_parameter(parset, nsmap, phase0, sign, uphase0)
+
+
+def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "VoltagePcc0Pu")
+    _set_parameter(parset, nsmap, voltage0, sign, pdr.U)
+    _, phase0 = dynawo_translator.get_dynawo_variable(lib, "PhasePcc0")
+    _set_parameter(parset, nsmap, phase0, sign, 0.0)
 
 
 def _apply_control_mode(generator, parset, nsmap, generator_control_mode, force_voltage_droop):
