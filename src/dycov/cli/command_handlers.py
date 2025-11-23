@@ -392,7 +392,7 @@ def _run_verification(
 
         return 0
     except KeyboardInterrupt:
-        dycov_logging.get_logger("CommandHandlers").exception(f"Execution interrupted by user")
+        dycov_logging.get_logger("CommandHandlers").exception("Execution interrupted by user")
         manage_files.remove_dir(params.get_working_dir())
         return 130
     except Exception as e:
