@@ -18,8 +18,6 @@ from dycov.curves.curves import get_cfg_oc_name
 from dycov.gfm.gfm import GridForming
 from dycov.logging.logging import dycov_logging
 
-LOGGER = dycov_logging.get_logger("OperatingCondition")
-
 
 class OperatingCondition:
     """Thrid-level representation of the pcs described in the DTR.
@@ -80,7 +78,7 @@ class OperatingCondition:
         if not validator.has_validations():
             results["compliance"] = None
 
-        if LOGGER.getEffectiveLevel() != logging.DEBUG:
+        if dycov_logging.get_logger("OperatingCondition").getEffectiveLevel() != logging.DEBUG:
             with open(working_oc_dir / "results.json", "w") as outfile:
                 outfile.write(str(results))
 
