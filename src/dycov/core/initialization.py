@@ -179,17 +179,17 @@ class DycovInitializer:
             self._copy_dummy_samples(tool_path, template)
 
         # Copy top-level READMEs and report-specific assets
-        manage_files.copy_files(tool_path / "templates" / "README.md", config_templates_dir)
+        manage_files.copy_from_path(tool_path / "templates" / "README.md", config_templates_dir)
         for template in templates_to_configure:
-            manage_files.copy_files(
+            manage_files.copy_from_path(
                 tool_path / "templates" / template / "README.md",
                 config_templates_dir / template,
             )
-        manage_files.copy_files(
+        manage_files.copy_from_path(
             tool_path / "templates" / "reports" / "TSO_logo.pdf",
             config_templates_dir / "reports",
         )
-        manage_files.copy_files(
+        manage_files.copy_from_path(
             tool_path / "templates" / "reports" / "fig_placeholder.pdf",
             config_templates_dir / "reports",
         )
@@ -206,7 +206,7 @@ class DycovInitializer:
                 dest = config.get_config_dir() / "templates" / source / category / ".DummySample"
                 if src.exists():
                     try:
-                        manage_files.copy_path(src, dest, dirs_exist_ok=True)
+                        manage_files.copy_directory(src, dest, dirs_exist_ok=True)
                     except Exception as e:
                         dycov_logging.get_logger("Initialization").error(
                             f"Failed to copy {src} to {dest}: {e}"
@@ -224,7 +224,7 @@ class DycovInitializer:
                     )
                     if src.exists():
                         try:
-                            manage_files.copy_path(src, dest, dirs_exist_ok=True)
+                            manage_files.copy_directory(src, dest, dirs_exist_ok=True)
                         except Exception as e:
                             dycov_logging.get_logger("Initialization").error(
                                 f"Failed to copy {src} to {dest}: {e}"

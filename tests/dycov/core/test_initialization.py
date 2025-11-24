@@ -142,39 +142,39 @@ class TestDycovInitializer:
         Tests that _configure_templates correctly sets up the template directories and
         copies necessary files.
         """
-        mock_copy_path = mocker.patch("dycov.files.manage_files.copy_path")
-        mock_copy_files = mocker.patch("dycov.files.manage_files.copy_files")
+        mock_copy_directory = mocker.patch("dycov.files.manage_files.copy_directory")
+        mock_copy_from_path = mocker.patch("dycov.files.manage_files.copy_from_path")
 
         dycov_initializer._configure_templates(tool_path_fixture)
 
         user_config_dir = self.mock_config.get_config_dir.return_value
         config_templates_dir = user_config_dir / "templates"
 
-        # Assert copy_files calls
-        mock_copy_files.assert_any_call(
+        # Assert copy_from_path calls
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "README.md", config_templates_dir
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "PCS" / "README.md", config_templates_dir / "PCS"
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "reports" / "README.md",
             config_templates_dir / "reports",
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "reports" / "TSO_logo.pdf",
             config_templates_dir / "reports",
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "reports" / "fig_placeholder.pdf",
             config_templates_dir / "reports",
         )
 
-        assert mock_copy_files.call_count == 5  # Total copy_files calls
+        assert mock_copy_from_path.call_count == 5  # Total copy_from_path calls
 
-        # Assert copy_path calls for dummy samples
-        # There are 2 templates ("PCS", "reports"), 2 categories, 3 models = 12 copy_path calls
-        assert mock_copy_path.call_count == 12
+        # Assert copy_directory calls for dummy samples
+        # There are 2 templates ("PCS", "reports"), 2 categories, 3 models = 12 copy_directory calls
+        assert mock_copy_directory.call_count == 12
         for template in ["PCS", "reports"]:
             for category in ["performance", "model"]:
                 for model in ["SM", "PPM", "BESS"]:
@@ -187,7 +187,7 @@ class TestDycovInitializer:
                         / ".DummySample"
                     )
                     dest = config_templates_dir / template / category / model / ".DummySample"
-                    mock_copy_path.assert_any_call(src, dest, dirs_exist_ok=True)
+                    mock_copy_directory.assert_any_call(src, dest, dirs_exist_ok=True)
 
     def test_is_valid_config_file_with_correct_version(self, dycov_initializer, tmp_path):
         """
