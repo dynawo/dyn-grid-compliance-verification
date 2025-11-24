@@ -125,7 +125,7 @@ class SCRJump(GFMCalculator):
             event_time=event_time,
         )
 
-        magnitude_name = "P"
+        magnitude_name = "Ip"
         return magnitude_name, power_at_pcc, upper_envelope, lower_envelope
 
     def _get_delta_p(

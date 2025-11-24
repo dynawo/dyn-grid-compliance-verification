@@ -32,7 +32,7 @@ def save_results_to_csv(
     """
     data = {
         "Time (s)": time_array,
-        f"{magnitude} PCC (pu)": pcc_signal,
+        f"{magnitude} PGU (pu)": pcc_signal,
         f"{magnitude} lower (pu)": lower_envelope,
         f"{magnitude} upper (pu)": upper_envelope,
     }
@@ -176,7 +176,7 @@ def plot_results(
         plt.plot(
             time_trimmed,
             pcc_trimmed,
-            label=f"{magnitude} at PCC",
+            label=f"{magnitude} at PGU",
             linewidth=3,
         )
         plt.plot(
@@ -294,7 +294,7 @@ def plot_results(
                 y=pcc_trimmed,
                 mode="lines",
                 line=dict(color="blue", width=3),
-                name=f"{magnitude} at PCC",
+                name=f"{magnitude} PGU",
             )
         )
 
