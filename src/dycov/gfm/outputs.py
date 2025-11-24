@@ -29,6 +29,22 @@ def save_results_to_csv(
     Save the calculated results to a CSV file.
 
     If extra_envelopes are provided (for hybrid mode), they are added as new columns.
+
+    Parameters
+    ----------
+    path : Path
+        The file path where the CSV file will be saved.
+    magnitude : str
+        Name of the magnitude (e.g., "P", "Iq").
+    time_array : np.ndarray
+        The time array corresponding to the signals.
+    pcc_signal : np.ndarray
+        The calculated signal at the point of common coupling.
+    lower_envelope : np.ndarray
+        The lower envelope of the signal.
+    upper_envelope : np.ndarray
+        The upper envelope of the signal.
+        
     """
     data = {
         "Time (s)": time_array,
