@@ -44,7 +44,7 @@ def save_results_to_csv(
         The lower envelope of the signal.
     upper_envelope : np.ndarray
         The upper envelope of the signal.
-        
+
     """
     data = {
         "Time (s)": time_array,
