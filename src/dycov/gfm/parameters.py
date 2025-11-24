@@ -281,21 +281,21 @@ class GFMParameters(Parameters):
 
     def __get_value(self, option: str) -> str:
         """Helper to retrieve a string value from hierarchical config sections."""
-        if config.has_key(self._oc_section, option):
+        if config.has_option(self._oc_section, option):
             return config.get_value(self._oc_section, option)
-        elif config.has_key(self._bm_section, option):
+        elif config.has_option(self._bm_section, option):
             return config.get_value(self._bm_section, option)
-        elif config.has_key(self._pcs_section, option):
+        elif config.has_option(self._pcs_section, option):
             return config.get_value(self._pcs_section, option)
         return config.get_value("DEFAULT", option)
 
     def __get_float_value(self, option: str, default_value: float) -> float:
         """Helper to retrieve a float value from hierarchical config sections."""
-        if config.has_key(self._oc_section, option):
+        if config.has_option(self._oc_section, option):
             return config.get_float(self._oc_section, option, default_value)
-        elif config.has_key(self._bm_section, option):
+        elif config.has_option(self._bm_section, option):
             return config.get_float(self._bm_section, option, default_value)
-        elif config.has_key(self._pcs_section, option):
+        elif config.has_option(self._pcs_section, option):
             return config.get_float(self._pcs_section, option, default_value)
         return config.get_float("DEFAULT", option, default_value)
 
