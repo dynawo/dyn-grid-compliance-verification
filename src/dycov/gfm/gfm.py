@@ -318,7 +318,7 @@ class GridForming:
             text_params_info.append(f"Qmin = {value:.3f} pu")
         if "DeltaPhase" in params_list:
             value = parameters.get_delta_phase()
-            text_params_info.append(f"Δθ = {value:.3f}°")
+            text_params_info.append(f"Δθ_grid = {value:.3f}°")
         if "SCR" in params_list:
             value = parameters.get_scr()
             text_params_info.append(f"SCR = {value:.3f}")
@@ -327,10 +327,10 @@ class GridForming:
             text_params_info.append(f"ΔV_Grid = {value / 100:.3f} pu")
         if "VoltageStepAtPDR" in params_list:
             value = parameters.get_voltage_step_at_pdr()
-            text_params_info.append(f"ΔV_PCC = {value / 100:.3f} pu")
+            text_params_info.append(f"ΔV_PGU = {value / 100:.3f} pu")
         if "AngleStepAtPDR" in params_list:
             value = parameters.get_delta_step()
-            text_params_info.append(f"Δθ_PCC = {value:.3f}°")
+            text_params_info.append(f"Δθ_PGU = {value:.3f}°")
         if "SCRinitial" in params_list:
             value = parameters.get_initial_scr()
             text_params_info.append(f"SCR_initial = {value:.3f}")

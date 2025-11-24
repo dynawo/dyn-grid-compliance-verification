@@ -116,7 +116,7 @@ class RoCoF(GFMCalculator):
             lower_envelope = p_down
             pcc_signal = p_pcc
 
-        magnitude_name = "P"
+        magnitude_name = "Ip"
         return magnitude_name, pcc_signal, upper_envelope, lower_envelope
 
     def _get_delta_p(
