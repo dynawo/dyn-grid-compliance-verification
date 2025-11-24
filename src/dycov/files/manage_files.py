@@ -20,7 +20,6 @@ import pandas as pd
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.logging.logging import dycov_logging
 
-LOGGER = dycov_logging.get_logger("Manage files")
 ModelFiles = namedtuple("ModelFiles", ["model_path", "omega_path", "pcs_path", "benchmark"])
 ProducerFiles = namedtuple("ProducerFiles", ["producer_dyd", "producer_par"])
 
@@ -38,7 +37,7 @@ def copy_file(
     target: Path
         path where the copy of the file is created
     """
-    LOGGER.debug(f"Copying {source} to {target}")
+    dycov_logging.get_logger("Manage files").debug(f"Copying {source} to {target}")
     shutil.copy(source, target)
 
 
@@ -359,7 +358,9 @@ def copy_base_curves_files(
                     file_copied = file.stem
 
     except OSError:
-        LOGGER.warning("The supplied curves set has not been updated")
+        dycov_logging.get_logger("Manage files").warning(
+            "The supplied curves set has not been updated"
+        )
 
     # copy the DICT file
     success = False
@@ -491,7 +492,7 @@ def move_report(
         source / (report_name.split(CASE_SEPARATOR)[0] + ".pdf"),
         target,
     )
-    if LOGGER.getEffectiveLevel() != logging.DEBUG:
+    if dycov_logging.get_logger("Manage files").getEffectiveLevel() != logging.DEBUG:
         shutil.rmtree(source)
 
     return True
