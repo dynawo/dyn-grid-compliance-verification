@@ -18,7 +18,6 @@ from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import plot_results, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.gfm import constants
 from dycov.logging.logging import dycov_logging
 
 # Initialize logger
