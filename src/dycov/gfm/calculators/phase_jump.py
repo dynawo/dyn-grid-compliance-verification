@@ -157,7 +157,7 @@ class PhaseJump(GFMCalculator):
         x_total_initial = Xeff + x_gr
 
         d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
-        h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
+        h_array = np.array([H, H * self._min_ratio, H * self._max_ratio])
 
         epsilon_initial_check = self._calculate_epsilon_initial_check(
             d_array, h_array, x_total_initial
