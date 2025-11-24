@@ -102,8 +102,12 @@ class GridForming:
             )
 
             # Merging: Maximum of upper envelopes, Minimum of lower envelopes
-            upper_envelope = np.maximum(up_over, up_under)
-            lower_envelope = np.minimum(low_over, low_under)
+            upper_envelope1 = np.maximum(up_over, up_under)
+            lower_envelope1 = np.minimum(low_over, low_under)
+            upper_envelope2 = np.maximum(low_over, low_under)
+            lower_envelop2 = np.minimum(up_over, up_under)
+            upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
+            lower_envelope = np.minimum(lower_envelope1, lower_envelop2)
 
             # For the visual PCC signal, we use the Overdamped trace as the primary reference
             pcc_signal = pcc_over
