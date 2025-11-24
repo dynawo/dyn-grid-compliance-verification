@@ -39,7 +39,7 @@ class DycovCLI:
         self.initializer = DycovInitializer()
         self.logger = dycov_logging.get_logger("DycovCLI")
 
-    def dycov(self) -> None:
+    def dycov(self) -> int:
         """Main entry point for the dycov command-line interface.
 
         It parses command-line arguments, performs necessary initializations,
@@ -56,11 +56,11 @@ class DycovCLI:
                 "Please provide a command. Use 'dycov --help' for available commands."
             )
             parser.error("Please provide a command. Use 'dycov --help' for available commands.")
-            return
+            return 1
 
-        self._execute_command(parser, args)
+        return self._execute_command(parser, args)
 
-    def _execute_command(self, parser, args) -> None:
+    def _execute_command(self, parser, args) -> int:
         """Executes the given command after handling initialization steps.
 
         Parameters
@@ -92,9 +92,9 @@ class DycovCLI:
         self.logger.debug("DycovInitializer completed initialization.")
 
         # Dispatch the command to the appropriate handler function.
-        self._dispatch_command(parser, args, dynawo_launcher_path)
+        return self._dispatch_command(parser, args, dynawo_launcher_path)
 
-    def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> None:
+    def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> int:
         """Dispatches the parsed command to its respective handler function.
 
         Parameters
@@ -108,22 +108,24 @@ class DycovCLI:
         """
         self.logger.info(f"Dispatching command: {args.command}")
         if args.command == "generateEnvelopes":
-            handle_generate_envelopes_command(parser, args, dynawo_launcher_path)
+            ret = handle_generate_envelopes_command(parser, args, dynawo_launcher_path)
         elif args.command == "validate":
-            handle_validate_command(parser, args, dynawo_launcher_path)
+            ret = handle_validate_command(parser, args, dynawo_launcher_path)
         elif args.command == "generate":
-            handle_generate_command(parser, args, dynawo_launcher_path)
+            ret = handle_generate_command(parser, args, dynawo_launcher_path)
         elif args.command == "compile":
-            handle_compile_command(parser, args, dynawo_launcher_path)
+            ret = handle_compile_command(parser, args, dynawo_launcher_path)
         elif args.command == "performance":
-            handle_performance_command(parser, args, dynawo_launcher_path)
+            ret = handle_performance_command(parser, args, dynawo_launcher_path)
         elif args.command == "anonymize":
-            handle_anonymize_command(parser, args)
+            ret = handle_anonymize_command(parser, args)
         else:
             # This case should ideally not be reached due to argparse
             # configuration, but it serves as a safeguard.
             self.logger.error(f"Unknown command: {args.command}")
             parser.print_help()
+            ret = 1
+        return ret
 
 
 def dycov():
@@ -132,4 +134,4 @@ def dycov():
     Instantiates and runs the DycovCLI.
     """
     cli = DycovCLI()
-    cli.dycov()
+    return cli.dycov()
