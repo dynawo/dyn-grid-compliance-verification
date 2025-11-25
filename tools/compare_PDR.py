@@ -81,6 +81,8 @@ def compute_metrics(a: pd.Series, b: pd.Series):
 def create_html_plot(time_axis, A, B, scenario_name, label_a, label_b, output_path: Path):
     signals = sorted(set(A.columns).union(B.columns))
     fig = go.Figure()
+
+    # Add traces for all signals (initially only first visible)
     for i, sig in enumerate(signals):
         y_a = A[sig] if sig in A.columns else pd.Series(index=A.index, dtype=float)
         y_b = B[sig] if sig in B.columns else pd.Series(index=B.index, dtype=float)
@@ -95,6 +97,7 @@ def create_html_plot(time_axis, A, B, scenario_name, label_a, label_b, output_pa
             )
         )
 
+    # Create buttons for signal selection
     buttons = []
     for i, sig in enumerate(signals):
         vis = [False] * len(fig.data)
@@ -104,32 +107,50 @@ def create_html_plot(time_axis, A, B, scenario_name, label_a, label_b, output_pa
             dict(
                 label=sig,
                 method="update",
-                args=[{"visible": vis}, {"title": f"Scenario: {scenario_name} | Signal: {sig}"}],
+                args=[
+                    {"visible": vis},
+                    {"title.text": f"Scenario: {scenario_name} | Signal: {sig}"},
+                ],
             )
         )
 
+    # Update layout: selector near legend, dynamic title
     fig.update_layout(
-        updatemenus=[dict(active=0, buttons=buttons, x=1.05, y=1)],
+        updatemenus=[
+            dict(
+                active=0,
+                buttons=buttons,
+                x=1.02,
+                y=0.5,
+                xanchor="left",
+                yanchor="middle",
+                direction="down",
+            )
+        ],
         title=f"Scenario: {scenario_name} | Signal: {signals[0] if signals else ''}",
         xaxis_title="Time [s]",
         yaxis_title="Value",
         height=600,
     )
+
     fig.write_html(str(output_path))
 
 
-def build_model_paths(case_name: str) -> tuple[Path, Path]:
-    base_dir = Path("examples/Performance/Single")
+def build_model_paths(base_dir: Path, case_name: str) -> tuple[Path, Path]:
     return base_dir / case_name / "Dynawo", base_dir / f"{case_name}PDRControl" / "Dynawo"
 
 
-def run_dycov(env_script: Path, model: Path, model_pdr: Path, out: Path, out_pdr: Path):
-    subprocess.run(["bash", "-lc", f"dycov performance -m {model} -o {out} --testing"], check=True)
+def run_dycov(
+    dynawo: Path, dynawo_pdr: Path, model: Path, model_pdr: Path, out: Path, out_pdr: Path
+):
+    subprocess.run(
+        ["bash", "-lc", f"dycov performance -m {model} -o {out} -l {dynawo} --testing"], check=True
+    )
     subprocess.run(
         [
             "bash",
             "-lc",
-            f"dycov performance -m {model_pdr} -o {out_pdr} -l {env_script} --testing",
+            f"dycov performance -m {model_pdr} -o {out_pdr} -l {dynawo_pdr} --testing",
         ],
         check=True,
     )
@@ -152,7 +173,13 @@ def main():
         default=home / "dynawo_WECC" / "myEnvDynawo.sh",
         help="Dynawo with PDR models launcher",
     )
-    parser.add_argument("--case-name", type=str, help="Case name used to build model paths")
+    parser.add_argument(
+        "--base-dir",
+        type=Path,
+        default=Path("examples/Performance/Single"),
+        help="Base directory for the case_name",
+    )
+    parser.add_argument("--case-name", type=str, help="Case name to test", required=True)
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -176,13 +203,13 @@ def main():
     args = parser.parse_args()
 
     ensure_dir(args.output_dir)
-    model, model_pdr = build_model_paths(args.case_name)
+    model, model_pdr = build_model_paths(args.base_dir, args.case_name)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         results_root = Path(tmpdir) / "Results"
         results_pdr_root = Path(tmpdir) / "ResultsPDR"
 
-        run_dycov(args.env_script, model, model_pdr, results_root, results_pdr_root)
+        run_dycov(args.dynawo, args.dynawo_pdr, model, model_pdr, results_root, results_pdr_root)
 
         map_a = find_csv_files(results_root, args.csv_name, depth=args.depth)
         map_b = find_csv_files(results_pdr_root, args.csv_name, depth=args.depth)
