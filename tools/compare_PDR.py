@@ -230,7 +230,7 @@ def run_comparisons(args):
                 global_summary.append(m)
 
             rel_link = str((scenario_dir / "comparison.html").relative_to(args.output_dir))
-            index_links.append(f"<li>{rel_link}{key}</a></li>")
+            index_links.append(f'<li><a href="{rel_link}">{key}</a></li>')
 
     return global_summary, index_links
 
