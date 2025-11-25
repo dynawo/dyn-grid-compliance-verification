@@ -611,6 +611,7 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
+            pdr,
         )
 
         # Collect all transformers for CRV file creation

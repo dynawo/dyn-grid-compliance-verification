@@ -158,16 +158,15 @@ def run_dycov(
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Run DyCoV and compare curves_calculated.csv files with interactive HTML plots."
+        description="Run DyCoV and compare curves_calculated.csv files with interactive HTML plots"
     )
-    home = Path.home()
     parser.add_argument(
         "--dynawo", type=Path, default=Path("dynawo.sh"), help="Nightly Dynawo launcher"
     )
     parser.add_argument(
         "--dynawo-pdr",
         type=Path,
-        default=home / "dynawo_WECC" / "myEnvDynawo.sh",
+        default=Path("dynawo.sh"),
         help="Dynawo with PDR models launcher",
     )
     parser.add_argument(
