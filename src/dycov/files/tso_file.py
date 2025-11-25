@@ -13,7 +13,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.curves.dynawo.translator import dynawo_translator
-from dycov.model.parameters import Gen_params
+from dycov.model.parameters import Gen_params, Pdr_params
 
 
 def _connect_generator_to_setpoint(
@@ -94,6 +94,7 @@ def complete_setpoint(
     generators: list,
     tso_model: str,
     event_params: dict,
+    pdr: Pdr_params,
 ) -> None:
     """Replace DYD/PAR TSOModel files placeholders with values.
 
@@ -126,6 +127,7 @@ def complete_setpoint(
     for i in range(len(generators)):
         generator = generators[i]
         pre_value = event_params["pre_value"][i]
+        pre_value = pdr.U
         _connect_generator_to_setpoint(dyd_root, dyd_ns, generator, event_params["connect_to"])
         _add_setpoint_parameters(par_root, par_ns, generator, event_params, pre_value)
 
