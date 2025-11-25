@@ -156,16 +156,13 @@ def run_dycov(
     )
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Run DyCoV and compare curves_calculated.csv files with interactive HTML plots."
     )
     home = Path.home()
     parser.add_argument(
-        "--dynawo",
-        type=Path,
-        default=Path("dynawo.sh"),
-        help="Nightly Dynawo launcher",
+        "--dynawo", type=Path, default=Path("dynawo.sh"), help="Nightly Dynawo launcher"
     )
     parser.add_argument(
         "--dynawo-pdr",
@@ -179,12 +176,9 @@ def main():
         default=Path("examples/Performance/Single"),
         help="Base directory for the case_name",
     )
-    parser.add_argument("--case-name", type=str, help="Case name to test", required=True)
+    parser.add_argument("--case-name", type=str, help="Case name used to build model paths")
     parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("Output"),
-        help="Directory for HTML outputs",
+        "--output-dir", type=Path, default=Path("Output"), help="Directory for HTML outputs"
     )
     parser.add_argument(
         "--csv-name", type=str, default="curves_calculated.csv", help="Name of CSV file to compare"
@@ -200,31 +194,28 @@ def main():
         action="store_true",
         help="Keep dycov results directories instead of deleting",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+def run_comparisons(args):
     ensure_dir(args.output_dir)
     model, model_pdr = build_model_paths(args.base_dir, args.case_name)
+    global_summary, index_links = [], []
 
     with tempfile.TemporaryDirectory() as tmpdir:
         results_root = Path(tmpdir) / "Results"
         results_pdr_root = Path(tmpdir) / "ResultsPDR"
-
         run_dycov(args.dynawo, args.dynawo_pdr, model, model_pdr, results_root, results_pdr_root)
 
         map_a = find_csv_files(results_root, args.csv_name, depth=args.depth)
         map_b = find_csv_files(results_pdr_root, args.csv_name, depth=args.depth)
-
-        print(
-            f"[INFO] Found {len(map_a)} CSVs in Results and {len(map_b)} in ResultsPDR at depth {args.depth}"
-        )
         common_keys = sorted(set(map_a.keys()).intersection(map_b.keys()))
-        print(f"[INFO] Common scenarios: {len(common_keys)}")
 
-        global_summary, index_links = [], []
         for key in common_keys:
             df_a = load_curves(map_a[key], args.time_col)
             df_b = load_curves(map_b[key], args.time_col)
             time_axis, A, B = align_on_union(df_a, df_b, args.time_col)
+
             scenario_dir = args.output_dir / key
             ensure_dir(scenario_dir)
             html_path = scenario_dir / "comparison.html"
@@ -239,25 +230,69 @@ def main():
                 global_summary.append(m)
 
             rel_link = str((scenario_dir / "comparison.html").relative_to(args.output_dir))
-            index_links.append(f'<li><a href="{rel_link}">{key}</a></li>')
+            index_links.append(f"<li>{rel_link}{key}</a></li>")
 
-        pd.DataFrame(global_summary).to_csv(args.output_dir / "global_summary.csv", index=False)
-        with (args.output_dir / "index.html").open("w", encoding="utf-8") as f:
-            f.write("<html><body><h1>Scenario Comparison Index</h1><ul>")
-            f.write("\n".join(index_links))
-            f.write("</ul></body></html>")
+    return global_summary, index_links
 
-        print(f"Created {len(common_keys)} scenario comparisons.")
-        print(f"Global summary: {args.output_dir / 'global_summary.csv'}")
-        print(f"Index HTML: {args.output_dir / 'index.html'}")
 
-        if args.keep_results:
-            keep_dir_a, keep_dir_b = Path("Results"), Path("ResultsPDR")
-            ensure_dir(keep_dir_a)
-            ensure_dir(keep_dir_b)
-            subprocess.run(["cp", "-r", str(results_root) + "/.", str(keep_dir_a)])
-            subprocess.run(["cp", "-r", str(results_pdr_root) + "/.", str(keep_dir_b)])
-            print(f"[INFO] Preserved Results in {keep_dir_a} and ResultsPDR in {keep_dir_b}")
+def generate_summary_files(args, global_summary, index_links):
+    summary_df = pd.DataFrame(global_summary)
+
+    # Improved summary
+    rename_map = {
+        "scenario": "Scenario",
+        "signal": "Signal",
+        "n_points": "Number of Points",
+        "rmse": "RMSE (Root Mean Square Error)",
+        "mae": "MAE (Mean Absolute Error)",
+        "max_abs_err": "Max Absolute Error",
+        "html": "HTML Report Path",
+    }
+    readable_df = summary_df.rename(columns=rename_map)
+    ordered_cols = [
+        "Scenario",
+        "Signal",
+        "Number of Points",
+        "RMSE (Root Mean Square Error)",
+        "MAE (Mean Absolute Error)",
+        "Max Absolute Error",
+        "HTML Report Path",
+    ]
+    readable_df = readable_df[[c for c in ordered_cols if c in readable_df.columns]]
+    readable_path = args.output_dir / "global_summary_readable.csv"
+    readable_df.to_csv(readable_path, index=False)
+
+    # Metadata
+    meta_path = args.output_dir / "global_summary_metadata.txt"
+    with open(meta_path, "w", encoding="utf-8") as f_meta:
+        f_meta.write("Column Descriptions:\n")
+        for col in ordered_cols:
+            desc = {
+                "Scenario": "PCS-Benchmark-OperatingCondition Identifier",
+                "Signal": "Name of the signal compared",
+                "Number of Points": "Aligned time points",
+                "RMSE (Root Mean Square Error)": "Deviation between curves",
+                "MAE (Mean Absolute Error)": "Average absolute difference",
+                "Max Absolute Error": "Maximum absolute difference",
+                "HTML Report Path": "Path to HTML plot",
+            }.get(col, "")
+            f_meta.write(f"{col}: {desc}\n")
+
+    # Index HTML
+    with (args.output_dir / "index.html").open("w", encoding="utf-8") as f:
+        f.write("<html><body><h1>Scenario Comparison Index</h1><ul>")
+        f.write("\n".join(index_links))
+        f.write("</ul></body></html>")
+
+    print(f"Created {len(index_links)} scenario comparisons.")
+    print(f"Readable summary: {readable_path}")
+    print(f"Metadata: {meta_path}")
+
+
+def main():
+    args = parse_arguments()
+    global_summary, index_links = run_comparisons(args)
+    generate_summary_files(args, global_summary, index_links)
 
 
 if __name__ == "__main__":
