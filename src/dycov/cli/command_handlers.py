@@ -9,6 +9,7 @@
 #
 
 import argparse
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -397,11 +398,17 @@ def _run_verification(
         return 0
     except KeyboardInterrupt:
         dycov_logging.get_logger("CommandHandlers").error("Execution interrupted by user")
-        manage_files.remove_dir(params.get_working_dir())
+        if dycov_logging.get_logger("CommandHandlers").getEffectiveLevel() == logging.DEBUG:
+            manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
+        else:
+            manage_files.remove_dir(params.get_working_dir())
         return 130
     except Exception as e:
         dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
-        manage_files.remove_dir(params.get_working_dir())
+        if dycov_logging.get_logger("CommandHandlers").getEffectiveLevel() == logging.DEBUG:
+            manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
+        else:
+            manage_files.remove_dir(params.get_working_dir())
         return 1
 
 
