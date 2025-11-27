@@ -859,10 +859,15 @@ class DynawoCurves(ProducerCurves):
         # PmaxInjection (default) or PmaxConsumption
         self.get_producer().set_consumption("PmaxConsumption" in pdr_p_cfg)
 
+        p_max_parameter = (
+            "PmaxConsumption"
+            if "PmaxConsumption" in pdr_p_cfg
+            else "PmaxInjection" if "PmaxInjection" in pdr_p_cfg else "Pmax"
+        )
         # Sign convention: the initializations expects Pdr to be negative;
         # therefore we need to flip its sign.
         ini_pdr_p = model_parameters.extract_defined_value(
-            pdr_p_cfg, "Pmax", self.get_producer().p_max_pu, -1
+            pdr_p_cfg, p_max_parameter, self.get_producer().p_max_pu, -1
         )
 
         # Optimized: Simplified conditional logic for ini_pdr_q
@@ -877,7 +882,7 @@ class DynawoCurves(ProducerCurves):
             )
         else:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, "Pmax", self.get_producer().p_max_pu, -1
+                pdr_q_cfg, p_max_parameter, self.get_producer().p_max_pu, -1
             )
 
         ini_pdr_u = (
