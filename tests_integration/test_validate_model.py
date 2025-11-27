@@ -1,5 +1,6 @@
-from dycov.model.compliance import Compliance
+import pytest
 
+from dycov.model.compliance import Compliance
 from tests_integration.utils import MODEL, RESOURCES, _execute_tool
 
 
@@ -9,6 +10,10 @@ def test_model_validation_wecca_model():
         None,
         f"{MODEL}/Wind/WECCA/ReferenceCurves",
     )
+
+    if isinstance(compliance, str) and "Validation skipped" in compliance:
+        pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
+
     assert [
         Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
@@ -43,6 +48,10 @@ def test_model_validation_iec2015_curves():
         f"{MODEL}/Wind/IECB2015/ProducerCurves",
         f"{MODEL}/Wind/IECB2015/ReferenceCurves",
     )
+
+    if isinstance(compliance, str) and "Validation skipped" in compliance:
+        pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
+
     assert [
         Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
@@ -77,6 +86,10 @@ def test_model_validation_partial_reference():
         None,
         f"{RESOURCES}/partial_reference_curves",
     )
+
+    if isinstance(compliance, str) and "Validation skipped" in compliance:
+        pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
+
     assert [
         Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
