@@ -198,12 +198,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            dycov_logging.get_logger("Cfg").debug(
-                "Key '%s' not found in section '%s'. Using default value: '%s'",
-                key,
-                section,
-                default,
-            )
             return default
         return value
 
@@ -226,12 +220,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            dycov_logging.get_logger("Cfg").debug(
-                "Key '%s' not found in section '%s'. Using default integer value: %s",
-                key,
-                section,
-                default,
-            )
             return default
         try:
             return int(value)
@@ -261,12 +249,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            dycov_logging.get_logger("Cfg").debug(
-                "Key '%s' not found in section '%s'. Using default float value: %s",
-                key,
-                section,
-                default,
-            )
             return default
         try:
             return float(value)
@@ -296,12 +278,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            dycov_logging.get_logger("Cfg").debug(
-                "Key '%s' not found in section '%s'. Using default boolean value: %s",
-                key,
-                section,
-                default,
-            )
             return default
         return value.lower() == "true"
 
@@ -323,9 +299,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            dycov_logging.get_logger("Cfg").debug(
-                "Key '%s' not found in section '%s'. Returning empty list.", key, section
-            )
             return []
         return value.split(",")
 
