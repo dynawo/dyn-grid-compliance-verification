@@ -78,9 +78,9 @@ def get_connected_to_pdr(producer_dyd: Path) -> list:
     connected_to_pdr = []
     nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
     for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
-        if "BusPDR" in connect.get("id1"):
+        if "BusPDR" in connect.get("id1") and "terminal" in connect.get("var2"):
             connected_to_pdr.append(Pdr_equipments(connect.get("id2"), connect.get("var2")))
-        if "BusPDR" in connect.get("id2"):
+        if "BusPDR" in connect.get("id2") and "terminal" in connect.get("var1"):
             connected_to_pdr.append(Pdr_equipments(connect.get("id1"), connect.get("var1")))
 
     return connected_to_pdr
@@ -883,9 +883,7 @@ def _adjust_generator(
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
-    control_mode_name = _apply_control_mode(
-        generator, parset, nsmap, generator_control_mode, force_voltage_droop
-    )
+    control_mode_name = _apply_control_mode(generator, parset, nsmap, generator_control_mode)
     _apply_voltage_droop(
         generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop
     )
@@ -921,7 +919,7 @@ def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
     _set_parameter(parset, nsmap, phase0, sign, 0.0)
 
 
-def _apply_control_mode(generator, parset, nsmap, generator_control_mode, force_voltage_droop):
+def _apply_control_mode(generator, parset, nsmap, generator_control_mode):
     control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap)
     _log_control_mode(generator, control_mode_parameters)
 

@@ -209,4 +209,4 @@ def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch)
     par_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
     parset_elem = etree.SubElement(par_root, f"{{{ns}}}set", id="parGen")
     nsmap = {"ns": ns}
-    model_parameters._apply_control_mode(DummyGen(), parset_elem, nsmap, "USetpoint", False)
+    model_parameters._apply_control_mode(DummyGen(), parset_elem, nsmap, "USetpoint")
