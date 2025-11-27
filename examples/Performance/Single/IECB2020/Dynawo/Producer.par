@@ -158,6 +158,19 @@
     <par type="DOUBLE" name="WPP_Q0Pu" value="0.21"/>
     <par type="DOUBLE" name="WPP_U0Pu" value="1"/>
     <par type="DOUBLE" name="WPP_UPhase0" value="0.21949"/>
+    <!-- PCS-->
+    <par type="DOUBLE" name="WPP_PPcc0Pu" value="-1"/>
+    <par type="DOUBLE" name="WPP_QPcc0Pu" value="0"/>
+    <par type="DOUBLE" name="WPP_UPcc0Pu" value="1"/>
+    <par type="DOUBLE" name="WPP_UPccPhase0" value="0"/>
+    <par type="BOOL" name="WPP_PPCLocal" value="false"/>
+
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WPP_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="WPP_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WPP_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WPP_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WPP_XLvTrPu" value="0.01"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">

@@ -7,6 +7,13 @@
     <par type="DOUBLE" name="photovoltaics_U0Pu" value="1.0"/>
     <par type="DOUBLE" name="photovoltaics_UPhase0" value="0.00000144621"/>
 
+    <!-- LV Transformer -->
+    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.01"/>
+
     <!-- Electrical Control -->
     <par type="BOOL" name="photovoltaics_QFlag" value="true"/>
     <par type="BOOL" name="photovoltaics_VFlag" value="true"/>
