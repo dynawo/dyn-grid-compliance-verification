@@ -20,8 +20,6 @@
        PPcc and QPcc are connected to a device connected to the PDR that has power flow -->
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine1" var2="WTG4A_uPccPu_re"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine1" var2="WTG4A_uPccPu_im"/>
-  <!-- UPcc is connected to the PDR bus, and 
-       PPcc and QPcc are connected to a device connected to the PDR that has power flow -->
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine2" var2="WTG4B_uPccPu_re"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine2" var2="WTG4B_uPccPu_im"/>
   <dyn:connect id1="Main_Xfmr" var1="transformer_P1Pu_value" id2="Wind_Turbine1" var2="WTG4A_PPccPu"/>
