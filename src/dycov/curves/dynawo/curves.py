@@ -50,6 +50,7 @@ from dycov.validation import common
 
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
+USE_PDR_VALUES = True
 
 
 class DynawoCurves(ProducerCurves):
@@ -141,6 +142,8 @@ class DynawoCurves(ProducerCurves):
         self._absAccuracy = 0.0
         self._relAccuracy = 0.0  # Only for IDA solver
         self.__reset_solver()
+
+        self._use_pdr_values = USE_PDR_VALUES
 
     def __get_log_title(self, bm_name: str, oc_name: str) -> str:
         """
@@ -345,7 +348,7 @@ class DynawoCurves(ProducerCurves):
         }
         return value_map.get(value_definition, 0.0)
 
-    def __adjust_event_value(self, event_params: dict) -> None:
+    def __adjust_event_value(self, event_params: dict, pdr: Pdr_params) -> None:
         """
         Adjusts the event 'pre_value' for AVRSetpointPu if voltage drop is enabled.
 
@@ -353,6 +356,8 @@ class DynawoCurves(ProducerCurves):
         ----------
         event_params : dict
             Dictionary containing event parameters.
+        pdr : Pdr_params
+            PDR parameters.
         """
         if event_params["connect_to"] != "AVRSetpointPu":
             return
@@ -360,8 +365,11 @@ class DynawoCurves(ProducerCurves):
         # Optimized: Iterate through generators once to update pre_value
         for i, generator in enumerate(self.get_producer().generators):
             if generator.UseVoltageDroop:
-                gen = self._gens[i]
-                event_params["pre_value"][i] = gen.U0 + generator.VoltageDroop * gen.Q0
+                if self._use_pdr_values:
+                    event_params["pre_value"][i] = pdr.U + generator.VoltageDroop * pdr.Q
+                else:
+                    gen = self._gens[i]
+                    event_params["pre_value"][i] = gen.U0 + generator.VoltageDroop * gen.Q0
 
     def __get_lines_for_initial_calcs(
         self, rte_lines: list, is_specific_fault: bool
@@ -530,6 +538,7 @@ class DynawoCurves(ProducerCurves):
             pcs_name,
             bm_name,
             oc_name,
+            pdr,
         )
         if (
             reference_event_start_time is not None
@@ -559,7 +568,7 @@ class DynawoCurves(ProducerCurves):
             control_mode,
             force_voltage_droop,
         )
-        self.__adjust_event_value(event_params)
+        self.__adjust_event_value(event_params, pdr)
 
         self.__calculate_Xv_values(
             event_params,
@@ -611,7 +620,6 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
-            pdr,
         )
 
         # Collect all transformers for CRV file creation
@@ -667,6 +675,7 @@ class DynawoCurves(ProducerCurves):
         pcs_name: str,
         bm_name: str,
         oc_name: str,
+        pdr: Pdr_params,
     ) -> dict:
         """
         Retrieves event parameters from the configuration.
@@ -679,6 +688,8 @@ class DynawoCurves(ProducerCurves):
             Benchmark name.
         oc_name : str
             Operating Condition name.
+        pdr : Pdr_params
+            PDR parameters.
 
         Returns
         -------
@@ -693,11 +704,20 @@ class DynawoCurves(ProducerCurves):
         pre_value = 1.0  # Default pre_value
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:
-                pre_value = [-gen.P0 for gen in self._gens]
+                if self._use_pdr_values:
+                    pre_value = [-pdr.P for gen in self._gens]
+                else:
+                    pre_value = [-gen.P0 for gen in self._gens]
             elif "ReactivePowerSetpointPu" == connect_event_to:
-                pre_value = [-gen.Q0 for gen in self._gens]
+                if self._use_pdr_values:
+                    pre_value = [-pdr.Q for gen in self._gens]
+                else:
+                    pre_value = [-gen.Q0 for gen in self._gens]
             elif "AVRSetpointPu" == connect_event_to:
-                pre_value = [gen.U0 for gen in self._gens]
+                if self._use_pdr_values:
+                    pre_value = [pdr.U for gen in self._gens]
+                else:
+                    pre_value = [gen.U0 for gen in self._gens]
 
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
