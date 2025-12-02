@@ -45,7 +45,7 @@ class RoCoF(GFMCalculator):
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
 
-        # Nuevos parámetros añadidos para respetar la lógica de saturación
+        # New parameters added to respect the saturation logic
         self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
