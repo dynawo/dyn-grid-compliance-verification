@@ -261,7 +261,7 @@ class GridForming:
         pcc_signal: np.ndarray,
         lower_envelope: np.ndarray,
         upper_envelope: np.ndarray,
-        extra_envelopes: dict | None = None,
+        extra_envelopes: dict = None,
     ) -> None:
         """
         Exports the simulation results to a CSV file.
@@ -379,8 +379,8 @@ class GridForming:
         params_list: list,
         calculator: GFMCalculator,
         is_inconsistent: bool = False,
-        disclaimer_msg: str | None = None,
-        extra_envelopes: dict | None = None,
+        disclaimer_msg: str = None,
+        extra_envelopes: dict = None,
     ) -> None:
         """
         Generates and saves a plot of the simulation results.

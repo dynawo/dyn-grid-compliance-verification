@@ -23,7 +23,7 @@ def save_results_to_csv(
     pcc_signal: np.ndarray,
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
-    extra_envelopes: dict[str, np.ndarray] | None = None,
+    extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
     """
     Save the calculated results to a CSV file.
