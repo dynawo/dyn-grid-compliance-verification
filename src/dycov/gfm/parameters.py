@@ -11,6 +11,7 @@
 from pathlib import Path
 
 import numpy as np
+from typing import Tuple, Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
@@ -303,7 +304,7 @@ class GFMParameters(Parameters):
     # NEW METHODS FOR HYBRID PARAMETER DETECTION
     # -------------------------------------------------------------------------
 
-    def get_hybrid_parameters(self) -> tuple[float, float, float, float] | None:
+    def get_hybrid_parameters(self) -> Optional[Tuple[float, float, float, float]]:
         """
         Attempts to retrieve the hybrid parameters (Overdamped/Underdamped).
 
@@ -322,7 +323,7 @@ class GFMParameters(Parameters):
             return d_over, h_over, d_under, h_under
         return None
 
-    def get_standard_parameters(self) -> tuple[float, float] | None:
+    def get_standard_parameters(self) -> Optional[Tuple[float, float]]:
         """
         Attempts to retrieve the standard parameters D and H.
 
@@ -338,7 +339,7 @@ class GFMParameters(Parameters):
             return d, h
         return None
 
-    def _get_optional_float(self, option: str) -> float | None:
+    def _get_optional_float(self, option: str) -> Optional[float]:
         """
         Helper to retrieve a float value without a default fallback.
         It checks the hierarchical config first, then the producer specific config.
