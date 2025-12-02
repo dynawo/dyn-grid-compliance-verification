@@ -198,7 +198,7 @@ class GFMGeneration:
                 _generate_pcs(pcs_tuple)
 
         for _, pcs_name, producer_name in self._pcs_list:
-            manage_files.copy_output_files(
+            manage_files.copy_directory(
                 self._parameters.get_working_dir() / producer_name,
                 self._parameters.get_output_dir(),
                 pcs_name,

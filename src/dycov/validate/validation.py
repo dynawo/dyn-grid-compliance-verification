@@ -37,21 +37,6 @@ from dycov.report.LatexReportException import LatexReportException
 from dycov.validate.parameters import ValidationParameters
 
 
-def _aborted_execution(e: Exception) -> None:
-    """Logs an aborted execution message with exception details.
-
-    Parameters
-    ----------
-    e : Exception
-        The exception that caused the abortion.
-    """
-
-    if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
-        dycov_logging.get_logger("Validation").exception(f"Aborted execution. {e}")
-    else:
-        dycov_logging.get_logger("Validation").error(f"Aborted execution. {e}")
-
-
 def _open_document(file: Path, is_testing: bool) -> None:
     """Opens a document using the appropriate system command.
 
@@ -133,13 +118,11 @@ def _prepare_report_pcs(
     """
     try:
         report.prepare_pcs_report(pcs_results, parameters, Path(path_latex_files))
-    except LatexReportException as e:
+    except LatexReportException:
         dycov_logging.get_logger("Validation").error(
             f"An error occurred while preparing the report for {pcs_results['pcs'].get_name()}."
         )
-        _aborted_execution(e)
-    except (FileNotFoundError, IOError, ValueError) as e:
-        _aborted_execution(e)
+        raise
 
 
 class Validation:
@@ -176,7 +159,6 @@ class Validation:
           will be overwritten.
         """
         # Prepare tool folders
-        manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
         manage_files.create_dir(self._parameters.get_working_dir() / "Reports", clean_first=False)
         manage_files.create_dir(self._parameters.get_working_dir() / "Latex", clean_first=False)
 
@@ -188,7 +170,6 @@ class Validation:
                 "erased and a new one will be created."
             )
             sys.exit()
-        manage_files.create_dir(self._parameters.get_output_dir())
 
     def __get_validation_pcs(self) -> list:
         """Determines the list of PCS to be validated based on simulation type and configuration.
@@ -327,31 +308,22 @@ class Validation:
                 self._parameters,
                 Path(self._path_latex_files),
             )
-        except LatexReportException as e:
+        except LatexReportException:
             dycov_logging.get_logger("Validation").error(
                 f"An error occurred while generating the report, "
                 f"look for the {REPORT_NAME.split(CASE_SEPARATOR)[0]}.log file "
                 f"under {self._parameters.get_output_dir() / 'Reports'}"
             )
-            _aborted_execution(e)
-        except (FileNotFoundError, IOError, ValueError) as e:
-            _aborted_execution(e)
+            raise
+        finally:
+            # Clean Latex folder
+            manage_files.remove_dir(self._parameters.get_working_dir() / "Latex")
 
-        for pcs_results in report_results.values():
-            pcs = pcs_results["pcs"]
-            producer_name = pcs_results["producer"]
-            manage_files.copy_output_files(
-                self._parameters.get_working_dir() / producer_name,
-                self._parameters.get_output_dir() / producer_name,
-                pcs.get_name(),
+            # Move output files to destination folder
+            manage_files.rename_path(
+                self._parameters.get_working_dir(),
+                self._parameters.get_output_dir(),
             )
-
-        # Move output files to destination folder
-        manage_files.copy_output_files(
-            self._parameters.get_working_dir(),
-            self._parameters.get_output_dir(),
-            "Reports",
-        )
 
     @staticmethod
     def get_project_path() -> Path:
@@ -364,21 +336,7 @@ class Validation:
         """
         return Path(__file__).parent.parent
 
-    def validate(self, use_parallel: bool = False, num_processes: int = 4) -> list:
-        """Validates the Producer inputs, parallel or sequential based on config.
-
-        Parameters
-        ----------
-        use_parallel : bool, optional
-            Whether to use parallel validation or not. Default is False.
-        num_processes : int, optional
-            Number of processes to use for parallel validation. Default is 4.
-
-        Returns
-        -------
-        list
-            Compliance results in a list.
-        """
+    def _validate(self, use_parallel: bool = False, num_processes: int = 4) -> list:
         summary_list = []
         report_results = {}
 
@@ -398,25 +356,40 @@ class Validation:
                 summary_list.extend(summary)
                 report_results[f"{producer_name}_{pcs_name}"] = pcs_results
 
+        return summary_list, report_results
+
+    def validate(self, use_parallel: bool = False, num_processes: int = 4) -> list:
+        """Validates the Producer inputs, parallel or sequential based on config.
+
+        Parameters
+        ----------
+        use_parallel : bool, optional
+            Whether to use parallel validation or not. Default is False.
+        num_processes : int, optional
+            Number of processes to use for parallel validation. Default is 4.
+
+        Returns
+        -------
+        list
+            Compliance results in a list.
+        """
+        summary_list, report_results = self._validate(use_parallel, num_processes)
         # Create the pcs report
         sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone", "producer_name"))
         self.__create_report(sorted_summary_list, report_results)
 
-        report_file = (
-            self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
-        )
-        if report_file.exists():
-            _open_document(report_file, self._is_testing)
-        else:
-            dycov_logging.get_logger("Validation").warning(
-                f"Report file does not exist: {report_file}"
+        if self._parameters.get_output_dir().exists():
+            report_file = (
+                self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
             )
+            if report_file.exists():
+                _open_document(report_file, self._is_testing)
+            else:
+                dycov_logging.get_logger("Validation").warning(
+                    f"Report file does not exist: {report_file}"
+                )
 
         compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
-        if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
-            return compliance_list
-
-        manage_files.remove_dir(self._parameters.get_working_dir())
         return compliance_list
 
     def set_testing(self, testing: bool):

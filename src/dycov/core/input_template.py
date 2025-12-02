@@ -52,7 +52,7 @@ class InputTemplateGenerator:
             The name of the template to copy.
         """
         input_templates_path = config.get_value("Global", "input_templates_path")
-        manage_files.copy_path(
+        manage_files.copy_directory(
             Path(input_templates_path) / template.replace("_", "/"), target, dirs_exist_ok=True
         )
 
@@ -251,7 +251,7 @@ class InputTemplateGenerator:
             dycov_logging.get_logger("Input Template Generator").error(
                 "The output path already exists, please indicate a new path."
             )
-            return
+            return 1
 
         manage_files.create_dir(target)
         self._copy_input_templates(target, template)
