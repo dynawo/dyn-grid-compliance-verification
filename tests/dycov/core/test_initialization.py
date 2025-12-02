@@ -8,7 +8,6 @@
 #     demiguelm@aia.es
 #
 import configparser
-import shutil
 
 import pytest
 
