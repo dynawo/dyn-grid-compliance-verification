@@ -129,8 +129,8 @@ def plot_results(
     output_format: str,
     params_list: list = None,
     show_disclaimer: bool = False,
-    disclaimer_message: str | None = None,
-    extra_envelopes: dict[str, np.ndarray] | None = None,
+    disclaimer_message: str = None,
+    extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
     """
     Plot the results, trimming stable data at the start and end.
