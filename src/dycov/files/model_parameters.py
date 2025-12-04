@@ -31,9 +31,15 @@ from dycov.model.parameters import (
     Xfmr_params,
 )
 
-# Precompile regex patterns for optimization
-NUMERIC_PATTERN = re.compile(r"[+-]?\d+(\.\d+)?")
-MULTIPLIER_PATTERN = re.compile(r"([+-]?\d*\.?\d*)?\*?([a-zA-Z_]+)")
+# Numeric values: supports integers, decimals, and leading sign; allows ".5" style.
+NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
+
+# Multiplier * name OR name only.
+# - Optional signed float multiplier followed by optional '*' (requires digits, no bare '+'/'-').
+# - Name is an identifier-like token (letters, digits, underscores; must start with a letter or underscore).
+MULTIPLIER_PATTERN = re.compile(
+    r"^(?:(?P<mul>[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\*\s*)?(?P<name>[A-Za-z_]\w*)$"
+)
 
 
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
@@ -366,50 +372,75 @@ def find_output_dir(results_case_dir: Path, filename: str) -> str:
 def extract_defined_value(
     value_definition: str, parameter: str, base_value: float, sign: int = 1
 ) -> float:
-    """Converts a parameter definition to a value.
-    Examples:
-        - P = P_max -> value_definition: 'pmax', parameter: 'pmax', base_value: 90, return 90
-        - X = 2*b -> value_definition: '2*b', parameter: 'b', base_value: 0.2, return 0.4
+    """
+    Converts a parameter definition to a numeric value.
+
+    Supported forms:
+      - Pure numeric: "1.2", "-0.5", ".75"
+      - Parameter only: "PmaxInjection", "-PmaxInjection"  (leading sign allowed)
+      - Multiplier * parameter: "2*b", "-0.8*Pmax", "+1.25*PmaxInjection"
+
+    Behavior:
+      - The definition's explicit sign/multiplier is parsed to produce a raw value.
+      - The 'sign' argument is applied at the end to convert the value to the desired
+        downstream sign convention (it does NOT sanitize the input; it just transforms
+        the final result).
 
     Parameters
     ----------
-    value_definition: str
-        Parameter value definition
-    parameter: str
-        Parameter name
-    base_value: float
-        Base value
-    sign: int
-        Sign of the value
+    value_definition : str
+        The configuration string that defines the value (may include sign/multiplier).
+    parameter : str
+        Expected parameter name (case-insensitive).
+    base_value : float
+        Base value associated with the parameter (e.g., Pmax in pu).
+    sign : int
+        Final sign conversion to match downstream convention (e.g., -1 to flip).
 
     Returns
     -------
     float
-        The value of the operation defined with the given base value
+        The computed value after applying the definition and the final 'sign'.
     """
     if value_definition is None:
         raise ValueError(f"{parameter} parameter not defined.")
 
-    value_definition = value_definition.strip()
+    s = value_definition.strip()
+    if not s:
+        raise ValueError(f"{parameter} parameter not defined (empty).")
 
-    # Case 1: Pure numeric value
-    if NUMERIC_PATTERN.fullmatch(value_definition):
-        return sign * float(value_definition)
+    # Step 1: Capture an explicit leading sign if present, then parse the rest.
+    explicit_sign = 1
+    if s[0] in "+-":
+        explicit_sign = -1 if s[0] == "-" else 1
+        s = s[1:].strip()
 
-    # Case 2: Multiplier * parameter OR parameter only
-    match = MULTIPLIER_PATTERN.fullmatch(value_definition)
-    if match:
-        multiplier_str = match.group(1)
-        param_name = match.group(2)
+    # Step 2: Pure numeric (including the explicit leading sign).
+    num_candidate = ("-" if explicit_sign == -1 else "") + s
+    if NUMERIC_PATTERN.fullmatch(num_candidate):
+        raw_value = float(num_candidate)
+        return sign * raw_value  # Apply final convention
 
+    # Step 3: Multiplier * parameter OR parameter only.
+    m = MULTIPLIER_PATTERN.fullmatch(s)
+    if m:
+        multiplier_str = m.group("mul")
+        param_name = m.group("name")
+
+        # Validate parameter name, case-insensitive.
         if param_name.lower() != parameter.lower():
             raise ValueError(
                 f"Parameter name mismatch: expected '{parameter}', got '{param_name}'"
             )
 
-        multiplier = float(multiplier_str) if multiplier_str else 1.0
-        return sign * multiplier * base_value
+        # Multiplier: if present, parse; otherwise default to 1.0.
+        multiplier = float(multiplier_str) if multiplier_str is not None else 1.0
 
+        # Compose: explicit sign from the definition × parsed multiplier × base value.
+        raw_value = explicit_sign * multiplier * base_value
+        return sign * raw_value  # Apply final convention
+
+    # Step 4: No valid form matched.
     raise ValueError(f"Invalid format for {parameter}: '{value_definition}'")
 
 
