@@ -36,7 +36,8 @@ NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
 
 # Multiplier * name OR name only.
 # - Optional signed float multiplier followed by optional '*' (requires digits, no bare '+'/'-').
-# - Name is an identifier-like token (letters, digits, underscores; must start with a letter or underscore).
+# - Name is an identifier-like token (letters, digits, underscores; must start with a letter
+#   or underscore).
 MULTIPLIER_PATTERN = re.compile(
     r"^(?:(?P<mul>[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\*\s*)?(?P<name>[A-Za-z_]\w*)$"
 )
