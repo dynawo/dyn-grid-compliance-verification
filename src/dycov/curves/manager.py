@@ -163,13 +163,29 @@ class CurvesManager:
 
     def __save_curves(self, working_oc_dir: Path):
         if not self.get_curves("calculated").empty:
-            self.get_curves("calculated").to_csv(
-                working_oc_dir / "curves_calculated.csv", sep=";", float_format="%.3e"
+            self.__save_curve(
+                self.get_curves("calculated"), working_oc_dir / "curves_calculated.csv"
             )
         if not self.get_curves("reference").empty:
-            self.get_curves("reference").to_csv(
-                working_oc_dir / "curves_reference.csv", sep=";", float_format="%.3e"
+            self.__save_curve(
+                self.get_curves("calculated"), working_oc_dir / "curves_reference.csv"
             )
+
+    def __save_curve(self, curves: pd.DataFrame, path: Path, precision: int = 9):
+        # Create a copy to avoid modifying the original DataFrame
+        curves_to_save = curves.copy()
+
+        if "time" in curves_to_save:
+            # Format 'time' column with specified precision
+            curves_to_save["time"] = pd.to_numeric(curves_to_save["time"], errors="coerce").map(
+                lambda x: f"{x:.{precision}f}" if pd.notna(x) else ""
+            )
+            # Ensure 'time' is the first column
+            cols = ["time"] + [col for col in curves_to_save.columns if col != "time"]
+            curves_to_save = curves_to_save[cols]
+
+        # Save to CSV without altering the original DataFrame
+        curves_to_save.to_csv(path, sep=";", float_format="%.3e", index=False)
 
     def __get_signal_processing_windows(self, curve: str, windows: str) -> tuple[float, float]:
         return self._windows[curve]["sigpro"][windows]
@@ -370,8 +386,8 @@ class CurvesManager:
         )
 
         if dycov_logging.get_logger("Curves Manager").getEffectiveLevel() == logging.DEBUG:
-            calculated_curves.to_csv(working_path / "signal.csv", sep=";", float_format="%.3e")
-            reference_curves.to_csv(working_path / "reference.csv", sep=";", float_format="%.3e")
+            self.__save_curve(calculated_curves, working_path / "signal.csv")
+            self.__save_curve(reference_curves, working_path / "reference.csv")
 
     def get_curves(self, curve: str) -> pd.DataFrame:
         """Get the curves.
