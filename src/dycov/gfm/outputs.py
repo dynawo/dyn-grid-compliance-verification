@@ -416,7 +416,7 @@ def save_ini_dump(
 
         # 3. Dump Producer Configuration (INI structure)
         f.write(f"\n{'=' * 30}\n")
-        f.write(f" GFMProducer Configuration (INI)\n")
+        f.write(" GFMProducer Configuration (INI)\n")
         f.write(f"{'=' * 30}\n")
 
         if producer_config:
