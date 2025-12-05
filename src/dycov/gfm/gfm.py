@@ -15,7 +15,7 @@ import numpy as np
 from dycov.gfm import constants
 from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
-from dycov.gfm.outputs import plot_results, save_results_to_csv
+from dycov.gfm.outputs import plot_results, save_results_to_csv, save_ini_dump
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 
@@ -159,6 +159,17 @@ class GridForming:
             upper_envelope,
             extra_envelopes=extra_envelopes,
         )
+
+        producer = parameters.get_producer()
+        producer_config = producer.get_config() if producer else None
+
+        save_ini_dump(
+            path=working_path / f"{title}_ini_dump.txt",
+            parameters=parameters,
+            producer_config=producer_config,
+            calculator=calculator,
+        )
+
         self._plot(
             working_path,
             title,
