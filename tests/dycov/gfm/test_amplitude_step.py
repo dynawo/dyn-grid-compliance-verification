@@ -22,7 +22,6 @@ from dycov.core.parameters import Parameters
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
-import pytest
 
 # Float tolerance
 epsilon = 1e-3

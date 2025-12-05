@@ -23,6 +23,7 @@ from dycov.sigpro.sigpro import lowpass_filter
 
 NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
+ORIGINAL_IMPLEMENTATION = False  # Set to True to use the original noise application method
 
 
 def anonymize(
@@ -352,6 +353,7 @@ def _apply_noise_to_curves(
     frequency: float,
     event_time: float,
     event_duration: float,
+    flat_threshold: float = 1e-4,
 ) -> None:
     """Applies noise to the curve data in the DataFrame.
 
@@ -370,6 +372,8 @@ def _apply_noise_to_curves(
         The start time of the event.
     event_duration: float
         The duration of the event.
+    flat_threshold: float = 1e-4,
+        Threshold to consider the signal nearly flat.
     """
     noise_event_start = event_time
     noise_event_end = event_time + event_duration
@@ -385,7 +389,13 @@ def _apply_noise_to_curves(
         if column == "time":
             continue
 
-        list_col = df_imported_curve[column].tolist()
+        values = df_imported_curve[column].to_numpy()
+
+        # Flatness guard: skip noise + filtering if nearly flat
+        if _is_nearly_flat(values, flat_threshold) or noisestd <= 0:
+            # Keep the signal as-is to avoid introducing artifacts
+            continue
+
         dycov_logging.get_logger("Anonymizer").debug(f"Applying noise to column: {column}")
 
         # Determine indices for before, during, and after event periods
@@ -396,35 +406,56 @@ def _apply_noise_to_curves(
             (df_imported_curve["time"] > noise_event_start)
             & (df_imported_curve["time"] <= noise_event_end)
         ].shape[0]
-        after_event_idx = len(list_col) - before_event_idx - during_event_idx
+        after_event_idx = len(values) - before_event_idx - during_event_idx
 
-        median_col = statistics.median(list_col)
-        # Ensure median_col is not too small to prevent division by zero or
-        # extremely large noise
-        if abs(median_col) < MIN_SCALE:
-            median_col = MIN_SCALE if median_col >= 0 else -MIN_SCALE
-            dycov_logging.get_logger("Anonymizer").debug(
-                f"Adjusted median_col to {median_col} due to MIN_SCALE."
+        if ORIGINAL_IMPLEMENTATION:
+            median_col = statistics.median(values.tolist())
+            # Prevent excessive noise on small signals
+            if abs(median_col) < MIN_SCALE:
+                median_col = MIN_SCALE if median_col >= 0 else -MIN_SCALE
+
+            noise_before = (
+                np.random.normal(0.0, noisestd, before_event_idx) * median_col / NOISE_DAMPING
+            )
+            noise_during = np.random.normal(0.0, noisestd, during_event_idx) * median_col
+            noise_after = (
+                np.random.normal(0.0, noisestd, after_event_idx) * median_col / NOISE_DAMPING
+            )
+        else:
+            # Robust local scale using rolling MAD
+            def local_scale(series: np.ndarray, window: int) -> np.ndarray:
+                w = max(3, window | 1)
+                s = pd.Series(series)
+                med = s.rolling(w, center=True, min_periods=1).median()
+                mad = (s - med).abs().rolling(w, center=True, min_periods=1).median()
+                return np.maximum(mad.to_numpy(), MIN_SCALE)
+
+            window_seconds = 0.5
+            window_samples = max(3, int(window_seconds * resampling_fs))
+            scale = local_scale(values, window_samples)
+
+            noise_before = np.random.normal(0.0, noisestd, before_event_idx) * (
+                scale[:before_event_idx] / NOISE_DAMPING
+            )
+            noise_during = (
+                np.random.normal(0.0, noisestd, during_event_idx)
+                * scale[before_event_idx : before_event_idx + during_event_idx]
+            )
+            noise_after = np.random.normal(0.0, noisestd, after_event_idx) * (
+                scale[-after_event_idx:] / NOISE_DAMPING
             )
 
-        # Apply reduced noise before the event
-        noise_before = (
-            np.random.normal(0.0, noisestd, before_event_idx) * median_col / NOISE_DAMPING
-        )
-        # Apply noise during the event
-        noise_during = np.random.normal(0.0, noisestd, during_event_idx) * median_col
-        # Apply reduced noise after the event
-        noise_after = np.random.normal(0.0, noisestd, after_event_idx) * median_col / NOISE_DAMPING
+        noise = np.concatenate((noise_before, noise_during, noise_after))
 
-        # Concatenate noises and apply low-pass filter
-        noise = lowpass_filter(
-            np.concatenate((noise_before, noise_during, noise_after)),
+        # Smooth noise using constant padding to stabilize boundaries
+        noise_smoothed = lowpass_filter(
+            noise,
             fc=frequency,
             fs=resampling_fs,
         )
 
-        # Apply the noise to the column
-        df_imported_curve[column] = np.add(list_col, noise)
+        # Apply noise to the column
+        df_imported_curve[column] = values + noise_smoothed
 
 
 def _process_curves(
@@ -466,9 +497,12 @@ def _process_curves(
         curves_cfg.read(dict_file)
 
         event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
-        fault_duration = (
-            float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
-        )  # Add 5.0 as per original script's logic
+        if ORIGINAL_IMPLEMENTATION:
+            fault_duration = (
+                float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
+            )  # Add 5.0 as per original script's logic
+        else:
+            fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
 
         importer = CurvesImporter(curves_folder, curves_path.stem, False)
 
@@ -485,7 +519,7 @@ def _process_curves(
 
             df_imported_curve = df_imported_curve.set_index("time")
             output_csv_path = output_folder / f"{curves_path.stem}.csv"
-            df_imported_curve.to_csv(output_csv_path, sep=";", float_format="%.3e")
+            _save_curve(df_imported_curve.reset_index(), output_csv_path)
             dycov_logging.get_logger("Anonymizer").info(
                 f"Saved anonymized curve to {output_csv_path}"
             )
@@ -507,3 +541,25 @@ def _process_curves(
             dycov_logging.get_logger("Anonymizer").warning(
                 f"No 'Curves-Dictionary' section found in {dict_file}. Skipping curve processing."
             )
+
+
+def _is_nearly_flat(series: np.ndarray, threshold: float) -> bool:
+    # Use range and std to detect flat signals robustly
+    return (np.ptp(series) <= threshold) or (np.nanstd(series) <= threshold / 3.0)
+
+
+def _save_curve(curves: pd.DataFrame, path: Path, precision: int = 9):
+    # Create a copy to avoid modifying the original DataFrame
+    curves_to_save = curves.copy()
+
+    if "time" in curves_to_save:
+        # Format 'time' column with specified precision
+        curves_to_save["time"] = pd.to_numeric(curves_to_save["time"], errors="coerce").map(
+            lambda x: f"{x:.{precision}f}" if pd.notna(x) else ""
+        )
+        # Ensure 'time' is the first column
+        cols = ["time"] + [col for col in curves_to_save.columns if col != "time"]
+        curves_to_save = curves_to_save[cols]
+
+    # Save to CSV without altering the original DataFrame
+    curves_to_save.to_csv(path, sep=";", float_format="%.3e", index=False)

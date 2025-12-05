@@ -407,6 +407,30 @@ def _plotly_figures(
     )
 
 
+def _update_layout(fig, curve_name, figure_description):
+    fig.update_layout(
+        title=curve_name,
+        xaxis_title="Time",
+        yaxis_title=figure_description,
+        template="plotly_dark",
+        font_color="#000000",
+        plot_bgcolor="#ffffff",
+        paper_bgcolor="#ffffff",
+    )
+    fig.update_xaxes(
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        showgrid=False,
+    )
+    fig.update_yaxes(
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        showgrid=False,
+    )
+
+
 def plotly_figures(
     figure_description: list,
     calculated_curves: pd.DataFrame,
@@ -446,27 +470,7 @@ def plotly_figures(
         )
 
     if curve_names:
-        fig.update_layout(
-            title=curve_names[0],
-            xaxis_title="Time",
-            yaxis_title=figure_description[3],
-            template="plotly_dark",
-            font_color="#000000",
-            plot_bgcolor="#ffffff",
-            paper_bgcolor="#ffffff",
-        )
-        fig.update_xaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
-        fig.update_yaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
+        _update_layout(fig, curve_names[0], figure_description[3])
         return (
             curve_names,
             curve_names[0],
@@ -507,28 +511,7 @@ def plotly_all_curves(
 
         fig = go.Figure()
         _plotly_figures(fig, curve_name, [], calculated_curves, reference_curves, results, False)
-
-        fig.update_layout(
-            title=curve_name,
-            xaxis_title="Time",
-            yaxis_title="Magnitude",
-            template="plotly_dark",
-            font_color="#000000",
-            plot_bgcolor="#ffffff",
-            paper_bgcolor="#ffffff",
-        )
-        fig.update_xaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
-        fig.update_yaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
+        _update_layout(fig, curve_name, "Magnitude")
         figures.append(
             (
                 curve_name,

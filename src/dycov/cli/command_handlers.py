@@ -9,6 +9,7 @@
 #
 
 import argparse
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -227,7 +228,7 @@ def handle_generate_command(
         )
         dycov_logging.get_logger("CommandHandlers").info("Input files generated successfully.")
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").exception(f"Error generating input files: {e}")
+        dycov_logging.get_logger("CommandHandlers").error(f"Error generating input files: {e}")
         parser.error(f"Failed to generate input files: {e}")
         result_code = 1
     return result_code
@@ -263,7 +264,7 @@ def handle_compile_command(
             print("Compilation finished successfully.")
             result_code = 0
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").exception(f"Error compiling models: {e}")
+        dycov_logging.get_logger("CommandHandlers").error(f"Error compiling models: {e}")
         parser.error(f"Failed to compile models: {e}")
         result_code = 1
     return result_code
@@ -293,7 +294,7 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
         dycov_logging.get_logger("CommandHandlers").info("Anonymization completed successfully.")
         result_code = 0
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").exception(f"Error during anonymization: {e}")
+        dycov_logging.get_logger("CommandHandlers").error(f"Error during anonymization: {e}")
         parser.error(f"Failed to anonymize curves: {e}")
         result_code = 1
     return result_code
@@ -344,19 +345,23 @@ def _run_verification(
     dycov_logging.get_logger("CommandHandlers").info(
         f"Running verification of type: {verification_type}"
     )
-    # Initialize Parameters for the tool
-    params = ValidationParameters(
-        launcher_dwo=dwo_launcher,
-        producer_model=producer_model,
-        producer_curves_path=producer_curves,
-        reference_curves_path=reference_curves,
-        selected_pcs=user_pcs,
-        output_dir=output_dir,
-        only_dtr=only_dtr,
-        verification_type=verification_type,
-    )
     try:
+        # Initialize Parameters for the tool
+        params = ValidationParameters(
+            launcher_dwo=dwo_launcher,
+            producer_model=producer_model,
+            producer_curves_path=producer_curves,
+            reference_curves_path=reference_curves,
+            selected_pcs=user_pcs,
+            output_dir=output_dir,
+            only_dtr=only_dtr,
+            verification_type=verification_type,
+        )
+    except ValueError as e:
+        dycov_logging.get_logger("CommandHandlers").error(f"{e}")
+        return 1
 
+    try:
         # Determine if the execution parameters are valid or complete based on the
         # verification type.
         is_ready = (
@@ -392,12 +397,18 @@ def _run_verification(
 
         return 0
     except KeyboardInterrupt:
-        dycov_logging.get_logger("CommandHandlers").exception("Execution interrupted by user")
-        manage_files.remove_dir(params.get_working_dir())
+        dycov_logging.get_logger("CommandHandlers").error("Execution interrupted by user")
+        if dycov_logging.get_logger("CommandHandlers").getEffectiveLevel() == logging.DEBUG:
+            manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
+        else:
+            manage_files.remove_dir(params.get_working_dir())
         return 130
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").exception(f"Error during verification: {e}")
-        manage_files.remove_dir(params.get_working_dir())
+        dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
+        if dycov_logging.get_logger("CommandHandlers").getEffectiveLevel() == logging.DEBUG:
+            manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
+        else:
+            manage_files.remove_dir(params.get_working_dir())
         return 1
 
 
@@ -437,5 +448,5 @@ def _generate_envelopes(
         )
         return 0
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").exception(f"Error during generation: {e}")
+        dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
         return 1

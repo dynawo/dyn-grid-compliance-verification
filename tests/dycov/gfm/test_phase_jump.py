@@ -22,7 +22,6 @@ from dycov.core.parameters import Parameters
 from dycov.gfm.calculators.phase_jump import PhaseJump
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
-import pytest
 
 # Float tolerance
 epsilon = 1e-3
