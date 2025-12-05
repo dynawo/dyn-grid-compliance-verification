@@ -9,6 +9,8 @@
 #
 
 from pathlib import Path
+import configparser
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -366,3 +368,60 @@ def plot_results(
         )
 
         fig.write_html(path.with_suffix(".html"))
+
+
+def save_ini_dump(
+    path: Path,
+    parameters: Any,
+    producer_config: configparser.ConfigParser,
+    calculator: Any,
+) -> None:
+    """
+    Dumps all attributes from Parameters, Producer Config, and Calculator
+    to a text file.
+
+    Parameters
+    ----------
+    path : Path
+        The full path (including filename) where the text file will be saved.
+    parameters : GFMParameters
+        The parameters object containing simulation settings.
+    producer_config : configparser.ConfigParser
+        The configuration object from the GFMProducer.
+    calculator : GFMCalculator
+        The calculator instance used for the simulation.
+    """
+
+    def _write_dict(f, title: str, data_dict: dict):
+        f.write(f"\n{'=' * 30}\n")
+        f.write(f" {title}\n")
+        f.write(f"{'=' * 30}\n")
+        for key, value in sorted(data_dict.items()):
+            # Filter out private attributes that might be irrelevant or callables
+            if not callable(value):
+                f.write(f"{key} = {value}\n")
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("GFM SIMULATION DUMP\n")
+        f.write("===================\n")
+
+        # 1. Dump GFMParameters
+        # We access the __dict__ to get all instance attributes
+        if hasattr(parameters, "__dict__"):
+            _write_dict(f, "GFMParameters Attributes", parameters.__dict__)
+
+        # 2. Dump GFMCalculator
+        if hasattr(calculator, "__dict__"):
+            _write_dict(f, "GFMCalculator Attributes", calculator.__dict__)
+
+        # 3. Dump Producer Configuration (INI structure)
+        f.write(f"\n{'=' * 30}\n")
+        f.write(" GFMProducer Configuration (INI)\n")
+        f.write(f"{'=' * 30}\n")
+
+        if producer_config:
+            for section in producer_config.sections():
+                f.write(f"[{section}]\n")
+                for key, value in producer_config.items(section):
+                    f.write(f"{key} = {value}\n")
+                f.write("\n")
