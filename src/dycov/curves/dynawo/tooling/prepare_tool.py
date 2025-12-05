@@ -10,7 +10,7 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.dynawo import DynawoSimulator
+from dycov.curves.dynawo.runtime.dynawo import DynawoSimulator
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 

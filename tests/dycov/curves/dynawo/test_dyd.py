@@ -11,7 +11,7 @@
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.curves.dynawo.dyd import DydFile
+from dycov.curves.dynawo.io.dyd import DydFile
 from dycov.files import replace_placeholders
 
 

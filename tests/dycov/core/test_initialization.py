@@ -172,7 +172,8 @@ class TestDycovInitializer:
         assert mock_copy_from_path.call_count == 5  # Total copy_from_path calls
 
         # Assert copy_directory calls for dummy samples
-        # There are 2 templates ("PCS", "reports"), 2 categories, 3 models = 12 copy_directory calls
+        # There are 2 templates ("PCS", "reports"), 2 categories,
+        # 3 models = 12 copy_directory calls
         assert mock_copy_directory.call_count == 12
         for template in ["PCS", "reports"]:
             for category in ["performance", "model"]:

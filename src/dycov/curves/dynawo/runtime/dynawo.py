@@ -93,7 +93,7 @@ class DynawoSimulator:
         with open(output_path / "compile.log", "a") as log_file:
             if os.name == "nt":
                 cmd = [
-                    Path(__file__).parent.resolve() / "Vsx64.cmd",
+                    Path(__file__).parent.parent.resolve() / "tooling" / "Vsx64.cmd",
                     models_path,
                     launcher_dwo,
                     model_name,
