@@ -50,7 +50,7 @@
     <par type="DOUBLE" name="WPP_Kpq" value="1.1"/>
     <par type="DOUBLE" name="WPP_Kpu" value="2"/>
     <par type="DOUBLE" name="WPP_Kqv" value="2"/>
-    <par type="INT" name="WPP_MqG" value="2"/>
+    <par type="INT" name="WPP_MqG" value="1"/>
     <par type="DOUBLE" name="WPP_RDropPu" value="0"/>
     <par type="DOUBLE" name="WPP_tPost" value="0"/>
     <par type="DOUBLE" name="WPP_tQord" value="0.01"/>
@@ -101,8 +101,8 @@
     <par type="DOUBLE" name="WPP_Kiwpx" value="2.1"/>
     <par type="DOUBLE" name="WPP_Kpwpx" value="0.5"/>
     <par type="DOUBLE" name="WPP_KwpqRef" value="0"/>
-    <par type="DOUBLE" name="WPP_Kwpqu" value="0"/>
-    <par type="INT" name="WPP_MwpqMode" value="0"/>
+    <par type="DOUBLE" name="WPP_Kwpqu" value="0.3"/>
+    <par type="INT" name="WPP_MwpqMode" value="3"/>
     <par type="DOUBLE" name="WPP_tUqFilt" value="0.01"/>
     <par type="DOUBLE" name="WPP_txfv" value="0.1"/>
     <par type="DOUBLE" name="WPP_txft" value="0.1"/>

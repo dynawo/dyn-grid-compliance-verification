@@ -18,11 +18,11 @@ def test_model_validation_wecca_model():
         Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
         Compliance.Compliant,  # 2
-        Compliance.NonCompliant,  # 3
-        Compliance.NonCompliant,  # 4
+        Compliance.Compliant,  # 3
+        Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
-        Compliance.NonCompliant,  # 7
+        Compliance.Compliant,  # 7
         Compliance.Compliant,  # 8
         Compliance.Compliant,  # 9
         Compliance.InvalidTest,  # 10
@@ -33,7 +33,7 @@ def test_model_validation_wecca_model():
         Compliance.Compliant,  # 15
         Compliance.Compliant,  # 16
         Compliance.Compliant,  # 17
-        Compliance.Compliant,  # 18
+        Compliance.NonCompliant,  # 18
         Compliance.Compliant,  # 19
         Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21
@@ -100,18 +100,18 @@ def test_model_validation_partial_reference():
         Compliance.Compliant,  # 6
         Compliance.NonCompliant,  # 7
         Compliance.WithoutReferenceCurves,  # 8
-        Compliance.NonCompliant,  # 9
+        Compliance.Compliant,  # 9
         Compliance.WithoutReferenceCurves,  # 10
         Compliance.NonCompliant,  # 11
-        Compliance.NonCompliant,  # 12
+        Compliance.Compliant,  # 12
         Compliance.NonCompliant,  # 13
         Compliance.NonCompliant,  # 14
         Compliance.NonCompliant,  # 15
         Compliance.WithoutReferenceCurves,  # 16
         Compliance.WithoutReferenceCurves,  # 17
-        Compliance.Compliant,  # 18
-        Compliance.NonCompliant,  # 19
-        Compliance.NonCompliant,  # 20
+        Compliance.NonCompliant,  # 18
+        Compliance.Compliant,  # 19
+        Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
         Compliance.WithoutReferenceCurves,  # 23

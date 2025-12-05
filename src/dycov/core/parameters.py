@@ -44,9 +44,8 @@ class Parameters:
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
-        self._working_dir = Path(
-            tempfile.mkdtemp(prefix=f"{tmp_path}_{username}_", dir=output_dir.parent)
-        )
+        base_dir = output_dir.parent if output_dir.parent.exists() else Path.cwd()
+        self._working_dir = Path(tempfile.mkdtemp(prefix=f"{tmp_path}_{username}_", dir=base_dir))
 
         # The parameter is initialized in the child class
         self._producer = None
