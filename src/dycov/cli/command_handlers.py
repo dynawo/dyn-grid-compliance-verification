@@ -18,7 +18,7 @@ from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
 from dycov.curves import anonymizer
-from dycov.curves.dynawo import prepare_tool
+from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.files import manage_files
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters

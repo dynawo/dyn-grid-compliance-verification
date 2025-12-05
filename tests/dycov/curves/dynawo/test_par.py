@@ -11,7 +11,7 @@
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.curves.dynawo.par import ParFile
+from dycov.curves.dynawo.io.par import ParFile
 from dycov.model.parameters import Gen_init
 
 

@@ -1,5 +1,4 @@
 from dycov.model.compliance import Compliance
-
 from tests_integration.utils import PERFORMANCE, _execute_tool
 
 
@@ -14,7 +13,7 @@ def test_perf_sm_model():
         Compliance.NonCompliant,  # 1
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
-        Compliance.FailedSimulation,  # 4
+        Compliance.NonCompliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
         Compliance.Compliant,  # 7

@@ -26,7 +26,7 @@ def _load_dictionary(filename: str, variables: configparser.ConfigParser):
     variables: configparser.ConfigParser
         The ConfigParser instance to load the dictionary into.
     """
-    dictionary = Path(__file__).resolve().parent / "dictionary"
+    dictionary = Path(__file__).resolve().parent
     # Load the tool dictionary
     variables.read(dictionary / filename)
 

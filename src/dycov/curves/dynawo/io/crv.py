@@ -13,7 +13,7 @@ from lxml import etree
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION
-from dycov.curves.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 
 
 def _add_curves_dict(

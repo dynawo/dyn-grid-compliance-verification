@@ -15,7 +15,7 @@ parameters of Dynawo models, including generator, transformer, load, and simulat
 from typing import List
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params
 from dycov.validation import common

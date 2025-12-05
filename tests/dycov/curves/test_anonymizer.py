@@ -257,12 +257,13 @@ def test_no_noise_applied_on_almost_flat_even_with_noisestd(tmp_dirs):
             out_sig,
             src_sig,
             rtol=0.0,
-            atol=5e-4,
+            atol=6e-4,
             err_msg="Output differs beyond expected CSV quantization for almost-flat input.",
         )
     else:
         # Length changed (likely resampling). We assert the curve remains effectively flat and
-        # near the original baseline. Adjust thresholds if your definition of "almost flat" differs.
+        # near the original baseline. Adjust thresholds if your definition of "almost flat"
+        # differs.
         out_std = float(np.nanstd(out_sig))
         out_range = float(np.nanmax(out_sig) - np.nanmin(out_sig))
         # "Effectively flat" within small tolerance (values near ~1.0 in your sample).

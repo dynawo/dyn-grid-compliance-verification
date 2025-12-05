@@ -14,7 +14,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.prepare_tool import precompile
+from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
