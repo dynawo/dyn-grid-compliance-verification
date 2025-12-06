@@ -1,5 +1,6 @@
+recursive-include src/dycov *.ini
+include src/dycov/curves/dynawo/tooling/Vsx64.cmd
 recursive-include src/dycov/report/templates *
 recursive-include src/dycov/templates *
 recursive-include src/dycov/model_lib *
-recursive-include src/dycov *.ini
-include src/dycov/curves/dynawo/Vsx64.cmd
+recursive-include src/dycov/templates/reports *.py *.json *.pdf
