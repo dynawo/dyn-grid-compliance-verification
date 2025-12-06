@@ -63,8 +63,6 @@ class SolverRetryStrategy:
         success, time_exceeds, log, curves_df, sim_time = DynamicSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        if time_exceeds:
-            logger.warning(f"{title} Simulation time exceeds the maximum allowed ({max_sim_time})")
         if success:
             return success, time_exceeds, log, curves_df, sim_time
 
@@ -107,6 +105,8 @@ class SolverRetryStrategy:
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
 
+        if time_exceeds:
+            logger.warning(f"{title} Simulation time exceeds the maximum allowed ({max_sim_time})")
         return success, time_exceeds, log, curves_df, sim_time
 
     # --- mutations & file updates ---
