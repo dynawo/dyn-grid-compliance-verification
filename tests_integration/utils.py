@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
@@ -11,7 +12,7 @@ MODEL = "../examples/Model"
 RESOURCES = "./resources"
 
 
-def _execute_tool(producer_model_path, producer_curves_path, reference_curves_path):
+def execute_tool(producer_model_path, producer_curves_path, reference_curves_path):
     testpath = Path(__file__).resolve().parent
     with TemporaryDirectory() as tmp_dir:
         output_dir = Path(tmp_dir)
@@ -24,6 +25,8 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
             assert (testpath / reference_curves_path).exists()
 
         try:
+            old_timeout = config.get_float("Dynawo", "simulation_limit", 30.0)
+            config.set_value("Dynawo", "simulation_limit", str(10.0))
             only_dtr = True
             if producer_model_path:
                 if "Performance" in producer_model_path:
@@ -48,8 +51,9 @@ def _execute_tool(producer_model_path, producer_curves_path, reference_curves_pa
             )
             md = Validation(params)
             md.set_testing(True)
-            compliance = md.validate(use_parallel=False, num_processes=4)
+            compliance = md.validate(use_parallel=True, num_processes=4)
         except Exception as e:
             compliance = str(e)
         finally:
+            config.set_value("Dynawo", "simulation_limit", str(old_timeout))
             return compliance

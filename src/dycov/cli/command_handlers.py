@@ -373,7 +373,7 @@ def _run_verification(
         if not is_ready:
             return -1
 
-        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
 
         # Initialize the Validation object
@@ -435,7 +435,7 @@ def _generate_envelopes(
         if not params.is_valid():
             return -1
 
-        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
 
         gfm = GFMGeneration(params)

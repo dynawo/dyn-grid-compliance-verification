@@ -1,9 +1,9 @@
 from dycov.model.compliance import Compliance
-from tests_integration.utils import MODEL, RESOURCES, _execute_tool
+from tests_integration.utils import MODEL, RESOURCES, execute_tool
 
 
 def test_model_validation_wecca_model():
-    compliance = _execute_tool(
+    compliance = execute_tool(
         f"{MODEL}/Wind/WECCA/Dynawo",
         None,
         f"{MODEL}/Wind/WECCA/ReferenceCurves",
@@ -32,12 +32,12 @@ def test_model_validation_wecca_model():
         Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
-        Compliance.FailedSimulation,  # 23
+        Compliance.SimulationTimeOut,  # 23
     ] == compliance
 
 
 def test_model_validation_iec2015_curves():
-    compliance = _execute_tool(
+    compliance = execute_tool(
         None,
         f"{MODEL}/Wind/IECB2015/ProducerCurves",
         f"{MODEL}/Wind/IECB2015/ReferenceCurves",
@@ -71,7 +71,7 @@ def test_model_validation_iec2015_curves():
 
 
 def test_model_validation_partial_reference():
-    compliance = _execute_tool(
+    compliance = execute_tool(
         f"{MODEL}/Wind/WECCB/Dynawo",
         None,
         f"{RESOURCES}/partial_reference_curves",

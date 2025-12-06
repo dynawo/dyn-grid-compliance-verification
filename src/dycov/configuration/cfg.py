@@ -179,6 +179,69 @@ class Config:
             or self._default_config.has_option(section, key)
         )
 
+    def set_value(self, section: str, key: str, value: str) -> None:
+        """Sets (or overrides) a configuration value at runtime using the same
+        precedence policy as get_value().
+
+        The precedence to choose the target source mirrors get_value() by checking:
+        1. User config
+        2. PCS config
+        3. Default config
+
+        Concretely:
+        - If (section, key) exists with a valid (non-empty) value in user → pcs → default
+        (checked with _is_valid_value), the override is applied in that same source.
+        - If it does not exist in any source with a valid value, the key is created in
+        the user config.
+
+        This method updates the in-memory configuration and creates the section if it
+        does not exist. It does not persist values to disk.
+
+        Parameters
+        ----------
+        section : str
+            Section header.
+        key : str
+            Key within the section.
+        value : str
+            New value to set.
+
+        Returns
+        -------
+        None
+            The value is set in-memory. No value is returned.
+        """
+        target_parser = None
+
+        # user
+        if self._user_config.has_option(section, key):
+            current = self._user_config.get(section, key)
+            if self._is_valid_value(current):
+                target_parser = self._user_config
+
+        # pcs (solo si no se decidió aún)
+        if target_parser is None and self._pcs_config.has_option(section, key):
+            current = self._pcs_config.get(section, key)
+            if self._is_valid_value(current):
+                target_parser = self._pcs_config
+
+        # default (solo si no se decidió aún)
+        if target_parser is None and self._default_config.has_option(section, key):
+            current = self._default_config.get(section, key)
+            if self._is_valid_value(current):
+                target_parser = self._default_config
+
+        # Si no se encontró un valor válido en ningún origen, crear en user
+        if target_parser is None:
+            target_parser = self._user_config
+
+        # Asegurar la sección en el origen elegido
+        if not target_parser.has_section(section):
+            target_parser.add_section(section)
+
+        # Log old -> new y escribir
+        target_parser.set(section, key, value)
+
     def get_value(self, section: str, key: str, default: str = None) -> str:
         """Gets a configuration value for a given key and section.
 

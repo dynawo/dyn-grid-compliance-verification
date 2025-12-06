@@ -336,16 +336,6 @@ class DynawoCurves(ProducerCurves):
         # Get output dir read from job file
         jobs_output_dir = model_parameters.find_output_dir(working_oc_dir, "TSOModel")
 
-        # Initialize logging handlers for the simulation
-        file_log_level = config.get_value("Global", "file_log_level")
-        if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
-            file_log_level = logging.DEBUG
-        self._logger.init_handlers(
-            file_log_level,
-            config.get_value("Global", "file_formatter"),
-            config.get_int("Global", "file_log_max_bytes", 50 * 1024 * 1024),
-            working_oc_dir,
-        )
         return output_dir, jobs_output_dir
 
     def _obtain_gen_value(self, gen: Gen_params, value_definition: str) -> float:
@@ -1657,8 +1647,6 @@ class DynawoCurves(ProducerCurves):
             )
         except ValueError as e:
             error_message = str(e)
-        finally:
-            self._logger.close_handlers()
         simulation_result = Simulation_result(
             success, time_exceeds, has_dynawo_curves, error_message
         )
