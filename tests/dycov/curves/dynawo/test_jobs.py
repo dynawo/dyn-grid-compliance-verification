@@ -11,7 +11,7 @@
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.curves.dynawo.jobs import JobsFile
+from dycov.curves.dynawo.io.jobs import JobsFile
 
 
 # Minimal stub classes to allow integration-style testing without mocks

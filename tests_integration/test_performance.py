@@ -1,11 +1,11 @@
 import pytest
 
 from dycov.model.compliance import Compliance
-from tests_integration.utils import PERFORMANCE, _execute_tool
+from tests_integration.utils import PERFORMANCE, execute_tool
 
 
 def test_perf_sm_model():
-    compliance = _execute_tool(
+    compliance = execute_tool(
         f"{PERFORMANCE}/SingleAux/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo",
         None,
         None,
@@ -28,7 +28,7 @@ def test_perf_sm_model():
 
 
 def test_perf_sm_curves():
-    compliance = _execute_tool(None, f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous/", None)
+    compliance = execute_tool(None, f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous/", None)
 
     if isinstance(compliance, str) and "Validation skipped" in compliance:
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
@@ -47,7 +47,7 @@ def test_perf_sm_curves():
 
 
 def test_perf_sm_complete():
-    compliance = _execute_tool(
+    compliance = execute_tool(
         f"{PERFORMANCE}/SingleAuxI/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo",
         f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous",
         None,
@@ -70,7 +70,7 @@ def test_perf_sm_complete():
 
 
 def test_perf_ppm_model():
-    compliance = _execute_tool(f"{PERFORMANCE}/SingleAux/WECCB/Dynawo", None, None)
+    compliance = execute_tool(f"{PERFORMANCE}/SingleAux/WECCB/Dynawo", None, None)
 
     if isinstance(compliance, str) and "Validation skipped" in compliance:
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
@@ -87,7 +87,7 @@ def test_perf_ppm_model():
 
 
 def test_perf_ppm_curves():
-    compliance = _execute_tool(None, f"{PERFORMANCE}/ProducerCurves/Wind", None)
+    compliance = execute_tool(None, f"{PERFORMANCE}/ProducerCurves/Wind", None)
 
     if isinstance(compliance, str) and "Validation skipped" in compliance:
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
@@ -104,7 +104,7 @@ def test_perf_ppm_curves():
 
 
 def test_perf_ppm_complete():
-    compliance = _execute_tool(
+    compliance = execute_tool(
         f"{PERFORMANCE}/SingleAux/IECB2020/Dynawo",
         f"{PERFORMANCE}/ProducerCurves/Wind",
         None,
