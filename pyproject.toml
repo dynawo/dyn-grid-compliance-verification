@@ -61,19 +61,24 @@ dependencies = [
     "colorama>=0.4.6",		# BSD License
     "kaleido>=1.0.0",       # MIT License
 ]
+
 [project.urls]
 "Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
 "Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+
+[tool.setuptools]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 # Data files: we now manage them here, instead of the MANIFEST.in file.
 # See: https://setuptools.pypa.io/en/latest/userguide/datafiles.html
 # The former content of the MANIFEST.in file was:
+#   recursive-include src/dycov *.ini
+#   include src/dycov/curves/dynawo/tooling/Vsx64.cmd
 #   recursive-include src/dycov/report/templates *
 #   recursive-include src/dycov/templates *
 #   recursive-include src/dycov/model_lib *
-#   recursive-include src/dycov *.ini
-#   include src/dycov/dynawo/Vsx64.cmd
+#   recursive-include src/dycov/templates/reports *.py *.json *.pdf
 #
 where = ["src"]
 exclude = [
@@ -87,13 +92,10 @@ exclude = [
     "report/templates/*",
     "templates/*",
     "model_lib/*",
-    "*.ini",
-    "curves/dynawo/Vsx64.cmd"
+    "**/*.ini",
+    "curves/dynawo/tooling/Vsx64.cmd"
 ]
 "dycov.templates.reports" = ["*.py", "*.json", "*.pdf"]
-
-[tool.setuptools]
-include-package-data = true
 
 # Entry points and automatic script creation:
 [project.scripts]

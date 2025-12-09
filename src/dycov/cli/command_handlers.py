@@ -18,7 +18,7 @@ from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
 from dycov.curves import anonymizer
-from dycov.curves.dynawo import prepare_tool
+from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.files import manage_files
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
@@ -373,7 +373,7 @@ def _run_verification(
         if not is_ready:
             return -1
 
-        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
 
         # Initialize the Validation object
@@ -435,7 +435,7 @@ def _generate_envelopes(
         if not params.is_valid():
             return -1
 
-        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", False)
+        use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
 
         gfm = GFMGeneration(params)
