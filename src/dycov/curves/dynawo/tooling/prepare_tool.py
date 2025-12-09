@@ -10,7 +10,7 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime.dynawo import DynawoSimulator
+from dycov.curves.dynawo.runtime.dynawo_precompile import get_dynawo_version, precompile_models
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
@@ -37,7 +37,7 @@ def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:
     bool
         True if execution should be aborted (user chose to abort), False otherwise.
     """
-    dynawo_version = DynawoSimulator().get_dynawo_version(launcher_dwo)
+    dynawo_version = get_dynawo_version(launcher_dwo)
 
     if force:
         manage_files.remove_dir(ddb_dir)
@@ -73,7 +73,7 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
     Precompile all Dynawo dynamic models or a specific model.
 
     Sets up directory structure, checks Dynawo version compatibility,
-    and initiates model precompilation using DynawoSimulator.
+    and initiates model precompilation using DynamicSimulator.
 
     Parameters
     ----------
@@ -117,7 +117,7 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
         return True
 
     # Execute precompilation
-    DynawoSimulator().precompile_models(
+    precompile_models(
         launcher_dwo,
         file_path / modelica_path,
         user_models,

@@ -16,7 +16,7 @@ from typing import Optional, Tuple
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime.dynamic_simulator import DynamicSimulator
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
 from dycov.logging.logging import dycov_logging
@@ -60,7 +60,7 @@ class SolverRetryStrategy:
         title = f"{run.pcs_name}.{bm_name}.{oc_name}:"
 
         # 1) Baseline
-        success, time_exceeds, log, curves_df, sim_time = DynamicSimulator.run_base(
+        success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
         if success:
@@ -69,7 +69,7 @@ class SolverRetryStrategy:
         # 2) Reduce min step
         logger.warning(f"{title} Retry: reducing minimum time step")
         self._reduce_min_step(solver, working_oc_dir)
-        success, time_exceeds, log, curves_df, sim_time = DynamicSimulator.run_base(
+        success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
         if success:
@@ -78,7 +78,7 @@ class SolverRetryStrategy:
         # 3) Increase required accuracy
         logger.warning(f"{title} Retry: increasing required accuracy")
         self._increase_accuracy(solver, working_oc_dir)
-        success, time_exceeds, log, curves_df, sim_time = DynamicSimulator.run_base(
+        success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
         if success:
@@ -88,7 +88,7 @@ class SolverRetryStrategy:
         if self.settings.add_parameters_small_network:
             logger.warning(f"{title} Retry: adding parameters for small networks")
             self._add_parameters_small_networks(solver, working_oc_dir)
-            success, time_exceeds, log, curves_df, sim_time = DynamicSimulator.run_base(
+            success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
             if success:
@@ -101,7 +101,7 @@ class SolverRetryStrategy:
             replace_placeholders.modify_jobs_file(
                 working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
             )
-            success, time_exceeds, log, curves_df, sim_time = DynamicSimulator.run_base(
+            success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
 

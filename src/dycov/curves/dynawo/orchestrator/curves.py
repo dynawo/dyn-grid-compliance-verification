@@ -27,7 +27,7 @@ from dycov.curves.dynawo.io.jobs import JobsFile
 from dycov.curves.dynawo.io.par import ParFile
 from dycov.curves.dynawo.io.solvers import SolversFile
 from dycov.curves.dynawo.io.table import TableFile
-from dycov.curves.dynawo.runtime.dynamic_simulator import DynamicSimulator
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.electrical.generator_variables import generator_variables
@@ -1008,7 +1008,7 @@ class DynawoCurves(ProducerCurves):
             - curves_calculated: DataFrame of calculated curves.
         """
         # Run Base Mode
-        success, time_exceeds, log, curves_calculated = self.__execute_dynawo(
+        success, time_exceeds, log, curves_calculated = self.__execute_simulation(
             output_dir,
             working_oc_dir,
             jobs_output_dir,
@@ -1023,7 +1023,7 @@ class DynawoCurves(ProducerCurves):
         has_dynawo_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and success
         return success, time_exceeds, has_dynawo_curves, curves_calculated
 
-    def __execute_dynawo(
+    def __execute_simulation(
         self,
         output_dir: Path,
         working_oc_dir: Path,
@@ -1155,7 +1155,7 @@ class DynawoCurves(ProducerCurves):
                 if success:
                     bisection_success = True
                     last_fault_xpu = fault_xpu
-                    voltage_dip_check_result = DynamicSimulator.check_voltage_dip(
+                    voltage_dip_check_result = DynawoSimulator.check_voltage_dip(
                         self._pcs_name,
                         bm_name,
                         oc_name,
@@ -1316,7 +1316,7 @@ class DynawoCurves(ProducerCurves):
             fault_duration,
         )
         # Run Dynawo simulation
-        ret_val, _, _, _, _ = DynamicSimulator.run_simple(
+        ret_val, _, _, _, _ = DynawoSimulator.run_simple(
             self._pcs_name,
             bm_name,
             oc_name,
