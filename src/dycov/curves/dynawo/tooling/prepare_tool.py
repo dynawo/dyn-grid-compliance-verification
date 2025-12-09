@@ -73,7 +73,7 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
     Precompile all Dynawo dynamic models or a specific model.
 
     Sets up directory structure, checks Dynawo version compatibility,
-    and initiates model precompilation using DynamicSimulator.
+    and initiates model precompilation using DynawoSimulator.
 
     Parameters
     ----------
