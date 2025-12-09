@@ -10,7 +10,7 @@
 from pathlib import Path
 
 from dycov.curves.curves import ProducerCurves
-from dycov.curves.dynawo.file_variables import FileVariables
+from dycov.curves.dynawo.io.file_variables import FileVariables
 from dycov.files import replace_placeholders
 from dycov.model.parameters import Gen_init
 

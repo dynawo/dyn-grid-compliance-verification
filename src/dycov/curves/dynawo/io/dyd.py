@@ -10,8 +10,7 @@
 from pathlib import Path
 
 from dycov.curves.curves import ProducerCurves
-from dycov.curves.dynawo.file_variables import FileVariables
-from dycov.curves.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.io.file_variables import FileVariables
 from dycov.files import replace_placeholders
 
 
@@ -37,10 +36,7 @@ class DydFile(FileVariables):
         oc_section : str
             The section identifier for the operational condition within the configuration.
         """
-        tool_variables = [
-            "generator_id",
-            "connection_event",
-        ]
+        tool_variables = []
         super().__init__(
             tool_variables,
             dynawo_curves,
@@ -52,11 +48,6 @@ class DydFile(FileVariables):
         """
         Completes the DYD file by replacing placeholders with corresponding values.
 
-        This method reads the TSOModel.dyd file, retrieves all variables, and then
-        updates specific placeholders like 'generator_id' and 'connection_event'
-        based on the provided event parameters. Finally, it dumps the modified
-        content back to the DYD file.
-
         Parameters
         ----------
         working_oc_dir : Path
@@ -65,15 +56,6 @@ class DydFile(FileVariables):
             A dictionary containing event-specific parameters, such as 'connect_to'.
         """
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.dyd")
-
-        # Handle 'connect_to' event parameter if present
-        if event_params.get("connect_to"):
-            generator = self._dynawo_curves.get_producer().generators[0]
-            _, connect_event_to = dynawo_translator.get_dynawo_variable(
-                generator.lib, event_params["connect_to"]
-            )
-            variables_dict["generator_id"] = generator.id
-            variables_dict["connection_event"] = connect_event_to
 
         # Complete parameters using the inherited method
         self.complete_parameters(variables_dict, event_params)

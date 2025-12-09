@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from dycov.curves.dynawo.dynawo import DynawoSimulator
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
 
 class DummyLogger:
@@ -132,7 +132,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
 
     # Mock _trim_curves to return controlled values
     mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._trim_curves",
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._trim_curves",
         return_value=(
             [0.0, 0.1],  # pre_time_values
             [0.2, 0.3, 0.4, 0.5],  # post_time_values
@@ -173,7 +173,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
 
     # Mock _trim_curves to verify it's called with adjusted fault_duration
     mock_trim_curves = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._trim_curves",
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._trim_curves",
         return_value=(
             [0.0, 0.1],  # pre_time_values
             [0.2, 0.3, 0.4, 0.5],  # post_time_values
@@ -250,23 +250,25 @@ def test_empty_input_lists():
 def test_valid_input_file_processing(mocker):
     # Mock dependencies
     mock_translate_curves = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._translate_curves"
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._translate_curves"
     )
     mock_get_pdr_voltage = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._get_pdr_voltage"
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._get_pdr_voltage"
     )
-    mock_get_modulus = mocker.patch("dycov.curves.dynawo.dynawo.DynawoSimulator._get_modulus")
+    mock_get_modulus = mocker.patch(
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._get_modulus"
+    )
     mock_get_pdr_current = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._get_pdr_current"
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._get_pdr_current"
     )
     mock_get_pdr_active_power = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._get_pdr_active_power"
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._get_pdr_active_power"
     )
     mock_get_pdr_reactive_power = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._get_pdr_reactive_power"
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._get_pdr_reactive_power"
     )
     mock_get_magnitude_controlled_by_avr = mocker.patch(
-        "dycov.curves.dynawo.dynawo.DynawoSimulator._get_magnitude_controlled_by_avr"
+        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._get_magnitude_controlled_by_avr"
     )
 
     # Setup test data
