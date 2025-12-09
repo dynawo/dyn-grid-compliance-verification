@@ -15,7 +15,7 @@ from typing import Any, List, Literal, Optional
 @dataclass
 class DynawoRunInputs:
     pcs_name: str
-    launcher_dwo: str | Path
+    launcher_dwo: Path
     curves_dict: dict[str, Any]
     generators: List[Any]
     s_nom: float
