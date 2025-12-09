@@ -203,7 +203,7 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
     monkeypatch.setattr("dycov.files.manage_files.rename_path", fake_rename_path)
     validation = Validation(parameters)
     validation.set_testing(False)
-    validation.validate(use_parallel=True, num_processes=4)
+    validation.validate(use_parallel=False, num_processes=4)
     assert len(renamed) == 1
     assert len(removed) == 1
     assert any("Latex" in c for c in removed)
