@@ -86,6 +86,11 @@ class PhaseJump(GFMCalculator):
             f"PMax={self._max_active_power}"
         )
 
+        # Store validation values for INI dump
+        self._d_val = D
+        self._h_val = H
+        _, self._epsilon, _, _ = self._calculate_common_params(D, H, Xeff)
+
         (
             delta_p_array,
             delta_p_min,
@@ -182,6 +187,10 @@ class PhaseJump(GFMCalculator):
         else:
             delta_p_min = self._get_underdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_underdamped_delta_p_max(D, H, Xeff, time_array, event_time)
+
+        self._d_vals = d_array
+        self._h_vals = h_array
+        self._epsilon_vals = np.array(epsilon_array)
 
         return (
             delta_p_array,
