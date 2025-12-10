@@ -9,4 +9,11 @@
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal2"/>
   <dyn:connect id1="Wind_Turbine" var1="WPP_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
+
+  <!-- UPcc is connected to the PDR bus, and 
+       PPcc and QPcc are connected to a device connected to the PDR that has power flow -->
+  <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine" var2="WPP_uPccPu_re"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine" var2="WPP_uPccPu_im"/>
+  <dyn:connect id1="StepUp_Xfmr" var1="transformer_P1Pu_value" id2="Wind_Turbine" var2="WPP_PPccPu"/>
+  <dyn:connect id1="StepUp_Xfmr" var1="transformer_Q1Pu_value" id2="Wind_Turbine" var2="WPP_QPccPu"/>
 </dyn:dynamicModelsArchitecture>
