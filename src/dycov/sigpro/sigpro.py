@@ -1,9 +1,12 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy import signal
 from scipy.interpolate import PchipInterpolator
 
 from dycov.configuration.cfg import config
+from dycov.logging.logging import dycov_logging
 from dycov.sigpro import lp_filters
 
 # For avoiding overflows in PChipInterpolator
@@ -103,6 +106,14 @@ def resample_to_fixed_step(curves: pd.DataFrame, fs_max=1000):
     return pd.DataFrame.from_dict(resampled_curve_dict, orient="columns")
 
 
+# RuntimeWarning explanation:
+# In our datasets the signals are almost flat and sampled on a dense, strictly increasing time grid.
+# PchipInterpolator computes local slopes mk = Δy/Δx and then uses a weighted harmonic mean that
+# includes terms of the form w / mk. When |Δy| is ~0 (plateaus) or Δx is extremely small, mk → 0,
+# so 1/mk becomes numerically huge, which triggers "overflow encountered in divide". The same
+# instability can propagate into subsequent weighted sums inside the derivative smoothing step,
+# surfacing as "overflow encountered in add". In short: near-zero slopes from quasi-constant curves
+# (or tiny time steps) make the internal reciprocal-weight calculations blow up.
 def resample_to_common_tgrid(sim_curves, ref_curves):
     """
     Resamples TWO sets of curves to a common fixed time step, t_com.
@@ -135,8 +146,18 @@ def resample_to_common_tgrid(sim_curves, ref_curves):
             continue
         sim_values = sim_curves[col][sim_uniq_idx]
         ref_values = ref_curves[col][ref_uniq_idx]
-        rs_sim_curves[col] = PchipInterpolator(sim_times, sim_values)(new_tgrid)
-        rs_ref_curves[col] = PchipInterpolator(ref_times, ref_values)(new_tgrid)
+
+        # Capture RuntimeWarnings during interpolation and log them at debug level
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always", RuntimeWarning)
+
+            rs_sim_curves[col] = PchipInterpolator(sim_times, sim_values)(new_tgrid)
+            rs_ref_curves[col] = PchipInterpolator(ref_times, ref_values)(new_tgrid)
+            for warn in w:
+                if issubclass(warn.category, RuntimeWarning):
+                    dycov_logging.get_logger("SigPro").debug(
+                        f"RuntimeWarning during interpolation of column '{col}': {warn.message}"
+                    )
 
     return pd.DataFrame(rs_sim_curves), pd.DataFrame(rs_ref_curves)
 
