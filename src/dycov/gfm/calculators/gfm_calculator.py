@@ -52,6 +52,11 @@ class GFMCalculator:
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
 
+        # Attributes for INI dump validation
+        self._d_vals = None
+        self._h_vals = None
+        self._epsilon_vals = None
+
     def get_plot_parameter_names(self) -> list[str]:
         """
         Abstract method to get the list of parameter names relevant for plotting.
