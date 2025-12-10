@@ -37,7 +37,9 @@ def _initialize_topo_s():
     gen_xfmr = parameters.Xfmr_params(
         id=None, lib=None, par_id=None, R=0.0003, X=0.0268, G=0.0, B=0.0, rTfo=0.9574
     )
-    pdr = parameters.Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    pdr = parameters.Pdr_params(
+        U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0
+    )
     grid_line = parameters.Pimodel_params(Ytr=-12.562245359891353j, Ysh1=0.0j, Ysh2=0.0j)
 
     print("\n\nTesting initialization calcs for Topology 'S':")
@@ -95,7 +97,9 @@ def _initialize_topo_s_i():
     int_line = parameters.Line_params(
         id=None, lib=None, connectedPdr=True, R=0.0, X=0.01, G=0.0, B=0.0
     )
-    pdr = parameters.Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    pdr = parameters.Pdr_params(
+        U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0
+    )
     grid_line = parameters.Pimodel_params(Ytr=-12.562245359891353j, Ysh1=0.0j, Ysh2=0.0j)
 
     print("\n\nTesting initialization calcs for Topology 'S+i':")
