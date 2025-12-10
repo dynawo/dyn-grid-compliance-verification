@@ -184,6 +184,127 @@ launch_generate() {
    color_msg "INFO: All envelope generation processes completed."
 }
 
+
+
+summarize_overall_results() {
+  local log_file="$1"
+  local results_dir="$2"
+
+  local out_csv="${log_file}.overall_result_counts.csv"
+  local out_png="${results_dir}/overall_result_counts.png"
+  local out_html="${results_dir}/overall_result_counts.html"
+
+  python3 - <<'PYCODE' "$log_file" "$out_csv" "$out_png" "$out_html"
+import sys, csv
+from collections import Counter
+
+POSSIBLE_RESULTS = [
+    "Compliant",
+    "Non-compliant",
+    "Invalid test",
+    "Failed simulation",
+    "Undefined validations",
+    "Test without curves",
+    "Test without reference curves",
+    "Test without producer curves",
+    "Fault simulation fails",
+    "Fault dip unachievable",
+    "Simulation time out",
+]
+
+def parse_counts(log_path: str):
+    counts = Counter()
+    with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+        for raw in f:
+            line = raw.rstrip()
+            if (not line.strip()
+                or line.startswith('-')
+                or line.startswith('Producer            PCS            Benchmark')
+                or line.startswith('Summary Report')):
+                continue
+            for label in POSSIBLE_RESULTS:
+                if line.endswith(label):
+                    counts[label] += 1
+                    break
+    for label in POSSIBLE_RESULTS:
+        counts.setdefault(label, 0)
+    return counts
+
+def write_csv(counts, path):
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["Overall Result", "Count"])
+        for label in POSSIBLE_RESULTS:
+            w.writerow([label, counts[label]])
+
+def try_plot_png(counts, path):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        labels = POSSIBLE_RESULTS
+        values = [counts[l] for l in labels]
+        fig, ax = plt.subplots(figsize=(10,4.5))
+        ax.bar(labels, values, color="#1f77b4")
+        ax.set_title("Overall Result counts")
+        ax.set_ylabel("Count")
+        ax.set_xticklabels(labels, rotation=35, ha="right")
+        fig.tight_layout()
+        plt.savefig(path, dpi=150)
+        return True
+    except Exception:
+        return False
+
+def try_plot_plotly(counts, path):
+    try:
+        import plotly.graph_objects as go
+        labels = POSSIBLE_RESULTS
+        values = [counts[l] for l in labels]
+        fig = go.Figure(go.Bar(x=labels, y=values))
+        fig.update_layout(
+            title="Overall Result counts",
+            xaxis_title="Overall Result",
+            yaxis_title="Count",
+            bargap=0.25,
+        )
+        fig.write_html(path, include_plotlyjs="cdn", auto_open=False)
+        return True
+    except Exception:
+        return False
+
+if __name__ == "__main__":
+    log_path, out_csv, out_png, out_html = sys.argv[1:5]
+    counts = parse_counts(log_path)
+    total = sum(counts.values())
+
+    write_csv(counts, out_csv)
+
+    # Optional plots
+    png_ok = try_plot_png(counts, out_png)
+    html_ok = try_plot_plotly(counts, out_html)
+
+    # ---- LOG OUTPUT (stdout -> $LOG) ----
+    print("Overall Result counts and percentages:")
+    print(f"- Total tests: {total}")
+    for label in POSSIBLE_RESULTS:
+        c = counts[label]
+        pct = (c / total * 100.0) if total > 0 else 0.0
+        print(f"  • {label}: {c}  ({pct:.2f}%)")
+    print(f"CSV: {out_csv}")
+    if png_ok:
+        print(f"PNG: {out_png}")
+    if html_ok:
+        print(f"HTML: {out_html}")
+PYCODE
+
+  # Mensajes al terminal (fd 6)
+  echo -e "${GREEN}INFO: Overall Result summary generated. CSV at: ${out_csv}${NC}" >&6
+  if [ -f "$out_html" ]; then
+    echo -e "${GREEN}INFO: Interactive HTML chart: ${out_html}${NC}" >&6
+  fi
+}
+
+
 launcher="dynawo.sh"
 iec_models=true # by default, add IEC models
 wecc_models=true # by default, add WECC models
@@ -256,8 +377,7 @@ mkdir -p "$results_path"
 # This is crucial for color_msg to continue writing to the console
 exec 6>&1      # Link file descriptor #6 with stdout. Saves stdout.
 
-DATETIME=$(date '+%Y%m%d_%H%M%S')
-LOG="$results_path/test_tool_$DATETIME.log"
+LOG="$results_path/test_tool.log"
 
 # Now redirect stdout and stderr to a file
 exec >"$LOG"   # stdout redirected to the log file
@@ -279,3 +399,6 @@ if [ "$generate" = true ]; then
 fi
 launch_end=$(date +%s)
 color_msg "Total Elapsed Time: $(($launch_end-$launch_start)) seconds"
+
+# Build and print Overall Result metrics
+summarize_overall_results "$LOG" "$results_path"
