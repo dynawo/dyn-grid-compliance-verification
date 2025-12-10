@@ -8,8 +8,8 @@
 #     demiguelm@aia.es
 #
 
-from pathlib import Path
 import configparser
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -78,6 +78,24 @@ def find_start_trim_index(
 
     This function iterates forward from the start of the signals and finds the
     first point where there is a significant change in any of the signals.
+
+    Parameters
+    ----------
+    pcc_signal : np.ndarray
+        The main signal array.
+    lower_envelope : np.ndarray
+        The lower envelope signal array.
+    upper_envelope : np.ndarray
+        The upper envelope signal array.
+    tolerance : float
+        The minimum change between consecutive points to be considered a variation.
+    buffer_points : int
+        Number of data points to keep before the first detected change.
+
+    Returns
+    -------
+    int
+        The index from which the data should be kept.
     """
     for i in range(len(pcc_signal) - 1):
         pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
@@ -104,6 +122,24 @@ def find_end_trim_index(
 
     This function iterates backward from the end of the signals and finds the
     last point where there is a significant change in any of the signals.
+
+    Parameters
+    ----------
+    pcc_signal : np.ndarray
+        The main signal array.
+    lower_envelope : np.ndarray
+        The lower envelope signal array.
+    upper_envelope : np.ndarray
+        The upper envelope signal array.
+    tolerance : float
+        The minimum change between consecutive points to be considered a variation.
+    buffer_points : int
+        Number of data points to keep after the last detected change.
+
+    Returns
+    -------
+    int
+        The index up to which the data should be kept.
     """
     for i in range(len(pcc_signal) - 1, 0, -1):
         pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
@@ -138,9 +174,37 @@ def plot_results(
     Plot the results, trimming stable data at the start and end.
 
     Saves an interactive HTML file and a static PNG image.
-    Includes optional extra envelopes for hybrid mode visualization.
+
+    Parameters
+    ----------
+    path : Path
+        The base file path for the output plots (extension will be added).
+    title : str
+        The title for the plot.
+    magnitude : str
+        The name of the magnitude being plotted (e.g., "P", "Iq").
+    time_array : np.ndarray
+        The full time array for the simulation.
+    event_time : float
+        The absolute time of the event.
+    shift_time : float
+        A time shift to apply to the event marker, if needed.
+    pcc_signal : np.ndarray
+        The main signal from the PCC.
+    lower_envelope : np.ndarray
+        The lower envelope signal.
+    upper_envelope : np.ndarray
+        The upper envelope signal.
+    output_format : str
+        The desired output format(s), e.g., "png&html".
+    params_list : list, optional
+        A list of formatted strings containing simulation parameters to display.
+    show_disclaimer : bool
+        If True, adds a warning disclaimer to the plot.
+    disclaimer_message : str | None
+        The detailed message for the disclaimer.
     """
-    # 1. Find the optimal indices to trim the data (based on main envelopes)
+    # 1. Find the optimal indices to trim the data.
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
 
@@ -161,7 +225,9 @@ def plot_results(
     disclaimer_text_html = ""
     if show_disclaimer:
         default_msg = "Inconsistent damping. Envelopes may be unreliable."
+        # Format for Matplotlib (uses \n)
         disclaimer_text_mpl = "Disclaimer:\n" + (disclaimer_message or default_msg)
+        # Format for Plotly (uses <br>)
         html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
         disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
 
@@ -405,16 +471,45 @@ def save_ini_dump(
         f.write("GFM SIMULATION DUMP\n")
         f.write("===================\n")
 
-        # 1. Dump GFMParameters
+        # 1. Key Validation Values (D, H, variations, and Epsilon)
+        f.write(f"\n{'=' * 30}\n")
+        f.write(" Key Validation Values\n")
+        f.write(f"{'=' * 30}\n")
+        try:
+            # Retrieve the list of used values stored in the calculator
+            d_vals = getattr(calculator, "_d_vals", None)
+            h_vals = getattr(calculator, "_h_vals", None)
+            eps_vals = getattr(calculator, "_epsilon_vals", None)
+
+            if d_vals is not None and h_vals is not None:
+                # Iterate over all combinations used (Nominal + Variations)
+                for i in range(len(d_vals)):
+                    # Determine label (0=Nominal, others=Variations)
+                    label = "Nominal" if i == 0 else f"Variation {i}"
+
+                    line = f"[{label}] D = {d_vals[i]:.6f}, H = {h_vals[i]:.6f}"
+
+                    # Add Epsilon if available
+                    if eps_vals is not None and i < len(eps_vals):
+                        line += f", Epsilon = {eps_vals[i]:.6f}"
+
+                    f.write(line + "\n")
+            else:
+                f.write("D and H variations data not available in calculator.\n")
+
+        except Exception as e:
+            f.write(f"Could not retrieve validation values: {e}\n")
+
+        # 2. Dump GFMParameters
         # We access the __dict__ to get all instance attributes
         if hasattr(parameters, "__dict__"):
             _write_dict(f, "GFMParameters Attributes", parameters.__dict__)
 
-        # 2. Dump GFMCalculator
+        # 3. Dump GFMCalculator
         if hasattr(calculator, "__dict__"):
             _write_dict(f, "GFMCalculator Attributes", calculator.__dict__)
 
-        # 3. Dump Producer Configuration (INI structure)
+        # 4. Dump Producer Configuration (INI structure)
         f.write(f"\n{'=' * 30}\n")
         f.write(" GFMProducer Configuration (INI)\n")
         f.write(f"{'=' * 30}\n")
