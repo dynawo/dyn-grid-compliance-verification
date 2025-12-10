@@ -156,8 +156,10 @@ class DynawoSimulator:
         voltage_values = curves[bus_pdr_voltage_column].tolist()
 
         # Ensure fault_duration does not exceed the simulation time
-        # if fault_duration == 9999.0 there is no fault
-        if fault_start + fault_duration > time_values[-1]:
+        if fault_duration == 9999.0:
+            # if fault_duration == 9999.0 there is no fault
+            fault_duration = time_values[-1] - fault_start
+        elif fault_start + fault_duration > time_values[-1]:
             dycov_logging.get_logger("DynawoSimulator").warning(
                 "Fault duration extends beyond simulation time. Adjusting fault_duration "
                 f"from {fault_duration} to {time_values[-1] - fault_start:.4f}."
