@@ -16,7 +16,7 @@ from pathlib import Path
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging.logging import dycov_logging, enable_warning_capture
 
 
 class DycovInitializer:
@@ -138,6 +138,7 @@ class DycovInitializer:
             console_formatter,
             log_dir,
         )
+        enable_warning_capture()
 
     def _template_cmd_config(self, template_path: Path):
         """
