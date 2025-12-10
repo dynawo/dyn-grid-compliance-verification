@@ -948,7 +948,7 @@ def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
     _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "VoltagePcc0Pu")
     _set_parameter(parset, nsmap, voltage0, sign, pdr.U)
     _, phase0 = dynawo_translator.get_dynawo_variable(lib, "PhasePcc0")
-    _set_parameter(parset, nsmap, phase0, sign, 0.0)
+    _set_parameter(parset, nsmap, phase0, sign, pdr.UPhase)
 
 
 def _apply_control_mode(generator, parset, nsmap, generator_control_mode):

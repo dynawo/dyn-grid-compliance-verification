@@ -886,7 +886,7 @@ class DynawoCurves(ProducerCurves):
             model_parameters.extract_defined_value(pdr_u_cfg, "Udim", u_dim)
             / self.get_producer().u_nom
         )
-        return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
+        return Pdr_params(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def __get_grid_load(
         self,

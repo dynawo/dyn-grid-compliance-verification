@@ -31,8 +31,16 @@ class Gen_params:
     UseVoltageDroop: bool
 
 
+@dataclass
+class Pdr_params:
+    U: float
+    UPhase: float
+    S: float
+    P: float
+    Q: float
+
+
 Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
-Pdr_params = namedtuple("Pdr_params", ["U", "S", "P", "Q"])
 Pimodel_params = namedtuple("Pimodel_params", ["Ytr", "Ysh1", "Ysh2"])
 Gen_init = namedtuple("Gen_init", ["id", "P0", "Q0", "U0", "UPhase0"])
 Load_init = namedtuple("Load_init", ["id", "lib", "P0", "Q0", "U0", "UPhase0"])
