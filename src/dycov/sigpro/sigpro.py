@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 from scipy.interpolate import PchipInterpolator
-from dycov.sigpro import lp_filters
+
 from dycov.configuration.cfg import config
+from dycov.sigpro import lp_filters
 
 # For avoiding overflows in PChipInterpolator
 ZERO_THRESHOLD = 1.0e-10
@@ -223,7 +224,9 @@ def filter_curves(curves, windows, f_cutoff=15, filter_name="critdamped"):
             c_filt = c
         else:
             # For avoiding overflows in PChipInterpolator (used in the 2nd resampling later on)
-            if config.get_boolean("GridCode", "disable_window_filtering", False):
+            if np.ptp(c) < 1e-4:  # signal almost flat
+                c_filt = c
+            elif config.get_boolean("GridCode", "disable_window_filtering", False):
                 c_filt = lowpass_filter(c, f_cutoff, fs, filter_name)
             else:
                 c_filt = c

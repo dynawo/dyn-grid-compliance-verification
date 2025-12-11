@@ -148,7 +148,7 @@ Currently supported models:
     * GeneratorSynchronousThreeWindingsProportionalRegulations
         Machine with three windings, a proportional governor on mechanical power and a
         proportional excitation voltage regulator
-    * SynchronousMachineI8SM
+    * GeneratorSynchronousThreeWindingsDTRI8
         Ad-hoc machine model for the I8 PCS
 * WECC Wind models:
     * WTG4AWeccCurrentSource1
@@ -374,7 +374,7 @@ tool will check that the edited file is correct, notifying the user if there are
               <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal2"/>
               <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
               <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
-              <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
+              <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
               <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
             </dyn:dynamicModelsArchitecture>
 

@@ -8,7 +8,6 @@
 #     demiguelm@aia.es
 #
 import configparser
-import shutil
 
 import pytest
 
@@ -49,9 +48,6 @@ class TestDycovInitializer:
         # Ensure the mocked config directory exists for tests that need it
         (tmp_path / "user_config").mkdir(parents=True, exist_ok=True)
         (tmp_path / "user_config" / "templates").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "user_config" / "user_models" / "dictionary").mkdir(
-            parents=True, exist_ok=True
-        )
         (tmp_path / "user_config" / "log").mkdir(parents=True, exist_ok=True)
 
         # Mock the logger for initialization tests
@@ -145,39 +141,40 @@ class TestDycovInitializer:
         Tests that _configure_templates correctly sets up the template directories and
         copies necessary files.
         """
-        mock_copy_path = mocker.patch("dycov.files.manage_files.copy_path")
-        mock_copy_files = mocker.patch("dycov.files.manage_files.copy_files")
+        mock_copy_directory = mocker.patch("dycov.files.manage_files.copy_directory")
+        mock_copy_from_path = mocker.patch("dycov.files.manage_files.copy_from_path")
 
         dycov_initializer._configure_templates(tool_path_fixture)
 
         user_config_dir = self.mock_config.get_config_dir.return_value
         config_templates_dir = user_config_dir / "templates"
 
-        # Assert copy_files calls
-        mock_copy_files.assert_any_call(
+        # Assert copy_from_path calls
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "README.md", config_templates_dir
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "PCS" / "README.md", config_templates_dir / "PCS"
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "reports" / "README.md",
             config_templates_dir / "reports",
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "reports" / "TSO_logo.pdf",
             config_templates_dir / "reports",
         )
-        mock_copy_files.assert_any_call(
+        mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "reports" / "fig_placeholder.pdf",
             config_templates_dir / "reports",
         )
 
-        assert mock_copy_files.call_count == 5  # Total copy_files calls
+        assert mock_copy_from_path.call_count == 5  # Total copy_from_path calls
 
-        # Assert copy_path calls for dummy samples
-        # There are 2 templates ("PCS", "reports"), 2 categories, 3 models = 12 copy_path calls
-        assert mock_copy_path.call_count == 12
+        # Assert copy_directory calls for dummy samples
+        # There are 2 templates ("PCS", "reports"), 2 categories,
+        # 3 models = 12 copy_directory calls
+        assert mock_copy_directory.call_count == 12
         for template in ["PCS", "reports"]:
             for category in ["performance", "model"]:
                 for model in ["SM", "PPM", "BESS"]:
@@ -190,33 +187,7 @@ class TestDycovInitializer:
                         / ".DummySample"
                     )
                     dest = config_templates_dir / template / category / model / ".DummySample"
-                    mock_copy_path.assert_any_call(src, dest, dirs_exist_ok=True)
-
-    def test_configure_user_models_creates_files(self, dycov_initializer, tmp_path):
-        """
-        Verifies that _configure_user_models creates the expected user model dictionary and files.
-        """
-        user_models_dict_path = (
-            self.mock_config.get_config_dir.return_value / "user_models" / "dictionary"
-        )
-        # Ensure the directory is clean before the test
-        if user_models_dict_path.exists():
-            shutil.rmtree(user_models_dict_path)
-
-        dycov_initializer._configure_user_models()
-
-        assert user_models_dict_path.is_dir()
-        expected_files = [
-            "Bus.ini",
-            "Line.ini",
-            "Load.ini",
-            "Power_Park.ini",
-            "Storage.ini",
-            "Synch_Gen.ini",
-            "Transformer.ini",
-        ]
-        for fname in expected_files:
-            assert (user_models_dict_path / fname).is_file()
+                    mock_copy_directory.assert_any_call(src, dest, dirs_exist_ok=True)
 
     def test_is_valid_config_file_with_correct_version(self, dycov_initializer, tmp_path):
         """
@@ -301,21 +272,15 @@ class TestDycovInitializer:
         assert not user_config_file.exists()
         assert (self.mock_config.get_config_dir.return_value / "config.ini.OLD.1").is_file()
 
-    def test_setup_templates_and_models(
-        self, dycov_initializer, tmp_path, tool_path_fixture, mocker
-    ):
+    def test_setup_templates(self, dycov_initializer, tool_path_fixture, mocker):
         """
-        Tests that _setup_templates_and_models orchestrates the setup of templates and user models.
+        Tests that _setup_templates orchestrates the setup of templates.
         """
         mock_configure_templates = mocker.patch.object(dycov_initializer, "_configure_templates")
-        mock_configure_user_models = mocker.patch.object(
-            dycov_initializer, "_configure_user_models"
-        )
 
         dycov_initializer._setup_templates_and_models(tool_path_fixture)
 
         mock_configure_templates.assert_called_once_with(tool_path_fixture)
-        mock_configure_user_models.assert_called_once()
 
     def test_initialize_logger_debug_mode(self, dycov_initializer, tmp_path, mocker):
         """

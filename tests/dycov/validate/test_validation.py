@@ -185,20 +185,25 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
 
 def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs):
     parameters = DummyParameters(output_dir=temp_dirs[0])
-    copied = []
+    renamed = []
+    removed = []
 
-    def fake_copy_output_files(source_path, target_path, pcs_name):
-        copied.append((str(source_path), str(target_path), pcs_name))
+    def fake_rename_path(source_path, target_path):
+        renamed.append((str(source_path), str(target_path)))
+
+    def fake_remove_dir(path):
+        removed.append(str(path))
 
     monkeypatch.setattr(
         "dycov.validate.validation.Pcs",
         lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
-    monkeypatch.setattr("dycov.files.manage_files.copy_output_files", fake_copy_output_files)
+    monkeypatch.setattr("dycov.files.manage_files.remove_dir", fake_remove_dir)
+    monkeypatch.setattr("dycov.files.manage_files.rename_path", fake_rename_path)
     validation = Validation(parameters)
     validation.set_testing(False)
     validation.validate(use_parallel=False, num_processes=4)
-    pcs_name = parameters.get_selected_pcs()
-    assert any(pcs_name in c[2] for c in copied)
-    assert any("Reports" in c[2] for c in copied)
+    assert len(renamed) == 1
+    assert len(removed) == 1
+    assert any("Latex" in c for c in removed)

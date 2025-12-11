@@ -14,7 +14,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM
-from dycov.curves.dynawo.crv import create_curves_file
+from dycov.curves.dynawo.io.crv import create_curves_file
 
 
 class DummyEquipment:

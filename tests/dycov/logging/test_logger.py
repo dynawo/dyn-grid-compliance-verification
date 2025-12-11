@@ -26,7 +26,7 @@ class TestDycovLogger:
         with tempfile.TemporaryDirectory() as tmpdirname:
             log_dir = Path(tmpdirname)
             logger.init_handlers(
-                file_log_level=logging.DEBUG,
+                file_log_level=logging.INFO,
                 file_formatter="%(levelname)s:%(message)s",
                 file_max_bytes=1024,
                 console_log_level=logging.INFO,

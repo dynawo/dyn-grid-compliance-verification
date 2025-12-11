@@ -7,7 +7,7 @@
   <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
-  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsGoverPropVRPropInt', 'GeneratorSynchronousFourWindingsProportionalRegulations', 'GeneratorSynchronousFourWindingsTGov1Sexs', 'GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousFourWindingsVRKundur', 'GeneratorSynchronousFourWindingsVRKundurPssKundur', 'GeneratorSynchronousThreeWindingsGoverPropVRPropInt', 'GeneratorSynchronousThreeWindingsProportionalRegulations', 'SynchronousMachineI8SM']-->
+  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsGoverPropVRPropInt', 'GeneratorSynchronousFourWindingsProportionalRegulations', 'GeneratorSynchronousFourWindingsTGov1Sexs', 'GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousFourWindingsVRKundur', 'GeneratorSynchronousFourWindingsVRKundurPssKundur', 'GeneratorSynchronousThreeWindingsGoverPropVRPropInt', 'GeneratorSynchronousThreeWindingsProportionalRegulations', 'GeneratorSynchronousThreeWindingsDTRI8']-->
   <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Int_Bus" var2="bus_terminal"/>

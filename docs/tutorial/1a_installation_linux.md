@@ -113,14 +113,6 @@ with its dependencies, will be placed in a *Python virtual environment* inside y
    ```bash
    dycov -h
    ```
-
-4. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```bash
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
    
 The DyCoV application is now ready to use.
 
@@ -151,8 +143,8 @@ The DyCoV application is now ready to use.
 
 * **First run**:
 The first time the tool is run from a clean state, a configuration folder will be created
-in $HOME/.config/dycov, and the models will be compiled with Open Modelica. This process
-may take several minutes and will only need to be repeated if the Dynawo version is updated.
+in $HOME/.config/dycov. This process may take several minutes and will only need to be repeated 
+if the Dynawo version is updated.
 
 [Dynawo Official Page](https://dynawo.github.io/)
 

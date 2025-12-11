@@ -10,6 +10,7 @@
 
 import shutil
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from dycov.curves.importer.importer import CurvesImporter
 
@@ -19,10 +20,9 @@ def _get_resources_path():
 
 
 def test_comtrade():
-    path = _get_resources_path() / "tmp"
-    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
-
-    try:
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
         importer = CurvesImporter(path, "Wind_farm_comtrade_example")
         df_comtrade_curve = importer.get_curves_dataframe(0)
 
@@ -32,5 +32,3 @@ def test_comtrade():
         assert df_comtrade_curve["time"].iloc[-1] == 7.5
         assert "Vac_a" in df_comtrade_curve
         assert "Ineg_q" in df_comtrade_curve
-    finally:
-        shutil.rmtree(path)

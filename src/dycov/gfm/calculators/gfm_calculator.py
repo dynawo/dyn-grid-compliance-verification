@@ -52,6 +52,11 @@ class GFMCalculator:
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
 
+        # Attributes for INI dump validation
+        self._d_vals = None
+        self._h_vals = None
+        self._epsilon_vals = None
+
     def get_plot_parameter_names(self) -> list[str]:
         """
         Abstract method to get the list of parameter names relevant for plotting.
@@ -96,13 +101,19 @@ class GFMCalculator:
         raise NotImplementedError
 
     def _apply_delay(
-        self, delay_time: float, delayed_value: float, time_array: np.ndarray, signal: np.ndarray
+        self,
+        delay_time: float,
+        delayed_value: float,
+        time_array: np.ndarray,
+        signal: np.ndarray,
+        start_time: float = 0.0,
     ) -> np.ndarray:
         """
-        Applies a time delay to a given signal.
+        Applies a time delay to a given signal starting at a specific time (default t=0).
 
-        This method shifts the signal in time, filling the initial part of
-        the array with a specified `delayed_value` for the duration of the delay.
+        This method keeps the signal unchanged for t < start_time. At t=start_time,
+        it inserts the `delayed_value` for the duration of the delay, shifting the
+        subsequent original signal values to the right.
 
         Parameters
         ----------
@@ -111,24 +122,40 @@ class GFMCalculator:
         delayed_value : float
             The value to use for the signal during the delay period.
         time_array : np.ndarray
-            The original time array of the signal.
+            The original time array of the signal (can contain negative values).
         signal : np.ndarray
             The input signal array to be delayed.
+        start_time : float, optional
+            The time at which the delay should start applied. Defaults to 0.0.
 
         Returns
         -------
         np.ndarray
             The delayed signal array, truncated to the original length.
         """
-        # Calculate the number of samples corresponding to the delay time.
-        # Ensure at least one sample for the delay.
-        delay_samples = max(1, int(delay_time / (time_array[1] - time_array[0])))
-        # Create a 'prefix' array filled with `delayed_value`.
-        sample = np.full(delay_samples, delayed_value)
-        # Concatenate this delay 'prefix' with the original signal.
-        # Then, truncate the combined array to the original signal's length,
-        # effectively shifting the signal values.
-        return np.concatenate((sample, signal))[: len(time_array)]
+        # 1. Calculate sample time (dt) assuming uniform spacing
+        dt = time_array[1] - time_array[0]
+
+        # 2. Calculate how many samples correspond to the delay_time
+        delay_samples = int(delay_time / dt) + 1
+
+        # Safety check: If start_time is beyond the simulation range, return original signal
+        if start_time > time_array[-1]:
+            return signal
+
+        # 3. Find the index where time becomes >= start_time
+        start_idx = np.argmax(time_array >= start_time)
+
+        # 4. Construct the new signal
+        pre_delay_signal = signal[:start_idx]
+        delay_block = np.full(delay_samples, delayed_value)
+        post_delay_signal = signal[start_idx:]
+
+        # 5. Concatenate parts
+        combined_signal = np.concatenate((pre_delay_signal, delay_block, post_delay_signal))
+
+        # 6. Truncate to match the original length of time_array
+        return combined_signal[: len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
         """

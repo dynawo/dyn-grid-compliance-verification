@@ -13,7 +13,6 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.configuration.cfg import config
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 
@@ -86,7 +85,6 @@ def _create_producer_par_file(
     filename: str,
 ) -> None:
     ddb_dynawo_path = _get_ddb_model_path(launcher_dwo)
-    ddb_local_config_path = config.get_config_dir() / "ddb"
     producer_par_root = etree.fromstring(
         """<parametersSet xmlns="http://www.rte-france.com/dynawo"></parametersSet>"""
     )
@@ -96,14 +94,12 @@ def _create_producer_par_file(
         if value["parId"] is None:
             continue
 
-        model_desc = _search_ddb_model_file(value["lib"], ddb_local_config_path)
+        model_desc = _search_ddb_model_file(value["lib"], ddb_dynawo_path)
         if not model_desc:
-            model_desc = _search_ddb_model_file(value["lib"], ddb_dynawo_path)
-            if not model_desc:
-                dycov_logging.get_logger("Create PAR input").error(
-                    f"Error: {value['lib']}.desc.xml file not found"
-                )
-                continue
+            dycov_logging.get_logger("Create PAR input").error(
+                f"Error: {value['lib']}.desc.xml file not found"
+            )
+            continue
 
         params_list = _get_desc_xml_params(model_desc)
         _write_params_par_file(producer_par_root, params_list, value["parId"])

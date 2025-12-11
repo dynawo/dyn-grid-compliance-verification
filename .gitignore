@@ -30,6 +30,9 @@ installers/Output
 # Exclude default results (for those cases when we run the tool in the src tree, which we shouldn't)
 Results/
 
-# Exlude auto-generate docs
+# Exclude auto-generate docs
 docs/manual/source/usage/helps
 docs/manual_dev/source/man/_autosummary
+
+# Exclude Analyse Complexity tool output
+complexity_report/

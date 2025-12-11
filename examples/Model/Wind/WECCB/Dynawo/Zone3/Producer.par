@@ -45,9 +45,9 @@
     <par type="BOOL" name="WTG4B_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4B_VCompFlag" value="false"/>
     <par type="BOOL" name="WTG4B_FreqFlag" value="true"/>
-    <par type="DOUBLE" name="WTG4B_Kc" value="0"/>
+    <par type="DOUBLE" name="WTG4B_Kc" value="0.3"/>
     <par type="DOUBLE" name="WTG4B_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="WTG4B_DbdPu" value="0.01"/>
+    <par type="DOUBLE" name="WTG4B_DbdPu" value="0.0001"/>
     <par type="DOUBLE" name="WTG4B_EMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG4B_EMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG4B_QMaxPu" value="0.4"/>

@@ -128,25 +128,19 @@ class AmplitudeStep(GFMCalculator):
             initial_lower_val = q_down[0] if not np.isscalar(q_down) else q_down
             initial_pcc_val = q_pcc[0] if not np.isscalar(q_pcc) else q_pcc
 
-            final_q_up = self._apply_delay(
+            iq_up_final = self._apply_delay(
                 constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, q_up
             )
-            final_q_down = self._apply_delay(
+            iq_down_final = self._apply_delay(
                 constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, q_down
             )
-            final_q_pcc = self._apply_delay(
+            iq_pcc_final = self._apply_delay(
                 constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, q_pcc
             )
         else:
-            final_q_up = q_up
-            final_q_down = q_down
-            final_q_pcc = q_pcc
-
-        # 4. Convert reactive power (Q) to reactive current (Iq)
-        # Conventionally, Iq = -Q (assuming V=1 p.u. and Q positive is inductive)
-        iq_pcc_final = -final_q_pcc
-        iq_up_final = -final_q_up
-        iq_down_final = -final_q_down
+            iq_up_final = q_up
+            iq_down_final = q_down
+            iq_pcc_final = q_pcc
 
         magnitude_name = "Iq"
         return magnitude_name, iq_pcc_final, iq_up_final, iq_down_final
@@ -250,16 +244,23 @@ class AmplitudeStep(GFMCalculator):
         # 2. Calculate the lower reactive power envelope (Qmin)
         # Formula: Q0 - SIGN(Vstep) * MIN(delta_iq_min, Qmax - Q0 - tunnel)
 
-        # This is the available reactive power range: (Qmax - Q0 - tunnel)
-        q_min_limit = self._max_reactive_power - self._initial_reactive_power - tunnel
-        q_down = self._initial_reactive_power - sign_K * np.minimum(delta_iq_min, q_min_limit)
+        q_down = np.maximum(
+            np.minimum(
+                self._initial_reactive_power - sign_K * delta_iq_min, self._max_reactive_power
+            ),
+            -self._max_reactive_power,
+        )
 
         # 3. Calculate the upper reactive power envelope (Qmax)
         # Formula: Q0 - SIGN(Vstep) * MIN(delta_iq_max, Qmax - Q0)
 
-        # This is the available reactive power range: (Qmax - Q0)
-        q_max_limit = self._max_reactive_power - self._initial_reactive_power
-        q_up = self._initial_reactive_power - sign_K * np.minimum(delta_iq_max, q_max_limit)
+        q_up = np.maximum(
+            np.minimum(
+                self._initial_reactive_power - sign_K * delta_iq_max,
+                self._max_reactive_power + tunnel,
+            ),
+            -self._max_reactive_power - tunnel,
+        )
 
         # 4. Calculate the expected reactive power curve (Qexpected)
         # This is the base curve, saturated by the plant's Qmax/Qmin limits.
@@ -356,7 +357,7 @@ class AmplitudeStep(GFMCalculator):
 
         # 1. Calculate the base exponential curve
         # This corresponds to: DeltaIQ*(1-EXP(-time/tau))
-        base_curve = self._get_delta_iq_base(Xeff, time_array)
+        base_curve = 0.9 * self._get_delta_iq_base(Xeff, time_array)
 
         # 2. Calculate the components for the lower limit (the ceiling)
         tunnel = self._get_tunnel(Xeff)

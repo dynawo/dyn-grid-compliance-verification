@@ -9,14 +9,10 @@
 #
 
 import getpass
-import shutil
 import tempfile
-import time
-import uuid
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.files import manage_files
 from dycov.model.producer import Producer
 
 
@@ -48,18 +44,8 @@ class Parameters:
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
-        working_dir = Path(tempfile.gettempdir()) / f"{tmp_path}_{username}"
-        manage_files.create_dir(working_dir, clean_first=False, all=True)
-
-        # Remove old executions
-        current_time = time.time()
-        for execution_path in working_dir.iterdir():
-            modification_time = execution_path.stat().st_mtime
-            # Delete old directories (24h)
-            if current_time - modification_time >= 24 * 3600:
-                shutil.rmtree(execution_path)
-
-        self._working_dir = working_dir / Path(str(uuid.uuid4()))
+        base_dir = output_dir.parent if output_dir.parent.exists() else Path.cwd()
+        self._working_dir = Path(tempfile.mkdtemp(prefix=f"{tmp_path}_{username}_", dir=base_dir))
 
         # The parameter is initialized in the child class
         self._producer = None

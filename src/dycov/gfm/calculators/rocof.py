@@ -45,6 +45,10 @@ class RoCoF(GFMCalculator):
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
 
+        # New parameters added to respect the saturation logic
+        self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
+        self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
+
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for RoCoF plots."""
         return ["P0", "Q0", "Frequency0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
@@ -68,7 +72,6 @@ class RoCoF(GFMCalculator):
             Array of time points for the simulation.
         event_time : float
             The time (in seconds) at which the event occurs.
-
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
@@ -126,7 +129,6 @@ class RoCoF(GFMCalculator):
             Array of time points for the simulation.
         event_time : float
             The time at which the event occurs.
-
         Returns
         -------
         tuple[list, list, list]
@@ -141,13 +143,23 @@ class RoCoF(GFMCalculator):
         p_peak_array = []
         t_response_array = []
 
+        epsilon_vals = []
+        u_prod = self._initial_voltage * self._grid_voltage
+
         for i in range(len(d_array)):
+            wn_i = np.sqrt(self._base_angular_frequency * u_prod / (2 * h_array[i] * x_total))
+            epsilon_vals.append(d_array[i] / (4 * h_array[i] * wn_i))
+
             delta_p, p_peak, t_response = self._calculate_delta_p_for_damping(
                 d_array[i], h_array[i], x_total, time_array, event_time
             )
             delta_p_array.append(delta_p)
             p_peak_array.append(p_peak)
             t_response_array.append(t_response)
+
+        self._d_vals = d_array
+        self._h_vals = h_array
+        self._epsilon_vals = np.array(epsilon_vals)
 
         return delta_p_array, p_peak_array, t_response_array
 
@@ -170,7 +182,6 @@ class RoCoF(GFMCalculator):
             Array of time points for the simulation.
         event_time : float
             The time at which the event occurs.
-
         Returns
         -------
         tuple[np.ndarray, float, float]
@@ -221,7 +232,6 @@ class RoCoF(GFMCalculator):
             Total system reactance.
         time_array : np.ndarray
             Time array relative to the event start (t=0 at event).
-
         Returns
         -------
         tuple[np.ndarray, float, float]
@@ -291,7 +301,6 @@ class RoCoF(GFMCalculator):
             Total system reactance.
         time_array : np.ndarray
             Time array relative to the event start (t=0 at event).
-
         Returns
         -------
         tuple[np.ndarray, float, float]
@@ -369,7 +378,6 @@ class RoCoF(GFMCalculator):
             Array of time points for the simulation.
         event_time : float
             The time at which the event occurs.
-
         Returns
         -------
         tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -426,6 +434,16 @@ class RoCoF(GFMCalculator):
                     mask_post_recovery, np.minimum(p_up_unlimited, clamp_val), p_up_unlimited
                 )
 
+        # Rule 4: Saturation limit protection (MoisTunnel Logic)
+        # This prevents the envelope from demanding values beyond the saturation margin
+        # even if the physical limit hasn't been reached yet.
+        p_down_unlimited = np.where(
+            p_down_unlimited > self._pmax_mois_tunnel, self._pmax_mois_tunnel, p_down_unlimited
+        )
+        p_up_unlimited = np.where(
+            p_up_unlimited < self._pmin_mois_tunnel, self._pmin_mois_tunnel, p_up_unlimited
+        )
+
         # Final clipping to operational limits.
         p_up_limited = np.clip(p_up_unlimited, self._min_active_power, self._max_active_power)
         p_down_limited = np.clip(p_down_unlimited, self._min_active_power, self._max_active_power)
@@ -440,7 +458,6 @@ class RoCoF(GFMCalculator):
         ----------
         p_peak_array : list[float]
             List of peak power changes, used to determine the tunnel size.
-
         Returns
         -------
         float

@@ -9,9 +9,6 @@ each platform for application data:
 * Under Linux: ``$HOME/.config/dycov/``
 * Under Windows: ``%APPDATA%\Local\dycov\``
 
-Besides the ``config.ini`` file, there is a subfolder named ``ddb``, which will contain all compiled
-preassembled Modelica models defined by the user.
-
 The supplied INI file contains basic configuration options. They appear all commented out,
 and with the default values. This way it is much easier for the user to configure anything,
 and also to find out what the default value is. We also recommend the user that, whenever he wants

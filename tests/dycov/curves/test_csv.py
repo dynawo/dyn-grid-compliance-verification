@@ -10,6 +10,7 @@
 
 import shutil
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from dycov.curves.importer.importer import CurvesImporter
 
@@ -19,10 +20,10 @@ def _get_resources_path():
 
 
 def test_csv():
-    path = _get_resources_path() / "tmp"
-    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
-    try:
         importer = CurvesImporter(path, "curves_final")
         df_csv_curve = importer.get_curves_dataframe(0)
 
@@ -32,5 +33,3 @@ def test_csv():
         assert df_csv_curve["time"].iloc[-1] == 100.0
         assert "BusPDR_bus_terminal_V" in df_csv_curve
         assert "Synch_Gen_generator_UStatorPu_value" in df_csv_curve
-    finally:
-        shutil.rmtree(path)

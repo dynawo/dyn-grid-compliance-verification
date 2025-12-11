@@ -8,12 +8,14 @@
 #     demiguelm@aia.es
 #
 
+from typing import Optional
+
 import numpy as np
 
+from dycov.gfm import constants
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
-from dycov.gfm import constants
 
 # Configure logger for this module
 logger = dycov_logging.get_logger(__name__)
@@ -58,11 +60,11 @@ class SCRJump(GFMCalculator):
 
         # Flag for inconsistent damping behavior
         self._is_inconsistent = False
-        self._disclaimer_message: str | None = None
+        self._disclaimer_message: Optional[str] = None
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for SCRJump plots."""
-        return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H"]
+        return ["P0", "Q0", "SCRinitial", "SCRfinal", "Xeff", "D", "H", "Epsilon"]
 
     def calculate_envelopes(
         self,
@@ -125,7 +127,7 @@ class SCRJump(GFMCalculator):
             event_time=event_time,
         )
 
-        magnitude_name = "P"
+        magnitude_name = "Ip"
         return magnitude_name, power_at_pcc, upper_envelope, lower_envelope
 
     def _get_delta_p(
@@ -152,7 +154,7 @@ class SCRJump(GFMCalculator):
         """
         # Create arrays for Damping and Inertia with nominal, max, and min variations.
         damping_variations = np.array([D, D * self._max_ratio, D * self._min_ratio])
-        inertia_variations = np.array([H, H / self._max_ratio, H / self._min_ratio])
+        inertia_variations = np.array([H, H * self._min_ratio, H * self._max_ratio])
 
         num_variations = len(damping_variations)
         num_time_points = len(time_array)
@@ -180,6 +182,10 @@ class SCRJump(GFMCalculator):
                 min_envelope_results[i, :] = delta_p_min
             if delta_p_max is not None:
                 max_envelope_results[i, :] = delta_p_max
+
+        self._d_vals = damping_variations
+        self._h_vals = inertia_variations
+        self._epsilon_vals = epsilon_results
 
         # Check if all scenarios (nominal, min, max) have the same damping type
         is_overdamped = epsilon_results >= 1
@@ -311,19 +317,15 @@ class SCRJump(GFMCalculator):
             )
 
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
-            condition = time_mask & (lower_trace > self._max_active_power * self._pmax_mois_tunnel)
+            condition = time_mask & (lower_trace > self._pmax_mois_tunnel)
 
             if is_overdamped:
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
                 )
-                lower_trace = np.where(
-                    condition, self._max_active_power * self._pmax_mois_tunnel, lower_trace
-                )
+                lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
             else:  # Underdamped case
-                lower_trace = np.where(
-                    condition, self._max_active_power * self._pmax_mois_tunnel, lower_trace
-                )
+                lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
                 )
@@ -341,19 +343,15 @@ class SCRJump(GFMCalculator):
             )
 
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
-            condition = time_mask & (upper_trace < self._min_active_power * self._pmin_mois_tunnel)
+            condition = time_mask & (upper_trace < self._pmin_mois_tunnel)
 
             if is_overdamped:
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time
                 )
-                upper_trace = np.where(
-                    condition, self._min_active_power * self._pmin_mois_tunnel, upper_trace
-                )
+                upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
             else:  # Underdamped case
-                upper_trace = np.where(
-                    condition, self._min_active_power * self._pmin_mois_tunnel, upper_trace
-                )
+                upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time
                 )
@@ -583,25 +581,78 @@ class SCRJump(GFMCalculator):
         lower_envelope = combined_lower_envelope
 
         # Apply a final delay for EMT-type simulations.
-        if self._is_emt_flag:
-            # Safely get initial values, handling both arrays and scalars.
-            initial_upper_val = (
-                upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
-            )
-            initial_lower_val = (
-                lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
-            )
-            initial_pcc_val = power_at_pcc[0] if not np.isscalar(power_at_pcc) else power_at_pcc
+        if (self._initial_active_power > 0 and delta_p_at_event > 0) or (
+            self._initial_active_power < 0 and delta_p_at_event > 0
+        ):
+            if self._is_emt_flag:
+                # Safely get initial values, handling both arrays and scalars.
+                initial_upper_val = (
+                    np.max(upper_envelope) if not np.isscalar(upper_envelope) else upper_envelope
+                )
+                initial_lower_val = (
+                    lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
+                )
+                initial_pcc_val = (
+                    np.max(power_at_pcc) if not np.isscalar(power_at_pcc) else power_at_pcc
+                )
 
-            upper_envelope = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, upper_envelope
-            )
-            lower_envelope = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, lower_envelope
-            )
-            power_at_pcc = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
-            )
+                upper_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, upper_envelope
+                )
+                lower_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S + constants.SCR_BOUND_DELAY_S,
+                    initial_lower_val,
+                    time_array,
+                    lower_envelope,
+                )
+                power_at_pcc = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+                )
+            else:
+                initial_lower_val = (
+                    lower_envelope[0] if not np.isscalar(lower_envelope) else lower_envelope
+                )
+                lower_envelope = self._apply_delay(
+                    constants.SCR_BOUND_DELAY_S,
+                    initial_lower_val,
+                    time_array,
+                    lower_envelope,
+                )
+        else:
+            if self._is_emt_flag:
+                # Safely get initial values, handling both arrays and scalars.
+                initial_upper_val = (
+                    upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
+                )
+                initial_lower_val = (
+                    np.min(lower_envelope) if not np.isscalar(lower_envelope) else lower_envelope
+                )
+                initial_pcc_val = (
+                    np.min(power_at_pcc) if not np.isscalar(power_at_pcc) else power_at_pcc
+                )
+
+                upper_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S + constants.SCR_BOUND_DELAY_S,
+                    initial_upper_val,
+                    time_array,
+                    upper_envelope,
+                )
+                lower_envelope = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, lower_envelope
+                )
+                power_at_pcc = self._apply_delay(
+                    constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+                )
+            else:
+                initial_upper_val = (
+                    upper_envelope[0] if not np.isscalar(upper_envelope) else upper_envelope
+                )
+                upper_envelope = self._apply_delay(
+                    constants.SCR_BOUND_DELAY_S,
+                    initial_upper_val,
+                    time_array,
+                    upper_envelope,
+                )
 
         return power_at_pcc, upper_envelope, lower_envelope
 
@@ -664,11 +715,12 @@ class SCRJump(GFMCalculator):
             if total_reactance > 0
             else 0
         )
+        self._epsilon = damping_ratio
         return total_reactance, damping_ratio, natural_frequency, peak_power_change
 
     def _calculate_delta_p_for_damping(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]:
+    ) -> tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], float, float]:
         """
         Selects the delta_p calculation method based on the damping ratio.
 
@@ -683,7 +735,7 @@ class SCRJump(GFMCalculator):
 
         Returns
         -------
-        tuple[np.ndarray, np.ndarray | None, np.ndarray | None, float, float]
+        tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], float, float]
             A tuple containing: the delta_p waveform, min/max envelopes (or None),
             peak power change, and damping ratio.
         """

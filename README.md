@@ -129,7 +129,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/linux_install.sh | bash
    ```
 
    This script will install the DyCoV tool, together with a matching version of
@@ -150,14 +150,6 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    dycov -h
    ```
 
-4. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```bash
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
-   
 The DyCoV application is now ready to use.
 
 
@@ -170,7 +162,7 @@ The DyCoV application is now ready to use.
 > The Windows installer described here will install not only the DyCoV tool, but
 > also all of the other requirements for you. Read the next section if you are
 > interested in the details of what is installed in the Operating System
-> (Dynawo, C++ compiler, Python, LaTeX).
+> (Dynawo, Python, LaTeX).
 
 1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/DyCoV_win_Installer.exe).
 
@@ -207,14 +199,6 @@ The DyCoV application is now ready to use.
    dycov -h
    ```
 
-5. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```winbatch
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
-   
 The DyCoV application is now ready to use.
 
 
@@ -241,15 +225,18 @@ To be more specific, we explicitly list here the packages to be installed:
   Guide](https://dynawo.github.io/install/).
    - **Nightly Version**: Download the **Nightly version** of Dynawo from the
      repository to ensure you have the latest features and updates.
-   - During installation, you will also need the following tools:
-     - **CMake**: CMake is used to configure the build process for
-       Dynawo. Download it from [cmake.org](https://cmake.org/download/).
-     - **Build Tools for Visual Studio 2019**: the Visual Studio compiler is
-       required to compile custom Modelica models in Dynawo. You can download
-       the free **Community Edition** of these tools from
-       [here](https://visualstudio.microsoft.com/vs/older-downloads/). During
-       the installation, select only the _"Desktop development with C++"_
-       workload.
+
+> [!NOTE]  
+> On Windows, you can either run Dynaωo with distribution models, in this case, 
+> nothing additional is required. But if you want to add new models, you will need:
+>   - **CMake**: CMake is used to configure the build process for
+>     Dynawo. Download it from [cmake.org](https://cmake.org/download/).
+>   - **Build Tools for Visual Studio 2019**: the Visual Studio compiler is
+>     required to compile custom Modelica models in Dynawo. You can download
+>     the free **Community Edition** of these tools from
+>     [here](https://visualstudio.microsoft.com/vs/older-downloads/). During
+>     the installation, select only the _"Desktop development with C++"_
+>     workload.
 
 * Install LaTeX. You can choose between these two LaTeX distributions:
    - **MiKTeX**: Download it from [MiKTeX Download](https://miktex.org/download).
@@ -517,51 +504,11 @@ this file follows the customary standard of each platform for application data:
 * Under Linux: `$HOME/.config/dycov/`
 * Under Windows: `%APPDATA%\Local\dycov`
 
-Besides the `config.ini` file, there is a subfolder named `ddb`, which will
-contain all compiled preassembled Modelica models (see next section).
-
 The supplied INI file contains just the options that most users of the tool
 would want to change, but there exist many more internal configuration options
 that may be overriden in this INI file.  For more information about
 configuration, including more advanced tasks such as adding a whole new test,
 consult the [User Manual](docs/manual).
-
-
-
-# Compiling Modelica models
-
-The tool uses some _preassembled_ Modelica models defined internally, and the
-user may also define additional ones of his own. They should be compiled by
-using the supplied script, `dycov compile`.
-
-As mentioned above, all compiled models (both the tool's and the user's) will be
-saved under the tool's config directory, in the `ddb` subfolder. All of the
-compilation output (standard output and standard error messages) will also be
-logged there, in a file named `compile.log`.
-
-For models provided by the user, the definition files `*.xml, *.mo, *.extvar`
-may be located anywhere, but upon compilation they will be _copied_ to a
-subfolder `user_models`, sibling to the `ddb` subfolder.
-
-In case of upgrading the version of Dyna&omega;o, you may want to recompile all
-models. You can easily do this by running the command with only the `--force`
-option.
-
-Run the command with option --help (or -h) to get a quick overview of the inputs
-you need to provide:
-```
-usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
-                        XML file describing a custom Modelica model
-  -f, --force           force the recompilation of all Modelica models (the
-                        user's and the tool's own)
-```
 
 
 # Workshop presentation
