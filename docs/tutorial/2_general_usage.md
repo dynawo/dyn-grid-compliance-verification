@@ -16,14 +16,14 @@ Developed by Grupo AIA
 1. [First run](#first-run)
    1. [Assumptions](#assumptions)
    2. [Executables](#executables)
-   3. [First test](#firsts-test)
+   3. [First test](#first-test)
 1. [Results directory](#results-directory)
    1. [The structure of results](#the-structure-of-results)
    2. [The structure of a *PCS* output](#the-structure-of-a-pcs-output)
    3. [The structure of results when running with in debug mode (-d)](#the-structure-of-results-when-running-with-in-debug-mode--d)
 3. [Configuration](#configuration)
    1. [The structure of the `~/.config/dycov` dir](#the-structure-of-the-configdycov-dir)
-4. [Trouble Shooting](#trouble-shooting)
+4. [Troubleshooting](#troubleshooting)
    1. [Error compiling a dynamic model](#error-compiling-a-dynamic-model)
    2. [Failed Simulation](#failed-simulation)
 5. [Extra](#extra)
@@ -39,32 +39,24 @@ Developed by Grupo AIA
 
 For the first run of the tool we will assume that:
 
-* Dynawo v1.7.x (Release) already installed
-  ```
-  user@dynawo:~$ which dynawo.sh
-  /opt/dynawo/dynawo.sh
-  user@dynawo:~$ dynawo.sh version
+* Dynawo v1.7.x (Release) already installed (either globally or via the DyCoV installer)
+  ```bash
+  user@dynawo:~$ dynawo.sh --version
   1.7.0 (rev:master-311b916)
   ``` 
 
-* DyCoV (DyCoV) Tool already installed
-  ```
-  user@dynawo:~/work/repo_dycov$ git status
-  On branch main
-  Your branch is up to date with 'origin/main'.
+* DyCoV (DyCoV) Tool already installed.
 
-  nothing to commit, working tree clean
-  ``` 
-
-* Python venv activated
-  ```
-  user@dynawo:~/work/repo_dycov$ source dycov_venv/bin/activate
-  (dycov_venv) user@dynawo:~/work/repo_dycov$
+* DyCoV Environment activated.
+  If you installed via the Linux script, use the generated activation script:
+  ```bash
+  user@dynawo:~/work$ source dycov/activate_dycov
+  (dycov_venv) user@dynawo:~/work$
   ``` 
 
 * Fresh start, there is no `~/.config/dycov` created yet
-  ```
-  user@dynawo:~/work/repo_dycov$ ls -al ~/.config/dycov
+  ```bash
+  user@dynawo:~/work$ ls -al ~/.config/dycov
   ls: cannot access '/home/user/.config/dycov': No such file or directory
   ``` 
 
@@ -79,8 +71,8 @@ In this mode the tool runs a set of *Model Validation tests*. Some of these test
 resemble those of the *PCS* in the provisional operation notification (ION) stage 
 in the RTE's DTR, while some are different.
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov validate -h
+```bash
+(dycov_venv) user@dynawo:~/work$ dycov validate -h
 usage: dycov validate [-h] [-d] [-l LAUNCHER_DWO]
                      [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
                      [-o RESULTS_DIR] [-od]
@@ -114,8 +106,8 @@ In this mode the tool runs an execution pipeline consisting in a set of pre-defi
 tests, those of the *PCS* in the provisional operation notification (ION) stage in 
 the RTE's DTR.
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov performance -h
+```bash
+(dycov_venv) user@dynawo:~/work$ dycov performance -h
 usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
                     [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
@@ -143,14 +135,16 @@ the curves are used only for showing them on the graphs, along the simulated
 curves). Therefore, you must provide either a *PRODUCER_MODEL* or a
 *PRODUCER_CURVE* directory, or both.
 
-## Firsts test
+## First test
 
 The easiest way to start using the tool is to copy one or more of the available examples.
-``` 
-(dycov_venv) user@dynawo:~$ mkdir work/MyTests/
-(dycov_venv) user@dynawo:~$ cd work
-(dycov_venv) user@dynawo:~/work$ cp -a ~/work/repo_dycov/examples/SM/Dynawo/* MyTests
-(dycov_venv) user@dynawo:~/work$ tree MyTests
+(Assuming you are in the directory where `dycov` was installed, usually `$PWD/dycov`):
+
+```bash
+(dycov_venv) user@dynawo:~/dycov$ mkdir work/MyTests/
+(dycov_venv) user@dynawo:~/dycov$ cd work
+(dycov_venv) user@dynawo:~/dycov/work$ cp -a ../examples/SM/Dynawo/* MyTests
+(dycov_venv) user@dynawo:~/dycov/work$ tree MyTests
 MyTests
 ├── Single
 │   ├── Producer.dyd
@@ -173,8 +167,8 @@ MyTests
 Each entry point to the tool has parameters to customize its execution, below 
 are the parameters for the `dycov performance` executable:
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov performance -h
+```bash
+(dycov_venv) user@dynawo:~/dycov/work$ dycov performance -h
 usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL] [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
 options:
@@ -225,8 +219,7 @@ options:
 
 * **-o, --results_dir**: 
   This parameter allows the user to set the path where the tool will save the 
-  execution results. If no specific path is declared for the results, a new *Results* 
-  directory will be created in the producer model path, or in the path of the producer
+  execution results. If no specific path is declared for the results, a new *Results* directory will be created in the producer model path, or in the path of the producer
   curves if there is no producer model, to save the results of the execution.
 
 * **-od, --only_dtr**: 
@@ -249,8 +242,8 @@ Note: console output also goes into the logfile, *dycov.log*.
 
 An example of the console output:
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ dycov performance -m SingleAuxI
 2024-02-01 11:56:27,637 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
 2024-02-01 11:56:40,688 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 2024-02-01 11:56:40,744 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
@@ -313,7 +306,7 @@ the results are saved.
 The *Results* directory is structured in:
 
 ```
-(dycov_venv) user@dynawo:~/work/MyTests$ tree Results -L 3
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ tree Results -L 3
 Results
 ├── PCS_RTE-I10
 │   └── Islanding
@@ -368,7 +361,7 @@ execute each *operating condition* individually with the Dynawo simulator.
 The *operating condition* directory is structured in:
 
 ```
-(dycov_venv) user@dynawo:~/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
+(dycov_venv) user@dynawo:~/dycov/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
 PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
 ├── curves_calculated.csv
 ├── curves_reference.csv
@@ -403,8 +396,7 @@ PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
   Directory with the output generated by the dynamic simulation of the model 
   with Dynawo.
 
-By accessing the directory with the results of an *operating condition* 
-it is possible to experiment by modifying one or more parameters of the 
+By accessing the directory with the results of an *operating condition* it is possible to experiment by modifying one or more parameters of the 
 producer model, and obtain new curves with the Dynawo simulator. In the 
 following example, the H parameter ("Kinetic constant = kinetic energy 
 / rated power") of the producer's Synchronous Machine found in the 
@@ -415,10 +407,6 @@ by the user of the Dynawo simulator; future executions of the tool will
 not be affected by these changes.
 
 ```
-    <!-- Original value -->
-    <!-- par type="DOUBLE" name="generator_H" value="4.5"/ -->
-
-    <!-- Testing value -->
     <par type="DOUBLE" name="generator_H" value="6.5"/>
 ```
 
@@ -432,8 +420,8 @@ Synchronous Machine, and to avoid losing the results of the first
 verification, an alternative route is indicated for the results of the 
 new execution.
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5
 2024-02-05 15:13:48,978 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
 2024-02-05 15:14:04,376 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 2024-02-05 15:14:04,425 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
@@ -455,8 +443,8 @@ new execution.
 
 Or, if desired, it is possible to validate a *PCS* only
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5 -p PCS_RTE-I10
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5 -p PCS_RTE-I10
 2024-02-05 15:26:10,407 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
 2024-02-05 15:26:16,310 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 ```
@@ -472,8 +460,8 @@ file.
 
 The changes that apply to the *PCS* output directory:
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ tree Results_debug/PCS_RTE-I4 -L 3
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ tree Results_debug/PCS_RTE-I4 -L 3
 Results_debug/PCS_RTE-I4
 └── ThreePhaseFault
     └── TransientBolted
@@ -495,8 +483,7 @@ Results_debug/PCS_RTE-I4
 * In PCS that calculate values using a bisection search algorithm, 
 * 2 new directories are maintained, each of the new directories 
 * containing the complete Dynawo model used in the search, as well 
-* as the output of the Dynawo execution. The *bisection_last_success* 
-* directory corresponds to the last simulation that completed 
+* as the output of the Dynawo execution. The *bisection_last_success* * directory corresponds to the last simulation that completed 
 * successfully, while the *bisection_last_failure* directory 
 * corresponds to the last simulation that failed.
 
@@ -538,8 +525,8 @@ dycov$
         ├── performance
         │   ├── BESS
         │   ├── PPM
-        │   └── SM
-        ├── README.md
+        │   ├── SM
+        │   └── README.md
         └── TSO_logo.pdf
 ```
 
@@ -570,7 +557,7 @@ dycov$
   user. The templating system is Jinja.
 
 
-# Trouble shooting
+# Troubleshooting
 
 ## Failed Simulation
 
@@ -581,8 +568,7 @@ one of these problems has occurred:
 
 * Dynawo has exceeded the maximum timeout established in the simulation of the model
 
-The user can check the reason for the error in the *dycov.log* file left by the tool in the **log** 
-directory inside the user configuration directory.
+The user can check the reason for the error in the *dycov.log* file left by the tool in the **log** directory inside the user configuration directory.
 
 ```
 dycov$
@@ -620,8 +606,8 @@ It’s an interactive helper tool to aid the user in constructing the
 DYD/PAR/INI files for input to the tool. For now, there is the generate 
 option:
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov generate -h
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/repo_dycov$ dycov generate -h
 usage: dycov generate [-h] [-d] [-l LAUNCHER_DWO] -o RESULTS_DIR -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i} -v {performance_SM,performance_PPM,model}
 
 options:
@@ -642,8 +628,8 @@ options:
 In this mode the tool generates a set of curves with generic names from 
 the input curves to which a noise signal is added.
 
-```
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov anonymize -h
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/repo_dycov$ dycov anonymize -h
 usage: dycov anonymize [-h] [-d] [-c PRODUCER_CURVES] [-o RESULTS_DIR]
 	                      [-n NOISESTD] [-f FREQUENCY]
 	
@@ -661,4 +647,3 @@ optional arguments:
   -f FREQUENCY, --frequency FREQUENCY
                         enter the frequency used for the lowpass filter
 ```
-

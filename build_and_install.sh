@@ -15,13 +15,14 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail
 
-MY_VENV="$PWD"/dycov_venv
+MY_VENV="$PWD/dycov_venv"
 python_cmd=""
 
-GREEN="\\033[1;32m"
-NC="\\033[0m"
+GREEN="\033[1;32m"
+NC="\033[0m"
 colormsg() {
-    echo -e "${GREEN}$1${NC}"
+    local msg="$1"
+    echo -e "${GREEN}${msg}${NC}"
 }
 
 show_usage() {
@@ -37,14 +38,15 @@ EOF
 # Searches for the newest compatible Python interpreter (3.9+).
 find_python_cmd() {
     local best_interpreter=""
-    local available_interpreters=()
+    local -a available_interpreters=() # Use local array for safety
 
     # Find all available and compatible interpreters
     for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
-        if which "$interpreter" > /dev/null; then
-            if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
+        if command -v "$interpreter" > /dev/null; then
+            # Check version with a single command to stdout and grep for 3.9+
+            if "$interpreter" -c 'import sys; exit(sys.version_info >= (3, 9))' 2>/dev/null; then
                 # Store the full path to avoid ambiguity
-                available_interpreters+=("$(which "$interpreter")")
+                available_interpreters+=("$(command -v "$interpreter")")
             fi
         fi
     done
@@ -53,10 +55,14 @@ find_python_cmd() {
     if [ ${#available_interpreters[@]} -gt 0 ]; then
         # Get unique paths, get versions, sort, and extract the path of the newest one
         best_interpreter=$(printf "%s\n" "${available_interpreters[@]}" | sort -u | while read -r interp; do
-            echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
+            # Extract major.minor.patch version string
+            local version
+            version=$("$interp" --version 2>&1 | awk '{print $2}')
+            echo "$version $interp"
         done | sort -V -r | head -n 1 | awk '{print $2}')
     fi
-    
+
+    # Set the global variable
     python_cmd="$best_interpreter"
 }
 
@@ -97,7 +103,7 @@ if [ "$HELP" = "y" ]; then
     exit 0
 fi
 
-# Check for uv
+# Check for uv using command -v
 if ! command -v uv &> /dev/null; then
     echo "ERROR: 'uv' command not found. Please install it first (e.g., 'pip install uv')."
     exit 1
@@ -118,7 +124,7 @@ uv venv "$MY_VENV" --python "$python_cmd"
 
 colormsg "Step 2: Activating environment and installing dependencies..."
 # shellcheck source=/dev/null
-source "$MY_VENV"/bin/activate
+. "$MY_VENV"/bin/activate
 
 # Build the installation command
 install_target="."
@@ -133,10 +139,10 @@ if [ "$DEVELOPER" = "y" ]; then
     install_extras="[dev,test]"
 fi
 
-# Install with uv
+# Install with uv, ensuring proper quoting
 uv pip install --upgrade "$install_target$install_extras"
 colormsg "OK."
 echo
 colormsg "Development environment is ready."
-colormsg "To activate it, run: source $MY_VENV/activate"
+colormsg "To activate it, run: . $MY_VENV/bin/activate"
 echo
