@@ -52,7 +52,7 @@ dependencies = [
     "plotly>=5.20.0",		# MIT License
     "SciPy>=1.9.3",		    # BSD License
     "colorama>=0.4.6",		# BSD License
-    "kaleido>=1.0.0",       # MIT License
+    "kaleido>=1.0.0"        # MIT License
 ]
 
 # Optional dependencies for development and testing.
@@ -73,9 +73,6 @@ dev = [
 [tool.setuptools]
 include-package-data = true
 
-[tool.setuptools.packages.find]
-# Data files: we now manage them here, instead of the MANIFEST.in file.
-# See: https://setuptools.pypa.io/en/latest/userguide/datafiles.html
 [tool.setuptools.packages.find]
 where = ["src"]
 exclude = [
@@ -102,10 +99,10 @@ dycov = "dycov.launchers:dycov"
 # Code linting and formatting tool: Ruff (replaces .flake8, isort, and black)
 # See: https://docs.astral.sh/ruff/
 [tool.ruff]
-# Set the maximum line length, consistent with the previous .flake8 config. [cite: 81]
+# Set the maximum line length, consistent with the previous .flake8 config.
 line-length = 99
 
-# Exclude directories, as defined in .flake8. [cite: 81]
+# Exclude directories, as defined in .flake8.
 exclude = [
     ".git",
     "__pycache__",
@@ -125,7 +122,7 @@ src = ["src"]
 # We also add isort (I) to handle import sorting.
 select = ["E", "F", "W", "I"]
 
-# Ignore specific error codes, as defined in .flake8. [cite: 81]
+# Ignore specific error codes, as defined in .flake8.
 ignore = ["E203", "W605"]
 
 [tool.ruff.lint.isort]
@@ -134,10 +131,9 @@ ignore = ["E203", "W605"]
 known-first-party = ["dycov"]
 
 [tool.ruff.format]
-# Use double quotes, as specified by 'inline-quotes = double' in .flake8. [cite: 81]
+# Use double quotes, as specified by 'inline-quotes = double' in .flake8.
 quote-style = "double"
-=======
+
 [project.urls]
 "Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
 "Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
->>>>>>> master
