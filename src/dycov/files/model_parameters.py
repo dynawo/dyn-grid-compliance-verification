@@ -43,6 +43,53 @@ MULTIPLIER_PATTERN = re.compile(
 )
 
 
+def write_pdr_comment(path: Path, par_file: str, pdr: Pdr_params) -> None:
+    """
+    Insert (or update) an XML comment at the top of the PAR file
+    with the PDR parameters (U, UPhase, S, P, Q).
+
+    The comment is marked with a stable header so that repeated calls
+    update the existing comment instead of duplicating it.
+
+    Parameters
+    ----------
+    path : Path
+        Directory where the PAR file is located.
+    par_file : str
+        PAR filename (e.g., "network.par").
+    pdr : Pdr_params
+        Parameters at the PDR bus (U, UPhase, S, P, Q).
+    """
+    par_path = path / par_file
+    parser = etree.XMLParser(remove_blank_text=True)
+    par_tree = etree.parse(par_path, parser)
+    par_root = par_tree.getroot()
+
+    header = "PDR parameters"
+    comment_text = f"{header}: U={pdr.U}, UPhase={pdr.UPhase}, S={pdr.S}, P={pdr.P}, Q={pdr.Q}"
+
+    # Buscar comentarios existentes en todo el documento
+    existing = None
+    for c in par_root.xpath("//comment()"):
+        if c.text and c.text.startswith(header):
+            existing = c
+            break
+
+    if existing is not None:
+        # Actualizar el comentario existente
+        existing.text = comment_text
+    else:
+        # Insertar un nuevo comentario como primer hijo del <root>
+        comment = etree.Comment(comment_text)
+        if len(par_root):
+            par_root.insert(0, comment)
+        else:
+            par_root.append(comment)
+
+    # Guardar cambios con declaración XML y codificación explícita
+    par_tree.write(par_path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
+
+
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
     """Gets the blackbox models of the producer model by type of equipment.
 
