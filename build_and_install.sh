@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Quick script to automate all steps for building/installing the package using 'uv'.
+# Quick script to automate all steps for building & installing DyCoV from sources.
+# Requirements: It just needs 'uv' to be previously installed.
 #   * it uses a venv named "dycov_venv"
 #   * it also pip-updates all dependencies to their latest version
 #   * it can install in editable mode and with developer dependencies
@@ -110,7 +111,7 @@ fi
 
 # Check for uv using command -v
 if ! command -v uv &> /dev/null; then
-    echo "ERROR: 'uv' command not found. Please install it first (e.g., 'pip install uv')."
+    echo "ERROR: 'uv' command not found. Please install it first (see https://docs.astral.sh/uv/getting-started/installation/)."
     exit 1
 fi
 

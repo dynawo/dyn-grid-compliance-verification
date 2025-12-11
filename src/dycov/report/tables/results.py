@@ -143,7 +143,7 @@ def create_map(results: dict) -> list:
         results_map.append(["$T_{cct}$", time_cct + " s"])
     if "static_diff" in results:
         static_diff = printable.format_value(results, "static_diff", apply_formatter=True)
-        results_map.append(["$\epsilon$", static_diff])
+        results_map.append([r"$\epsilon$", static_diff])
 
     _iterate_variables(results, results_map)
 
