@@ -38,15 +38,24 @@ EOF
 # Searches for the newest compatible Python interpreter (3.9+).
 find_python_cmd() {
     local best_interpreter=""
-    local -a available_interpreters=() # Use local array for safety
+    local available_interpreters=()
 
     # Find all available and compatible interpreters
     for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
-        if command -v "$interpreter" > /dev/null; then
-            # Check version with a single command to stdout and grep for 3.9+
-            if "$interpreter" -c 'import sys; exit(sys.version_info >= (3, 9))' 2>/dev/null; then
+        # We capture the output in a variable using "|| true" inside the subshell.
+        # This prevents the 'command -v' failure (status 1) from triggering the ERR trap.
+        local interp_path
+        interp_path=$(command -v "$interpreter" 2>/dev/null || true)
+
+        if which "$interpreter" > /dev/null; then
+            if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
                 # Store the full path to avoid ambiguity
-                available_interpreters+=("$(command -v "$interpreter")")
+                available_interpreters+=("$(which "$interpreter")")
+                local ver
+                ver=$("$interp_path" --version 2>&1 | awk '{print $2}')
+                if echo "$ver" | grep -Eq '^3\.(9|[1-9][0-9])\.'; then
+                     available_interpreters+=("$interp_path")
+                fi
             fi
         fi
     done
@@ -55,14 +64,10 @@ find_python_cmd() {
     if [ ${#available_interpreters[@]} -gt 0 ]; then
         # Get unique paths, get versions, sort, and extract the path of the newest one
         best_interpreter=$(printf "%s\n" "${available_interpreters[@]}" | sort -u | while read -r interp; do
-            # Extract major.minor.patch version string
-            local version
-            version=$("$interp" --version 2>&1 | awk '{print $2}')
-            echo "$version $interp"
+            echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
         done | sort -V -r | head -n 1 | awk '{print $2}')
     fi
 
-    # Set the global variable
     python_cmd="$best_interpreter"
 }
 
