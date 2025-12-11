@@ -65,6 +65,24 @@ curves). Therefore you must provide either a `PRODUCER_MODEL` or a `PRODUCER_CUR
 The options and the required format of INI and curves files are documented in this manual. For the format of DYD and PAR files (that is, the Dynawo model of the
 producer's facilities), see the Dynawo documentation.
 
+GFM Envelope Generation
+-----------------------
+
+This command is a special utility for Grid-Forming (GFM) analysis. It calculates and plots theoretical response envelopes for GFM assets based on their key parameters (D, H, Xeff). It does not run a full dynamic simulation but instead solves the analytical equations for various grid events.
+
+You would use the command ``dycov generateEnvelopes``.
+
+A typical command looks like this:
+
+.. code-block:: console
+
+   dycov generateEnvelopes -i /path/to/gfm_producer.ini -o /path/to/results
+
+This command requires a specific ``.ini`` file defining the GFM producer's parameters. The output consists of CSV data files and plots in both PNG and interactive HTML formats.
+
+.. seealso::
+   For detailed instructions, refer to the full :doc:`GFM Envelope Generation <gfm_envelopes>` guide.
+
 
 Generate Producer Input Files
 -----------------------------

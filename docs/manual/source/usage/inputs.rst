@@ -58,6 +58,39 @@ in the DTR documentation, in PCS I16.
 
 __ https://dynawo.github.io/
 
+.. _gfm_producer_input:
+
+GFM Producer Input (.ini file)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``dycov generateEnvelopes`` command requires a dedicated ``.ini`` file that specifies the characteristics of the Grid-Forming asset. This file must contain two main sections: ``[DEFAULT]`` for general parameters and ``[GFM Parameters]`` for the core GFM constants.
+
+Here is an example of a valid GFM producer file:
+
+.. code-block:: ini
+   :caption: Example GFM Producer INI File
+
+   [DEFAULT]
+   # Nominal voltage at the PDR Bus (in kV)
+   Unom = 20.0
+   # Maximum active power injection of the unit (in MW)
+   p_max_injection = 100.0
+   # Minimum active power injection of the unit (in MW)
+   p_min_injection = 0.0
+   # Maximum reactive power capability (in MVar)
+   q_max = 50.0
+   # Minimum reactive power capability (in MVar)
+   q_min = -50.0
+
+   [GFM Parameters]
+   # Damping constant (unitless or in pu)
+   D = 20.0
+   # Inertia constant (in seconds)
+   H = 3.5
+   # Effective reactance from the inverter to the PDR (in pu)
+   Xeff = 0.15
+   # Nominal apparent power of the GFM unit (in MVA)
+   Snom = 110.0
 
 Supported Dynamic Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
