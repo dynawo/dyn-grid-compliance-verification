@@ -1,60 +1,67 @@
-# Dockerfile for containerizing the Dynamic grid compliance validation tool.
+# Dockerfile for containerizing the Dycov tool.
 #
-# To rebuild the Docker image:
-#   docker build -t dycov:latest -t dycov:X.Y . > build.log 2>&1 &
-# (if the name of the pip package changes, add: --build-arg dycov_PKG=whatever )
-#
-# To launch the container (adapt your local volume path!), use the
-# provided script "run_dycov_docker.sh".  This script will launch the
-# container with the adequate mapping of local volume and UID/GID
-# mappings.  Heres's an example, in case you want to run it by hand:
-#
-#  docker run --rm -it \
-#     -v /some/host/dir:/home/myuser \
-#     -e dycov_USER=myuser -e dycov_GROUP=mygroup -e dycov_UID=1000 -e dycov_GID=1000 \
-#     --entrypoint /start_dycov.sh \
-#     --name dycov --hostname dycov "dycov:latest
-#
-#
-# (c) 2022 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     demiguel@aia.es
-#     omsg@aia.es
 #
 
-FROM debian:bullseye-slim
+FROM python:3.11-slim-bookworm
 
-ARG dycov_PKG=dycov_RTE_AIA-0.0.1-py3-none-any.whl
-ARG DWO_ZIP=Dynawo_omc_V1.4.0.zip
+ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
+ARG DYNAWO_DIR_NAME=dynawo_build
 
 ENV DEBIAN_FRONTEND=noninteractive
+# Add uv's install directory to the PATH
+ENV PATH="/root/.local/bin:${PATH}"
 
 # First layer:
-#   - Update the base debian dist, and install all required debs (python, texlive).
-#   - Install Dynawo (at this moment, using the public nighly))
+#   - Update the base debian dist.
+#   - Install required deb dependencies.
+#   - Install uv.
 RUN apt-get update && apt-get -y upgrade \
-  && apt-get install -y --no-install-recommends curl unzip rsync python3 python3-pip \
+  && apt-get install -y --no-install-recommends curl unzip rsync \
      texlive-base texlive-latex-base texlive-latex-extra texlive-latex-recommended \
      texlive-science texlive-lang-french texlive-bibtex-extra biber make \
-  && curl -sSOL https://github.com/dynawo/dynawo/releases/download/nightly/"$DWO_ZIP" \
-  && unzip -q "$DWO_ZIP" -d /opt \
-  && rm "$DWO_ZIP" \
-  && /bin/echo -e '\n\nexport PATH=/opt/dynawo:$PATH' >> /etc/profile
-
+     g++ \
+     cmake \
+  && curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Second layer:
-#   - The pip package for the dycov tool itself, and all its dependencies (Note:
-#     the COPY and the "rm" can be removed once the package is published (either
-#     on PyPI or as a public download from Github)
-COPY ./$dycov_PKG $dycov_EXAMPLES /tmp/
-RUN pip install --upgrade pip && \  
-    pip install /tmp/$dycov_PKG && rm /tmp/$dycov_PKG
+#   - Install the dycov tool itself using uv.
+#   - COPY THE EXAMPLES into a global location accessible to users
+COPY ./$dycov_PKG /tmp/
+RUN uv pip install --system /tmp/$dycov_PKG && rm /tmp/$dycov_PKG
 
+# Create directory and copy examples
+COPY ./$dycov_EXAMPLES /opt/dycov/examples
+
+# Third layer:
+#   - Install Dynawo from the host path provided at build time.
+COPY ./$DYNAWO_DIR_NAME /opt/dynawo_install
+
+RUN \
+    echo "Checking for Boost compatibility patch..." && \
+    if command -v g++ >/dev/null; then \
+        GNU_MAJOR=$(g++ -dumpversion | cut -d"." -f1); \
+        echo "Detected GCC major version: $GNU_MAJOR"; \
+        if [ "$GNU_MAJOR" -gt 11 ]; then \
+            BOOST_HEADER=/opt/dynawo_install/dynawo/include/boost/thread/pthread/thread_data.hpp; \
+            if [ -f "$BOOST_HEADER" ] && grep -q '#if PTHREAD_STACK_MIN > 0$' "$BOOST_HEADER"; then \
+                echo "Applying compatibility patch for Boost and GCC > 11 to $BOOST_HEADER..."; \
+                sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOST_HEADER"; \
+            else \
+                echo "Boost header not found or already patched."; \
+            fi; \
+        else \
+            echo "GCC version is 11 or less, no patch needed."; \
+        fi; \
+    else \
+        echo "WARNING: g++ not found, skipping Boost patch."; \
+    fi
+
+RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dycov.sh
 
 # Copy the entrypoint shell script
 COPY start_dycov.sh /
 
 ENTRYPOINT ["/start_dycov.sh"]
-

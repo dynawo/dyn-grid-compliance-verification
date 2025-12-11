@@ -12,6 +12,9 @@ __pycache__/
 /.idea
 *.iml
 
+# Tool logs
+*.log
+
 # VS Code
 .vscode
 .vs/
@@ -36,3 +39,6 @@ docs/manual_dev/source/man/_autosummary
 
 # Exclude Analyse Complexity tool output
 complexity_report/
+
+# dycov installation folder
+dycov/

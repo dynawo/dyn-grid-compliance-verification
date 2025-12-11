@@ -9,9 +9,9 @@
 #
 
 from pathlib import Path
+from typing import Optional, Tuple
 
 import numpy as np
-from typing import Tuple, Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
