@@ -660,6 +660,16 @@ class DynawoCurves(ProducerCurves):
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
         )
+        model_parameters.write_pdr_comment(
+            working_oc_dir,
+            self.get_producer().get_producer_par().name,
+            pdr,
+        )
+        model_parameters.write_pdr_comment(
+            working_oc_dir,
+            _TSO_PAR,
+            pdr,
+        )
 
         # Collect all transformers for CRV file creation
         xmfrs = self.get_producer().stepup_xfmrs[:]
