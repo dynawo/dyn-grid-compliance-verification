@@ -2,14 +2,11 @@
 #
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     demiguelm@aia.es
-#     omsg@aia.es
 #
 
 FROM python:3.11-slim-bookworm
 
-ARG dycov_PKG=dycov_RTE_AIA-0.0.1-py3-none-any.whl
+ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
 ARG DYNAWO_DIR_NAME=dynawo_build
 
@@ -29,12 +26,11 @@ RUN apt-get update && apt-get -y upgrade \
      cmake \
   && curl -LsSf https://astral.sh/uv/install.sh | sh
 
-
 # Second layer:
 #   - Install the dycov tool itself using uv.
-COPY ./$dycov_PKG $dycov_EXAMPLES /tmp/
+COPY ./$dycov_PKG /tmp/
+COPY ./$dycov_EXAMPLES /tmp/examples
 RUN uv pip install --system /tmp/$dycov_PKG && rm /tmp/$dycov_PKG
-
 
 # Third layer:
 #   - Install Dynawo from the host path provided at build time.
@@ -44,7 +40,8 @@ COPY ./$DYNAWO_DIR_NAME /opt/dynawo_install
 RUN \
     echo "Checking for Boost compatibility patch..." && \
     if command -v g++ >/dev/null; then \
-        GNU_MAJOR=$(g++ -v 2>&1 | grep -E '^gcc version ' | cut -d" " -f 3 | cut -d"." -f1); \
+        # Use -dumpversion for reliable major version extraction (consistent with installer)
+        GNU_MAJOR=$(g++ -dumpversion | cut -d"." -f1); \
         echo "Detected GCC major version: $GNU_MAJOR"; \
         if [ "$GNU_MAJOR" -gt 11 ]; then \
             BOOST_HEADER=/opt/dynawo_install/dynawo/include/boost/thread/pthread/thread_data.hpp; \
@@ -61,9 +58,7 @@ RUN \
         echo "WARNING: g++ not found, skipping Boost patch."; \
     fi
 
-    
 RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dycov.sh
-
 
 # Copy the entrypoint shell script
 COPY start_dycov.sh /
