@@ -29,7 +29,7 @@ REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
 DYNAWO_ZIP_URL_DEFAULT="https://github.com/dynawo/dynawo/releases/download/nightly/Dynawo_omc_v1.8.0.zip"
 DYNAWO_SHA256SUM="d023648173bce24c2e830aee4c8e15e68dec7aafda895fd22da3403a50654b2"
 # Default branch is master
-TARGET_BRANCH="GFM_installation"
+TARGET_BRANCH="master"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 
 # Script State Variables
