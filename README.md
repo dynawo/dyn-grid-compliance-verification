@@ -122,7 +122,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/linux_install.sh | bash
    ```
 
    This script will install the DyCoV tool under your current directory in `$PWD/dycov`. 
@@ -450,11 +450,6 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 4.  Quickly check that your installation is working by running the help option:
     ```bash
     dycov -h
-    ```
-
-5.  Compile the internal Modelica models. This is required on first use.
-    ```bash
-    dycov compile
     ```
    
 The DyCoV application is now ready for development.

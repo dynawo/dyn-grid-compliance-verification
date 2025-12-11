@@ -112,7 +112,7 @@ def create_map(results: dict) -> list:
         check = printable.format_value(results, "AVR_5_check")
         compliance_map.append(
             [
-                "Stator voltage within $\pm 5\%$ of setpoint",
+                r"Stator voltage within $\pm 5\%$ of setpoint",
                 f"\\footnote{{If non-compliant, time at which this happens.}}{AVR_5}",
                 check,
             ]
@@ -120,7 +120,7 @@ def create_map(results: dict) -> list:
     if "static_diff" in results:
         static_diff = printable.format_value(results, "static_diff", apply_formatter=True)
         check = printable.format_value(results, "static_diff_check")
-        compliance_map.append(["$\epsilon < 0.2 \%$", static_diff, check])
+        compliance_map.append([r"$\epsilon < 0.2 \%$", static_diff, check])
     if "imax_reac" in results:
         imax_reac = printable.format_value(
             results, "imax_reac", apply_formatter=True, add_seconds_unit=True
@@ -128,7 +128,7 @@ def create_map(results: dict) -> list:
         check = printable.format_value(results, "imax_reac_check")
         compliance_map.append(
             [
-                "Reactive inj.\ prioritized if Imax reached",
+                r"Reactive inj.\ prioritized if Imax reached",
                 f"\\footnote{{If non-compliant, time at which this happens.}}{imax_reac}",
                 check,
             ]
