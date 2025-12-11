@@ -698,16 +698,27 @@ def _get_line_values(
     return lines
 
 
-def _calculate_line_xpu(x_str: str, applied_line_xpu: float) -> float:
-    if applied_line_xpu is None:
-        return float(x_str)
-    if x_str and "{{line_XPu}}" in x_str:
-        return applied_line_xpu
-    elif x_str and "{{line_XPu_1}}" in x_str:
-        return applied_line_xpu * 0.01
-    elif x_str and "{{line_XPu_99}}" in x_str:
-        return applied_line_xpu * 0.99
-    return float(x_str) if x_str else 0.0
+def _calculate_line_xpu(x_str: Optional[str], applied_line_xpu: float) -> float:
+    if not x_str:
+        return 0.0
+
+    s = x_str.strip()
+    try:
+        return float(s)
+    except ValueError:
+        pass
+
+    m_braced = re.fullmatch(r"\{\{\s*(.+?)\s*\}\}", s)
+    token = m_braced.group(1) if m_braced else s
+
+    m = re.fullmatch(r"line_XPu(?:_(\d+(?:\.\d+)?))?$", token)
+    if m:
+        suffix = m.group(1)
+        factor = 1.0 if suffix is None else float(suffix) / 100.0
+        return applied_line_xpu * factor
+
+    dycov_logging.get_logger("Model Parameters").error("Unsupported x_str format: %r", x_str)
+    raise ValueError(f"Unsupported x_str format: {x_str!r}")
 
 
 def _get_transformer_values(
