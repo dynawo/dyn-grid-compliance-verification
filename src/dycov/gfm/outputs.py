@@ -8,7 +8,9 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,9 +25,12 @@ def save_results_to_csv(
     pcc_signal: np.ndarray,
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
+    extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
     """
     Save the calculated results to a CSV file.
+
+    If extra_envelopes are provided (for hybrid mode), they are added as new columns.
 
     Parameters
     ----------
@@ -41,15 +46,23 @@ def save_results_to_csv(
         The lower envelope of the signal.
     upper_envelope : np.ndarray
         The upper envelope of the signal.
+
     """
-    df = pd.DataFrame(
-        {
-            "Time (s)": time_array,
-            f"{magnitude} PCC (pu)": pcc_signal,
-            f"{magnitude} lower (pu)": lower_envelope,
-            f"{magnitude} upper (pu)": upper_envelope,
-        }
-    )
+    data = {
+        "Time (s)": time_array,
+        f"{magnitude} PGU (pu)": pcc_signal,
+        f"{magnitude} lower (pu)": lower_envelope,
+        f"{magnitude} upper (pu)": upper_envelope,
+    }
+
+    # Add extra envelopes if requested (Hybrid mode detailed output)
+    if extra_envelopes:
+        for name, signal in extra_envelopes.items():
+            # Clean name for CSV header (e.g., "upper_overdamped" -> "P upper_overdamped (pu)")
+            col_name = f"{magnitude} {name} (pu)"
+            data[col_name] = signal
+
+    df = pd.DataFrame(data)
     df.to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
@@ -154,7 +167,8 @@ def plot_results(
     output_format: str,
     params_list: list = None,
     show_disclaimer: bool = False,
-    disclaimer_message: str | None = None,  # New parameter
+    disclaimer_message: str = None,
+    extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
     """
     Plot the results, trimming stable data at the start and end.
@@ -200,6 +214,12 @@ def plot_results(
     down_trimmed = lower_envelope[start_index:end_index]
     up_trimmed = upper_envelope[start_index:end_index]
 
+    # 2b. Slice extra envelopes if they exist
+    extra_trimmed = {}
+    if extra_envelopes:
+        for name, signal in extra_envelopes.items():
+            extra_trimmed[name] = signal[start_index:end_index]
+
     # 3. Prepare disclaimer text if needed
     disclaimer_text_mpl = ""
     disclaimer_text_html = ""
@@ -214,16 +234,40 @@ def plot_results(
     # --- Plotting with Matplotlib (for PNG) ---
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
+
+        # Plot Extra Envelopes first (behind the main lines) if they exist
+        if extra_trimmed:
+            colors = {"overdamped": "purple", "underdamped": "orange"}
+            for name, signal in extra_trimmed.items():
+                # Determine style based on name
+                style_color = "gray"
+                if "overdamped" in name:
+                    style_color = colors["overdamped"]
+                if "underdamped" in name:
+                    style_color = colors["underdamped"]
+
+                plt.plot(
+                    time_trimmed,
+                    signal,
+                    linestyle=":",
+                    linewidth=1,
+                    color=style_color,
+                    alpha=0.7,
+                    label=name.replace("_", " ").title(),
+                )
+
+        # Plot Main Envelopes and PCC
         plt.plot(
             time_trimmed,
             pcc_trimmed,
-            label=f"{magnitude} at PCC",
+            label=f"{magnitude} at PGU",
             linewidth=3,
         )
         plt.plot(
             time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
         )
         plt.plot(time_trimmed, up_trimmed, linewidth=2, color="red")
+
         plt.xlabel("Time (s)")
         plt.ylabel(f"{magnitude} (pu)")
         plt.title(title)
@@ -254,17 +298,20 @@ def plot_results(
                 0.02,
                 disclaimer_text_mpl,
                 transform=plt.gca().transAxes,
-                fontsize=8,  # Adjusted fontsize to fit potentially long text
+                fontsize=8,
                 color="red",
                 verticalalignment="bottom",
                 horizontalalignment="left",
                 bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
             )
 
-        plt.legend(loc="lower right")
+        # Adjust legend to handle many items
+        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.xlim(time_trimmed[0], time_trimmed[-1])
 
+        # Tight layout to accommodate external legend
+        plt.tight_layout()
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
@@ -272,7 +319,7 @@ def plot_results(
     if "html" in output_format:
         fig = go.Figure()
 
-        # Add filled area for envelopes for better visualization
+        # Add filled area for envelopes
         fig.add_trace(
             go.Scatter(
                 x=np.concatenate([time_trimmed, time_trimmed[::-1]]),
@@ -284,6 +331,29 @@ def plot_results(
                 showlegend=False,
             )
         )
+
+        # Plot Extra Envelopes
+        if extra_trimmed:
+            colors = {"overdamped": "purple", "underdamped": "orange"}
+            for name, signal in extra_trimmed.items():
+                style_color = "gray"
+                if "overdamped" in name:
+                    style_color = colors["overdamped"]
+                if "underdamped" in name:
+                    style_color = colors["underdamped"]
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=time_trimmed,
+                        y=signal,
+                        mode="lines",
+                        line=dict(color=style_color, width=1, dash="dot"),
+                        name=name.replace("_", " ").title(),
+                        opacity=0.7,
+                    )
+                )
+
+        # Plot Main Lines
         fig.add_trace(
             go.Scatter(
                 x=time_trimmed,
@@ -308,7 +378,7 @@ def plot_results(
                 y=pcc_trimmed,
                 mode="lines",
                 line=dict(color="blue", width=3),
-                name=f"{magnitude} at PCC",
+                name=f"{magnitude} PGU",
             )
         )
 
@@ -347,7 +417,7 @@ def plot_results(
                 showarrow=False,
                 align="left",
                 valign="bottom",
-                font=dict(color="red", size=10),  # Adjusted fontsize
+                font=dict(color="red", size=10),
                 bgcolor="rgba(255, 255, 255, 0.8)",
                 bordercolor="red",
                 borderwidth=1,
@@ -358,8 +428,95 @@ def plot_results(
             title_text=title,
             xaxis_title="Time (s)",
             yaxis_title=f"{magnitude} (pu)",
-            legend=dict(x=0.99, y=0.01, xanchor="right", yanchor="bottom"),
+            legend=dict(x=1.02, y=0.5, xanchor="left", yanchor="middle"),
             template="plotly_white",
+            margin=dict(r=150),  # Add margin for external legend
         )
 
         fig.write_html(path.with_suffix(".html"))
+
+
+def save_ini_dump(
+    path: Path,
+    parameters: Any,
+    producer_config: configparser.ConfigParser,
+    calculator: Any,
+) -> None:
+    """
+    Dumps all attributes from Parameters, Producer Config, and Calculator
+    to a text file.
+
+    Parameters
+    ----------
+    path : Path
+        The full path (including filename) where the text file will be saved.
+    parameters : GFMParameters
+        The parameters object containing simulation settings.
+    producer_config : configparser.ConfigParser
+        The configuration object from the GFMProducer.
+    calculator : GFMCalculator
+        The calculator instance used for the simulation.
+    """
+
+    def _write_dict(f, title: str, data_dict: dict):
+        f.write(f"\n{'=' * 30}\n")
+        f.write(f" {title}\n")
+        f.write(f"{'=' * 30}\n")
+        for key, value in sorted(data_dict.items()):
+            # Filter out private attributes that might be irrelevant or callables
+            if not callable(value):
+                f.write(f"{key} = {value}\n")
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("GFM SIMULATION DUMP\n")
+        f.write("===================\n")
+
+        # 1. Key Validation Values (D, H, variations, and Epsilon)
+        f.write(f"\n{'=' * 30}\n")
+        f.write(" Key Validation Values\n")
+        f.write(f"{'=' * 30}\n")
+        try:
+            # Retrieve the list of used values stored in the calculator
+            d_vals = getattr(calculator, "_d_vals", None)
+            h_vals = getattr(calculator, "_h_vals", None)
+            eps_vals = getattr(calculator, "_epsilon_vals", None)
+
+            if d_vals is not None and h_vals is not None:
+                # Iterate over all combinations used (Nominal + Variations)
+                for i in range(len(d_vals)):
+                    # Determine label (0=Nominal, others=Variations)
+                    label = "Nominal" if i == 0 else f"Variation {i}"
+
+                    line = f"[{label}] D = {d_vals[i]:.6f}, H = {h_vals[i]:.6f}"
+
+                    # Add Epsilon if available
+                    if eps_vals is not None and i < len(eps_vals):
+                        line += f", Epsilon = {eps_vals[i]:.6f}"
+
+                    f.write(line + "\n")
+            else:
+                f.write("D and H variations data not available in calculator.\n")
+
+        except Exception as e:
+            f.write(f"Could not retrieve validation values: {e}\n")
+
+        # 2. Dump GFMParameters
+        # We access the __dict__ to get all instance attributes
+        if hasattr(parameters, "__dict__"):
+            _write_dict(f, "GFMParameters Attributes", parameters.__dict__)
+
+        # 3. Dump GFMCalculator
+        if hasattr(calculator, "__dict__"):
+            _write_dict(f, "GFMCalculator Attributes", calculator.__dict__)
+
+        # 4. Dump Producer Configuration (INI structure)
+        f.write(f"\n{'=' * 30}\n")
+        f.write(" GFMProducer Configuration (INI)\n")
+        f.write(f"{'=' * 30}\n")
+
+        if producer_config:
+            for section in producer_config.sections():
+                f.write(f"[{section}]\n")
+                for key, value in producer_config.items(section):
+                    f.write(f"{key} = {value}\n")
+                f.write("\n")

@@ -45,7 +45,7 @@ class PhaseJump(GFMCalculator):
 
     def get_plot_parameter_names(self) -> list[str]:
         """Returns the list of parameter names relevant for PhaseJump plots."""
-        return ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H"]
+        return ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H", "Epsilon"]
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -86,6 +86,11 @@ class PhaseJump(GFMCalculator):
             f"PMax={self._max_active_power}"
         )
 
+        # Store validation values for INI dump
+        self._d_val = D
+        self._h_val = H
+        _, self._epsilon, _, _ = self._calculate_common_params(D, H, Xeff)
+
         (
             delta_p_array,
             delta_p_min,
@@ -124,7 +129,7 @@ class PhaseJump(GFMCalculator):
             lower_envelope = p_down
             pcc_signal = p_pcc
 
-        magnitude_name = "P"
+        magnitude_name = "Ip"
         return magnitude_name, pcc_signal, upper_envelope, lower_envelope
 
     def _get_delta_p(
@@ -157,7 +162,7 @@ class PhaseJump(GFMCalculator):
         x_total_initial = Xeff + x_gr
 
         d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
-        h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
+        h_array = np.array([H, H * self._min_ratio, H * self._max_ratio])
 
         epsilon_initial_check = self._calculate_epsilon_initial_check(
             d_array, h_array, x_total_initial
@@ -182,6 +187,10 @@ class PhaseJump(GFMCalculator):
         else:
             delta_p_min = self._get_underdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_underdamped_delta_p_max(D, H, Xeff, time_array, event_time)
+
+        self._d_vals = d_array
+        self._h_vals = h_array
+        self._epsilon_vals = np.array(epsilon_array)
 
         return (
             delta_p_array,
@@ -283,6 +292,8 @@ class PhaseJump(GFMCalculator):
 
         delta_theta_rad = np.abs(self._delta_phase * np.pi / 180)
         p_peak_calc = delta_theta_rad * u_prod / x_total_initial
+
+        self._epsilon = epsilon
 
         return x_total_initial, epsilon, wn, p_peak_calc
 
@@ -436,12 +447,12 @@ class PhaseJump(GFMCalculator):
         np.ndarray
             The maximum delta_p array for the overdamped system.
         """
-        delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
-        delta_p1_margined = self._margin_high * delta_p1
-        delta_p1_delayed = self._apply_delay(
-            constants.OVERDAMPED_MAX_DELAY_S, 0, time_array, delta_p1_margined
+        delta_p, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
+        delta_p_margined = self._margin_high * delta_p
+        delta_p_delayed = self._apply_delay(
+            constants.OVERDAMPED_MAX_DELAY_S, 0, time_array, delta_p_margined
         )
-        delta_p = np.where(time_array < event_time, 0, delta_p1_delayed)
+        delta_p = np.where(time_array < event_time, 0, delta_p_delayed)
         return delta_p
 
     def _get_underdamped_delta_p_base(

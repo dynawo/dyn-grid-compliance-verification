@@ -16,44 +16,41 @@
 
 
 [build-system]
-requires = ["setuptools>=65"]
+requires = ["setuptools>=65", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
 [project]
-# Metadata:
 name = "dycov"
 version = "0.8.1"
 description = "A tool for automating the verification of dynamic grid compliance requirements for solar, wind, and storage farms, including RMS model validation."
 authors = [
-    {name="Guiu Oms", email="omsg@aia.es"},
-    {name="Marcos de Miguel", email="demiguelm@aia.es"},
-    {name="Jose Luis Marin", email="marinjl@aia.es"}
+    { name = "Guiu Oms", email = "omsg@aia.es" },
+    { name = "Marcos de Miguel", email = "demiguelm@aia.es" },
+    { name = "Jose Luis Marin", email = "marinjl@aia.es" }
 ]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MPL-2.0"  # SPDX identifier
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 keywords = ["Power Systems", "Dynamic modeling", "verification", "validation"]
 
 # Use the official classifiers published by PyPI (PEP 301): https://pypi.org/classifiers/
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent"
 ]
-urls = {"Code repo"="https://github.com/dynawo/dyn-grid-compliance-verification", "Bug tracker"="https://github.com/dynawo/dyn-grid-compliance-verification"}
 
 # Required packages: here we declare only the direct dependencies.
 dependencies = [
     "comtrade>=0.0.10",		# MIT License
-    "fpdf>=1.7.2",		# GNU Lesser General Public License v3 (LGPLv3)
+    "fpdf>=1.7.2",		    # GNU Lesser General Public License v3 (LGPLv3)
     "Jinja2>=3.1.2",		# BSD License
-    "lxml>=4.6.3",		# BSD License
+    "lxml>=4.6.3",		    # BSD License
     "matplotlib>=3.4.0",	# Python Software Foundation License
     "numpy>=1.21.0",		# BSD License
     "pandas>=1.3.0",		# BSD License
     "plotly>=5.20.0",		# MIT License
-    "SciPy>=1.9.3",		# BSD License
+    "SciPy>=1.9.3",		    # BSD License
     "colorama>=0.4.6",		# BSD License
     "kaleido>=1.0.0",       # MIT License
 ]
@@ -73,14 +70,29 @@ dev = [
 ]
 
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
 # Data files: we now manage them here, instead of the MANIFEST.in file.
 # See: https://setuptools.pypa.io/en/latest/userguide/datafiles.html
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = [
+    "*/__pycache__",
+    "*.tests",
+    "*.tests.*"
+]
 
 [tool.setuptools.package-data]
-dycov = ["src/dycov/report/templates", "templates", "src/dycov/model_lib", "src/dycov/*.ini", "dynawo/Vsx64.cmd"]
-
+"dycov" = [
+    "report/templates/*",
+    "templates/*",
+    "model_lib/*",
+    "**/*.ini",
+    "curves/dynawo/tooling/Vsx64.cmd"
+]
+"dycov.templates.reports" = ["*.py", "*.json", "*.pdf"]
 
 # Entry points and automatic script creation:
 [project.scripts]
@@ -124,3 +136,8 @@ known-first-party = ["dycov"]
 [tool.ruff.format]
 # Use double quotes, as specified by 'inline-quotes = double' in .flake8. [cite: 81]
 quote-style = "double"
+=======
+[project.urls]
+"Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+"Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+>>>>>>> master

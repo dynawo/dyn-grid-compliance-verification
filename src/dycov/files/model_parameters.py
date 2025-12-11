@@ -8,22 +8,18 @@
 #     demiguelm@aia.es
 #
 
-# TODO: remove generator types ("GeneratorSynchronous", "IECWPP", "WTG4", etc. ==> we'll need
-#       entries in the master dictionary).
-#       The same goes for generator families ("IEC", "Wecc").
-#
-
 from __future__ import annotations
 
 import configparser
 import math
+import re
 from pathlib import Path
 from typing import Optional
 
 from lxml import etree
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.translator import dynawo_translator, get_generator_family_level
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import (
     Gen_params,
@@ -35,681 +31,16 @@ from dycov.model.parameters import (
     Xfmr_params,
 )
 
-
-def _get_generator_values(
-    dyd_root: etree.Element, par_root: etree.Element, producer_ini: configparser.ConfigParser
-) -> list:
-    generators = []
-    # Generators
-    for model_parameter in find_bbmodel_by_type(dyd_root, "GeneratorSynchronous"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-
-    # WindTurbine Parks
-    for model_parameter in find_bbmodel_by_type(dyd_root, "IECWPP"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-    for model_parameter in find_bbmodel_by_type(dyd_root, "WTG4"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-
-    # WindTurbines
-    for model_parameter in find_bbmodel_by_type(dyd_root, "IECWT"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-    for model_parameter in find_bbmodel_by_type(dyd_root, "WT4"):
-        if "IECWT" in model_parameter.get("lib"):
-            continue
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-
-    # Photovoltaics
-    for model_parameter in find_bbmodel_by_type(dyd_root, "PhotovoltaicsWecc"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-
-    # BESS
-    for model_parameter in find_bbmodel_by_type(dyd_root, "BESS"):
-        _append_generator(dyd_root, par_root, model_parameter, producer_ini, generators)
-
-    if generators:
-        total_p = sum(g.P for g in generators)
-        total_q = sum(q.Q for q in generators)
-
-        if not math.isclose(total_p, 1.0):
-            dycov_logging.get_logger("Model Parameters").error(
-                "Generator P flows do not add up to 1"
-            )
-            raise ValueError("Generator P flows do not add up to 1")
-
-        if not math.isclose(total_q, 1.0):
-            dycov_logging.get_logger("Model Parameters").error(
-                "Generator Q flows do not add up to 1"
-            )
-            raise ValueError("Generator Q flows do not add up to 1")
-
-    return generators
-
-
-def _append_generator(
-    dyd_root: etree.Element,
-    par_root: etree.Element,
-    model_parameter: etree.Element,
-    producer_ini: configparser.ConfigParser,
-    generators: list,
-):
-    gen_id = model_parameter.get("id")
-    par_id = model_parameter.get("parId")
-    lib = model_parameter.get("lib")
-    dyn = etree.QName(dyd_root).namespace
-    ns = etree.QName(par_root).namespace
-
-    dydset1 = dyd_root.find(f".//{{{dyn}}}connect[@id1='{gen_id}']")
-    dydset2 = dyd_root.find(f".//{{{dyn}}}connect[@id2='{gen_id}']")
-    if dydset1 is not None:
-        connectedXmfr = dydset1.get("id2")
-    elif dydset2 is not None:
-        connectedXmfr = dydset2.get("id1")
-    else:
-        connectedXmfr = None
-
-    # Parameter Set from which to extract the generator parameters we need
-    parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
-
-    sign, generator_imax = dynawo_translator.get_dynawo_variable(lib, "InjectedCurrentMax")
-    imaxpu = parset.find(f"{{{ns}}}par[@name='{generator_imax}']")
-    if imaxpu is not None:
-        imax = float(imaxpu.get("value")) * sign
-    else:
-        imax = None
-
-    default_section = "DEFAULT"
-
-    if producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
-        P_sharing = producer_ini.get(default_section, f"P_sharing_{gen_id}")
-        P = float(P_sharing)
-    elif (
-        producer_ini.has_option(default_section, "topology")
-        and str(producer_ini.get(default_section, "topology"))[0] == "S"
-    ):
-        P = 1
-        dycov_logging.get_logger("Model Parameters").warning(
-            "A P flow of 1 has been automatically defined."
-        )
-        raise Warning("A P flow of 1 has been automatically defined.")
-    else:
-        dycov_logging.get_logger("Model Parameters").error(
-            "It is mandatory to define the distribution of P flows for multi-topology generators"
-        )
-        raise ValueError("Generator P flows not defined")
-
-    if producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
-        Q_sharing = producer_ini.get(default_section, f"Q_sharing_{gen_id}")
-        Q = float(Q_sharing)
-    elif (
-        producer_ini.has_option(default_section, "topology")
-        and str(producer_ini.get(default_section, "topology"))[0] == "S"
-    ):
-        Q = 1
-        dycov_logging.get_logger("Model Parameters").warning(
-            "A Q flow of 1 has been automatically defined."
-        )
-        raise Warning("A Q flow of 1 has been automatically defined.")
-    else:
-        dycov_logging.get_logger("Model Parameters").error(
-            "It is mandatory to define the distribution of Q flows for multi-topology generators"
-        )
-        raise ValueError("Generator Q flows not defined")
-
-    _, generator_VoltageDroop = dynawo_translator.get_dynawo_variable(lib, "VoltageDroop")
-    if generator_VoltageDroop is not None:
-        gVoltageDroop = parset.find(f"{{{ns}}}par[@name='{generator_VoltageDroop}']")
-        VoltageDroop = float(gVoltageDroop.get("value"))
-    else:
-        VoltageDroop = 0.0
-
-    _, generator_SNom = dynawo_translator.get_dynawo_variable(lib, "NominalApparentPower")
-    snom_par = parset.find(f"{{{ns}}}par[@name='{generator_SNom}']")
-    s_nom = float(snom_par.get("value"))
-
-    generators.append(
-        Gen_params(
-            id=gen_id,
-            lib=lib,
-            connectedXmfr=connectedXmfr,
-            SNom=s_nom,
-            IMax=imax,
-            par_id=par_id,
-            P=P,
-            Q=Q,
-            VoltageDroop=VoltageDroop,
-            UseVoltageDroop=False,
-        )
-    )
-
-
-def _get_line_values(
-    dyd_root: etree.Element,
-    par_root: etree.Element,
-    applied_line_rpu: float,
-    applied_line_xpu: float,
-) -> list:
-    lines = []
-    ns = etree.QName(par_root).namespace
-    for model_parameter in find_bbmodel_by_type(dyd_root, "Line"):
-        line_id = model_parameter.get("id")
-        lib = model_parameter.get("lib")
-        par_id = model_parameter.get("parId")
-        # Parameter Set from which to extract the line parameters
-        parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
-
-        _, line_R = dynawo_translator.get_dynawo_variable(lib, "ResistancePu")
-        _, line_X = dynawo_translator.get_dynawo_variable(lib, "ReactancePu")
-        _, line_B = dynawo_translator.get_dynawo_variable(lib, "SusceptancePu")
-        _, line_G = dynawo_translator.get_dynawo_variable(lib, "ConductancePu")
-        r_par = parset.find(f"{{{ns}}}par[@name='{line_R}']")
-        x_par = parset.find(f"{{{ns}}}par[@name='{line_X}']")
-        b_par = parset.find(f"{{{ns}}}par[@name='{line_B}']")
-        g_par = parset.find(f"{{{ns}}}par[@name='{line_G}']")
-
-        if applied_line_rpu is None:
-            line_rpu = float(r_par.get("value"))
-        else:
-            line_rpu = applied_line_rpu
-
-        if applied_line_xpu is None:
-            line_xpu = float(x_par.get("value"))
-        else:
-            if "{{line_XPu}}" in x_par.get("value"):
-                line_xpu = applied_line_xpu
-            elif "{{line1_XPu}}" in x_par.get("value"):
-                line_xpu = applied_line_xpu * 0.01
-            elif "{{line99_XPu}}" in x_par.get("value"):
-                line_xpu = applied_line_xpu * 0.99
-
-        line_gpu = float(g_par.get("value"))
-        line_bpu = float(b_par.get("value"))
-        connected = _are_connected(dyd_root, line_id, "BusPDR")
-
-        lines.append(Line_params(line_id, lib, connected, line_rpu, line_xpu, line_bpu, line_gpu))
-
-    return lines
-
-
-def _get_transformer_values(
-    dyd_root: etree.Element,
-    par_root: etree.Element,
-    s_nref: float,
-) -> list:
-    transformers = []
-    ns = etree.QName(par_root).namespace
-    for bbmodel in find_bbmodel_by_type(dyd_root, "Transformer"):
-        transformer_id = bbmodel.get("id")
-        lib = bbmodel.get("lib")
-        par_id = bbmodel.get("parId")
-        # Parameter Set from which to extract the transformer parameters
-        parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
-
-        # Not all Transformer models provide their params in pu
-        _, transformer_R = dynawo_translator.get_dynawo_variable(lib, "Resistance")
-        _, transformer_X = dynawo_translator.get_dynawo_variable(lib, "Reactance")
-        _, transformer_B = dynawo_translator.get_dynawo_variable(lib, "Susceptance")
-        _, transformer_G = dynawo_translator.get_dynawo_variable(lib, "Conductance")
-        r_par = parset.find(f"{{{ns}}}par[@name='{transformer_R}']")
-        x_par = parset.find(f"{{{ns}}}par[@name='{transformer_X}']")
-        g_par = parset.find(f"{{{ns}}}par[@name='{transformer_G}']")
-        b_par = parset.find(f"{{{ns}}}par[@name='{transformer_B}']")
-        units_inPu = transformer_R.endswith("Pu")
-        if not units_inPu:
-            _, transformer_SNom = dynawo_translator.get_dynawo_variable(lib, "SNom")
-            snom_par = parset.find(f"{{{ns}}}par[@name='{transformer_SNom}']")
-            s_nom = float(snom_par.get("value"))
-            xfmr_rpu = (s_nref / s_nom) * float(r_par.get("value")) / 100
-            xfmr_xpu = (s_nref / s_nom) * float(x_par.get("value")) / 100
-            xfmr_gpu = (s_nom / s_nref) * float(g_par.get("value")) / 100
-            xfmr_bpu = (s_nom / s_nref) * float(b_par.get("value")) / 100
-        else:
-            xfmr_rpu = float(r_par.get("value"))
-            xfmr_xpu = float(x_par.get("value"))
-            xfmr_gpu = float(g_par.get("value"))
-            xfmr_bpu = float(b_par.get("value"))
-
-        # If there's a regulating tap, get rTfo0Pu; otherwise get rTfoPu
-        _, transformer_rTfoPu = dynawo_translator.get_dynawo_variable(lib, "Rho")
-        tap_par = parset.find(f"{{{ns}}}par[@name='{transformer_rTfoPu}']")
-        xfmr_tapr = float(tap_par.get("value"))
-
-        transformers.append(
-            Xfmr_params(
-                transformer_id,
-                lib,
-                xfmr_rpu,
-                xfmr_xpu,
-                xfmr_bpu,
-                xfmr_gpu,
-                xfmr_tapr,
-                par_id,
-            )
-        )
-
-    return transformers
-
-
-def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
-    loads = []
-    ns = etree.QName(par_root).namespace
-    for bbmodel in find_bbmodel_by_type(dyd_root, "Load"):
-        load_id = bbmodel.get("id")
-        lib = bbmodel.get("lib")
-        par_id = bbmodel.get("parId")
-        connectedXmfr = _find_connect_by_id(dyd_root, load_id)
-
-        # Parameter Set from which to extract the transformer parameters
-        parset = par_root.find(f"{{{ns}}}set[@id='{par_id}']")
-
-        sign_P, load_P0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0")
-        sign_Q, load_Q0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
-        _, load_U0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
-        _, load_Ph0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
-        _, load_alpha = dynawo_translator.get_dynawo_variable(lib, "Alpha")
-        _, load_beta = dynawo_translator.get_dynawo_variable(lib, "Beta")
-        p0_par = parset.find(f"{{{ns}}}par[@name='{load_P0}']")
-        q0_par = parset.find(f"{{{ns}}}par[@name='{load_Q0}']")
-        u0_par = parset.find(f"{{{ns}}}par[@name='{load_U0}']")
-        ph0_par = parset.find(f"{{{ns}}}par[@name='{load_Ph0}']")
-        alpha_value = None
-        if load_alpha is not None:
-            alpha_par = parset.find(f"{{{ns}}}par[@name='{load_alpha}']")
-            alpha_value = float(alpha_par.get("value"))
-        beta_value = None
-        if load_beta is not None:
-            beta_par = parset.find(f"{{{ns}}}par[@name='{load_beta}']")
-            beta_value = float(beta_par.get("value"))
-
-        # Check if value contains a float or a placeholder
-        if "{" in p0_par.get("value"):
-            aux_ppu = p0_par.get("value").replace("{", "").replace("}", "") * sign_P
-            aux_qpu = q0_par.get("value").replace("{", "").replace("}", "") * sign_Q
-            aux_upu = u0_par.get("value").replace("{", "").replace("}", "")
-            aux_phpu = ph0_par.get("value").replace("{", "").replace("}", "")
-        else:
-            aux_ppu = float(p0_par.get("value")) * sign_P
-            aux_qpu = float(q0_par.get("value")) * sign_Q
-            aux_upu = float(u0_par.get("value"))
-            aux_phpu = float(ph0_par.get("value"))
-
-        loads.append(
-            Load_params(
-                load_id,
-                lib,
-                connectedXmfr,
-                aux_ppu,
-                aux_qpu,
-                aux_upu,
-                aux_phpu,
-                alpha_value,
-                beta_value,
-            )
-        )
-
-    return loads
-
-
-def _find_connect_by_id(producer_dyd_root: etree.Element, model_id: str) -> Optional[str]:
-    ns = etree.QName(producer_dyd_root).namespace
-    for connect in producer_dyd_root.iterfind(f"{{{ns}}}connect"):
-        if model_id in connect.get("id1"):
-            return connect.get("id2")
-        if model_id in connect.get("id2"):
-            return connect.get("id1")
-
-    return None
-
-
-def _are_connected(producer_dyd_root: etree.Element, model_id1: str, model_id2: str) -> bool:
-    ns = etree.QName(producer_dyd_root).namespace
-    for connect in producer_dyd_root.iterfind(f"{{{ns}}}connect"):
-        if model_id1 in connect.get("id1") and model_id2 in connect.get("id2"):
-            return True
-        if model_id1 in connect.get("id2") and model_id2 in connect.get("id1"):
-            return True
-
-    return False
-
-
-def _adjust_transformer(
-    producer_par_root: etree.Element,
-    transformer: Xfmr_params,
-    generator_p0pu: float,
-    generator_q0pu: float,
-    generator_u0pu: float,
-    generator_uphase0: float,
-    pdr: Pdr_params,
-) -> None:
-    ns = etree.QName(producer_par_root).namespace
-    parset = producer_par_root.find(f"{{{ns}}}set[@id='{transformer.par_id}']")
-    if parset is None:
-        return
-
-    sign, active_power0 = dynawo_translator.get_dynawo_variable(transformer.lib, "ActivePower0")
-    _set_parameter(parset, ns, active_power0, sign, generator_p0pu)
-
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(
-        transformer.lib, "ReactivePower0"
-    )
-    _set_parameter(parset, ns, reactive_power0, sign, generator_q0pu)
-
-    sign = 1
-    _, voltage0 = dynawo_translator.get_dynawo_variable(transformer.lib, "Voltage0")
-    _set_parameter(parset, ns, voltage0, sign, generator_u0pu)
-
-    _, phase0 = dynawo_translator.get_dynawo_variable(transformer.lib, "Phase0")
-    _set_parameter(parset, ns, phase0, sign, generator_uphase0)
-
-    _, voltage_setpoint = dynawo_translator.get_dynawo_variable(transformer.lib, "VoltageSetpoint")
-    _set_parameter(parset, ns, voltage_setpoint, sign, pdr.U)
-
-
-def _adjust_generator(
-    producer_par_root: etree.Element,
-    generator: Gen_params,
-    generator_p0pu: float,
-    generator_q0pu: float,
-    generator_u0pu: float,
-    generator_uphase0: float,
-    generator_control_mode: str,
-    force_voltage_droop: bool,
-) -> None:
-    """Modify the Producer generator to add the init values.
-    MODEL_DEPENDENT_CODE
-    """
-    ns = etree.QName(producer_par_root).namespace
-    parset = producer_par_root.find(f"{{{ns}}}set[@id='{generator.par_id}']")
-    if parset is None:
-        return
-
-    sign, active_power0 = dynawo_translator.get_dynawo_variable(generator.lib, "ActivePower0Pu")
-    _set_parameter(parset, ns, active_power0, sign, generator_p0pu)
-
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(
-        generator.lib, "ReactivePower0Pu"
-    )
-    _set_parameter(parset, ns, reactive_power0, sign, generator_q0pu)
-
-    sign = 1
-    _, voltage0 = dynawo_translator.get_dynawo_variable(generator.lib, "Voltage0Pu")
-    _set_parameter(parset, ns, voltage0, sign, generator_u0pu)
-
-    _, phase0 = dynawo_translator.get_dynawo_variable(generator.lib, "Phase0")
-    _set_parameter(parset, ns, phase0, sign, generator_uphase0)
-
-    control_mode_name = _set_control_mode(
-        generator, parset, ns, generator_control_mode, force_voltage_droop
-    )
-
-    _set_voltage_droop(
-        generator, parset, ns, generator_control_mode, control_mode_name, force_voltage_droop
-    )
-
-
-def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
-    if "MwpqMode" in voltage_droop_parameters:
-        if voltage_droop_parameters["MwpqMode"] == "3":
-            generator.UseVoltageDroop = True
-
-    if all(p in voltage_droop_parameters for p in ["RefFlag", "VCompFlag"]):
-        if voltage_droop_parameters["RefFlag"].lower() != "true":
-            return
-        if voltage_droop_parameters["VCompFlag"].lower() != "false":
-            return
-        generator.UseVoltageDroop = True
-
-
-def _set_voltage_droop(
-    generator, parset, ns, generator_control_mode, control_mode_name, force_voltage_droop
-) -> None:
-    # Get the generator voltage droop parameters from the producer PAR file.
-    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, ns)
-    dycov_logging.get_logger("Model Parameters").debug(
-        f"Generator {generator.id} Voltage Droop Mode: {voltage_droop_parameters}"
-    )
-    # If the generator has not voltage droop parameters return, like NonPlant Controller units.
-    if not voltage_droop_parameters:
-        force_voltage_droop = False
-
-    # If the control mode is reactive, disable voltage droop
-    if control_mode_name:
-        force_voltage_droop = not dynawo_translator.is_reactive_control_mode(
-            generator, control_mode_name
-        )
-
-    if force_voltage_droop:
-        # Check if the configured voltage droop is valid
-        is_valid, _ = dynawo_translator.is_valid_control_mode(
-            generator, "VoltageDroop", voltage_droop_parameters
-        )
-        if not is_valid:
-            dycov_logging.get_logger("Model Parameters").warning(
-                f"{generator.lib} voltage droop mode will be changed"
-            )
-            default_voltage_droop_parameters = _get_default_voltage_droop_parameters(
-                generator, "VoltageDroop"
-            )
-            dycov_logging.get_logger("Model Parameters").debug(
-                f"Default Voltage Droop Mode: {default_voltage_droop_parameters} "
-                f"for {generator_control_mode}"
-            )
-            is_valid, _ = dynawo_translator.is_valid_control_mode(
-                generator, "VoltageDroop", default_voltage_droop_parameters
-            )
-            if is_valid:
-                _set_parameters(generator, parset, ns, default_voltage_droop_parameters)
-            else:
-                dycov_logging.get_logger("Model Parameters").error(
-                    f"{generator.lib} executed with wrong voltage droop mode"
-                )
-                raise ValueError(f"{generator.lib} executed with wrong voltage droop mode")
-
-    _recalculate_voltage_ref(generator, voltage_droop_parameters)
-
-
-def _set_control_mode(generator, parset, ns, generator_control_mode, force_voltage_droop) -> str:
-    # Get the generator control mode parameters from the producer PAR file.
-    control_mode_parameters = _get_control_mode_parameters(generator, parset, ns)
-    dycov_logging.get_logger("Model Parameters").debug(
-        f"Generator {generator.id} Control Mode: {control_mode_parameters}"
-    )
-    # If the generator has not control mode parameters return.
-    if not control_mode_parameters:
-        return
-
-    # Check if the configured control mode is valid
-    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
-        generator, generator_control_mode, control_mode_parameters
-    )
-    if generator_control_mode != "Others" and not is_valid:
-        dycov_logging.get_logger("Model Parameters").warning(
-            f"{generator.lib} control mode will be changed"
-        )
-        default_control_mode_parameters = _get_default_control_mode_parameters(
-            generator, generator_control_mode
-        )
-        dycov_logging.get_logger("Model Parameters").debug(
-            f"Default Control Mode: {default_control_mode_parameters} for {generator_control_mode}"
-        )
-        is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
-            generator, generator_control_mode, default_control_mode_parameters
-        )
-        if is_valid:
-            _set_parameters(generator, parset, ns, default_control_mode_parameters)
-        else:
-            dycov_logging.get_logger("Model Parameters").error(
-                f"{generator.lib} executed with wrong control mode"
-            )
-            raise ValueError(f"{generator.lib} executed with wrong control mode")
-
-    return control_mode_name
-
-
-def _get_voltage_droop_parameters(generator, parset, ns) -> dict:
-    if "IEC" in generator.lib:
-        return _get_voltage_droop_parameters_iec(generator, parset, ns)
-    elif "Wecc" in generator.lib:
-        return _get_voltage_droop_parameters_wecc(generator, parset, ns)
-    else:
-        return {}
-
-
-def _get_voltage_droop_parameters_iec(generator, parset, ns) -> dict:
-    parameters = {}
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MwpqMode")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["MwpqMode"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MqG")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["MqG"] = par.get("value")
-
-    return parameters
-
-
-def _get_voltage_droop_parameters_wecc(generator, parset, ns) -> dict:
-    parameters = {}
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "RefFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["RefFlag"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "VCompFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["VCompFlag"] = par.get("value")
-    return parameters
-
-
-def _get_control_mode_parameters(generator, parset, ns) -> dict:
-    if "IEC" in generator.lib:
-        return _get_control_mode_parameters_iec(generator, parset, ns)
-    elif "Wecc" in generator.lib:
-        return _get_control_mode_parameters_wecc(generator, parset, ns)
-    else:
-        return {}
-
-
-def _get_control_mode_parameters_iec(generator, parset, ns) -> dict:
-    parameters = {}
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MwpqMode")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["MwpqMode"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "MqG")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["MqG"] = par.get("value")
-
-    return parameters
-
-
-def _get_control_mode_parameters_wecc(generator, parset, ns) -> dict:
-    parameters = {}
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PfFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["PfFlag"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "VFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["VFlag"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "PFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["PFlag"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "QFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["QFlag"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "RefFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["RefFlag"] = par.get("value")
-
-    _, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, "FreqFlag")
-    par = parset.find(f"{{{ns}}}par[@name='{dynawo_variable}']")
-    if par is not None:
-        parameters["FreqFlag"] = par.get("value")
-
-    return parameters
-
-
-def _get_default_voltage_droop_parameters(generator, generator_voltage_droop) -> dict:
-    family, level = get_generator_family_level(generator)
-    parameters = {}
-    section = f"{generator_voltage_droop}_{family}_{level}"
-    if config.has_key(section, "control_option"):
-        control_option = config.get_int(section, "control_option", 1)
-        parameters = dynawo_translator.get_control_mode(section, control_option)
-    else:
-        options = config.get_options(section)
-        for option in options:
-            parameters[option] = config.get_value(section, option)
-    return parameters
-
-
-def _get_default_control_mode_parameters(generator, generator_control_mode) -> dict:
-    family, level = get_generator_family_level(generator)
-    parameters = {}
-    section = f"{generator_control_mode}_{family}_{level}"
-    if config.has_key(section, "control_option"):
-        control_option = config.get_int(section, "control_option", 1)
-        parameters = dynawo_translator.get_control_mode(section, control_option)
-    else:
-        options = config.get_options(section)
-        for option in options:
-            parameters[option] = config.get_value(section, option)
-    return parameters
-
-
-def _set_parameters(generator, parset, ns, parameters: dict):
-    for name, value in parameters.items():
-        _, dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
-        _set_parameter(parset, ns, dynawo_name, 1, value.lower())
-
-
-def _adjust_load(
-    producer_par_root: etree.Element,
-    load: Load_init,
-    load_p0pu: float,
-    load_q0pu: float,
-    load_u0pu: float,
-    load_uphase0: float,
-) -> None:
-    ns = etree.QName(producer_par_root).namespace
-    parset = producer_par_root.find(f"{{{ns}}}set[@id='{load.id}']")
-    if parset is None:
-        return
-
-    sign, active_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ActivePower0")
-    _set_parameter(parset, ns, active_power0, sign, load_p0pu)
-
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ReactivePower0")
-    _set_parameter(parset, ns, reactive_power0, sign, load_q0pu)
-
-    sign = 1
-    _, voltage0 = dynawo_translator.get_dynawo_variable(load.lib, "Voltage0")
-    _set_parameter(parset, ns, voltage0, sign, load_u0pu)
-
-    _, phase0 = dynawo_translator.get_dynawo_variable(load.lib, "Phase0")
-    _set_parameter(parset, ns, phase0, sign, load_uphase0)
-
-
-def _set_parameter(parset, ns, parameter_name, sign, parameter_value):
-    if parameter_name is None:
-        return
-
-    parameter = parset.find(f"{{{ns}}}par[@name='{parameter_name}']")
-    if parameter is not None:
-        parameter.set("value", str(sign * parameter_value))
+# Numeric values: supports integers, decimals, and leading sign; allows ".5" style.
+NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
+
+# Multiplier * name OR name only.
+# - Optional signed float multiplier followed by optional '*' (requires digits, no bare '+'/'-').
+# - Name is an identifier-like token (letters, digits, underscores; must start with a letter
+#   or underscore).
+MULTIPLIER_PATTERN = re.compile(
+    r"^(?:(?P<mul>[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\*\s*)?(?P<name>[A-Za-z_]\w*)$"
+)
 
 
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
@@ -727,21 +58,33 @@ def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> l
         All the blackbox models in the producer model
     """
     bbmodels = []
-    ns = etree.QName(producer_dyd_root).namespace
-    for bbmodel in producer_dyd_root.iterfind(f"{{{ns}}}blackBoxModel"):
-        if model_type in bbmodel.get("lib"):
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    for bbmodel in producer_dyd_root.xpath("//ns:blackBoxModel", namespaces=nsmap):
+        if model_type == bbmodel.get("lib"):
             bbmodels.append(bbmodel)
 
     return bbmodels
 
 
 def get_connected_to_pdr(producer_dyd: Path) -> list:
+    """Gets the list of equipment connected to the PDR bus in the producer DYD model.
+
+    Parameters
+    ----------
+    producer_dyd: Path
+        Path to the producer DYD file
+
+    Returns
+    -------
+    list
+        List of Pdr_equipments objects representing equipment connected to the PDR bus
+    """
     producer_dyd_tree = etree.parse(producer_dyd, etree.XMLParser(remove_blank_text=True))
     producer_dyd_root = producer_dyd_tree.getroot()
 
     connected_to_pdr = []
-    ns = etree.QName(producer_dyd_root).namespace
-    for connect in producer_dyd_root.iterfind(f"{{{ns}}}connect"):
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
         if "BusPDR" in connect.get("id1"):
             connected_to_pdr.append(Pdr_equipments(connect.get("id2"), connect.get("var2")))
         if "BusPDR" in connect.get("id2"):
@@ -824,6 +167,39 @@ def get_producer_values(
         ppm_xfmr,
         intline,
     )
+
+
+def get_pcs_generators_params(pcs_dyd: Path, pcs_par: Path) -> list:
+    """Gets the generators parameters of the pcs model.
+
+    Parameters
+    ----------
+    pcs_dyd: Path
+        Path to the pcs DYD file
+    pcs_par: Path
+        Path to the pcs PAR file
+
+    Returns
+    -------
+    list
+        Generators parameters of the pcs model
+    """
+    pcs_dyd_tree = etree.parse(pcs_dyd, etree.XMLParser(remove_blank_text=True))
+    pcs_dyd_root = pcs_dyd_tree.getroot()
+
+    pcs_par_tree = etree.parse(pcs_par, etree.XMLParser(remove_blank_text=True))
+    pcs_par_root = pcs_par_tree.getroot()
+
+    generators = []
+    allowed_sync_models = dynawo_translator.get_synchronous_machine_models()
+    allowed_park_models = dynawo_translator.get_power_park_models()
+    allowed_storage_models = dynawo_translator.get_storage_models()
+
+    all_allowed_models = allowed_sync_models + allowed_park_models + allowed_storage_models
+
+    for model_parameter in _get_allowed_models(pcs_dyd_root, all_allowed_models):
+        _append_generator(pcs_dyd_root, pcs_par_root, model_parameter, generators, None)
+    return generators
 
 
 def get_pcs_load_params(pcs_dyd: Path, pcs_par: Path) -> list:
@@ -934,20 +310,26 @@ def get_event_times(
         etree.XMLParser(remove_blank_text=True),
     )
 
+    # Parse XML
     root = etree_par.getroot()
     ns = etree.QName(root).namespace
-    tbegin_parameters = root.find(f".//{{{ns}}}par[@name='fault_tBegin']")
-    if tbegin_parameters is not None:
-        tevent1 = float(tbegin_parameters.get("value"))
+    nsmap = {"ns": ns}
+
+    # XPath queries
+    tbegin_parameters = root.xpath("//ns:par[@name='fault_tBegin']", namespaces=nsmap)
+    tevent_parameters = root.xpath("//ns:par[@name='event_tEvent']", namespaces=nsmap)
+    tstep_parameters = root.xpath("//ns:par[@name='step_tStep']", namespaces=nsmap)
+
+    # Extract values
+    if tbegin_parameters:
+        tevent1 = float(tbegin_parameters[0].get("value"))
     else:
         tevent1 = float("NaN")
 
-    tevent_parameters = root.find(f".//{{{ns}}}par[@name='event_tEvent']")
-    tstep_parameters = root.find(f".//{{{ns}}}par[@name='step_tStep']")
-    if tevent_parameters is not None and not tevent_parameters.get("value").startswith("{"):
-        tevent2 = float(tevent_parameters.get("value"))
-    elif tstep_parameters is not None and not tstep_parameters.get("value").startswith("{"):
-        tevent2 = float(tstep_parameters.get("value"))
+    if tevent_parameters and not tevent_parameters[0].get("value").startswith("{"):
+        tevent2 = float(tevent_parameters[0].get("value"))
+    elif tstep_parameters and not tstep_parameters[0].get("value").startswith("{"):
+        tevent2 = float(tstep_parameters[0].get("value"))
     else:
         tevent2 = float("NaN")
 
@@ -981,9 +363,9 @@ def find_output_dir(results_case_dir: Path, filename: str) -> str:
     )
 
     root = etree_par.getroot()
-    ns = etree.QName(root).namespace
+    nsmap = {"ns": etree.QName(root).namespace}
     output_dir = None
-    for model_output in root.iter("{%s}outputs" % ns):
+    for model_output in root.xpath("//ns:outputs", namespaces=nsmap):
         output_dir = model_output.get("directory")
     return output_dir
 
@@ -991,42 +373,76 @@ def find_output_dir(results_case_dir: Path, filename: str) -> str:
 def extract_defined_value(
     value_definition: str, parameter: str, base_value: float, sign: int = 1
 ) -> float:
-    """Converts a parameter definition to a value.
-    Examples:
-        - P = P_max -> value_definition: 'pmax', parameter: 'pmax', base_value: 90, return 90
-        - X = 2*b -> value_definition: '2*b', parameter: 'b', base_value: 0.2, return 0.4
+    """
+    Converts a parameter definition to a numeric value.
+
+    Supported forms:
+      - Pure numeric: "1.2", "-0.5", ".75"
+      - Parameter only: "PmaxInjection", "-PmaxInjection"  (leading sign allowed)
+      - Multiplier * parameter: "2*b", "-0.8*Pmax", "+1.25*PmaxInjection"
+
+    Behavior:
+      - The definition's explicit sign/multiplier is parsed to produce a raw value.
+      - The 'sign' argument is applied at the end to convert the value to the desired
+        downstream sign convention (it does NOT sanitize the input; it just transforms
+        the final result).
 
     Parameters
     ----------
-    value_definition: str
-        Parameter value definition
-    parameter: str
-        Parameter name
-    base_value: float
-        Base value
-    sign: int
-        Sign of the value
+    value_definition : str
+        The configuration string that defines the value (may include sign/multiplier).
+    parameter : str
+        Expected parameter name (case-insensitive).
+    base_value : float
+        Base value associated with the parameter (e.g., Pmax in pu).
+    sign : int
+        Final sign conversion to match downstream convention (e.g., -1 to flip).
 
     Returns
     -------
     float
-        The value of the operation defined with the given base value
+        The computed value after applying the definition and the final 'sign'.
     """
-    multiplier = 1
     if value_definition is None:
         raise ValueError(f"{parameter} parameter not defined.")
 
-    if "*" in value_definition:
-        parts = value_definition.split("*")
-        multiplier = float(parts[0])
-        value = parts[1]
-    else:
-        value = value_definition
+    s = value_definition.strip()
+    if not s:
+        raise ValueError(f"{parameter} parameter not defined (empty).")
 
-    if parameter.lower() in value.lower():
-        value = base_value
+    # Step 1: Capture an explicit leading sign if present, then parse the rest.
+    explicit_sign = 1
+    if s[0] in "+-":
+        explicit_sign = -1 if s[0] == "-" else 1
+        s = s[1:].strip()
 
-    return sign * float(value) * multiplier
+    # Step 2: Pure numeric (including the explicit leading sign).
+    num_candidate = ("-" if explicit_sign == -1 else "") + s
+    if NUMERIC_PATTERN.fullmatch(num_candidate):
+        raw_value = float(num_candidate)
+        return sign * raw_value  # Apply final convention
+
+    # Step 3: Multiplier * parameter OR parameter only.
+    m = MULTIPLIER_PATTERN.fullmatch(s)
+    if m:
+        multiplier_str = m.group("mul")
+        param_name = m.group("name")
+
+        # Validate parameter name, case-insensitive.
+        if param_name.lower() != parameter.lower():
+            raise ValueError(
+                f"Parameter name mismatch: expected '{parameter}', got '{param_name}'"
+            )
+
+        # Multiplier: if present, parse; otherwise default to 1.0.
+        multiplier = float(multiplier_str) if multiplier_str is not None else 1.0
+
+        # Compose: explicit sign from the definition × parsed multiplier × base value.
+        raw_value = explicit_sign * multiplier * base_value
+        return sign * raw_value  # Apply final convention
+
+    # Step 4: No valid form matched.
+    raise ValueError(f"Invalid format for {parameter}: '{value_definition}'")
 
 
 def adjust_producer_init(
@@ -1099,3 +515,716 @@ def adjust_producer_init(
         )
 
     producer_par_tree.write(path / producer_par.name, pretty_print=True)
+
+
+def _get_allowed_models(dyd_root: etree.Element, model_list: list) -> list[etree.Element]:
+    matched_models = []
+    for model_type in model_list:
+        matched_models.extend(find_bbmodel_by_type(dyd_root, model_type))
+    return matched_models
+
+
+def _get_generator_values(
+    dyd_root: etree.Element, par_root: etree.Element, producer_ini: configparser.ConfigParser
+) -> list:
+    generators = []
+    all_allowed_models = _collect_allowed_generator_models()
+
+    for model_parameter in _get_allowed_models(dyd_root, all_allowed_models):
+        _append_generator(dyd_root, par_root, model_parameter, generators, producer_ini)
+
+    _validate_generator_flows(generators)
+    return generators
+
+
+def _collect_allowed_generator_models() -> list:
+    allowed_sync_models = dynawo_translator.get_synchronous_machine_models()
+    allowed_park_models = dynawo_translator.get_power_park_models()
+    allowed_storage_models = dynawo_translator.get_storage_models()
+    return allowed_sync_models + allowed_park_models + allowed_storage_models
+
+
+def _validate_generator_flows(generators: list) -> None:
+    if not generators:
+        return
+
+    total_p = sum(g.P for g in generators)
+    total_q = sum(g.Q for g in generators)
+
+    if not math.isclose(total_p, 1.0, rel_tol=1e-6):
+        dycov_logging.get_logger("Model Parameters").error("Generator P flows do not add up to 1")
+        raise ValueError("Generator P flows do not add up to 1")
+
+    if not math.isclose(total_q, 1.0, rel_tol=1e-6):
+        dycov_logging.get_logger("Model Parameters").error("Generator Q flows do not add up to 1")
+        raise ValueError("Generator Q flows do not add up to 1")
+
+
+def _append_generator(
+    dyd_root: etree.Element,
+    par_root: etree.Element,
+    model_parameter: etree.Element,
+    generators: list,
+    producer_ini: configparser.ConfigParser = None,
+):
+    gen_id = model_parameter.get("id")
+    par_id = model_parameter.get("parId")
+    lib = model_parameter.get("lib")
+    nsmap = {"dyn": etree.QName(dyd_root).namespace, "ns": etree.QName(par_root).namespace}
+
+    connected_xfmr = _get_connected_xfmr(dyd_root, gen_id, nsmap)
+    parset = _get_parset(par_root, par_id, nsmap)
+
+    imax = _get_injected_current(parset, nsmap, lib)
+    P, Q = _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini)
+    droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
+
+    generators.append(
+        Gen_params(
+            id=gen_id,
+            lib=lib,
+            connectedXmfr=connected_xfmr,
+            SNom=s_nom,
+            IMax=imax,
+            par_id=par_id,
+            P=P,
+            Q=Q,
+            VoltageDroop=droop_value,
+            UseVoltageDroop=False,
+        )
+    )
+
+
+def _get_connected_xfmr(dyd_root, gen_id, nsmap):
+    for connect in dyd_root.xpath("//dyn:connect", namespaces=nsmap):
+        if connect.get("id1") == gen_id:
+            return connect.get("id2")
+        elif connect.get("id2") == gen_id:
+            return connect.get("id1")
+    return None
+
+
+def _get_parset(par_root, par_id, nsmap):
+    parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+    if parset is None:
+        raise ValueError(f"The parameter set with id='{par_id}' was not found")
+    return parset
+
+
+def _get_injected_current(parset, nsmap, lib):
+    sign, imaxpu_element = _get_parameter(parset, nsmap, lib, "InjectedCurrentMax")
+    return float(imaxpu_element) * sign if imaxpu_element is not None else None
+
+
+def _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini):
+    default_section = "DEFAULT"
+    if not producer_ini:
+        _, P_str = _get_parameter(parset, nsmap, lib, "ActivePower0Pu")
+        P = float(P_str) if P_str is not None else 0.0
+    elif producer_ini.has_option(default_section, f"P_sharing_{gen_id}"):
+        P = float(producer_ini.get(default_section, f"P_sharing_{gen_id}"))
+    elif producer_ini.has_option(default_section, "topology") and str(
+        producer_ini.get(default_section, "topology")
+    ).startswith("S"):
+        P = 1.0
+        dycov_logging.get_logger("Model Parameters").warning(
+            "A P flow of 1.0 has been automatically defined."
+        )
+    else:
+        dycov_logging.get_logger("Model Parameters").error(
+            "It is mandatory to define the distribution of P flows for multi-topology generators"
+        )
+        raise ValueError("Generator P flows not defined")
+
+    if not producer_ini:
+        _, Q_str = _get_parameter(parset, nsmap, lib, "ReactivePower0Pu")
+        Q = float(Q_str) if Q_str is not None else 0.0
+    elif producer_ini.has_option(default_section, f"Q_sharing_{gen_id}"):
+        Q = float(producer_ini.get(default_section, f"Q_sharing_{gen_id}"))
+    elif producer_ini.has_option(default_section, "topology") and str(
+        producer_ini.get(default_section, "topology")
+    ).startswith("S"):
+        Q = 1.0
+        dycov_logging.get_logger("Model Parameters").warning(
+            "A Q flow of 1.0 has been automatically defined."
+        )
+    else:
+        dycov_logging.get_logger("Model Parameters").error(
+            "It is mandatory to define the distribution of Q flows for multi-topology generators"
+        )
+        raise ValueError("Generator Q flows not defined")
+
+    return P, Q
+
+
+def _get_generator_droop_and_snom(parset, nsmap, lib):
+    _, VoltageDroop_str = _get_parameter(parset, nsmap, lib, "VoltageDroop")
+    droop_value = float(VoltageDroop_str) if VoltageDroop_str is not None else 0.0
+    _, s_nom_str = _get_parameter(parset, nsmap, lib, "NominalApparentPower")
+    s_nom = float(s_nom_str) if s_nom_str is not None else 0.0
+    return droop_value, s_nom
+
+
+def _get_line_values(
+    dyd_root: etree.Element,
+    par_root: etree.Element,
+    applied_line_rpu: float,
+    applied_line_xpu: float,
+) -> list:
+    lines = []
+    nsmap = {"ns": etree.QName(par_root).namespace}
+    allowed_line_models = dynawo_translator.get_line_models()
+
+    for model_parameter in _get_allowed_models(dyd_root, allowed_line_models):
+        line_id = model_parameter.get("id")
+        lib = model_parameter.get("lib")
+        par_id = model_parameter.get("parId")
+        parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+
+        _, r_str = _get_parameter(parset, nsmap, lib, "ResistancePu")
+        _, x_str = _get_parameter(parset, nsmap, lib, "ReactancePu")
+        _, b_str = _get_parameter(parset, nsmap, lib, "SusceptancePu")
+        _, g_str = _get_parameter(parset, nsmap, lib, "ConductancePu")
+
+        line_rpu = float(r_str) if applied_line_rpu is None else applied_line_rpu
+        line_xpu = _calculate_line_xpu(x_str, applied_line_xpu)
+        line_gpu = float(g_str) if g_str is not None else 0.0
+        line_bpu = float(b_str) if b_str is not None else 0.0
+        connected = _are_connected(dyd_root, line_id, "BusPDR")
+
+        lines.append(Line_params(line_id, lib, connected, line_rpu, line_xpu, line_bpu, line_gpu))
+
+    return lines
+
+
+def _calculate_line_xpu(x_str: str, applied_line_xpu: float) -> float:
+    if applied_line_xpu is None:
+        return float(x_str)
+    if x_str and "{{line_XPu}}" in x_str:
+        return applied_line_xpu
+    elif x_str and "{{line_XPu_1}}" in x_str:
+        return applied_line_xpu * 0.01
+    elif x_str and "{{line_XPu_99}}" in x_str:
+        return applied_line_xpu * 0.99
+    return float(x_str) if x_str else 0.0
+
+
+def _get_transformer_values(
+    dyd_root: etree.Element, par_root: etree.Element, s_nref: float
+) -> list:
+    transformers = []
+    nsmap = {"ns": etree.QName(par_root).namespace}
+    allowed_transformer_models = dynawo_translator.get_transformer_models()
+
+    for bbmodel in _get_allowed_models(dyd_root, allowed_transformer_models):
+        transformer_id, lib, par_id, parset = _parse_transformer_metadata(bbmodel, par_root, nsmap)
+        xfmr_rpu, xfmr_xpu, xfmr_gpu, xfmr_bpu = _convert_transformer_units(
+            parset, nsmap, lib, s_nref
+        )
+        xfmr_tapr = _get_tap_ratio(parset, nsmap, lib)
+
+        transformers.append(
+            Xfmr_params(
+                transformer_id, lib, xfmr_rpu, xfmr_xpu, xfmr_bpu, xfmr_gpu, xfmr_tapr, par_id
+            )
+        )
+
+    return transformers
+
+
+def _parse_transformer_metadata(bbmodel, par_root, nsmap):
+    transformer_id = bbmodel.get("id")
+    lib = bbmodel.get("lib")
+    par_id = bbmodel.get("parId")
+    parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+    return transformer_id, lib, par_id, parset
+
+
+def _convert_transformer_units(parset, nsmap, lib, s_nref):
+    _, r_str = _get_parameter(parset, nsmap, lib, "Resistance")
+    _, x_str = _get_parameter(parset, nsmap, lib, "Reactance")
+    _, g_str = _get_parameter(parset, nsmap, lib, "Conductance")
+    _, b_str = _get_parameter(parset, nsmap, lib, "Susceptance")
+    units_inPu = dynawo_translator.get_dynawo_variable(lib, "Resistance")[1].endswith("Pu")
+
+    if not units_inPu:
+        _, snom_str = _get_parameter(parset, nsmap, lib, "SNom")
+        s_nom = float(snom_str)
+        xfmr_rpu = (s_nref / s_nom) * float(r_str) / 100
+        xfmr_xpu = (s_nref / s_nom) * float(x_str) / 100
+        xfmr_gpu = (s_nom / s_nref) * float(g_str) / 100
+        xfmr_bpu = (s_nom / s_nref) * float(b_str) / 100
+    else:
+        xfmr_rpu = float(r_str)
+        xfmr_xpu = float(x_str)
+        xfmr_gpu = float(g_str)
+        xfmr_bpu = float(b_str)
+
+    return xfmr_rpu, xfmr_xpu, xfmr_gpu, xfmr_bpu
+
+
+def _get_tap_ratio(parset, nsmap, lib):
+    _, rho_str = _get_parameter(parset, nsmap, lib, "Rho")
+    return float(rho_str)
+
+
+def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
+    loads = []
+    nsmap = {"ns": etree.QName(par_root).namespace}
+    allowed_load_models = dynawo_translator.get_load_models()
+
+    for bbmodel in _get_allowed_models(dyd_root, allowed_load_models):
+        load_id, lib, par_id, connectedXmfr, parset = _parse_load_metadata(
+            bbmodel, dyd_root, par_root, nsmap
+        )
+        aux_ppu, aux_qpu, aux_upu, aux_phpu, alpha, beta = _extract_load_parameters(
+            parset, nsmap, lib
+        )
+
+        loads.append(
+            Load_params(
+                load_id, lib, connectedXmfr, aux_ppu, aux_qpu, aux_upu, aux_phpu, alpha, beta
+            )
+        )
+
+    return loads
+
+
+def _parse_load_metadata(bbmodel, dyd_root, par_root, nsmap):
+    load_id = bbmodel.get("id")
+    lib = bbmodel.get("lib")
+    par_id = bbmodel.get("parId")
+    connectedXmfr = _find_connect_by_id(dyd_root, load_id)
+    parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+    return load_id, lib, par_id, connectedXmfr, parset
+
+
+def _extract_load_parameters(parset, nsmap, lib):
+    sign_P, p0_value = _get_parameter(parset, nsmap, lib, "ActivePower0")
+    sign_Q, q0_value = _get_parameter(parset, nsmap, lib, "ReactivePower0")
+    _, u0_value = _get_parameter(parset, nsmap, lib, "Voltage0")
+    _, ph0_value = _get_parameter(parset, nsmap, lib, "Phase0")
+    _, alpha_value = _get_parameter(parset, nsmap, lib, "Alpha")
+    _, beta_value = _get_parameter(parset, nsmap, lib, "Beta")
+
+    aux_ppu = _resolve_value(p0_value, sign_P)
+    aux_qpu = _resolve_value(q0_value, sign_Q)
+    aux_upu = _resolve_value(u0_value, 1)
+    aux_phpu = _resolve_value(ph0_value, 1)
+
+    alpha = None if alpha_value is None else float(alpha_value)
+    beta = None if beta_value is None else float(beta_value)
+
+    return aux_ppu, aux_qpu, aux_upu, aux_phpu, alpha, beta
+
+
+def _resolve_value(raw, sign):
+    if raw is None:
+        return None
+    if isinstance(raw, str) and raw.startswith("{") and raw.endswith("}"):
+        return raw.replace("{", "").replace("}", "")
+    try:
+        return float(raw) * sign
+    except (ValueError, TypeError):
+        return raw
+
+
+def _find_connect_by_id(producer_dyd_root: etree.Element, model_id: str) -> Optional[str]:
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
+        if model_id in connect.get("id1"):
+            return connect.get("id2")
+        if model_id in connect.get("id2"):
+            return connect.get("id1")
+
+    return None
+
+
+def _are_connected(producer_dyd_root: etree.Element, model_id1: str, model_id2: str) -> bool:
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
+        if model_id1 in connect.get("id1") and model_id2 in connect.get("id2"):
+            return True
+        if model_id1 in connect.get("id2") and model_id2 in connect.get("id1"):
+            return True
+
+    return False
+
+
+def _adjust_transformer(
+    producer_par_root,
+    transformer,
+    generator_p0pu,
+    generator_q0pu,
+    generator_u0pu,
+    generator_uphase0,
+    pdr,
+):
+    nsmap = {"ns": etree.QName(producer_par_root).namespace}
+    parset = _get_parset(producer_par_root, transformer.par_id, nsmap)
+    if parset is None:
+        return
+
+    _set_transformer_power(parset, nsmap, transformer.lib, generator_p0pu, generator_q0pu)
+    _set_transformer_voltage_phase(
+        parset, nsmap, transformer.lib, generator_u0pu, generator_uphase0
+    )
+    _set_transformer_voltage_setpoint(parset, nsmap, transformer.lib, pdr.U)
+
+
+def _set_transformer_power(parset, nsmap, lib, p0pu, q0pu):
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0")
+    _set_parameter(parset, nsmap, active_power0, sign, p0pu)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
+    _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
+
+
+def _set_transformer_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
+    _set_parameter(parset, nsmap, voltage0, sign, u0pu)
+    _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
+    _set_parameter(parset, nsmap, phase0, sign, uphase0)
+
+
+def _set_transformer_voltage_setpoint(parset, nsmap, lib, voltage_setpoint_value):
+    sign = 1
+    _, voltage_setpoint = dynawo_translator.get_dynawo_variable(lib, "VoltageSetpoint")
+    _set_parameter(parset, nsmap, voltage_setpoint, sign, voltage_setpoint_value)
+
+
+def _adjust_generator(
+    producer_par_root: etree.Element,
+    generator: Gen_params,
+    generator_p0pu: float,
+    generator_q0pu: float,
+    generator_u0pu: float,
+    generator_uphase0: float,
+    generator_control_mode: str,
+    force_voltage_droop: bool,
+) -> None:
+    nsmap = {"ns": etree.QName(producer_par_root).namespace}
+    parset = _get_parset(producer_par_root, generator.par_id, nsmap)
+    if parset is None:
+        return
+
+    _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
+    _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
+
+    control_mode_name = _apply_control_mode(
+        generator, parset, nsmap, generator_control_mode, force_voltage_droop
+    )
+    _apply_voltage_droop(
+        generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop
+    )
+
+
+def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
+    _set_parameter(parset, nsmap, active_power0, sign, p0pu)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
+    _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
+
+
+def _set_initial_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0Pu")
+    _set_parameter(parset, nsmap, voltage0, sign, u0pu)
+    _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
+    _set_parameter(parset, nsmap, phase0, sign, uphase0)
+
+
+def _apply_control_mode(generator, parset, nsmap, generator_control_mode, force_voltage_droop):
+    control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap)
+    _log_control_mode(generator, control_mode_parameters)
+
+    if not control_mode_parameters:
+        return None
+
+    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
+        generator, generator_control_mode, control_mode_parameters
+    )
+
+    if generator_control_mode != "Others" and not is_valid:
+        control_mode_name = _handle_invalid_control_mode(
+            generator, parset, nsmap, generator_control_mode
+        )
+
+    return control_mode_name
+
+
+def _log_control_mode(generator, control_mode_parameters):
+    dycov_logging.get_logger("Model Parameters").debug(
+        f"Generator {generator.id} Control Mode: {control_mode_parameters}"
+    )
+
+
+def _handle_invalid_control_mode(generator, parset, nsmap, generator_control_mode):
+    dycov_logging.get_logger("Model Parameters").warning(
+        f"{generator.lib} control mode will be changed"
+    )
+    default_control_mode_parameters = _get_default_control_mode_parameters(
+        generator, generator_control_mode
+    )
+    dycov_logging.get_logger("Model Parameters").debug(
+        f"Default Control Mode: {default_control_mode_parameters} for {generator_control_mode}"
+    )
+
+    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
+        generator, generator_control_mode, default_control_mode_parameters
+    )
+    if is_valid:
+        _set_parameters(generator, parset, nsmap, default_control_mode_parameters)
+    else:
+        dycov_logging.get_logger("Model Parameters").error(
+            f"{generator.lib} executed with wrong control mode"
+        )
+        raise ValueError(f"{generator.lib} executed with wrong control mode")
+
+    return control_mode_name
+
+
+def _apply_voltage_droop(
+    generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop
+):
+    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, nsmap)
+    _log_voltage_droop(generator, voltage_droop_parameters)
+
+    force_voltage_droop = _determine_voltage_droop(
+        force_voltage_droop, control_mode_name, voltage_droop_parameters, generator
+    )
+
+    if force_voltage_droop:
+        _validate_or_apply_default_voltage_droop(
+            generator, parset, nsmap, generator_control_mode, voltage_droop_parameters
+        )
+
+    _recalculate_voltage_ref(generator, voltage_droop_parameters)
+
+
+def _log_voltage_droop(generator, voltage_droop_parameters):
+    dycov_logging.get_logger("Model Parameters").debug(
+        f"Generator {generator.id} Voltage Droop Mode: {voltage_droop_parameters}"
+    )
+
+
+def _determine_voltage_droop(
+    force_voltage_droop, control_mode_name, voltage_droop_parameters, generator
+):
+    if not voltage_droop_parameters:
+        return False
+    if control_mode_name:
+        return not dynawo_translator.is_reactive_control_mode(generator, control_mode_name)
+    return force_voltage_droop
+
+
+def _validate_or_apply_default_voltage_droop(
+    generator, parset, nsmap, generator_control_mode, voltage_droop_parameters
+):
+    is_valid, _ = dynawo_translator.is_valid_control_mode(
+        generator, "VoltageDroop", voltage_droop_parameters
+    )
+    if not is_valid:
+        dycov_logging.get_logger("Model Parameters").warning(
+            f"{generator.lib} voltage droop mode will be changed"
+        )
+        default_voltage_droop_parameters = _get_default_voltage_droop_parameters(
+            generator, "VoltageDroop"
+        )
+        dycov_logging.get_logger("Model Parameters").debug(
+            f"Default Voltage Droop Mode: {default_voltage_droop_parameters} "
+            f"for {generator_control_mode}"
+        )
+        is_valid, _ = dynawo_translator.is_valid_control_mode(
+            generator, "VoltageDroop", default_voltage_droop_parameters
+        )
+        if is_valid:
+            _set_parameters(generator, parset, nsmap, default_voltage_droop_parameters)
+        else:
+            dycov_logging.get_logger("Model Parameters").error(
+                f"{generator.lib} executed with wrong voltage droop mode"
+            )
+            raise ValueError(f"{generator.lib} executed with wrong voltage droop mode")
+
+
+def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
+    if "MwpqMode" in voltage_droop_parameters:
+        if voltage_droop_parameters["MwpqMode"] == "3":
+            generator.UseVoltageDroop = True
+
+    if all(p in voltage_droop_parameters for p in ["RefFlag", "VCompFlag"]):
+        if voltage_droop_parameters["RefFlag"].lower() != "true":
+            return
+        if voltage_droop_parameters["VCompFlag"].lower() != "false":
+            return
+        generator.UseVoltageDroop = True
+
+
+def _get_voltage_droop_parameters(generator, parset, nsmap) -> dict:
+    if "IEC" in generator.lib:
+        return _get_voltage_droop_parameters_iec(generator, parset, nsmap)
+    elif "Wecc" in generator.lib:
+        return _get_voltage_droop_parameters_wecc(generator, parset, nsmap)
+    else:
+        return {}
+
+
+def _get_voltage_droop_parameters_iec(generator, parset, nsmap) -> dict:
+    parameters = {}
+    _, MwpqMode = _get_parameter(parset, nsmap, generator.lib, "MwpqMode")
+    if MwpqMode is not None:
+        parameters["MwpqMode"] = MwpqMode
+
+    _, MqG = _get_parameter(parset, nsmap, generator.lib, "MqG")
+    if MqG is not None:
+        parameters["MqG"] = MqG
+
+    return parameters
+
+
+def _get_voltage_droop_parameters_wecc(generator, parset, nsmap) -> dict:
+    parameters = {}
+    _, RefFlag = _get_parameter(parset, nsmap, generator.lib, "RefFlag")
+    if RefFlag is not None:
+        parameters["RefFlag"] = RefFlag
+
+    _, VCompFlag = _get_parameter(parset, nsmap, generator.lib, "VCompFlag")
+    if VCompFlag is not None:
+        parameters["VCompFlag"] = VCompFlag
+
+    return parameters
+
+
+def _get_control_mode_parameters(generator, parset, nsmap) -> dict:
+    if "IEC" in generator.lib:
+        return _get_control_mode_parameters_iec(generator, parset, nsmap)
+    elif "Wecc" in generator.lib:
+        return _get_control_mode_parameters_wecc(generator, parset, nsmap)
+    else:
+        return {}
+
+
+def _get_control_mode_parameters_iec(generator, parset, nsmap) -> dict:
+    parameters = {}
+    _, MwpqMode = _get_parameter(parset, nsmap, generator.lib, "MwpqMode")
+    if MwpqMode is not None:
+        parameters["MwpqMode"] = MwpqMode
+
+    _, MqG = _get_parameter(parset, nsmap, generator.lib, "MqG")
+    if MqG is not None:
+        parameters["MqG"] = MqG
+
+    return parameters
+
+
+def _get_control_mode_parameters_wecc(generator, parset, nsmap) -> dict:
+    parameters = {}
+    # Use _get_parameter where it helps to centralize lookup
+    _, PfFlag = _get_parameter(parset, nsmap, generator.lib, "PfFlag")
+    if PfFlag is not None:
+        parameters["PfFlag"] = PfFlag
+
+    _, VFlag = _get_parameter(parset, nsmap, generator.lib, "VFlag")
+    if VFlag is not None:
+        parameters["VFlag"] = VFlag
+
+    _, PFlag = _get_parameter(parset, nsmap, generator.lib, "PFlag")
+    if PFlag is not None:
+        parameters["PFlag"] = PFlag
+
+    _, QFlag = _get_parameter(parset, nsmap, generator.lib, "QFlag")
+    if QFlag is not None:
+        parameters["QFlag"] = QFlag
+
+    _, RefFlag = _get_parameter(parset, nsmap, generator.lib, "RefFlag")
+    if RefFlag is not None:
+        parameters["RefFlag"] = RefFlag
+
+    _, FreqFlag = _get_parameter(parset, nsmap, generator.lib, "FreqFlag")
+    if FreqFlag is not None:
+        parameters["FreqFlag"] = FreqFlag
+
+    return parameters
+
+
+def _get_default_voltage_droop_parameters(generator, generator_voltage_droop) -> dict:
+    family, level = dynawo_translator.get_generator_family_level(generator)
+    parameters = {}
+    section = f"{generator_voltage_droop}_{family}_{level}"
+    if config.has_option(section, "control_option"):
+        control_option = config.get_int(section, "control_option", 1)
+        parameters = dynawo_translator.get_control_mode(section, control_option)
+    else:
+        options = config.get_options(section)
+        for option in options:
+            parameters[option] = config.get_value(section, option)
+    return parameters
+
+
+def _get_default_control_mode_parameters(generator, generator_control_mode) -> dict:
+    family, level = dynawo_translator.get_generator_family_level(generator)
+    parameters = {}
+    section = f"{generator_control_mode}_{family}_{level}"
+    if config.has_option(section, "control_option"):
+        control_option = config.get_int(section, "control_option", 1)
+        parameters = dynawo_translator.get_control_mode(section, control_option)
+    else:
+        options = config.get_options(section)
+        for option in options:
+            parameters[option] = config.get_value(section, option)
+    return parameters
+
+
+def _set_parameters(generator, parset, nsmap, parameters: dict):
+    for name, value in parameters.items():
+        _, dynawo_name = dynawo_translator.get_dynawo_variable(generator.lib, name)
+        _set_parameter(parset, nsmap, dynawo_name, 1, value.lower())
+
+
+def _adjust_load(
+    producer_par_root: etree.Element,
+    load: Load_init,
+    load_p0pu: float,
+    load_q0pu: float,
+    load_u0pu: float,
+    load_uphase0: float,
+) -> None:
+    nsmap = {"ns": etree.QName(producer_par_root).namespace}
+    parset = producer_par_root.xpath(f"//ns:set[@id='{load.id}']", namespaces=nsmap)
+    if parset is None:
+        return
+
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ActivePower0")
+    _set_parameter(parset, nsmap, active_power0, sign, load_p0pu)
+
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ReactivePower0")
+    _set_parameter(parset, nsmap, reactive_power0, sign, load_q0pu)
+
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(load.lib, "Voltage0")
+    _set_parameter(parset, nsmap, voltage0, sign, load_u0pu)
+
+    _, phase0 = dynawo_translator.get_dynawo_variable(load.lib, "Phase0")
+    _set_parameter(parset, nsmap, phase0, sign, load_uphase0)
+
+
+def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value):
+    # Validate parset contains exactly one element
+    if not isinstance(parset, list) or len(parset) != 1 or not parameter_name:
+        return
+    ps = parset[0]
+    parameter = ps.xpath(f"ns:par[@name='{parameter_name}']", namespaces=nsmap)
+    if parameter:
+        parameter[0].set("value", str(sign * parameter_value))
+
+
+def _get_parameter(parset, nsmap, lib, parameter_name):
+    # Validate parset contains exactly one element
+    if not isinstance(parset, list) or len(parset) != 1:
+        return None, None
+    ps = parset[0]
+    sign, variable_name = dynawo_translator.get_dynawo_variable(lib, parameter_name)
+    if not variable_name:
+        return None, None
+    variable = ps.xpath(f"ns:par[@name='{variable_name}']", namespaces=nsmap)
+    return (sign, variable[0].get("value")) if variable else (sign, None)
