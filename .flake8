@@ -1,0 +1,16 @@
+[flake8]
+# See: https://flake8.pycqa.org/en/latest/user/configuration.html
+# See: https://flake8.pycqa.org/en/latest/user/options.html
+show-source = True
+exclude = .git,__pycache__,build,dist
+
+# Recommend matching the black line length (default 88), rather than using flake8's default (79)
+max-line-length = 99
+
+extend-ignore =
+    # See https://github.com/PyCQA/pycodestyle/issues/373
+    # flake8/pycodechecker gives false positives on black code
+    E203, W605
+
+# flake-quote settings: Set this to match black style:
+inline-quotes = double
