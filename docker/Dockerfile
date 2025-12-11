@@ -16,8 +16,8 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 # First layer:
 #   - Update the base debian dist.
-#   - Install required deb dependencies (texlive, etc.). Python is already in the base image.
-#   - Install uv (Python package manager).
+#   - Install required deb dependencies.
+#   - Install uv.
 RUN apt-get update && apt-get -y upgrade \
   && apt-get install -y --no-install-recommends curl unzip rsync \
      texlive-base texlive-latex-base texlive-latex-extra texlive-latex-recommended \
@@ -28,19 +28,20 @@ RUN apt-get update && apt-get -y upgrade \
 
 # Second layer:
 #   - Install the dycov tool itself using uv.
+#   - COPY THE EXAMPLES into a global location accessible to users
 COPY ./$dycov_PKG /tmp/
-COPY ./$dycov_EXAMPLES /tmp/examples
 RUN uv pip install --system /tmp/$dycov_PKG && rm /tmp/$dycov_PKG
+
+# Create directory and copy examples
+COPY ./$dycov_EXAMPLES /opt/dycov/examples
 
 # Third layer:
 #   - Install Dynawo from the host path provided at build time.
-#   - Add the dynawo executable to the system PATH.
 COPY ./$DYNAWO_DIR_NAME /opt/dynawo_install
 
 RUN \
     echo "Checking for Boost compatibility patch..." && \
     if command -v g++ >/dev/null; then \
-        # Use -dumpversion for reliable major version extraction (consistent with installer)
         GNU_MAJOR=$(g++ -dumpversion | cut -d"." -f1); \
         echo "Detected GCC major version: $GNU_MAJOR"; \
         if [ "$GNU_MAJOR" -gt 11 ]; then \
