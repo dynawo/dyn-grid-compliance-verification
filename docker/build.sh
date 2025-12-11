@@ -38,7 +38,6 @@ if [ ! -d ../dist ]; then
   PKG=$(find "$ROOT_DIR/dist" -iname '*.whl' -printf "%Ts %P\n" | sort -n | tail -n 1 | cut -d' ' -f2)
   rm -f "$PKG"
   cp "$ROOT_DIR/dist/$PKG" .
-  # We leave the dist folder there as cache
 else 
   # If dist exists, we still rebuild to ensure we have the latest changes
   echo "Re-building package with uv..."
@@ -48,17 +47,19 @@ else
   cp "$ROOT_DIR/dist/$PKG" .
 fi
 
-# The examples also need to be visible at the build directory level
-EXAMPLES=examples
-rm -rf "$EXAMPLES" # Clean previous
-cp -a "$ROOT_DIR/examples" .
+# Copy the examples folder from the repo root to the current directory
+# so Docker can see it (Docker build context restriction).
+EXAMPLES_DIR="examples"
+rm -rf "$EXAMPLES_DIR" # Clean up any previous copy
+echo "Copying examples directory..."
+cp -a "$ROOT_DIR/examples" "$EXAMPLES_DIR"
 
 # Dynawo: Copy the host directory to the build context
 DYNAWO_DIR_NAME=dynawo_build
 if [ ! -d "$DYNAWO_HOST_PATH" ]; then
    echo "ERROR: Dynawo path $DYNAWO_HOST_PATH not found."
    rm -f "$PKG"
-   rm -rf "$EXAMPLES"
+   rm -rf "$EXAMPLES_DIR"
    exit 1
 fi
 rm -rf "$DYNAWO_DIR_NAME" # Clean up previous
@@ -70,7 +71,7 @@ if [ ! -f "$DYNAWO_DIR_NAME/dynawo/dynawo.sh" ]; then
     echo "ERROR: Expected executable not found at '$DYNAWO_HOST_PATH/dynawo/dynawo.sh'"
     rm -rf "$DYNAWO_DIR_NAME"
     rm -f "$PKG"
-    rm -rf "$EXAMPLES"
+    rm -rf "$EXAMPLES_DIR"
     exit 1
 fi
 
@@ -79,13 +80,13 @@ rm -f build.log
 echo "Starting Docker build..."
 docker build -t dycov:latest -t dycov:"$TAG" \
              --build-arg dycov_PKG="$PKG" \
-             --build-arg dycov_EXAMPLES="$EXAMPLES" \
+             --build-arg dycov_EXAMPLES="$EXAMPLES_DIR" \
              --build-arg DYNAWO_DIR_NAME="$DYNAWO_DIR_NAME" \
              .
 
 # Clean up artifacts to keep the docker folder clean
 rm -f "$PKG"
-rm -rf "$EXAMPLES"
+rm -rf "$EXAMPLES_DIR"
 rm -rf "$DYNAWO_DIR_NAME"
 
 echo "Build complete. Image tagged as dycov:$TAG and dycov:latest"
