@@ -10,8 +10,8 @@
 
 import numpy as np
 
-from dycov.gfm.parameters import GFMParameters
 from dycov.gfm import constants
+from dycov.gfm.parameters import GFMParameters
 
 
 class GFMCalculator:
