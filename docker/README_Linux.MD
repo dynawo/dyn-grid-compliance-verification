@@ -1,6 +1,6 @@
 # Dycov Docker Container
 
-This directory contains the Dockerfile and auxiliary scripts to build and run a Docker container for the Dycov application.
+This directory contains the Dockerfile and auxiliary scripts to build, run, and distribute a Docker container for the Dycov application.
 
 This guide assumes you are running commands from within the `docker/` directory of the repository.
 
@@ -9,18 +9,18 @@ This guide assumes you are running commands from within the `docker/` directory 
 Before you begin, ensure you have the following tools installed on your host machine:
 
 * **Docker:** To build and run the container.
-* **[uv](https://github.com/astral-sh/uv):** The Python package manager.
-* **A local installation of Dynawo:** You must have a complete Dynawo installation directory available on your host machine.
+* **[uv](https://github.com/astral-sh/uv):** The Python package manager (required only if building from source).
+* **A local installation of Dynawo:** Required only if building from source.
 
 > **Tip:** If you have already run the standard `linux_install.sh` script, you already have a compatible Dynawo version installed in your installation folder (e.g., `$HOME/dycov/dynawo`). You can use that path.
 
 ## 2. Building the Docker Image
 
-The build process uses `uv` to build the `dycov` Python package and bundles your local Dynawo installation into the image.
+The build process uses `uv` to build the `dycov` Python package and bundles both your local Dynawo installation and the `examples` folder into the image.
 
-### Using the Build Script (Linux/macOS)
+### Using the Build Script
 
-The `build.sh` script automates the process. It builds the wheel and creates the Docker image.
+The `build.sh` script automates the process.
 
 **Arguments:**
 1.  **TAG:** The version tag for your new Docker image (e.g., `v0.8.1`).
@@ -35,7 +35,7 @@ The `build.sh` script automates the process. It builds the wheel and creates the
 
 This script will:
 1.  Build the Python wheel using `uv`.
-2.  Copy the wheel, examples, and Dynawo into the build context.
+2.  Copy the wheel, the `examples` folder, and Dynawo into the build context.
 3.  Run `docker build`.
 4.  Tag the image as `dycov:latest` and `dycov:<TAG>`.
 
@@ -55,3 +55,31 @@ This will:
 2.  Launch the container.
 3.  Map that subdirectory to the container's home.
 4.  Log you in as a user matching your host UID/GID.
+5.  **Auto-copy Examples:** On the first run, the tool will copy the `examples` folder to `~/examples` inside the container so you can start working immediately.
+
+## 4. Distributing the Image (No-Build Mode)
+
+If you need to move the tool to a machine that does not have internet access or build dependencies (like `uv`), use the provided export/import scripts.
+
+### Step A: Export (On the Build Machine)
+Run this on the machine where you successfully built the image.
+
+```bash
+./export_image.sh
+```
+This creates a compressed file named `dycov_image.tar.gz`.
+
+### Step B: Transfer
+Copy the following files to the target machine:
+1.  `dycov_image.tar.gz`
+2.  `import_image.sh`
+3.  `run_dycov_docker.sh`
+
+### Step C: Import (On the Target Machine)
+Run the import script to load the image into Docker.
+
+```bash
+./import_image.sh
+```
+
+Once imported, you can run the tool using `run_dycov_docker.sh` as described in Section 3.
