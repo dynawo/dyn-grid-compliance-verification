@@ -79,7 +79,7 @@ jobs:
         run: uv run pytest --cov=. --cov-report=xml:coverage.xml
 
       # Upload wheel as an artifact (handy for downloading and testing locally)
-      - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ matrix.os }}-py${{ matrix.python-version }}
+      # - name: Upload wheel artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: dist-${{ matrix.os }}-py${{ matrix.python-version }}
