@@ -188,7 +188,7 @@ class DynawoCurves(ProducerCurves):
         self._relAccuracy = 0.0  # Only for IDA solver
         self.__reset_solver()
 
-        self._use_pdr_values = USE_PDR_VALUES
+        self._use_pdr_values = USE_PDR_VALUES if producer.get_zone() != 1 else False
 
     def __cfg_section(self, pcs_name: str, bm_name: str, oc_name: str, suffix: str = "") -> str:
         """
