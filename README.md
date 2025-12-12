@@ -389,9 +389,10 @@ for deeper analysis, if desired.
 Opening in existing browser session.
 ```
 
-# Grid Forming (GFM) Analysis
+# Grid-forming (GFM) envelope calculation
 
-In addition to standard model validation and electrical performance verification, DyCoV includes a specialized module for **Grid Forming (GFM)** analysis. This module calculates theoretical dynamic response envelopes based on the generator's control parameters (Damping $D$ and Inertia $H$) and grid characteristics.
+In addition to generic-model validation and electrical performance verification, DyCoV includes a specialized module for **Grid Forming (GFM)** analysis. This module calculates the theoretical dynamic response **envelopes** (i.e., max/min tolerances), based on the desired damping 
+D and inertia H characteristics
 
 This allows for the verification of whether the generator's behavior remains within operational and stability limits calculated analytically for various grid events.
 
