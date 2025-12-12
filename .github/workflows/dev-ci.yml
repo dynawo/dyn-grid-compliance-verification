@@ -28,6 +28,9 @@ jobs:
       - name: Install dev dependencies
         run: uv pip install -e ".[dev]"
 
+      - name: Ensure flake8 is installed
+        run: uv pip install flake8 flake8-bugbear flake8-import-order
+
       - name: Linting with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
