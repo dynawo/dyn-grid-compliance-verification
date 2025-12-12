@@ -7,7 +7,7 @@
 # How it works:
 #   * Creates a root dir ("dycov") under the $PWD.
 #   * Downloads Dynawo (our own validated Nightly release) and unpacks it under $PWD/dycov/dynawo.
-#   * Shallow-clones the DyCoV repo (specific branch or tag) under a temporary subdir.
+#   * Gets DyCoV source (via Git, URL, or Local ZIP) under a temporary subdir.
 #   * Builds & installs the app in a venv using 'uv'.
 #   * Edits the venv activation script to include Dynawo in the PATH.
 #   * Copies examples and builds the manual.
@@ -37,6 +37,7 @@ INSTALL_DIR_BASE="$PWD/dycov"
 NON_INTERACTIVE=false
 CUSTOM_ZIP_USED=false
 DIRECT_URL=""
+LOCAL_SOURCE_ZIP=""
 INSTALL_DYNAWO=true
 
 # Local paths
@@ -169,7 +170,8 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo "Options:"
     echo "  -b, --branch NAME      The Git branch or tag to clone (default: $TARGET_BRANCH)."
-    echo "  -u, --url URL          Direct URL to a ZIP file. Overrides --branch."
+    echo "  -u, --url URL          Direct URL to a ZIP file (DyCoV Source). Overrides --branch."
+    echo "  -s, --source-zip FILE  Local ZIP file containing DyCoV source. Overrides --url and --branch."
     echo "  -z, --zipfile FILE     The local name of the Dynawo ZIP file (default: $DYNAWO_ZIP_FILE)."
     echo "  -d, --directory PATH   Directory where the installation will be performed (default: ./dycov)."
     echo "  -y, --yes              Non-interactive mode."
@@ -184,6 +186,14 @@ while [[ $# -gt 0 ]]; do
     case "$key" in
         -b | --branch) TARGET_BRANCH="$2"; shift; shift ;;
         -u | --url) DIRECT_URL="$2"; shift; shift ;;
+        -s | --source-zip) 
+            # Capture absolute path immediately to avoid issues after 'cd'
+            if [[ "$2" = /* ]]; then
+                LOCAL_SOURCE_ZIP="$2"
+            else
+                LOCAL_SOURCE_ZIP="$PWD/$2"
+            fi
+            shift; shift ;;
         -z | --zipfile) DYNAWO_ZIP_FILE="$2"; CUSTOM_ZIP_USED=true; shift; shift ;;
         -d | --directory) INSTALL_DIR_BASE="$2"; shift; shift ;;
         -y | --yes) NON_INTERACTIVE=true; shift ;;
@@ -291,19 +301,42 @@ if [ -d "$TMP_LOCAL_REPO" ]; then
     confirm_and_delete "$TMP_LOCAL_REPO"
 fi
 
-if [ -n "$DIRECT_URL" ]; then
+if [ -n "$LOCAL_SOURCE_ZIP" ]; then
+    color_msg "Step 2: Extracting DyCoV source code from local ZIP..."
+    
+    if [ ! -f "$LOCAL_SOURCE_ZIP" ]; then
+        color_err_msg "ERROR: The specified source ZIP file does not exist: $LOCAL_SOURCE_ZIP"
+        exit 1
+    fi
+    
+    # Copy file to current dir to avoid issues
+    cp "$LOCAL_SOURCE_ZIP" .
+    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP")
+    unzip -q "$ZIP_FILENAME"
+    rm -f "$ZIP_FILENAME"
+
+    # Find the extracted directory (ignoring dynawo and virtual envs)
+    UNZIPPED_DIR=$(find . -mindepth 1 -maxdepth 1 -type d ! -name 'dynawo' | grep -v 'dycov_venv' | grep -v 'manual')
+    if [ -z "$UNZIPPED_DIR" ] || [ "$(echo "$UNZIPPED_DIR" | wc -l)" -ne 1 ]; then
+        color_err_msg "ERROR: Could not determine the unzipped source directory. Ensure the zip contains a single root folder."
+        exit 1
+    fi
+    mv "$UNZIPPED_DIR" "$TMP_LOCAL_REPO"
+
+elif [ -n "$DIRECT_URL" ]; then
     color_msg "Step 2: Downloading DyCoV source code from direct URL..."
     SOURCE_ZIP_FILENAME="${DIRECT_URL##*/}"
     curl -L --fail "$DIRECT_URL" -o "$SOURCE_ZIP_FILENAME"
     unzip -q "$SOURCE_ZIP_FILENAME"
     rm -f "$SOURCE_ZIP_FILENAME"
 
-    UNZIPPED_DIR=$(find . -mindepth 1 -maxdepth 1 -type d ! -name 'dynawo' | grep -v 'dycov_venv')
+    UNZIPPED_DIR=$(find . -mindepth 1 -maxdepth 1 -type d ! -name 'dynawo' | grep -v 'dycov_venv' | grep -v 'manual')
     if [ -z "$UNZIPPED_DIR" ] || [ "$(echo "$UNZIPPED_DIR" | wc -l)" -ne 1 ]; then
         color_err_msg "ERROR: Could not determine the unzipped source directory."
         exit 1
     fi
     mv "$UNZIPPED_DIR" "$TMP_LOCAL_REPO"
+
 else
     color_msg "Step 2: Shallow-cloning the DyCoV repository (branch/tag: $TARGET_BRANCH)..."
     git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
