@@ -1,10 +1,12 @@
 #!/bin/bash
 #
-# Quick and dirty script to automate all steps for building/installing the package:
-#   * it uses a venv named "dycov_venv" (created under the $PWD when you invoke it)
-#   * it also pip-updates all dependencies to their latest version ("eager" strategy)
-# Assumes Python 3.9 or later.
-# 
+# Quick script to automate all steps for building & installing DyCoV from sources.
+# Requirements: It just needs 'uv' to be previously installed.
+#   * it uses a venv named "dycov_venv"
+#   * it also pip-updates all dependencies to their latest version
+#   * it can install in editable mode and with developer dependencies
+# Assumes Python 3.9 or later and uv are installed.
+#
 # (c) 2022 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
@@ -14,48 +16,47 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail
 
-
-PKG="dycov"
-SCRIPT_PATH=$(realpath "$0")
-MY_LOCAL_REPO=$(dirname "$SCRIPT_PATH")
-MY_VENV="$PWD"/dycov_venv
+MY_VENV="$PWD/dycov_venv"
 python_cmd=""
 
-
-GREEN="\\033[1;32m"
-NC="\\033[0m"
-colormsg()
-{
-    echo -e "${GREEN}$1${NC}"
-}
-colormsg_nnl()
-{
-    echo -n -e "${GREEN}$1${NC}"
+GREEN="\033[1;32m"
+NC="\033[0m"
+colormsg() {
+    local msg="$1"
+    echo -e "${GREEN}${msg}${NC}"
 }
 
-show_usage()
-{
+show_usage() {
     cat <<EOF
 Usage: $0 [OPTIONS]
   Options:
     -e | --editable   Install the tool as an editable package (for developers)
-    -d | --devel      Install additional Python packages for developers (adds ~250 MB to the venv)
+    -d | --devel      Install additional Python packages for developers (ruff, etc.)
     -h | --help       Show this help message
 EOF
 }
 
 # Searches for the newest compatible Python interpreter (3.9+).
-find_python_cmd()
-{
+find_python_cmd() {
     local best_interpreter=""
     local available_interpreters=()
 
     # Find all available and compatible interpreters
     for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
+        # We capture the output in a variable using "|| true" inside the subshell.
+        # This prevents the 'command -v' failure (status 1) from triggering the ERR trap.
+        local interp_path
+        interp_path=$(command -v "$interpreter" 2>/dev/null || true)
+
         if which "$interpreter" > /dev/null; then
             if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
                 # Store the full path to avoid ambiguity
                 available_interpreters+=("$(which "$interpreter")")
+                local ver
+                ver=$("$interp_path" --version 2>&1 | awk '{print $2}')
+                if echo "$ver" | grep -Eq '^3\.(9|[1-9][0-9])\.'; then
+                     available_interpreters+=("$interp_path")
+                fi
             fi
         fi
     done
@@ -67,7 +68,7 @@ find_python_cmd()
             echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
         done | sort -V -r | head -n 1 | awk '{print $2}')
     fi
-    
+
     python_cmd="$best_interpreter"
 }
 
@@ -87,36 +88,19 @@ set -e
 
 OPTIONS=edh
 LONGOPTS=editable,devel,help
-# -activate quoting/enhanced mode (e.g. by writing out “--options”)
-# -pass arguments only via   -- "$@"   to separate them correctly
 PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
-# read getopt’s output this way to handle the quoting right:
 eval set -- "$PARSED"
-# now enjoy the options in order and nicely split until we see "--"
-# defaults:
-EDITABLE=n DEVELOPER=n HELP=n
+
+EDITABLE=n
+DEVELOPER=n
+HELP=n
 while true; do
     case "$1" in
-        -e|--editable)
-            EDITABLE=y
-            shift
-            ;;
-        -d|--devel)
-            DEVELOPER=y
-            shift
-            ;;
-        -h|--help)
-            HELP=y
-            shift
-            ;;
-        --)
-            shift
-            break
-            ;;
-        *)
-            echo "Programming error"
-            exit 3
-            ;;
+        -e|--editable) EDITABLE=y; shift ;;
+        -d|--devel) DEVELOPER=y; shift ;;
+        -h|--help) HELP=y; shift ;;
+        --) shift; break ;;
+        *) echo "Programming error"; exit 3 ;;
     esac
 done
 
@@ -125,6 +109,11 @@ if [ "$HELP" = "y" ]; then
     exit 0
 fi
 
+# Check for uv using command -v
+if ! command -v uv &> /dev/null; then
+    echo "ERROR: 'uv' command not found. Please install it first (see https://docs.astral.sh/uv/getting-started/installation/)."
+    exit 1
+fi
 
 find_python_cmd
 if [ -z "$python_cmd" ]; then
@@ -132,71 +121,34 @@ if [ -z "$python_cmd" ]; then
     exit 1
 fi
 
-
 #######################################
 # The real meat starts here
 #######################################
 
-# Step 1: make sure the Python venv exists and activate it
-echo
-if [ ! -d "$MY_VENV" ]; then
-    colormsg_nnl "Virtual env not found, creating it now... "
-    $python_cmd -m venv "$MY_VENV"
-    colormsg "OK."
-fi
-colormsg_nnl "Activating venv... "
+colormsg "Step 1: Creating or verifying virtual environment '$MY_VENV'..."
+uv venv "$MY_VENV" --python "$python_cmd"
+
+colormsg "Step 2: Activating environment and installing dependencies..."
 # shellcheck source=/dev/null
-source "$MY_VENV"/bin/activate
-colormsg "OK."
-colormsg "Installing/upgrading pip & build in the venv... "
-pip install --upgrade pip build
-colormsg "OK."
+. "$MY_VENV"/bin/activate
 
+# Build the installation command
+install_target="."
+install_extras=""
 
-# Step 2: build
-echo
-colormsg "Building the DyCoV Tool package... "
 if [ "$EDITABLE" = "y" ]; then
-    colormsg "   SKIPPING (installing the DyCoV Tool as an editable Python package)."
-else
-    cd "$MY_LOCAL_REPO" && rm -rf build dist && python -m build --wheel
-    colormsg "OK."
+    install_target="-e ."
 fi
 
-
-# Step 3: install the package
-echo
-colormsg "Uninstalling the previous version of the DyCoV Tool... (if it exists)"
-# Add a '|| true' to prevent script exit if the package is not already installed
-pip uninstall -y "$PKG" || true
-colormsg "Installing the DyCoV Tool package and all its dependencies... "
-if [ "$EDITABLE" = "y" ]; then
-    cd "$MY_LOCAL_REPO" && pip install -e .
-else
-    pip install "$MY_LOCAL_REPO"/dist/*.whl
-fi
-
-
-# Step 4: upgrade all deps
-echo
-colormsg "Upgrading all dependent Python packages to their latest versions... "
-pip install --upgrade-strategy eager -U "$PKG"
-colormsg "OK."
-echo
-
-
-# Step 5 (OPTIONAL): install additional packages used only by developers
 if [ "$DEVELOPER" = "y" ]; then
-    echo
-    colormsg "Installing additional Python packages for developers... "
-    pip install --upgrade-strategy eager -U pipdeptree black isort flake8 pytest pytest-cov pytest-mock sphinx jupyter
-    colormsg "OK."
-    echo
+    # These extras are defined in pyproject.toml
+    install_extras="[dev,test]"
 fi
 
-# Step 6: Clean
-echo
-colormsg "Cleaning up build directories... "
-rm -rf "$MY_LOCAL_REPO"/build "$MY_LOCAL_REPO"/dist
+# Install with uv, ensuring proper quoting
+uv pip install --upgrade "$install_target$install_extras"
 colormsg "OK."
+echo
+colormsg "Development environment is ready."
+colormsg "To activate it, run: . $MY_VENV/bin/activate"
 echo
