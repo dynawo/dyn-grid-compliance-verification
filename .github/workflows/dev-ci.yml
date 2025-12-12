@@ -4,12 +4,10 @@ name: Dev CI
 on:
   pull_request:
 
-# Cancel in-progress runs for the same PR branch (saves minutes)
 concurrency:
   group: dev-ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Least privilege permissions; adjust if you later need to push tags, etc.
 permissions:
   contents: read
 
@@ -27,59 +25,58 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Install uv and enable its cache on the runner
+      # Install uv and enable its cache
       - name: Install uv
         uses: astral-sh/setup-uv@v2
 
-      # Install the desired Python version via uv (isolated from system Python)
+      # Install Python with uv
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      # Create a virtual environment in .venv (uv run will pick it up automatically)
+      # Create venv (uv will use it with `uv run`)
       - name: Create venv
         run: uv venv
 
-      # Install your project with both dev and test extras from pyproject.toml
+      # Install dev & test deps from your pyproject extras
       - name: Install dev & test dependencies
         run: uv pip install -e ".[dev,test]"
 
-      # 🔧 Build toolchain fix: ensure packaging tools exist before building
+      # Ensure packaging toolchain (fix for `python -m build`)
       - name: Install build toolchain
         run: uv pip install --upgrade build setuptools wheel
 
-      # Lint with Ruff (as configured in your pyproject.toml)
+      # Lint with Ruff (consistent with your pyproject.toml)
       - name: Lint with Ruff
         run: |
           uv run ruff --version
           uv run ruff check src --output-format=github
 
-      # If you prefer Flake8 instead of Ruff, use uvx (tool-on-demand) and comment the Ruff step:
-      # - name: Lint with flake8 (uvx)
-      #   run: |
-      #     uvx -q flake8 --version
-      #     # Stop the build if there are Python syntax errors or undefined names
-      #     uvx -q flake8 src --count --show-source --statistics
-      #     # Treat style issues as warnings (exit-zero), still display them
-      #     uvx -q flake8 src --count --exit-zero --statistics --max-complexity=10
-
-      # Build a wheel using the venv-managed Python
+      # Build the wheel
       - name: Build package (wheel)
         run: uv run python -m build --wheel
 
-      # Install the built wheel so tests run against the actual artifact
-      - name: Install wheel
+      # Install wheel on Linux/macOS (bash expands glob)
+      - name: Install wheel (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
         run: uv pip install dist/*.whl
 
-      # Run tests (pytest, pytest-mock, pytest-cov come from your [test] extras)
+      # Install wheel on Windows (PowerShell enumerates the file)
+      - name: Install wheel (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $wheel = Get-ChildItem -Path dist -Filter *.whl | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $wheel) {
+            Write-Error "No wheel found in dist/"
+          }
+          Write-Host "Installing wheel: $wheel"
+          uv pip install "$wheel"
+
+      # Run tests
       - name: Test
         run: uv run pytest -q --color=yes
 
-      # Generate coverage in a deterministic filename for downstream tools (Codecov, Sonar, etc.)
+           # Coverage (XML)
       - name: Coverage (XML)
-        run: uv run pytest --cov=. --cov-report=xml:coverage.xml
-
-      # Upload wheel as an artifact (handy for downloading and testing locally)
-      # - name: Upload wheel artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dist-${{ matrix.os }}-py${{ matrix.python-version }}
+        run: uv run pytest --cov=src --cov-report=xml
