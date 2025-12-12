@@ -389,53 +389,7 @@ for deeper analysis, if desired.
 Opening in existing browser session.
 ```
 
-# Grid Forming (GFM) Analysis
 
-In addition to standard model validation and electrical performance verification, DyCoV includes a specialized module for **Grid Forming (GFM)** analysis. This module calculates theoretical dynamic response envelopes based on the generator's control parameters (Damping $D$ and Inertia $H$) and grid characteristics.
-
-This allows for the verification of whether the generator's behavior remains within operational and stability limits calculated analytically for various grid events.
-
-## Supported GFM Events
-
-The tool supports envelope calculation for the following dynamic events:
-
-* **Amplitude Step:** Calculates the reactive current ($I_q$) and reactive power envelopes in response to a grid voltage step.
-* **Phase Jump:** Analyzes the active power ($P$) response to a sudden change in the grid voltage phase angle.
-* **RoCoF (Rate of Change of Frequency):** Calculates the active power response to a frequency ramp, modeling finite-duration events by superimposing step responses.
-* **SCR Jump:** Evaluates stability and power response following a sudden change in the Short Circuit Ratio (grid impedance), differentiating between overdamped and underdamped responses.
-
-## Hybrid Parameters & Configuration
-
-The GFM module is highly configurable via the `Producer.ini` file. A key feature is the ability to handle **Hybrid** configurations, creating merged envelopes that cover the uncertainty between different operating modes (e.g., varying damping conditions).
-
-### Standard vs. Hybrid Mode
-
-The tool automatically detects the operating mode based on the parameters defined in the configuration:
-
-1.  **Standard Mode:** Uses classic control parameters $D$ (Damping) and $H$ (Inertia). The tool calculates a single set of Upper and Lower envelopes.
-2.  **Hybrid Mode:** If specific parameters are defined for both overdamped and underdamped behaviors, the tool generates a **Merged Envelope**.
-    * Independent traces are calculated for the *Overdamped* set ($D_{over}, H_{over}$) and the *Underdamped* set ($D_{under}, H_{under}$).
-    * The final envelope is constructed by taking the maximum of the upper limits and the minimum of the lower limits, ensuring a robust validation range that covers both dynamic spectrums.
-
-### Key Configuration Parameters
-
-Parameters are defined in the `[GFM Parameters]` section of the producer's INI file:
-
-* **Physical:** `Snom`, `Unom`.
-* **Control (Standard):** `D`, `H`, `Xeff` (Effective Reactance).
-* **Control (Hybrid):** `D_Overdamped`, `H_Overdamped`, `D_Underdamped`, `H_Underdamped`.
-* **Limits:** `p_max_injection`, `p_min_injection`, `q_max`, `q_min`.
-* **Simulation Settings:**
-    * `save_all_envelopes`: If set to `true`, the CSV output will include all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope.
-    * `RatioMin`, `RatioMax`: Used for sensitivity analysis regarding parameter variations.
-
-## GFM Outputs
-
-For each GFM simulation case, the tool generates the following files in the results directory:
-
-* **Plots (HTML & PNG):** Interactive and static graphs showing the PCC signal alongside the calculated Upper/Lower envelopes. In Hybrid mode, it can also visualize the individual Over/Under traces.
-* **CSV Data:** Files containing the time series of the analyzed magnitude ($P$, $Q$, $I_q$) and their calculated limits.
-* **INI Dump:** A `_ini_dump.txt` file that preserves the exact configuration and calculated internal values (such as the damping ratio $\epsilon$) used during the execution.
 
 # Configuration
 
