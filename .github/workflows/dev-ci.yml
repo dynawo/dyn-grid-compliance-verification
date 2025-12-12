@@ -29,7 +29,7 @@ jobs:
         run: uv pip install -e ".[dev]"
 
       - name: Ensure flake8 is installed
-        run: uv pip install flake8 flake8-bugbear flake8-import-order
+        run: uv pip install flake8
 
       - name: Linting with flake8
         run: |
