@@ -4,10 +4,12 @@ name: Dev CI
 on:
   pull_request:
 
+# Cancel in-progress runs for the same PR branch (saves minutes)
 concurrency:
   group: dev-ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege permissions; adjust if you later need to push tags, etc.
 permissions:
   contents: read
 
@@ -25,44 +27,58 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Install uv and enable its cache on the runner
       - name: Install uv
         uses: astral-sh/setup-uv@v2
 
+      # Install the desired Python version via uv (isolated from system Python)
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
+      # Create a virtual environment in .venv (uv run will pick it up automatically)
       - name: Create venv
         run: uv venv
 
-      # Install your project with dev and test extras from pyproject.toml
+      # Install your project with both dev and test extras from pyproject.toml
       - name: Install dev & test dependencies
         run: uv pip install -e ".[dev,test]"
 
-      # Lint with Ruff (consistent with your pyproject config)
+      # 🔧 Build toolchain fix: ensure packaging tools exist before building
+      - name: Install build toolchain
+        run: uv pip install --upgrade build setuptools wheel
+
+      # Lint with Ruff (as configured in your pyproject.toml)
       - name: Lint with Ruff
         run: |
-          # Show version to verify availability
           uv run ruff --version
-          # Lint (uses E/F/W/I as configured)
           uv run ruff check src --output-format=github
 
-      # Build wheel
+      # If you prefer Flake8 instead of Ruff, use uvx (tool-on-demand) and comment the Ruff step:
+      # - name: Lint with flake8 (uvx)
+      #   run: |
+      #     uvx -q flake8 --version
+      #     # Stop the build if there are Python syntax errors or undefined names
+      #     uvx -q flake8 src --count --show-source --statistics
+      #     # Treat style issues as warnings (exit-zero), still display them
+      #     uvx -q flake8 src --count --exit-zero --statistics --max-complexity=10
+
+      # Build a wheel using the venv-managed Python
       - name: Build package (wheel)
         run: uv run python -m build --wheel
 
-      # Install the built wheel (tests run against installed artifact)
+      # Install the built wheel so tests run against the actual artifact
       - name: Install wheel
         run: uv pip install dist/*.whl
 
-      # Tests (pytest + pytest-mock + pytest-cov are in [test] extras)
+      # Run tests (pytest, pytest-mock, pytest-cov come from your [test] extras)
       - name: Test
         run: uv run pytest -q --color=yes
 
-      # Coverage report in a deterministic filename
+      # Generate coverage in a deterministic filename for downstream tools (Codecov, Sonar, etc.)
       - name: Coverage (XML)
         run: uv run pytest --cov=. --cov-report=xml:coverage.xml
 
-      # Upload wheel      # Upload wheel as artifact (handy for debugging)
+      # Upload wheel as an artifact (handy for downloading and testing locally)
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
