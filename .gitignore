@@ -42,4 +42,4 @@ docs/manual_dev/source/man/_autosummary
 complexity_report/
 
 # dycov installation folder
-dycov/
+/dycov/
