@@ -10,8 +10,8 @@
 
 import numpy as np
 
-from dycov.gfm.parameters import GFMParameters
 from dycov.gfm import constants
+from dycov.gfm.parameters import GFMParameters
 
 
 class GFMCalculator:
@@ -51,6 +51,11 @@ class GFMCalculator:
         self._margin_high = gfm_params.get_margin_high()
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
+
+        # Attributes for INI dump validation
+        self._d_vals = None
+        self._h_vals = None
+        self._epsilon_vals = None
 
     def get_plot_parameter_names(self) -> list[str]:
         """

@@ -27,7 +27,7 @@ def create_map(results: dict) -> list:
     if "t_P90_error" in results:
         apr_map.append(
             [
-                "$Err_{T_\\text{90P}} < min(10\% T_\\text{$90P_\\text{ref}$}, 100ms)$",
+                r"$Err_{T_\\text{90P}} < min(10\% T_\\text{$90P_\\text{ref}$}, 100ms)$",
                 printable.format_value(
                     results,
                     "t_P90_error",
