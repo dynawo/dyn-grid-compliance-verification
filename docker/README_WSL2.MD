@@ -1,57 +1,87 @@
-# Dycov Deployment Guide for WSL2 (Using a Pre-Built Image)
+# Dycov Deployment Guide for Windows (WSL2)
 
-This guide explains how to transfer a pre-built `dycov:latest` Docker image from a Linux machine and run it on a Windows machine using WSL2.
+This guide explains how to set up the environment from scratch, transfer a pre-built `dycov:latest` Docker image, and run it on a Windows machine using WSL2 (Windows Subsystem for Linux).
 
-This workflow is much faster than building the image from scratch and avoids installing build dependencies on Windows.
+This workflow avoids installing complex build dependencies on Windows by using a pre-packaged Docker image.
 
-## 1. Prerequisites: Setting Up Your WSL2 Environment
+## 1. Prerequisites: Setting Up Your Environment
 
-* **WSL2:** Open PowerShell as Administrator and run `wsl --install`.
-* **Docker Desktop for Windows:** Ensure you **enable the "Use WSL2 based engine"** option in settings.
+Before handling the files, you must enable Linux support on your Windows machine.
+
+### Step 1.1: Install WSL2
+1.  Open the **PowerShell** application as **Administrator**.
+2.  Run the following command:
+    ```powershell
+    wsl --install
+    ```
+3.  **Restart your computer**.
+4.  After restarting, a terminal window will open automatically. It will ask you to create a **UNIX username** and **password**. Follow the prompts (note: the password will not appear on screen while typing).
+
+### Step 1.2: Install Docker Desktop
+1.  Download and install **Docker Desktop for Windows**.
+2.  During installation, ensure the **"Use WSL 2 based engine"** option is checked.
+3.  Once installed, open Docker Desktop, go to **Settings (gear icon) -> Resources -> WSL Integration**.
+4.  Ensure the toggle for your Linux distribution (e.g., "Ubuntu") is turned **ON**.
 
 ## 2. The Deployment Files
 
-You require the following files on your Windows/WSL2 machine:
+You need the following files on your Windows machine (e.g., in a folder named `Dycov` on your Desktop):
 
-1.  **`dycov_image.tar.gz`:** The exported image file.
-2.  **`import_image.sh`:** The script to load the image.
-3.  **`run_dycov_docker.sh`:** The script to run the container.
+1.  **`dycov_image.tar.gz`**: The compressed Docker image.
+2.  **`import_image.sh`**: The script to load the image into Docker.
+3.  **`run_dycov_docker.sh`**: The script to launch the container.
 
 ## 3. Step-by-Step Deployment
 
-### Step 1: Export the Image (On your Linux build machine)
+### Step 1: Open the WSL Terminal
+Open the "Ubuntu" application from your Windows Start menu. You are now in the Linux command line.
 
-Run the export script on the machine where you successfully built the image.
+### Step 2: Navigate to your Windows Files
+In WSL, your Windows drives are mounted under `/mnt`. To go to the folder created in Section 2 (assuming it is on your Desktop):
 
 ```bash
-./export_image.sh
+# Replace 'YOUR_USER' with your actual Windows username
+cd /mnt/c/Users/YOUR_USER/Desktop/Dycov
 ```
-This generates the `dycov_image.tar.gz` file.
 
-### Step 2: Transfer the Files (To your WSL2 machine)
+### Step 3: Sanitize the Scripts (Crucial for Windows)
+Windows and Linux use different codes for line breaks. If you try to run scripts copied directly from Windows, they may fail.
 
-Copy `dycov_image.tar.gz`, `import_image.sh`, and `run_dycov_docker.sh` to your Windows/WSL2 environment (e.g., inside your user home directory).
+1.  Install the conversion tool:
+    ```bash
+    sudo apt-get update && sudo apt-get install -y dos2unix
+    ```
+2.  Convert the scripts to Linux format:
+    ```bash
+    dos2unix *.sh
+    ```
+3.  Make the scripts executable:
+    ```bash
+    chmod +x *.sh
+    ```
 
-### Step 3: Import the Image (Inside your WSL2 terminal)
-
-Open your WSL2 terminal (Ubuntu), navigate to the folder where you copied the files, and run:
+### Step 4: Import the Image
+Run the import script to load the Docker image layers into your local system:
 
 ```bash
-chmod +x import_image.sh run_dycov_docker.sh
 ./import_image.sh
 ```
+*This process loads the image from `dycov_image.tar.gz`.*
 
-This will load the `dycov:latest` image into your Docker Desktop instance.
+### Step 5: Run the Container
+You can now launch the tool. You must specify a "Work Directory" (a folder on your host machine that the container can read/write to).
 
-### Step 4: Run the Container
-
-You can now launch the container using the run script. It requires one argument: the path to your working directory on the host.
+To use the current folder (`.`) as your workspace:
 
 ```bash
-# Usage: ./run_dycov_docker.sh <WORK_DIR>
-./run_dycov_docker.sh $HOME/dycov_projects
+./run_dycov_docker.sh .
 ```
 
-**Note:**
-1.  This script will create a `dycov_docker` subdirectory inside your project folder.
-2.  **Examples:** The `examples` folder will be automatically copied to your home directory inside the container upon launch, ready for use.
+* **What happens next?** The script will map your user permissions and log you into the container.
+* **Accessing Examples:** The `examples` folder is automatically copied to `~/examples` inside the container for immediate use.
+
+### Step 6: Exiting
+To close the session and stop the container, simply type:
+```bash
+exit
+```
