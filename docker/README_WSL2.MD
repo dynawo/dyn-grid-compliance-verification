@@ -27,7 +27,7 @@ Before handling the files, you must enable Linux support on your Windows machine
 
 You need the following files on your Windows machine (e.g., in a folder named `Dycov` on your Desktop):
 
-1.  **`dycov_image.tar.gz`**: The compressed Docker image.
+1.  **`dycov_image.tar.gz`** (or a download URL): The compressed Docker image. You can use the local file or a direct URL to download it (e.g., from the GitHub Release).
 2.  **`import_image.sh`**: The script to load the image into Docker.
 3.  **`run_dycov_docker.sh`**: The script to launch the container.
 
@@ -61,12 +61,17 @@ Windows and Linux use different codes for line breaks. If you try to run scripts
     ```
 
 ### Step 4: Import the Image
-Run the import script to load the Docker image layers into your local system:
+Run the import script to load the Docker image layers into your local system.
 
+*Option A: If you have the local .tar.gz file:*
 ```bash
 ./import_image.sh
 ```
-*This process loads the image from `dycov_image.tar.gz`.*
+
+*Option B: If you want to download it from a URL (e.g., GitHub Release):*
+```bash
+./import_image.sh --url "https://link-to-your-github-release/dycov_image.tar.gz"
+```
 
 ### Step 5: Run the Container
 You can now launch the tool. You must specify a "Work Directory" (a folder on your host machine that the container can read/write to).
