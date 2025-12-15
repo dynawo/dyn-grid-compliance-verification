@@ -1,63 +1,82 @@
+
 name: Dev CI
 
 on:
   pull_request:
 
+concurrency:
+  group: dev-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   build:
-
-    name: Build OS ${{ matrix.os}} with Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os}}
+    name: Build OS ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10"]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      # Install uv and enable its cache
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      # Install Python with uv
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      # Create venv (uv will use it with `uv run`)
+      - name: Create venv
+        run: uv venv
+
+      # Install dev & test deps from your pyproject extras
+      - name: Install dev & test dependencies
+        run: uv pip install -e ".[dev,test]"
+
+      # Ensure packaging toolchain (fix for `python -m build`)
+      - name: Install build toolchain
+        run: uv pip install --upgrade build setuptools wheel
+
+      # Lint with Ruff (consistent with your pyproject.toml)
+      - name: Lint with Ruff
         run: |
-          python -m pip install --upgrade pip build setuptools wheel
-          python -m pip install --upgrade flake8 pytest pytest-mock pytest-cov
+          uv run ruff --version
+          uv run ruff check src --output-format=github
 
-      - name: Build package
-        run: python -m build --wheel
+      # Build the wheel
+      - name: Build package (wheel)
+        run: uv run python -m build --wheel
 
-      - name: Install wheel
-        if: matrix.os != 'windows-latest'
-        run: pip install dist/*.whl
-
-      - name: Install wheel
-        if: matrix.os == 'windows-latest'
+      # Install wheel on Linux/macOS (bash expands glob)
+      - name: Install wheel (Linux/macOS)
+        if: runner.os != 'Windows'
         shell: bash
-        run: python -m pip install dist/*.whl
+        run: uv pip install dist/*.whl
 
-      - name: Linting with flake8
+      # Install wheel on Windows (PowerShell enumerates the file)
+      - name: Install wheel (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 src --count --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 99 chars wide
-          flake8 src --count --exit-zero --statistics --max-complexity=10 
-          
-      # - name: Run tests
-      #   run: pytest
+          $wheel = Get-ChildItem -Path dist -Filter *.whl | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $wheel) {
+            Write-Error "No wheel found in dist/"
+          }
+          Write-Host "Installing wheel: $wheel"
+          uv pip install "$wheel"
 
-      - name: Generate coverage
-        run: pytest --cov=. --cov-report=xml 
+      # Run tests
+      - name: Test
+        run: uv run pytest -q --color=yes
 
-      #- name: Sonar analysis
-      #  uses: sonarsource/sonarcloud-github-action@v2.0.2
-      #  env:
-      #    GITHUB_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
-      #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #  with:
-      #    args: |
-      #      -Dsonar.python.coverage.reportPaths=coverage.xml
-
+           # Coverage (XML)
+      - name: Coverage (XML)
+        run: uv run pytest --cov=src --cov-report=xml
