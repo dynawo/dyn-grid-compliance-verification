@@ -23,20 +23,28 @@ color_msg()
     echo -e "${GREEN}$1${NC}" >&6
 }
 
-usage()
+usage() 
 {
-   echo "This script is used to test the dycov tool."
-   echo "Usage: $0 [options]"
-   echo "Options:"
-   echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
-   echo "  -e, --examples: specify the examples path (default: ./examples)"
-   echo "  -o, --output: specify the output path (default: ../Results)"
-   echo "  -r, --remove: remove the output path if it exists"
-   echo "  --iec: execute only IEC models"
-   echo "  --wecc: execute only WECC models"
-   echo "  -v, --validate: execute only model validation"
-   echo "  -p, --performance: execute only performance verification"
-   echo "  -h, --help: display this help"
+  echo "This script is used to test the dycov tool."
+  echo "Usage: $0 [options]"
+  echo "Options:"
+  echo "  -l, --launcher: specify the Dynawo launcher script to use (default: dynawo.sh)"
+  echo "  -e, --examples: specify the examples path (default: ./examples)"
+  echo "  -o, --output: specify the output path (default: ../Results)"
+  echo "  -r, --remove: remove the output path if it exists"
+  echo "  --iec: execute only IEC models"
+  echo "  --wecc: execute only WECC models"
+  echo "  -v, --validate: execute only model validation"
+  echo "  -p, --performance: execute only performance verification"
+  echo "  -g, --generate: execute only envelope generation (GFM)"
+  echo "  -h, --help: display this help"
+  echo
+  echo "Notes:"
+  echo "  • By default the script runs Validation, Performance, and Envelope Generation phases in parallel (max 4 processes per phase)."
+  echo "  • At the end of the run, an Overall Result summary is produced from the log:"
+  echo "    CSV at:   <output>/test_tool.log.overall_result_counts.csv"
+  echo "    PNG at:   <output>/overall_result_counts.png   (if Matplotlib available)"
+  echo "    HTML at:  <output>/overall_result_counts.html  (if Plotly available)"
 }
 
 # Function to execute a validation command and record time
@@ -169,7 +177,7 @@ run_dycov_generate() {
 export -f run_dycov_generate
 
 launch_generate() {
-   declare -a models=("GFM_Overdamped" "GFM_Underdamped")
+   declare -a models=("GFM_Overdamped" "GFM_Underdamped" "GFM_Fusion")
 
    local -a generate_commands=()
 
