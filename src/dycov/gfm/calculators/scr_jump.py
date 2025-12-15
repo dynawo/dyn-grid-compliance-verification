@@ -183,6 +183,10 @@ class SCRJump(GFMCalculator):
             if delta_p_max is not None:
                 max_envelope_results[i, :] = delta_p_max
 
+        self._d_vals = damping_variations
+        self._h_vals = inertia_variations
+        self._epsilon_vals = epsilon_results
+
         # Check if all scenarios (nominal, min, max) have the same damping type
         is_overdamped = epsilon_results >= 1
         if not np.all(is_overdamped == is_overdamped[0]):
@@ -313,19 +317,15 @@ class SCRJump(GFMCalculator):
             )
 
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
-            condition = time_mask & (lower_trace > self._max_active_power * self._pmax_mois_tunnel)
+            condition = time_mask & (lower_trace > self._pmax_mois_tunnel)
 
             if is_overdamped:
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
                 )
-                lower_trace = np.where(
-                    condition, self._max_active_power * self._pmax_mois_tunnel, lower_trace
-                )
+                lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
             else:  # Underdamped case
-                lower_trace = np.where(
-                    condition, self._max_active_power * self._pmax_mois_tunnel, lower_trace
-                )
+                lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
                 )
@@ -343,19 +343,15 @@ class SCRJump(GFMCalculator):
             )
 
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
-            condition = time_mask & (upper_trace < self._min_active_power * self._pmin_mois_tunnel)
+            condition = time_mask & (upper_trace < self._pmin_mois_tunnel)
 
             if is_overdamped:
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time
                 )
-                upper_trace = np.where(
-                    condition, self._min_active_power * self._pmin_mois_tunnel, upper_trace
-                )
+                upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
             else:  # Underdamped case
-                upper_trace = np.where(
-                    condition, self._min_active_power * self._pmin_mois_tunnel, upper_trace
-                )
+                upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time
                 )

@@ -10,10 +10,10 @@
 
 import numpy as np
 
+from dycov.gfm import constants
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
-from dycov.gfm import constants
 
 
 class RoCoF(GFMCalculator):
@@ -143,13 +143,23 @@ class RoCoF(GFMCalculator):
         p_peak_array = []
         t_response_array = []
 
+        epsilon_vals = []
+        u_prod = self._initial_voltage * self._grid_voltage
+
         for i in range(len(d_array)):
+            wn_i = np.sqrt(self._base_angular_frequency * u_prod / (2 * h_array[i] * x_total))
+            epsilon_vals.append(d_array[i] / (4 * h_array[i] * wn_i))
+
             delta_p, p_peak, t_response = self._calculate_delta_p_for_damping(
                 d_array[i], h_array[i], x_total, time_array, event_time
             )
             delta_p_array.append(delta_p)
             p_peak_array.append(p_peak)
             t_response_array.append(t_response)
+
+        self._d_vals = d_array
+        self._h_vals = h_array
+        self._epsilon_vals = np.array(epsilon_vals)
 
         return delta_p_array, p_peak_array, t_response_array
 

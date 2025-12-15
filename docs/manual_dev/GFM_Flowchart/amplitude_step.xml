@@ -1,0 +1,96 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="28.2.7">
+  <diagram name="AmplitudeStep Flow (Logical) - Updated" id="amplitude-step-flow-logical-v2">
+    <mxGraphModel dx="1360" dy="793" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="E1" value="Start: Amplitude Step Calculation" style="ellipse;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fillColor=#dae8fc;fontSize=12;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="310" y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="E2" value="Inputs: D, H, Xeff, time_array, event_time" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="160" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="E3" value="Calculate `delta_iq` curves&lt;br&gt;(Nominal, Min, Max)" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="260" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="E7" value="&lt;div&gt;&lt;b&gt;`delta_iq` Logic:&lt;/b&gt;&lt;br&gt;&lt;div&gt;&lt;ul style=&quot;margin-left: 20px; padding-left: 0px;&quot;&gt;&lt;li&gt;&lt;b&gt;Nominal:&lt;/b&gt; 1st order exponential rise.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Min:&lt;/b&gt; 1st order rise, held at 0 until t90, and clipped by a `(max_iq - tunnel)` ceiling.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Max:&lt;/b&gt; 1st order rise + a decaying transient &quot;boost&quot; + tunnel.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;dashed=1;dashPattern=8 8;fillColor=#FFF8E9;strokeColor=#000000;fontSize=12;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="270" y="360" width="260" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="E8" value="Combine `delta_iq` curves into Reactive Power (Q) Envelopes" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="275" y="550" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="E9" value="&lt;div&gt;&lt;b&gt;Reactive Power (Q) Logic:&lt;/b&gt;&lt;br&gt;&lt;div&gt;&lt;ul style=&quot;margin-left: 20px; padding-left: 0px;&quot;&gt;&lt;li&gt;Get `sign_K` from voltage step.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Q_PCC&lt;/b&gt; = clip(Q0 - sign_K * `delta_iq_nominal`)&lt;/li&gt;&lt;li&gt;&lt;b&gt;Q_Lower&lt;/b&gt; = Q0 - sign_K * MIN(`delta_iq_min`, ... limit)&lt;/li&gt;&lt;li&gt;&lt;b&gt;Q_Upper&lt;/b&gt; = Q0 - sign_K * MIN(`delta_iq_max`, ... limit)&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;dashed=1;dashPattern=8 8;fillColor=#FFF8E9;strokeColor=#000000;fontSize=12;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="235" y="680" width="330" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="E14" value="Receive Final `Q` Envelopes&lt;br&gt;(PCC, Upper, Lower)" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;align=center;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="850" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="E16" value="Is EMT simulation?" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;strokeColor=#000000;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="350" y="960" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="E17" value="Yes: Apply Final Time Delay to `Q` signals" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="120" y="980" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="E18" value="No: Use `Q` signals directly" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="500" y="980" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="E13" value="Convert Final `Q` signals to `Iq` signals&lt;br&gt;(Iq = -Q)" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="1120" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="E19" value="Return Final Results (Iq)" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;align=center;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="325" y="1230" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="E20" value="End" style="ellipse;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fillColor=#f8cecc;fontSize=12;strokeColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="340" y="1330" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E1-E2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E1" target="E2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E2-E3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E2" target="E3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E3-E7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E3" target="E7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E7-E8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E7" target="E8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E8-E9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E8" target="E9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E9-E14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E9" target="E14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E14-E16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E14" target="E16" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E16-E17" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E16" target="E17" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E16-E18" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E16" target="E18" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E17-E13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E17" target="E13" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="210" y="1155" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-E18-E13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E18" target="E13" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="1155" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-E13-E19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E13" target="E19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-E19-E20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;strokeColor=#000000;fontColor=#000000;" parent="1" source="E19" target="E20" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -9,7 +9,6 @@
 #
 from dycov.configuration.cfg import config
 
-
 # Mapping of measurement names to their respective prefixes used in configuration keys.
 # This dictionary is used to retrieve the appropriate prefix for a given measurement name.
 MEASUREMENT_PREFIX_MAP = {
