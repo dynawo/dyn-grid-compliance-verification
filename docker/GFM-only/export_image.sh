@@ -10,7 +10,7 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail 
 
-IMAGE_NAME="dycov-GFM-only:latest"
+IMAGE_NAME="dycov:latest"
 OUTPUT_FILE="dycov_image_GFM-only.tar.gz"
 
 # Colors for output

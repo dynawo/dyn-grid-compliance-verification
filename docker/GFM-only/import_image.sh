@@ -92,7 +92,7 @@ colormsg "This process may take a minute..."
 
 if docker load < "$INPUT_FILE"; then
     colormsg "Success!"
-    colormsg "The image 'dycov-GFM-only:latest' is now available in Docker."
+    colormsg "The image 'dycov:latest' is now available in Docker."
     echo ""
     echo "You can now run the tool using './run_dycov_docker.sh <WORK_DIRECTORY>'"
 else
