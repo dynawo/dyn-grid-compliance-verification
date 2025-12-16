@@ -23,7 +23,7 @@ def test_create_map_returns_table_row_with_valid_input():
     assert len(table) == 1
     row = table[0]
 
-    expected = r"$Err_{T_\\text{90P}} < min(10\% T_\\text{$90P_\\text{ref}$}, 100ms)$"
+    expected = r"$Err_{T_\text{90P}} < min(10\% T_\text{$90P_\text{ref}$}, 100ms)$"
     assert row[0] == expected
     assert row[1] == "0.0123"
     assert row[2] == "0.1"
