@@ -56,7 +56,7 @@ cp -a "$ROOT_DIR/examples" "$EXAMPLES_DIR"
 # Launch the build (GFM-only version)
 rm -f build.log
 echo "Starting Docker build (GFM-only)..."
-docker build -t dycov-GFM-only:latest -t dycov-GFM-only:"$TAG" \
+docker build -t dycov:latest -t dycov:"$TAG" \
              --build-arg dycov_PKG="$PKG" \
              --build-arg dycov_EXAMPLES="$EXAMPLES_DIR" \
              .
