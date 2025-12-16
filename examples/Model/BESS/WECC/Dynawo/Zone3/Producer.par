@@ -75,8 +75,8 @@
     <par type="DOUBLE" name="BESS_DUp" value="0.001"/>
     <par type="DOUBLE" name="BESS_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="BESS_FEMinPu" value="-999"/>
-    <par type="DOUBLE" name="BESS_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="BESS_PMinPu" value="0"/>
+    <par type="DOUBLE" name="BESS_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="BESS_PMinPu" value="-0.75"/>
     <par type="DOUBLE" name="BESS_tLag" value="0.1"/>
     <par type="DOUBLE" name="BESS_Kp" value="0.1"/>
     <par type="DOUBLE" name="BESS_Ki" value="1.5"/>
