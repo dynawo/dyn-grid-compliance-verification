@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# export_image.sh: Export the built 'dycov-GFM-only:latest' Docker image.
+# export_image.sh: Export the built 'dycov:latest' Docker image.
 #
 # (c) 2023/24 RTE
 # Developed by Grupo AIA

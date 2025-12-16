@@ -65,4 +65,4 @@ docker build -t dycov:latest -t dycov:"$TAG" \
 rm -f "$PKG"
 rm -rf "$EXAMPLES_DIR"
 
-echo "Build complete. Image tagged as dycov-GFM-only:$TAG and dycov-GFM-only:latest"
+echo "Build complete. Image tagged as dycov:$TAG and dycov:latest"
