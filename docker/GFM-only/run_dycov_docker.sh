@@ -12,7 +12,7 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail 
 
 # Config vars - Points to GFM-only image
-DOCKER_IMAGE="dycov-GFM-only:latest"
+DOCKER_IMAGE="dycov:latest"
 
 GREEN="\033[1;32m"
 NC="\033[0m"
