@@ -240,7 +240,6 @@ color_msg "Dependencies verified successfully."
 
 color_msg ""
 color_msg "Starting the installation of the DyCoV tool in: $INSTALL_DIR"
-# ... (rest of logging logic same as original)
 
 ################################################################################
 # Download and Extraction of Dynawo
