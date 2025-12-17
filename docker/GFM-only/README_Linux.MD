@@ -29,7 +29,7 @@ The `build.sh` script automates the process.
 This script will:
 1.  Build the Python wheel using `uv`.
 2.  Run `docker build`.
-3.  Tag the image as `dycov-GFM-only:latest` and `dycov-GFM-only:<TAG>`.
+3.  Tag the image as `dycov:latest` and `dycov:<TAG>`.
 
 ## 3. Running the Container
 
@@ -42,7 +42,7 @@ Use the `run_dycov_docker.sh` script to launch the container.
 ./run_dycov_docker.sh $HOME/dycov_projects
 ```
 
-This will launch `dycov-GFM-only:latest`.
+This will launch `dycov:latest`.
 
 ## 4. Distributing the Image
 
