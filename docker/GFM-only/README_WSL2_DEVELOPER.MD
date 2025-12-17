@@ -41,7 +41,7 @@ sudo usermod -aG docker $USER
 *Note: You may need to log out and log back in for the group change to take effect.*
 
 ### 3. Build/Load the GFM-only Image
-Ensure the `dycov-GFM-only:latest` image exists inside this local Docker engine.
+Ensure the `dycov:latest` image exists inside this local Docker engine.
 
 ```bash
 # Navigate to the GFM-only directory
