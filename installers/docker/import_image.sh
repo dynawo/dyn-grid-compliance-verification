@@ -46,8 +46,13 @@ colormsg "Restoring Docker metadata (ENV, ENTRYPOINT)..."
 # 1. Restore PATH (combining system path + uv path + dynawo path)
 # 2. Restore DEBIAN_FRONTEND
 # 3. Restore ENTRYPOINT script
+
+# We reconstruct the PATH to match the Dockerfile environment.
+# Note: This list must include the path where Dynawo is installed inside the image.
+RESTORED_PATH="/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 cat "$INPUT_FILE" | docker import \
-    --change "ENV PATH=/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    --change "ENV PATH=$RESTORED_PATH" \
     --change "ENV DEBIAN_FRONTEND=noninteractive" \
     --change "ENTRYPOINT [\"/start_dycov.sh\"]" \
     - "$TARGET_IMAGE"
