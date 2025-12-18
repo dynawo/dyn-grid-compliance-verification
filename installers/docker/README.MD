@@ -38,10 +38,16 @@ You need the file: **`dycov_dist.tar.gz`** (and the scripts).
 **Prerequisites:** Docker Desktop installed.
 
 1.  **Import the Image (PowerShell):**
-    You cannot use `docker load`. You must run the import command manually to restore the configuration:
+    You cannot use `docker load`. You must run the import command manually to restore the configuration (PATH and ENTRYPOINT) which are stripped during the export process.
+    
+    Paste the following commands in PowerShell (in the folder containing the `.tar.gz`):
     ```powershell
-    # Run inside PowerShell in the folder with the .tar.gz
-    docker import --change "ENTRYPOINT [\"/start_dycov.sh\"]" .\dycov_dist.tar.gz dycov:latest
+    # 1. Define the environment variables to match the Linux configuration
+    $DycovPath = 'ENV PATH="/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"'
+    $DycovEntry = 'ENTRYPOINT ["/start_dycov.sh"]'
+
+    # 2. Import the image applying the changes
+    docker import --change $DycovPath --change $DycovEntry .\dycov_dist.tar.gz dycov:latest
     ```
 
 2.  **Run the Tool:**
