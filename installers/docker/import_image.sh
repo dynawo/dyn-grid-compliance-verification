@@ -12,7 +12,7 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail 
 
-INPUT_FILE="dycov_dist.tar.gz"
+INPUT_ARG="dycov_dist.tar.gz"
 TARGET_IMAGE="dycov:latest"
 
 GREEN="\033[1;32m"
@@ -27,35 +27,50 @@ errormsg() {
     echo -e "${RED}$1${NC}" >&2
 }
 
-# Allow passing a different file as argument
+# Allow passing a different file OR a URL as argument
 if [ "$#" -ge 1 ]; then
-    INPUT_FILE="$1"
+    INPUT_ARG="$1"
 fi
 
-if [ ! -f "$INPUT_FILE" ]; then
-    errormsg "ERROR: File '$INPUT_FILE' not found."
-    errormsg "Usage: $0 [path_to_tar_gz_file]"
-    exit 1
-fi
-
-colormsg "Importing filesystem from '$INPUT_FILE'..."
-colormsg "Restoring Docker metadata (ENV, ENTRYPOINT)..."
-
+# Function to run the docker import command
 # We use 'docker import' with --change flags to manually restore the Dockerfile instructions
 # that were lost during 'docker export'.
-# 1. Restore PATH (combining system path + uv path + dynawo path)
-# 2. Restore DEBIAN_FRONTEND
-# 3. Restore ENTRYPOINT script
+do_import() {
+    docker import \
+        --change "ENV PATH=/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+        --change "ENV DEBIAN_FRONTEND=noninteractive" \
+        --change "ENTRYPOINT [\"/start_dycov.sh\"]" \
+        - "$TARGET_IMAGE"
+}
 
-# We reconstruct the PATH to match the Dockerfile environment.
-# Note: This list must include the path where Dynawo is installed inside the image.
-RESTORED_PATH="/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# Check if input is a URL (http or https)
+if [[ "$INPUT_ARG" =~ ^https?:// ]]; then
+    colormsg "Detected URL source: $INPUT_ARG"
+    
+    if ! command -v curl >/dev/null 2>&1; then
+        errormsg "ERROR: 'curl' is required to download from a URL but it is not installed."
+        exit 1
+    fi
 
-cat "$INPUT_FILE" | docker import \
-    --change "ENV PATH=$RESTORED_PATH" \
-    --change "ENV DEBIAN_FRONTEND=noninteractive" \
-    --change "ENTRYPOINT [\"/start_dycov.sh\"]" \
-    - "$TARGET_IMAGE"
+    colormsg "Downloading and importing stream directly (no temp file)..."
+    colormsg "Restoring Docker metadata (ENV, ENTRYPOINT)..."
+    
+    # Pipe curl directly to docker import
+    # -L follows redirects, -f fails on HTTP errors, -s shows progress bar implied or silence
+    curl -L --fail --progress-bar "$INPUT_ARG" | do_import
+
+# Check if input is a local file
+elif [ -f "$INPUT_ARG" ]; then
+    colormsg "Importing filesystem from local file '$INPUT_ARG'..."
+    colormsg "Restoring Docker metadata (ENV, ENTRYPOINT)..."
+    
+    cat "$INPUT_ARG" | do_import
+
+else
+    errormsg "ERROR: Source '$INPUT_ARG' not found locally and is not a valid URL."
+    errormsg "Usage: $0 [path_to_tar_gz_file | http://url/to/file.tar.gz]"
+    exit 1
+fi
 
 if [ $? -eq 0 ]; then
     colormsg "Success! Image '$TARGET_IMAGE' created."
