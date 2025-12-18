@@ -25,6 +25,7 @@ You need the file: **`dycov_dist.tar.gz`** (and the scripts).
     chmod +x import_image.sh
     ./import_image.sh dycov_dist.tar.gz
     ```
+    *(Note: The import script also supports downloading from a URL: `./import_image.sh https://example.com/dycov_dist.tar.gz`)*
 
 2.  **Run the Tool:**
     ```bash
@@ -40,11 +41,13 @@ You need the file: **`dycov_dist.tar.gz`** (and the scripts).
 1.  **Import the Image (PowerShell):**
     You cannot use `docker load`. You must run the import command manually to restore the configuration (PATH and ENTRYPOINT) which are stripped during the export process.
     
+    **Crucial:** You must use the escaped quotes (`\"`) as shown below, otherwise PowerShell will strip them and the import will fail.
+    
     Paste the following commands in PowerShell (in the folder containing the `.tar.gz`):
     ```powershell
-    # 1. Define the environment variables to match the Linux configuration
-    $DycovPath = 'ENV PATH="/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"'
-    $DycovEntry = 'ENTRYPOINT ["/start_dycov.sh"]'
+    # 1. Define the environment variables with ESCAPED quotes (\")
+    $DycovPath = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+    $DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
 
     # 2. Import the image applying the changes
     docker import --change $DycovPath --change $DycovEntry .\dycov_dist.tar.gz dycov:latest
