@@ -5,8 +5,8 @@
   <dyn:blackBoxModel id="Aux_Load" lib="LoadAlphaBeta" parFile="Producer.par" parId="Aux_Load"/>
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
   <dyn:blackBoxModel id="Wind_Turbine" lib="IECWPP4ACurrentSource2015" parFile="Producer.par" parId="Wind_Turbine"/>
-  <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal2"/>
-  <dyn:connect id1="Wind_Turbine" var1="WPP_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
+  <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
+  <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
+  <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
+  <dyn:connect id1="Wind_Turbine" var1="WPP_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 </dyn:dynamicModelsArchitecture>
