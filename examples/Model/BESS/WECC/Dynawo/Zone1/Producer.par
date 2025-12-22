@@ -35,8 +35,8 @@
     <par type="DOUBLE" name="BESS_tP" value="0.05"/>
     <par type="DOUBLE" name="BESS_QMaxPu" value="999"/>
     <par type="DOUBLE" name="BESS_QMinPu" value="-999"/>
-    <par type="DOUBLE" name="BESS_PMaxPu" value="1.0"/>
-    <par type="DOUBLE" name="BESS_PMinPu" value="0.0"/>
+    <par type="DOUBLE" name="BESS_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="BESS_PMinPu" value="-0.75"/>
 
     <!-- Generator Control -->
     <par type="DOUBLE" name="BESS_tG" value="0.02"/>
@@ -48,7 +48,7 @@
     <par type="DOUBLE" name="BESS_SOC0Pu" value="0.75"/>
     <par type="DOUBLE" name="BESS_SOCMaxPu" value="0.8"/>
     <par type="DOUBLE" name="BESS_SOCMinPu" value="0.2"/>
-    <par type="DOUBLE" name="BESS_tBattery" value="999"/>
+    <par type="DOUBLE" name="BESS_tBattery" value="9999"/>
 
     <!-- PLL Control -->
     <par type="DOUBLE" name="BESS_KiPLL" value="20"/>
