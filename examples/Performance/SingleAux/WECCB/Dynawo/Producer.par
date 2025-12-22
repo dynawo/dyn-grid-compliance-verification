@@ -133,7 +133,7 @@
     <par type="DOUBLE" name="transformer_U10Pu" value="1.0086"/>
     <par type="DOUBLE" name="transformer_U1Phase0" value="0.4334"/>
     <par type="DOUBLE" name="transformer_U20Pu" value="1.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
+    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.01"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
     <par type="INT" name="transformer_NbTap" value="21"/>

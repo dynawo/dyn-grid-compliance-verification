@@ -409,6 +409,7 @@ def _run_verification(
             manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
         else:
             manage_files.remove_dir(params.get_working_dir())
+        raise
         return 1
 
 

@@ -143,6 +143,25 @@ def _add_pdr_curves(curves_root: etree.Element, connected_to_pdr: list, curves_d
         "CurrentRe": "i_re",
         "CurrentIm": "i_im",
     }
+    etree.SubElement(
+        curves_root,
+        "curve",
+        model="Measurements",
+        variable="measurements_PPu",
+    )
+    etree.SubElement(
+        curves_root,
+        "curve",
+        model="Measurements",
+        variable="measurements_QPu",
+    )
+    etree.SubElement(
+        curves_root,
+        "curve",
+        model="Measurements",
+        variable="measurements_UPu",
+    )
+
     for equipment in connected_to_pdr:
         for variable, terminal_variable in terminal_variables_map.items():
             dynawo_variable = equipment.var + "_" + terminal_variable
