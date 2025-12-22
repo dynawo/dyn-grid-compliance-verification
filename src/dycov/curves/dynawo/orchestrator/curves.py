@@ -744,17 +744,20 @@ class DynawoCurves(ProducerCurves):
         connect_event_to = config.get_value(config_section, "connect_event_to")
         self.__log(bm_name, oc_name, f"\t{connect_event_to=}")
         pre_value = 1.0  # Default pre_value
+        # Active/Reactive power in PDR are in pu (base UNom, SnRef)
+        # but Active/Reactive power setpoint are in pu (base SNom)
+        setpoint_factor = self._s_nref / self.get_producer().s_nom
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:
                 if self._use_pdr_values:
-                    pre_value = [-pdr.P for gen in self._gens]
+                    pre_value = [-pdr.P * setpoint_factor for gen in self._gens]
                 else:
-                    pre_value = [-gen.P0 for gen in self._gens]
+                    pre_value = [-gen.P0 * setpoint_factor for gen in self._gens]
             elif "ReactivePowerSetpointPu" == connect_event_to:
                 if self._use_pdr_values:
-                    pre_value = [-pdr.Q for gen in self._gens]
+                    pre_value = [-pdr.Q * setpoint_factor for gen in self._gens]
                 else:
-                    pre_value = [-gen.Q0 for gen in self._gens]
+                    pre_value = [-gen.Q0 * setpoint_factor for gen in self._gens]
             elif "AVRSetpointPu" == connect_event_to:
                 if self._use_pdr_values:
                     pre_value = [pdr.U for gen in self._gens]
@@ -907,9 +910,7 @@ class DynawoCurves(ProducerCurves):
         p_max_parameter = (
             "PmaxConsumption"
             if "PmaxConsumption" in pdr_p_cfg
-            else "PmaxInjection"
-            if "PmaxInjection" in pdr_p_cfg
-            else "Pmax"
+            else "PmaxInjection" if "PmaxInjection" in pdr_p_cfg else "Pmax"
         )
 
         # Sign convention: the initializations expects Pdr to be negative;
