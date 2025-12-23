@@ -165,26 +165,29 @@ def _add_measurements_blackbox(dyd_root, ns):
 def _add_connection(
     dyd_root: etree.Element,
     ns: str,
-    id1: str,
-    var1: str,
-    id2: str,
-    var2: str,
+    id_from: str,
+    var_from: str,
+    id_to: str,
+    var_to: str,
     show_comment: bool = False,
 ):
     if show_comment:
-        if var1 in PLACEHOLDER_TERMINALS:
-            _add_terminal_options(dyd_root, var1)
-        elif var2 in PLACEHOLDER_TERMINALS:
-            _add_terminal_options(dyd_root, var2)
+        if var_from in PLACEHOLDER_TERMINALS:
+            _add_terminal_options(dyd_root, var_from)
+        elif var_to in PLACEHOLDER_TERMINALS:
+            _add_terminal_options(dyd_root, var_to)
 
-    etree.SubElement(
+    print(f"etree.SubElement connection {id_from=}, {var_from=}, {id_to=}, {var_to=}")
+    new_elem = etree.SubElement(
         dyd_root,
         f"{{{ns}}}connect",
-        id1=id1,
-        var1=var1,
-        id2=id2,
-        var2=var2,
+        id1=id_from,
+        var1=var_from,
+        id2=id_to,
+        var2=var_to,
     )
+    xml_str = etree.tostring(new_elem, pretty_print=True).decode()
+    print(xml_str)
 
 
 def _add_measurements_connection_comment(dyd_root: etree.Element):
@@ -215,8 +218,8 @@ def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int, p
     _add_measurements_blackbox(dyd_root, ns)
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_saux_topology(
@@ -242,11 +245,11 @@ def _create_saux_topology(
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -270,11 +273,11 @@ def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, 
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_sauxi_topology(
@@ -302,13 +305,13 @@ def _create_sauxi_topology(
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -332,13 +335,13 @@ def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int, p
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _create_maux_topology(
@@ -366,15 +369,15 @@ def _create_maux_topology(
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -399,14 +402,14 @@ def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int, 
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _create_mauxi_topology(
@@ -435,16 +438,16 @@ def _create_mauxi_topology(
     _add_measurements_connection_comment(dyd_root)
     _add_connection(dyd_root, ns, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL1, PDR_ID, BUS_TERMINAL)
     _add_connection(
-        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
+        dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MEASUREMENTS_ID, MEASUREMENTS_TERMINAL2
     )
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _check_dynamic_models(target: Path, filename: str) -> bool:
@@ -526,6 +529,8 @@ def _create_producer_dyd_file(
     dyd_tree = etree.ElementTree(
         etree.fromstring(etree.tostring(dyd_root), etree.XMLParser(remove_blank_text=True))
     )
+    xml_str = etree.tostring(dyd_tree, pretty_print=True).decode()
+    print(xml_str)
     dyd_tree.write(target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True)
 
 

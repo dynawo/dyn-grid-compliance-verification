@@ -17,11 +17,11 @@
   <!--Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
        are on terminal1, so it is necessary to connect terminal1 to the BusPDR-->
   <dyn:connect id1="Measurements" var1="Measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal1" id2="Measurements" var2="Measurements_terminal2"/>
-  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
-  <dyn:connect id1="StepUp_Xfmr_1" var1="transformer_terminal1" id2="Int_Bus" var2="bus_terminal"/>
-  <dyn:connect id1="StepUp_Xfmr_2" var1="transformer_terminal1" id2="Int_Bus" var2="bus_terminal"/>
+  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="Measurements" var2="Measurements_terminal2"/>
+  <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="Main_Xfmr" var2="transformer_terminal1"/>
+  <dyn:connect id1="StepUp_Xfmr_1" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
+  <dyn:connect id1="StepUp_Xfmr_2" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <!--Replace the placeholder: 'PPM_TERMINAL', available_options: ['WPP_terminal', 'WT_terminal', 'WTG4A_terminal', 'WTG4B_terminal', 'WT4A_terminal', 'WT4B_terminal', 'photovoltaics_terminal']-->
-  <dyn:connect id1="Power_Park_1" var1="PPM_TERMINAL" id2="StepUp_Xfmr_1" var2="transformer_terminal2"/>
-  <dyn:connect id1="Power_Park_2" var1="PPM_TERMINAL" id2="StepUp_Xfmr_2" var2="transformer_terminal2"/>
+  <dyn:connect id1="Power_Park_1" var1="PPM_TERMINAL" id2="StepUp_Xfmr_1" var2="transformer_terminal1"/>
+  <dyn:connect id1="Power_Park_2" var1="PPM_TERMINAL" id2="StepUp_Xfmr_2" var2="transformer_terminal1"/>
 </dyn:dynamicModelsArchitecture>
