@@ -10,7 +10,14 @@
   <dyn:blackBoxModel id="Power_Park_1" lib="PPM_DYNAMIC_MODEL" parFile="Producer.par" parId="Power_Park_1"/>
   <dyn:blackBoxModel id="StepUp_Xfmr_2" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr_2"/>
   <dyn:blackBoxModel id="Power_Park_2" lib="PPM_DYNAMIC_MODEL" parFile="Producer.par" parId="Power_Park_2"/>
-  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
+  <!--"Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
+       Here it is needed in order to channel the flows coming from all branches to the BusPDR into a single element,
+       thus allowing the connection of PQ flow values taken at the external PCC to those generating units that control P or Q at the PCC point.-->
+  <dyn:blackBoxModel id="Measurements" lib="Measurements"/>
+  <!--Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
+       are on terminal1, so it is necessary to connect terminal1 to the BusPDR-->
+  <dyn:connect id1="Measurements" var1="Measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
+  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal1" id2="Measurements" var2="Measurements_terminal2"/>
   <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="StepUp_Xfmr_1" var1="transformer_terminal1" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="StepUp_Xfmr_2" var1="transformer_terminal1" id2="Int_Bus" var2="bus_terminal"/>
