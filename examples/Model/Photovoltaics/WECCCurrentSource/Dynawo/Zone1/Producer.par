@@ -7,13 +7,6 @@
     <par type="DOUBLE" name="photovoltaics_U0Pu" value="1.0"/>
     <par type="DOUBLE" name="photovoltaics_UPhase0" value="0.00000144621"/>
 
-    <!-- PCS-->
-    <par type="DOUBLE" name="photovoltaics_PPcc0Pu" value="-0.7"/>
-    <par type="DOUBLE" name="photovoltaics_QPcc0Pu" value="-0.2"/>
-    <par type="DOUBLE" name="photovoltaics_UPcc0Pu" value="1.0"/>
-    <par type="DOUBLE" name="photovoltaics_UPhasePcc0" value="0.00000144621"/>
-    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>
     <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
@@ -55,10 +48,10 @@
     <par type="DOUBLE" name="photovoltaics_RrpwrPu" value="10"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
     <par type="DOUBLE" name="photovoltaics_tP" value="0.05"/>
-    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="1"/>
     <par type="DOUBLE" name="photovoltaics_PMinPu" value="0.0"/>
-    <par type="DOUBLE" name="photovoltaics_QMaxPu" value="999"/>
-    <par type="DOUBLE" name="photovoltaics_QMinPu" value="-999"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxPu" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_QMinPu" value="-1"/>
 
     <!-- PLL Control -->
     <par type="DOUBLE" name="photovoltaics_KiPLL" value="20"/>
