@@ -7,10 +7,19 @@
   <dyn:blackBoxModel id="Aux_Load" lib="LoadAlphaBeta" parFile="Producer.par" parId="Aux_Load"/>
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
   <dyn:blackBoxModel id="Wind_Turbine" lib="IECWPP4BCurrentSource2020" parFile="Producer.par" parId="Wind_Turbine"/>
-  <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
+
+  <!-- "Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
+       Here it is needed in order to channel the flows coming from all branches to the BusPDR into a single element,
+       thus allowing the connection of PQ flow values taken at the external PCC to those generating units that control P or Q at the PCC point. -->
+  <dyn:blackBoxModel id="Measurements" lib="Measurements"/>
+
+  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
+       are on terminal1, so it is necessary to connect terminal1 to the BusPDR -->
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
+  <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="IntNetwork_Line" var2="line_terminal1"/>
-  <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
-  <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
+  <dyn:connect id1="AuxLoad_Xfmr" var2="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
+  <dyn:connect id1="StepUp_Xfmr" var2="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Wind_Turbine" var1="WPP_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 </dyn:dynamicModelsArchitecture>
