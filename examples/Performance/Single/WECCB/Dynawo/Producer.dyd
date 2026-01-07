@@ -12,6 +12,6 @@
   <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
        are on terminal1, so it is necessary to connect terminal1 to the BusPDR -->
   <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="StepUp_Xfmr" var2="transformer_terminal2" id2="Measurements" var2="measurements_terminal2"/>
+  <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="Wind_Turbine" var1="WTG4B_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 </dyn:dynamicModelsArchitecture>
