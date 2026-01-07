@@ -16,6 +16,90 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATIO
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 
 
+def create_curves_file(
+    path: Path,
+    curves_filename: str,
+    connected_to_pdr: list,
+    xfmrs: list,
+    generators: list,
+    rte_loads: list,  # This parameter is not used in the current implementation.
+    sim_type: int,
+    zone: int,
+    control_mode: str,
+) -> dict:
+    """Creates the CRV file for Dynawo.
+
+    Parameters
+    ----------
+    path: Path
+        Path to the directory where the CRV file will be saved.
+    curves_filename: str
+        Name of the CRV file to be created.
+    connected_to_pdr: list
+        List of equipment connected to the PDR bus on the Producer side.
+    xfmrs: list
+        List of transformers on the Producer side.
+    generators: list
+        List of generators on the Producer side.
+    rte_loads: list
+        Loads on the TSO side, if the model has loads. (Currently not used)
+    sim_type: int
+        Type of simulation:
+        * 1: Electrical performance for Synchronous Machine Model (ELECTRIC_PERFORMANCE_SM)
+        * 2: Electrical performance for Power Park Module Model (PPM - handled by else case)
+        * 3: Model validation (MODEL_VALIDATION)
+    zone: int
+        Relevant for Model Validation:
+        * 1: Zone 1 (the individual generating unit)
+        * 3: Zone 3 (the whole plant)
+    control_mode: str
+        The control mode of the generators.
+
+    Returns
+    -------
+    dict
+        Dictionary of the variables for which curves are obtained and their equivalent in Dynawo.
+    """
+    curves_dict = {}
+
+    curves_root = etree.fromstring(
+        """<curvesInput xmlns="http://www.rte-france.com/dynawo"></curvesInput>"""
+    )
+
+    if any(element.id == "Measurements" for element in connected_to_pdr):
+        _add_measurements_curves(curves_root, curves_dict)
+    else:
+        _add_pdr_curves(curves_root, connected_to_pdr, curves_dict)
+    if zone == 1:
+        _add_bus_curves(curves_root, curves_dict)
+    _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
+
+    if sim_type == ELECTRIC_PERFORMANCE_SM:
+        generator_variables = config.get_list("CurvesVariables", "SM")
+    elif (
+        sim_type > MODEL_VALIDATION
+    ):  # Covers MODEL_VALIDATION (3) and potentially other higher values
+        if zone == 3:
+            generator_variables = config.get_list("CurvesVariables", "ModelValidationZ3")
+        elif zone == 1:
+            generator_variables = config.get_list("CurvesVariables", "ModelValidationZ1")
+        else:
+            generator_variables = []
+    else:  # Assumed to be PPM for sim_type == 2
+        generator_variables = config.get_list("CurvesVariables", "PPM")
+
+    _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)
+
+    # This process is done to parse the new Elements and make pretty_print work correctly
+    curves_tree = etree.ElementTree(
+        etree.fromstring(etree.tostring(curves_root), etree.XMLParser(remove_blank_text=True))
+    )
+    curves_tree.write(
+        path / curves_filename, encoding="utf-8", pretty_print=True, xml_declaration=True
+    )
+    return curves_dict
+
+
 def _add_curves_dict(
     id: str, variable: str, type: str, dynawo_variable: str, sign: int, curves_dict: dict
 ) -> bool:
@@ -90,39 +174,49 @@ def _add_curve_to_file(
         )
 
 
-def _add_bus_curves(curves_root: etree.Element, zone: int, curves_dict: dict) -> None:
+def _add_measurements_curves(curves_root: etree.Element, curves_dict: dict) -> None:
+    """Adds measurement-related curves to the XML root and curves dictionary.
+    Parameters
+    ----------
+    curves_root : etree.Element
+        The root XML element for curves.
+    curves_dict : dict
+        The dictionary to which curve entries will be added.
+    """
+    _add_curve_to_file(
+        curves_root, "Measurements", "Voltage", "BUS", 1, "measurements_UPu", curves_dict
+    )
+    _add_curve_to_file(
+        curves_root, "Measurements", "ActivePower", "BUS", 1, "measurements_PPu", curves_dict
+    )
+    _add_curve_to_file(
+        curves_root, "Measurements", "ReactivePower", "BUS", 1, "measurements_QPu", curves_dict
+    )
+
+
+def _add_bus_curves(curves_root: etree.Element, curves_dict: dict) -> None:
     """Adds bus-related curves to the XML root and curves dictionary.
 
     Parameters
     ----------
     curves_root : etree.Element
         The root XML element for curves.
-    zone : int
-        The zone ID.
     curves_dict : dict
         The dictionary to which curve entries will be added.
     """
-    bus_variables = ["VoltageRe", "VoltageIm"]
-    for variable in bus_variables:
-        sign, dynawo_variable = dynawo_translator.get_dynawo_variable("Bus", variable)
-        if dynawo_variable:  # Check if dynawo_variable is not empty
-            _add_curve_to_file(
-                curves_root, "BusPDR", variable, "BUS", sign, dynawo_variable, curves_dict
-            )
-    if zone == 1:
-        sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
-            "InfiniteBus", "NetworkFrequencyPu"
+    sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
+        "InfiniteBus", "NetworkFrequencyPu"
+    )
+    if dynawo_variable:  # Check if dynawo_variable is not empty
+        _add_curve_to_file(
+            curves_root,
+            "InfiniteBus",
+            "NetworkFrequencyPu",
+            "BUS",
+            sign,
+            dynawo_variable,
+            curves_dict,
         )
-        if dynawo_variable:  # Check if dynawo_variable is not empty
-            _add_curve_to_file(
-                curves_root,
-                "InfiniteBus",
-                "NetworkFrequencyPu",
-                "BUS",
-                sign,
-                dynawo_variable,
-                curves_dict,
-            )
 
 
 def _add_pdr_curves(curves_root: etree.Element, connected_to_pdr: list, curves_dict: dict) -> None:
@@ -286,83 +380,3 @@ def _add_generators_curves(
             _add_curve_to_file(
                 curves_root, generator.id, variable, "GEN", sign, dynawo_variable, curves_dict
             )
-
-
-def create_curves_file(
-    path: Path,
-    curves_filename: str,
-    connected_to_pdr: list,
-    xfmrs: list,
-    generators: list,
-    rte_loads: list,  # This parameter is not used in the current implementation.
-    sim_type: int,
-    zone: int,
-    control_mode: str,
-) -> dict:
-    """Creates the CRV file for Dynawo.
-
-    Parameters
-    ----------
-    path: Path
-        Path to the directory where the CRV file will be saved.
-    curves_filename: str
-        Name of the CRV file to be created.
-    connected_to_pdr: list
-        List of equipment connected to the PDR bus on the Producer side.
-    xfmrs: list
-        List of transformers on the Producer side.
-    generators: list
-        List of generators on the Producer side.
-    rte_loads: list
-        Loads on the TSO side, if the model has loads. (Currently not used)
-    sim_type: int
-        Type of simulation:
-        * 1: Electrical performance for Synchronous Machine Model (ELECTRIC_PERFORMANCE_SM)
-        * 2: Electrical performance for Power Park Module Model (PPM - handled by else case)
-        * 3: Model validation (MODEL_VALIDATION)
-    zone: int
-        Relevant for Model Validation:
-        * 1: Zone 1 (the individual generating unit)
-        * 3: Zone 3 (the whole plant)
-    control_mode: str
-        The control mode of the generators.
-
-    Returns
-    -------
-    dict
-        Dictionary of the variables for which curves are obtained and their equivalent in Dynawo.
-    """
-    curves_dict = {}
-
-    curves_root = etree.fromstring(
-        """<curvesInput xmlns="http://www.rte-france.com/dynawo"></curvesInput>"""
-    )
-
-    _add_bus_curves(curves_root, zone, curves_dict)
-    _add_pdr_curves(curves_root, connected_to_pdr, curves_dict)
-    _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
-
-    if sim_type == ELECTRIC_PERFORMANCE_SM:
-        generator_variables = config.get_list("CurvesVariables", "SM")
-    elif (
-        sim_type > MODEL_VALIDATION
-    ):  # Covers MODEL_VALIDATION (3) and potentially other higher values
-        if zone == 3:
-            generator_variables = config.get_list("CurvesVariables", "ModelValidationZ3")
-        elif zone == 1:
-            generator_variables = config.get_list("CurvesVariables", "ModelValidationZ1")
-        else:
-            generator_variables = []
-    else:  # Assumed to be PPM for sim_type == 2
-        generator_variables = config.get_list("CurvesVariables", "PPM")
-
-    _add_generators_curves(curves_root, generators, generator_variables, control_mode, curves_dict)
-
-    # This process is done to parse the new Elements and make pretty_print work correctly
-    curves_tree = etree.ElementTree(
-        etree.fromstring(etree.tostring(curves_root), etree.XMLParser(remove_blank_text=True))
-    )
-    curves_tree.write(
-        path / curves_filename, encoding="utf-8", pretty_print=True, xml_declaration=True
-    )
-    return curves_dict
