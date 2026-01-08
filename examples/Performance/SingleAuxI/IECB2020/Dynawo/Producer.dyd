@@ -17,7 +17,7 @@
        are on terminal1, so it is necessary to connect terminal1 to the BusPDR -->
   <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Measurements" var2="measurements_terminal2"/>
-  <dyn:connect id1="IntNetwork_Line" var1="line_terminal1" id2="Int_Bus" var2="bus_terminal"/>
+  <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="IntNetwork_Line" var2="line_terminal1"/>
   <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
