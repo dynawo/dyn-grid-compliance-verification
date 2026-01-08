@@ -9,7 +9,6 @@
 #
 
 import configparser
-import logging
 import re
 import shutil
 from collections import namedtuple
