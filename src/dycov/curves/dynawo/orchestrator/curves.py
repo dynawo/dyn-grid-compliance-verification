@@ -136,7 +136,6 @@ class DynawoCurves(ProducerCurves):
         self._table_file = None
         self._solvers_file = None
         self._curves_dict = {}
-        self._gens = []  # To store generator parameters
         self._rte_loads = []  # To store RTE loads
         self._has_line = False  # Flag to indicate if a line is present
 
@@ -373,8 +372,9 @@ class DynawoCurves(ProducerCurves):
         # Optimized: Iterate through generators once to update pre_value
         for i, generator in enumerate(self.get_producer().generators):
             if generator.UseVoltageDroop:
-                gen = self._gens[i]
-                event_params["pre_value"][i] = gen.U0 + generator.VoltageDroop * gen.Q0
+                event_params["pre_value"][i] = (
+                    generator.terminals[0].U0 + generator.VoltageDroop * generator.terminals[0].Q0
+                )
 
     def __get_lines_for_initial_calcs(
         self, rte_lines: list, is_specific_fault: bool
@@ -507,13 +507,13 @@ class DynawoCurves(ProducerCurves):
         # Optimized: Using a dictionary for faster lookup, then building sorted list
         xfmr_map = {xfmr.id: xfmr for xfmr in self.get_producer().stepup_xfmrs}
         sorted_stepup_xfmrs = [
-            xfmr_map[gen.connectedXmfr]
+            xfmr_map[gen.terminals[0].connectedEquipment]
             for gen in self.get_producer().generators
-            if gen.connectedXmfr in xfmr_map
+            if gen.terminals[0].connectedEquipment in xfmr_map
         ]
 
         # Perform initial calculations for the system
-        rte_gen, gens, aux_load = init_calcs(
+        rte_gen = init_calcs(
             tuple(self.get_producer().generators),
             tuple(sorted_stepup_xfmrs),
             self.get_producer().aux_load,
@@ -524,7 +524,6 @@ class DynawoCurves(ProducerCurves):
             conn_line,
             self.__get_grid_load(pcs_name, bm_name, oc_name, u_dim),
         )
-        self._gens = gens  # Store calculated generator initial parameters
 
         self.__log(
             bm_name,
@@ -558,9 +557,7 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().get_producer_par(),
             self.get_producer().generators,
             sorted_stepup_xfmrs,
-            gens,
-            aux_load,
-            pdr,
+            self.get_producer().aux_load,
             control_mode,
             force_voltage_droop,
         )
@@ -690,11 +687,17 @@ class DynawoCurves(ProducerCurves):
         setpoint_factor = self._s_nref / self.get_producer().s_nom
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:
-                pre_value = [-gen.P0 * setpoint_factor for gen in self._gens]
+                pre_value = [
+                    -gen.terminals[0].P0 * setpoint_factor
+                    for gen in self.get_producer().generators
+                ]
             elif "ReactivePowerSetpointPu" == connect_event_to:
-                pre_value = [-gen.Q0 * setpoint_factor for gen in self._gens]
+                pre_value = [
+                    -gen.terminals[0].Q0 * setpoint_factor
+                    for gen in self.get_producer().generators
+                ]
             elif "AVRSetpointPu" == connect_event_to:
-                pre_value = [gen.U0 for gen in self._gens]
+                pre_value = [gen.terminals[0].U0 for gen in self.get_producer().generators]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
         # Optimized: Determine fault_duration more concisely
