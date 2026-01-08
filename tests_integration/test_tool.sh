@@ -170,12 +170,12 @@ run_dycov_generate() {
 export -f run_dycov_generate
 
 launch_generate() {
-    declare -a models=("GFM_Overdamped" "GFM_Underdamped" "GFM_Fusion")
+    declare -a models=("Overdamped" "Underdamped" "Fusion")
 
     local -a generate_commands=()
 
     for model in "${models[@]}"; do
-        local cmd="run_dycov_generate \"$examples_path/$model/Producer.ini\" \"$results_path/Envelopes/$model\" \"$model\""
+        local cmd="run_dycov_generate \"$examples_path/GFM/$model/Producer.ini\" \"$results_path/Envelopes/$model\" \"$model\""
         generate_commands+=("$cmd")
     done
 
