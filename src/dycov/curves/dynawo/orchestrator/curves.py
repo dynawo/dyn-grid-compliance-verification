@@ -40,6 +40,7 @@ from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import (
     Disconnection_Model,
     Gen_params,
+    Line_params,
     Load_init,
     Load_params,
     Pdr_params,
@@ -59,6 +60,43 @@ BISECTION_ROUND = 10
 _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
 _CURVES_CSV = "curves/curves.csv"
+
+
+def _are_params_close(
+    a: Line_params, b: Line_params, rtol: float = 1e-4, atol: float = 1e-12
+) -> bool:
+    return (
+        math.isclose(a.R, b.R, rel_tol=rtol, abs_tol=atol)
+        and math.isclose(a.X, b.X, rel_tol=rtol, abs_tol=atol)
+        and math.isclose(a.B, b.B, rel_tol=rtol, abs_tol=atol)
+        and math.isclose(a.G, b.G, rel_tol=rtol, abs_tol=atol)
+    )
+
+
+def _group_by_electrical_params(rte_lines: list, rtol: float = 1e-4, atol: float = 1e-12) -> list:
+    groups: list[list[Line_params]] = []
+    for line in rte_lines:
+        placed = False
+        for group in groups:
+            if _are_params_close(line, group[0], rtol=rtol, atol=atol):
+                group.append(line)
+                placed = True
+                break
+        if not placed:
+            groups.append([line])
+    return groups
+
+
+def _pick_parallel_representative(rte_lines: list) -> Line_params:
+    groups = _group_by_electrical_params(rte_lines, rtol=1e-4, atol=1e-12)
+
+    groups.sort(key=lambda g: (-len(g), str(g[0].id)))
+    best_group = groups[0]
+
+    if len(best_group) < 2:
+        pass
+
+    return best_group[0]
 
 
 class DynawoCurves(ProducerCurves):
@@ -387,8 +425,9 @@ class DynawoCurves(ProducerCurves):
         lines_to_process = []
         if is_specific_fault:
             # If it's a specific fault, treat as four identical lines for calculation
-            # Assumes rte_lines[0] exists if is_specific_fault is true
-            lines_to_process = [rte_lines[0]] * 4
+            # Optimized: Pick representative line to duplicate four times
+            representative = _pick_parallel_representative(rte_lines)
+            lines_to_process = [representative] * 4
         else:
             lines_to_process = rte_lines
         Ytr_sum, Ysh1_sum, Ysh2_sum = 0, 0, 0
