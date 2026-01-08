@@ -31,7 +31,6 @@ from dycov.curves.dynawo.runtime.dynawo_precompile import get_dynawo_version
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
 from dycov.report import figure, html
-from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
