@@ -158,11 +158,11 @@ run_dycov_generate() {
     local model_name=$3
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov generateEnvelopes -i \"$model_path\" -e -o \"$output_path\" --testing"
+    local command_to_execute="dycov generateEnvelopes -i \"$model_path\" -e -o \"$output_path\""
 
     start=$(date +%s)
     # Execute the command
-    dycov generateEnvelopes -i "$model_path" -e -o "$output_path" --testing
+    dycov generateEnvelopes -i "$model_path" -e -o "$output_path"
     end=$(date +%s)
     echo "$(date '+%Y-%m-%d %H:%M:%S')     | Verify: $model_name Elapsed Time: $((end - start)) seconds"
 }
