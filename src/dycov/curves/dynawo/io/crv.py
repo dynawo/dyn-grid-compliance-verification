@@ -176,6 +176,16 @@ def _add_curve_to_file(
 
 def _add_measurements_curves(curves_root: etree.Element, curves_dict: dict) -> None:
     """Adds measurement-related curves to the XML root and curves dictionary.
+
+    Some cases need the Measurements pseudo-model connected at the PCC bus, because for those PPM
+    models that are capable of controlling P or Q flows at a remote point (normally the PCC), this
+    is the way by which we can provide a variable P or Q that can be connected to
+    (in the DYD file), in order for that control to do its job.
+
+    In addition, whether the Measurement object is used for this reason or not, it also provides a
+    more convenient way for collecting all branch flows converging to the PCC, in order to compute
+    the P/Q/V curves.
+
     Parameters
     ----------
     curves_root : etree.Element
