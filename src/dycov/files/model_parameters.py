@@ -14,7 +14,6 @@ import configparser
 import math
 import re
 from pathlib import Path
-from typing import Optional
 
 from lxml import etree
 
@@ -24,10 +23,9 @@ from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import (
     Gen_params,
     Line_params,
-    Load_init,
     Load_params,
     Pdr_equipments,
-    Pdr_params,
+    Terminal,
     Xfmr_params,
 )
 
@@ -249,7 +247,18 @@ def get_grid_load(loads: list) -> Load_params:
         ppu += load.P0
         qpu += load.Q0
 
-    return Load_params(None, None, None, ppu, qpu, None, None, None, None)
+    return Load_params(
+        id=None,
+        lib=None,
+        P=ppu,
+        Q=qpu,
+        U=None,
+        UPhase=None,
+        Alpha=None,
+        Beta=None,
+        par_id=None,
+        terminals=(Terminal(connectedEquipment=None),),
+    )
 
 
 def get_pcs_lines_params(pcs_dyd: Path, pcs_par: Path, line_rpu: float, line_xpu: float) -> list:
@@ -450,9 +459,7 @@ def adjust_producer_init(
     producer_par: Path,
     generators: list,
     xfmrs: list,
-    gens: list,
-    aux_load: Load_init,
-    pdr: Pdr_params,
+    aux_load: Load_params,
     generator_control_mode: str,
     force_voltage_droop: bool,
 ) -> None:
@@ -468,12 +475,8 @@ def adjust_producer_init(
         All the producer's generators
     xfmrs: list
         Parameters for the transformers
-    gens: float
-        Initial values to the producer's generators
-    aux_load: Load_init
+    aux_load: Load_params
         Initial values to the producer's auxiliary load
-    pdr: Pdr_params
-        Initial values for the transformer on the PDR side
     generator_control_mode: str
         Control mode
     force_voltage_droop: bool
@@ -483,23 +486,23 @@ def adjust_producer_init(
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
 
-    for generator, xfmr, gen in zip(generators, xfmrs, gens):
+    for generator, xfmr in zip(generators, xfmrs):
         _adjust_transformer(
             producer_par_root,
             xfmr,
-            -gen.P0,
-            -gen.Q0,
-            gen.U0,
-            gen.UPhase0,
-            pdr,
+            xfmr.terminals[0].P0,
+            xfmr.terminals[0].Q0,
+            xfmr.terminals[0].U0,
+            xfmr.terminals[0].UPhase0,
+            xfmr.terminals[1].U0,
         )
         _adjust_generator(
             producer_par_root,
             generator,
-            gen.P0,
-            gen.Q0,
-            gen.U0,
-            gen.UPhase0,
+            generator.terminals[0].P0,
+            generator.terminals[0].Q0,
+            generator.terminals[0].U0,
+            generator.terminals[0].UPhase0,
             generator_control_mode,
             force_voltage_droop,
         )
@@ -507,11 +510,12 @@ def adjust_producer_init(
     if aux_load:
         _adjust_load(
             producer_par_root,
-            aux_load,
-            aux_load.P0,
-            aux_load.Q0,
-            aux_load.U0,
-            aux_load.UPhase0,
+            aux_load.id,
+            aux_load.lib,
+            aux_load.terminals[0].P0,
+            aux_load.terminals[0].Q0,
+            aux_load.terminals[0].U0,
+            aux_load.terminals[0].UPhase0,
         )
 
     producer_par_tree.write(path / producer_par.name, pretty_print=True)
@@ -570,9 +574,9 @@ def _append_generator(
     gen_id = model_parameter.get("id")
     par_id = model_parameter.get("parId")
     lib = model_parameter.get("lib")
-    nsmap = {"dyn": etree.QName(dyd_root).namespace, "ns": etree.QName(par_root).namespace}
+    nsmap = {"ns": etree.QName(par_root).namespace}
 
-    connected_xfmr = _get_connected_xfmr(dyd_root, gen_id, nsmap)
+    connected_equipment = _get_connected_equipment(dyd_root, gen_id)
     parset = _get_parset(par_root, par_id, nsmap)
 
     imax = _get_injected_current(parset, nsmap, lib)
@@ -583,7 +587,7 @@ def _append_generator(
         Gen_params(
             id=gen_id,
             lib=lib,
-            connectedXmfr=connected_xfmr,
+            terminals=(Terminal(connectedEquipment=connected_equipment),),
             SNom=s_nom,
             IMax=imax,
             par_id=par_id,
@@ -595,11 +599,22 @@ def _append_generator(
     )
 
 
-def _get_connected_xfmr(dyd_root, gen_id, nsmap):
+def _get_connected_equipment(dyd_root, gen_id):
+    nsmap = {"dyn": etree.QName(dyd_root).namespace}
     for connect in dyd_root.xpath("//dyn:connect", namespaces=nsmap):
         if connect.get("id1") == gen_id:
             return connect.get("id2")
         elif connect.get("id2") == gen_id:
+            return connect.get("id1")
+    return None
+
+
+def _get_connected_equipment_by_terminal(dyd_root, gen_id, terminal):
+    nsmap = {"dyn": etree.QName(dyd_root).namespace}
+    for connect in dyd_root.xpath("//dyn:connect", namespaces=nsmap):
+        if connect.get("id1") == gen_id and terminal in connect.get("var1"):
+            return connect.get("id2")
+        elif connect.get("id2") == gen_id and terminal in connect.get("var2"):
             return connect.get("id1")
     return None
 
@@ -690,9 +705,25 @@ def _get_line_values(
         line_xpu = _calculate_line_xpu(x_str, applied_line_xpu)
         line_gpu = float(g_str) if g_str is not None else 0.0
         line_bpu = float(b_str) if b_str is not None else 0.0
-        connected = _are_connected(dyd_root, line_id, "BusPDR")
 
-        lines.append(Line_params(line_id, lib, connected, line_rpu, line_xpu, line_bpu, line_gpu))
+        connected_equipment1 = _get_connected_equipment_by_terminal(dyd_root, line_id, "terminal1")
+        connected_equipment2 = _get_connected_equipment_by_terminal(dyd_root, line_id, "terminal2")
+
+        lines.append(
+            Line_params(
+                id=line_id,
+                lib=lib,
+                R=line_rpu,
+                X=line_xpu,
+                B=line_bpu,
+                G=line_gpu,
+                par_id=par_id,
+                terminals=(
+                    Terminal(connectedEquipment=connected_equipment1),
+                    Terminal(connectedEquipment=connected_equipment2),
+                ),
+            )
+        )
 
     return lines
 
@@ -722,10 +753,27 @@ def _get_transformer_values(
             parset, nsmap, lib, s_nref
         )
         xfmr_tapr = _get_tap_ratio(parset, nsmap, lib)
+        connected_equipment1 = _get_connected_equipment_by_terminal(
+            dyd_root, transformer_id, "terminal1"
+        )
+        connected_equipment2 = _get_connected_equipment_by_terminal(
+            dyd_root, transformer_id, "terminal2"
+        )
 
         transformers.append(
             Xfmr_params(
-                transformer_id, lib, xfmr_rpu, xfmr_xpu, xfmr_bpu, xfmr_gpu, xfmr_tapr, par_id
+                id=transformer_id,
+                lib=lib,
+                R=xfmr_rpu,
+                X=xfmr_xpu,
+                B=xfmr_bpu,
+                G=xfmr_gpu,
+                rTfo=xfmr_tapr,
+                par_id=par_id,
+                terminals=(
+                    Terminal(connectedEquipment=connected_equipment1),
+                    Terminal(connectedEquipment=connected_equipment2),
+                ),
             )
         )
 
@@ -774,16 +822,26 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
     allowed_load_models = dynawo_translator.get_load_models()
 
     for bbmodel in _get_allowed_models(dyd_root, allowed_load_models):
-        load_id, lib, par_id, connectedXmfr, parset = _parse_load_metadata(
+        load_id, lib, par_id, connected_equipment, parset = _parse_load_metadata(
             bbmodel, dyd_root, par_root, nsmap
         )
         aux_ppu, aux_qpu, aux_upu, aux_phpu, alpha, beta = _extract_load_parameters(
             parset, nsmap, lib
         )
+        connected_equipment = _get_connected_equipment(dyd_root, load_id)
 
         loads.append(
             Load_params(
-                load_id, lib, connectedXmfr, aux_ppu, aux_qpu, aux_upu, aux_phpu, alpha, beta
+                id=load_id,
+                lib=lib,
+                P=aux_ppu,
+                Q=aux_qpu,
+                U=aux_upu,
+                UPhase=aux_phpu,
+                Alpha=alpha,
+                Beta=beta,
+                par_id=par_id,
+                terminals=(Terminal(connectedEquipment=connected_equipment),),
             )
         )
 
@@ -794,9 +852,9 @@ def _parse_load_metadata(bbmodel, dyd_root, par_root, nsmap):
     load_id = bbmodel.get("id")
     lib = bbmodel.get("lib")
     par_id = bbmodel.get("parId")
-    connectedXmfr = _find_connect_by_id(dyd_root, load_id)
+    connected_equipment = _get_connected_equipment(dyd_root, load_id)
     parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
-    return load_id, lib, par_id, connectedXmfr, parset
+    return load_id, lib, par_id, connected_equipment, parset
 
 
 def _extract_load_parameters(parset, nsmap, lib):
@@ -829,68 +887,46 @@ def _resolve_value(raw, sign):
         return raw
 
 
-def _find_connect_by_id(producer_dyd_root: etree.Element, model_id: str) -> Optional[str]:
-    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
-    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
-        if model_id in connect.get("id1"):
-            return connect.get("id2")
-        if model_id in connect.get("id2"):
-            return connect.get("id1")
-
-    return None
-
-
-def _are_connected(producer_dyd_root: etree.Element, model_id1: str, model_id2: str) -> bool:
-    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
-    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
-        if model_id1 in connect.get("id1") and model_id2 in connect.get("id2"):
-            return True
-        if model_id1 in connect.get("id2") and model_id2 in connect.get("id1"):
-            return True
-
-    return False
-
-
 def _adjust_transformer(
     producer_par_root,
     transformer,
-    generator_p0pu,
-    generator_q0pu,
-    generator_u0pu,
-    generator_uphase0,
-    pdr,
+    transformer_p10pu,
+    transformer_q10pu,
+    transformer_u10pu,
+    transformer_uphase10,
+    transformer_u20pu,
 ):
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, transformer.par_id, nsmap)
     if parset is None:
         return
 
-    _set_transformer_power(parset, nsmap, transformer.lib, generator_p0pu, generator_q0pu)
+    _set_transformer_power(parset, nsmap, transformer.lib, transformer_p10pu, transformer_q10pu)
     _set_transformer_voltage_phase(
-        parset, nsmap, transformer.lib, generator_u0pu, generator_uphase0
+        parset, nsmap, transformer.lib, transformer_u10pu, transformer_uphase10
     )
-    _set_transformer_voltage_setpoint(parset, nsmap, transformer.lib, pdr.U)
+    _set_transformer_voltage(parset, nsmap, transformer.lib, transformer_u20pu)
 
 
 def _set_transformer_power(parset, nsmap, lib, p0pu, q0pu):
-    sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0")
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower10")
     _set_parameter(parset, nsmap, active_power0, sign, p0pu)
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0")
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower10")
     _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
 
 
 def _set_transformer_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     sign = 1
-    _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0")
+    _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage10")
     _set_parameter(parset, nsmap, voltage0, sign, u0pu)
-    _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
+    _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase10")
     _set_parameter(parset, nsmap, phase0, sign, uphase0)
 
 
-def _set_transformer_voltage_setpoint(parset, nsmap, lib, voltage_setpoint_value):
+def _set_transformer_voltage(parset, nsmap, lib, u0pu):
     sign = 1
-    _, voltage_setpoint = dynawo_translator.get_dynawo_variable(lib, "VoltageSetpoint")
-    _set_parameter(parset, nsmap, voltage_setpoint, sign, voltage_setpoint_value)
+    _, voltage_setpoint = dynawo_translator.get_dynawo_variable(lib, "Voltage20")
+    _set_parameter(parset, nsmap, voltage_setpoint, sign, u0pu)
 
 
 def _adjust_generator(
@@ -1183,28 +1219,29 @@ def _set_parameters(generator, parset, nsmap, parameters: dict):
 
 def _adjust_load(
     producer_par_root: etree.Element,
-    load: Load_init,
+    load_id: str,
+    load_lib: str,
     load_p0pu: float,
     load_q0pu: float,
     load_u0pu: float,
     load_uphase0: float,
 ) -> None:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
-    parset = producer_par_root.xpath(f"//ns:set[@id='{load.id}']", namespaces=nsmap)
+    parset = producer_par_root.xpath(f"//ns:set[@id='{load_id}']", namespaces=nsmap)
     if parset is None:
         return
 
-    sign, active_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ActivePower0")
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ActivePower0")
     _set_parameter(parset, nsmap, active_power0, sign, load_p0pu)
 
-    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(load.lib, "ReactivePower0")
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ReactivePower0")
     _set_parameter(parset, nsmap, reactive_power0, sign, load_q0pu)
 
     sign = 1
-    _, voltage0 = dynawo_translator.get_dynawo_variable(load.lib, "Voltage0")
+    _, voltage0 = dynawo_translator.get_dynawo_variable(load_lib, "Voltage0")
     _set_parameter(parset, nsmap, voltage0, sign, load_u0pu)
 
-    _, phase0 = dynawo_translator.get_dynawo_variable(load.lib, "Phase0")
+    _, phase0 = dynawo_translator.get_dynawo_variable(load_lib, "Phase0")
     _set_parameter(parset, nsmap, phase0, sign, load_uphase0)
 
 
