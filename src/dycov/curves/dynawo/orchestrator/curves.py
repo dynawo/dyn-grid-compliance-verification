@@ -604,6 +604,7 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
             sorted_stepup_xfmrs,
             self.get_producer().aux_load,
+            pdr,
             control_mode,
             force_voltage_droop,
         )
