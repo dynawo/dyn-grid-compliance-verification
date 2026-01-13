@@ -48,6 +48,7 @@ class Pcs:
         self._has_user_config = False
 
         report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(self._producer)
+        self._producer.set_zone(pcs_zone, producer_name)
         self._report_name = report_name
         self._id = int(pcs_id)
         self._zone = int(pcs_zone)
@@ -148,7 +149,6 @@ class Pcs:
         pcs_results = {"id": self._id, "zone": self._zone, "producer": self._producer_name}
         success = False
         for bm in self._bm_list:
-            self._producer.set_zone(self._zone, self._producer_name)
             success |= bm.validate(
                 summary_list,
                 pcs_results,

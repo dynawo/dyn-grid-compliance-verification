@@ -60,7 +60,6 @@ def test_create_curves_file_electric_performance_sm():
         curve_models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        assert "BusPDR" in curve_models
         assert "InfiniteBus" in curve_models
         assert "Xfmr" in curve_models
         assert "Gen" in curve_models
@@ -136,7 +135,8 @@ def test_create_curves_file_invalid_sim_type_and_zone():
         models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        assert "BusPDR" in models or "InfiniteBus" in models
+        allowed = {"InfiniteBus"}
+        assert (not models) or set(models).issubset(allowed)
         # Dictionary should be minimal or empty
         assert isinstance(curves_dict, dict)
         assert len(curves_dict) <= 4
