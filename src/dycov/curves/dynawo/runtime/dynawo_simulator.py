@@ -156,8 +156,10 @@ class DynawoSimulator:
         voltage_values = curves[bus_pdr_voltage_column].tolist()
 
         # Ensure fault_duration does not exceed the simulation time
-        # if fault_duration == 9999.0 there is no fault
-        if fault_start + fault_duration > time_values[-1]:
+        if fault_duration == 9999.0:
+            # if fault_duration == 9999.0 there is no fault
+            fault_duration = time_values[-1] - fault_start
+        elif fault_start + fault_duration > time_values[-1]:
             dycov_logging.get_logger("DynawoSimulator").warning(
                 "Fault duration extends beyond simulation time. Adjusting fault_duration "
                 f"from {fault_duration} to {time_values[-1] - fault_start:.4f}."
@@ -567,17 +569,17 @@ class DynawoSimulator:
             u_variable = f"{generator.id}_GEN_MagnitudeControlledByAVRUPu"
             q_variable = f"{generator.id}_GEN_MagnitudeControlledByAVRQPu"
 
+            has_u = u_variable in df_curves.columns
             if variable in df_curves.columns:
                 curves_dict[variable] = df_curves[variable].tolist()
                 delete_columns.append(variable)
-            elif u_variable in df_curves.columns:
-                if (
-                    getattr(generator, "UseVoltageDroop", False)
-                    and q_variable in df_curves.columns
-                ):
+            elif has_u:
+                use_droop = generator.UseVoltageDroop
+                has_q = q_variable in df_curves.columns
+                if use_droop and has_q:
                     curve_u = df_curves[u_variable].to_numpy()
                     curve_q = df_curves[q_variable].to_numpy()
-                    voltage_drop = float(getattr(generator, "VoltageDroop", 0.0))
+                    voltage_drop = generator.VoltageDroop
                     curves_dict[variable] = np.add(
                         curve_u, np.multiply(curve_q, voltage_drop)
                     ).tolist()
@@ -585,7 +587,7 @@ class DynawoSimulator:
                 else:
                     curves_dict[variable] = df_curves[u_variable].tolist()
                     delete_columns.append(u_variable)
-                    if q_variable in df_curves.columns:
+                    if has_q:
                         delete_columns.append(q_variable)
 
         for column in delete_columns:
