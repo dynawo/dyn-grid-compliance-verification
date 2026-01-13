@@ -1,3 +1,4 @@
+
 #!/bin/bash
 #
 # This script automatically installs the DyCoV tool for end-users
@@ -55,7 +56,20 @@ NC='\033[0m'
 
 # Backup file descriptor for the original stdout (console output)
 # We use FD 6 to print to the user's screen regardless of log redirection
-exec 6>&1
+# --- prepare console fds early (robust under pipes / non-tty) ---
+if [ -t 1 ]; then
+  exec 6>/dev/tty || exec 6>&1
+else
+  exec 6>/dev/null
+fi
+
+# Optional: prepare a backup for stderr similar to fd6 (for cleanup restore)
+if [ -t 2 ]; then
+  exec 7>/dev/tty || true
+else
+  exec 7>/dev/null
+fi
+# --- end console fd setup ---
 
 ################################################################################
 # Helper Functions
@@ -124,7 +138,7 @@ confirm_and_delete() {
     fi
     local response
     echo -n -e "\n${RED}WARNING:${NC} The directory already exists and will be deleted: ${target}. Are you sure? [y/N] " >&6
-    read -r response <&6
+    read -r response </dev/tty
     case "$response" in
         [yY][eE][sS] | [yY]) rm -rf "$target" ;;
         *) color_err_msg "Operation cancelled by user. Aborting script."; exit 1 ;;
@@ -249,7 +263,7 @@ cd "$INSTALL_DIR"
 
 if [[ "$NON_INTERACTIVE" == false ]]; then
     echo -n -e "\nDo you want to download and install Dynawo? (Required for some examples) [Y/n] " >&6
-    read -r response <&6
+    read -r response </dev/tty
     case "$response" in
         [nN][oO] | [nN]) INSTALL_DYNAWO=false; color_msg "Skipping Dynawo installation." ;;
         *) INSTALL_DYNAWO=true; color_msg "Confirmed Dynawo installation." ;;
@@ -310,7 +324,7 @@ if [ -n "$LOCAL_SOURCE_ZIP" ]; then
     
     # Copy file to current dir to avoid issues
     cp "$LOCAL_SOURCE_ZIP" .
-    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP")
+    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP$")
     unzip -q "$ZIP_FILENAME"
     rm -f "$ZIP_FILENAME"
 
