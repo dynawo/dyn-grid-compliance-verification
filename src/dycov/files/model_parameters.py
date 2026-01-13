@@ -14,6 +14,7 @@ import configparser
 import math
 import re
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
@@ -25,6 +26,7 @@ from dycov.model.parameters import (
     Line_params,
     Load_params,
     Pdr_equipments,
+    Pdr_params,
     Terminal,
     Xfmr_params,
 )
