@@ -13,5 +13,5 @@
   <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line1" var2="line_terminal1"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line2" var2="line_terminal1"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line3" var2="line_terminal1"/>
-  <dyn:connect id1="DISCONNECT_LINE" var1="event_state1" id2="Line3" var2="line_switchOffSignal2"/>
+  <dyn:connect id1="DISCONNECT_LINE" var1="event_state1" id2="Line3" var2="line_switchOffSignal1"/>
 </dyn:dynamicModelsArchitecture>
