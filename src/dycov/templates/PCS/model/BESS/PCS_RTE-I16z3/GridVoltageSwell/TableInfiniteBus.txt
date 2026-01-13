@@ -16,5 +16,5 @@ double TableUPu(10,2)
 {{delta_t_rec2}} 1.25
 {{delta_t_rec2}} 1.15
 {{delta_t_rec3}} 1.15
-{{delta_t_rec3}} 1.1
-{{simulation_stop}} 1.1
+{{delta_t_rec3}} {{bus_u0pu}}
+{{simulation_stop}} {{bus_u0pu}}

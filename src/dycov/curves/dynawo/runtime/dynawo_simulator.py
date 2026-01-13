@@ -368,19 +368,21 @@ class DynawoSimulator:
         column_size = len(df_curves_imported["time"])
 
         # Remove PDR voltage if present; we'll add our computed one
-        if "BusPDR_BUS_Voltage" in df_curves.columns:
-            del df_curves["BusPDR_BUS_Voltage"]
+        if "Measurements_BUS_Voltage" in df_curves.columns:
+            pdr_voltage_modulus = df_curves["Measurements_BUS_Voltage"].tolist()
+            pdr_active_power = df_curves["Measurements_BUS_ActivePower"].tolist()
+            pdr_reactive_power = df_curves["Measurements_BUS_ReactivePower"].tolist()
+        else:
+            pdr_voltage_complex = self._get_pdr_voltage(df_curves)
+            pdr_voltage_modulus = self._get_modulus(pdr_voltage_complex)
+            pdr_current_complex = self._get_pdr_current(df_curves, column_size)
 
-        pdr_voltage_complex = self._get_pdr_voltage(df_curves)
-        pdr_voltage_modulus = self._get_modulus(pdr_voltage_complex)
-        pdr_current_complex = self._get_pdr_current(df_curves, column_size)
-
-        pdr_active_power = self._get_pdr_active_power(
-            np.array(pdr_voltage_complex), np.array(pdr_current_complex), snom, snref
-        )
-        pdr_reactive_power = self._get_pdr_reactive_power(
-            np.array(pdr_voltage_complex), np.array(pdr_current_complex), snom, snref
-        )
+            pdr_active_power = self._get_pdr_active_power(
+                np.array(pdr_voltage_complex), np.array(pdr_current_complex), snom, snref
+            )
+            pdr_reactive_power = self._get_pdr_reactive_power(
+                np.array(pdr_voltage_complex), np.array(pdr_current_complex), snom, snref
+            )
 
         rtol = 0.002
         atol = 0.1 * rtol
@@ -574,12 +576,10 @@ class DynawoSimulator:
             elif has_u:
                 use_droop = generator.UseVoltageDroop
                 has_q = q_variable in df_curves.columns
-
                 if use_droop and has_q:
                     curve_u = df_curves[u_variable].to_numpy()
                     curve_q = df_curves[q_variable].to_numpy()
                     voltage_drop = generator.VoltageDroop
-
                     curves_dict[variable] = np.add(
                         curve_u, np.multiply(curve_q, voltage_drop)
                     ).tolist()

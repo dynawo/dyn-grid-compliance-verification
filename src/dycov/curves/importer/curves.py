@@ -15,7 +15,13 @@ from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.files import manage_files
-from dycov.model.parameters import Disconnection_Model, Gen_init, Gen_params, Simulation_result
+from dycov.model.parameters import (
+    Disconnection_Model,
+    Gen_init,
+    Gen_params,
+    Simulation_result,
+    Terminal,
+)
 from dycov.model.producer import Producer
 
 
@@ -194,7 +200,7 @@ class ImportedCurves(ProducerCurves):
                     Gen_params(
                         id=gen_id,
                         lib="",
-                        connectedXmfr="",
+                        terminals=(Terminal(connectedEquipment=""),),
                         SNom=0.0,
                         IMax=0.0,
                         par_id="",
