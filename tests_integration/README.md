@@ -87,7 +87,7 @@ Running with **no options** will:
 ### B) Performance — `dycov performance`
 
 *   **Topologies**: `Single`, `SingleAux`, `SingleAuxI`, `SingleI`
-*   **Models**: always `GeneratorSynchronousFourWindingsTGov1SexsPss2a`; adds IEC and WECC models if enabled
+*   **Models**: `GeneratorSynchronousFourWindingsTGov1SexsPss2a`, `IECB2015`, `IECB2020`, `WECCB`
 *   Paths per (topology, model):
     *   Input: `${examples_path}/Performance/<Topology>/<Model>/Dynawo`
     *   Output: `${results_path}/Performance/<Topology>/<Model>`
@@ -95,9 +95,9 @@ Running with **no options** will:
 
 ### C) Envelope Generation — `dycov generateEnvelopes`
 
-*   **GFM**: `GFM_Overdamped`, `GFM_Underdamped`, `GFM_Fusion`
+*   **GFM_Options**: `Overdamped`, `Underdamped`, `Fusion`
 *   Paths per model:
-    *   Input: `${examples_path}/<Model>/Producer.ini`
+    *   Input: `${examples_path}/GFM/<GFM_Options>/Producer.ini`
     *   Output: `${results_path}/Envelopes/<Model>`
 *   Runs up to **4 generators in parallel**.
 
