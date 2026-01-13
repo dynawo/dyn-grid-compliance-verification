@@ -9,7 +9,6 @@
 #
 
 import configparser
-import logging
 import re
 import shutil
 from collections import namedtuple
@@ -386,8 +385,6 @@ def move_report(source: Path, target: Path, report_name: str) -> bool:
         copy_file(source / (report_name.split(CASE_SEPARATOR)[0] + ".log"), target)
         return False
     copy_file(pdf_file, target)
-    if dycov_logging.get_logger("Manage files").getEffectiveLevel() != logging.DEBUG:
-        shutil.rmtree(source)
     return True
 
 

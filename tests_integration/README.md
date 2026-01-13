@@ -87,7 +87,7 @@ Running with **no options** will:
 ### B) Performance — `dycov performance`
 
 *   **Topologies**: `Single`, `SingleAux`, `SingleAuxI`, `SingleI`
-*   **Models**: always `GeneratorSynchronousFourWindingsTGov1SexsPss2a`; adds IEC and WECC models if enabled
+*   **Models**: `GeneratorSynchronousFourWindingsTGov1SexsPss2a`, `IECB2015`, `IECB2020`, `WECCB`
 *   Paths per (topology, model):
     *   Input: `${examples_path}/Performance/<Topology>/<Model>/Dynawo`
     *   Output: `${results_path}/Performance/<Topology>/<Model>`
@@ -95,9 +95,9 @@ Running with **no options** will:
 
 ### C) Envelope Generation — `dycov generateEnvelopes`
 
-*   **GFM**: `GFM_Overdamped`, `GFM_Underdamped`, `GFM_Fusion`
+*   **GFM_Options**: `Overdamped`, `Underdamped`, `Fusion`
 *   Paths per model:
-    *   Input: `${examples_path}/<Model>/Producer.ini`
+    *   Input: `${examples_path}/GFM/<GFM_Options>/Producer.ini`
     *   Output: `${results_path}/Envelopes/<Model>`
 *   Runs up to **4 generators in parallel**.
 
@@ -160,4 +160,3 @@ tests_integration/test_tool.sh --examples /home/marcos/project/examples
 *   Parallelism: commands are dispatched via `xargs -P 4 -I { } bash -c "{ }"`. Adjust `-P` for concurrency.
 *   Function exports: `run_dycov_validate`, `run_dycov_performance`, `run_dycov_generate` are `export -f` so `xargs` can invoke them in subshells.
 *   Timing: each sub-command prints elapsed seconds; the total time is reported at the end.
-

@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 import warnings
 
 import numpy as np
@@ -107,13 +116,13 @@ def resample_to_fixed_step(curves: pd.DataFrame, fs_max=1000):
 
 
 # RuntimeWarning explanation:
-# In our datasets the signals are almost flat and sampled on a dense, strictly increasing time grid.
-# PchipInterpolator computes local slopes mk = Δy/Δx and then uses a weighted harmonic mean that
-# includes terms of the form w / mk. When |Δy| is ~0 (plateaus) or Δx is extremely small, mk → 0,
-# so 1/mk becomes numerically huge, which triggers "overflow encountered in divide". The same
-# instability can propagate into subsequent weighted sums inside the derivative smoothing step,
-# surfacing as "overflow encountered in add". In short: near-zero slopes from quasi-constant curves
-# (or tiny time steps) make the internal reciprocal-weight calculations blow up.
+# In our datasets the signals are almost flat and sampled on a dense, strictly increasing time
+# grid. PchipInterpolator computes local slopes mk = Δy/Δx and then uses a weighted harmonic mean
+# that includes terms of the form w / mk. When |Δy| is ~0 (plateaus) or Δx is extremely small,
+# mk → 0, so 1/mk becomes numerically huge, which triggers "overflow encountered in divide". The
+# same instability can propagate into subsequent weighted sums inside the derivative smoothing
+# step,surfacing as "overflow encountered in add". In short: near-zero slopes from quasi-constant
+# curves (or tiny time steps) make the internal reciprocal-weight calculations blow up.
 def resample_to_common_tgrid(sim_curves, ref_curves):
     """
     Resamples TWO sets of curves to a common fixed time step, t_com.

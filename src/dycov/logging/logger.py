@@ -92,7 +92,6 @@ class DycovLogger(logging.getLoggerClass()):
         """
         Redirect Python warnings (e.g., SciPy/NumPy RuntimeWarning) into logging
         and use the same handlers/formatters configured on this DycovLogger.
-
         This uses Python's built-in logging.captureWarnings(True), which sends
         warnings to the 'py.warnings' logger. We attach our handlers to that
         logger so the output looks identical to the rest of DyCoV logs.
