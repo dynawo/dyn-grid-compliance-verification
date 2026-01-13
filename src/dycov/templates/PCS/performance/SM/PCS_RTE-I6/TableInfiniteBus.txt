@@ -8,8 +8,8 @@ double TableUPhase(2,2)
 {{simulation_stop}} 0.0
 
 double TableUPu(8,2)
-{{simulation_start}} 1.0
-{{start_event}} 1.0
+{{simulation_start}} {{bus_u0pu}}
+{{start_event}} {{bus_u0pu}}
 {{start_event}} {{u_fault}}
 {{end_event}} {{u_fault}}
 {{end_event}} {{u_clear}}

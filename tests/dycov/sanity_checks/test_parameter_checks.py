@@ -10,18 +10,40 @@
 
 import pytest
 
-from dycov.model import parameters
+from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
 from dycov.sanity_checks import parameter_checks
 
 
 def test_trafos():
-    xfmr = parameters.Xfmr_params(
-        id=None, lib=None, R=0.0003, X=0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
+    xfmr = Xfmr_params(
+        id=None,
+        lib=None,
+        R=0.0003,
+        X=0.0268,
+        B=0.0,
+        G=0.0,
+        rTfo=0.9574,
+        par_id="",
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
     )
     parameter_checks.check_trafo(xfmr)
 
-    bad_xfmr = parameters.Xfmr_params(
-        id="Xfmr", lib=None, R=0.0003, X=-0.0268, B=0.0, G=0.0, rTfo=0.9574, par_id=""
+    bad_xfmr = Xfmr_params(
+        id="Xfmr",
+        lib=None,
+        R=0.0003,
+        X=-0.0268,
+        B=0.0,
+        G=0.0,
+        rTfo=0.9574,
+        par_id="",
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_trafo(bad_xfmr)
@@ -33,29 +55,31 @@ def test_trafos():
 
 
 def test_auxiliary_loads():
-    load = parameters.Load_params(
+    load = Load_params(
         id=None,
         lib=None,
-        connectedXmfr="",
         P=0.1,
         Q=0.05,
         U=1.0,
         UPhase=0.0,
         Alpha=None,
         Beta=None,
+        par_id=None,
+        terminals=(Terminal(connectedEquipment=None),),
     )
     parameter_checks.check_auxiliary_load(load)
 
-    bad_load = parameters.Load_params(
+    bad_load = Load_params(
         id=None,
         lib=None,
-        connectedXmfr="",
         P=-0.1,
         Q=0.05,
         U=1.0,
         UPhase=0.0,
         Alpha=None,
         Beta=None,
+        par_id=None,
+        terminals=(Terminal(connectedEquipment=None),),
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_auxiliary_load(bad_load)
@@ -67,10 +91,10 @@ def test_auxiliary_loads():
 
 
 def test_generators():
-    sm = parameters.Gen_params(
+    sm = Gen_params(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        connectedXmfr="",
+        terminals=(Terminal(connectedEquipment=""),),
         SNom=90,
         IMax=100.0,
         par_id="",
@@ -79,10 +103,10 @@ def test_generators():
         VoltageDroop=None,
         UseVoltageDroop=False,
     )
-    ppm = parameters.Gen_params(
+    ppm = Gen_params(
         id=None,
         lib="WTG4AWeccCurrentSource1",
-        connectedXmfr="",
+        terminals=(Terminal(connectedEquipment=""),),
         SNom=90,
         IMax=100.0,
         par_id="",
@@ -91,10 +115,10 @@ def test_generators():
         VoltageDroop=None,
         UseVoltageDroop=False,
     )
-    bess = parameters.Gen_params(
+    bess = Gen_params(
         id=None,
         lib="BESSWeccCurrentSource",
-        connectedXmfr="",
+        terminals=(Terminal(connectedEquipment=""),),
         SNom=90,
         IMax=100.0,
         par_id="",
@@ -126,13 +150,33 @@ def test_generators():
 
 
 def test_internal_lines():
-    line = parameters.Line_params(
-        id="Line", lib=None, connectedPdr=True, R=0.02, X=0.004, B=0.0, G=0.0
+    line = Line_params(
+        id="Line",
+        lib=None,
+        R=0.02,
+        X=0.004,
+        B=0.0,
+        G=0.0,
+        par_id="",
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
     )
     parameter_checks.check_internal_line(line)
 
-    bad_line = parameters.Line_params(
-        id="Line", lib=None, connectedPdr=True, R=-0.02, X=0.004, B=0.0, G=0.0
+    bad_line = Line_params(
+        id="Line",
+        lib=None,
+        R=-0.02,
+        X=0.004,
+        B=0.0,
+        G=0.0,
+        par_id="",
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_internal_line(bad_line)

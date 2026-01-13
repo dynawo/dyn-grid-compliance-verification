@@ -317,7 +317,8 @@ class Validation:
             raise
         finally:
             # Clean Latex folder
-            manage_files.remove_dir(self._parameters.get_working_dir() / "Latex")
+            if dycov_logging.get_logger("Report").getEffectiveLevel() != logging.DEBUG:
+                manage_files.remove_dir(self._parameters.get_working_dir() / "Latex")
 
             # Move output files to destination folder
             manage_files.rename_path(
