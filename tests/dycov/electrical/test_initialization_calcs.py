@@ -29,11 +29,15 @@ def test_pimodel():
     ln = Line_params(
         id=None,
         lib=None,
-        connectedPdr=True,
         R=0.04444444444444444,
         X=0.4444444444444444,
         G=0.0,
         B=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
     )
     pdr = Pdr_params(U=1.0444444444444445, UPhase=0.0, S=complex(-0.75, 0.0), P=-0.75, Q=0.0)
     v_pdr = cmath.rect(abs(pdr.U), 0)
@@ -86,7 +90,7 @@ def _initialize_topo_s():
             Terminal(connectedEquipment=None),
         ),
     )
-    pdr = Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    pdr = Pdr_params(U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
     grid_line = Pimodel_params(Ytr=-12.562245359891353j, Ysh1=0.0j, Ysh2=0.0j)
 
     print("\n\nTesting initialization calcs for Topology 'S':")
@@ -162,7 +166,7 @@ def _initialize_topo_s_i():
             Terminal(connectedEquipment=None),
         ),
     )
-    pdr = Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    pdr = Pdr_params(U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
     grid_line = Pimodel_params(Ytr=-12.562245359891353j, Ysh1=0.0j, Ysh2=0.0j)
 
     print("\n\nTesting initialization calcs for Topology 'S+i':")
