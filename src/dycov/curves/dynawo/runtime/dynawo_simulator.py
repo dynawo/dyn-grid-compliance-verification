@@ -365,24 +365,10 @@ class DynawoSimulator:
         ]
 
         df_curves = self._translate_curves(variable_translations, df_curves_imported)
-        column_size = len(df_curves_imported["time"])
 
-        # Remove PDR voltage if present; we'll add our computed one
-        if "Measurements_BUS_Voltage" in df_curves.columns:
-            pdr_voltage_modulus = df_curves["Measurements_BUS_Voltage"].tolist()
-            pdr_active_power = df_curves["Measurements_BUS_ActivePower"].tolist()
-            pdr_reactive_power = df_curves["Measurements_BUS_ReactivePower"].tolist()
-        else:
-            pdr_voltage_complex = self._get_pdr_voltage(df_curves)
-            pdr_voltage_modulus = self._get_modulus(pdr_voltage_complex)
-            pdr_current_complex = self._get_pdr_current(df_curves, column_size)
-
-            pdr_active_power = self._get_pdr_active_power(
-                np.array(pdr_voltage_complex), np.array(pdr_current_complex), snom, snref
-            )
-            pdr_reactive_power = self._get_pdr_reactive_power(
-                np.array(pdr_voltage_complex), np.array(pdr_current_complex), snom, snref
-            )
+        pdr_voltage_modulus = df_curves["Measurements_BUS_Voltage"].tolist()
+        pdr_active_power = df_curves["Measurements_BUS_ActivePower"].tolist()
+        pdr_reactive_power = df_curves["Measurements_BUS_ReactivePower"].tolist()
 
         rtol = 0.002
         atol = 0.1 * rtol
@@ -526,39 +512,6 @@ class DynawoSimulator:
             curves_translation["NetworkFrequencyPu"] = curves_translation[
                 network_frequency_list[0]
             ]
-
-    def _get_pdr_voltage(self, df_curves: pd.DataFrame) -> list:
-        voltage_columns_regex = re.compile(r".*_TE_.*_Voltage$")
-        voltage_columns_list = list(filter(voltage_columns_regex.match, df_curves.columns))
-        if voltage_columns_list:
-            return df_curves[voltage_columns_list[0]].tolist()
-        return []
-
-    def _get_pdr_current(self, df_curves: pd.DataFrame, column_size: int) -> list:
-        current_columns_regex = re.compile(r".*_TE_.*_Current$")
-        current_columns_list = list(filter(current_columns_regex.match, df_curves.columns))
-        if not current_columns_list:
-            return []
-        pdr_current_base_snref = np.zeros(column_size, dtype=np.complex128)
-        for current_column in current_columns_list:
-            pdr_current_base_snref = np.add(
-                pdr_current_base_snref, list(df_curves[current_column])
-            )
-        return pdr_current_base_snref.tolist()
-
-    def _get_pdr_active_power(
-        self, pdr_voltage: list, pdr_current: list, snom: float, snref: float
-    ) -> list:
-        pdr_active_power_base_snref = np.real(pdr_voltage * np.conjugate(pdr_current)) * -1
-        pdr_active_power = pdr_active_power_base_snref * (snref / snom)
-        return pdr_active_power.tolist()
-
-    def _get_pdr_reactive_power(
-        self, pdr_voltage: list, pdr_current: list, snom: float, snref: float
-    ) -> list:
-        pdr_reactive_power_base_snref = np.imag(pdr_voltage * np.conjugate(pdr_current)) * -1
-        pdr_reactive_power = pdr_reactive_power_base_snref * (snref / snom)
-        return pdr_reactive_power.tolist()
 
     def _get_magnitude_controlled_by_avr(
         self, generators: list, df_curves: pd.DataFrame, curves_dict: dict
