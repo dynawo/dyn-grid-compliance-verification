@@ -31,7 +31,6 @@ from dycov.curves.dynawo.runtime.dynawo_precompile import get_dynawo_version
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
 from dycov.report import figure, html
-from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
@@ -437,9 +436,7 @@ def _clean(working_path: Path):
             try:
                 file_to_delete.unlink()
             except OSError as e:
-                dycov_logging.get_logger("Report").warning(
-                    f"Error al eliminar {file_to_delete}: {e}"
-                )
+                dycov_logging.get_logger("Report").warning(f"Error deleting {file_to_delete}: {e}")
 
 
 def prepare_pcs_report(
@@ -509,16 +506,16 @@ def create_pdf(
     dynawo_version = None
     if producer.is_dynawo_model():
         dynawo_version = str(get_dynawo_version(parameters.get_launcher_dwo())).replace(
-            "\\", "\\\\"
+            "\\", "\\textbackslash"
         )
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
-    model_template = str(producer.get_producer_path()).replace("\\", "\\\\")
+    model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
     summary_description += f"Model dir: {model_template} \\\\"
 
     reference_template = None
     if producer.has_reference_curves_path():
-        reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
+        reference_template = str(producer.get_reference_path()).replace("\\", "\\textbackslash")
         summary_description += f"Reference curves dir: {reference_template} \\\\"
 
     _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
@@ -561,11 +558,11 @@ def create_pdf(
         stderr=subprocess.PIPE,
     )
 
-    if dycov_logging.get_logger("Report").getEffectiveLevel() == logging.DEBUG:
+    if dycov_logging.get_logger("Report").getEffectiveLevel() != logging.DEBUG:
         _clean(working_path)
 
     dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
     if move_report(working_path, output_path, REPORT_NAME):
         dycov_logging.get_logger("Report").info("PDF done.")
     else:
-        raise LatexReportException("PDFLatex Error.")
+        dycov_logging.get_logger("Report").error("PDFLatex Error.")
