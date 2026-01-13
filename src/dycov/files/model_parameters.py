@@ -509,6 +509,7 @@ def adjust_producer_init(
     generators: list,
     xfmrs: list,
     aux_load: Load_params,
+    pdr: Pdr_params,
     generator_control_mode: str,
     force_voltage_droop: bool,
 ) -> None:
@@ -526,6 +527,8 @@ def adjust_producer_init(
         Parameters for the transformers
     aux_load: Load_params
         Initial values to the producer's auxiliary load
+    pdr: Pdr_params
+        PDR parameters
     generator_control_mode: str
         Control mode
     force_voltage_droop: bool
@@ -552,6 +555,7 @@ def adjust_producer_init(
             generator.terminals[0].Q0,
             generator.terminals[0].U0,
             generator.terminals[0].UPhase0,
+            pdr,
             generator_control_mode,
             force_voltage_droop,
         )
