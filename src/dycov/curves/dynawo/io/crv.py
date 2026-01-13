@@ -19,7 +19,6 @@ from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 def create_curves_file(
     path: Path,
     curves_filename: str,
-    connected_to_pdr: list,
     xfmrs: list,
     generators: list,
     rte_loads: list,  # This parameter is not used in the current implementation.
@@ -35,8 +34,6 @@ def create_curves_file(
         Path to the directory where the CRV file will be saved.
     curves_filename: str
         Name of the CRV file to be created.
-    connected_to_pdr: list
-        List of equipment connected to the PDR bus on the Producer side.
     xfmrs: list
         List of transformers on the Producer side.
     generators: list
@@ -66,10 +63,7 @@ def create_curves_file(
         """<curvesInput xmlns="http://www.rte-france.com/dynawo"></curvesInput>"""
     )
 
-    if any(element.id == "Measurements" for element in connected_to_pdr):
-        _add_measurements_curves(curves_root, curves_dict)
-    else:
-        _add_pdr_curves(curves_root, connected_to_pdr, curves_dict)
+    _add_measurements_curves(curves_root, curves_dict)
     if zone == 1:
         _add_bus_curves(curves_root, curves_dict)
     _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
