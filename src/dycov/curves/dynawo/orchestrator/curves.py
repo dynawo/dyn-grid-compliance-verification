@@ -40,7 +40,6 @@ from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import (
     Disconnection_Model,
     Gen_params,
-    Line_params,
     Load_init,
     Load_params,
     Pdr_params,
