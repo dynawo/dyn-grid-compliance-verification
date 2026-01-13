@@ -749,7 +749,9 @@ class DynawoCurves(ProducerCurves):
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:
                 if self._use_pdr_values:
-                    pre_value = [-pdr.P * setpoint_factor for gen in self._gens]
+                    pre_value = [
+                        -pdr.P * setpoint_factor for gen in self.get_producer().generators
+                    ]
                 else:
                     pre_value = [
                         -gen.terminals[0].P0 * setpoint_factor
@@ -757,7 +759,9 @@ class DynawoCurves(ProducerCurves):
                     ]
             elif "ReactivePowerSetpointPu" == connect_event_to:
                 if self._use_pdr_values:
-                    pre_value = [-pdr.Q * setpoint_factor for gen in self._gens]
+                    pre_value = [
+                        -pdr.Q * setpoint_factor for gen in self.get_producer().generators
+                    ]
                 else:
                     pre_value = [
                         -gen.terminals[0].Q0 * setpoint_factor
@@ -765,7 +769,7 @@ class DynawoCurves(ProducerCurves):
                     ]
             elif "AVRSetpointPu" == connect_event_to:
                 if self._use_pdr_values:
-                    pre_value = [pdr.U for gen in self._gens]
+                    pre_value = [pdr.U for gen in self.get_producer().generators]
                 else:
                     pre_value = [gen.terminals[0].U0 for gen in self.get_producer().generators]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
