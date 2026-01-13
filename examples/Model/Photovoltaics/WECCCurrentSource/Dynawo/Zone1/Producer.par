@@ -41,10 +41,10 @@
     <par type="DOUBLE" name="photovoltaics_RrpwrPu" value="10"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
     <par type="DOUBLE" name="photovoltaics_tP" value="0.05"/>
-    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="1.0"/>
     <par type="DOUBLE" name="photovoltaics_PMinPu" value="0.0"/>
-    <par type="DOUBLE" name="photovoltaics_QMaxPu" value="999"/>
-    <par type="DOUBLE" name="photovoltaics_QMinPu" value="-999"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMinPu" value="-1.0"/>
 
     <!-- PLL Control -->
     <par type="DOUBLE" name="photovoltaics_KiPLL" value="20"/>
