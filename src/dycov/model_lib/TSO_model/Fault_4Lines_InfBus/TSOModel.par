@@ -22,7 +22,7 @@
     <par type="DOUBLE" name="line_BPu" value="0.0"/>
     <par type="DOUBLE" name="line_GPu" value="0.0"/>
   </set>
-  <set id="Line4">
+  <set id="LineFault">
     <par type="DOUBLE" name="line_RPu" value="0.0"/>
     <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
     <par type="DOUBLE" name="line_BPu" value="0.0"/>
