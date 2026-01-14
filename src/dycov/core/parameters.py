@@ -8,11 +8,18 @@
 #     demiguelm@aia.es
 #
 
+import atexit
 import getpass
+import logging
+import os
+import signal
 import tempfile
+import threading
 from pathlib import Path
 
 from dycov.configuration.cfg import config
+from dycov.files import manage_files
+from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
 
 
@@ -49,6 +56,10 @@ class Parameters:
 
         # The parameter is initialized in the child class
         self._producer = None
+
+        # Cleanup bookkeeping
+        self._cleanup_registered = False
+        self._register_cleanup_hooks()
 
     def get_launcher_dwo(self) -> Path:
         """Get the Dynawo launcher.
@@ -119,3 +130,70 @@ class Parameters:
             True if it is a valid execution, False otherwise
         """
         pass
+
+    def cleanup_working_dir(self, preserve_on_debug: bool = True) -> None:
+        """
+        Deletes the working directory, or renames it to output_dir when running in DEBUG
+        and preserve_on_debug=True (to keep artifacts for inspection).
+        Idempotent and safe to call multiple times.
+        """
+        wd: Path | None = getattr(self, "_working_dir", None)
+        if not wd:
+            return
+
+        try:
+            logger = dycov_logging.get_logger("Parameters")
+            is_debug = logger.getEffectiveLevel() == logging.DEBUG
+            if is_debug and preserve_on_debug:
+                # Keep artifacts: move into final output for inspection
+                manage_files.rename_path(wd, self._output_dir)
+            else:
+                manage_files.remove_dir(wd)
+        except Exception:
+            # Best-effort hard delete if rename failed
+            try:
+                manage_files.remove_dir(wd)
+            except Exception:
+                pass
+        finally:
+            self._working_dir = None
+
+    def __exit__(self, exc_type, exc, tb):
+        # On normal exit or exception, remove tmp unless you're debugging and want to keep it
+        self.cleanup_working_dir(preserve_on_debug=True)
+
+    # --- INTERNAL: hook registration ---
+    def _register_cleanup_hooks(self):
+        if self._cleanup_registered:
+            return
+
+        # Run at normal interpreter exit
+        atexit.register(self.cleanup_working_dir)
+
+        # Trap SIGINT/SIGTERM so Ctrl+C / docker stop also cleans
+        def _sig_handler(signum, frame):
+            try:
+                self.cleanup_working_dir(preserve_on_debug=True)
+            finally:
+                # Restore default and re-signal so the process exits with the right code
+                try:
+                    signal.signal(signum, signal.SIG_DFL)
+                except Exception:
+                    pass
+                try:
+                    os.kill(os.getpid(), signum)
+                except Exception:
+                    # On Windows or restricted envs, fall back to sys.exit with non-zero
+                    import sys
+
+                    sys.exit(130 if signum == signal.SIGINT else 143)
+
+        if threading.current_thread() is threading.main_thread():
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                try:
+                    signal.signal(sig, _sig_handler)
+                except Exception:
+                    # Not always possible (Windows services, non-main thread, etc.)
+                    pass
+
+        self._cleanup_registered = True
