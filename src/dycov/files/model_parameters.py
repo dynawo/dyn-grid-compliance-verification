@@ -20,14 +20,7 @@ from lxml import etree
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import (
-    Gen_params,
-    Line_params,
-    Load_params,
-    Pdr_equipments,
-    Terminal,
-    Xfmr_params,
-)
+from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
 
 # Numeric values: supports integers, decimals, and leading sign; allows ".5" style.
 NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
