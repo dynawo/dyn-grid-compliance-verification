@@ -6,7 +6,7 @@
   <dyn:blackBoxModel id="Line1" lib="Line" parFile="TSOModel.par" parId="Line1"/>
   <dyn:blackBoxModel id="Line2" lib="Line" parFile="TSOModel.par" parId="Line2"/>
   <dyn:blackBoxModel id="Line3" lib="Line" parFile="TSOModel.par" parId="Line3"/>
-  <dyn:blackBoxModel id="Line4" lib="LineFault" parFile="TSOModel.par" parId="Line4"/>
+  <dyn:blackBoxModel id="Line4" lib="LineFault" parFile="TSOModel.par" parId="LineFault"/>
   <dyn:connect id1="Line1" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
   <dyn:connect id1="Line2" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
   <dyn:connect id1="Line3" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
