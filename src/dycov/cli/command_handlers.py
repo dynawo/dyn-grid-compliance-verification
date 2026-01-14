@@ -19,7 +19,6 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
 from dycov.curves import anonymizer
 from dycov.curves.dynawo.tooling import prepare_tool
-from dycov.files import manage_files
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
@@ -395,21 +394,32 @@ def _run_verification(
             f" ({parallel_status})"
         )
 
+        # SUCCESS: always delete the temporary directory
+        params.cleanup_working_dir(preserve_on_debug=False)
         return 0
+
     except KeyboardInterrupt:
         dycov_logging.get_logger("CommandHandlers").error("Execution interrupted by user")
-        if dycov_logging.get_logger("CommandHandlers").getEffectiveLevel() == logging.DEBUG:
-            manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
-        else:
-            manage_files.remove_dir(params.get_working_dir())
+        # Keep artifacts if we are in DEBUG mode (rename to output_dir); otherwise, delete.
+        params.cleanup_working_dir(
+            preserve_on_debug=dycov_logging.get_logger("CommandHandlers").getEffectiveLevel()
+            == logging.DEBUG
+        )
         return 130
+
     except Exception as e:
         dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
-        if dycov_logging.get_logger("CommandHandlers").getEffectiveLevel() == logging.DEBUG:
-            manage_files.rename_path(params.get_working_dir(), params.get_output_dir())
-        else:
-            manage_files.remove_dir(params.get_working_dir())
-        return 1
+        # Keep artifacts if we are in DEBUG mode (rename to output_dir); if not, delete.
+        try:
+            params.cleanup_working_dir(
+                preserve_on_debug=dycov_logging.get_logger("CommandHandlers").getEffectiveLevel()
+                == logging.DEBUG
+            )
+        finally:
+            pass
+
+    # fallback
+    return 1
 
 
 def _generate_envelopes(
@@ -446,7 +456,16 @@ def _generate_envelopes(
         dycov_logging.get_logger("CommandHandlers").info(
             f"Generation completed in {end_time - start_time:.2f} seconds."
         )
+
+        # SUCCESS: always delete the temporary directory
+        params.cleanup_working_dir(preserve_on_debug=False)
         return 0
+
     except Exception as e:
         dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
+        # Keep artifacts in DEBUG for diagnostics; otherwise, delete
+        try:
+            params.cleanup_working_dir(preserve_on_debug=True)
+        except Exception:
+            pass
         return 1
