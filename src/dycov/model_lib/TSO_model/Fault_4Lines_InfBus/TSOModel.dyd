@@ -6,7 +6,7 @@
   <dyn:blackBoxModel id="Line1" lib="Line" parFile="TSOModel.par" parId="Line1"/>
   <dyn:blackBoxModel id="Line2" lib="Line" parFile="TSOModel.par" parId="Line2"/>
   <dyn:blackBoxModel id="Line3" lib="Line" parFile="TSOModel.par" parId="Line3"/>
-  <dyn:blackBoxModel id="Line4" lib="LineFault" parFile="TSOModel.par" parId="Line4"/>
+  <dyn:blackBoxModel id="Line4" lib="LineFault" parFile="TSOModel.par" parId="LineFault"/>
 
   <!-- "Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
        Here it is needed in order to channel the flows coming from all branches to the BusPDR into a single element,
