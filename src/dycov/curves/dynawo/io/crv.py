@@ -194,7 +194,7 @@ def _add_measurements_curves(curves_root: etree.Element, curves_dict: dict) -> N
         The dictionary to which curve entries will be added.
     """
     _add_curve_to_file(
-        curves_root, "Measurements", "Voltage", "BUS", -1, "measurements_UPu", curves_dict
+        curves_root, "Measurements", "Voltage", "BUS", 1, "measurements_UPu", curves_dict
     )
     _add_curve_to_file(
         curves_root, "Measurements", "ActivePower", "BUS", -1, "measurements_PPu", curves_dict
