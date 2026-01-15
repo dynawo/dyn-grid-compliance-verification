@@ -11,21 +11,51 @@
 import atexit
 import getpass
 import logging
-import os
-import signal
+import shutil
 import tempfile
 import threading
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from dycov.configuration.cfg import config
+from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
 
 
-class Parameters:
-    """Parent class to define the common parameters.
+def _purge_stale_temp_dirs(
+    base_dir: Path, prefix: str, older_than: timedelta, exclude: Path | None = None
+) -> None:
+    try:
+        now = datetime.now().timestamp()
+        threshold = now - older_than.total_seconds()
+        for entry in base_dir.iterdir():
+            try:
+                if not entry.is_dir(follow_symlinks=False):
+                    continue
+                name = entry.name
+                if not name.startswith(prefix):
+                    continue
+                path = base_dir / name
+                if exclude is not None and path == exclude:
+                    continue
+                st = entry.stat(follow_symlinks=False)
+                if st.st_mtime <= threshold:
+                    shutil.rmtree(path, ignore_errors=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
+
+# Global abort flag to coordinate graceful shutdown across threads
+ABORT_EVENT = threading.Event()
+
+
+class Parameters:
+    """
+    Parent class to define the common parameters.
     Args
     ----
     launcher_dwo: Path
@@ -51,11 +81,34 @@ class Parameters:
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
-        base_dir = output_dir.parent if output_dir.parent.exists() else Path.cwd()
-        self._working_dir = Path(tempfile.mkdtemp(prefix=f"{tmp_path}_{username}_", dir=base_dir))
+        base_dir = Path.cwd()
+        prefix = f"{tmp_path}_{username}_"
+        _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(hours=6))
+        self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
 
         # The parameter is initialized in the child class
-        self._producer = None
+        self._producer: Producer | None = None
+
+        # --- Robust atexit cleanup bound to concrete path (not to object state) ---
+        wd = self._working_dir
+        out = self._output_dir
+
+        def _cleanup_on_exit():
+            try:
+                # Preserve in DEBUG, remove otherwise (no logs emitted)
+                logger = dycov_logging.get_logger("Parameters")
+                is_debug = logger.getEffectiveLevel() == logging.DEBUG
+                if is_debug:
+                    manage_files.rename_path(wd, out)
+                else:
+                    manage_files.remove_dir(wd)
+            except Exception:
+                try:
+                    manage_files.remove_dir(wd)
+                except Exception:
+                    pass
+
+        atexit.register(_cleanup_on_exit)
 
         # Cleanup bookkeeping
         self._cleanup_registered = False
@@ -140,17 +193,14 @@ class Parameters:
         wd: Path | None = getattr(self, "_working_dir", None)
         if not wd:
             return
-
         try:
             logger = dycov_logging.get_logger("Parameters")
             is_debug = logger.getEffectiveLevel() == logging.DEBUG
             if is_debug and preserve_on_debug:
-                # Keep artifacts: move into final output for inspection
                 manage_files.rename_path(wd, self._output_dir)
             else:
                 manage_files.remove_dir(wd)
         except Exception:
-            # Best-effort hard delete if rename failed
             try:
                 manage_files.remove_dir(wd)
             except Exception:
@@ -167,33 +217,25 @@ class Parameters:
         if self._cleanup_registered:
             return
 
-        # Run at normal interpreter exit
-        atexit.register(self.cleanup_working_dir)
+        # Install centralized signal handlers via graceful_shutdown.install_signal_handlers
+        def _on_exit(exit_code: int) -> None:
+            """Minimal exit callback for signal handlers.
+            - Mark global abort
+            - Terminate external children (Dynawo + LaTeX)
+            - Exit from main thread using Pythonic exceptions so finally/atexit run
+            """
+            # 1) Mark global abort so long-running loops can break promptly
+            ABORT_EVENT.set()
+            # 2) Terminate external children (best-effort & idempotent)
+            terminate_all_children(timeout=5.0)
+            # 3) Exit only from the main thread
+            if threading.current_thread() is threading.main_thread():
+                if exit_code == 130:  # SIGINT
+                    raise KeyboardInterrupt()
+                else:  # SIGTERM/SIGHUP/SIGQUIT -> conventional code
+                    raise SystemExit(exit_code)
+            # Non-main threads: do nothing else; main will exit cleanly.
 
-        # Trap SIGINT/SIGTERM so Ctrl+C / docker stop also cleans
-        def _sig_handler(signum, frame):
-            try:
-                self.cleanup_working_dir(preserve_on_debug=True)
-            finally:
-                # Restore default and re-signal so the process exits with the right code
-                try:
-                    signal.signal(signum, signal.SIG_DFL)
-                except Exception:
-                    pass
-                try:
-                    os.kill(os.getpid(), signum)
-                except Exception:
-                    # On Windows or restricted envs, fall back to sys.exit with non-zero
-                    import sys
-
-                    sys.exit(130 if signum == signal.SIGINT else 143)
-
-        if threading.current_thread() is threading.main_thread():
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                try:
-                    signal.signal(sig, _sig_handler)
-                except Exception:
-                    # Not always possible (Windows services, non-main thread, etc.)
-                    pass
-
+        # Register handlers (SIGINT + SIGTERM/SIGHUP/SIGQUIT) only from main thread
+        install_signal_handlers(on_exit=_on_exit)
         self._cleanup_registered = True
