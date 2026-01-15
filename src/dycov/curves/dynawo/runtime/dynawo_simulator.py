@@ -17,7 +17,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -31,10 +31,27 @@ from dycov.validation.common import is_stable
 VOLTAGE_DIP_THRESHOLD = 0.002
 
 
+class _ProcRegistry:
+    """Simple process registry for DynawoSimulator child processes."""
+
+    procs: List[subprocess.Popen] = []
+
+    @classmethod
+    def add(cls, p: subprocess.Popen) -> None:
+        cls.procs.append(p)
+
+    @classmethod
+    def discard(cls, p: subprocess.Popen) -> None:
+        try:
+            cls.procs.remove(p)
+        except ValueError:
+            pass
+
+
 class DynawoSimulator:
-    # -------------------------
-    # Public wrappers (API estable)
-    # -------------------------
+    # ---------------
+    # Public wrappers
+    # ---------------
     @staticmethod
     def run_base(
         run: DynawoRunInputs,
@@ -139,8 +156,8 @@ class DynawoSimulator:
         -------
         int
             -1 if the actual voltage dip is less than the required dip.
-            1 if the actual voltage dip is greater than the required dip.
-            0 if the actual voltage dip is approximately equal to the required dip.
+             1 if the actual voltage dip is greater than the required dip.
+             0 if the actual voltage dip is approximately equal to the required dip.
         """
         if expected_dip == 0.0:
             return 0
@@ -196,9 +213,9 @@ class DynawoSimulator:
         else:
             return -1
 
-    # -------------------------
-    # Engine (migrado desde dynamic_simulator.py)
-    # -------------------------
+    # ------
+    # Engine
+    # ------
     def run_base_dynawo(
         self,
         pcs_name: str,
@@ -295,6 +312,8 @@ class DynawoSimulator:
         dycov_logging.get_logger("DynawoSimulator").debug(
             f"Simulation limit: {simulation_limit} seconds."
         )
+        # Start Dynawo as a new session/process group (Unix) to manage the whole tree.
+        # On Windows we’ll fallback to taskkill below.
         proc = subprocess.Popen(
             [launcher_dwo, "jobs", f"{jobs_filename}.jobs"],
             cwd=inputs_path,
@@ -302,34 +321,38 @@ class DynawoSimulator:
             stderr=subprocess.PIPE,
             preexec_fn=os.setsid if os.name != "nt" else None,
         )
+        _ProcRegistry.add(proc)
         start_time = time.time()
         current_time = start_time
         ret_value = False
         stderr_output = ""
-
         while (
             simulation_limit is None or (current_time - start_time) < simulation_limit
         ) and proc.poll() is None:
             current_time = time.time()
             time.sleep(0.1)
 
-        if proc.poll() is None:
-            stderr_output = "Execution terminated due to timeout."
-            if os.name == "nt":
-                subprocess.run(
-                    f"taskkill /F /T /PID {proc.pid}",
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    check=False,
-                )
+        try:
+            if proc.poll() is None:
+                # Timeout path: kill process group hard
+                stderr_output = "Execution terminated due to timeout."
+                if os.name == "nt":
+                    subprocess.run(
+                        f"taskkill /F /T /PID {proc.pid}",
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        check=False,
+                    )
+                else:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                proc.wait()
             else:
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            proc.wait()
-        else:
-            stderr_output = proc.stderr.read().decode("utf-8")
-            if "succeeded" in stderr_output:
-                ret_value = True
+                stderr_output = proc.stderr.read().decode("utf-8")
+                if "succeeded" in stderr_output:
+                    ret_value = True
+        finally:
+            _ProcRegistry.discard(proc)
 
         return ret_value, stderr_output, time.time() - start_time
 
@@ -350,7 +373,55 @@ class DynawoSimulator:
                     return True
         return False
 
-    # ----- Curves translation & augmentation -----
+    # ---- Public helper to terminate all Dynawo children gracefully ----
+    @staticmethod
+    def terminate_all_children(timeout: float = 5.0) -> None:
+        """Gracefully stop all child processes started by DynawoSimulator.
+        Idempotent and best-effort: never raises.
+        """
+        procs = [p for p in list(_ProcRegistry.procs) if p and p.poll() is None]
+        if not procs:
+            return
+        # Try graceful termination first
+        for p in procs:
+            try:
+                if os.name == "nt":
+                    p.terminate()
+                else:
+                    os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            except Exception:
+                try:
+                    p.terminate()
+                except Exception:
+                    pass
+        # Wait up to timeout
+        deadline = time.time() + max(0.0, timeout)
+        for p in procs:
+            rem = deadline - time.time()
+            if rem <= 0:
+                break
+            try:
+                p.wait(timeout=rem)
+            except Exception:
+                pass
+        # Escalate to kill for stubborn ones
+        for p in procs:
+            if p.poll() is None:
+                try:
+                    if os.name == "nt":
+                        subprocess.run(
+                            f"taskkill /F /T /PID {p.pid}",
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            check=False,
+                        )
+                    else:
+                        os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+                except Exception:
+                    pass
+
+    # ---- Curves translation & augmentation ----
     def _create_curves(
         self,
         variable_translations: dict,

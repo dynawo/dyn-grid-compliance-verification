@@ -12,6 +12,7 @@ import logging
 import operator
 import os
 import shutil
+import signal
 import subprocess
 import sys
 from multiprocessing import Pool
@@ -29,6 +30,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
+from dycov.core.graceful_shutdown import terminate_all_children
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.pcs import Pcs
@@ -59,6 +61,11 @@ def _open_document(file: Path, is_testing: bool) -> None:
             subprocess.run(["open", file], check=True)
         else:
             dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
+
+
+def _worker_initializer():
+    """Workers ignore SIGINT; main process coordinates shutdown."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def _validate_pcs(pcs_args) -> tuple:
@@ -345,17 +352,41 @@ class Validation:
             dycov_logging.get_logger("Validation").info(
                 f"Validating PCS in parallel using {num_processes} processes."
             )
-            with Pool(processes=num_processes) as pool:
-                results = pool.map(_validate_pcs, self._pcs_list)
+            # Use an initializer so only the main process handles SIGINT
+            with Pool(processes=num_processes, initializer=_worker_initializer) as pool:
+                try:
+                    results = pool.map(_validate_pcs, self._pcs_list)
+                    pool.close()
+                    pool.join()
+                except KeyboardInterrupt:
+                    # 1) Terminate external children before tearing down the pool
+                    terminate_all_children(timeout=5.0)
+                    # 2) Stop workers cleanly, avoiding multiple worker tracebacks
+                    pool.terminate()
+                    pool.join()
+                    logger = dycov_logging.get_logger("Validation")
+                    logger.error(
+                        "Execution interrupted by user (SIGINT). Shutting down workers and children..."
+                    )
+                    # Propagate conventional exit code for SIGINT
+                    raise SystemExit(130)
+            # Collect results only if we reached here (no interrupt)
             for producer_name, pcs_name, summary, pcs_results in results:
                 summary_list.extend(summary)
                 report_results[f"{producer_name}_{pcs_name}"] = pcs_results
         else:
             dycov_logging.get_logger("Validation").info("Validating PCS sequentially.")
-            for pcs_tuple in self._pcs_list:
-                producer_name, pcs_name, summary, pcs_results = _validate_pcs(pcs_tuple)
-                summary_list.extend(summary)
-                report_results[f"{producer_name}_{pcs_name}"] = pcs_results
+            try:
+                for pcs_tuple in self._pcs_list:
+                    producer_name, pcs_name, summary, pcs_results = _validate_pcs(pcs_tuple)
+                    summary_list.extend(summary)
+                    report_results[f"{producer_name}_{pcs_name}"] = pcs_results
+            except KeyboardInterrupt:
+                # Ensure external children are stopped also in sequential mode
+                terminate_all_children(timeout=5.0)
+                logger = dycov_logging.get_logger("Validation")
+                logger.error("Execution interrupted by user (SIGINT). Aborting current task...")
+                raise SystemExit(130)
 
         return summary_list, report_results
 
