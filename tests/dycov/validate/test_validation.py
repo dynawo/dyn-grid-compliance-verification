@@ -7,6 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+
+import logging
 import shutil
 import tempfile
 from pathlib import Path
@@ -22,6 +24,40 @@ from dycov.model.pcs import Pcs
 from dycov.report.LatexReportException import LatexReportException
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
+
+
+# ---- Logger fixture: force Report logger level != DEBUG (deterministic cleanup) ----
+@pytest.fixture(autouse=True)
+def _patch_report_logger(monkeypatch):
+    class _Logger:
+        def __init__(self, name):
+            self._name = name
+
+        def getEffectiveLevel(self):
+            # Force INFO so Latex folder is removed in __create_report
+            return logging.INFO
+
+        # minimal interface for .info/.warning/.error used across code
+        def info(self, *a, **k):
+            pass
+
+        def warning(self, *a, **k):
+            pass
+
+        def error(self, *a, **k):
+            pass
+
+        def debug(self, *a, **k):
+            pass
+
+    def _get_logger(name):
+        return _Logger(name)
+
+    monkeypatch.setattr(
+        "dycov.logging.logging.dycov_logging.get_logger",
+        _get_logger,
+        raising=True,
+    )
 
 
 class DummyProducer:
@@ -55,7 +91,8 @@ class DummyProducer:
     def get_reference_path(self):
         return Path("dummy_reference_path")
 
-    def get_filenames(self):
+    def get_filenames(self, zone=None):
+        # keep interface compatible
         return ["dummy_file1", "dummy_file2"]
 
 
@@ -143,6 +180,8 @@ def make_valid_pcs(producer, name, parameters):
 
 
 def make_latex_exception_report(monkeypatch):
+    from dycov.report.LatexReportException import LatexReportException
+
     def fake_create_pdf(*args, **kwargs):
         raise LatexReportException("Latex error")
 
@@ -166,6 +205,7 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
         lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
+
     validation = Validation(parameters)
     pcs_names = [pcs_name for _, pcs_name, _, _ in validation._pcs_list]
     assert pcs_names == ["PCS2", "PCS2"]
@@ -173,7 +213,7 @@ def test_validation_populates_pcs_list_correctly(monkeypatch, temp_dirs):
 
 def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     parameters = DummyParameters(output_dir=temp_dirs[0])
-    # Patch check_output_dir to simulate user not wanting to overwrite
+    # Simulate user not wanting to overwrite
     monkeypatch.setattr("dycov.files.manage_files.check_output_dir", lambda path: True)
     monkeypatch.setattr(
         "dycov.validate.validation.Pcs",
@@ -185,8 +225,7 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
 
 def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs):
     parameters = DummyParameters(output_dir=temp_dirs[0])
-    renamed = []
-    removed = []
+    renamed, removed = [], []
 
     def fake_rename_path(source_path, target_path):
         renamed.append((str(source_path), str(target_path)))
@@ -201,9 +240,11 @@ def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs
     monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
     monkeypatch.setattr("dycov.files.manage_files.remove_dir", fake_remove_dir)
     monkeypatch.setattr("dycov.files.manage_files.rename_path", fake_rename_path)
+
     validation = Validation(parameters)
     validation.set_testing(False)
     validation.validate(use_parallel=False, num_processes=4)
+
     assert len(renamed) == 1
     assert len(removed) == 1
     assert any("Latex" in c for c in removed)
