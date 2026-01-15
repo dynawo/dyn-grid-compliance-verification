@@ -16,6 +16,7 @@ import tempfile
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
@@ -25,7 +26,7 @@ from dycov.model.producer import Producer
 
 
 def _purge_stale_temp_dirs(
-    base_dir: Path, prefix: str, older_than: timedelta, exclude: Path | None = None
+    base_dir: Path, prefix: str, older_than: timedelta, exclude: Optional[Path] = None
 ) -> None:
     try:
         now = datetime.now().timestamp()
@@ -87,7 +88,7 @@ class Parameters:
         self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
 
         # The parameter is initialized in the child class
-        self._producer: Producer | None = None
+        self._producer: Optional[Producer] = None
 
         # --- Robust atexit cleanup bound to concrete path (not to object state) ---
         wd = self._working_dir
@@ -190,7 +191,7 @@ class Parameters:
         and preserve_on_debug=True (to keep artifacts for inspection).
         Idempotent and safe to call multiple times.
         """
-        wd: Path | None = getattr(self, "_working_dir", None)
+        wd: Optional[Path] = getattr(self, "_working_dir", None)
         if not wd:
             return
         try:
