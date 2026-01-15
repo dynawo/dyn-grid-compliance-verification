@@ -9,7 +9,9 @@
 #
 
 import logging
+import os
 import shutil
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -45,6 +47,90 @@ from dycov.report.tables import (
 from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
+
+
+# --- Process registry for LaTeX compilation ---
+class _ReportProcRegistry:
+    """Tracks LaTeX (pdflatex) subprocesses to allow graceful termination."""
+
+    procs: list[subprocess.Popen] = []
+
+    @classmethod
+    def add(cls, p: subprocess.Popen) -> None:
+        cls.procs.append(p)
+
+    @classmethod
+    def discard(cls, p: subprocess.Popen) -> None:
+        try:
+            cls.procs.remove(p)
+        except ValueError:
+            pass
+
+
+def terminate_all_children(timeout: float = 5.0) -> None:
+    """Terminate any running pdflatex processes (best-effort, idempotent)."""
+    procs = [p for p in list(_ReportProcRegistry.procs) if p and p.poll() is None]
+    if not procs:
+        return
+    for p in procs:
+        try:
+            if os.name == "nt":
+                p.terminate()
+            else:
+                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+        except Exception:
+            try:
+                p.terminate()
+            except Exception:
+                pass
+    deadline = time.time() + max(0.0, timeout)
+    for p in procs:
+        rem = deadline - time.time()
+        if rem <= 0:
+            break
+        try:
+            p.wait(timeout=rem)
+        except Exception:
+            pass
+    for p in procs:
+        if p.poll() is None:
+            try:
+                if os.name == "nt":
+                    subprocess.run(
+                        f"taskkill /F /T /PID {p.pid}",
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        check=False,
+                    )
+                else:
+                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+            except Exception:
+                pass
+
+
+def _run_pdflatex(working_path: Path, report_name_noext: str):
+    """Run pdflatex in a controllable way (as a process group) so we can terminate it on abort."""
+    proc = subprocess.Popen(
+        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_noext],
+        cwd=working_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        preexec_fn=os.setsid if os.name != "nt" else None,
+    )
+    _ReportProcRegistry.add(proc)
+    try:
+        stdout, stderr = proc.communicate()
+
+        class _CP:
+            def __init__(self, returncode, stdout, stderr):
+                self.returncode = returncode
+                self.stdout = stdout
+                self.stderr = stderr
+
+        return _CP(proc.returncode, stdout, stderr)
+    finally:
+        _ReportProcRegistry.discard(proc)
 
 
 def _get_verification_type(sim_type: int) -> str:
@@ -545,18 +631,8 @@ def create_pdf(
     ).dump(str(working_path / REPORT_NAME))
 
     report_name_ = REPORT_NAME.replace(".tex", "")
-    proc = subprocess.run(
-        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
-        cwd=working_path,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    proc = subprocess.run(
-        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
-        cwd=working_path,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    proc = _run_pdflatex(working_path, report_name_)
+    proc = _run_pdflatex(working_path, report_name_)
 
     if dycov_logging.get_logger("Report").getEffectiveLevel() != logging.DEBUG:
         _clean(working_path)

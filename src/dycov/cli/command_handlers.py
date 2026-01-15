@@ -9,7 +9,6 @@
 #
 
 import argparse
-import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -401,20 +400,14 @@ def _run_verification(
     except KeyboardInterrupt:
         dycov_logging.get_logger("CommandHandlers").error("Execution interrupted by user")
         # Keep artifacts if we are in DEBUG mode (rename to output_dir); otherwise, delete.
-        params.cleanup_working_dir(
-            preserve_on_debug=dycov_logging.get_logger("CommandHandlers").getEffectiveLevel()
-            == logging.DEBUG
-        )
+        params.cleanup_working_dir(preserve_on_debug=False)
         return 130
 
     except Exception as e:
         dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
         # Keep artifacts if we are in DEBUG mode (rename to output_dir); if not, delete.
         try:
-            params.cleanup_working_dir(
-                preserve_on_debug=dycov_logging.get_logger("CommandHandlers").getEffectiveLevel()
-                == logging.DEBUG
-            )
+            params.cleanup_working_dir(preserve_on_debug=False)
         finally:
             pass
 
