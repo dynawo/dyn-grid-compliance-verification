@@ -252,6 +252,12 @@ def fault_time(path: Path, time: float) -> None:
         ):
             fault_tbegin = model_output.get("value")
 
+        if (
+            model_output.get("name") == "line_tBegin"
+            and model_output.getparent().get("id") == "LineFault"
+        ):
+            fault_tbegin = model_output.get("value")
+
     if fault_tbegin is None:
         dycov_logging.get_logger("Files").info("No event to disconnect")
         return
@@ -271,6 +277,11 @@ def fault_time(path: Path, time: float) -> None:
         ):
             model_output.set("value", fault_tend)
 
+        if (
+            model_output.get("name") == "line_tEnd"
+            and model_output.getparent().get("id") == "LineFault"
+        ):
+            model_output.set("value", fault_tend)
     etree_par.write(
         path,
         pretty_print=True,

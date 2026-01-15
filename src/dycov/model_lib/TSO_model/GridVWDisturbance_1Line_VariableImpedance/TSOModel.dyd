@@ -5,7 +5,7 @@
   <dyn:blackBoxModel id="Line" lib="Line" parFile="TSOModel.par" parId="Line"/>
   <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
   <dyn:blackBoxModel id="VariableImpedantFault" lib="VariableImpedantFault" parFile="TSOModel.par" parId="VariableImpedantFault"/>
-  <dyn:connect id1="Line" var1="line_terminal1" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Line" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="VariableImpedantFault" var1="variableImpedantFault_terminal" id2="Line" var2="line_terminal2"/>
+  <dyn:connect id1="Line" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line" var2="line_terminal1"/>
+  <dyn:connect id1="VariableImpedantFault" var1="variableImpedantFault_terminal" id2="Line" var2="line_terminal1"/>
 </dyn:dynamicModelsArchitecture>
