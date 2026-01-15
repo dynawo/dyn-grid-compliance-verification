@@ -34,8 +34,15 @@ EOF
 
 # --- Argument Parsing ---
 # (Simple parsing to avoid getopt dependency issues on some minimal environments)
-user=$(id -u)
-group=$(id -g)
+
+if [ -n "${SUDO_UID:-}" ]; then
+    user="$SUDO_UID"
+    group="$SUDO_GID"
+else
+    user=$(id -u)
+    group=$(id -g)
+fi
+
 WORK_DIR=""
 
 while [[ $# -gt 0 ]]; do
