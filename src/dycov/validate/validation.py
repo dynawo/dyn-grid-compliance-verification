@@ -366,7 +366,8 @@ class Validation:
                     pool.join()
                     logger = dycov_logging.get_logger("Validation")
                     logger.error(
-                        "Execution interrupted by user (SIGINT). Shutting down workers and children..."
+                        "Execution interrupted by user (SIGINT). "
+                        "Shutting down workers and children..."
                     )
                     # Propagate conventional exit code for SIGINT
                     raise SystemExit(130)
