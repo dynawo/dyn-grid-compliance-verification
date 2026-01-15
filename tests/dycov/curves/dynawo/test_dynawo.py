@@ -13,32 +13,51 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
-
-# --- Dummy logger to silence and capture dycov_logging in tests ---
-class DummyLogger:
-    def __init__(self):
-        self.messages = []
-
-    def get_logger(self, name):
-        return self
-
-    def debug(self, msg):
-        self.messages.append(("debug", msg))
-
-    def info(self, msg):
-        self.messages.append(("info", msg))
-
-    def error(self, msg):
-        self.messages.append(("error", msg))
+# -----------------------------------------------------------------------------
+# Logging patch: patch ONLY dycov_logging.get_logger (not the whole module)
+# -----------------------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
 def patch_dycov_logging(monkeypatch):
-    dummy_logger = DummyLogger()
-    monkeypatch.setattr("dycov.logging.logging.dycov_logging", dummy_logger)
-    return dummy_logger
+    class _DummyLogger:
+        def __init__(self):
+            self.messages = []
+
+        def debug(self, msg):
+            self.messages.append(("debug", msg))
+
+        def info(self, msg):
+            self.messages.append(("info", msg))
+
+        def error(self, msg):
+            self.messages.append(("error", msg))
+
+    dummy = _DummyLogger()
+
+    def _get_logger(_name):
+        return dummy
+
+    # Patch only the function, keep the module intact
+    monkeypatch.setattr(
+        "dycov.logging.logging.dycov_logging.get_logger", _get_logger, raising=True
+    )
+    return dummy
+
+
+# (Optional) guard to ensure any manual patches are cleaned
+@pytest.fixture(autouse=True)
+def _no_leak_patches(mocker):
+    yield
+    try:
+        mocker.stopall()
+    except Exception:
+        pass
+
+
+# -----------------------------------------------------------------------------
+# Helpers for test assets
+# -----------------------------------------------------------------------------
 
 
 # ----------------------------
@@ -46,8 +65,12 @@ def patch_dycov_logging(monkeypatch):
 # ----------------------------
 
 
+# -----------------------------------------------------------------------------
+# Tests
+# -----------------------------------------------------------------------------
+
+
 def test_is_stable_raises_on_length_mismatch():
-    # Import from correct location
     from dycov.validation.common import is_stable
 
     time = [0.0, 0.1, 0.2]
@@ -60,6 +83,8 @@ def test_is_stable_raises_on_length_mismatch():
 
 
 def test_create_curves_handles_missing_or_malformed_file(tmp_path):
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Setup
     variable_translations = {
         "BusPDR_BUS_Voltage": ["BusPDR_BUS_Voltage"],
@@ -76,17 +101,18 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
     snom = 1.0
     snref = 1.0
 
-    # Case 1: Missing file -> pandas.read_csv should raise FileNotFoundError
+    # Case 1: Missing file
     missing_file = tmp_path / "missing.csv"
     with pytest.raises(FileNotFoundError):
         DynawoSimulator()._create_curves(
             variable_translations, missing_file, generators, snom, snref
         )
 
-    # Case 2: Malformed file (wrong separator) -> KeyError/Exception when accessing 'time'
+    # Case 2: Malformed file
     malformed_file = tmp_path / "malformed.csv"
     with open(malformed_file, "w") as f:
         f.write("not,a,valid,csv\n1,2,3\n")
+
     with pytest.raises(Exception):
         DynawoSimulator()._create_curves(
             variable_translations, malformed_file, generators, snom, snref
@@ -100,6 +126,8 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
 
 # Voltage dip equals expected dip within tolerance (returns 0)
 def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     curves = pd.DataFrame(
         {
@@ -141,6 +169,10 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
 
 # Fault duration exceeds simulation time
 def test_fault_duration_exceeds_simulation_time(mocker):
+    from pytest import approx
+
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     curves = pd.DataFrame(
         {
@@ -176,18 +208,22 @@ def test_fault_duration_exceeds_simulation_time(mocker):
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
     )
 
-    # Assert
-    # Verify that _trim_curves was called with the adjusted fault_duration
-    expected_adjusted_duration = 0.5 - fault_start  # 0.3
+    # Assert: _trim_curves called with adjusted duration
     mock_trim_curves.assert_called_once()
-    _, _, _, actual_adjusted_duration = mock_trim_curves.call_args[0]
-    assert math.isclose(actual_adjusted_duration, expected_adjusted_duration)
-    # And the function returns the expected result
+    args, kwargs = mock_trim_curves.call_args
+    assert args[0] == curves["time"].tolist()
+    assert args[1] == curves["BusPDR_BUS_Voltage"].tolist()
+    assert args[2] == fault_start
+    assert args[3] == approx(0.5 - fault_start)  # adjusted to simulation end
+
+    # Result expected
     assert result == 0
 
 
 # Function correctly identifies pre-fault and post-fault time and voltage values
 def test_correct_identification_of_pre_and_post_fault_values():
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     time_values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     voltage_values = [1.0, 1.0, 1.0, 0.8, 0.6, 0.4, 0.6, 0.8, 0.9, 1.0, 1.0]
@@ -208,6 +244,8 @@ def test_correct_identification_of_pre_and_post_fault_values():
 
 # Empty input lists for time_values and voltage_values
 def test_empty_input_lists():
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     time_values = []
     voltage_values = []
@@ -233,6 +271,8 @@ def test_empty_input_lists():
 
 # Successfully processes a valid input file and returns a DataFrame with transformed curves
 def test_valid_input_file_processing(mocker, tmp_path):
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Mock read_csv to return a minimal input with time + an 'Unnamed' columns
     mock_df_import = pd.DataFrame(
         {
@@ -307,6 +347,8 @@ def test_valid_input_file_processing(mocker, tmp_path):
 
 # Translating complex columns with correct sign conventions
 def test_prepare_complex_column_applies_sign_conventions():
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     column_name = "test_column"
     column_size = 3
@@ -334,6 +376,8 @@ def test_prepare_complex_column_applies_sign_conventions():
 
 # Empty dataframes or missing columns in input data
 def test_translate_curves_with_missing_columns():
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     df_curves_imported = pd.DataFrame(
         {
@@ -353,7 +397,6 @@ def test_translate_curves_with_missing_columns():
     result_df = DynawoSimulator()._translate_curves(variable_translations, df_curves_imported)
 
     # Assert
-    # Should contain time and translated existing column
     assert "time" in result_df.columns
     assert "translated_existing" in result_df.columns
     # Should not contain the missing translated column base (it would need both parts)
@@ -364,6 +407,8 @@ def test_translate_curves_with_missing_columns():
 
 # Function correctly processes generators with variable in df_curves.columns
 def test_process_generators_with_variable_in_columns():
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     # Arrange
     class Generator:
         def __init__(self, id_):
@@ -405,22 +450,23 @@ def test_process_generators_with_variable_in_columns():
 
 # Empty generators list
 def test_empty_generators_list():
-    # Arrange
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     generators = []
     df_curves = pd.DataFrame({"OtherColumn1": [1.0, 2.0, 3.0], "OtherColumn2": [4.0, 5.0, 6.0]})
     original_df = df_curves.copy()
     curves_dict = {}
 
-    # Act
     DynawoSimulator()._get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
 
-    # Assert
     assert len(curves_dict) == 0
     pd.testing.assert_frame_equal(df_curves, original_df)
 
 
 # _get_modulus correctly calculates the absolute value of complex numbers
 def test_get_modulus_correct_calculation():
+    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+
     complex_list = [complex(3, 4), complex(5, 12)]
     expected_modulus = [5.0, 13.0]
     result = DynawoSimulator()._get_modulus(complex_list)
