@@ -733,10 +733,6 @@ def _calculate_line_xpu(x_str: str, applied_line_xpu: float) -> float:
         return float(x_str)
     if x_str and "{{line_XPu}}" in x_str:
         return applied_line_xpu
-    elif x_str and "{{line_XPu_1}}" in x_str:
-        return applied_line_xpu * 0.01
-    elif x_str and "{{line_XPu_99}}" in x_str:
-        return applied_line_xpu * 0.99
     return float(x_str) if x_str else 0.0
 
 
