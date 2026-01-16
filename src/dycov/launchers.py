@@ -81,11 +81,6 @@ class DycovCLI:
             check_dynawo_launcher_availability(dynawo_launcher_name)
             dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
-        elif args.debug:
-            # For 'anonymize' with debug mode, initialize logging as it
-            # bypasses the full 'init'.
-            dycov_logging.init_logging(args.debug)
-            self.logger.info("Debug mode enabled for anonymize command.")
 
         # Initialize core DYCOV components
         self.initializer.init(dynawo_launcher_path, args.debug)
