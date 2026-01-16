@@ -2,27 +2,17 @@
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!-- Benchmark Case -->
   <dyn:blackBoxModel id="InfiniteBus" lib="InfiniteBus" parFile="TSOModel.par" parId="InfiniteBus"/>
-  <dyn:blackBoxModel id="Bus" lib="Bus"/>
   <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
   <dyn:blackBoxModel id="Line1" lib="Line" parFile="TSOModel.par" parId="Line1"/>
   <dyn:blackBoxModel id="Line2" lib="Line" parFile="TSOModel.par" parId="Line2"/>
   <dyn:blackBoxModel id="Line3" lib="Line" parFile="TSOModel.par" parId="Line3"/>
-  <dyn:blackBoxModel id="Line4a" lib="Line" parFile="TSOModel.par" parId="Line4a"/>
-  <dyn:blackBoxModel id="Line4b" lib="Line" parFile="TSOModel.par" parId="Line4b"/>
-  <dyn:blackBoxModel id="NODE_FAULT" lib="NodeFault" parFile="TSOModel.par" parId="NodeFault"/>
-  <dyn:blackBoxModel id="DISCONNECT_LINE" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLine"/>
-  <dyn:connect id1="Line1" var1="line_terminal1" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Line2" var1="line_terminal1" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Line3" var1="line_terminal1" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Line4b" var1="line_terminal1" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Line4b" var1="line_terminal2" id2="Bus" var2="bus_terminal"/>
-  <dyn:connect id1="Line4a" var1="line_terminal1" id2="Bus" var2="bus_terminal"/>
-  <dyn:connect id1="Line1" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Line2" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Line3" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Line4a" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="NODE_FAULT" var1="fault_terminal" id2="Bus" var2="bus_terminal"/>
-
-  <!--dyn:connect id1="DISCONNECT_LINE" var1="event_state1" id2="Line4a" var2="line_switchOffSignal2"/-->
-  <dyn:connect id1="DISCONNECT_LINE" var1="event_state1" id2="Line4b" var2="line_switchOffSignal2"/>
+  <dyn:blackBoxModel id="Line4" lib="LineFault" parFile="TSOModel.par" parId="LineFault"/>
+  <dyn:connect id1="Line1" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
+  <dyn:connect id1="Line2" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
+  <dyn:connect id1="Line3" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
+  <dyn:connect id1="Line4" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line1" var2="line_terminal1"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line2" var2="line_terminal1"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line3" var2="line_terminal1"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line4" var2="line_terminal1"/>
 </dyn:dynamicModelsArchitecture>

@@ -782,25 +782,22 @@ def _get_line_values(
 
 
 def _calculate_line_xpu(x_str: Optional[str], applied_line_xpu: float) -> float:
+    """
+    Compute X from 'line_XPu'.
+
+    Rules:
+    - If x_str is None or empty/whitespace: return 0.0
+    - If x_str == 'line_XPu' (whitespace tolerated): return applied_line_xpu
+    - Any other value: raise ValueError
+
+    This function assumes the input domain has been constrained upstream.
+    """
     if not x_str:
         return 0.0
 
-    s = x_str.strip()
-    try:
-        return float(s)
-    except ValueError:
-        pass
+    if x_str.strip() == "line_XPu":
+        return applied_line_xpu
 
-    m_braced = re.fullmatch(r"\{\{\s*(.+?)\s*\}\}", s)
-    token = m_braced.group(1) if m_braced else s
-
-    m = re.fullmatch(r"line_XPu(?:_(\d+(?:\.\d+)?))?$", token)
-    if m:
-        suffix = m.group(1)
-        factor = 1.0 if suffix is None else float(suffix) / 100.0
-        return applied_line_xpu * factor
-
-    dycov_logging.get_logger("Model Parameters").error("Unsupported x_str format: %r", x_str)
     raise ValueError(f"Unsupported x_str format: {x_str!r}")
 
 
