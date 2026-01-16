@@ -92,17 +92,11 @@ class Parameters:
 
         # --- Robust atexit cleanup bound to concrete path (not to object state) ---
         wd = self._working_dir
-        out = self._output_dir
 
         def _cleanup_on_exit():
             try:
                 # Preserve in DEBUG, remove otherwise (no logs emitted)
-                logger = dycov_logging.get_logger("Parameters")
-                is_debug = logger.getEffectiveLevel() == logging.DEBUG
-                if is_debug:
-                    manage_files.rename_path(wd, out)
-                else:
-                    manage_files.remove_dir(wd)
+                manage_files.remove_dir(wd)
             except Exception:
                 try:
                     manage_files.remove_dir(wd)
@@ -195,12 +189,7 @@ class Parameters:
         if not wd:
             return
         try:
-            logger = dycov_logging.get_logger("Parameters")
-            is_debug = logger.getEffectiveLevel() == logging.DEBUG
-            if is_debug and preserve_on_debug:
-                manage_files.rename_path(wd, self._output_dir)
-            else:
-                manage_files.remove_dir(wd)
+            manage_files.remove_dir(wd)
         except Exception:
             try:
                 manage_files.remove_dir(wd)
