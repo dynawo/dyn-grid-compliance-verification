@@ -11,10 +11,10 @@
        thus allowing the connection of PQ flow values taken at the external PCC to those generating units that control P or Q at the PCC point. -->
   <dyn:blackBoxModel id="Measurements" lib="Measurements"/>
 
-  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
-       are on terminal1, so it is necessary to connect terminal1 to the BusPDR -->
+  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point)
+     are on terminal1, so it is necessary to connect terminal2 to the BusPDR on the TSO side -->
   <dyn:connect id1="Line" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Line" var2="line_terminal1"/>
-  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Measurements" var2="measurements_terminal1"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="Line" var2="line_terminal1"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="VariableImpedantFault" var1="variableImpedantFault_terminal" id2="Line" var2="line_terminal1"/>
 </dyn:dynamicModelsArchitecture>
