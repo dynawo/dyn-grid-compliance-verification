@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!--Topology: S+i-->
-  <!--Replace the placeholder: 'LINE_DYNAMIC_MODEL', available_options: ['Line']-->
+  <!--Replace the placeholder: 'LINE_DYNAMIC_MODEL', available_options: ['Line', 'LineFault']-->
   <dyn:blackBoxModel id="IntNetwork_Line" lib="LINE_DYNAMIC_MODEL" parFile="Producer.par" parId="IntNetwork_Line"/>
   <!--Replace the placeholder: 'BUS_DYNAMIC_MODEL', available_options: ['InfiniteBus', 'InfiniteBusFromTable', 'Bus']-->
   <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
