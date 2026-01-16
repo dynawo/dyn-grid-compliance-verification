@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!--Topology: M+i-->
-  <!--Replace the placeholder: 'LINE_DYNAMIC_MODEL', available_options: ['Line']-->
+  <!--Replace the placeholder: 'LINE_DYNAMIC_MODEL', available_options: ['Line', 'LineFault']-->
   <dyn:blackBoxModel id="IntNetwork_Line" lib="LINE_DYNAMIC_MODEL" parFile="Producer.par" parId="IntNetwork_Line"/>
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
   <dyn:blackBoxModel id="Main_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="Main_Xfmr"/>
