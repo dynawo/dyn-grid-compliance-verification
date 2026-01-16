@@ -8,10 +8,10 @@
   <dyn:blackBoxModel id="Load_de" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Load_PE"/>
   <dyn:blackBoxModel id="Generator" lib="GeneratorSynchronousThreeWindingsDTRI8" parFile="TSOModel.par" parId="Generator"/>
   <dyn:blackBoxModel id="DISCONNECT_LOAD" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLoad"/>
-  <dyn:connect id1="Load_eq" var1="load_terminal" id2="Bus" var2="bus_terminal"/>
-  <dyn:connect id1="Load_de" var1="load_terminal" id2="Bus" var2="bus_terminal"/>
-  <dyn:connect id1="Generator" var1="generator_terminal" id2="Bus" var2="bus_terminal"/>
-  <dyn:connect id1="Line1" var1="line_terminal1" id2="Bus" var2="bus_terminal"/>
-  <dyn:connect id1="Line1" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="DISCONNECT_LOAD" var1="event_state1" id2="Load_de" var2="load_switchOffSignal2"/>
+  <dyn:connect id1="Bus" var1="bus_terminal" id2="Load_eq" var2="load_terminal"/>
+  <dyn:connect id1="Bus" var1="bus_terminal" id2="Load_de" var2="load_terminal"/>
+  <dyn:connect id1="Bus" var1="bus_terminal" id2="Generator" var2="generator_terminal"/>
+  <dyn:connect id1="Line1" var1="line_terminal2" id2="Bus" var2="bus_terminal"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Line1" var2="line_terminal1"/>
+  <dyn:connect id1="DISCONNECT_LOAD" var1="event_state1" id2="Load_de" var2="load_switchOffSignal1"/>
 </dyn:dynamicModelsArchitecture>

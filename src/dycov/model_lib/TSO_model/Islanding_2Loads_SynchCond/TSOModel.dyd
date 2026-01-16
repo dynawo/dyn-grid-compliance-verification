@@ -6,8 +6,8 @@
   <dyn:blackBoxModel id="Main_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Main_Load"/>
   <dyn:blackBoxModel id="Secondary_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Secondary_Load"/>
   <dyn:blackBoxModel id="DISCONNECT_LOAD" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLoad"/>
-  <dyn:connect id1="Main_load" var1="load_terminal" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Secondary_load" var1="load_terminal" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="SyncCompensator" var1="generator_terminal" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="DISCONNECT_LOAD" var1="event_state1" id2="Secondary_load" var2="load_switchOffSignal2"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Main_load" var2="load_terminal"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Secondary_load" var2="load_terminal"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="SyncCompensator" var2="generator_terminal"/>
+  <dyn:connect id1="DISCONNECT_LOAD" var1="event_state1" id2="Secondary_load" var2="load_switchOffSignal1"/>
 </dyn:dynamicModelsArchitecture>
