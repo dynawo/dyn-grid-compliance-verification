@@ -153,8 +153,7 @@ def _add_connection(
         elif var_to in PLACEHOLDER_TERMINALS:
             _add_terminal_options(dyd_root, var_to)
 
-    print(f"etree.SubElement connection {id_from=}, {var_from=}, {id_to=}, {var_to=}")
-    new_elem = etree.SubElement(
+    etree.SubElement(
         dyd_root,
         f"{{{ns}}}connect",
         id1=id_from,
@@ -162,8 +161,6 @@ def _add_connection(
         id2=id_to,
         var2=var_to,
     )
-    xml_str = etree.tostring(new_elem, pretty_print=True).decode()
-    print(xml_str)
 
 
 def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -465,8 +462,6 @@ def _create_producer_dyd_file(
     dyd_tree = etree.ElementTree(
         etree.fromstring(etree.tostring(dyd_root), etree.XMLParser(remove_blank_text=True))
     )
-    xml_str = etree.tostring(dyd_tree, pretty_print=True).decode()
-    print(xml_str)
     dyd_tree.write(target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True)
 
 
