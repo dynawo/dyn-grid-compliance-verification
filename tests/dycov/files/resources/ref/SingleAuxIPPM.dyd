@@ -19,8 +19,8 @@
   <!--Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls P/Q flows at the PCC point) 
        need to have the proper sign that the Plant control expects. Therefore, depending on where it is placed, the "Measurements" object 
        shall connect its terminal 1 to BusPDR when placed on the Producer side, and its terminal 2 to BusPDR when placed on the TSO side.-->
-  <dyn:connect id1="Measurements" var1="Measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Measurements" var2="Measurements_terminal2"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
+  <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="IntNetwork_Line" var2="line_terminal1"/>
   <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
