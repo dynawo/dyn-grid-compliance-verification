@@ -51,9 +51,12 @@ class InputTemplateGenerator:
         template: str
             The name of the template to copy.
         """
+        tool_path = Path(__file__).resolve().parent.parent
         input_templates_path = config.get_value("Global", "input_templates_path")
         manage_files.copy_directory(
-            Path(input_templates_path) / template.replace("_", "/"), target, dirs_exist_ok=True
+            tool_path / input_templates_path / template.replace("_", "/"),
+            target,
+            dirs_exist_ok=True,
         )
 
     def _create_and_validate_file(
