@@ -11,11 +11,12 @@
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
   <dyn:connect id1="Wind_Turbine" var1="WTG4B_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 
-  <!-- UPcc is connected to the PDR bus -->
+  <!-- Remote voltage control: connect the plant's monitored voltage (UPcc) to the PDR bus -->
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine" var2="WTG4B_uPccPu_re"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine" var2="WTG4B_uPccPu_im"/>
 
-  <!-- PPcc and QPcc are connected to the Plant control of Generation Units -->
+  <!-- Remote P/Q control: connect the plant's monitored flows (PPcc, QPcc) to the PDR bus -->
+  <!-- (note this is done through a "measurements" object that is connected to the PDR bus) -->
   <dyn:connect id1="Measurements" var1="measurements_PPu" id2="Wind_Turbine" var2="WTG4B_PPccPu"/>
   <dyn:connect id1="Measurements" var1="measurements_QPu" id2="Wind_Turbine" var2="WTG4B_QPccPu"/>
 </dyn:dynamicModelsArchitecture>
