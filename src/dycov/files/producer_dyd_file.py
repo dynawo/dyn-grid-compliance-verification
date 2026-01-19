@@ -56,8 +56,8 @@ XFMR_TERMINAL1 = "transformer_terminal1"
 XFMR_TERMINAL2 = "transformer_terminal2"
 LINE_TERMINAL1 = "line_terminal1"
 LINE_TERMINAL2 = "line_terminal2"
-MEASUREMENTS_TERMINAL1 = "Measurements_terminal1"
-MEASUREMENTS_TERMINAL2 = "Measurements_terminal2"
+MEASUREMENTS_TERMINAL1 = "measurements_terminal1"
+MEASUREMENTS_TERMINAL2 = "measurements_terminal2"
 
 PLACEHOLDER_MODELS = [
     BUS_DYNAMIC_MODEL,
@@ -177,8 +177,7 @@ def _add_connection(
         elif var_to in PLACEHOLDER_TERMINALS:
             _add_terminal_options(dyd_root, var_to)
 
-    print(f"etree.SubElement connection {id_from=}, {var_from=}, {id_to=}, {var_to=}")
-    new_elem = etree.SubElement(
+    etree.SubElement(
         dyd_root,
         f"{{{ns}}}connect",
         id1=id_from,
@@ -186,16 +185,17 @@ def _add_connection(
         id2=id_to,
         var2=var_to,
     )
-    xml_str = etree.tostring(new_elem, pretty_print=True).decode()
-    print(xml_str)
 
 
 def _add_measurements_connection_comment(dyd_root: etree.Element):
     dyd_root.append(
         etree.Comment(
             "Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes "
-            "when the Plant controls at the PCC point) \n"
-            "       are on terminal1, so it is necessary to connect terminal1 to the BusPDR"
+            "when the Plant controls P/Q flows at the PCC point) \n"
+            "       need to have the proper sign that the Plant control expects. Therefore, "
+            'depending on where it is placed, the "Measurements" object \n'
+            "       shall connect its terminal 1 to BusPDR when placed on the Producer side, and "
+            "its terminal 2 to BusPDR when placed on the TSO side."
         )
     )
 
@@ -529,8 +529,6 @@ def _create_producer_dyd_file(
     dyd_tree = etree.ElementTree(
         etree.fromstring(etree.tostring(dyd_root), etree.XMLParser(remove_blank_text=True))
     )
-    xml_str = etree.tostring(dyd_tree, pretty_print=True).decode()
-    print(xml_str)
     dyd_tree.write(target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True)
 
 
