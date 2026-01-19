@@ -465,9 +465,6 @@ def check_curves(curves: Path) -> bool:
             continue
 
         target = ini_file.parent
-        dycov_logging.get_logger("Create Curves input").info(
-            f"Checking curves files defined in {ini_file}."
-        )
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(ini_file)
 
@@ -481,9 +478,6 @@ def check_curves(curves: Path) -> bool:
                 all_declared = False
             else:
                 curves_file = target / value
-                dycov_logging.get_logger("Create Curves input").info(
-                    f"Checking existence of curves file: {curves_file}."
-                )
                 if not curves_file.exists():
                     no_files.append(value)
                     exists_files = False
