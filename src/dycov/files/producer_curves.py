@@ -459,7 +459,7 @@ def check_curves(curves: Path) -> bool:
 
     ini_files = list(curves.rglob("*.[iI][nN][iI]"))
     if not ini_files:
-        dycov_logging.get_logger("Create Curves input").error(f"No INI files found in {target}.")
+        dycov_logging.get_logger("Create Curves input").error(f"No INI files found in {curves}.")
     for ini_file in ini_files:
         if ini_file.name != "CurvesFiles.ini":
             continue
