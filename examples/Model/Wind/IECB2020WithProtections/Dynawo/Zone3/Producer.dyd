@@ -11,21 +11,21 @@
        thus allowing the connection of PQ flow values taken at the external PCC to those generating units that control P or Q at the PCC point. -->
   <dyn:blackBoxModel id="Measurements" lib="Measurements"/>
 
-  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
-       are on terminal1, so it is necessary to connect terminal1 to the BusPDR -->
+  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls P/Q flows at the PCC point) 
+       need to have the proper sign that the Plant control expects. Therefore, depending on where it is placed, the “Measurements” object 
+       shall connect its terminal 1 to BusPDR when placed on the Producer side, and its terminal 2 to BusPDR when placed on the TSO side. -->
   <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Wind_Turbine" var1="WPP_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 
-  <!-- UPcc is connected to the PDR bus, and 
-       PPcc and QPcc are connected to a device connected to the PDR that has power flow -->
+  <!-- Remote voltage control: connect the plant's monitored voltage (UPcc) to the PDR bus -->
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine" var2="WPP_uPccPu_re"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine" var2="WPP_uPccPu_im"/>
 
-  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls at the PCC point) 
-       are on terminal1, so it is necessary to connect terminal1 to the BusPDR -->
+  <!-- Remote P/Q control: connect the plant's monitored flows (PPcc, QPcc) to the PDR bus -->
+  <!-- (note this is done through a "measurements" object that is connected to the PDR bus) -->
   <dyn:connect id1="Measurements" var1="measurements_PPu" id2="Wind_Turbine" var2="WPP_PPccPu"/>
   <dyn:connect id1="Measurements" var1="measurements_QPu" id2="Wind_Turbine" var2="WPP_QPccPu"/>
 </dyn:dynamicModelsArchitecture>
