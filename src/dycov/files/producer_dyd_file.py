@@ -56,8 +56,8 @@ XFMR_TERMINAL1 = "transformer_terminal1"
 XFMR_TERMINAL2 = "transformer_terminal2"
 LINE_TERMINAL1 = "line_terminal1"
 LINE_TERMINAL2 = "line_terminal2"
-MEASUREMENTS_TERMINAL1 = "Measurements_terminal1"
-MEASUREMENTS_TERMINAL2 = "Measurements_terminal2"
+MEASUREMENTS_TERMINAL1 = "measurements_terminal1"
+MEASUREMENTS_TERMINAL2 = "measurements_terminal2"
 
 PLACEHOLDER_MODELS = [
     BUS_DYNAMIC_MODEL,
