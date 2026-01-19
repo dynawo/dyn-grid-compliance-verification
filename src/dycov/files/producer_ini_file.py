@@ -23,6 +23,7 @@ def _create_producer_ini_file(
         (target / "Producer.ini").rename(target / filename)
 
     producer_ini_txt = (
+        f"[DEFAULT]\n"
         f"# p_{{max_unite}} injection as defined by the DTR in MW\n"
         f"p_max_injection =\n"
         f"# p_{{max_unite}} consumption as defined by the DTR in MW (only for BESS)\n"
