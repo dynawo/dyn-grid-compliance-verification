@@ -7,7 +7,7 @@
     <par type="DOUBLE" name="WPP_tS" value="0.001"/>
     <!-- Electrical -->
     <par type="DOUBLE" name="WPP_BesPu" value="0"/>
-    <par type="DOUBLE" name="WPP_GesPu" value="0"/>
+    <par type="DOUBLE" name="WPP_GesPu" value="2e-3"/>
     <par type="DOUBLE" name="WPP_ResPu" value="0"/>
     <par type="DOUBLE" name="WPP_XesPu" value="0"/>
     <!-- Control -->
@@ -29,8 +29,8 @@
     <par type="DOUBLE" name="WPP_tfcFilt" value="0.01"/>
     <par type="DOUBLE" name="WPP_tIcFilt" value="0.01"/>
     <par type="DOUBLE" name="WPP_tPcFilt" value="0.01"/>
-    <par type="DOUBLE" name="WPP_tQcFilt" value="0.01"/>
-    <par type="DOUBLE" name="WPP_tUcFilt" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tQcFilt" value="0.02"/>
+    <par type="DOUBLE" name="WPP_tUcFilt" value="0.02"/>
     <!-- MeasurementP -->
     <par type="DOUBLE" name="WPP_DfpMaxPu" value="1"/>
     <par type="DOUBLE" name="WPP_tfpFilt" value="0.01"/>
@@ -91,7 +91,8 @@
     <par type="DOUBLE" name="WPP_fOverPu" value="1.2"/>
     <par type="DOUBLE" name="WPP_fUnderPu" value="0.8"/>
     <par type="DOUBLE" name="WPP_UOverPu" value="1.1"/>
-    <par type="DOUBLE" name="WPP_UUnderPu" value="0"/> <!-- We disable under voltage limit to avoid protection tripping -->
+    <par type="DOUBLE" name="WPP_UUnderPu" value="0"/>
+    <!-- We disable under voltage limit to avoid protection tripping -->
     <par type="DOUBLE" name="WPP_TabletUoverUwtfilt11" value="1.0"/>
     <par type="DOUBLE" name="WPP_TabletUoverUwtfilt12" value="2.0"/>
     <par type="DOUBLE" name="WPP_TabletUoverUwtfilt21" value="1.5"/>
