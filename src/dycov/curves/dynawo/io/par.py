@@ -49,6 +49,10 @@ class ParFile(FileVariables):
             "event_end",
             "event_pre_value",
             "event_step_value",
+            "generator_SNom",
+            "generator_PNom",
+            "generator_XpdPu",
+            "generator_H",
         ]
         super().__init__(
             tool_variables,
@@ -63,6 +67,9 @@ class ParFile(FileVariables):
         line_rpu: float,
         line_xpu: float,
         rte_gen: Gen_init,
+        s_nom: float,
+        gen_xpdpu: float,
+        gen_h: float,
         event_params: dict,
     ) -> None:
         """
@@ -78,6 +85,12 @@ class ParFile(FileVariables):
             The per unit reactance value for the line.
         rte_gen: Gen_init
             Parameters for the initialization of the TSO's bus side (P, Q, U, angle).
+        s_nom: float
+            The nominal apparent power of the generator.
+        gen_xpdpu: float
+            The direct axis transient reactance of the generator in per unit.
+        gen_h: float
+            The inertia constant of the generator.
         event_params: dict
             A dictionary containing event-specific parameters, including start time,
             duration, pre-event value, and step value.
@@ -96,6 +109,10 @@ class ParFile(FileVariables):
         variables_dict["gen_Q0Pu"] = rte_gen.Q0
         variables_dict["gen_U0Pu"] = rte_gen.U0
         variables_dict["gen_UPhase0"] = rte_gen.UPhase0
+        variables_dict["generator_SNom"] = s_nom
+        variables_dict["generator_PNom"] = s_nom * 0.9
+        variables_dict["generator_XpdPu"] = gen_xpdpu
+        variables_dict["generator_H"] = gen_h
 
         # Update event parameters
         variables_dict["event_start"] = event_params["start_time"]

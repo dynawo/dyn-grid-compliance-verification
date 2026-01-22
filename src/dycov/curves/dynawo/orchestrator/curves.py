@@ -575,7 +575,24 @@ class DynawoCurves(ProducerCurves):
         self._jobs_file.complete_file(
             working_oc_dir, self._solver_id, self._solver_lib, event_params
         )
-        self._par_file.complete_file(working_oc_dir, line_rpu, line_xpu, rte_gen, event_params)
+        gen_xdpu = generator_variables.calculate_xpu(
+            "b",
+            self.get_producer().p_max_pu * -1,
+            self.get_producer().s_nom,
+            self.get_producer().u_nom,
+            self._s_nref,
+        )
+        gen_h = 1.25 * self.get_producer().p_max_pu * self._s_nref / self.get_producer().s_nom
+        self._par_file.complete_file(
+            working_oc_dir,
+            line_rpu,
+            line_xpu,
+            rte_gen,
+            self.get_producer().s_nom,
+            gen_xdpu,
+            gen_h,
+            event_params,
+        )
         self._dyd_file.complete_file(working_oc_dir, event_params)
         self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
@@ -731,7 +748,7 @@ class DynawoCurves(ProducerCurves):
             try:
                 line_xpu = float(line_xtype)
             except ValueError:
-                line_xpu = xpu_multiplier * generator_variables.calculate_line_xpu(
+                line_xpu = xpu_multiplier * generator_variables.calculate_xpu(
                     line_xtype,
                     self.get_producer().p_max_pu * -1,
                     self.get_producer().s_nom,

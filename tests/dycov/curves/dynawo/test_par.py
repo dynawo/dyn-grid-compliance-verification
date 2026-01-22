@@ -83,7 +83,7 @@ def test_complete_file_replaces_placeholders_successfully(
     working_dir_with_template, rte_gen, event_params
 ):
     par = ParFile(DummyProducerCurves(), "BM", "OC")
-    par.complete_file(working_dir_with_template, 0.01, 0.02, rte_gen, event_params)
+    par.complete_file(working_dir_with_template, 0.01, 0.02, rte_gen, 90, 1.0, event_params)
     output = read_generated_file(working_dir_with_template / "TSOModel.par")
     assert "line_XPu = 0.02" in output
     assert "line_RPu = 0.01" in output
@@ -113,7 +113,7 @@ def test_complete_file_populates_variables_dict_correctly(
 
     rp.dump_file = fake_dump_file
     try:
-        par.complete_file(working_dir_with_template, 0.03, 0.04, rte_gen, event_params)
+        par.complete_file(working_dir_with_template, 0.03, 0.04, rte_gen, 90, 1.0, event_params)
     finally:
         rp.dump_file = orig_dump
     assert captured["line_XPu"] == 0.04
@@ -140,7 +140,7 @@ def test_complete_file_calls_complete_parameters(working_dir_with_template, rte_
             super().complete_parameters(variables_dict, event_params_)
 
     par = ParFileWithSpy(DummyProducerCurves(), "BM", "OC")
-    par.complete_file(working_dir_with_template, 0.01, 0.02, rte_gen, event_params)
+    par.complete_file(working_dir_with_template, 0.01, 0.02, rte_gen, 90, 1.0, event_params)
     assert par.called
 
 
@@ -162,7 +162,7 @@ def test_complete_file_tool_variables_not_overwritten(
 
     rp.get_all_variables = fake_get_all_variables
     try:
-        par.complete_file(working_dir_with_template, 0.01, 0.02, rte_gen, event_params)
+        par.complete_file(working_dir_with_template, 0.01, 0.02, rte_gen, 90, 1.0, event_params)
     finally:
         rp.get_all_variables = orig_get_all_variables
     output = read_generated_file(working_dir_with_template / "TSOModel.par")

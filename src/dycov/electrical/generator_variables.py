@@ -142,10 +142,10 @@ class GeneratorVariables:
 
         return self._scc_switcher.get(generator_type, lambda: "Invalid Type")
 
-    def calculate_line_xpu(
-        self, line_xtype: str, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float
+    def calculate_xpu(
+        self, standard_x: str, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float
     ) -> float:
-        """Calculate the reactance of the line.
+        """Calculate the reactance.
         variables by generator's type:
           HTB1:  a=0.05 b=Pmax<50MW?0.2:0.3, Udim=90kV, Unom=90kV, SnRef=100MVA
           HTB2:  a=0.05 b=Pmax<250MW?0.3:0.54, Udim=235kV, Unom=225kV, SnRef=100MVA
@@ -154,7 +154,7 @@ class GeneratorVariables:
 
         Parameters
         ----------
-        line_xtype: str
+        standard_x: str
             Standard reactance value, allowed values are 'a' or 'b'
         p_max_pu: float
             Maximum active power
@@ -171,7 +171,7 @@ class GeneratorVariables:
             Reactance of the line
         """
         p_max = p_max_pu * -s_nref
-        x_dtr, u_dim = self.__get_generator_variables(line_xtype, p_max, u_nom)
+        x_dtr, u_dim = self.__get_generator_variables(standard_x, p_max, u_nom)
 
         return x_dtr * (u_dim**2 / u_nom**2) * (s_nref / s_nom)
 
