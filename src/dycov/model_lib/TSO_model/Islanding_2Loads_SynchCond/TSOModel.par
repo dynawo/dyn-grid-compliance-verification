@@ -1,31 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <set id="Main_Load">
-    <par type="DOUBLE" name="load_alpha" value="2"/>
-    <par type="DOUBLE" name="load_beta" value="2"/>
+    <par type="DOUBLE" name="load_alpha" value="0"/>
+    <par type="DOUBLE" name="load_beta" value="0"/>
     <par type="DOUBLE" name="load_P0Pu" value="{{main_P0Pu}}"/>
     <par type="DOUBLE" name="load_Q0Pu" value="{{main_Q0Pu}}"/>
     <par type="DOUBLE" name="load_U0Pu" value="{{main_U0Pu}}"/>
     <par type="DOUBLE" name="load_UPhase0" value="{{main_UPhase0}}"/>
   </set>
   <set id="Secondary_Load">
-    <par type="DOUBLE" name="load_alpha" value="2"/>
-    <par type="DOUBLE" name="load_beta" value="2"/>
-    <par type="DOUBLE" name="load_P0Pu" value="{{secondary_P0Pu}}"/>
-    <par type="DOUBLE" name="load_Q0Pu" value="{{secondary_Q0Pu}}"/>
+    <par type="DOUBLE" name="load_alpha" value="0"/>
+    <par type="DOUBLE" name="load_beta" value="0"/>
+    <par type="DOUBLE" name="load_P0Pu" value="0.0"/>
+    <par type="DOUBLE" name="load_Q0Pu" value="0.0"/>
     <par type="DOUBLE" name="load_U0Pu" value="{{secondary_U0Pu}}"/>
     <par type="DOUBLE" name="load_UPhase0" value="{{secondary_UPhase0}}"/>
   </set>
   <set id="SyncCompensator">
-    <par type="DOUBLE" name="generator_Alpha" value="1"/>
-    <par type="DOUBLE" name="generator_Beta" value="1"/>
+    <par type="INT" name="generator_ExcitationPu" value="3"/>
+    <par type="BOOL" name="generator_UseApproximation" value="true"/>
+    <par type="DOUBLE" name="generator_md" value="0"/>
+    <par type="DOUBLE" name="generator_mq" value="0"/>
+    <par type="DOUBLE" name="generator_nd" value="0"/>
+    <par type="DOUBLE" name="generator_nq" value="0"/>
+    <par type="DOUBLE" name="generator_MdPuEfd" value="50.0"/>
+    <par type="DOUBLE" name="generator_DPu" value="0"/>
+    <par type="DOUBLE" name="generator_H" value="{{generator_H}}"/>
+    <par type="DOUBLE" name="generator_RaPu" value="0"/>
+    <par type="DOUBLE" name="generator_XlPu" value="0.15"/>
+    <par type="DOUBLE" name="generator_XdPu" value="2"/>
+    <par type="DOUBLE" name="generator_XpdPu" value="{{generator_XpdPu}}"/>
+    <par type="DOUBLE" name="generator_XppdPu" value="0.25"/>
+    <par type="DOUBLE" name="generator_Tpd0" value="5.143"/>
+    <par type="DOUBLE" name="generator_Tppd0" value="0.042"/>
+    <par type="DOUBLE" name="generator_XqPu" value="{{generator_XpdPu}}"/>
+    <par type="DOUBLE" name="generator_XpqPu" value="0.25"/>
+    <par type="DOUBLE" name="generator_XppqPu" value="0.13"/>
+    <par type="DOUBLE" name="generator_Tpq0" value="2.16"/>
+    <par type="DOUBLE" name="generator_Tppq0" value="0.083"/>
+    <par type="DOUBLE" name="generator_UNom" value="225"/>
+    <par type="DOUBLE" name="generator_SNom" value="{{generator_SNom}}"/>
+    <par type="DOUBLE" name="generator_PNomTurb" value="{{generator_SNom}}"/>
+    <par type="DOUBLE" name="generator_PNomAlt" value="{{generator_PNom}}"/>
+    <par type="DOUBLE" name="generator_SnTfo" value="{{generator_SNom}}"/>
+    <par type="DOUBLE" name="generator_UNomHV" value="225"/>
+    <par type="DOUBLE" name="generator_UNomLV" value="225"/>
+    <par type="DOUBLE" name="generator_UBaseHV" value="225"/>
+    <par type="DOUBLE" name="generator_UBaseLV" value="225"/>
+    <par type="DOUBLE" name="generator_RTfPu" value="0"/>
+    <par type="DOUBLE" name="generator_XTfPu" value="0"/>
     <par type="DOUBLE" name="generator_P0Pu" value="0"/>
     <par type="DOUBLE" name="generator_Q0Pu" value="0"/>
     <par type="DOUBLE" name="generator_U0Pu" value="{{main_U0Pu}}"/>
-    <par type="DOUBLE" name="generator_UPhase0" value="0.0"/>
+    <par type="DOUBLE" name="generator_UPhase0" value="{{main_UPhase0}}"/>
   </set>
-  <set id="DisconnectLoad">
-    <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>
-    <par type="BOOL" name="event_stateEvent1" value="true"/>
+  <set id="PRefPu">
+    <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
+    <par type="DOUBLE" name="step_Value0" value="0"/>
+    <par type="DOUBLE" name="step_Height" value="{{secondary_P0Pu}}"/>
+  </set>
+  <set id="QRefPu">
+    <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
+    <par type="DOUBLE" name="step_Value0" value="0"/>
+    <par type="DOUBLE" name="step_Height" value="{{secondary_Q0Pu}}"/>
   </set>
 </parametersSet>

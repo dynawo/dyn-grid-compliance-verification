@@ -2,12 +2,14 @@
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!-- Benchmark Case -->
   <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
-  <dyn:blackBoxModel id="SyncCompensator" lib="GeneratorFictitious" parFile="TSOModel.par" parId="SyncCompensator"/>
+  <dyn:blackBoxModel id="SyncCompensator" lib="GeneratorSynchronousFourWindings" parFile="TSOModel.par" parId="SyncCompensator"/>
   <dyn:blackBoxModel id="Main_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Main_Load"/>
   <dyn:blackBoxModel id="Secondary_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Secondary_Load"/>
-  <dyn:blackBoxModel id="DISCONNECT_LOAD" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLoad"/>
+  <dyn:blackBoxModel id="PRefPu" lib="Step" parFile="TSOModel.par" parId="PRefPu"/>
+  <dyn:blackBoxModel id="QRefPu" lib="Step" parFile="TSOModel.par" parId="QRefPu"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Main_load" var2="load_terminal"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Secondary_load" var2="load_terminal"/>
   <dyn:connect id1="BusPDR" var1="bus_terminal" id2="SyncCompensator" var2="generator_terminal"/>
-  <dyn:connect id1="DISCONNECT_LOAD" var1="event_state1" id2="Secondary_load" var2="load_switchOffSignal1"/>
+  <dyn:connect id1="PRefPu" var1="step_step" id2="Secondary_load" var2="load_PRefPu"/>
+  <dyn:connect id1="QRefPu" var1="step_step" id2="Secondary_load" var2="load_QRefPu"/>
 </dyn:dynamicModelsArchitecture>
