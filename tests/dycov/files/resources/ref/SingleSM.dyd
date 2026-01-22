@@ -3,7 +3,7 @@
   <!--Topology: S-->
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
-  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsGoverPropVRPropInt', 'GeneratorSynchronousFourWindingsProportionalRegulations', 'GeneratorSynchronousFourWindingsTGov1Sexs', 'GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousFourWindingsVRKundur', 'GeneratorSynchronousFourWindingsVRKundurPssKundur', 'GeneratorSynchronousThreeWindingsGoverPropVRPropInt', 'GeneratorSynchronousThreeWindingsProportionalRegulations', 'GeneratorSynchronousThreeWindingsDTRI8']-->
+  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorAlphaBeta', 'GeneratorSynchronousFourWindings', 'GeneratorSynchronousFourWindingsGoverPropVRPropInt', 'GeneratorSynchronousFourWindingsProportionalRegulations', 'GeneratorSynchronousFourWindingsTGov1Sexs', 'GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousFourWindingsVRKundur', 'GeneratorSynchronousFourWindingsVRKundurPssKundur', 'GeneratorSynchronousThreeWindingsGoverPropVRPropInt', 'GeneratorSynchronousThreeWindingsProportionalRegulations', 'GeneratorSynchronousThreeWindingsDTRI8']-->
   <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
   <!--"Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
        Here it is needed in order to channel the flows coming from all branches to the BusPDR into a single element,
