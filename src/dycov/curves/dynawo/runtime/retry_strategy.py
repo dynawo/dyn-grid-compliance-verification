@@ -28,6 +28,8 @@ class RetrySettings:
     accuracy_multiplier: float = 10.0
     add_parameters_small_network: bool = True
     enable_solver_flip: bool = True
+    allowed_retries: int = 4
+    simulations_retryed: int = 0
 
     @staticmethod
     def from_config() -> "RetrySettings":
@@ -38,6 +40,7 @@ class RetrySettings:
                 "Dynawo", "retry_add_parameters_small_network", True
             ),
             enable_solver_flip=config.get_boolean("Dynawo", "retry_solver_flip", True),
+            allowed_retries=config.get_int("Debug", "max_simulation_retries", 4),
         )
 
 
@@ -63,7 +66,8 @@ class SolverRetryStrategy:
         success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        if success:
+        self.settings.simulations_retryed += 1
+        if success or self.settings.simulations_retryed > self.settings.allowed_retries:
             return success, time_exceeds, log, curves_df, sim_time
 
         # 2) Reduce min step
@@ -72,7 +76,8 @@ class SolverRetryStrategy:
         success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        if success:
+        self.settings.simulations_retryed += 1
+        if success or self.settings.simulations_retryed > self.settings.allowed_retries:
             return success, time_exceeds, log, curves_df, sim_time
 
         # 3) Increase required accuracy
@@ -81,7 +86,8 @@ class SolverRetryStrategy:
         success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        if success:
+        self.settings.simulations_retryed += 1
+        if success or self.settings.simulations_retryed > self.settings.allowed_retries:
             return success, time_exceeds, log, curves_df, sim_time
 
         # 4) Add parameters for small networks
@@ -91,7 +97,8 @@ class SolverRetryStrategy:
             success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
-            if success:
+            self.settings.simulations_retryed += 1
+            if success or self.settings.simulations_retryed > self.settings.allowed_retries:
                 return success, time_exceeds, log, curves_df, sim_time
 
         # 5) Flip solver type
