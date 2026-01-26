@@ -5,7 +5,17 @@
   <dyn:blackBoxModel id="Main_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Main_Load"/>
   <dyn:blackBoxModel id="Secondary_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Secondary_Load"/>
   <dyn:blackBoxModel id="DISCONNECT_LOAD" lib="EventSetPointBoolean" parFile="TSOModel.par" parId="DisconnectLoad"/>
-  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Main_load" var2="load_terminal"/>
-  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Secondary_load" var2="load_terminal"/>
+
+  <!-- "Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
+       Here it is needed in order to channel the flows coming from all branches to the BusPDR into a single element,
+       thus allowing the connection of PQ flow values taken at the external PCC to those generating units that control P or Q at the PCC point. -->
+  <dyn:blackBoxModel id="Measurements" lib="Measurements"/>
+
+  <!-- Variables measurements_PPu & measurements_QPu (which are the controlled magnitudes when the Plant controls P/Q flows at the PCC point) 
+       need to have the proper sign that the Plant control expects. Therefore, depending on where it is placed, the “Measurements” object 
+       shall connect its terminal 1 to BusPDR when placed on the Producer side, and its terminal 2 to BusPDR when placed on the TSO side. -->
+  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Main_load" var2="load_terminal"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Secondary_load" var2="load_terminal"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Measurements" var2="measurements_terminal1"/>
   <dyn:connect id1="DISCONNECT_LOAD" var1="event_state1" id2="Secondary_load" var2="load_switchOffSignal1"/>
 </dyn:dynamicModelsArchitecture>
