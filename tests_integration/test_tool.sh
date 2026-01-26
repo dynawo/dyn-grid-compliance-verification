@@ -304,9 +304,12 @@ PYCODE
 launcher="dynawo.sh"
 iec_models=true  # by default, add IEC models
 wecc_models=true # by default, add WECC models
-validate=true    # by default, validate the models
-performance=true # by default, verify the performance
-generate=true    # by default, generate the envelopes
+# Accumulative execution flags: start disabled; we'll enable after parsing
+# If user does not specify any (-v/-p/-g), we will enable all three.
+validate=false
+performance=false
+generate=false
+any_exec_flag=false
 remove=false     # by default, remove Results path
 examples_path="./examples"
 results_path="../Results"
@@ -322,18 +325,18 @@ while (($#)); do
             shift
             ;;
         -v | --validate)
-            performance=false
-            generate=false
+            validate=true
+            any_exec_flag=true
             shift
             ;;
         -p | --performance)
-            validate=false
-            generate=false
+            performance=true
+            any_exec_flag=true
             shift
             ;;
         -g | --generate)
-            performance=false
-            validate=false
+            generate=true
+            any_exec_flag=true
             shift
             ;;
         -l | --launcher)
@@ -363,6 +366,13 @@ while (($#)); do
             ;;
     esac
 done
+
+# If user did not specify any of -v/-p/-g, enable all phases by default
+if [ "$any_exec_flag" = false ]; then
+    validate=true
+    performance=true
+    generate=true
+fi
 
 if [ "$remove" = true ]; then
     rm -rf "$results_path"
