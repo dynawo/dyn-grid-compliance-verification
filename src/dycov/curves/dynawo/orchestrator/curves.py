@@ -614,7 +614,6 @@ class DynawoCurves(ProducerCurves):
         self._curves_dict = crv.create_curves_file(
             working_oc_dir,
             "TSOModel.crv",
-            self.get_producer().get_connected_to_pdr(),
             xmfrs,
             self.get_producer().generators,
             self._rte_loads,

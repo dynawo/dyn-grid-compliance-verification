@@ -20,14 +20,7 @@ from lxml import etree
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import (
-    Gen_params,
-    Line_params,
-    Load_params,
-    Pdr_equipments,
-    Terminal,
-    Xfmr_params,
-)
+from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
 
 # Numeric values: supports integers, decimals, and leading sign; allows ".5" style.
 NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
@@ -62,33 +55,6 @@ def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> l
             bbmodels.append(bbmodel)
 
     return bbmodels
-
-
-def get_connected_to_pdr(producer_dyd: Path) -> list:
-    """Gets the list of equipment connected to the PDR bus in the producer DYD model.
-
-    Parameters
-    ----------
-    producer_dyd: Path
-        Path to the producer DYD file
-
-    Returns
-    -------
-    list
-        List of Pdr_equipments objects representing equipment connected to the PDR bus
-    """
-    producer_dyd_tree = etree.parse(producer_dyd, etree.XMLParser(remove_blank_text=True))
-    producer_dyd_root = producer_dyd_tree.getroot()
-
-    connected_to_pdr = []
-    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
-    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
-        if "BusPDR" in connect.get("id1"):
-            connected_to_pdr.append(Pdr_equipments(connect.get("id2"), connect.get("var2")))
-        if "BusPDR" in connect.get("id2"):
-            connected_to_pdr.append(Pdr_equipments(connect.get("id1"), connect.get("var1")))
-
-    return connected_to_pdr
 
 
 def get_producer_values(
