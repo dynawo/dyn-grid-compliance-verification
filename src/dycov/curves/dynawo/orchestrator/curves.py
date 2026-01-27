@@ -575,7 +575,9 @@ class DynawoCurves(ProducerCurves):
         self._jobs_file.complete_file(
             working_oc_dir, self._solver_id, self._solver_lib, event_params
         )
-        self._par_file.complete_file(working_oc_dir, line_rpu, line_xpu, rte_gen, event_params)
+        self._par_file.complete_file(
+            working_oc_dir, line_rpu, line_xpu, rte_gen, event_params, self.get_producer().u_nom
+        )
         self._dyd_file.complete_file(working_oc_dir, event_params)
         self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
