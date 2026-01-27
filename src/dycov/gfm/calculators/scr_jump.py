@@ -325,10 +325,10 @@ class SCRJump(GFMCalculator):
                 )
                 lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
             else:  # Underdamped case
-                lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
                 lower_trace = self._modify_envelope(
                     lower_trace, power_at_50_percent, time_array, event_time
                 )
+                lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
         else:
             # Case 2: Power decreases (negative delta_p).
             upper_trace = (
@@ -351,10 +351,10 @@ class SCRJump(GFMCalculator):
                 )
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
             else:  # Underdamped case
-                upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
                 upper_trace = self._modify_envelope(
                     upper_trace, power_at_50_percent, time_array, event_time
                 )
+                upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
 
         # Ensure final traces are within the operational power limits.
         final_upper_trace = self._limit_signal(upper_trace)
@@ -560,22 +560,6 @@ class SCRJump(GFMCalculator):
                 (lower_trace_candidates, [power_at_50_percent], lower_traces_from_min_env)
             )
         combined_lower_envelope = np.nanmin(lower_matrix, axis=0)
-
-        # The following block was commented out in the original code.
-        # It seems intended for applying initial limiting, which might be handled
-        # elsewhere or was deemed unnecessary.
-        """
-        tunnel_nominal = self._get_tunnel(p_peak_array[0])
-
-        upper_envelope, lower_envelope = self._apply_initial_limiting(
-            p_up_limited,
-            p_down_limited,
-            delta_p_nominal,
-            time_array,
-            event_time,
-            tunnel_nominal,
-        )
-        """
 
         upper_envelope = combined_upper_envelope
         lower_envelope = combined_lower_envelope
