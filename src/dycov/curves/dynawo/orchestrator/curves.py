@@ -810,7 +810,9 @@ class DynawoCurves(ProducerCurves):
         p_max_parameter = (
             "PmaxConsumption"
             if "PmaxConsumption" in pdr_p_cfg
-            else "PmaxInjection" if "PmaxInjection" in pdr_p_cfg else "Pmax"
+            else "PmaxInjection"
+            if "PmaxInjection" in pdr_p_cfg
+            else "Pmax"
         )
 
         # Sign convention: the initializations expects Pdr to be negative;
