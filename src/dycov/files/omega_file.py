@@ -40,7 +40,7 @@ def _connect_generator_to_dynmodelomegaref(
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "RotorSpeedPu")
     _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value")
 
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     _connect_generator(
         dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
     )
@@ -52,7 +52,7 @@ def _connect_generator_to_dynmodelomegaref(
 def _connect_generator_to_setpoint(
     dyd_root: etree.Element, ns: str, generator: Gen_params
 ) -> None:
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     if variable:
         _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint")
 
@@ -60,7 +60,7 @@ def _connect_generator_to_setpoint(
 def _connect_generator_to_infinitebus(
     dyd_root: etree.Element, ns: str, generator: Gen_params
 ) -> None:
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     _connect_generator(
         dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
     )
