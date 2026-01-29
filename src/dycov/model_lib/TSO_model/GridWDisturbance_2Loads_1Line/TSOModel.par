@@ -18,10 +18,10 @@
     <par type="DOUBLE" name="generator_RTfPu" value="0"/>
     <par type="DOUBLE" name="generator_XTfPu" value="0"/>
     <par type="DOUBLE" name="generator_SnTfo" value="340000"/>
-    <par type="DOUBLE" name="generator_UNomHV" value="225"/>
-    <par type="DOUBLE" name="generator_UNomLV" value="225"/>
-    <par type="DOUBLE" name="generator_UBaseHV" value="225"/>
-    <par type="DOUBLE" name="generator_UBaseLV" value="225"/>
+    <par type="DOUBLE" name="generator_UNomHV" value="{{gen_UNom}}"/>
+    <par type="DOUBLE" name="generator_UNomLV" value="{{gen_UNom}}"/>
+    <par type="DOUBLE" name="generator_UBaseHV" value="{{gen_UNom}}"/>
+    <par type="DOUBLE" name="generator_UBaseLV" value="{{gen_UNom}}"/>
     <par type="DOUBLE" name="generator_H" value="8"/>
     <par type="DOUBLE" name="generator_RaPu" value="0.003"/>
     <par type="DOUBLE" name="generator_XlPu" value="0.18"/>
@@ -33,7 +33,7 @@
     <par type="DOUBLE" name="generator_XqPu" value="0.65"/>
     <par type="DOUBLE" name="generator_XppqPu" value="0.25"/>
     <par type="DOUBLE" name="generator_Tppq0" value="0.11"/>
-    <par type="DOUBLE" name="generator_UNom" value="225"/>
+    <par type="DOUBLE" name="generator_UNom" value="{{gen_UNom}}"/>
     <par type="DOUBLE" name="generator_SNom" value="340000"/>
     <par type="DOUBLE" name="generator_PNomTurb" value="340000"/>
     <par type="DOUBLE" name="generator_PNomAlt" value="320000"/>
