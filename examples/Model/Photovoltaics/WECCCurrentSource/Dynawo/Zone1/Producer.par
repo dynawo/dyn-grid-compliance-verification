@@ -13,7 +13,7 @@
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_PQFlag" value="false"/>
     <par type="DOUBLE" name="photovoltaics_tRv" value="0.01"/>
-    <par type="DOUBLE" name="photovoltaics_VUpPu" value="1.2"/>
+    <par type="DOUBLE" name="photovoltaics_VUpPu" value="1.35"/>
     <par type="DOUBLE" name="photovoltaics_VDipPu" value="0.8"/>
     <par type="DOUBLE" name="photovoltaics_VRef0Pu" value="1"/>
     <par type="DOUBLE" name="photovoltaics_Dbd1Pu" value="-0.05"/>
