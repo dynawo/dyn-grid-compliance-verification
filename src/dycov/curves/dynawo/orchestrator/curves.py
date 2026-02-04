@@ -400,6 +400,11 @@ class DynawoCurves(ProducerCurves):
         Zv = (Udip * Zcc) / (Uinf - Udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
         Xv = (Zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
+        if Xv == 0.0:
+            dycov_logging.get_logger("ProducerCurves").warning(
+                "Xv is zero, which may indicate an issue with the calculation."
+            )
+            Xv = 1e-3  # Avoid zero value
         return Xv
 
     def __calculate_Xv_values(
@@ -812,9 +817,7 @@ class DynawoCurves(ProducerCurves):
         p_max_parameter = (
             "PmaxConsumption"
             if "PmaxConsumption" in pdr_p_cfg
-            else "PmaxInjection"
-            if "PmaxInjection" in pdr_p_cfg
-            else "Pmax"
+            else "PmaxInjection" if "PmaxInjection" in pdr_p_cfg else "Pmax"
         )
 
         # Sign convention: the initializations expects Pdr to be negative;
