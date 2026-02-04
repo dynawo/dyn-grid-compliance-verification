@@ -39,7 +39,11 @@ class TableFile(FileVariables):
         """
         tool_variables = [
             "start_event",
+            "start_event_dec_eps",
+            "start_event_inc_eps",
             "end_event",
+            "end_event_dec_eps",
+            "end_event_inc_eps",
             "bus_u0pu",
             "bus_upu",
             "end_freq",
@@ -59,12 +63,16 @@ class TableFile(FileVariables):
     def __complete_file(
         self, working_oc_dir: Path, rte_gen: Gen_init, event_params: dict, filename: str
     ) -> None:
-        # Retrieve all existing variables from the TableInfiniteBus.txt file
+        # Retrieve all existing variables from the TXT file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
 
         # Update event timing variables
         variables_dict["start_event"] = event_params["start_time"]
+        variables_dict["start_event_dec_eps"] = variables_dict["start_event"] - 0.01
+        variables_dict["start_event_inc_eps"] = variables_dict["start_event"] + 0.01
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
+        variables_dict["end_event_dec_eps"] = variables_dict["end_event"] - 0.01
+        variables_dict["end_event_inc_eps"] = variables_dict["end_event"] + 0.01
 
         # Set the initial per-unit voltage for the bus
         variables_dict["bus_u0pu"] = rte_gen.U0
