@@ -10,7 +10,7 @@
 from pathlib import Path
 
 from dycov.curves.curves import ProducerCurves
-from dycov.curves.dynawo.io.file_variables import FileVariables
+from dycov.curves.dynawo.io.file_variables import EPSILON, FileVariables
 from dycov.files import replace_placeholders
 from dycov.model.parameters import Gen_init
 
@@ -68,11 +68,11 @@ class TableFile(FileVariables):
 
         # Update event timing variables
         variables_dict["start_event"] = event_params["start_time"]
-        variables_dict["start_event_dec_eps"] = variables_dict["start_event"] - 0.01
-        variables_dict["start_event_inc_eps"] = variables_dict["start_event"] + 0.01
+        variables_dict["start_event_dec_eps"] = variables_dict["start_event"] - EPSILON
+        variables_dict["start_event_inc_eps"] = variables_dict["start_event"] + EPSILON
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
-        variables_dict["end_event_dec_eps"] = variables_dict["end_event"] - 0.01
-        variables_dict["end_event_inc_eps"] = variables_dict["end_event"] + 0.01
+        variables_dict["end_event_dec_eps"] = variables_dict["end_event"] - EPSILON
+        variables_dict["end_event_inc_eps"] = variables_dict["end_event"] + EPSILON
 
         # Set the initial per-unit voltage for the bus
         variables_dict["bus_u0pu"] = rte_gen.U0
