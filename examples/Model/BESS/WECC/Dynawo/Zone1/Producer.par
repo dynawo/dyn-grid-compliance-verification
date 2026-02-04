@@ -13,7 +13,7 @@
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
     <par type="DOUBLE" name="BESS_tRv" value="0.01"/>
-    <par type="DOUBLE" name="BESS_VUpPu" value="1.1"/>
+    <par type="DOUBLE" name="BESS_VUpPu" value="1.35"/>
     <par type="DOUBLE" name="BESS_VDipPu" value="0.9"/>
     <par type="DOUBLE" name="BESS_VRef0Pu" value="1"/>
     <par type="DOUBLE" name="BESS_Dbd1Pu" value="-0.05"/>

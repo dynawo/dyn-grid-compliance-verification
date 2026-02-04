@@ -13,7 +13,7 @@
     <par type="BOOL" name="WTG4B_PfFlag" value="false"/>
     <par type="BOOL" name="WTG4B_PQFlag" value="false"/>
     <par type="DOUBLE" name="WTG4B_tRv" value="0.01"/>
-    <par type="DOUBLE" name="WTG4B_VUpPu" value="1.2"/>
+    <par type="DOUBLE" name="WTG4B_VUpPu" value="1.35"/>
     <par type="DOUBLE" name="WTG4B_VDipPu" value="0.8"/>
     <par type="DOUBLE" name="WTG4B_VRef0Pu" value="1"/>
     <par type="DOUBLE" name="WTG4B_Dbd1Pu" value="-0.05"/>

@@ -90,7 +90,7 @@
     <!-- GridProtection -->
     <par type="DOUBLE" name="WPP_fOverPu" value="1.2"/>
     <par type="DOUBLE" name="WPP_fUnderPu" value="0.8"/>
-    <par type="DOUBLE" name="WPP_UOverPu" value="1.1"/>
+    <par type="DOUBLE" name="WPP_UOverPu" value="1.35"/>
     <par type="DOUBLE" name="WPP_UUnderPu" value="0"/> <!-- We disable under voltage limit to avoid protection tripping -->
     <par type="DOUBLE" name="WPP_TabletUoverUwtfilt11" value="1.0"/>
     <par type="DOUBLE" name="WPP_TabletUoverUwtfilt12" value="2.0"/>
