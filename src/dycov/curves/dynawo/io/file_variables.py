@@ -12,9 +12,10 @@ from dycov.curves.curves import ProducerCurves
 from dycov.electrical.generator_variables import generator_variables
 from dycov.logging.logging import dycov_logging
 
-# A 10 ms time epsilon is applied to ensure no two consecutive rows share the same timestamp,
-# avoiding interpolation and solver issues.
-EPSILON = 0.010
+# A symmetric time offset is applied: the earlier row gets -EPSILON and the next row gets +EPSILON.
+# This means the effective separation added between timestamps is 2 * EPSILON.
+# To guarantee a 10 ms minimum gap, set EPSILON to 5 ms.
+EPSILON = 0.005
 
 
 class FileVariables:
