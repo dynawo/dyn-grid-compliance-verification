@@ -44,10 +44,14 @@ def test_txt_file():
         {
             "simulation_start",
             "simulation_stop",
-            "start_event",
-            "end_event",
-            "t_rec2",
-            "t_rec3",
+            "start_event_dec_eps",
+            "start_event_inc_eps",
+            "end_event_dec_eps",
+            "end_event_inc_eps",
+            "t_rec2_dec_eps",
+            "t_rec2_inc_eps",
+            "t_rec3_dec_eps",
+            "t_rec3_inc_eps",
         },
         0,
     )
@@ -60,5 +64,5 @@ def test_txt_file():
                 if k in control_variables and variables[k] == control_variables[k]
             }
         )
-        == 6
+        == 10
     )
