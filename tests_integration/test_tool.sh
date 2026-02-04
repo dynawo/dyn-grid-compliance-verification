@@ -70,11 +70,11 @@ launch_validate() {
     declare -a photo_models=()
     declare -a bess_models=()
     if [ "$iec_models" = true ]; then
-        color_msg "INFO: Including IEC models for validation."
+        color_msg "INFO: Including IEC models for Model validation."
         wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
     fi
     if [ "$wecc_models" = true ]; then
-        color_msg "INFO: Including WECC models for validation."
+        color_msg "INFO: Including WECC models for Model validation."
         wind_models+=("WECCA" "WECCB" "WECC")
         photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2")
         bess_models+=("WECC")
@@ -101,9 +101,50 @@ launch_validate() {
     done
 
     # Execute commands in parallel with xargs, limiting to 4 processes
-    color_msg "INFO: Starting parallel validation with max 4 processes..."
+    color_msg "INFO: Starting parallel Model validation with max 4 processes..."
     printf '%s\n' "${validation_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
-    color_msg "INFO: All validation processes completed."
+    color_msg "INFO: All model validation processes completed."
+}
+
+launch_model_as_performance() {
+    declare -a wind_models=()
+    declare -a photo_models=()
+    declare -a bess_models=()
+    if [ "$iec_models" = true ]; then
+        color_msg "INFO: Including IEC models for Performance validation."
+        wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
+    fi
+    if [ "$wecc_models" = true ]; then
+        color_msg "INFO: Including WECC models for Performance validation."
+        wind_models+=("WECCA" "WECCB" "WECC")
+        photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2")
+        bess_models+=("WECC")
+    fi
+
+    local -a validation_commands=()
+
+    # Performance validation for BESS models
+    for bess_model in "${bess_models[@]}"; do
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/BESS/$bess_model/Dynawo/Zone3\" \"$results_path/Performance/BESS/$bess_model\" \"$bess_model\""
+        validation_commands+=("$cmd")
+    done
+
+    # Performance validation for Photovoltaics models
+    for photo_model in "${photo_models[@]}"; do
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Photovoltaics/$photo_model/Dynawo/Zone3\" \"$results_path/Performance/Photovoltaics/$photo_model\" \"$photo_model\""
+        validation_commands+=("$cmd")
+    done
+
+    # Performance validation for Wind models
+    for wind_model in "${wind_models[@]}"; do
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Wind/$wind_model/Dynawo/Zone3\" \"$results_path/Performance/Wind/$wind_model\" \"$wind_model\""
+        validation_commands+=("$cmd")
+    done
+
+    # Execute commands in parallel with xargs, limiting to 4 processes
+    color_msg "INFO: Starting parallel performance verification with Model examples with max 4 processes..."
+    printf '%s\n' "${validation_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
+    color_msg "INFO: All performance verification processes completed."
 }
 
 # Function to execute a performance command and record time
@@ -129,9 +170,11 @@ export -f run_dycov_performance
 launch_performance() {
     declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a")
     if [ "$iec_models" = true ]; then
+        color_msg "INFO: Including IEC models for Performance validation."
         models+=("IECB2015" "IECB2020")
     fi
     if [ "$wecc_models" = true ]; then
+        color_msg "INFO: Including WECC models for Performance validation."
         models+=("WECCB")
     fi
     declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
@@ -398,6 +441,7 @@ fi
 if [ "$performance" = true ]; then
     color_msg "Starting performance verification phase..."
     launch_performance
+    launch_model_as_performance
 fi
 if [ "$generate" = true ]; then
     color_msg "Starting envelope generation phase..."
