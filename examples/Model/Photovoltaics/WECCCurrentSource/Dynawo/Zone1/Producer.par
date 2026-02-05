@@ -36,8 +36,8 @@
     <!-- Generator Control -->
     <par type="DOUBLE" name="photovoltaics_tG" value="0.02"/>
     <par type="DOUBLE" name="photovoltaics_tFilterGC" value="0.02"/>
-    <par type="DOUBLE" name="photovoltaics_IqrMaxPu" value="999"/>
-    <par type="DOUBLE" name="photovoltaics_IqrMinPu" value="-999"/>
+    <par type="DOUBLE" name="photovoltaics_IqrMaxPu" value="20"/>
+    <par type="DOUBLE" name="photovoltaics_IqrMinPu" value="-20"/>
     <par type="DOUBLE" name="photovoltaics_RrpwrPu" value="10"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
     <par type="DOUBLE" name="photovoltaics_tP" value="0.05"/>
@@ -49,8 +49,8 @@
     <!-- PLL Control -->
     <par type="DOUBLE" name="photovoltaics_KiPLL" value="20"/>
     <par type="DOUBLE" name="photovoltaics_KpPLL" value="3"/>
-    <par type="DOUBLE" name="photovoltaics_OmegaMaxPu" value="999"/>
-    <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="-999"/>
+    <par type="DOUBLE" name="photovoltaics_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="0.5"/>
 
     <!-- BaseWT4 -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="90"/>
