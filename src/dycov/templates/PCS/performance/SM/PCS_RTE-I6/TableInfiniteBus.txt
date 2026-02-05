@@ -9,12 +9,12 @@ double TableUPhase(2,2)
 
 double TableUPu(10,2)
 {{simulation_start}} {{bus_u0pu}}
-{{start_event_dec_eps}} {{bus_u0pu}}
-{{start_event_inc_eps}} {{u_fault}}
-{{end_event_dec_eps}} {{u_fault}}
-{{end_event_inc_eps}} {{u_clear}}
+{{start_event}} {{bus_u0pu}}
+{{start_event}} {{u_fault}}
+{{end_event}} {{u_fault}}
+{{end_event}} {{u_clear}}
 {{delta_t_rec1}} {{u_clear}}
 {{delta_t_rec2}} 0.9
-{{delta_t_rec3_dec_eps}} 0.9
-{{delta_t_rec3_inc_eps}} {{bus_u0pu}}
+{{delta_t_rec3}} 0.9
+{{delta_t_rec3}} {{bus_u0pu}}
 {{simulation_stop}} {{bus_u0pu}}
