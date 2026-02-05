@@ -243,7 +243,7 @@ class CsvReader(CurvesReader):
             Whether to remove the file after reading. Default is True.
         """
         file = next(self._path.glob(self._filename + ".[cC][sS][vV]"))
-        data = pd.read_csv(file.as_posix(), sep=";")
+        data = pd.read_csv(file.as_posix(), sep=None, engine="python")
         self.__read(data)
         if remove_file:
             file.unlink()
