@@ -59,8 +59,8 @@
     <par type="DOUBLE" name="pss_VPssMinPu" value="-0.1"/>
     <par type="INT" name="pss_M" value="1"/>
     <par type="INT" name="pss_N" value="0"/>
-    <par type="DOUBLE" name="pss_OmegaMaxPu" value="999"/>
-    <par type="DOUBLE" name="pss_OmegaMinPu" value="-999"/>
+    <par type="DOUBLE" name="pss_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="pss_OmegaMinPu" value="0.5"/>
     <par type="DOUBLE" name="pss_PGenMaxPu" value="999"/>
     <par type="DOUBLE" name="pss_PGenMinPu" value="-999"/>
     <par type="DOUBLE" name="pss_SNom" value="500"/>
