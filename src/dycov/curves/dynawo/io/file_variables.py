@@ -10,12 +10,6 @@
 from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves
 from dycov.electrical.generator_variables import generator_variables
-from dycov.logging.logging import dycov_logging
-
-# A symmetric time offset is applied: the earlier row gets -EPSILON and the next row gets +EPSILON.
-# This means the effective separation added between timestamps is 2 * EPSILON.
-# To guarantee a 10 ms minimum gap, set EPSILON to 5 ms.
-EPSILON = 0.005
 
 
 class FileVariables:
@@ -51,42 +45,6 @@ class FileVariables:
         self._model_section = f"{bm_section}.{oc_section}.Model"
         self._event_section = f"{bm_section}.{oc_section}.Event"
         self._tool_variables = tool_variables
-
-    def __apply_epsilon(self, value: str, epsilon: float) -> str:
-        """
-        Applies an epsilon adjustment to float-like values.
-
-        Parameters
-        ----------
-        value: str
-            The original value as a string.
-        epsilon: float
-            The epsilon adjustment to apply.
-
-        Returns
-        -------
-        str
-            The adjusted value as a string.
-        """
-        try:
-            # Treat the value as a float only if its syntax indicates a float
-            # (decimal point or scientific notation)
-            is_float = "." in value or "e" in value.lower()
-            v = float(value)
-        except ValueError:
-            is_float = False
-            v = None
-
-        if is_float:
-            return str(v + epsilon)
-
-        if epsilon != 0 and not is_float:
-            dycov_logging.warning(
-                f"Epsilon adjustment of {epsilon} cannot be applied to non-float value '{value}'.",
-                stacklevel=2,
-            )
-
-        return value
 
     def __obtain_value(self, value_definition: str) -> str:
         """
@@ -135,7 +93,7 @@ class FileVariables:
             return self.__obtain_value(config.get_value(section, key))
         return None
 
-    def __get_variable_value(self, ikey: str) -> str:
+    def __get_variable_value(self, key: str) -> str:
         """
         Retrieves the value for a given key by searching through various configuration sections.
 
@@ -145,7 +103,7 @@ class FileVariables:
 
         Parameters
         ----------
-        ikey: str
+        key: str
             The key of the variable to retrieve.
 
         Returns
@@ -153,17 +111,6 @@ class FileVariables:
         str
             The obtained value if found, otherwise None.
         """
-        # Determine epsilon adjustment based on key suffix
-        if "_dec_eps" in ikey:
-            epsilon = -EPSILON
-            key = ikey.replace("_dec_eps", "")
-        elif "_inc_eps" in ikey:
-            epsilon = EPSILON
-            key = ikey.replace("_inc_eps", "")
-        else:
-            epsilon = 0.0
-            key = ikey
-
         # Determine the generator type based on the nominal voltage
         generator_type = generator_variables.get_generator_type(
             self._dynawo_curves.get_producer().u_nom
@@ -181,12 +128,11 @@ class FileVariables:
         for section in sections:
             value = self.__get_value_from_section(section, key, generator_type)
             if value:
-                return self.__apply_epsilon(value, epsilon)
-
+                return value
         # As a last resort, check the global 'Dynawo' section
         if config.has_option("Dynawo", key):
             value = self.__obtain_value(config.get_value("Dynawo", key))
-            return self.__apply_epsilon(value, epsilon)
+            return value
 
         return None
 
