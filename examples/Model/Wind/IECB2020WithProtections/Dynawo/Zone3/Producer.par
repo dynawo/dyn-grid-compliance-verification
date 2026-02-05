@@ -140,10 +140,10 @@
     <par type="DOUBLE" name="WPP_UwpqRisePu" value="1.2"/>
     <par type="DOUBLE" name="WPP_XErrMaxPu" value="1"/>
     <par type="DOUBLE" name="WPP_XErrMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_XRefMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_XRefMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_XRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XRefMinPu" value="-999"/>
     <par type="DOUBLE" name="WPP_XwpDropPu" value="0"/>
     <!-- Operating Point -->
     <par type="DOUBLE" name="WPP_P0Pu" value="-1"/>
