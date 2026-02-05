@@ -90,7 +90,8 @@ class TableFile(FileVariables):
         points = config.get_int("Dynawo", "transition_points", 3)
         half_width = config.get_float("Dynawo", "transition_half_width", 0.01)
         dycov_logging.debug(
-            f"Post-processing {filename} with smoothing enabled={enabled}, points={points}, half_width={half_width}"
+            f"Post-processing {filename} with smoothing enabled={enabled}, "
+            f"points={points}, half_width={half_width}"
         )
         self.__smooth_duplicate_timestamps(
             working_oc_dir / filename,
@@ -170,14 +171,14 @@ class TableFile(FileVariables):
             # Collect all data lines until next header/comment/EOF
             data_rows = []
             while i < n:
-                l = lines[i]
-                if header_re.match(l):
+                ln = lines[i]
+                if header_re.match(ln):
                     break
-                if l.strip().startswith("#"):
+                if ln.strip().startswith("#"):
                     break
-                if not l.strip():  # blank line marks end of table block
+                if not ln.strip():  # blank line marks end of table block
                     break
-                data_rows.append(l)
+                data_rows.append(ln)
                 i += 1
 
             # Parse data rows
