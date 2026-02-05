@@ -9,6 +9,6 @@ double TableUPhase(2,2)
 
 double TableUPu(4,2)
 {{simulation_start}} {{bus_u0pu}}
-{{start_event_dec_eps}} {{bus_u0pu}}
-{{start_event_inc_eps}} {{bus_upu}}
+{{start_event}} {{bus_u0pu}}
+{{start_event}} {{bus_upu}}
 {{simulation_stop}} {{bus_upu}}
