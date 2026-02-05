@@ -107,10 +107,10 @@
     <par type="DOUBLE" name="WPP_txfv" value="0.1"/>
     <par type="DOUBLE" name="WPP_txft" value="0.1"/>
     <par type="DOUBLE" name="WPP_UwpqDipPu" value="0.8"/>
-    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_XRefMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_XRefMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_XRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XRefMinPu" value="-999"/>
     <!-- Mechanical -->
     <par type="DOUBLE" name="WPP_CdrtPu" value="15"/>
     <par type="DOUBLE" name="WPP_Hgen" value="1"/>
