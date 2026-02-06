@@ -48,7 +48,7 @@ def execute_tool(producer_model_path, producer_curves_path, reference_curves_pat
                 only_dtr,
                 sim_type,
             )
-            md = Validation(params)
+            md = Validation(params, dry_run=True)
             md.set_testing(True)
             compliance = md.validate(use_parallel=True, num_processes=4)
         except Exception as e:

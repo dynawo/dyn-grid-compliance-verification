@@ -555,6 +555,7 @@ def create_pdf(
     report_results: dict,
     parameters: ValidationParameters,
     path_latex_files: Path,
+    dry_run: bool = False,
 ) -> None:
     """Creates the dycov final report.
 
@@ -629,6 +630,10 @@ def create_pdf(
             "modeltype": _get_model_type(producer.get_sim_type()),
         }
     ).dump(str(working_path / REPORT_NAME))
+
+    if dry_run:
+        dycov_logging.get_logger("Report").info("Dry run enabled - skipping PDF generation.")
+        return
 
     report_name_ = REPORT_NAME.replace(".tex", "")
     proc = _run_pdflatex(working_path, report_name_)
