@@ -12,11 +12,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-import pytest
 
-
-# ---- Logger fixture: patch ONLY dycov_logging.get_logger so caplog captures ----
-@pytest.fixture(autouse=True)
 def _patch_dycov_logging(monkeypatch):
     def _get_logger(name):
         # Return a standard logging logger so caplog can intercept it
