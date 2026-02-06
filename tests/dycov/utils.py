@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -7,9 +8,19 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
 
-PERFORMANCE = "../examples/Performance"
-MODEL = "../examples/Model"
-RESOURCES = "./resources"
+PERFORMANCE = "../../examples/Performance"
+MODEL = "../../examples/Model"
+
+
+def _resolve_dynawo_sh():
+    env_path = os.environ.get("DYNAWOPATH")
+    if env_path:
+        candidate = Path(env_path) / "dynawo.sh"
+        if candidate.exists():
+            return candidate.resolve()
+
+    found = shutil.which("dynawo.sh")
+    return Path(found).resolve() if found else None
 
 
 def execute_tool(producer_model_path, producer_curves_path, reference_curves_path):
@@ -39,8 +50,10 @@ def execute_tool(producer_model_path, producer_curves_path, reference_curves_pat
                 else:
                     sim_type = MODEL_VALIDATION
 
+            dynawo_sh = _resolve_dynawo_sh()
+
             params = ValidationParameters(
-                Path(shutil.which("dynawo.sh")).resolve() if shutil.which("dynawo.sh") else None,
+                dynawo_sh,
                 testpath / producer_model_path if producer_model_path else None,
                 testpath / producer_curves_path if producer_curves_path else None,
                 testpath / reference_curves_path if reference_curves_path else None,
@@ -49,7 +62,7 @@ def execute_tool(producer_model_path, producer_curves_path, reference_curves_pat
                 only_dtr,
                 sim_type,
             )
-            md = Validation(params)
+            md = Validation(params, dry_run=True)
             md.set_testing(True)
             compliance = md.validate(use_parallel=True, num_processes=4)
         except Exception as e:
