@@ -22,7 +22,6 @@ class DummyLogger:
         self.logged.append(msg)
 
 
-@pytest.fixture(autouse=True)
 def patch_dycov_logging(monkeypatch):
     dummy_logger = DummyLogger()
     monkeypatch.setattr("dycov.logging.logging.dycov_logging", dummy_logger)
