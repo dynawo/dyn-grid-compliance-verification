@@ -4,7 +4,7 @@ from tests.dycov.utils import MODEL, execute_tool
 RESOURCES = "./resources"
 
 
-def test_model_validation_wecca_model():
+def test_model_validation_wecca_model(dynawo_latest):
     compliance = execute_tool(
         f"{MODEL}/Wind/WECCA/Dynawo",
         None,
@@ -38,7 +38,7 @@ def test_model_validation_wecca_model():
     ] == compliance
 
 
-def test_model_validation_partial_reference():
+def test_model_validation_partial_reference(dynawo_latest):
     compliance = execute_tool(
         f"{MODEL}/Wind/WECCB/Dynawo",
         None,
