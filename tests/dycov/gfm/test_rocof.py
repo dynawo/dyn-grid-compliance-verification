@@ -12,8 +12,6 @@ import configparser
 import math
 from pathlib import Path
 
-import pytest
-
 import numpy as np
 import pandas as pd
 
@@ -118,20 +116,18 @@ class ParametersHelper(GFMParameters):
         config._pcs_config.read_string(config_str)
 
 
-@pytest.mark.skip
 def test_rocof_initialization():
     test_params = ParametersHelper(gfm_overdamped_params)
     rocof = RoCoF(gfm_params=test_params)
 
-    assert rocof._change_frequency == test_params.get_change_frequency()
+    assert rocof._rocof_value == test_params.get_change_frequency()
 
     test_params = ParametersHelper(gfm_underdamped_params)
     rocof = RoCoF(gfm_params=test_params)
 
-    assert rocof._change_frequency == test_params.get_change_frequency()
+    assert rocof._rocof_value == test_params.get_change_frequency()
 
 
-@pytest.mark.skip
 def test_rocof_overdamped_envelopes_event_at_0s():
     start_time = -1
     end_time = 8.0
@@ -150,14 +146,15 @@ def test_rocof_overdamped_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
 
 
-@pytest.mark.skip
 def test_rocof_overdamped_envelopes_event_at_200ms():
     start_time = -1.0
     end_time = 8.0
@@ -176,14 +173,15 @@ def test_rocof_overdamped_envelopes_event_at_200ms():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
 
 
-@pytest.mark.skip
 def test_rocof_underdamped_envelopes_event_at_0s():
     start_time = 0
     end_time = 1.315
@@ -202,14 +200,15 @@ def test_rocof_underdamped_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
 
 
-@pytest.mark.skip
 def test_rocof_underdamped_envelopes_event_at_200ms():
     start_time = 0
     end_time = 1.315
@@ -228,14 +227,15 @@ def test_rocof_underdamped_envelopes_event_at_200ms():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
 
 
-@pytest.mark.skip
 def test_s_rocof_1_rocof():
     start_time = 0
     end_time = 10
@@ -254,8 +254,10 @@ def test_s_rocof_1_rocof():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
