@@ -2,7 +2,7 @@ from dycov.model.compliance import Compliance
 from tests.dycov.utils import PERFORMANCE, execute_tool
 
 
-def test_perf_sm_model():
+def test_perf_sm_model(dynawo_latest):
     compliance = execute_tool(
         f"{PERFORMANCE}/SingleAux/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo",
         None,
@@ -21,7 +21,7 @@ def test_perf_sm_model():
     ] == compliance
 
 
-def test_perf_sm_complete():
+def test_perf_sm_complete(dynawo_latest):
     compliance = execute_tool(
         f"{PERFORMANCE}/SingleAuxI/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo",
         f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous",
@@ -40,7 +40,7 @@ def test_perf_sm_complete():
     ] == compliance
 
 
-def test_perf_ppm_model():
+def test_perf_ppm_model(dynawo_latest):
     compliance = execute_tool(f"{PERFORMANCE}/SingleAux/WECCB/Dynawo", None, None)
     assert [
         Compliance.NonCompliant,  # 0
@@ -53,7 +53,7 @@ def test_perf_ppm_model():
     ] == compliance
 
 
-def test_perf_ppm_complete():
+def test_perf_ppm_complete(dynawo_latest):
     compliance = execute_tool(
         f"{PERFORMANCE}/SingleAux/IECB2020/Dynawo",
         f"{PERFORMANCE}/ProducerCurves/Wind",
