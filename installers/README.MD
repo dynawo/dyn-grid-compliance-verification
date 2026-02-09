@@ -21,7 +21,7 @@ Before starting, create a clean folder on your computer (e.g., `Dycov_Install/`)
 
 **If using Method 1 (Linux Native):**
 You only need the script `linux_install.sh`.
-* *Requirement:* You must have an active internet connection so the script can download the solver (Dynawo) and Python dependencies.
+* *Requirement:* You must have an active internet connection so the script can download Dynawo and Python dependencies.
 
 **If using Methods 2, 3, or 4 (Docker / WSL):**
 You need the **distribution artifacts** (typically from the Release page). Ensure you have these three files in the same directory:
@@ -44,7 +44,7 @@ Choose **ONE** of the following methods that best fits your environment.
     chmod +x linux_install.sh
     ./linux_install.sh
     ```
-    *What this does:* The script will create a local `dycov` folder, download the correct version of the Dynawo solver, set up a private Python virtual environment, and install the tool.
+    *What this does:* The script will create a local `dycov` folder, download the correct version of the Dynawo application, set up a private Python virtual environment, and install the tool.
 
 3.  **To use the tool:** Since this is a local installation, you must "activate" the tool every time you open a new terminal window:
     ```bash
