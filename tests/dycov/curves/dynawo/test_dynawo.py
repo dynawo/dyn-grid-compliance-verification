@@ -7,18 +7,11 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import math
-
 import numpy as np
 import pandas as pd
 import pytest
 
-# -----------------------------------------------------------------------------
-# Logging patch: patch ONLY dycov_logging.get_logger (not the whole module)
-# -----------------------------------------------------------------------------
 
-
-@pytest.fixture(autouse=True)
 def patch_dycov_logging(monkeypatch):
     class _DummyLogger:
         def __init__(self):
