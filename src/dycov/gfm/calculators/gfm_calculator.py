@@ -331,7 +331,7 @@ class GFMCalculator:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * lower_envelope_unlimited,
-                        limit_min, 
+                        limit_min,
                     ),
                     limit_max,
                 )
@@ -363,14 +363,14 @@ class GFMCalculator:
             lower_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - sign * lower_envelope_unlimited,
-                    limit_min, 
+                    limit_min,
                 ),
-                limit_max,     
+                limit_max,
             )
             upper_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - 1 * sign * upper_envelope_unlimited,
-                    min_power, 
+                    min_power,
                 ),
                 max_power,
             )
