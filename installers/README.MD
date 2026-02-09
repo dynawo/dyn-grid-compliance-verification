@@ -1,136 +1,161 @@
 # Dycov: Installation and User Guide
 
-This document serves as a complete step-by-step guide for installing, configuring, and running the tool.
+Welcome to Dycov (Dynamic Coverage Tool). This document serves as a complete, step-by-step guide for installing, configuring, and running the tool.
 
-This guide is divided into three main sections:
-1.  **Prerequisites:** What files you need before starting.
-2.  **Installation:** How to set up the tool (Docker or Linux Native).
-3.  **GFM Configuration & Usage:** How to configure the physics/scenarios and run simulations.
+## Installation Overview
 
----
+There are **four ways** to install Dycov depending on your Operating System and preferences. Please verify which file you have (`linux_install.sh` OR `dycov_dist.tar.gz`) before starting.
 
-## 1. Prerequisites and Downloads
-
-Before attempting any installation, ensure you have the necessary files. These are provided in the **Releases** section of the repository or sent by the distribution team.
-
-You must have the following three files in a single folder on your computer:
-
-* **dycov_dist.tar.gz**: This is the main application package. It is a large file containing the tool and all its dependencies.
-* **import_image.sh**: A script required to load the application into Docker correctly.
-* **run_dycov_docker.sh**: The script you will use to launch the tool daily.
-
-> **Note:** Do not try to extract the .tar.gz file manually. The scripts will handle it.
+| Method | OS | Required File | Description |
+| :--- | :--- | :--- | :--- |
+| **1. Linux Native** | Linux | `linux_install.sh` | **No Docker.** It automatically downloads Dynawo and installs Dycov directly into your system. Requires internet. |
+| **2. Linux Docker** | Linux | `dycov_dist.tar.gz` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
+| **3. Windows Docker** | Windows | `dycov_dist.tar.gz` | Runs inside Docker Desktop. Requires familiarity with PowerShell. |
+| **4. Windows WSL** | Windows | `dycov_dist.tar.gz` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
 
 ---
 
-## 2. Installation Methods
+## 1. Prerequisites (Check your files)
 
-There are two ways to install Dycov. **Method A (Docker)** is highly recommended because it guarantees the tool runs in a controlled environment compatible with Windows and Linux, without library conflicts.
+Before starting, create a clean folder on your computer (e.g., `Dycov_Install/`) and place the required files there.
 
-### Method A: Docker Installation (Recommended)
+**If using Method 1 (Linux Native):**
+You only need the script `linux_install.sh`.
+* *Requirement:* You must have an active internet connection so the script can download the solver (Dynawo) and Python dependencies.
 
-Follow these steps exactly in order.
+**If using Methods 2, 3, or 4 (Docker / WSL):**
+You need the **distribution artifacts** (typically from the Release page). Ensure you have these three files in the same directory:
+* `dycov_dist.tar.gz` (The heavy application package; do not unzip this manually).
+* `import_image.sh` (Helper script for Linux Docker).
+* `run_dycov_docker.sh` (Helper script for Linux Docker).
 
-#### Step 1: Prepare the Scripts
-By default, Linux prevents scripts from running for security reasons. You must grant them "execution permissions".
-Open your terminal in the folder where you downloaded the files and run:
+---
 
+## 2. Installation Instructions
+
+Choose **ONE** of the following methods that best fits your environment.
+
+### Method 1: Linux Native (Automatic Installer)
+*Best for: Linux users who want a standard installation without using Docker containers.*
+
+1.  Download `linux_install.sh` to your folder.
+2.  Give it execution permissions and run it:
+    ```bash
+    chmod +x linux_install.sh
+    ./linux_install.sh
+    ```
+    *What this does:* The script will create a local `dycov` folder, download the correct version of the Dynawo solver, set up a private Python virtual environment, and install the tool.
+
+3.  **To use the tool:** Since this is a local installation, you must "activate" the tool every time you open a new terminal window:
+    ```bash
+    source dycov/activate_dycov
+    ```
+    (You will see `(dycov)` appear in your terminal prompt when active).
+
+---
+
+### Method 2: Linux via Docker
+*Best for: Linux servers or users who prefer isolated containers to keep their system clean.*
+
+**Step 1: Permissions**
+Linux blocks scripts by default. Grant execution permissions to the helper scripts:
 ```bash
 chmod +x import_image.sh
 chmod +x run_dycov_docker.sh
 ```
 
-#### Step 2: Import the Application Image
-You need to load the `dycov_dist.tar.gz` file into your Docker system.
-**Important:** Do not use the standard `docker load` command. You must use the provided script because it restores critical configuration settings (Metadata) that are specific to this tool.
-
-Run the following command:
-
+**Step 2: Import the Image**
+You must use the provided script instead of the standard `docker load`. This script restores critical metadata (like the ENTRYPOINT) that allows the tool to run automatically.
 ```bash
 ./import_image.sh dycov_dist.tar.gz
 ```
 
-*If you receive a "Permission denied" error regarding the docker socket, try running it with sudo:*
+**Step 3: Run**
+When running Docker on Linux, files created by the container often belong to the "root" user, making them impossible to delete or edit later. To fix this, we map your user ID into the container.
 
 ```bash
-sudo ./import_image.sh dycov_dist.tar.gz
+# 1. Create a folder for your simulation projects if you haven't already
+mkdir my_project
+
+# 2. Run the tool mapping your current User ID (-u) and Group ID (-g)
+./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_project/
 ```
 
-#### Step 3: Run Dycov
-To use the tool, you will "enter" the Docker container.
-A common issue users face is that files created inside Docker are locked (owned by the `root` user). To prevent this, we will tell Docker to use your current User ID.
+---
 
-1.  Create a folder where you will store your simulation projects (e.g., `my_dycov_work`):
-    ```bash
-    mkdir my_dycov_work
-    ```
+### Method 3: Windows via Docker Desktop
+*Best for: Windows users who already use Docker Desktop and are comfortable with PowerShell.*
 
-2.  Launch the tool mapping your user ID and group ID:
-    ```bash
-    ./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_dycov_work/
-    ```
+**Step 1: Import (PowerShell)**
+Open PowerShell in the folder containing `dycov_dist.tar.gz`. You need to import the image while manually restoring the configuration.
+*Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
 
-**Explanation of the command:**
-* `-u $(id -u)`: Tells Dycov to run as your current user ID.
-* `-g $(id -g)`: Tells Dycov to run as your current group ID.
-* `my_dycov_work/`: This is the folder that will be accessible inside the tool.
+```powershell
+# 1. Define variables with escaped quotes (Crucial for PowerShell)
+$DycovPath = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+$DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
 
-Once the command finishes, your terminal prompt will change. You are now inside Dycov and ready to run simulations.
+# 2. Import the image applying the changes
+docker import --change $DycovPath --change $DycovEntry .\dycov_dist.tar.gz dycov:latest
+```
+
+**Step 2: Run**
+Launch the container mapping your current directory (`${PWD}`) so the tool can see your files.
+```powershell
+docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:latest
+```
 
 ---
 
-### Method B: Linux Native Installation (Advanced)
+### Method 4: Windows via Standalone WSL (No Docker)
+*Best for: Windows users without Docker Desktop. This installs Dycov as a separate "App" in your Windows Subsystem for Linux.*
 
-If you cannot use Docker and have a compatible Linux operating system (e.g., Ubuntu, Debian), you can install the tool directly.
+**Step 1: Install**
+Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
+```powershell
+# Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
+# This creates a folder C:\DycovApp containing the system files.
+wsl --import DycovApp C:\DycovApp .\dycov_dist.tar.gz
+```
 
-1.  Download the `linux_install.sh` script from the repository.
-2.  Make it executable and run it:
-    ```bash
-    chmod +x linux_install.sh
-    ./linux_install.sh
-    ```
-    *The script will automatically download the Dynawo solver, create a Python virtual environment, and install all dependencies.*
-
-3.  Every time you want to use the tool, you must activate the environment:
-    ```bash
-    source dycov/activate_dycov
-    ```
+**Step 2: Run**
+To start the tool, you simply launch this specific distribution:
+```powershell
+wsl -d DycovApp
+```
+*Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
 
 ---
 
-## 3. GFM Configuration and Usage Guide
+## 3. GFM Configuration & Usage
 
-This section explains how to configure the Grid Forming (GFM) simulations. Users often need to modify physical parameters, scenarios, or simulation times before running the tool.
+Users typically want to use the GFM (Grid Forming) capabilities. This requires configuring specific files **before** running the simulation commands.
 
 ### Key Configuration Files
+When you prepare a study in your working directory (e.g., inside `examples/`), you will see several `.ini` files. Here is what they control:
 
-All configuration files are located inside your example or project folder. You must edit these files using a text editor (like Notepad, VS Code, or Nano) **before** running the command.
-
-| File Name | Purpose | What to Modify |
+| File | Purpose | Detailed Description |
 | :--- | :--- | :--- |
-| **Producer.ini** | Physical Generator Parameters | Modify this file to change physical constants such as Inertia (H) or Damping (D). |
-| **config.alias** | Operating Point | Edit this file to change the initial Operating Conditions (Voltage, Power, etc.) for the simulation. |
-| **PCS_*.ini** | PCS Scenarios | There is one file per PCS scenario (e.g., `PCS_RTE-IGFM1.ini`). Edit these to change specific control scenarios. |
-| **config.ini** | Global Settings | Modify the `SCR` (Short Circuit Ratio) value here. Look for `SCRmax` or similar variables. |
+| **`Producer.ini`** | Physical Parameters | This represents the physical generator. Modify values here for **H** (Inertia), **D** (Damping), and other machine constants. |
+| **`config.alias`** | Operating Conditions | This file maps variable names to values. Modify this to change the initial **Active Power (P)**, **Voltage (U)**, or **Reactive Power (Q)** for the simulation start point. |
+| **`PCS_*.ini`** | Control Scenarios | Defines specific control scenarios (e.g., `PCS_RTE-IGFM1.ini`). Edit these files to change parameters specific to the controller logic. |
+| **`config.ini`** | Global Config | **Critical:** This is where you set the grid strength. Look for **`SCRmax`** (Short Circuit Ratio) to adjust the grid stiffness. |
 
-### Important Note on Units
-Please be extremely careful when reading or editing the **PCS Description.ini** files. There is a difference between the internal calculation units and the display units.
+### Advanced Configuration (Source Code)
+* **Simulation Time:** The duration of the simulation is currently hardcoded in the source file `src/dycov/gfm/constants.py`.
+* *Warning:* If you are using Docker or WSL (Methods 2, 3, 4), this file is inside the image. You cannot easily edit it. If you need longer simulations, please request a parameter update. If using Method 1 (Linux Native), you can edit this file directly in your installation folder.
 
-* **Internal Calculations:** The tool uses **Radians per second (rad/s)** for calculations.
-* **Plots and Legends:** The output graphs often display **Degrees (°)** for readability.
-
-**Example Calculation:**
-If you see a formula like `DeltaPhase = 0.3 * (Xeff + 1/SCRmax)`, ensure you understand that `DeltaPhase` is being calculated for the solver (likely in rads) even if the final plot shows degrees.
+### A Note on Units ⚠️
+Please be extremely careful with unit definitions in the `PCS Description.ini` files.
+* **Internal Calculation:** The solver always uses **Radians per second (rad/s)**.
+* **Plots/Legend:** The output graphs often convert this to **Degrees (°)** for readability.
+* *Example:* If you see a formula like `DeltaPhase = ...`, ensure the inputs match the expected units (rad vs deg).
 
 ---
 
 ## 4. Running a Simulation
 
-Once you have edited your configuration files (`Producer.ini`, `config.ini`, etc.), you are ready to generate the envelopes.
-
-1.  Ensure you are inside the Docker container (or have activated the Linux environment).
-2.  Navigate to your working directory.
-3.  Run the generation command.
+Once you have edited your configuration files, you are ready to generate the results (envelopes).
 
 **Standard Command:**
 ```bash
@@ -138,22 +163,15 @@ dycov generateEnvelopes -i GFM_Fusion/Producer.ini -e -o ../Envelopes/Fusion
 ```
 
 **Command Breakdown:**
-* `dycov generateEnvelopes`: The main command to start the process.
-* `-i GFM_Fusion/Producer.ini`: The **Input** file. This points to your main producer configuration.
-* `-e`: Enables the "Envelope" calculation mode.
-* `-o ../Envelopes/Fusion`: The **Output** directory where the results and plots will be saved.
+* `dycov generateEnvelopes`: The command to start the Grid Forming calculation module.
+* `-i GFM_Fusion/Producer.ini`: The **Input**. This must point to your main `Producer.ini` file.
+* `-e`: This flag tells the tool to calculate the "Envelopes" (the min/max boundaries).
+* `-o ../Envelopes/Fusion`: The **Output**. Specifies the folder where the results (CSV files and Plots) will be saved.
 
----
-
-## Troubleshooting
-
-**Problem: "Permission Denied" when trying to open result files.**
-* **Cause:** You likely ran the Docker container without specifying your user ID. The files were created by `root`.
-* **Solution:**
-    1.  Exit the container.
-    2.  Run `sudo chown -R $USER:$USER my_dycov_work/` to fix current file permissions.
-    3.  Next time, always use the `-u $(id -u)` and `-g $(id -g)` flags as shown in the Installation Step 3.
-
-**Problem: "Image dycov:latest not found"**
-* **Cause:** You skipped the import step.
-* **Solution:** Run `./import_image.sh dycov_dist.tar.gz` before trying to start the tool.
+**Troubleshooting Permissions (Docker users):**
+If you see "Permission Denied" when trying to open the result files after the simulation:
+1.  Run this command in your host terminal (outside Docker) to reclaim ownership:
+    ```bash
+    sudo chown -R $USER:$USER my_project_folder/
+    ```
+2.  Next time, remember to use `-u $(id -u)` when launching the container (see Method 2).
