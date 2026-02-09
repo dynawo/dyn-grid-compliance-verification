@@ -322,15 +322,18 @@ class GFMCalculator:
             - upper_envelope_limited: The final, limited upper envelope.
         """
 
+        limit_max = max_power - tunnel_value
+        limit_min = min_power + tunnel_value
+
         if use_opposite_signs:
             # This checks if the initial power and the angle change have opposite signs.
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * lower_envelope_unlimited,
-                        -1 + tunnel_value,
+                        limit_min, 
                     ),
-                    1 - tunnel_value,
+                    limit_max,
                 )
                 upper_envelope_limited = np.minimum(
                     np.maximum(
@@ -339,7 +342,6 @@ class GFMCalculator:
                     ),
                     max_power,
                 )
-
             else:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
@@ -351,23 +353,24 @@ class GFMCalculator:
                 upper_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * upper_envelope_unlimited,
-                        -1 + tunnel_value,
+                        limit_min,
                     ),
-                    1 - tunnel_value,
+                    limit_max,
                 )
 
         else:
+            # Standard logic (used in most calculators)
             lower_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - sign * lower_envelope_unlimited,
-                    -1 + tunnel_value,
+                    limit_min, 
                 ),
-                1 - tunnel_value,
+                limit_max,     
             )
             upper_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - 1 * sign * upper_envelope_unlimited,
-                    min_power,
+                    min_power, 
                 ),
                 max_power,
             )
