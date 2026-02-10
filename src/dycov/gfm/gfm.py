@@ -82,6 +82,7 @@ class GridForming:
 
         # Dictionary to hold extra curves if 'save_all_envelopes' is True
         extra_envelopes = None
+        title = f"{pcs_name}.{bm_name}.{oc_name}"
 
         if hybrid_params:
             LOGGER.info(
@@ -94,9 +95,29 @@ class GridForming:
                 calculator, time_array, event_time, d_over, h_over, x_eff
             )
 
+            producer = parameters.get_producer()
+            producer_config = producer.get_config() if producer else None
+
+            save_ini_dump(
+                path=working_path / f"{title}_ini_dump_overdamped.txt",
+                parameters=parameters,
+                producer_config=producer_config,
+                calculator=calculator,
+            )
+
             # Execution 2: Underdamped Parameters
             _, pcc_under, up_under, low_under = self._calculate_envelopes(
                 calculator, time_array, event_time, d_under, h_under, x_eff
+            )
+
+            producer = parameters.get_producer()
+            producer_config = producer.get_config() if producer else None
+
+            save_ini_dump(
+                path=working_path / f"{title}_ini_dump_underdamped.txt",
+                parameters=parameters,
+                producer_config=producer_config,
+                calculator=calculator,
             )
 
             # Merging: Maximum of upper envelopes, Minimum of lower envelopes
@@ -148,7 +169,6 @@ class GridForming:
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
         # Export and Plot (passing extra_envelopes)
-        title = f"{pcs_name}.{bm_name}.{oc_name}"
         self._export_csv(
             working_path,
             title,
@@ -160,15 +180,16 @@ class GridForming:
             extra_envelopes=extra_envelopes,
         )
 
-        producer = parameters.get_producer()
-        producer_config = producer.get_config() if producer else None
+        if not hybrid_params:
+            producer = parameters.get_producer()
+            producer_config = producer.get_config() if producer else None
 
-        save_ini_dump(
-            path=working_path / f"{title}_ini_dump.txt",
-            parameters=parameters,
-            producer_config=producer_config,
-            calculator=calculator,
-        )
+            save_ini_dump(
+                path=working_path / f"{title}_ini_dump.txt",
+                parameters=parameters,
+                producer_config=producer_config,
+                calculator=calculator,
+            )
 
         self._plot(
             working_path,
