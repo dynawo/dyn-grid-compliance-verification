@@ -36,6 +36,21 @@
 #     Developed by Grupo AIA
 #
 
+# --- prepare console fds early (robust under pipes / non-tty) ---
+if [ -t 1 ]; then
+  exec 6>/dev/tty || exec 6>&1
+else
+  exec 6>/dev/null
+fi
+
+# Optional: prepare a backup for stderr similar to fd6 (for cleanup restore)
+if [ -t 2 ]; then
+  exec 7>/dev/tty || true
+else
+  exec 7>/dev/null
+fi
+# --- end console fd setup ---
+
 # For saner programming:
 set -o nounset -o noclobber
 set -o errexit -o pipefail
@@ -43,14 +58,8 @@ set -o errexit -o pipefail
 # Configuration vars that depend on the release:
 # --------------------------------------------------------------------------------------------------------
 RELEASE_TAG="v0.9.1"
-read -p "Do you wish to install Dynawo? " yn
-case $yn in
-    [Yy]* ) INSTALL_DYNAWO="yes";;
-    [Nn]* ) INSTALL_DYNAWO="no";;
-esac
-
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
-DYNAWO_CHECKSUM="2e2f36920d729413126ae3dbea94e34e11b6ab33"
+DYNAWO_CHECKSUM="7ad411544e41e791e4b21e8bfc304fdfa9f2988d"
 DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$RELEASE_TAG/$DYNAWO_ZIP_FILE"
 # DEBUG: when testing which Dynawo version to use for the release, comment out the previous line and use these instead:
 #DYNAWO_ZIP_URL="https://github.com/dynawo/dynawo/releases/download/nightly/$DYNAWO_ZIP_FILE"
@@ -64,8 +73,7 @@ TMP_LOCAL_REPO=$INSTALL_DIR/repo_dycov
 VENV="dycov_venv"
 DATETIME=$(date '+%Y%m%d_%H%M%S')
 LOG=$INSTALL_DIR/installation_$DATETIME.log
-
-
+INSTALL_DYNAWO="yes"
 
 # Some useful functions
 RED="\\033[1;31m"  # ANSI color escape sequences
@@ -111,8 +119,6 @@ find_python_cmd()
     done
 }
 
-
-
 #######################################
 # The real meat starts here
 #######################################
@@ -125,9 +131,7 @@ fi
 mkdir "$INSTALL_DIR"
 
 # Set up redirections to the log file
-exec 6>&1      # Link file descriptor #6 with stdout. Saves stdout.
 exec >"$LOG"   # stdout redirected to the log file
-exec 7>&2      # Link file descriptor #7 with stderr. Saves stderr.
 exec 2>&1      # stderr redirected to stdout
 # Reminder of how to restore stderr and stdout in case you need it elsewhere in the script:
 #exec 1>&6 6>&-    # Restore stdout and close fd 6
@@ -164,6 +168,13 @@ color_msg ""
 #####################################################################
 # Step 1: download Dynawo and unpack under the installation tree
 #####################################################################
+color_msg "Do you wish to install Dynawo? [Y/n]"
+read -r yn < /dev/tty
+case $yn in
+    [Yy]* ) INSTALL_DYNAWO="yes";;
+    [Nn]* ) INSTALL_DYNAWO="no";;
+esac
+
 if [ "$INSTALL_DYNAWO" == "yes" ]; then
     color_msg ""
     color_msg_nnl "Downloading Dynawo from the DyCoV repository (~ 150 MB)... "
