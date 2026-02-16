@@ -94,7 +94,7 @@ with its dependencies, will be placed in a *Python virtual environment* inside y
 1. Run the following command:
 
    ```bash
-   curl https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/linux_install.sh | bash
+   curl https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/linux_install.sh | bash
    ```
 
    This will download the lastest version of the Python package,
