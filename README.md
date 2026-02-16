@@ -122,7 +122,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/linux_install.sh | bash
    ```
 
    This script will install the DyCoV tool under your current directory in `$PWD/dycov`. 
@@ -157,7 +157,7 @@ The DyCoV application is now ready to use.
 > interested in the details of what is installed in the Operating System
 > (Dynawo, Python, LaTeX).
 
-1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/DyCoV_win_Installer.exe).
+1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/DyCoV_win_Installer.exe).
 
    In order to install the application, it is essential that the user has administrator rights. If the user is an administrator, there are no problems in unblocking the executable:
    

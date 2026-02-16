@@ -1,7 +1,7 @@
 [CustomMessages]
 #define PythonVersion "11"
 #define PythonSubVersion "6"
-#define DyCoVVersion "0.8.1"
+#define DyCoVVersion "0.9.2"
 #define MiktexVersion "24.1"
 #define SourceDir "..\.."
 ; SourceDir directory should contain the following items:
