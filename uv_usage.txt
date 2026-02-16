@@ -1,0 +1,47 @@
+uv: A Brief Overview
+
+---
+
+## What is uv?
+
+uv is an extremely fast Python package installer, resolver, and manager, written in Rust. Developed by Astral (the creators of ruff), it's designed as an all-in-one, drop-in replacement for tools like pip, venv, virtualenv, and pip-tools.
+
+---
+
+## Key Advantages
+
+* **Extreme Speed:** It is orders of magnitude faster than traditional tools like pip, especially for projects with complex dependencies. This is due to its Rust core and efficient global caching mechanisms.
+
+* **All-in-One Tool:** It unifies the functionality of multiple tools into a single command-line interface (`uv`). It handles package installation, virtual environment management, and dependency locking/syncing.
+
+* **Full Compatibility:** It is a drop-in replacement that understands existing `pyproject.toml` and `requirements.txt` files without modification.
+
+* **Global Cache:** It maintains a global cache of downloaded packages, which are shared across all your projects. This eliminates redundant downloads and speeds up the creation of new environments.
+
+---
+
+## Core Concepts for Use
+
+* **Role:** uv manages packages and environments, not Python versions. You still need a separate Python installation and can use tools like `pyenv` to manage different Python versions.
+
+* **Recommended Workflow:** The best practice is to define project dependencies in `pyproject.toml`.
+
+* **Reproducible Environments:** For production, the standard workflow is to "compile" your abstract dependencies into a locked file with exact versions, and then "sync" your environment from that file.
+    1.  **Compile:** `uv pip compile pyproject.toml -o requirements.txt`
+    2.  **Sync:** `uv pip sync -r requirements.txt`
+
+---
+
+## Essential Commands
+
++--------------------------------+-----------------------------------------------+-------------------------------------------------+
+| Task                           | Old Command (venv/pip)                        | New Command (uv)                                |
++--------------------------------+-----------------------------------------------+-------------------------------------------------+
+| Create Virtual Environment     | python -m venv .venv                          | uv venv                                         |
+| Activate Environment           | source .venv/bin/activate                     | source .venv/bin/activate (no change)           |
+| Install Dependencies           | pip install -e .[dev]                         | uv pip install -e .[dev]                         |
+| Reproducible Installs          | pip install -r requirements.txt               | uv pip sync -r requirements.txt                 |
+| Freeze Dependencies            | pip freeze > requirements.txt                 | uv pip freeze > requirements.txt                |
+| Compile Dependencies           | pip-compile ... (with pip-tools)              | uv pip compile pyproject.toml -o reqs.txt       |
+| Uninstall a package            | pip uninstall <package>                       | uv pip uninstall <package>                      |
++--------------------------------+-----------------------------------------------+-------------------------------------------------+

@@ -1,104 +1,139 @@
 # A pyproject.toml based on the latest standards for packaging (PEPs 517, 518,
 # 621), which decouple package building from package internal structure and
-# installation.  In our case we will continue to use setuptools as the
-# underlying build back-end, but the new standard allows us to:
+# installation. In our case we will continue to use setuptools as the
+# underlying build back-end.
 #
-#   - get rid of setup.py and setup.cfg
-#   - get rid of MANIFEST.in (include data files here via the package-data entry)
-#   - install less things in our venv: only "pip" and "build" are needed, and
-#     then "build" will install anything else it needs (setuptools and wheel) in
-#     a temporary venv at build time.
+# Using `uv` (https://github.com/astral-sh/uv), the main steps for setting up a
+# development environment are:
+#    uv venv dycov_venv
+#    source dycov_venv/bin/activate
+#    uv pip install -e .[dev,test]
+#
 #
 # Official specs (as of 2024):
 #    https://packaging.python.org/en/latest/specifications/pyproject-toml/
 #
-#
-# Reminder of the main steps for building the package:
-#    python3 -m venv dse_venv
-#    source dse_venv/bin/activate
-#    pip install --upgrade pip build
-#    python -m build --wheel
-#
 
 
 [build-system]
-requires = ["setuptools>=65"]
+requires = ["setuptools>=65", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
 [project]
-# Metadata:
 name = "dycov"
-version = "0.9.1"
+version = "0.8.1"
 description = "A tool for automating the verification of dynamic grid compliance requirements for solar, wind, and storage farms, including RMS model validation."
 authors = [
-    {name="Guiu Oms", email="omsg@aia.es"},
-    {name="Marcos de Miguel", email="demiguelm@aia.es"},
-    {name="Jose Luis Marin", email="marinjl@aia.es"}
+    { name = "Guiu Oms", email = "omsg@aia.es" },
+    { name = "Marcos de Miguel", email = "demiguelm@aia.es" },
+    { name = "Jose Luis Marin", email = "marinjl@aia.es" }
 ]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MPL-2.0"  # SPDX identifier
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 keywords = ["Power Systems", "Dynamic modeling", "verification", "validation"]
 
 # Use the official classifiers published by PyPI (PEP 301): https://pypi.org/classifiers/
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent"
 ]
-urls = {"Code repo"="https://github.com/dynawo/dyn-grid-compliance-verification", "Bug tracker"="https://github.com/dynawo/dyn-grid-compliance-verification"}
 
-# Required packages: here we declare only the direct dependencies. To see all the cascading
-# dependencies, pip-install pipdeptree and run "pipdeptree -p dycov".
+# Required packages: here we declare only the direct dependencies.
 dependencies = [
     "comtrade>=0.0.10",		# MIT License
-    "fpdf>=1.7.2",		# GNU Lesser General Public License v3 (LGPLv3)
+    "fpdf>=1.7.2",		    # GNU Lesser General Public License v3 (LGPLv3)
     "Jinja2>=3.1.2",		# BSD License
-    "lxml>=4.6.3",		# BSD License
+    "lxml>=4.6.3",		    # BSD License
     "matplotlib>=3.4.0",	# Python Software Foundation License
     "numpy>=1.21.0",		# BSD License
     "pandas>=1.3.0",		# BSD License
     "plotly>=5.20.0",		# MIT License
-    "SciPy>=1.9.3",		# BSD License
+    "SciPy>=1.9.3",		    # BSD License
     "colorama>=0.4.6",		# BSD License
+    "kaleido>=1.0.0"        # MIT License
+]
+
+# Optional dependencies for development and testing.
+# Install with: uv pip install -e .[dev,test]
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+dev = [
+    "ruff",
+    "sphinx",
+    "jupyter",
 ]
 
 
-# Data files: we now manage them here, instead of the MANIFEST.in file.
-# See: https://setuptools.pypa.io/en/latest/userguide/datafiles.html
-# The former content of the MANIFEST.in file was:
-#   recursive-include src/dycov/report/templates *
-#   recursive-include src/dycov/templates *
-#   recursive-include src/dycov/model_lib *
-#   recursive-include src/dycov *.ini
-#   include src/dycov/dynawo/Vsx64.cmd
-#
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = [
+    "*/__pycache__",
+    "*.tests",
+    "*.tests.*"
+]
 
 [tool.setuptools.package-data]
-dcgv = ["report/templates", "templates", "model_lib", "*.ini", "dynawo/Vsx64.cmd"]
-
+"dycov" = [
+    "report/templates/*",
+    "templates/*",
+    "model_lib/*",
+    "**/*.ini",
+    "curves/dynawo/tooling/Vsx64.cmd"
+]
+"dycov.templates.reports" = ["*.py", "*.json", "*.pdf"]
 
 # Entry points and automatic script creation:
 [project.scripts]
 dycov = "dycov.launchers:dycov"
 
 
-# Importer tool
-[tool.isort]
-multi_line_output = 3
-line_length = 99
-include_trailing_comma = true
-
-
-# Code-formatting tool:
-[tool.black]
+# Code linting and formatting tool: Ruff (replaces .flake8, isort, and black)
+# See: https://docs.astral.sh/ruff/
+[tool.ruff]
+# Set the maximum line length, consistent with the previous .flake8 config.
 line-length = 99
 
+# Exclude directories, as defined in .flake8.
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+]
 
-# Code-linting tool:
-# [tool.flake8]
-# (flake8 doesn't support pyproject.toml yet, so we use a .flake8 file at the project root)
-# TODO: migrate to Astral's Ruff: https://docs.astral.sh/ruff/
+# Set the Python version to target for compatibility.
+# The project requires >=3.9
+target-version = "py39"
+
+# Define the source directory.
+src = ["src"]
+
+[tool.ruff.lint]
+# Enable Pyflakes (F) and pycodestyle (E, W) rules to replace flake8's core.
+# We also add isort (I) to handle import sorting.
+select = ["E", "F", "W", "I"]
+
+# Ignore specific error codes, as defined in .flake8.
+ignore = ["E203", "W605"]
+
+[tool.ruff.lint.isort]
+# Identify the local package as first-party to sort imports correctly.
+# The project name is "dycov".
+known-first-party = ["dycov"]
+
+[tool.ruff.format]
+# Use double quotes, as specified by 'inline-quotes = double' in .flake8.
+quote-style = "double"
+
+[project.urls]
+"Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+"Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
