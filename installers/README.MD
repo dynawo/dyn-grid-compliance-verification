@@ -4,14 +4,14 @@ Welcome to Dycov (Dynamic Coverage Tool). This document serves as a complete, st
 
 ## Installation Overview
 
-There are **four ways** to install Dycov depending on your Operating System and preferences. Please verify which file you have (`linux_install.sh` OR `dycov_dist.tar.gz`) before starting.
+There are **four ways** to install Dycov depending on your Operating System and preferences. Please verify which file you have (`linux_install.sh` OR `dycov_rawimage.tar.gz`) before starting.
 
 | Method | OS | Required File | Description |
 | :--- | :--- | :--- | :--- |
-| **1. Windows WSL** | Windows | `dycov_dist.tar.gz` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
-| **2. Windows Docker** | Windows | `dycov_dist.tar.gz` | Runs inside Docker Desktop. Requires familiarity with PowerShell. |
+| **1. Windows WSL** | Windows | `dycov_rawimage.tar.gz` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
+| **2. Windows Docker** | Windows | `dycov_rawimage.tar.gz` | Runs inside Docker Desktop. Requires familiarity with PowerShell. |
 | **3. Linux Native** | Linux | `linux_install.sh` | **No Docker.** It automatically downloads Dynawo and installs Dycov directly into your system. Requires internet. |
-| **4. Linux Docker** | Linux | `dycov_dist.tar.gz` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
+| **4. Linux Docker** | Linux | `dycov_rawimage.tar.gz` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
 
 ---
 
@@ -21,7 +21,7 @@ Before starting, create a clean folder on your computer (e.g., `Dycov_Install/`)
 
 **If using Methods 1, 2, or 4 (Docker / WSL):**
 You need the **distribution artifacts** (typically from the Release page). Ensure you have these three files in the same directory:
-* `dycov_dist.tar.gz` (The heavy application package; do not unzip this manually).
+* `dycov_rawimage.tar.gz` (The heavy application package; do not unzip this manually).
 * `import_image.sh` (Helper script for Linux Docker).
 * `run_dycov_docker.sh` (Helper script for Linux Docker).
 
@@ -43,7 +43,7 @@ Open PowerShell. We will "import" the file as a new Linux distribution named "Dy
 ```powershell
 # Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
 # This creates a folder C:\DycovApp containing the system files.
-wsl --import DycovApp C:\DycovApp .\dycov_dist.tar.gz
+wsl --import DycovApp C:\DycovApp .\dycov_rawimage.tar.gz
 ```
 
 **Step 2: Run**
@@ -59,7 +59,7 @@ wsl -d DycovApp
 *Best for: Windows users who already use Docker Desktop and are comfortable with PowerShell.*
 
 **Step 1: Import (PowerShell)**
-Open PowerShell in the folder containing `dycov_dist.tar.gz`. You need to import the image while manually restoring the configuration.
+Open PowerShell in the folder containing `dycov_rawimage.tar.gz`. You need to import the image while manually restoring the configuration.
 *Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
 
 ```powershell
@@ -68,7 +68,7 @@ $DycovPath = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/
 $DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
 
 # 2. Import the image applying the changes
-docker import --change $DycovPath --change $DycovEntry .\dycov_dist.tar.gz dycov:latest
+docker import --change $DycovPath --change $DycovEntry .\dycov_rawimage.tar.gz dycov:latest
 ```
 
 **Step 2: Run**
@@ -111,7 +111,7 @@ chmod +x run_dycov_docker.sh
 **Step 2: Import the Image**
 You must use the provided script instead of the standard `docker load`. This script restores critical metadata (like the ENTRYPOINT) that allows the tool to run automatically.
 ```bash
-./import_image.sh dycov_dist.tar.gz
+./import_image.sh dycov_rawimage.tar.gz
 ```
 
 **Step 3: Run**
@@ -175,3 +175,54 @@ If you see "Permission Denied" when trying to open the result files after the si
     sudo chown -R $USER:$USER my_project_folder/
     ```
 2.  Next time, remember to use `-u $(id -u)` when launching the container (see Method 2).
+
+
+
+## 5. Native Windows installation for developers (not recommended)
+
+> [!WARNING]  
+> Native Windows execution is not recommended because Dynawo, LaTeX tools, and several
+> system‑level dependencies are Linux‑oriented.
+> Use this option only if you cannot use WSL or Docker.
+
+If you still prefer to set up DyCoV natively in Windows:
+
+1.  Clone the Repository using your favorite Git client (e.g., GitHub Desktop or `git-scm`).
+    ```bash
+    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
+    cd dycov_repo
+    ```
+
+2.  Ensure you have `uv` installed. You can install it via pip:
+    ```bash
+    pip install uv
+    ```
+
+3.  Set up the virtual environment and install dependencies.
+    - Open a **CMD terminal** or **PowerShell**.
+    - Navigate to the root folder of the cloned repository.
+    - Create a new virtual environment:
+      ```winbatch
+      uv venv dycov_venv
+      ```
+    - Activate the virtual environment:
+      ```winbatch
+      dycov_venv\Scripts\activate
+      ```
+    - Install the package in editable mode with all development and test dependencies:
+      ```winbatch
+      uv pip install -e .[dev,test]
+      ```
+
+4.  Verify Installation. This should display the help message for the tool.
+    ```winbatch
+    dycov -h
+    ```
+
+5.  Pre-Execution Compilation. Before running the tool for the first time, compile the tool's resources:
+    ```winbatch
+    dycov compile
+    ```
+
+The DyCoV application is now ready for development.
+
