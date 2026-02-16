@@ -89,14 +89,13 @@ comparing them).
 ### System requirements
 
 The requirements at the OS-level are rather minimal: one just needs a recent
-Linux distribution in which you should install Dyna&omega;o's requirements, plus
-**LaTeX** and **Python**. If you do not have any strong preference, we would
+Linux distribution. If you do not have any strong preference, we would
 recommend Debian 12 or higher, as well as Ubuntu 22.04 LTS or higher.
 
 To be more specific, we explicitly list here the packages to be installed,
 assuming a Debian/Ubuntu system:
 
-* Install the following packages, required by Dyna&omega;o:
+* Install the following packages (required by Dyna&omega;o):
   ```bash
   apt install curl unzip gcc g++ cmake
   ```
@@ -108,15 +107,9 @@ assuming a Debian/Ubuntu system:
   ```
 
 * Install a basic Python installation (version 3.9 or higher), containing at
-  least `pip` and the `venv` module:
+  least `pip`, `venv` and `git`:
    ```bash
-   apt install python3-minimal python3-pip python3-venv
-   ```
-
-* Install git (the current installer relies on building the Python package from
-  sources):
-   ```bash
-   apt install git
+   apt install python3-minimal python3-pip python3-venv git
    ```
 
 Note that the tool itself is a Python package. However, this package and all of
@@ -132,15 +125,15 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/linux_install.sh | bash
    ```
 
-   This script will install the DyCoV tool, together with a matching version of
-   Dyna&omega;o, under your current directory in `$PWD/dycov`.  It will do so by
-   cloning the latest stable release and building & installing the application
-   (and all of its dependencies, such as NumPy, etc.) under a Python virtual
-   environment.
+   This script will install the DyCoV tool under your current directory in `$PWD/dycov`. 
+   It will automatically:
+   * Download and install a matching version of Dyna&omega;o (if confirmed by the user).
+   * Clone the latest stable release.
+   * Build & install the application (and all of its dependencies) using `uv` inside a virtual environment.
 
-2. Next, you must activate the virtual environment that has just been created: 
+2. Next, you must activate the virtual environment using the **wrapper script** generated in the installation folder. This is important to ensure Dyna&omega;o is found in the system PATH:
    ```bash
-   source $PWD/dycov/activate_dycov
+   source dycov/activate_dycov
    ```
 
 3. The tool is used via a single command `dycov` having several subcommands. Quickly
@@ -150,14 +143,6 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
    dycov -h
    ```
 
-4. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```bash
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
-   
 The DyCoV application is now ready to use.
 
 
@@ -170,9 +155,9 @@ The DyCoV application is now ready to use.
 > The Windows installer described here will install not only the DyCoV tool, but
 > also all of the other requirements for you. Read the next section if you are
 > interested in the details of what is installed in the Operating System
-> (Dynawo, C++ compiler, Python, LaTeX).
+> (Dynawo, Python, LaTeX).
 
-1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/DyCoV_win_Installer.exe).
+1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/DyCoV_win_Installer.exe).
 
    In order to install the application, it is essential that the user has administrator rights. If the user is an administrator, there are no problems in unblocking the executable:
    
@@ -207,14 +192,6 @@ The DyCoV application is now ready to use.
    dycov -h
    ```
 
-5. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```winbatch
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
-   
 The DyCoV application is now ready to use.
 
 
@@ -241,15 +218,18 @@ To be more specific, we explicitly list here the packages to be installed:
   Guide](https://dynawo.github.io/install/).
    - **Nightly Version**: Download the **Nightly version** of Dynawo from the
      repository to ensure you have the latest features and updates.
-   - During installation, you will also need the following tools:
-     - **CMake**: CMake is used to configure the build process for
-       Dynawo. Download it from [cmake.org](https://cmake.org/download/).
-     - **Build Tools for Visual Studio 2019**: the Visual Studio compiler is
-       required to compile custom Modelica models in Dynawo. You can download
-       the free **Community Edition** of these tools from
-       [here](https://visualstudio.microsoft.com/vs/older-downloads/). During
-       the installation, select only the _"Desktop development with C++"_
-       workload.
+
+> [!NOTE]  
+> On Windows, you can either run Dynaωo with distribution models, in this case, 
+> nothing additional is required. But if you want to add new models, you will need:
+>   - **CMake**: CMake is used to configure the build process for
+>     Dynawo. Download it from [cmake.org](https://cmake.org/download/).
+>   - **Build Tools for Visual Studio 2019**: the Visual Studio compiler is
+>     required to compile custom Modelica models in Dynawo. You can download
+>     the free **Community Edition** of these tools from
+>     [here](https://visualstudio.microsoft.com/vs/older-downloads/). During
+>     the installation, select only the _"Desktop development with C++"_
+>     workload.
 
 * Install LaTeX. You can choose between these two LaTeX distributions:
    - **MiKTeX**: Download it from [MiKTeX Download](https://miktex.org/download).
@@ -287,7 +267,7 @@ mandatory to provide _reference curves_ as well as a model or producer curves.
 
 Run the command with option `--help` (or `-h`) to get a quick overview of the
 inputs you need to provide:
-```
+```bash
 usage: dycov validate [-h] [-d] [-l LAUNCHER_DWO]
                      [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
                      [-o RESULTS_DIR] [-od]
@@ -325,7 +305,7 @@ _Power Park Modules_ (i.e. Wind and PV farms).
 
 Run the command with option `--help` (or `-h`) to get a quick overview of the
 inputs you need to provide:
-```
+```bash
 usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
                     [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
@@ -369,7 +349,7 @@ examples.
 
 ## Model Validation Example:
 
-```
+```bash
 dycov validate $PWD/dycov/examples/Model/Wind/IEC2015/ReferenceCurves -m $PWD/dycov/examples/Model/Wind/IEC2015/Dynawo
 ```
 
@@ -383,80 +363,14 @@ for deeper analysis, if desired.
 ```
 2024-10-11 11:27:51,765 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   92 | DyCoV Model Validation
 2024-10-11 11:27:51,798 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3
-2024-10-11 11:27:56,324 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR10
-2024-10-11 11:27:59,540 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientBoltedSCR3Qmin
-2024-10-11 11:28:02,960 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc800
-2024-10-11 11:28:17,388 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: TransientHiZTc500
-2024-10-11 11:28:33,459 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentBolted
-2024-10-11 11:28:37,575 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.ThreePhaseFault, OPER. COND.: PermanentHiZ
-2024-10-11 11:28:50,476 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Active
-2024-10-11 11:28:54,294 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Reactive
-2024-10-11 11:28:57,550 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.SetPointStep, OPER. COND.: Voltage
-2024-10-11 11:28:57,601 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWT4BCurrentSource2015 control mode will be changed
-2024-10-11 11:29:01,219 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridFreqRamp, OPER. COND.: W500mHz250ms
-2024-10-11 11:29:04,795 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Rise
-2024-10-11 11:29:08,083 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z1.GridVoltageStep, OPER. COND.: Drop
-2024-10-11 11:29:11,629 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: AReactance
-2024-10-11 11:29:11,694 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWPP4BCurrentSource2015 control mode will be changed
-2024-10-11 11:29:15,820 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.USetPointStep, OPER. COND.: BReactance
-2024-10-11 11:29:15,871 |                    DyCoV.Dynawo |    WARNING |       model_parameters.py:  351 | IECWPP4BCurrentSource2015 control mode will be changed
-2024-10-11 11:29:19,563 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Dec40
-2024-10-11 11:29:23,539 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.PSetPointStep, OPER. COND.: Inc40
-2024-10-11 11:29:27,268 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Inc10
-2024-10-11 11:29:30,366 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.QSetPointStep, OPER. COND.: Dec20
-2024-10-11 11:29:33,440 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.ThreePhaseFault, OPER. COND.: TransientBolted
-2024-10-11 11:29:40,400 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageDip, OPER. COND.: Qzero
-2024-10-11 11:29:46,410 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMax
-2024-10-11 11:29:51,451 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.GridVoltageSwell, OPER. COND.: QMin
-2024-10-11 11:29:56,347 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I16z3.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-10-11 11:29:58,116 |                    DyCoV.Dynawo |    WARNING |              simulator.py:  892 | Simulation Fails, logs in Results/Model/PCS_RTE-I16z3/Islanding/DeltaP10DeltaQ4/outputs/logs/dynawo.log
-2024-10-11 11:30:47,926 |                  DyCoV.PDFLatex |    WARNING |                 figure.py:  507 | All curves appear to be flat in PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms; something must be wrong with the simulation
-2024-10-11 11:31:46,592 |                    DyCoV.Report |       INFO |                 report.py:  273 | 
-Summary Report
-==============
-
-***Run on 2024-10-11 11:31 CEST***
-***Dynawo version: 1.7.0 (rev:master-4ee311a)***
-***Model: examples/Model/Wind/IEC2015/Dynawo***
-***Reference: examples/Model/Wind/IEC2015/ReferenceCurves***
-
-
-Pcs          Benchmark                Operating Condition      Overall Result
------------------------------------------------------------------------------
-PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3      Compliant
-PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR10     Compliant
-PCS_RTE-I16z1ThreePhaseFault          TransientBoltedSCR3Qmin  Compliant
-PCS_RTE-I16z1ThreePhaseFault          TransientHiZTc800        Compliant
-PCS_RTE-I16z1ThreePhaseFault          TransientHiZTc500        Compliant
-PCS_RTE-I16z1ThreePhaseFault          PermanentBolted          Compliant
-PCS_RTE-I16z1ThreePhaseFault          PermanentHiZ             Compliant
-PCS_RTE-I16z1SetPointStep             Active                   Non-compliant
-PCS_RTE-I16z1SetPointStep             Reactive                 Compliant
-PCS_RTE-I16z1SetPointStep             Voltage                  Non-compliant
-PCS_RTE-I16z1GridFreqRamp             W500mHz250ms             Non-compliant
-PCS_RTE-I16z1GridVoltageStep          Rise                     Non-compliant
-PCS_RTE-I16z1GridVoltageStep          Drop                     Non-compliant
-PCS_RTE-I16z3USetPointStep            AReactance               Non-compliant
-PCS_RTE-I16z3USetPointStep            BReactance               Non-compliant
-PCS_RTE-I16z3PSetPointStep            Dec40                    Compliant
-PCS_RTE-I16z3PSetPointStep            Inc40                    Compliant
-PCS_RTE-I16z3QSetPointStep            Inc10                    Compliant
-PCS_RTE-I16z3QSetPointStep            Dec20                    Non-compliant
-PCS_RTE-I16z3ThreePhaseFault          TransientBolted          Compliant
-PCS_RTE-I16z3GridVoltageDip           Qzero                    Compliant
-PCS_RTE-I16z3GridVoltageSwell         QMax                     Compliant
-PCS_RTE-I16z3GridVoltageSwell         QMin                     Compliant
-PCS_RTE-I16z3Islanding                DeltaP10DeltaQ4          Failed simulation
-
-
-2024-10-11 11:32:17,921 |                  DyCoV.PDFLatex |       INFO |                 report.py:  414 | PDF done: /tmp/DyCoV_Results_debian/0b738550-9d10-4ead-bfc5-e03cc2bcaee5/Reports/report.tex
+...
 2024-10-11 11:32:36,547 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   40 | Opening the report: Results/Model/Reports/report.pdf
 Opening in existing browser session.
 ```
 
 ## Electrical Performance Example:
 
-```
+```bash
 dycov performance -m $PWD/dycov/examples/SM/Dynawo/SingleAux
 ```
 
@@ -470,42 +384,59 @@ for deeper analysis, if desired.
 ```
 2024-10-11 11:34:29,199 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   76 | Electric Performance Verification for Synchronous Machines
 2024-10-11 11:34:29,232 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: AReactance
-2024-10-11 11:34:29,766 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I2.USetPointStep, OPER. COND.: BReactance
-2024-10-11 11:34:30,215 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I3.LineTrip, OPER. COND.: 2BReactance
-2024-10-11 11:34:30,828 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
-2024-10-11 11:34:41,351 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I6.GridVoltageDip, OPER. COND.: Qzero
-2024-10-11 11:34:42,511 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMax
-2024-10-11 11:34:43,523 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I7.GridVoltageSwell, OPER. COND.: QMin
-2024-10-11 11:34:44,482 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I8.LoadShedDisturbance, OPER. COND.: PmaxQzero
-2024-10-11 11:34:44,925 |       DyCoV.Operating Condition |       INFO |    operating_condition.py:  237 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
-2024-10-11 11:34:57,351 |                    DyCoV.Report |       INFO |                 report.py:  273 | 
-Summary Report
-==============
-
-***Run on 2024-10-11 11:34 CEST***
-***Dynawo version: 1.7.0 (rev:master-4ee311a)***
-***Model: examples/SM/Dynawo/SingleAux***
-
-
-Pcs          Benchmark                Operating Condition      Overall Result
------------------------------------------------------------------------------
-PCS_RTE-I2   USetPointStep            AReactance               Non-compliant
-PCS_RTE-I2   USetPointStep            BReactance               Non-compliant
-PCS_RTE-I3   LineTrip                 2BReactance              Compliant
-PCS_RTE-I4   ThreePhaseFault          TransientBolted          Compliant
-PCS_RTE-I6   GridVoltageDip           Qzero                    Compliant
-PCS_RTE-I7   GridVoltageSwell         QMax                     Compliant
-PCS_RTE-I7   GridVoltageSwell         QMin                     Compliant
-PCS_RTE-I8   LoadShedDisturbance      PmaxQzero                Compliant
-PCS_RTE-I10  Islanding                DeltaP10DeltaQ4          Compliant
-
-
-2024-10-11 11:35:08,635 |                  DyCoV.PDFLatex |       INFO |                 report.py:  414 | PDF done: /tmp/DyCoV_Results_debian/e66c17ee-caff-4ef1-ae1f-eba5592092bb/Reports/report.tex
+...
 2024-10-11 11:35:08,797 |           DyCoV.ModelValidation |       INFO |       model_validation.py:   40 | Opening the report: Results/Performance/Reports/report.pdf
 Opening in existing browser session.
 ```
 
+# Grid-forming (GFM) envelope calculation
 
+In addition to generic-model validation and electrical performance verification, DyCoV includes a specialized module for **Grid Forming (GFM)** analysis. This module calculates the theoretical dynamic response **envelopes** (i.e., max/min tolerances), based on the desired damping 
+D and inertia H characteristics
+
+This allows for the verification of whether the generator's behavior remains within operational and stability limits calculated analytically for various grid events.
+
+## Supported GFM Events
+
+The tool supports envelope calculation for the following dynamic events:
+
+* **Amplitude Step:** Calculates the reactive current ($I_q$) and reactive power envelopes in response to a grid voltage step.
+* **Phase Jump:** Analyzes the active power ($P$) response to a sudden change in the grid voltage phase angle.
+* **RoCoF (Rate of Change of Frequency):** Calculates the active power response to a frequency ramp, modeling finite-duration events by superimposing step responses.
+* **SCR Jump:** Evaluates stability and power response following a sudden change in the Short Circuit Ratio (grid impedance), differentiating between overdamped and underdamped responses.
+
+## Hybrid Parameters & Configuration
+
+The GFM module is highly configurable via the `Producer.ini` file. A key feature is the ability to handle **Hybrid** configurations, creating merged envelopes that cover the uncertainty between different operating modes (e.g., varying damping conditions).
+
+### Standard vs. Hybrid Mode
+
+The tool automatically detects the operating mode based on the parameters defined in the configuration:
+
+1.  **Standard Mode:** Uses classic control parameters $D$ (Damping) and $H$ (Inertia). The tool calculates a single set of Upper and Lower envelopes.
+2.  **Hybrid Mode:** If specific parameters are defined for both overdamped and underdamped behaviors, the tool generates a **Merged Envelope**.
+    * Independent traces are calculated for the *Overdamped* set ($D_{over}, H_{over}$) and the *Underdamped* set ($D_{under}, H_{under}$).
+    * The final envelope is constructed by taking the maximum of the upper limits and the minimum of the lower limits, ensuring a robust validation range that covers both dynamic spectrums.
+
+### Key Configuration Parameters
+
+Parameters are defined in the `[GFM Parameters]` section of the producer's INI file:
+
+* **Physical:** `Snom`, `Unom`.
+* **Control (Standard):** `D`, `H`, `Xeff` (Effective Reactance).
+* **Control (Hybrid):** `D_Overdamped`, `H_Overdamped`, `D_Underdamped`, `H_Underdamped`.
+* **Limits:** `p_max_injection`, `p_min_injection`, `q_max`, `q_min`.
+* **Simulation Settings:**
+    * `save_all_envelopes`: If set to `true`, the CSV output will include all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope.
+    * `RatioMin`, `RatioMax`: Used for sensitivity analysis regarding parameter variations.
+
+## GFM Outputs
+
+For each GFM simulation case, the tool generates the following files in the results directory:
+
+* **Plots (HTML & PNG):** Interactive and static graphs showing the PCC signal alongside the calculated Upper/Lower envelopes. In Hybrid mode, it can also visualize the individual Over/Under traces.
+* **CSV Data:** Files containing the time series of the analyzed magnitude ($P$, $Q$, $I_q$) and their calculated limits.
+* **INI Dump:** A `_ini_dump.txt` file that preserves the exact configuration and calculated internal values (such as the damping ratio $\epsilon$) used during the execution.
 
 # Configuration
 
@@ -517,51 +448,11 @@ this file follows the customary standard of each platform for application data:
 * Under Linux: `$HOME/.config/dycov/`
 * Under Windows: `%APPDATA%\Local\dycov`
 
-Besides the `config.ini` file, there is a subfolder named `ddb`, which will
-contain all compiled preassembled Modelica models (see next section).
-
 The supplied INI file contains just the options that most users of the tool
 would want to change, but there exist many more internal configuration options
 that may be overriden in this INI file.  For more information about
 configuration, including more advanced tasks such as adding a whole new test,
 consult the [User Manual](docs/manual).
-
-
-
-# Compiling Modelica models
-
-The tool uses some _preassembled_ Modelica models defined internally, and the
-user may also define additional ones of his own. They should be compiled by
-using the supplied script, `dycov compile`.
-
-As mentioned above, all compiled models (both the tool's and the user's) will be
-saved under the tool's config directory, in the `ddb` subfolder. All of the
-compilation output (standard output and standard error messages) will also be
-logged there, in a file named `compile.log`.
-
-For models provided by the user, the definition files `*.xml, *.mo, *.extvar`
-may be located anywhere, but upon compilation they will be _copied_ to a
-subfolder `user_models`, sibling to the `ddb` subfolder.
-
-In case of upgrading the version of Dyna&omega;o, you may want to recompile all
-models. You can easily do this by running the command with only the `--force`
-option.
-
-Run the command with option --help (or -h) to get a quick overview of the inputs
-you need to provide:
-```
-usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
-                        XML file describing a custom Modelica model
-  -f, --force           force the recompilation of all Modelica models (the
-                        user's and the tool's own)
-```
 
 
 # Workshop presentation
@@ -578,118 +469,78 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 
 # For developers
 
-## Build and install on Linux
+## Build and install on Linux (using uv)
 
-1. Clone the repository via: 
-   ```bash
-   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-   ```
-   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
+    cd dycov_repo
+    ```
+
+2.  Ensure you have `uv` installed. If not, you can install it via pipx or pip:
+    ```bash
+    pip install uv
+    ```
+
+3.  Use the provided helper script to create the environment and install dependencies:
+    ```bash
+    ./build_and_install.sh --devel
+    ```
+    
+    *Alternatively, you can run the steps manually:*
+    ```bash
+    uv venv dycov_venv
+    source dycov_venv/bin/activate
+    uv pip install -e .[dev,test]
+    ```
+
+4.  Quickly check that your installation is working by running the help option:
+    ```bash
+    dycov -h
+    ```
    
-2. Get into the repository and run the shell script named `build_and_install.sh`.
-   This builds the Python package, creates a Python virtual environment under
-   the subdirectory `dycov_venv`, and installs the package into it (together with
-   all the necessary library dependencies, such as NumPy, etc.).
+The DyCoV application is now ready for development.
 
-3. Next, you must activate the virtual environment that has just been created: 
-   ```bash
-   source dycov_venv/bin/activate
-   ```
+## Build and install on Windows (using uv)
 
-4. The tool is used via a single command `dycov` having several subcommands. Quickly
-   check that your installation is working by running the help option, which will show
-   you all available subcommands:
-   ```bash
-   dycov -h
-   ```
+1.  Clone the Repository using your favorite Git client (e.g., GitHub Desktop or `git-scm`).
+    ```bash
+    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
+    cd dycov_repo
+    ```
 
-5. Upon the first use, the tool will automatically compile the Modelica models
-   internally defined by the tool. You can also run this command explicitly, as follows:
-   ```bash
-   dycov compile
-   ```
-   (Note: this command is also used to compile any new Modelica models custom-defined by the
-   user; see the section below on [Compiling Modelica models](#compiling-modelica-models).)
-   
-The DyCoV application is now ready to use.
+2.  Ensure you have `uv` installed. You can install it via pip:
+    ```bash
+    pip install uv
+    ```
 
-## Build and install on Windows
+3.  Set up the virtual environment and install dependencies.
+    - Open a **CMD terminal** or **PowerShell**.
+    - Navigate to the root folder of the cloned repository.
+    - Create a new virtual environment:
+      ```winbatch
+      uv venv dycov_venv
+      ```
+    - Activate the virtual environment:
+      ```winbatch
+      dycov_venv\Scripts\activate
+      ```
+    - Install the package in editable mode with all development and test dependencies:
+      ```winbatch
+      uv pip install -e .[dev,test]
+      ```
 
-1. Clone the Repository
-   The first step is to clone the repository to your local machine. Using GitHub Desktop:
-   - Open GitHub Desktop and click **File** > **Clone repository**.
-   - Enter the following URL to clone the repository:
-         
-   ```winbatch
-     git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-   ```
-   (you may of course use any name for the top-level directory, here `"dycov_repo"`.)
+4.  Verify Installation. This should display the help message for the tool.
+    ```winbatch
+    dycov -h
+    ```
 
-   - Choose a local directory where you want to save the repository and click **Clone**.
+5.  Pre-Execution Compilation. Before running the tool for the first time, compile the tool's resources:
+    ```winbatch
+    dycov compile
+    ```
 
-2. Set Up Virtual Environment
-   A virtual environment is recommended to manage dependencies for the project. This ensures that the package uses the correct Python version and dependencies without affecting other projects on your system.
-   - Open a **CMD terminal** (Command Prompt) as administrator.
-   - Navigate to the root folder of the cloned repository using the `cd` command:
-         
-   ```winbatch
-     cd dycov_repo
-   ```
-
-   - Create a new virtual environment with:
-         
-   ```winbatch
-     python.exe -m venv dycov_venv
-   ```
-     
-   - This will create a directory `dycov_venv` in your repository folder.
-   
-3. Build the Package
-   The next step is to compile the package into a distributable format:
-       
-   ```winbatch
-   	python.exe -m build
-   ```
-   
-   - This command will create the necessary build files in the `dist` folder of the repository. The build process might take a few minutes to complete.
-
-4. Activate the Virtual Environment
-   Now that the virtual environment is created, activate it to use the isolated environment:
-       
-   ```winbatch
-   	dycov_venv\Scripts\activate
-   ```
-   
-   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dycov_venv)` at the beginning of the prompt).
-
-5. Install the Package
-   Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
-       
-   ```winbatch
-   	python.exe -m pip install dist\dycov....whl
-   ```
-   
-   - This will install the package into your active virtual environment.
-
-6. Verify Installation
-   After installation, verify that the tool was installed correctly by running the following command:
-       
-   ```winbatch
-   	dycov -h
-   ```
-   
-   - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
-
-7. Pre-Execution Compilation
-   Before running the tool for the first time, it's recommended to compile the tool's resources:
-       
-   ```winbatch
-   	dycov compile
-   ```
-   
-   - This step ensures that all necessary files are generated and compiled for optimal performance.
-
-The DyCoV application is now ready to use.
+The DyCoV application is now ready for development.
 
 Finally, if you want to further _develop_ the source code of this tool, consult
 the [Developer Manual](docs/manual_dev).
@@ -724,5 +575,6 @@ Below are the major development axis identified for DyCoV in the next few months
 
 # Contact
 
-In case of any question or feedback, please feel free to contact us at the following e-mail adress: rte-r-d-raccordement@rte-france.com
-
+For any questions or feedback, please reach out to the appropriate contact below:
+* For inquiries related to electrical modeling, please contact RTE at: rte-r-d-raccordement@rte-france.com
+* For any software-related issues or questions, please contact AIA at: dycov@aia.es
