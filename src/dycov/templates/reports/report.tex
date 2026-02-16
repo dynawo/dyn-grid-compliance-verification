@@ -25,6 +25,7 @@
 \usepackage{caption}
 \usepackage{amstext}
 \usepackage{ifthen}
+\usepackage{tabularx}
 
 
 %% More sensible colors for hyperref links:
@@ -98,7 +99,7 @@
     {{summary_description}}
 
     \begin{center}
-        \begin{tabular}{ccccc}
+        \begin{tabularx}{\textwidth}{l l l l}
             \toprule
             PCS & Benchmark & Operating Condition & Overall Result \\
             \midrule
@@ -106,7 +107,7 @@
             {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
             \BLOCK{endfor}
             \bottomrule
-        \end{tabular}
+        \end{tabularx}
     \end{center}
 
     \BLOCK{for report in reports}
