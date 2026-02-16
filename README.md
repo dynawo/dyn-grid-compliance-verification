@@ -170,7 +170,7 @@ The DyCoV application is now ready to use.
 
 2. Install:
 
-   - for WSL installation:
+   - for **WSL installation**:  
      Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
       ```powershell
       # Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
@@ -178,7 +178,7 @@ The DyCoV application is now ready to use.
       wsl --import DycovApp C:\DycovApp .\dycov_dist.tar.gz
       ```
 
-   - for Docker installation:
+   - for **Docker installation**:  
      Open PowerShell in the folder containing `dycov_dist.tar.gz`. You need to import the image while manually restoring the configuration.
      *Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
 
@@ -193,14 +193,14 @@ The DyCoV application is now ready to use.
 
 3. Run:
 
-   - for WSL installation:
+   - for **WSL installation**:  
      To start the tool, you simply launch this specific distribution:
       ```powershell
       wsl -d DycovApp
       ```
      *Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
 
-   - for Docker installation:
+   - for **Docker installation**:  
      Launch the container mapping your current directory (`${PWD}`) so the tool can see your files.
       ```powershell
       docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:latest
