@@ -17,7 +17,7 @@ set -o errexit -o pipefail
 
 IMAGE_NAME="dycov:latest"
 TEMP_CONTAINER_NAME="dycov_export_temp"
-OUTPUT_FILE="dycov_dist.tar.gz"
+OUTPUT_FILE="dycov_rawimage.tar.gz"
 
 GREEN="\033[1;32m"
 RED="\033[1;31m"
