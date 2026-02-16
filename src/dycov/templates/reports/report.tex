@@ -99,12 +99,12 @@
     {{summary_description}}
 
     \begin{center}
-        \begin{tabularx}{\textwidth}{l l l l}
+        \begin{tabularx}{\textwidth}{l l l l l}
             \toprule
-            PCS & Benchmark & Operating Condition & Overall Result \\
+            Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
             \midrule
             \BLOCK{for row in summaryReport}
-            {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabularx}
