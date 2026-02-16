@@ -457,12 +457,7 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
     pip install uv
     ```
 
-3. Use the provided helper script to create the environment and install dependencies:
-   ```bash
-   ./build_and_install.sh --devel
-   ```
-    
-   *Alternatively, you can run the steps manually:*
+3. Create the environment and install dependencies:
    ```bash
    uv venv dycov_venv
    source dycov_venv/bin/activate
