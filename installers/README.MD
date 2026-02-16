@@ -8,10 +8,10 @@ There are **four ways** to install Dycov depending on your Operating System and 
 
 | Method | OS | Required File | Description |
 | :--- | :--- | :--- | :--- |
-| **1. Linux Native** | Linux | `linux_install.sh` | **No Docker.** It automatically downloads Dynawo and installs Dycov directly into your system. Requires internet. |
-| **2. Linux Docker** | Linux | `dycov_dist.tar.gz` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
-| **3. Windows Docker** | Windows | `dycov_dist.tar.gz` | Runs inside Docker Desktop. Requires familiarity with PowerShell. |
-| **4. Windows WSL** | Windows | `dycov_dist.tar.gz` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
+| **1. Windows WSL** | Windows | `dycov_dist.tar.gz` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
+| **2. Windows Docker** | Windows | `dycov_dist.tar.gz` | Runs inside Docker Desktop. Requires familiarity with PowerShell. |
+| **3. Linux Native** | Linux | `linux_install.sh` | **No Docker.** It automatically downloads Dynawo and installs Dycov directly into your system. Requires internet. |
+| **4. Linux Docker** | Linux | `dycov_dist.tar.gz` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
 
 ---
 
@@ -19,15 +19,15 @@ There are **four ways** to install Dycov depending on your Operating System and 
 
 Before starting, create a clean folder on your computer (e.g., `Dycov_Install/`) and place the required files there.
 
-**If using Method 1 (Linux Native):**
-You only need the script `linux_install.sh`.
-* *Requirement:* You must have an active internet connection so the script can download Dynawo and Python dependencies.
-
-**If using Methods 2, 3, or 4 (Docker / WSL):**
+**If using Methods 1, 2, or 4 (Docker / WSL):**
 You need the **distribution artifacts** (typically from the Release page). Ensure you have these three files in the same directory:
 * `dycov_dist.tar.gz` (The heavy application package; do not unzip this manually).
 * `import_image.sh` (Helper script for Linux Docker).
 * `run_dycov_docker.sh` (Helper script for Linux Docker).
+
+**If using Method 3 (Linux Native):**
+You only need the script `linux_install.sh`.
+* *Requirement:* You must have an active internet connection so the script can download Dynawo and Python dependencies.
 
 ---
 
@@ -35,7 +35,51 @@ You need the **distribution artifacts** (typically from the Release page). Ensur
 
 Choose **ONE** of the following methods that best fits your environment.
 
-### Method 1: Linux Native (Automatic Installer)
+### Method 1: Windows via Standalone WSL (No Docker)
+*Best for: Windows users without Docker Desktop. This installs Dycov as a separate "App" in your Windows Subsystem for Linux.*
+
+**Step 1: Install**
+Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
+```powershell
+# Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
+# This creates a folder C:\DycovApp containing the system files.
+wsl --import DycovApp C:\DycovApp .\dycov_dist.tar.gz
+```
+
+**Step 2: Run**
+To start the tool, you simply launch this specific distribution:
+```powershell
+wsl -d DycovApp
+```
+*Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
+
+---
+
+### Method 2: Windows via Docker Desktop
+*Best for: Windows users who already use Docker Desktop and are comfortable with PowerShell.*
+
+**Step 1: Import (PowerShell)**
+Open PowerShell in the folder containing `dycov_dist.tar.gz`. You need to import the image while manually restoring the configuration.
+*Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
+
+```powershell
+# 1. Define variables with escaped quotes (Crucial for PowerShell)
+$DycovPath = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+$DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
+
+# 2. Import the image applying the changes
+docker import --change $DycovPath --change $DycovEntry .\dycov_dist.tar.gz dycov:latest
+```
+
+**Step 2: Run**
+Launch the container mapping your current directory (`${PWD}`) so the tool can see your files.
+```powershell
+docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:latest
+```
+
+---
+
+### Method 3: Linux Native (Automatic Installer)
 *Best for: Linux users who want a standard installation without using Docker containers.*
 
 1.  Download `linux_install.sh` to your folder.
@@ -54,7 +98,7 @@ Choose **ONE** of the following methods that best fits your environment.
 
 ---
 
-### Method 2: Linux via Docker
+### Method 4: Linux via Docker
 *Best for: Linux servers or users who prefer isolated containers to keep their system clean.*
 
 **Step 1: Permissions**
@@ -80,50 +124,6 @@ mkdir my_project
 # 2. Run the tool mapping your current User ID (-u) and Group ID (-g)
 ./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_project/
 ```
-
----
-
-### Method 3: Windows via Docker Desktop
-*Best for: Windows users who already use Docker Desktop and are comfortable with PowerShell.*
-
-**Step 1: Import (PowerShell)**
-Open PowerShell in the folder containing `dycov_dist.tar.gz`. You need to import the image while manually restoring the configuration.
-*Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
-
-```powershell
-# 1. Define variables with escaped quotes (Crucial for PowerShell)
-$DycovPath = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
-$DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
-
-# 2. Import the image applying the changes
-docker import --change $DycovPath --change $DycovEntry .\dycov_dist.tar.gz dycov:latest
-```
-
-**Step 2: Run**
-Launch the container mapping your current directory (`${PWD}`) so the tool can see your files.
-```powershell
-docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:latest
-```
-
----
-
-### Method 4: Windows via Standalone WSL (No Docker)
-*Best for: Windows users without Docker Desktop. This installs Dycov as a separate "App" in your Windows Subsystem for Linux.*
-
-**Step 1: Install**
-Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
-```powershell
-# Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
-# This creates a folder C:\DycovApp containing the system files.
-wsl --import DycovApp C:\DycovApp .\dycov_dist.tar.gz
-```
-
-**Step 2: Run**
-To start the tool, you simply launch this specific distribution:
-```powershell
-wsl -d DycovApp
-```
-*Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
 
 ---
 
