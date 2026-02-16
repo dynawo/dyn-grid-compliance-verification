@@ -74,18 +74,27 @@ echo "Building Python package..."
     uv build --out-dir dist
 )
 
-PKG=$(ls -t "$ROOT_DIR"/dist/*.whl 2>/dev/null | head -n 1 || true)
+########################################
+# 2. Locate exactly one wheel (portable: macOS/Linux)
+########################################
 
-if [[ -z "$PKG" ]]; then
-    echo "ERROR: No wheel package found in dist/"
+NWHEELS=$(find "$ROOT_DIR/dist" -type f  -iname "*.whl" | wc -l)
+ 
+# There should be only one wheel file
+if [[ $NWHEELS -eq 0 ]]; then
+    echo "ERROR: No wheel files found in dist/"
+    exit 1
+elif [[ $NWHEELS -ne 1 ]]; then
+    echo "ERROR: Multiple wheel files found in dist/ (expected one, found: $NWHEELS)"
     exit 1
 fi
-
+PKG=$(find "$ROOT_DIR/dist" -type f  -iname "*.whl")
 PKG_BASENAME=$(basename "$PKG")
+echo "Found unique wheel: $PKG_BASENAME"
 
 
 ########################################
-# 2. Version Consistency Check
+# 3. Version Consistency Check
 ########################################
 
 # Extract version from pyproject.toml
@@ -111,28 +120,28 @@ TAG_VERSION="${TAG#v}"
 # Ensure TAG matches project version
 if [[ "$TAG_VERSION" != "$VERSION" ]]; then
     echo "ERROR: TAG mismatch!"
-    echo "  TAG argument:           $TAG_VERSION"
+    echo "  TAG argument:           $TAG  (numeric part: $TAG_VERSION)"
     echo "  pyproject.toml version: $VERSION"
     echo ""
-    echo "The TAG must match the project version to ensure reproducible builds."
+    echo "TAG must be 'v$VERSION' for reproducible builds."
     exit 1
 fi
 
 echo "Version check OK:"
-echo " - package version   = $VERSION"
-echo " - wheel filename    = $PKG_BASENAME"
-echo " - docker TAG        = $TAG"
+echo " - project version = $VERSION"
+echo " - wheel filename  = $PKG_BASENAME"
+echo " - TAG             = $TAG"
 
 
 ########################################
-# 3. Copy wheel into TEMP_DIR
+# 4. Copy wheel into TEMP_DIR
 ########################################
 
 cp "$PKG" "$TEMP_DIR/"
 
 
 ########################################
-# 4. Copy examples
+# 5. Copy examples
 ########################################
 
 echo "Copying examples..."
@@ -142,7 +151,7 @@ fi
 
 
 ########################################
-# 5. Copy Dynawo
+# 6. Copy Dynawo
 ########################################
 
 if [[ ! -d "$DYNAWO_HOST_PATH" ]]; then
@@ -161,7 +170,7 @@ fi
 
 
 ########################################
-# 6. Copy Dockerfile + start script
+# 7. Copy Dockerfile + start script
 ########################################
 
 cp Dockerfile "$TEMP_DIR/"
@@ -169,7 +178,7 @@ cp start_dycov.sh "$TEMP_DIR/"
 
 
 ########################################
-# 7. Docker build (context = TEMP_DIR)
+# 8. Docker build (context = TEMP_DIR)
 ########################################
 
 echo "Starting Docker build using context $TEMP_DIR..."
