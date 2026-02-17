@@ -1,6 +1,6 @@
 # Maintainer Guide: Building Distribution Artifacts
 
-This guide explains how to generate the **single distribution artifact** (`dycov_dist.tar.gz`).
+This guide explains how to generate the **single distribution artifact** (`dycov_rawimage.tar.gz`).
 
 ## The Strategy
 We use `docker export` to create a generic filesystem tarball.
@@ -22,13 +22,13 @@ We use `docker export` to create a generic filesystem tarball.
     ./export_image.sh
     ```
 
-    **Output:** `dycov_dist.tar.gz`
+    **Output:** `dycov_rawimage.tar.gz`
 
 ---
 
 ## Release Checklist
 
 Distribute the following files:
-1.  **`dycov_dist.tar.gz`** (The main artifact).
+1.  **`dycov_rawimage.tar.gz`** (The main artifact).
 2.  **`import_image.sh`** (Critical for Linux/Docker Desktop users).
 3.  **`run_dycov_docker.sh`** (For Linux users).
