@@ -33,3 +33,19 @@ def test_csv():
         assert df_csv_curve["time"].iloc[-1] == 100.0
         assert "BusPDR_bus_terminal_V" in df_csv_curve
         assert "Synch_Gen_generator_UStatorPu_value" in df_csv_curve
+
+
+def test_csv_comma_separated():
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
+
+        importer = CurvesImporter(path, "curves_final_comma")
+        df_csv_curve = importer.get_curves_dataframe(0)
+
+        assert not df_csv_curve.empty
+        assert "time" in df_csv_curve
+        assert df_csv_curve["time"].iloc[0] == 0.0
+        assert df_csv_curve["time"].iloc[-1] == 100.0
+        assert "BusPDR_bus_terminal_V" in df_csv_curve
+        assert "Synch_Gen_generator_UStatorPu_value" in df_csv_curve
