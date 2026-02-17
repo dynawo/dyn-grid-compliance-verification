@@ -12,7 +12,7 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail 
 
-INPUT_ARG="dycov_dist.tar.gz"
+INPUT_ARG="dycov_rawimage.tar.gz"
 TARGET_IMAGE="dycov:latest"
 
 GREEN="\033[1;32m"

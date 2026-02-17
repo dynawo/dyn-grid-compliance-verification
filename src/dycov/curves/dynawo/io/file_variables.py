@@ -60,7 +60,8 @@ class FileVariables:
         str
             The obtained value.
         """
-        return self._dynawo_curves.obtain_value(value_definition)
+        value = self._dynawo_curves.obtain_value(value_definition)
+        return str(value)
 
     def __get_value_from_section(self, section: str, key: str, generator_type: str) -> str:
         """
@@ -128,10 +129,10 @@ class FileVariables:
             value = self.__get_value_from_section(section, key, generator_type)
             if value:
                 return value
-
         # As a last resort, check the global 'Dynawo' section
         if config.has_option("Dynawo", key):
-            return self.__obtain_value(config.get_value("Dynawo", key))
+            value = self.__obtain_value(config.get_value("Dynawo", key))
+            return value
 
         return None
 

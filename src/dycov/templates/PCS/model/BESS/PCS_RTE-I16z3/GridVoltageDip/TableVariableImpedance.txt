@@ -1,11 +1,9 @@
 #1
-double ImpedanceTable(10,3)
+double ImpedanceTable(9,3)
 {{simulation_start}} 0 100
 {{start_event}} 0 100
 {{start_event}} 0 {{Xv_fault}}
 {{end_event}} 0 {{Xv_fault}}
-{{end_event}} 0 {{Xv_clear}}
-{{delta_t_rec1}} 0 {{Xv_clear}}
 {{delta_t_rec2}} 0 {{Xv_rec2}}
 {{delta_t_rec3}} 0 {{Xv_rec2}}
 {{delta_t_rec3}} 0 100
