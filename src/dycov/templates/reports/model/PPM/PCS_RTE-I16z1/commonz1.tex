@@ -6,10 +6,21 @@
 \definecolor{dark-green}{RGB}{16,128,16}
 
 %Snippet for the circuits
-\newcommand{\GridCircuitZone}{
+\newcommand{\GridCircuitZoneFault}{
     The grid model and its operational point is as in the following schematic:
     \begin{center}
-        \includestandalone[width=0.8\textwidth]{circuit_z1.tikz}
+        \includestandalone[width=0.8\textwidth]{circuit_z1_fault.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+}
+
+\newcommand{\GridCircuitZoneSetPoint}{
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_z1_setpoint.tikz}
     \end{center}
     \begin{center}
         \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
