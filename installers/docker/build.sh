@@ -161,7 +161,8 @@ fi
 
 echo "Copying Dynawo from host ($DYNAWO_HOST_PATH)..."
 
-cp -R "$DYNAWO_HOST_PATH/"* "$DYNAWO_DIR_NAME/"
+mkdir -p "$DYNAWO_DIR_NAME/dynawo"
+cp -R "$DYNAWO_HOST_PATH/"* "$DYNAWO_DIR_NAME/dynawo/"
 
 if [[ ! -f "$DYNAWO_DIR_NAME/dynawo/dynawo.sh" ]]; then
     echo "ERROR: Expected dynawo.sh missing in dynawo_build/dynawo/"
