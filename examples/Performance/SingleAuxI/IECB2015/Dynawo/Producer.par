@@ -25,7 +25,7 @@
     <par type="DOUBLE" name="WPP_DPMaxP4BPu" value="1"/>
     <par type="DOUBLE" name="WPP_Kpaw" value="1000"/>
     <par type="DOUBLE" name="WPP_tPAero" value="0.1"/>
-    <par type="DOUBLE" name="WPP_tPOrdP4B" value="0.1"/>
+    <par type="DOUBLE" name="WPP_tPOrdP4B" value="0.05"/>
     <par type="DOUBLE" name="WPP_tUFiltP4B" value="0.01"/>
     <!-- CurrentLimiter -->
     <par type="DOUBLE" name="WPP_IMaxDipPu" value="1.3"/>
@@ -53,7 +53,7 @@
     <par type="INT" name="WPP_MqG" value="1"/>
     <par type="DOUBLE" name="WPP_RDropPu" value="0"/>
     <par type="DOUBLE" name="WPP_tPost" value="0"/>
-    <par type="DOUBLE" name="WPP_tQord" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tQord" value="0.05"/>
     <par type="DOUBLE" name="WPP_UMaxPu" value="1.1"/>
     <par type="DOUBLE" name="WPP_UMinPu" value="0.9"/>
     <par type="DOUBLE" name="WPP_UqDipPu" value="0.9"/>
@@ -61,14 +61,14 @@
     <par type="DOUBLE" name="WPP_XDropPu" value="0"/>
     <!-- QLimiter -->
     <par type="BOOL" name="WPP_QlConst" value="true"/>
-    <par type="DOUBLE" name="WPP_QMaxPu" value="0.4"/>
-    <par type="DOUBLE" name="WPP_QMinPu" value="-0.4"/>
+    <par type="DOUBLE" name="WPP_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="WPP_QMinPu" value="-0.8"/>
     <par type="DOUBLE" name="WPP_tPFiltql" value="0.01"/>
     <par type="DOUBLE" name="WPP_tUFiltql" value="0.01"/>
     <!-- GridProtection -->
     <par type="DOUBLE" name="WPP_fOverPu" value="1.1"/>
     <par type="DOUBLE" name="WPP_fUnderPu" value="0.9"/>
-    <par type="DOUBLE" name="WPP_UOverPu" value="1.1"/>
+    <par type="DOUBLE" name="WPP_UOverPu" value="1.35"/>
     <par type="DOUBLE" name="WPP_UUnderPu" value="0"/> <!-- We disable under voltage limit to avoid protection tripping -->
     <!-- UfMeasurement -->
     <par type="DOUBLE" name="WPP_tphiFilt" value="0.02"/>
@@ -96,12 +96,12 @@
     <par type="DOUBLE" name="WPP_tWPPFiltQ" value="0.01"/>
     <par type="DOUBLE" name="WPP_tWPQFiltQ" value="0.01"/>
     <par type="DOUBLE" name="WPP_tWPUFiltQ" value="0.01"/>
-    <par type="DOUBLE" name="WPP_DXRefMaxPu" value="999"/>
-    <par type="DOUBLE" name="WPP_DXRefMinPu" value="-999"/>
-    <par type="DOUBLE" name="WPP_Kiwpx" value="2.1"/>
+    <par type="DOUBLE" name="WPP_DXRefMaxPu" value="10"/>
+    <par type="DOUBLE" name="WPP_DXRefMinPu" value="-10"/>
+    <par type="DOUBLE" name="WPP_Kiwpx" value="10"/>
     <par type="DOUBLE" name="WPP_Kpwpx" value="0.5"/>
     <par type="DOUBLE" name="WPP_KwpqRef" value="0"/>
-    <par type="DOUBLE" name="WPP_Kwpqu" value="0.3"/>
+    <par type="DOUBLE" name="WPP_Kwpqu" value="0"/>
     <par type="INT" name="WPP_MwpqMode" value="3"/>
     <par type="DOUBLE" name="WPP_tUqFilt" value="0.01"/>
     <par type="DOUBLE" name="WPP_txfv" value="0.1"/>
