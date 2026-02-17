@@ -13,7 +13,7 @@
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
     <par type="DOUBLE" name="BESS_tRv" value="0.01"/>
-    <par type="DOUBLE" name="BESS_VUpPu" value="1.1"/>
+    <par type="DOUBLE" name="BESS_VUpPu" value="1.35"/>
     <par type="DOUBLE" name="BESS_VDipPu" value="0.9"/>
     <par type="DOUBLE" name="BESS_VRef0Pu" value="1"/>
     <par type="DOUBLE" name="BESS_Dbd1Pu" value="-0.05"/>
@@ -33,16 +33,16 @@
     <par type="DOUBLE" name="BESS_DPMinPu" value="-999"/>
     <par type="DOUBLE" name="BESS_IMaxPu" value="1.3"/>
     <par type="DOUBLE" name="BESS_tP" value="0.05"/>
-    <par type="DOUBLE" name="BESS_QMaxPu" value="999"/>
-    <par type="DOUBLE" name="BESS_QMinPu" value="-999"/>
+    <par type="DOUBLE" name="BESS_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="BESS_QMinPu" value="-0.8"/>
     <par type="DOUBLE" name="BESS_PMaxPu" value="0.75"/>
     <par type="DOUBLE" name="BESS_PMinPu" value="-0.75"/>
 
     <!-- Generator Control -->
     <par type="DOUBLE" name="BESS_tG" value="0.02"/>
     <par type="DOUBLE" name="BESS_tFilterGC" value="0.02"/>
-    <par type="DOUBLE" name="BESS_IqrMaxPu" value="999"/>
-    <par type="DOUBLE" name="BESS_IqrMinPu" value="-999"/>
+    <par type="DOUBLE" name="BESS_IqrMaxPu" value="20"/>
+    <par type="DOUBLE" name="BESS_IqrMinPu" value="-20"/>
     <par type="DOUBLE" name="BESS_RrpwrPu" value="10"/>
     <par type="BOOL" name="BESS_RateFlag" value="false"/>
     <par type="DOUBLE" name="BESS_SOC0Pu" value="0.75"/>
@@ -53,8 +53,8 @@
     <!-- PLL Control -->
     <par type="DOUBLE" name="BESS_KiPLL" value="20"/>
     <par type="DOUBLE" name="BESS_KpPLL" value="3"/>
-    <par type="DOUBLE" name="BESS_OmegaMaxPu" value="999"/>
-    <par type="DOUBLE" name="BESS_OmegaMinPu" value="-999"/>
+    <par type="DOUBLE" name="BESS_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="BESS_OmegaMinPu" value="0.5"/>
 
     <!-- BaseWT4 -->
     <par type="DOUBLE" name="BESS_SNom" value="60"/>

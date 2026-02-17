@@ -28,11 +28,10 @@ Developed by Grupo AIA
 3. [Quick start](#quick-start)
 4. [Running examples](#running-examples)
 5. [Configuration](#configuration)
-6. [Compiling Modelica models](#compiling-modelica-models)
-7. [Workshop presentation](#workshop-presentation)
-8. [For developers](#for-developers)
-9. [Roadmap](#roadmap)
-10. [Contact](#contact)
+6. [Workshop presentation](#workshop-presentation)
+7. [For developers](#for-developers)
+8. [Roadmap](#roadmap)
+9. [Contact](#contact)
 
 --------------------------------------------------------------------------------
 
@@ -84,6 +83,12 @@ comparing them).
 
 # DyCoV installation
 
+> [!IMPORTANT]  
+> **This section covers installing and running DyCoV as an end‑user** (prebuilt artifacts, installers and/or packaged distribution).
+> If you intend to **develop or modify the source code**, please skip to
+> **[For developers](#for-developers)** where we explain how to clone the GitHub repo and build the project for development
+> (Linux natively and Windows via **WSL or Docker running Linux**).
+
 ## Linux installation
 
 ### System requirements
@@ -122,7 +127,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.1/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/linux_install.sh | bash
    ```
 
    This script will install the DyCoV tool under your current directory in `$PWD/dycov`. 
@@ -152,38 +157,52 @@ The DyCoV application is now ready to use.
 ### Installation
 
 > [!NOTE]  
-> The Windows installer described here will install not only the DyCoV tool, but
-> also all of the other requirements for you. Read the next section if you are
-> interested in the details of what is installed in the Operating System
-> (Dynawo, Python, LaTeX).
+> The Windows installation described here will install not only the DyCoV tool, but
+> also all of the other requirements for you.
 
-1. Download the [DyCoV's Windows Installer](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/DyCoV_win_Installer.exe).
+1. Download the **distribution artifacts** (typically from the Release page):
 
-   In order to install the application, it is essential that the user has administrator rights. If the user is an administrator, there are no problems in unblocking the executable:
-   
-   ![Unblocking Executable](./docs/manual/source/usage/figs_installation/admin.png)
+   - [dycov_rawimage.tar.gz](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
+   - [import_image.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/import_image.sh): Helper script for Linux Docker.
+   - [run_dycov_docker.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/run_dycov_docker.sh): Helper script for Linux Docker.
 
-2. Next, execute the downloaded installer:
+2. Install:
 
-   This executable will install the DyCoV tool, together with a matching version of Dynawo,
-   under the selected directory (default installation path: `c:/dycov`).  It will do this 
-   by copying the latest stable version and compiling and installing the application (and 
-   all its dependencies, such as NumPy, etc.) into a Python virtual environment. The 
-   installer will also install any third-party applications required for the proper 
-   functioning of the tool.
+   - for **WSL installation**:  
+     Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
+      ```powershell
+      # Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
+      # This creates a folder C:\DycovApp containing the system files.
+      wsl --import DycovApp C:\DycovApp .\dycov_rawimage.tar.gz
+      ```
 
-    The MikTex installer allows you to select the configuration that you want to apply. 
-    For the tool to work correctly, you must select the "Yes" or "Ask me first" option on the 
-    following screen:
-    ![MikTex Installer Settings](./docs/manual/source/usage/figs_installation/miktex_settings.png)
+   - for **Docker installation**:  
+     Open PowerShell in the folder containing `dycov_rawimage.tar.gz`. You need to import the image while manually restoring the configuration.
+     *Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
 
+      ```powershell
+      # 1. Define variables with escaped quotes (Crucial for PowerShell)
+      $DycovPath = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+      $DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
 
-3. Next, you must activate the virtual environment that has just been created by
-   double-clicking on the DyCoV.bat file that has been created on the desktop.
+      # 2. Import the image applying the changes
+      docker import --change $DycovPath --change $DycovEntry .\dycov_rawimage.tar.gz dycov:latest
+      ```
 
-   This action will open a new Command Prompt with the virtual environment
-   activated where the tool can be used.  To finish using the tool, you only
-   need to close the Command Prompt.
+3. Run:
+
+   - for **WSL installation**:  
+     To start the tool, you simply launch this specific distribution:
+      ```powershell
+      wsl -d DycovApp
+      ```
+     *Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
+
+   - for **Docker installation**:  
+     Launch the container mapping your current directory (`${PWD}`) so the tool can see your files.
+      ```powershell
+      docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:latest
+      ```
 
 4. The tool is used via a single command `dycov` having several subcommands. Quickly
    check that your installation is working by running the help option, which will show
@@ -193,59 +212,6 @@ The DyCoV application is now ready to use.
    ```
 
 The DyCoV application is now ready to use.
-
-
-### System requirements (for manual installs)
-
-> [!NOTE]  
-> The Windows installer (described in the previous section) will install all of
-> these system requirements for you. This is only here for your information, in
-> case you would rather install any of these components yourself. After you have
-> installed all this, you should still use the Windows installer to install the
-> DyCoV tool (it will skip installing any of these OS requirements if they are
-> already installed).
-
-The requirements of the DyCoV tool at the OS-level are rather minimal: one just
-needs a recent Windows distribution in which you should install **Dyna&omega;o**
-(and its requirements), **LaTeX**, and **Python**. If you do not have any strong
-preference, we would recommend Windows 10 or higher.
-
-To be more specific, we explicitly list here the packages to be installed:
-
-* Install Dyna&omega;o (v1.7.0 or later) and its required packages: Dyna&omega;o
-  is a simulation platform required by this tool. Follow the steps outlined in
-  the official Dyna&omega;o installation guide at [Dynawo Installation
-  Guide](https://dynawo.github.io/install/).
-   - **Nightly Version**: Download the **Nightly version** of Dynawo from the
-     repository to ensure you have the latest features and updates.
-
-> [!NOTE]  
-> On Windows, you can either run Dynaωo with distribution models, in this case, 
-> nothing additional is required. But if you want to add new models, you will need:
->   - **CMake**: CMake is used to configure the build process for
->     Dynawo. Download it from [cmake.org](https://cmake.org/download/).
->   - **Build Tools for Visual Studio 2019**: the Visual Studio compiler is
->     required to compile custom Modelica models in Dynawo. You can download
->     the free **Community Edition** of these tools from
->     [here](https://visualstudio.microsoft.com/vs/older-downloads/). During
->     the installation, select only the _"Desktop development with C++"_
->     workload.
-
-* Install LaTeX. You can choose between these two LaTeX distributions:
-   - **MiKTeX**: Download it from [MiKTeX Download](https://miktex.org/download).
-   - **TeX Live**: Download it from [TeX Live Download](https://www.tug.org/texlive/).
-
-* Install a basic Python installation (version 3.9 or higher), containing at
-  least `pip` and the `venv` module:
-   - Go to the [official Python website](https://www.python.org/downloads/).
-   - Download the latest version of Python 3 (ensure that you select the option
-     to add Python to the system PATH during installation).
-
-Note that the DyCoV tool itself is a Python package. However, this package and
-all of its dependencies (NumPy, etc.) will get installed under a *Python virtual
-environment*.
-
-
 
 
 # Quick start
@@ -456,6 +422,11 @@ consult the [User Manual](docs/manual).
 
 
 # Workshop presentation
+
+> [!WARNING]  
+> These videos were generated using version **0.8.1**.  
+> They are still fully valid, although some minor interface elements or workflows may have changed in more recent versions.
+
 Here you can watch the video of the presentation workshop held on 11/03/2025. (english subtitles available only if you download the video)
 Part 1: 
 
@@ -469,78 +440,105 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 
 # For developers
 
+> [!NOTE]  
+> **This section is for contributors and developers** who want to clone the GitHub repository and build DyCoV from source.
+> If you only want to *use* DyCoV, see **[DyCoV Installation](#dycov-installation)** (end‑user installation on Linux/Windows).
+
 ## Build and install on Linux (using uv)
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-    cd dycov_repo
-    ```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
+   cd dycov_repo
+   ```
 
-2.  Ensure you have `uv` installed. If not, you can install it via pipx or pip:
+2. Ensure you have `uv` installed. If not, you can install it via pipx or pip:
     ```bash
     pip install uv
     ```
 
-3.  Use the provided helper script to create the environment and install dependencies:
-    ```bash
-    ./build_and_install.sh --devel
-    ```
-    
-    *Alternatively, you can run the steps manually:*
-    ```bash
-    uv venv dycov_venv
-    source dycov_venv/bin/activate
-    uv pip install -e .[dev,test]
-    ```
+3. Create the environment and install dependencies:
+   ```bash
+   uv venv dycov_venv
+   source dycov_venv/bin/activate
+   uv pip install -e .[dev,test]
+   ```
 
-4.  Quickly check that your installation is working by running the help option:
-    ```bash
-    dycov -h
-    ```
+4. Quickly check that your installation is working by running the help option:
+   ```bash
+   dycov -h
+   ```
    
 The DyCoV application is now ready for development.
 
 ## Build and install on Windows (using uv)
 
-1.  Clone the Repository using your favorite Git client (e.g., GitHub Desktop or `git-scm`).
-    ```bash
-    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-    cd dycov_repo
-    ```
+> [!IMPORTANT]  
+> **The recommended way to use and develop DyCoV on Windows is through either  
+> (1) Windows Subsystem for Linux (WSL) or  
+> (2) Docker.**  
+> Both methods provide a fully Linux‑compatible environment, which is required for Dynawo and LaTeX.
 
-2.  Ensure you have `uv` installed. You can install it via pip:
-    ```bash
-    pip install uv
-    ```
+### Recommended approaches (WSL or Docker)
 
-3.  Set up the virtual environment and install dependencies.
-    - Open a **CMD terminal** or **PowerShell**.
-    - Navigate to the root folder of the cloned repository.
-    - Create a new virtual environment:
-      ```winbatch
-      uv venv dycov_venv
-      ```
-    - Activate the virtual environment:
-      ```winbatch
-      dycov_venv\Scripts\activate
-      ```
-    - Install the package in editable mode with all development and test dependencies:
-      ```winbatch
-      uv pip install -e .[dev,test]
-      ```
+#### Option A — Development using **WSL** (recommended)
 
-4.  Verify Installation. This should display the help message for the tool.
-    ```winbatch
-    dycov -h
-    ```
+1. Enable WSL and install Ubuntu 22.04 or later.
+2. Open a WSL terminal and follow the Linux instructions exactly:
 
-5.  Pre-Execution Compilation. Before running the tool for the first time, compile the tool's resources:
-    ```winbatch
-    dycov compile
-    ```
+   ```bash
+   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
+   cd dycov_repo
 
-The DyCoV application is now ready for development.
+   pip install uv  # if not already installed
+   uv venv dycov_venv
+   source dycov_venv/bin/activate
+   uv pip install -e .[dev,test]
+   ```
+
+3. Activate the environment and run:
+
+   ```bash
+   source dycov_venv/bin/activate
+   dycov -h
+   ```
+#### Option B — Development using **Docker**
+
+1. Start a basic Linux container (e.g., Ubuntu), mounting your project folder:
+
+   ```bash
+   docker run --rm -it -v "${PWD}:/workspace" -w /workspace ubuntu:22.04
+   ```
+
+2. Inside the container, install required system tools:
+
+   ```bash
+   apt update
+   apt install -y python3 python3-pip python3-venv git curl unzip gcc g++ cmake
+   pip install uv
+   ```
+
+3. Build and install DyCoV exactly as in Linux:
+
+   ```bash
+   uv venv dycov_venv
+   source dycov_venv/bin/activate
+   uv pip install -e .[dev,test]
+   ```
+
+4. Run the tool:
+
+   ```bash
+   source dycov_venv/bin/activate
+   dycov -h
+   ```
+
+#### Native Windows installation (not recommended)
+
+> [!WARNING]  
+> A fully Windows‑native installation *might* be technically possible, but we do not provide support for it.  
+> Setting up all required components separately (C/C++, LaTeX, Python, and more) is complex, and supporting all possible version combinations would be unmanageable.
+
 
 Finally, if you want to further _develop_ the source code of this tool, consult
 the [Developer Manual](docs/manual_dev).
