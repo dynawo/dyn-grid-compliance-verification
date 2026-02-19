@@ -347,7 +347,6 @@ class ModelProducer(Producer):
             self.__read_producer_ini(),
             self._s_nref,
         )
-        self._connected_to_pdr = model_parameters.get_connected_to_pdr(self.get_producer_dyd())
         self.s_nom = sum(gen.SNom for gen in self.generators)
 
         # Check sanity of the producer network
@@ -693,16 +692,6 @@ class ModelProducer(Producer):
         if self._ppm_xfmr:
             xfmrs.append(self._ppm_xfmr)
         return xfmrs
-
-    def get_connected_to_pdr(self) -> list:
-        """Gets the Producer models connected to the bus PDR.
-
-        Returns
-        -------
-        list
-            Equipments connected to the bus PDR
-        """
-        return self._connected_to_pdr
 
     def set_is_field_measurements(self, is_field_measurements: bool) -> None:
         """Sets if the curves are field measurements.

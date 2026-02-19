@@ -406,6 +406,11 @@ class DynawoCurves(ProducerCurves):
         Zv = (Udip * Zcc) / (Uinf - Udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
         Xv = (Zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
+        if Xv == 0.0:
+            dycov_logging.get_logger("ProducerCurves").warning(
+                "Xv is zero, which may indicate an issue with the calculation."
+            )
+            Xv = 1e-3  # Avoid zero value
         return Xv
 
     def __calculate_Xv_values(
@@ -583,7 +588,9 @@ class DynawoCurves(ProducerCurves):
         self._jobs_file.complete_file(
             working_oc_dir, self._solver_id, self._solver_lib, event_params
         )
-        self._par_file.complete_file(working_oc_dir, line_rpu, line_xpu, rte_gen, event_params)
+        self._par_file.complete_file(
+            working_oc_dir, line_rpu, line_xpu, rte_gen, event_params, self.get_producer().u_nom
+        )
         self._dyd_file.complete_file(working_oc_dir, event_params)
         self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
@@ -632,7 +639,6 @@ class DynawoCurves(ProducerCurves):
         self._curves_dict = crv.create_curves_file(
             working_oc_dir,
             "TSOModel.crv",
-            self.get_producer().get_connected_to_pdr(),
             xmfrs,
             self.get_producer().generators,
             self._rte_loads,

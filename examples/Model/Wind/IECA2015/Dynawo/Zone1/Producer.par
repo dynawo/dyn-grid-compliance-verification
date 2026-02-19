@@ -53,7 +53,7 @@
     <par type="INT" name="WT_MqG" value="1"/>
     <par type="DOUBLE" name="WT_RDropPu" value="0"/>
     <par type="DOUBLE" name="WT_tPost" value="0"/>
-    <par type="DOUBLE" name="WT_tQord" value="0.01"/>
+    <par type="DOUBLE" name="WT_tQord" value="0.05"/>
     <par type="DOUBLE" name="WT_UMaxPu" value="1.1"/>
     <par type="DOUBLE" name="WT_UMinPu" value="0.9"/>
     <par type="DOUBLE" name="WT_UqDipPu" value="0.9"/>
@@ -61,8 +61,8 @@
     <par type="DOUBLE" name="WT_XDropPu" value="0"/>
     <!-- QLimiter -->
     <par type="BOOL" name="WT_QlConst" value="true"/>
-    <par type="DOUBLE" name="WT_QMaxPu" value="0.4"/>
-    <par type="DOUBLE" name="WT_QMinPu" value="-0.4"/>
+    <par type="DOUBLE" name="WT_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="WT_QMinPu" value="-0.8"/>
     <par type="DOUBLE" name="WT_tPFiltql" value="0.01"/>
     <par type="DOUBLE" name="WT_tUFiltql" value="0.01"/>
     <!-- GridProtection -->

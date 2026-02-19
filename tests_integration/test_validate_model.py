@@ -1,10 +1,12 @@
 import pytest
 
 from dycov.model.compliance import Compliance
-from tests_integration.utils import MODEL, RESOURCES, execute_tool
+from tests.dycov.utils import MODEL, execute_tool
+
+RESOURCES = "./resources"
 
 
-def test_model_validation_wecca_model():
+def test_model_validation_wecca_model(dynawo_latest):
     compliance = execute_tool(
         f"{MODEL}/Wind/WECCA/Dynawo",
         None,

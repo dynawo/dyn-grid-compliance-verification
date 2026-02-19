@@ -20,7 +20,7 @@
   <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Measurements" var2="measurements_terminal2"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
-  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="Measurements" var2="measurements_terminal2"/>
+  <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="StepUp_Xfmr1" var1="transformer_terminal2" id2="Main_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Wind_Turbine1" var1="WTG4A_terminal" id2="StepUp_Xfmr1" var2="transformer_terminal1"/>
   <dyn:connect id1="StepUp_Xfmr2" var1="transformer_terminal2" id2="Main_Xfmr" var2="transformer_terminal1"/>
