@@ -26,12 +26,13 @@ from dycov.model.producer import Producer
 def _purge_stale_temp_dirs(
     base_dir: Path, prefix: str, older_than: timedelta, exclude: Optional[Path] = None
 ) -> None:
+    print(f"Purging stale temp dirs in {base_dir} with prefix {prefix} older than {older_than}")
     try:
         now = datetime.now().timestamp()
         threshold = now - older_than.total_seconds()
         for entry in base_dir.iterdir():
             try:
-                if not entry.is_dir(follow_symlinks=False):
+                if not entry.is_dir():
                     continue
                 name = entry.name
                 if not name.startswith(prefix):
@@ -39,7 +40,7 @@ def _purge_stale_temp_dirs(
                 path = base_dir / name
                 if exclude is not None and path == exclude:
                     continue
-                st = entry.stat(follow_symlinks=False)
+                st = entry.stat()
                 if st.st_mtime <= threshold:
                     shutil.rmtree(path, ignore_errors=True)
             except Exception:
@@ -82,7 +83,7 @@ class Parameters:
         username = getpass.getuser()
         base_dir = Path.cwd()
         prefix = f"{tmp_path}_{username}_"
-        _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(hours=6))
+        _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(minutes=30))
         self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
 
         # The parameter is initialized in the child class

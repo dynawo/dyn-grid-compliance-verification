@@ -64,6 +64,7 @@ class ParFile(FileVariables):
         line_xpu: float,
         rte_gen: Gen_init,
         event_params: dict,
+        unom: float,
     ) -> None:
         """
         Replaces the file placeholders in the 'TSOModel.par' file with the corresponding values.
@@ -81,6 +82,8 @@ class ParFile(FileVariables):
         event_params: dict
             A dictionary containing event-specific parameters, including start time,
             duration, pre-event value, and step value.
+        unom: float
+            The nominal voltage value for the generator.
         """
         # Retrieve all existing variables from the TSOModel.par file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.par")
@@ -96,6 +99,7 @@ class ParFile(FileVariables):
         variables_dict["gen_Q0Pu"] = rte_gen.Q0
         variables_dict["gen_U0Pu"] = rte_gen.U0
         variables_dict["gen_UPhase0"] = rte_gen.UPhase0
+        variables_dict["gen_UNom"] = unom
 
         # Update event parameters
         variables_dict["event_start"] = event_params["start_time"]

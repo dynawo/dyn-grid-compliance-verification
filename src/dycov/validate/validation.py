@@ -147,9 +147,11 @@ class Validation:
     def __init__(
         self,
         parameters: ValidationParameters,
+        dry_run: bool = False,
     ):
         self._parameters = parameters
         self._is_testing = False  # Flag to avoid opening the report in the tests
+        self._dry_run = dry_run
 
         # Environment Path
         self._modelica_path = Path(config.get_value("Global", "modelica_path"))
@@ -314,6 +316,7 @@ class Validation:
                 report_results,
                 self._parameters,
                 Path(self._path_latex_files),
+                self._dry_run,
             )
         except LatexReportException:
             dycov_logging.get_logger("Validation").error(

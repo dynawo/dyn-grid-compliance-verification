@@ -80,6 +80,12 @@ class GFMProducer(Producer):
         """
         return "gfm"
 
+    def set_zone(self, zone: int, filename: str) -> None:
+        """
+        Dummy
+        """
+        pass
+
     def get_config(self) -> configparser.ConfigParser:
         """
         Gets the producer settings for the GFM calculations.
