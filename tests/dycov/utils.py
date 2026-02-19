@@ -52,18 +52,10 @@ def execute_tool(producer_model_path, producer_curves_path, reference_curves_pat
                     else MODEL_VALIDATION
                 )
 
-            # Buscar DYNAWOPATH o dynawo.sh
-            dynawo_path = os.getenv("DYNAWOPATH")
-            if not dynawo_path:
-                dynawo_path = shutil.which("dynawo.sh")
-
-            if not dynawo_path:
-                return "Validation skipped: DYNAWOPATH not set and dynawo.sh not found."
-
             dynawo_sh = _resolve_dynawo_sh()
 
             params = ValidationParameters(
-                Path(dynawo_path).resolve(),
+                dynawo_sh,
                 testpath / producer_model_path if producer_model_path else None,
                 testpath / producer_curves_path if producer_curves_path else None,
                 testpath / reference_curves_path if reference_curves_path else None,
