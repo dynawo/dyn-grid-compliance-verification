@@ -84,3 +84,7 @@ Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
 Disconnection_Model = namedtuple(
     "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
 )
+ExclusionWindows = namedtuple(
+    "ExclusionWindows",
+    ["event_start", "event_end", "clear_start", "clear_end"],
+)
