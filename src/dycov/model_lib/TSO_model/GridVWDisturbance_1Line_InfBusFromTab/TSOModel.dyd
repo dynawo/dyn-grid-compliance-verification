@@ -3,7 +3,7 @@
   <!-- Benchmark Case -->
   <dyn:blackBoxModel id="InfiniteBus" lib="InfiniteBusFromTable" parFile="TSOModel.par" parId="InfiniteBus"/>
   <dyn:blackBoxModel id="Line" lib="Line" parFile="TSOModel.par" parId="Line"/>
-  <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
+  <dyn:blackBoxModel id="BusPDR" lib="Bus" parFile="TSOModel.par" parId="PDR"/>
 
   <!-- "Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
        Here it is needed in order to channel the flows coming from all branches to the BusPDR into a single element,
