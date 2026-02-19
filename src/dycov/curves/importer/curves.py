@@ -201,12 +201,12 @@ class ImportedCurves(ProducerCurves):
                         id=gen_id,
                         lib="",
                         terminals=(Terminal(connectedEquipment=""),),
-                        SNom="",
-                        IMax="",
+                        SNom=0.0,
+                        IMax=0.0,
                         par_id="",
-                        P="",
-                        Q="",
-                        VoltageDroop="",
+                        P=0.0,
+                        Q=0.0,
+                        VoltageDroop=0.0,
                         UseVoltageDroop=False,
                     )
                 )

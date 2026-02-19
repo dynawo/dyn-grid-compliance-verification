@@ -14,13 +14,22 @@ import configparser
 import math
 import re
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
+from dycov.model.parameters import (
+    Gen_params,
+    Line_params,
+    Load_params,
+    Pdr_equipments,
+    Pdr_params,
+    Terminal,
+    Xfmr_params,
+)
 
 # Numeric values: supports integers, decimals, and leading sign; allows ".5" style.
 NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
@@ -32,6 +41,53 @@ NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
 MULTIPLIER_PATTERN = re.compile(
     r"^(?:(?P<mul>[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\*\s*)?(?P<name>[A-Za-z_]\w*)$"
 )
+
+
+def write_pdr_comment(path: Path, par_file: str, pdr: Pdr_params) -> None:
+    """
+    Insert (or update) an XML comment at the top of the PAR file
+    with the PDR parameters (U, UPhase, S, P, Q).
+
+    The comment is marked with a stable header so that repeated calls
+    update the existing comment instead of duplicating it.
+
+    Parameters
+    ----------
+    path : Path
+        Directory where the PAR file is located.
+    par_file : str
+        PAR filename (e.g., "network.par").
+    pdr : Pdr_params
+        Parameters at the PDR bus (U, UPhase, S, P, Q).
+    """
+    par_path = path / par_file
+    parser = etree.XMLParser(remove_blank_text=True)
+    par_tree = etree.parse(par_path, parser)
+    par_root = par_tree.getroot()
+
+    header = "PDR parameters"
+    comment_text = f"{header}: U={pdr.U}, UPhase={pdr.UPhase}, S={pdr.S}, P={pdr.P}, Q={pdr.Q}"
+
+    # Buscar comentarios existentes en todo el documento
+    existing = None
+    for c in par_root.xpath("//comment()"):
+        if c.text and c.text.startswith(header):
+            existing = c
+            break
+
+    if existing is not None:
+        # Actualizar el comentario existente
+        existing.text = comment_text
+    else:
+        # Insertar un nuevo comentario como primer hijo del <root>
+        comment = etree.Comment(comment_text)
+        if len(par_root):
+            par_root.insert(0, comment)
+        else:
+            par_root.append(comment)
+
+    # Guardar cambios con declaración XML y codificación explícita
+    par_tree.write(par_path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
 
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
@@ -55,6 +111,33 @@ def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> l
             bbmodels.append(bbmodel)
 
     return bbmodels
+
+
+def get_connected_to_pdr(producer_dyd: Path) -> list:
+    """Gets the list of equipment connected to the PDR bus in the producer DYD model.
+
+    Parameters
+    ----------
+    producer_dyd: Path
+        Path to the producer DYD file
+
+    Returns
+    -------
+    list
+        List of Pdr_equipments objects representing equipment connected to the PDR bus
+    """
+    producer_dyd_tree = etree.parse(producer_dyd, etree.XMLParser(remove_blank_text=True))
+    producer_dyd_root = producer_dyd_tree.getroot()
+
+    connected_to_pdr = []
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    for connect in producer_dyd_root.xpath("//ns:connect", namespaces=nsmap):
+        if "BusPDR" in connect.get("id1") and "terminal" in connect.get("var2"):
+            connected_to_pdr.append(Pdr_equipments(connect.get("id2"), connect.get("var2")))
+        if "BusPDR" in connect.get("id2") and "terminal" in connect.get("var1"):
+            connected_to_pdr.append(Pdr_equipments(connect.get("id1"), connect.get("var1")))
+
+    return connected_to_pdr
 
 
 def get_producer_values(
@@ -426,6 +509,7 @@ def adjust_producer_init(
     generators: list,
     xfmrs: list,
     aux_load: Load_params,
+    pdr: Pdr_params,
     generator_control_mode: str,
     force_voltage_droop: bool,
 ) -> None:
@@ -443,6 +527,8 @@ def adjust_producer_init(
         Parameters for the transformers
     aux_load: Load_params
         Initial values to the producer's auxiliary load
+    pdr: Pdr_params
+        PDR parameters
     generator_control_mode: str
         Control mode
     force_voltage_droop: bool
@@ -469,6 +555,7 @@ def adjust_producer_init(
             generator.terminals[0].Q0,
             generator.terminals[0].U0,
             generator.terminals[0].UPhase0,
+            pdr,
             generator_control_mode,
             force_voltage_droop,
         )
@@ -694,7 +781,7 @@ def _get_line_values(
     return lines
 
 
-def _calculate_line_xpu(x_str: str, applied_line_xpu: float) -> float:
+def _calculate_line_xpu(x_str: Optional[str], applied_line_xpu: float) -> float:
     if applied_line_xpu is None:
         return float(x_str)
     if x_str and "{{line_XPu}}" in x_str:
@@ -898,6 +985,7 @@ def _adjust_generator(
     generator_q0pu: float,
     generator_u0pu: float,
     generator_uphase0: float,
+    pdr: Pdr_params,
     generator_control_mode: str,
     force_voltage_droop: bool,
 ) -> None:
@@ -907,11 +995,11 @@ def _adjust_generator(
         return
 
     _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
+    _set_initial_pcc_power(parset, nsmap, generator.lib, pdr)
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
+    _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
-    control_mode_name = _apply_control_mode(
-        generator, parset, nsmap, generator_control_mode, force_voltage_droop
-    )
+    control_mode_name = _apply_control_mode(generator, parset, nsmap, generator_control_mode)
     _apply_voltage_droop(
         generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop
     )
@@ -924,6 +1012,13 @@ def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
     _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
 
 
+def _set_initial_pcc_power(parset, nsmap, lib, pdr):
+    sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePowerPcc0Pu")
+    _set_parameter(parset, nsmap, active_power0, sign, pdr.P)
+    sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePowerPcc0Pu")
+    _set_parameter(parset, nsmap, reactive_power0, sign, pdr.Q)
+
+
 def _set_initial_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     sign = 1
     _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0Pu")
@@ -932,7 +1027,15 @@ def _set_initial_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     _set_parameter(parset, nsmap, phase0, sign, uphase0)
 
 
-def _apply_control_mode(generator, parset, nsmap, generator_control_mode, force_voltage_droop):
+def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
+    sign = 1
+    _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "VoltagePcc0Pu")
+    _set_parameter(parset, nsmap, voltage0, sign, pdr.U)
+    _, phase0 = dynawo_translator.get_dynawo_variable(lib, "PhasePcc0")
+    _set_parameter(parset, nsmap, phase0, sign, pdr.UPhase)
+
+
+def _apply_control_mode(generator, parset, nsmap, generator_control_mode):
     control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap)
     _log_control_mode(generator, control_mode_parameters)
 

@@ -115,6 +115,12 @@
     <par type="DOUBLE" name="WT_Q0Pu" value="0.21"/>
     <par type="DOUBLE" name="WT_U0Pu" value="1"/>
     <par type="DOUBLE" name="WT_UPhase0" value="0.21949"/>
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WT_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="WT_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT_XLvTrPu" value="0.01"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">

@@ -52,6 +52,7 @@ from dycov.validation import common
 
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
+USE_PDR_VALUES = True
 
 # ----------------------------
 # Private file/paths constants
@@ -148,9 +149,8 @@ class DynawoCurves(ProducerCurves):
         self._relAccuracy = 0.0  # Only for IDA solver
         self.__reset_solver()
 
-    # ----------------------------
-    # Small private helpers (DRY)
-    # ----------------------------
+        self._use_pdr_values = USE_PDR_VALUES if producer.get_zone() != 1 else False
+
     def __cfg_section(self, pcs_name: str, bm_name: str, oc_name: str, suffix: str = "") -> str:
         """
         Compose '<PCS>.<BM>.<OC>' optionally with a suffix like '.Model' or '.Event'.
@@ -359,22 +359,28 @@ class DynawoCurves(ProducerCurves):
         }
         return value_map.get(value_definition, 0.0)
 
-    def __adjust_event_value(self, event_params: dict) -> None:
+    def __adjust_event_value(self, event_params: dict, pdr: Pdr_params) -> None:
         """
         Adjusts the event 'pre_value' for AVRSetpointPu if voltage drop is enabled.
         Parameters
         ----------
         event_params : dict
             Dictionary containing event parameters.
+        pdr : Pdr_params
+            PDR parameters.
         """
         if event_params["connect_to"] != "AVRSetpointPu":
             return
         # Optimized: Iterate through generators once to update pre_value
         for i, generator in enumerate(self.get_producer().generators):
             if generator.UseVoltageDroop:
-                event_params["pre_value"][i] = (
-                    generator.terminals[0].U0 + generator.VoltageDroop * generator.terminals[0].Q0
-                )
+                if self._use_pdr_values:
+                    event_params["pre_value"][i] = pdr.U + generator.VoltageDroop * pdr.Q
+                else:
+                    event_params["pre_value"][i] = (
+                        generator.terminals[0].U0
+                        + generator.VoltageDroop * generator.terminals[0].Q0
+                    )
 
     def __get_lines_for_initial_calcs(self, rte_lines: list) -> Pimodel_params:
         """
@@ -529,6 +535,7 @@ class DynawoCurves(ProducerCurves):
             pcs_name,
             bm_name,
             oc_name,
+            pdr,
         )
         if (
             reference_event_start_time is not None
@@ -553,10 +560,11 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
             sorted_stepup_xfmrs,
             self.get_producer().aux_load,
+            pdr,
             control_mode,
             force_voltage_droop,
         )
-        self.__adjust_event_value(event_params)
+        self.__adjust_event_value(event_params, pdr)
         self.__calculate_Xv_values(
             event_params,
             line_xpu,
@@ -609,6 +617,16 @@ class DynawoCurves(ProducerCurves):
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
         )
+        model_parameters.write_pdr_comment(
+            working_oc_dir,
+            self.get_producer().get_producer_par().name,
+            pdr,
+        )
+        model_parameters.write_pdr_comment(
+            working_oc_dir,
+            _TSO_PAR,
+            pdr,
+        )
 
         # Collect all transformers for CRV file creation
         xmfrs = self.get_producer().stepup_xfmrs[:]
@@ -635,6 +653,7 @@ class DynawoCurves(ProducerCurves):
         pcs_name: str,
         bm_name: str,
         oc_name: str,
+        pdr: Pdr_params,
     ) -> dict:
         """
         Retrieves event parameters from the configuration.
@@ -646,6 +665,9 @@ class DynawoCurves(ProducerCurves):
             Benchmark name.
         oc_name : str
             Operating Condition name.
+        pdr : Pdr_params
+            PDR parameters.
+
         Returns
         -------
         dict
@@ -660,17 +682,30 @@ class DynawoCurves(ProducerCurves):
         setpoint_factor = self._s_nref / self.get_producer().s_nom
         if connect_event_to:
             if "ActivePowerSetpointPu" == connect_event_to:
-                pre_value = [
-                    -gen.terminals[0].P0 * setpoint_factor
-                    for gen in self.get_producer().generators
-                ]
+                if self._use_pdr_values:
+                    pre_value = [
+                        -pdr.P * setpoint_factor for gen in self.get_producer().generators
+                    ]
+                else:
+                    pre_value = [
+                        -gen.terminals[0].P0 * setpoint_factor
+                        for gen in self.get_producer().generators
+                    ]
             elif "ReactivePowerSetpointPu" == connect_event_to:
-                pre_value = [
-                    -gen.terminals[0].Q0 * setpoint_factor
-                    for gen in self.get_producer().generators
-                ]
+                if self._use_pdr_values:
+                    pre_value = [
+                        -pdr.Q * setpoint_factor for gen in self.get_producer().generators
+                    ]
+                else:
+                    pre_value = [
+                        -gen.terminals[0].Q0 * setpoint_factor
+                        for gen in self.get_producer().generators
+                    ]
             elif "AVRSetpointPu" == connect_event_to:
-                pre_value = [gen.terminals[0].U0 for gen in self.get_producer().generators]
+                if self._use_pdr_values:
+                    pre_value = [pdr.U for gen in self.get_producer().generators]
+                else:
+                    pre_value = [gen.terminals[0].U0 for gen in self.get_producer().generators]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
         # Optimized: Determine fault_duration more concisely
@@ -845,7 +880,7 @@ class DynawoCurves(ProducerCurves):
             model_parameters.extract_defined_value(pdr_u_cfg, "Udim", u_dim)
             / self.get_producer().u_nom
         )
-        return Pdr_params(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
+        return Pdr_params(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def __get_grid_load(
         self,

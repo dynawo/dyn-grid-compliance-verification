@@ -3,11 +3,10 @@
 #
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
+# marinjl@aia.es
+# omsg@aia.es
+# demiguelm@aia.es
 #
-
 import logging
 
 from dycov.logging.logger import DycovLogger

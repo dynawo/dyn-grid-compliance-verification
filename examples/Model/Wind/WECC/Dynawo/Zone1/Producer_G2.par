@@ -7,6 +7,13 @@
     <par type="DOUBLE" name="WT4B_U0Pu" value="1.0"/>
     <par type="DOUBLE" name="WT4B_UPhase0" value="0.00000144621"/>
 
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WT4B_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="WT4B_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.01"/>
+
     <!-- Electrical Control -->
     <par type="BOOL" name="WT4B_QFlag" value="true"/>
     <par type="BOOL" name="WT4B_VFlag" value="true"/>

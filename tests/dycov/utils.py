@@ -40,15 +40,17 @@ def execute_tool(producer_model_path, producer_curves_path, reference_curves_pat
             config.set_value("Dynawo", "simulation_limit", str(10.0))
             only_dtr = True
             if producer_model_path:
-                if "Performance" in producer_model_path:
-                    sim_type = ELECTRIC_PERFORMANCE
-                else:
-                    sim_type = MODEL_VALIDATION
+                sim_type = (
+                    ELECTRIC_PERFORMANCE
+                    if "Performance" in producer_model_path
+                    else MODEL_VALIDATION
+                )
             else:
-                if "Performance" in producer_curves_path:
-                    sim_type = ELECTRIC_PERFORMANCE
-                else:
-                    sim_type = MODEL_VALIDATION
+                sim_type = (
+                    ELECTRIC_PERFORMANCE
+                    if "Performance" in producer_curves_path
+                    else MODEL_VALIDATION
+                )
 
             dynawo_sh = _resolve_dynawo_sh()
 

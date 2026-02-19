@@ -52,11 +52,16 @@ class DycovLogger(logging.getLoggerClass()):
     ) -> None:
         log_name = "dycov.log"
         log_file = log_dir / log_name
+
         file_handler = RotatingFileHandler(
-            log_file, mode="a", maxBytes=file_max_bytes, backupCount=5, encoding=None, delay=0
+            log_file,
+            mode="a",
+            maxBytes=file_max_bytes,
+            backupCount=5,
+            encoding=None,
+            delay=0,
         )
         file_handler.setLevel(file_log_level)
-
         file_handler.setFormatter(logging.Formatter(file_formatter))
 
         if not disable_file:
