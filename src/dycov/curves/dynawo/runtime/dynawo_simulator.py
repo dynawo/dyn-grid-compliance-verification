@@ -16,6 +16,7 @@ import re
 import signal
 import subprocess
 import time
+from enum import IntEnum
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -29,6 +30,15 @@ from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
 VOLTAGE_DIP_THRESHOLD = 0.002
+
+
+class VoltDipResult(IntEnum):
+    """Result codes for voltage dip comparison."""
+
+    COLUMN_MISSING = -2  # Error: BusPDR_BUS_Voltage column not found
+    DIP_TOO_SMALL = -1  # Actual dip < expected (need more impedance)
+    DIP_CORRECT = 0  # Actual dip ≈ expected (within tolerance)
+    DIP_TOO_LARGE = 1  # Actual dip > expected (need less impedance)
 
 
 class _ProcRegistry:
@@ -125,7 +135,7 @@ class DynawoSimulator:
         )
 
     @staticmethod
-    def check_voltage_dip(
+    def classify_voltage_dip(
         pcs_name: str,
         bm_name: str,
         oc_name: str,
@@ -135,7 +145,8 @@ class DynawoSimulator:
         expected_dip: float,
     ) -> int:
         """
-        Checks if the desired voltage dip has occurred during the simulation.
+        Classifies the voltage dip magnitude relative to expected value.
+
         Parameters
         ----------
         pcs_name : str
@@ -152,22 +163,22 @@ class DynawoSimulator:
             The duration of the fault in seconds.
         expected_dip : float
             The required voltage drop (positive value).
+
         Returns
         -------
-        int
-            -1 if the actual voltage dip is less than the required dip.
-             1 if the actual voltage dip is greater than the required dip.
-             0 if the actual voltage dip is approximately equal to the required dip.
+        VoltDipResult
+            Classification of the voltage dip:
+            - COLUMN_MISSING: Required column not found in curves
+            - DIP_TOO_SMALL: Increase fault impedance
+            - DIP_CORRECT: Within tolerance
+            - DIP_TOO_LARGE: Decrease fault impedance
         """
         if expected_dip == 0.0:
-            return 0
+            return VoltDipResult.DIP_CORRECT
 
         bus_pdr_voltage_column = "BusPDR_BUS_Voltage"
         if bus_pdr_voltage_column not in curves.columns:
-            dycov_logging.get_logger("DynawoSimulator").error(
-                f"'{bus_pdr_voltage_column}' not found in curves DataFrame."
-            )
-            return -2  # Indicate an error if the column is missing
+            return VoltDipResult.COLUMN_MISSING
 
         time_values = curves["time"].tolist()
         voltage_values = curves[bus_pdr_voltage_column].tolist()
@@ -207,11 +218,11 @@ class DynawoSimulator:
         rtol = VOLTAGE_DIP_THRESHOLD
         atol = 0.1 * rtol
         if math.isclose(voltage_dip, expected_dip, rel_tol=rtol, abs_tol=atol):
-            return 0
+            return VoltDipResult.DIP_CORRECT
         elif expected_dip < voltage_dip:
-            return 1
+            return VoltDipResult.DIP_TOO_LARGE
         else:
-            return -1
+            return VoltDipResult.DIP_TOO_SMALL
 
     # ------
     # Engine
