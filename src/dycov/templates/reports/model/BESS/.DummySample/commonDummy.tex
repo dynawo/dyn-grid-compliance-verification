@@ -28,11 +28,16 @@
     As required by the DTR PCS \DTRPcs, the figures below show the
     following magnitudes:
     \begin{itemize}
-        \item Voltage at connection point.
-        \item Active power supplied at the connection point.
-        \item Reactive power supplied at the connection point.
-        \item Active current {{ supplied_at }}.
-        \item Reactive current {{ supplied_at }}.
+        \item Voltage at connection point: modulus of the complex AC voltage at
+        the PDR bus.
+        \item Active power supplied at the connection point: sum of active power
+        over all lines on TSO side.
+        \item Reactive power supplied at the connection point: sum of reactive power
+        over all lines on TSO side.
+        \item Active current supplied at the connection point: sum of active power
+        over all lines on TSO side.
+        \item Reactive current supplied at the connection point: sum of reactive power
+        over all lines on TSO side.
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
         All BESS units are plotted on the same graph.
     \end{itemize}
@@ -83,7 +88,7 @@
         \centering
         \includegraphics[width=\textwidth]{fig_Ire_PCS_Iz1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Active current output Ip{{ measure_at }}.
+            \small Active current output Ip, measured at the PDR bus.
         \end{minipage}
     \end{minipage}
 %
@@ -92,7 +97,7 @@
         \centering
         \includegraphics[width=\textwidth]{fig_Iim_PCS_Iz1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive current output Iq{{ measure_at }}.
+            \small Reactive current output Iq, measured at the PDR bus.
         \end{minipage}
     \end{minipage}
 }
