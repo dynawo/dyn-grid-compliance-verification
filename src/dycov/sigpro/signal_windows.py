@@ -50,7 +50,7 @@ def _get_exclusion_zones(
 
     return Exclusion_zones(
         t_windowLPF_excl_start,
-        t_windowLPF_excl_start,
+        t_windowLPF_excl_end,
         t_integrator_tol,
         t_faultLPF_excl,
         t_faultQS_excl,
