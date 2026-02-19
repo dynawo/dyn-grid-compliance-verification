@@ -14,7 +14,7 @@ import pandas as pd
 
 from dycov.curves.manager import CurvesManager
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Disconnection_Model
+from dycov.model.parameters import Disconnection_Model, ExclusionWindows
 from dycov.model.producer import Producer
 from dycov.validation import compliance_list
 
@@ -150,16 +150,20 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         curves = self._get_reference_curves()
         return curves.get(name, None)
 
-    def _get_exclusion_times(self) -> tuple[float, float, float, float]:
+    def _get_exclusion_windows(self) -> ExclusionWindows:
         """
-        Retrieves exclusion times from the curves manager.
+        Retrieves exclusion windows from the curves manager.
 
         Returns
         -------
-        tuple[float, float, float, float]
-            A tuple containing four float values representing exclusion times.
+        ExclusionWindows
+            Named tuple with exclusion zone boundaries:
+            - event_start: Time before the event is triggered
+            - event_end: Time after the event is triggered
+            - clear_start: Time before the event is cleared (0.0 if no clearance)
+            - clear_end: Time after the event is cleared (0.0 if no clearance)
         """
-        return self._curves_manager.get_exclusion_times()
+        return self._curves_manager.get_exclusion_windows()
 
     def _get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -281,7 +285,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         """
         return self._curves_manager.get_generator_u_dim()
 
-    def complete_parameters(
+    def initialize_validation_params(
         self,
         working_oc_dir: Path,
         jobs_output_dir: Path,
@@ -290,7 +294,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         oc_name: str,
     ) -> None:
         """
-        Completes the validation parameters by retrieving necessary values from the curves manager.
+        Initialize the validation parameters by retrieving necessary values from the curves manager.
 
         Parameters
         ----------
