@@ -39,6 +39,8 @@ Summary = namedtuple(
     ],
 )
 
+CURRENT_IN_PDR = config.get_boolean("GridCode", "current_in_pdr", False)
+
 
 class Benchmark:
     """Second-level representation of the pcs described in the DTR.
@@ -378,17 +380,47 @@ class Benchmark:
         fig_Ire = config.get_list("ReportCurves", "fig_Ire")
         if pcs_benchmark_name in fig_Ire:
             tests = []
-            self._figures_description.append(
-                ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
-            )
+            if CURRENT_IN_PDR:
+                self._figures_description.append(
+                    ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
+                )
+            else:
+                self._figures_description.append(
+                    [
+                        "fig_Ire",
+                        [
+                            {
+                                "type": "generator",
+                                "variable": "InjectedActiveCurrent",
+                            }
+                        ],
+                        tests,
+                        "Ip(pu)",
+                    ]
+                )
 
     def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Iim = config.get_list("ReportCurves", "fig_Iim")
         if pcs_benchmark_name in fig_Iim:
             tests = []
-            self._figures_description.append(
-                ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
-            )
+            if CURRENT_IN_PDR:
+                self._figures_description.append(
+                    ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
+                )
+            else:
+                self._figures_description.append(
+                    [
+                        "fig_Iim",
+                        [
+                            {
+                                "type": "generator",
+                                "variable": "InjectedReactiveCurrent",
+                            }
+                        ],
+                        tests,
+                        "Iq(pu)",
+                    ]
+                )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_W = config.get_list("ReportCurves", "fig_W")
