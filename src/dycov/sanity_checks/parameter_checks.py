@@ -12,6 +12,7 @@ This module contains functions for validating various numerical and configuratio
 parameters of Dynawo models, including generator, transformer, load, and simulation settings.
 """
 
+import math
 from typing import List
 
 from dycov.configuration.cfg import config
@@ -110,6 +111,58 @@ def check_producer_params(
     )
     if str(u_nom) not in Udims:
         raise ValueError("Unexpected nominal voltage in the PDR Bus.")
+
+
+def check_producer_params_consistency(
+    generators: List[Gen_params],
+    p_max_pu: float = 0.0,
+    q_max_pu: float = 0.0,
+    q_min_pu: float = 0.0,
+    rel_tol: float = 1e-6,
+    abs_tol: float = 1e-9,
+) -> None:
+    """Check whether the user-supplied producer parameters are consistent.
+
+    Parameters
+    ----------
+    generators_z1: list
+        Generators parameters list.
+    p_max_pu: float
+        Maximum active power in per unit.
+    q_max_pu: float
+        Maximum reactive power in per unit.
+    q_min_pu: float
+        Minimum reactive power in per unit.
+    rel_tol: float
+        Relative tolerance for the comparison.
+    abs_tol: float
+        Absolute tolerance for the comparison.
+    """
+    gen_p_max = 0.0
+    gen_q_max = 0.0
+    gen_q_min = 0.0
+    for generator in generators:
+        if generator.PMax is not None:
+            gen_p_max += generator.PMax
+        if generator.QMax is not None:
+            gen_q_max += generator.QMax
+        if generator.QMin is not None:
+            gen_q_min += generator.QMin
+
+    if not math.isclose(p_max_pu, gen_p_max, rel_tol=rel_tol, abs_tol=abs_tol):
+        dycov_logging.get_logger("Sanity Checks").warning(
+            "Inconsistency detected for Pmax: value from INI does not match value from PAR."
+        )
+
+    if not math.isclose(q_max_pu, gen_q_max, rel_tol=rel_tol, abs_tol=abs_tol):
+        dycov_logging.get_logger("Sanity Checks").warning(
+            "Inconsistency detected for Qmax: value from INI does not match value from PAR."
+        )
+
+    if not math.isclose(q_min_pu, gen_q_min, rel_tol=rel_tol, abs_tol=abs_tol):
+        dycov_logging.get_logger("Sanity Checks").warning(
+            "Inconsistency detected for Qmin: value from INI does not match value from PAR."
+        )
 
 
 def check_generators(

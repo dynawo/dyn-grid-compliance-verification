@@ -137,6 +137,12 @@ class ModelProducer(Producer):
                 self.__read_producer_ini(),
                 self._s_nref,
             )
+            parameter_checks.check_producer_params_consistency(
+                generators,
+                p_max_pu=self.p_max_injection_pu,
+                q_max_pu=self.q_max_pu,
+                q_min_pu=self.q_min_pu,
+            )
             sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
             file_checks.check_performance_curves(self._producer_curves_path)
@@ -229,6 +235,7 @@ class ModelProducer(Producer):
         self._zone = 1
         generators_z1 = list()
         for self._filename in self.get_filenames(self._zone):
+            self.__init_parameters()
             (
                 generators,
                 _,
@@ -260,6 +267,13 @@ class ModelProducer(Producer):
                 self._s_nref,
             )
             generators_z3 += generators
+        self.__init_parameters()
+        parameter_checks.check_producer_params_consistency(
+            generators_z3,
+            p_max_pu=self.p_max_injection_pu,
+            q_max_pu=self.q_max_pu,
+            q_min_pu=self.q_min_pu,
+        )
         sm_models, ppm_models, bess_models = parameter_checks.check_generators(
             generators_z1, generators_z3
         )
