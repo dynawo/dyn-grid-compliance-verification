@@ -17,11 +17,18 @@ from typing import Iterable, Set
 
 import pandas as pd
 
+import dycov
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.logging.logging import dycov_logging
 
 ModelFiles = namedtuple("ModelFiles", ["model_path", "omega_path", "pcs_path", "benchmark"])
 ProducerFiles = namedtuple("ProducerFiles", ["producer_dyd", "producer_par"])
+_PKG_ROOT = Path(dycov.__file__).resolve().parent
+_LATEX_ASSETS = [
+    _PKG_ROOT / "templates/reports/step_response_characteristics.png",
+    _PKG_ROOT / "templates/reports/TSO_logo.pdf",
+    _PKG_ROOT / "templates/reports/fig_placeholder.pdf",
+]
 
 
 def should_copy(file: Path, extra_excludes: Iterable[re.Pattern] = ()) -> bool:
@@ -332,12 +339,9 @@ def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
             copy_file(file, target / f"{prefix_name}.{file.name}")
         else:
             copy_file(file, target)
-    for extra in [
-        "../../../step_response_characteristics.png",
-        "../../../TSO_logo.pdf",
-        "../../../fig_placeholder.pdf",
-    ]:
-        copy_file(source / extra, target)
+
+    for asset in _LATEX_ASSETS:
+        copy_file(asset, target)
 
 
 def create_config_file(config_file: Path, target_file: Path) -> None:
