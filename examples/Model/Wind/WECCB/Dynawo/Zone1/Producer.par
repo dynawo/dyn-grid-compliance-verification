@@ -33,9 +33,9 @@
     <par type="DOUBLE" name="WT4B_DPMinPu" value="-999"/>
     <par type="DOUBLE" name="WT4B_IMaxPu" value="1.3"/>
     <par type="DOUBLE" name="WT4B_tP" value="0.05"/>
-    <par type="DOUBLE" name="WT4B_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WT4B_QMinPu" value="-0.8"/>
-    <par type="DOUBLE" name="WT4B_PMaxPu" value="1"/>
+    <par type="DOUBLE" name="WT4B_QMaxPu" value="0.4"/>
+    <par type="DOUBLE" name="WT4B_QMinPu" value="-0.4"/>
+    <par type="DOUBLE" name="WT4B_PMaxPu" value="0.75"/>
     <par type="DOUBLE" name="WT4B_PMinPu" value="0"/>
 
     <!-- Generator Control -->
