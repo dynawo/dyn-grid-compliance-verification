@@ -57,7 +57,7 @@
     <par type="DOUBLE" name="WTG3_VRef0Pu" value="0"/>
     <par type="DOUBLE" name="WTG3_DPMaxPu" value="2"/>
     <par type="DOUBLE" name="WTG3_DPMinPu" value="-2"/>
-    <par type="DOUBLE" name="WTG3_DbdPu" value="0.01"/>
+    <par type="DOUBLE" name="WTG3_DbdPu" value="0.0001"/>
     <par type="DOUBLE" name="WTG3_Dbd1Pu" value="-0.05"/>
     <par type="DOUBLE" name="WTG3_Dbd2Pu" value="0.05"/>
     <par type="DOUBLE" name="WTG3_EMaxPu" value="0.5"/>
