@@ -121,7 +121,8 @@ def check_producer_params_consistency(
     rel_tol: float = 1e-6,
     abs_tol: float = 1e-9,
 ) -> None:
-    """Check whether the user-supplied producer parameters are consistent.
+    """Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
+    for the case of models where there exists this overlap.
 
     Parameters
     ----------
@@ -149,20 +150,21 @@ def check_producer_params_consistency(
         if generator.QMin is not None:
             gen_q_min += generator.QMin
 
+    has_error = False
     if not math.isclose(p_max_pu, gen_p_max, rel_tol=rel_tol, abs_tol=abs_tol):
-        dycov_logging.get_logger("Sanity Checks").warning(
-            "Inconsistency detected for Pmax: value from INI does not match value from PAR."
-        )
+        dycov_logging.get_logger("Sanity Checks").error("Inconsistency detected for Pmax")
+        has_error = True
 
     if not math.isclose(q_max_pu, gen_q_max, rel_tol=rel_tol, abs_tol=abs_tol):
-        dycov_logging.get_logger("Sanity Checks").warning(
-            "Inconsistency detected for Qmax: value from INI does not match value from PAR."
-        )
+        dycov_logging.get_logger("Sanity Checks").error("Inconsistency detected for Qmax")
+        has_error = True
 
     if not math.isclose(q_min_pu, gen_q_min, rel_tol=rel_tol, abs_tol=abs_tol):
-        dycov_logging.get_logger("Sanity Checks").warning(
-            "Inconsistency detected for Qmin: value from INI does not match value from PAR."
-        )
+        dycov_logging.get_logger("Sanity Checks").error("Inconsistency detected for Qmin")
+        has_error = True
+
+    if has_error:
+        raise ValueError("Inconsistency detected: values from INI do not match values from PAR.")
 
 
 def check_generators(
