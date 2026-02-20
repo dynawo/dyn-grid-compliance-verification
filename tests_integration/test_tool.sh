@@ -75,7 +75,7 @@ launch_validate() {
     fi
     if [ "$wecc_models" = true ]; then
         color_msg "INFO: Including WECC models for Model validation."
-        wind_models+=("WECC4A1" "WECC4A2" "WECC4B" "WECC4")
+        wind_models+=("WECC31" "WECC32" "WECC4A1" "WECC4A2" "WECC4B" "WECC4")
         photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2" "WECCVoltageSource3" "WECCVoltageSource4")
         bess_models+=("WECC")
     fi
@@ -116,7 +116,7 @@ launch_model_as_performance() {
     fi
     if [ "$wecc_models" = true ]; then
         color_msg "INFO: Including WECC models for Performance validation."
-        wind_models+=("WECC4A1" "WECC4A2" "WECC4B" "WECC4")
+        wind_models+=("WECC31" "WECC32" "WECC4A1" "WECC4A2" "WECC4B" "WECC4")
         photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2" "WECCVoltageSource3" "WECCVoltageSource4")
         bess_models+=("WECC")
     fi
