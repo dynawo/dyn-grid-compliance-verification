@@ -126,7 +126,7 @@ def check_producer_params_consistency(
 
     Parameters
     ----------
-    generators_z1: list
+    generators: list
         Generators parameters list.
     p_max_pu: float
         Maximum active power in per unit.
@@ -151,16 +151,22 @@ def check_producer_params_consistency(
             gen_q_min += generator.QMin
 
     has_error = False
-    if not math.isclose(p_max_pu, gen_p_max, rel_tol=rel_tol, abs_tol=abs_tol):
-        dycov_logging.get_logger("Sanity Checks").error("Inconsistency detected for Pmax")
+    if not math.isclose(p_max_pu, gen_p_max, rel_tol=rel_tol, abs_tol=abs_tol) and gen_p_max != 0:
+        dycov_logging.get_logger("Sanity Checks").error(
+            f"Inconsistency detected for Pmax ({p_max_pu} vs {gen_p_max})"
+        )
         has_error = True
 
-    if not math.isclose(q_max_pu, gen_q_max, rel_tol=rel_tol, abs_tol=abs_tol):
-        dycov_logging.get_logger("Sanity Checks").error("Inconsistency detected for Qmax")
+    if not math.isclose(q_max_pu, gen_q_max, rel_tol=rel_tol, abs_tol=abs_tol) and gen_q_max != 0:
+        dycov_logging.get_logger("Sanity Checks").error(
+            f"Inconsistency detected for Qmax ({q_max_pu} vs {gen_q_max})"
+        )
         has_error = True
 
-    if not math.isclose(q_min_pu, gen_q_min, rel_tol=rel_tol, abs_tol=abs_tol):
-        dycov_logging.get_logger("Sanity Checks").error("Inconsistency detected for Qmin")
+    if not math.isclose(q_min_pu, gen_q_min, rel_tol=rel_tol, abs_tol=abs_tol) and gen_q_min != 0:
+        dycov_logging.get_logger("Sanity Checks").error(
+            f"Inconsistency detected for Qmin ({q_min_pu} vs {gen_q_min})"
+        )
         has_error = True
 
     if has_error:
