@@ -249,6 +249,12 @@ class ModelProducer(Producer):
                 self.__read_producer_ini(),
                 self._s_nref,
             )
+            parameter_checks.check_producer_params_consistency(
+                generators,
+                p_max_pu=self.p_max_injection_pu,
+                q_max_pu=self.q_max_pu,
+                q_min_pu=self.q_min_pu,
+            )
             generators_z1 += generators
         self._zone = 3
         generators_z3 = list()
