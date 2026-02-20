@@ -50,8 +50,8 @@
     <par type="DOUBLE" name="WTG4B_DbdPu" value="0.01"/>
     <par type="DOUBLE" name="WTG4B_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="WTG4B_EMinPu" value="-0.5"/>
-    <par type="DOUBLE" name="WTG4B_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WTG4B_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="WTG4B_QMaxPu" value="0.4"/>
+    <par type="DOUBLE" name="WTG4B_QMinPu" value="-0.4"/>
     <par type="DOUBLE" name="WTG4B_tFt" value="1e-5"/>
     <par type="DOUBLE" name="WTG4B_tFv" value="0.1"/>
     <par type="DOUBLE" name="WTG4B_tP" value="0.05"/>
@@ -61,7 +61,7 @@
     <par type="DOUBLE" name="WTG4B_DUp" value="0.001"/>
     <par type="DOUBLE" name="WTG4B_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG4B_FEMinPu" value="-999"/>
-    <par type="DOUBLE" name="WTG4B_PMaxPu" value="1"/>
+    <par type="DOUBLE" name="WTG4B_PMaxPu" value="0.75"/>
     <par type="DOUBLE" name="WTG4B_PMinPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_tLag" value="0.1"/>
     <par type="DOUBLE" name="WTG4B_Kp" value="0.1"/>
