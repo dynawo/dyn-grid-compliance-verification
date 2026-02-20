@@ -185,3 +185,78 @@ def test_internal_lines():
         pytest_wrapped_e.value.args[0]
         == "The reactance and admittance of the internal line must be greater than zero."
     )
+
+
+def test_producer_params_consistency():
+    gen1 = Gen_params(
+        id=None,
+        lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
+        terminals=(Terminal(connectedEquipment=""),),
+        SNom=90,
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
+        PMax=0.5,
+        QMax=0.3,
+        QMin=-0.3,
+    )
+    gen2 = Gen_params(
+        id=None,
+        lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
+        terminals=(Terminal(connectedEquipment=""),),
+        SNom=90,
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
+        PMax=0.5,
+        QMax=0.3,
+        QMin=-0.3,
+    )
+    parameter_checks.check_producer_params_consistency(
+        [gen1, gen2], p_max_pu=1.0, q_max_pu=0.6, q_min_pu=-0.6
+    )
+
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        parameter_checks.check_producer_params_consistency(
+            [gen1, gen2], p_max_pu=0.8, q_max_pu=0.6, q_min_pu=-0.6
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert (
+        pytest_wrapped_e.value.args[0]
+        == "Inconsistency detected: values from INI do not match values from PAR."
+    )
+
+    gen_none = Gen_params(
+        id=None,
+        lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
+        terminals=(Terminal(connectedEquipment=""),),
+        SNom=90,
+        IMax=100.0,
+        par_id="",
+        P=0.1,
+        Q=0.05,
+        VoltageDroop=None,
+        UseVoltageDroop=False,
+        PMax=None,
+        QMax=None,
+        QMin=None,
+    )
+    parameter_checks.check_producer_params_consistency(
+        [gen_none], p_max_pu=0.0, q_max_pu=0.0, q_min_pu=0.0
+    )
+
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        parameter_checks.check_producer_params_consistency(
+            [gen1], p_max_pu=0.5, q_max_pu=0.5, q_min_pu=-0.3
+        )
+    assert pytest_wrapped_e.type == ValueError
+    assert (
+        pytest_wrapped_e.value.args[0]
+        == "Inconsistency detected: values from INI do not match values from PAR."
+    )
