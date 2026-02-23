@@ -121,56 +121,69 @@ def check_producer_params_consistency(
     rel_tol: float = 1e-6,
     abs_tol: float = 1e-9,
 ) -> None:
-    """Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
-    for the case of models where there exists this overlap.
+    """
+    Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
+    using RTE's rule: INI values may differ as long as they are more restrictive.
+
+    More restrictive rules:
+      - Pmax_ini <= Sum(Pmax_par)
+      - Qmax_ini <= Sum(Qmax_par)
+      - Qmin_ini >= Sum(Qmin_par)
 
     Parameters
     ----------
     generators: list
-        Generators parameters list.
+        Generator parameters list.
     p_max_pu: float
-        Maximum active power in per unit.
+        Maximum active power in PDR (INI) in per unit.
     q_max_pu: float
-        Maximum reactive power in per unit.
+        Maximum reactive power in PDR (INI) in per unit.
     q_min_pu: float
-        Minimum reactive power in per unit.
+        Minimum reactive power in PDR (INI) in per unit.
     rel_tol: float
-        Relative tolerance for the comparison.
+        Relative tolerance.
     abs_tol: float
-        Absolute tolerance for the comparison.
+        Absolute tolerance.
     """
-    gen_p_max = 0.0
-    gen_q_max = 0.0
-    gen_q_min = 0.0
-    for generator in generators:
-        if generator.PMax is not None:
-            gen_p_max += generator.PMax
-        if generator.QMax is not None:
-            gen_q_max += generator.QMax
-        if generator.QMin is not None:
-            gen_q_min += generator.QMin
 
+    # Aggregate PAR values
+    gen_p_max = sum(g.PMax for g in generators if g.PMax is not None)
+    gen_q_max = sum(g.QMax for g in generators if g.QMax is not None)
+    gen_q_min = sum(g.QMin for g in generators if g.QMin is not None)
+
+    log = dycov_logging.get_logger("Sanity Checks")
     has_error = False
-    if not math.isclose(p_max_pu, gen_p_max, rel_tol=rel_tol, abs_tol=abs_tol) and gen_p_max != 0:
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"Inconsistency detected for Pmax ({p_max_pu} vs {gen_p_max})"
-        )
-        has_error = True
 
-    if not math.isclose(q_max_pu, gen_q_max, rel_tol=rel_tol, abs_tol=abs_tol) and gen_q_max != 0:
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"Inconsistency detected for Qmax ({q_max_pu} vs {gen_q_max})"
-        )
-        has_error = True
+    # --- Pmax check ---
+    if gen_p_max != 0:
+        # INI must be <= PAR (more restrictive)
+        if p_max_pu > gen_p_max + max(abs_tol, rel_tol * abs(gen_p_max)):
+            log.error(
+                f"Inconsistency in Pmax: INI={p_max_pu} is less restrictive than PAR={gen_p_max}"
+            )
+            has_error = True
 
-    if not math.isclose(q_min_pu, gen_q_min, rel_tol=rel_tol, abs_tol=abs_tol) and gen_q_min != 0:
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"Inconsistency detected for Qmin ({q_min_pu} vs {gen_q_min})"
-        )
-        has_error = True
+    # --- Qmax check ---
+    if gen_q_max != 0:
+        if q_max_pu > gen_q_max + max(abs_tol, rel_tol * abs(gen_q_max)):
+            log.error(
+                f"Inconsistency in Qmax: INI={q_max_pu} is less restrictive than PAR={gen_q_max}"
+            )
+            has_error = True
+
+    # --- Qmin check ---
+    if gen_q_min != 0:
+        # For Qmin, "more restrictive" means INI >= PAR
+        if q_min_pu < gen_q_min - max(abs_tol, rel_tol * abs(gen_q_min)):
+            log.error(
+                f"Inconsistency in Qmin: INI={q_min_pu} is less restrictive than PAR={gen_q_min}"
+            )
+            has_error = True
 
     if has_error:
-        raise ValueError("Inconsistency detected: values from INI do not match values from PAR.")
+        raise ValueError(
+            "Inconsistency detected: INI values are less restrictive than PAR values."
+        )
 
 
 def check_generators(
