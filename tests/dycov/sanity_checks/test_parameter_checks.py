@@ -224,12 +224,12 @@ def test_producer_params_consistency():
 
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_producer_params_consistency(
-            [gen1, gen2], p_max_pu=0.8, q_max_pu=0.6, q_min_pu=-0.6
+            [gen1, gen2], p_max_pu=1.2, q_max_pu=0.6, q_min_pu=-0.6
         )
     assert pytest_wrapped_e.type == ValueError
     assert (
         pytest_wrapped_e.value.args[0]
-        == "Inconsistency detected: values from INI do not match values from PAR."
+        == "Inconsistency detected: INI values are less restrictive than PAR values."
     )
 
     gen_none = Gen_params(
@@ -248,7 +248,7 @@ def test_producer_params_consistency():
         QMin=None,
     )
     parameter_checks.check_producer_params_consistency(
-        [gen_none], p_max_pu=0.0, q_max_pu=0.0, q_min_pu=0.0
+        [gen_none], p_max_pu=0.5, q_max_pu=0.5, q_min_pu=-0.3
     )
 
     with pytest.raises(ValueError) as pytest_wrapped_e:
@@ -258,7 +258,7 @@ def test_producer_params_consistency():
     assert pytest_wrapped_e.type == ValueError
     assert (
         pytest_wrapped_e.value.args[0]
-        == "Inconsistency detected: values from INI do not match values from PAR."
+        == "Inconsistency detected: INI values are less restrictive than PAR values."
     )
 
 
