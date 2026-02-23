@@ -12,7 +12,6 @@ This module contains functions for validating various numerical and configuratio
 parameters of Dynawo models, including generator, transformer, load, and simulation settings.
 """
 
-import math
 from typing import List
 
 from dycov.configuration.cfg import config
