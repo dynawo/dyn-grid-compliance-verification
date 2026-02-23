@@ -47,26 +47,21 @@
     <par type="BOOL" name="WTG4A_VCompFlag" value="false"/>
     <par type="BOOL" name="WTG4A_FreqFlag" value="true"/>
     <par type="DOUBLE" name="WTG4A_Kc" value="0"/>
-    <par type="DOUBLE" name="WTG4A_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="WTG4A_DbdPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_tFilterPC" value="9999"/>
+    <par type="DOUBLE" name="WTG4A_DbdPu" value="0"/>**
     <par type="DOUBLE" name="WTG4A_EMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG4A_EMinPu" value="-999"/>
-    <par type="DOUBLE" name="WTG4A_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WTG4A_QMinPu" value="-0.8"/>
     <par type="DOUBLE" name="WTG4A_tFt" value="1e-5"/>
     <par type="DOUBLE" name="WTG4A_tFv" value="1e-5"/>
-    <par type="DOUBLE" name="WTG4A_tP" value="0.05"/>
     <par type="DOUBLE" name="WTG4A_FDbd1Pu" value="0"/>
     <par type="DOUBLE" name="WTG4A_FDbd2Pu" value="0"/>
     <par type="DOUBLE" name="WTG4A_DDn" value="0"/>
     <par type="DOUBLE" name="WTG4A_DUp" value="0"/>
     <par type="DOUBLE" name="WTG4A_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG4A_FEMinPu" value="-999"/>
-    <par type="DOUBLE" name="WTG4A_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="WTG4A_PMinPu" value="0"/>
     <par type="DOUBLE" name="WTG4A_tLag" value="1e-5"/>
     <par type="DOUBLE" name="WTG4A_Kp" value="1"/>
-    <par type="DOUBLE" name="WTG4A_Ki" value="1e-5"/>
+    <par type="DOUBLE" name="WTG4A_Ki" value="1e-5"/> 
     <par type="DOUBLE" name="WTG4A_Kpg" value="1"/>
     <par type="DOUBLE" name="WTG4A_Kig" value="1e-5"/>
     <par type="DOUBLE" name="WTG4A_VFrz" value="0"/>

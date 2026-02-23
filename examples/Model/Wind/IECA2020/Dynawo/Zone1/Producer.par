@@ -105,6 +105,39 @@
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt62" value="180"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt71" value="0.9008"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt72" value="180"/>
+    <!-- PControlWP -->
+    <par type="DOUBLE" name="WPP_DPRefMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_DPRefMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_DPwpRefMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_DPwpRefMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_Kiwpp" value="5"/>
+    <par type="DOUBLE" name="WPP_Kpwpp" value="2.25"/>
+    <par type="DOUBLE" name="WPP_KwppRef" value="1.5"/>
+    <par type="DOUBLE" name="WPP_PErrMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_PErrMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_PKiwppMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_PKiwppMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_PRefMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_PRefMinPu" value="0"/>
+    <!-- QControlWP -->
+    <par type="DOUBLE" name="WPP_DXRefMaxPu" value="10"/>
+    <par type="DOUBLE" name="WPP_DXRefMinPu" value="-10"/>
+    <par type="DOUBLE" name="WPP_Kiwpx" value="10"/>
+    <par type="DOUBLE" name="WPP_Kpwpx" value="0.5"/>
+    <par type="DOUBLE" name="WPP_KwpqRef" value="0"/>
+    <par type="DOUBLE" name="WPP_Kwpqu" value="0.3"/>
+    <par type="INT" name="WPP_MwpqMode" value="3"/>
+    <par type="DOUBLE" name="WPP_RwpDropPu" value="0"/>
+    <par type="DOUBLE" name="WPP_tUqFilt" value="0.01"/>
+    <par type="DOUBLE" name="WPP_UwpqDipPu" value="0.8"/>
+    <par type="DOUBLE" name="WPP_UwpqRisePu" value="1.2"/>
+    <par type="DOUBLE" name="WPP_XErrMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_XErrMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_XRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XRefMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_XwpDropPu" value="0"/>
     <!-- Mechanical -->
     <par type="DOUBLE" name="WT_CdrtPu" value="15"/>
     <par type="DOUBLE" name="WT_Hgen" value="1"/>

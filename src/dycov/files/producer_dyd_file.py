@@ -74,13 +74,11 @@ def _add_terminal_options(dyd_root: etree.Element, terminal: str):
         return
 
     available_models = [
-        "WPP_terminal",
-        "WT_terminal",
+        "WTG3_terminal",
         "WTG4A_terminal",
         "WTG4B_terminal",
-        "WT4A_terminal",
-        "WT4B_terminal",
         "photovoltaics_terminal",
+        "WPP_terminal",
     ]
     dyd_root.append(
         etree.Comment(
