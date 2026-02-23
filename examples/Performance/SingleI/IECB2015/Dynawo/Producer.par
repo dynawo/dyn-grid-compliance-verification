@@ -61,8 +61,8 @@
     <par type="DOUBLE" name="WPP_XDropPu" value="0"/>
     <!-- QLimiter -->
     <par type="BOOL" name="WPP_QlConst" value="true"/>
-    <par type="DOUBLE" name="WPP_QMaxPu" value="0.4"/>
-    <par type="DOUBLE" name="WPP_QMinPu" value="-0.4"/>
+    <par type="DOUBLE" name="WPP_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="WPP_QMinPu" value="-0.8"/>
     <par type="DOUBLE" name="WPP_tPFiltql" value="0.01"/>
     <par type="DOUBLE" name="WPP_tUFiltql" value="0.01"/>
     <!-- GridProtection -->
