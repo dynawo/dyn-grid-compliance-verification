@@ -294,7 +294,8 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         oc_name: str,
     ) -> None:
         """
-        Initialize the validation parameters by retrieving necessary values from the curves manager.
+        Initialize the validation parameters by retrieving necessary values from the curves
+        manager.
 
         Parameters
         ----------
