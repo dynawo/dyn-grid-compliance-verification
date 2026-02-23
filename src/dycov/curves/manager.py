@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 import logging
 from pathlib import Path
 
@@ -7,8 +16,7 @@ from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.curves import curves_factory
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import (Disconnection_Model, ExclusionWindows,
-                                    Simulation_result)
+from dycov.model.parameters import Disconnection_Model, ExclusionWindows, Simulation_result
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
