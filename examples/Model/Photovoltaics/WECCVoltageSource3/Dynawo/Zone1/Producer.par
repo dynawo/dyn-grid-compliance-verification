@@ -54,7 +54,7 @@
     <par type="BOOL" name="photovoltaics_FreqFlag" value="true"/>
     <par type="DOUBLE" name="photovoltaics_Kc" value="0"/>
     <par type="DOUBLE" name="photovoltaics_tFilterPC" value="9999"/>
-    <par type="DOUBLE" name="photovoltaics_DbdPu" value="0"/>**
+    <par type="DOUBLE" name="photovoltaics_DbdPu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_EMaxPu" value="999"/>
     <par type="DOUBLE" name="photovoltaics_EMinPu" value="-999"/>
     <par type="DOUBLE" name="photovoltaics_tFt" value="1e-5"/>

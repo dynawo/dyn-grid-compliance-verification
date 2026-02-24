@@ -56,7 +56,7 @@
     <par type="BOOL" name="BESS_FreqFlag" value="true"/>
     <par type="DOUBLE" name="BESS_Kc" value="0"/>
     <par type="DOUBLE" name="BESS_tFilterPC" value="9999"/>
-    <par type="DOUBLE" name="BESS_DbdPu" value="0"/>**
+    <par type="DOUBLE" name="BESS_DbdPu" value="0"/>
     <par type="DOUBLE" name="BESS_EMaxPu" value="999"/>
     <par type="DOUBLE" name="BESS_EMinPu" value="-999"/>
     <par type="DOUBLE" name="BESS_tFt" value="1e-5"/>

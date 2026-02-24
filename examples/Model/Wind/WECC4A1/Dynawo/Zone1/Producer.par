@@ -52,7 +52,7 @@
     <par type="BOOL" name="WTG4A_FreqFlag" value="true"/>
     <par type="DOUBLE" name="WTG4A_Kc" value="0"/>
     <par type="DOUBLE" name="WTG4A_tFilterPC" value="9999"/>
-    <par type="DOUBLE" name="WTG4A_DbdPu" value="0"/>**
+    <par type="DOUBLE" name="WTG4A_DbdPu" value="0"/>
     <par type="DOUBLE" name="WTG4A_EMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG4A_EMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG4A_tFt" value="1e-5"/>
