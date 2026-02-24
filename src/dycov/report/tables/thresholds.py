@@ -10,7 +10,7 @@
 from dycov.configuration.cfg import config
 from dycov.validation import threshold_variables
 
-CURRENT_IN_PDR = config.get_boolean("GridCode", "current_in_pdr", False)
+CURRENTS_AT_PDR = config.get_boolean("GridCode", "currents_at_pdr", False)
 
 
 def _setpoint_tracking_thresholds(results: dict, measurement: str, thresholds_map: list) -> None:
@@ -66,12 +66,12 @@ def _get_measurement_name(
     if measurement == "reactive_power":
         return "BusPDR_BUS_ReactivePower"
     if measurement == "active_current":
-        if CURRENT_IN_PDR:
+        if CURRENTS_AT_PDR:
             return "BusPDR_BUS_ActiveCurrent"
         else:
             return "InjectedActiveCurrent"
     if measurement == "reactive_current":
-        if CURRENT_IN_PDR:
+        if CURRENTS_AT_PDR:
             return "BusPDR_BUS_ReactiveCurrent"
         else:
             return "InjectedReactiveCurrent"

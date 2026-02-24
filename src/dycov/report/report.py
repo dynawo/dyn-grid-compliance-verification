@@ -48,7 +48,7 @@ from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
 
-CURRENT_IN_PDR = config.get_boolean("GridCode", "current_in_pdr", False)
+CURRENTS_AT_PDR = config.get_boolean("GridCode", "currents_at_pdr", False)
 
 
 # --- Process registry for LaTeX compilation ---
@@ -558,13 +558,13 @@ def _replace_current_placeholders(working_path: Path, common_file: str):
         {
             "supplied_at": (
                 "supplied at the connection point"
-                if CURRENT_IN_PDR
+                if CURRENTS_AT_PDR
                 else "supplied at the injector terminal"
             ),
             "measure_at": (
                 ", measured at the PDR bus"
-                if CURRENT_IN_PDR
-                else ", measured in low voltage at the injector terminal"
+                if CURRENTS_AT_PDR
+                else ", measured at the injector terminals"
             ),
         }
     ).dump(str(working_path / common_file))

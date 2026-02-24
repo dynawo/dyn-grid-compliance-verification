@@ -39,7 +39,7 @@ Summary = namedtuple(
     ],
 )
 
-CURRENT_IN_PDR = config.get_boolean("GridCode", "current_in_pdr", False)
+CURRENTS_AT_PDR = config.get_boolean("GridCode", "currents_at_pdr", False)
 
 
 class Benchmark:
@@ -377,17 +377,17 @@ class Benchmark:
             self._figures_description.append(["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q(pu)"])
 
     def __init_figures_ire(self, validations: list, pcs_benchmark_name: str) -> None:
-        fig_Ire = config.get_list("ReportCurves", "fig_Ire")
-        if pcs_benchmark_name in fig_Ire:
+        fig_Ip = config.get_list("ReportCurves", "fig_Ip")
+        if pcs_benchmark_name in fig_Ip:
             tests = []
-            if CURRENT_IN_PDR:
+            if CURRENTS_AT_PDR:
                 self._figures_description.append(
-                    ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
+                    ["fig_Ip", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
                 )
             else:
                 self._figures_description.append(
                     [
-                        "fig_Ire",
+                        "fig_Ip",
                         [
                             {
                                 "type": "generator",
@@ -400,17 +400,17 @@ class Benchmark:
                 )
 
     def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
-        fig_Iim = config.get_list("ReportCurves", "fig_Iim")
-        if pcs_benchmark_name in fig_Iim:
+        fig_Iq = config.get_list("ReportCurves", "fig_Iq")
+        if pcs_benchmark_name in fig_Iq:
             tests = []
-            if CURRENT_IN_PDR:
+            if CURRENTS_AT_PDR:
                 self._figures_description.append(
-                    ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
+                    ["fig_Iq", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
                 )
             else:
                 self._figures_description.append(
                     [
-                        "fig_Iim",
+                        "fig_Iq",
                         [
                             {
                                 "type": "generator",
