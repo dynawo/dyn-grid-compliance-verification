@@ -46,7 +46,7 @@
     <par type="DOUBLE" name="WTG4A_RrpwrPu" value="10"/>
     <par type="BOOL" name="WTG4A_RateFlag" value="false"/>
 
-    <!-- Plant Control -->
+    <!-- Plant Control (bypassed) -->
     <par type="BOOL" name="WTG4A_RefFlag" value="false"/>
     <par type="BOOL" name="WTG4A_VCompFlag" value="false"/>
     <par type="BOOL" name="WTG4A_FreqFlag" value="true"/>

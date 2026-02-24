@@ -50,7 +50,7 @@
     <par type="DOUBLE" name="BESS_SOCMinPu" value="0.2"/>
     <par type="DOUBLE" name="BESS_tBattery" value="9999"/>
 
-    <!-- Plant Control -->
+    <!-- Plant Control (bypassed) -->
     <par type="BOOL" name="BESS_RefFlag" value="false"/>
     <par type="BOOL" name="BESS_VCompFlag" value="false"/>
     <par type="BOOL" name="BESS_FreqFlag" value="true"/>

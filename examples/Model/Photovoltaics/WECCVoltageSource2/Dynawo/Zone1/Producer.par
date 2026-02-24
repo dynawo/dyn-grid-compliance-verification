@@ -41,7 +41,7 @@
     <par type="DOUBLE" name="photovoltaics_RrpwrPu" value="10"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
 
-    <!-- Plant Control -->
+    <!-- Plant Control (bypassed) -->
     <par type="BOOL" name="photovoltaics_RefFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_VCompFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_FreqFlag" value="true"/>
