@@ -28,15 +28,15 @@ from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
-    if not producer_config.has_option(section, "u_nom"):
+    if not producer_config.has_option(section, "u_nom_at_PDR"):
         raise ValueError("The parameter file must specify the u_nom")
-    if not producer_config.has_option(section, "q_min"):
+    if not producer_config.has_option(section, "q_min_at_PDR"):
         raise ValueError("The parameter file must specify the q_min")
-    if not producer_config.has_option(section, "q_max"):
+    if not producer_config.has_option(section, "q_max_at_PDR"):
         raise ValueError("The parameter file must specify the q_max")
-    if not producer_config.has_option(section, "p_max_injection"):
+    if not producer_config.has_option(section, "p_max_injection_at_PDR"):
         raise ValueError("The parameter file must specify the p_max_injection")
-    if needs_consumption and not producer_config.has_option(section, "p_max_consumption"):
+    if needs_consumption and not producer_config.has_option(section, "p_max_consumption_at_PDR"):
         raise ValueError("The parameter file must specify the p_max_consumption")
     if not producer_config.has_option(section, "topology"):
         raise ValueError("The parameter file must specify the topology")
@@ -123,6 +123,7 @@ class ModelProducer(Producer):
         ppm_models = 0
         bess_models = 0
         if self.is_dynawo_model():
+            self.__init_parameters()
             file_checks.check_performance_model(self._producer_model_path)
             (
                 generators,
@@ -136,6 +137,12 @@ class ModelProducer(Producer):
                 self.get_producer_par(),
                 self.__read_producer_ini(),
                 self._s_nref,
+            )
+            parameter_checks.check_producer_params_consistency(
+                generators,
+                p_max_pu=self.p_max_injection_pu,
+                q_max_pu=self.q_max_pu,
+                q_min_pu=self.q_min_pu,
             )
             sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
@@ -229,6 +236,7 @@ class ModelProducer(Producer):
         self._zone = 1
         generators_z1 = list()
         for self._filename in self.get_filenames(self._zone):
+            self.__init_parameters()
             (
                 generators,
                 _,
@@ -241,6 +249,12 @@ class ModelProducer(Producer):
                 self.get_producer_par(),
                 self.__read_producer_ini(),
                 self._s_nref,
+            )
+            parameter_checks.check_producer_params_consistency(
+                generators,
+                p_max_pu=self.p_max_injection_pu,
+                q_max_pu=self.q_max_pu,
+                q_min_pu=self.q_min_pu,
             )
             generators_z1 += generators
         self._zone = 3
@@ -260,6 +274,13 @@ class ModelProducer(Producer):
                 self._s_nref,
             )
             generators_z3 += generators
+        self.__init_parameters()
+        parameter_checks.check_producer_params_consistency(
+            generators_z3,
+            p_max_pu=self.p_max_injection_pu,
+            q_max_pu=self.q_max_pu,
+            q_min_pu=self.q_min_pu,
+        )
         sm_models, ppm_models, bess_models = parameter_checks.check_generators(
             generators_z1, generators_z3
         )
@@ -319,16 +340,17 @@ class ModelProducer(Producer):
         )
 
         self.p_max_injection_pu = (
-            float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
+            float(producer_config.get(default_section, "p_max_injection_at_PDR")) / self._s_nref
         )
         self.p_max_consumption_pu = 0.0
-        if producer_config.has_option(default_section, "p_max_consumption"):
+        if producer_config.has_option(default_section, "p_max_consumption_at_PDR"):
             self.p_max_consumption_pu = (
-                float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
+                float(producer_config.get(default_section, "p_max_consumption_at_PDR"))
+                / self._s_nref
             )
-        self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
-        self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
-        self.u_nom = float(producer_config.get(default_section, "u_nom"))
+        self.q_max_pu = float(producer_config.get(default_section, "q_max_at_PDR")) / self._s_nref
+        self.q_min_pu = float(producer_config.get(default_section, "q_min_at_PDR")) / self._s_nref
+        self.u_nom = float(producer_config.get(default_section, "u_nom_at_PDR"))
         self.topology = producer_config.get(default_section, "topology")
 
     def __init_model(self) -> None:

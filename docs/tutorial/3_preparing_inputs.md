@@ -139,18 +139,16 @@ Dynawo
   *examples/PPM/Dynawo/SingleAux/IEC2015*):
 
   ```ini
-  # p_{max_unite} as defined by the DTR in MW
-  p_max = 75
-  # u_nom is the nominal voltage in the PDR Bus (in kV)
+  # p_{max_unite} injection as defined by the DTR in MW 
+  p_max_injection_at_PDR = 75
+  # u_nom is the nominal voltage at the PDR bus (in kV)
   # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
   u_nom = 225
   # s_nom is the nominal apparent power of all generating units (in MVA)
-  # This is the value that will be used for the base conversion in the PDR bus active/reactive power
-  s_nom = 100
-  # q_max is the maximum reactive power of the generator unit (in MVar)
-  q_max = 40
-  # q_min is the minimum reactive power of the generator unit (in MVar)
-  q_min = -40
+  # q_max is the maximum reactive power at the PDR bus (in MVar)
+  q_max_at_PDR = 40
+  # q_min is the minimum reactive power at the PDR bus (in MVar)
+  q_min_at_PDR = -40
   # topology
   topology = S+Aux
   ```
@@ -659,18 +657,15 @@ Again the user must complete the generated INI file, giving value to all the
 parameters that the tool needs but cannot infer from the Dynawo model:
 
 ```ini
-# p_{max_unite} as defined by the DTR in MW
-p_max =
-# u_nom is the nominal voltage in the PDR Bus (in kV)
+# p_{max_unite} injection as defined by the DTR in MW 
+p_max_injection_at_PDR =
+# u_nom is the nominal voltage at the PDR bus (in kV)
 # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
 u_nom =
-# s_nom is the nominal apparent power of all generating units (in MVA)
-# This is the value that will be used for the base conversion in the PDR bus active/reactive power
-s_nom =
-# q_max is the maximum reactive power of the generator unit (in MVar)
-q_max =
-# q_min is the minimum reactive power of the generator unit (in MVar)
-q_min =
+# q_max is the maximum reactive power at the PDR bus (in MVar)
+q_max_at_PDR =
+# q_min is the minimum reactive power at the PDR bus (in MVar)
+q_min_at_PDR =
 # topology
 topology = S+Aux
 ```
