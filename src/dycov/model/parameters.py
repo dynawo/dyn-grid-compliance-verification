@@ -9,6 +9,7 @@
 #
 from collections import namedtuple
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -69,6 +70,10 @@ class Gen_params(Equipment):
     Q: float
     VoltageDroop: float
     UseVoltageDroop: bool
+    PMin: Optional[float] = None
+    PMax: Optional[float] = None
+    QMin: Optional[float] = None
+    QMax: Optional[float] = None
 
 
 Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
