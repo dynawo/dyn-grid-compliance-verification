@@ -547,6 +547,9 @@ def _append_generator(
 
     imax = _get_injected_current(parset, nsmap, lib)
     P, Q = _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini)
+    p_max, p_min, q_max, q_min = _get_generator_power_limits(
+        parset, nsmap, lib, gen_id, producer_ini
+    )
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
 
     generators.append(
@@ -558,7 +561,11 @@ def _append_generator(
             IMax=imax,
             par_id=par_id,
             P=P,
+            PMax=p_max,
+            PMin=p_min,
             Q=Q,
+            QMax=q_max,
+            QMin=q_min,
             VoltageDroop=droop_value,
             UseVoltageDroop=False,
         )
@@ -636,6 +643,20 @@ def _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini):
         raise ValueError("Generator Q flows not defined")
 
     return P, Q
+
+
+def _get_generator_power_limits(parset, nsmap, lib, gen_id, producer_ini):
+    _, P_max_str = _get_parameter(parset, nsmap, lib, "MaxActivePowerPu")
+    _, P_min_str = _get_parameter(parset, nsmap, lib, "MinActivePowerPu")
+    _, Q_max_str = _get_parameter(parset, nsmap, lib, "MaxReactivePowerPu")
+    _, Q_min_str = _get_parameter(parset, nsmap, lib, "MinReactivePowerPu")
+
+    p_max = float(P_max_str) if P_max_str is not None else 0.0
+    p_min = float(P_min_str) if P_min_str is not None else 0.0
+    q_max = float(Q_max_str) if Q_max_str is not None else 0.0
+    q_min = float(Q_min_str) if Q_min_str is not None else 0.0
+
+    return p_max, p_min, q_max, q_min
 
 
 def _get_generator_droop_and_snom(parset, nsmap, lib):

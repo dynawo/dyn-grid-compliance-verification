@@ -109,7 +109,80 @@ def check_producer_params(
         + config.get_list("GridCode", "HTB3_External_Udims")
     )
     if str(u_nom) not in Udims:
-        raise ValueError("Unexpected nominal voltage in the PDR Bus.")
+        raise ValueError("Unexpected nominal voltage at the PDR bus.")
+
+
+def check_producer_params_consistency(
+    generators: List[Gen_params],
+    p_max_pu: float = 0.0,
+    q_max_pu: float = 0.0,
+    q_min_pu: float = 0.0,
+    rel_tol: float = 1e-6,
+    abs_tol: float = 1e-9,
+) -> None:
+    """
+    Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
+    using RTE's rule: INI values may differ as long as they are more restrictive.
+
+    More restrictive rules:
+      - Pmax_ini <= Sum(Pmax_par)
+      - Qmax_ini <= Sum(Qmax_par)
+      - Qmin_ini >= Sum(Qmin_par)
+
+    Parameters
+    ----------
+    generators: list
+        Generator parameters list.
+    p_max_pu: float
+        Maximum active power in PDR (INI) in per unit.
+    q_max_pu: float
+        Maximum reactive power in PDR (INI) in per unit.
+    q_min_pu: float
+        Minimum reactive power in PDR (INI) in per unit.
+    rel_tol: float
+        Relative tolerance.
+    abs_tol: float
+        Absolute tolerance.
+    """
+
+    # Aggregate PAR values
+    gen_p_max = sum(g.PMax for g in generators if g.PMax is not None)
+    gen_q_max = sum(g.QMax for g in generators if g.QMax is not None)
+    gen_q_min = sum(g.QMin for g in generators if g.QMin is not None)
+
+    log = dycov_logging.get_logger("Sanity Checks")
+    has_error = False
+
+    # --- Pmax check ---
+    if gen_p_max != 0:
+        # INI must be <= PAR (more restrictive)
+        if p_max_pu > gen_p_max + max(abs_tol, rel_tol * abs(gen_p_max)):
+            log.error(
+                f"Inconsistency in Pmax: INI={p_max_pu} is less restrictive than PAR={gen_p_max}"
+            )
+            has_error = True
+
+    # --- Qmax check ---
+    if gen_q_max != 0:
+        if q_max_pu > gen_q_max + max(abs_tol, rel_tol * abs(gen_q_max)):
+            log.error(
+                f"Inconsistency in Qmax: INI={q_max_pu} is less restrictive than PAR={gen_q_max}"
+            )
+            has_error = True
+
+    # --- Qmin check ---
+    if gen_q_min != 0:
+        # For Qmin, "more restrictive" means INI >= PAR
+        if q_min_pu < gen_q_min - max(abs_tol, rel_tol * abs(gen_q_min)):
+            log.error(
+                f"Inconsistency in Qmin: INI={q_min_pu} is less restrictive than PAR={gen_q_min}"
+            )
+            has_error = True
+
+    if has_error:
+        raise ValueError(
+            "Inconsistency detected: INI values are less restrictive than PAR values."
+        )
 
 
 def check_generators(
