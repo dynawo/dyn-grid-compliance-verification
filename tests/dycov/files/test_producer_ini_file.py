@@ -30,7 +30,7 @@ class TestProducerIniFile:
             assert "topology = S" in content
             assert "p_max_injection_at_PDR =" in content
             assert "p_max_consumption_at_PDR =" in content
-            assert "u_nom =" in content
+            assert "u_nom_at_PDR =" in content
             assert "q_max_at_PDR =" in content
             assert "q_min_at_PDR =" in content
 
@@ -43,7 +43,7 @@ class TestProducerIniFile:
                 "# p_{max_unite} injection as defined by the DTR in MW\n"
                 "p_max_injection_in_PDR = 100\n"
                 "# u_nom is the nominal voltage at the PDR bus (in kV)\n"
-                "u_nom = 225\n"
+                "u_nom_at_PDR = 225\n"
                 "# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
                 "q_max_at_PDR = 50\n"
                 "# q_min is the minimum reactive power at the PDR bus (in MVar)\n"
@@ -64,7 +64,7 @@ class TestProducerIniFile:
                 "# p_{max_unite} injection as defined by the DTR in MW\n"
                 "p_max_injection_in_PDR =\n"
                 "# u_nom is the nominal voltage at the PDR bus (in kV)\n"
-                "u_nom = 225\n"
+                "u_nom_at_PDR = 225\n"
                 "# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
                 "q_max_at_PDR = 50\n"
                 "# q_min is the minimum reactive power at the PDR bus (in MVar)\n"
