@@ -109,7 +109,7 @@ def check_producer_params(
         + config.get_list("GridCode", "HTB3_External_Udims")
     )
     if str(u_nom) not in Udims:
-        raise ValueError("Unexpected nominal voltage in the PDR Bus.")
+        raise ValueError("Unexpected nominal voltage at the PDR bus.")
 
 
 def check_producer_params_consistency(
