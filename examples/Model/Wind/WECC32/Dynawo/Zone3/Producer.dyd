@@ -9,5 +9,5 @@
   <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
-  <dyn:connect id1="Wind_Turbine" var1="WTG4A_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
+  <dyn:connect id1="Wind_Turbine" var1="WTG3_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 </dyn:dynamicModelsArchitecture>
