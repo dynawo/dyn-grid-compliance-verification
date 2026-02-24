@@ -143,7 +143,7 @@ Dynawo
   p_max_injection_at_PDR = 75
   # u_nom is the nominal voltage at the PDR bus (in kV)
   # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
-  u_nom = 225
+  u_nom_at_PDR = 225
   # s_nom is the nominal apparent power of all generating units (in MVA)
   # q_max is the maximum reactive power at the PDR bus (in MVar)
   q_max_at_PDR = 40
