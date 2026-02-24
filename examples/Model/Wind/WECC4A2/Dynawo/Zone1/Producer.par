@@ -43,6 +43,11 @@
     <par type="BOOL" name="WTG4A_RateFlag" value="false"/>
 
     <!-- Plant Control (bypassed) -->
+    <par type="DOUBLE" name="WTG4A_tP" value="0.05"/>
+    <par type="DOUBLE" name="WTG4A_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="WTG4A_PMinPu" value="0.0"/>
+    <par type="DOUBLE" name="WTG4A_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="WTG4A_QMinPu" value="-0.8"/>
     <par type="BOOL" name="WTG4A_RefFlag" value="false"/>
     <par type="BOOL" name="WTG4A_VCompFlag" value="false"/>
     <par type="BOOL" name="WTG4A_FreqFlag" value="true"/>

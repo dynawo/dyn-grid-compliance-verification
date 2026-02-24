@@ -105,39 +105,6 @@
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt62" value="180"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt71" value="0.9008"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt72" value="180"/>
-    <!-- PControlWP -->
-    <par type="DOUBLE" name="WPP_DPRefMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_DPRefMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_DPwpRefMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_DPwpRefMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_Kiwpp" value="5"/>
-    <par type="DOUBLE" name="WPP_Kpwpp" value="2.25"/>
-    <par type="DOUBLE" name="WPP_KwppRef" value="1.5"/>
-    <par type="DOUBLE" name="WPP_PErrMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_PErrMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_PKiwppMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_PKiwppMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_PRefMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_PRefMinPu" value="0"/>
-    <!-- QControlWP -->
-    <par type="DOUBLE" name="WPP_DXRefMaxPu" value="10"/>
-    <par type="DOUBLE" name="WPP_DXRefMinPu" value="-10"/>
-    <par type="DOUBLE" name="WPP_Kiwpx" value="10"/>
-    <par type="DOUBLE" name="WPP_Kpwpx" value="0.5"/>
-    <par type="DOUBLE" name="WPP_KwpqRef" value="0"/>
-    <par type="DOUBLE" name="WPP_Kwpqu" value="0.3"/>
-    <par type="INT" name="WPP_MwpqMode" value="3"/>
-    <par type="DOUBLE" name="WPP_RwpDropPu" value="0"/>
-    <par type="DOUBLE" name="WPP_tUqFilt" value="0.01"/>
-    <par type="DOUBLE" name="WPP_UwpqDipPu" value="0.8"/>
-    <par type="DOUBLE" name="WPP_UwpqRisePu" value="1.2"/>
-    <par type="DOUBLE" name="WPP_XErrMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_XErrMinPu" value="-1"/>
-    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="999"/>
-    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-999"/>
-    <par type="DOUBLE" name="WPP_XRefMaxPu" value="999"/>
-    <par type="DOUBLE" name="WPP_XRefMinPu" value="-999"/>
-    <par type="DOUBLE" name="WPP_XwpDropPu" value="0"/>
     <!-- Mechanical -->
     <par type="DOUBLE" name="WT_CdrtPu" value="15"/>
     <par type="DOUBLE" name="WT_Hgen" value="1"/>
@@ -148,6 +115,84 @@
     <par type="DOUBLE" name="WT_Q0Pu" value="0.21"/>
     <par type="DOUBLE" name="WT_U0Pu" value="1"/>
     <par type="DOUBLE" name="WT_UPhase0" value="0.21949"/>
+
+    <!-- Bypassing PCC -->
+    <!-- MeasurementWP -->
+    <par type="DOUBLE" name="WPP_DfMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_tfFilt" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tIFilt" value="0"/>
+    <par type="DOUBLE" name="WPP_tPFilt" value="0"/>
+    <par type="DOUBLE" name="WPP_tQFilt" value="0"/>
+    <par type="DOUBLE" name="WPP_tUFilt" value="0"/>
+    <!-- LinearCommunication -->
+    <par type="DOUBLE" name="WPP_tLag" value="0"/>
+    <par type="DOUBLE" name="WPP_tLead" value="0"/>
+
+    <!-- PControlWP -->
+    <par type="DOUBLE" name="WPP_DPRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_DPRefMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_DPwpRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_DPwpRefMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_Kiwpp" value="0"/>
+    <par type="DOUBLE" name="WPP_Kpwpp" value="0"/>
+    <par type="DOUBLE" name="WPP_KwppRef" value="1"/>
+    <par type="DOUBLE" name="WPP_PErrMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_PErrMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_PKiwppMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_PKiwppMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_PRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_PRefMinPu" value="-999"/>
+
+    <!-- Active power response to frequency deviation -->
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom11" value="0.947"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom12" value="0"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom21" value="0.996"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom22" value="0"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom31" value="0.998"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom32" value="0"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom41" value="1"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom42" value="0"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom51" value="1.01"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom52" value="0"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom61" value="1.02"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom62" value="0"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom71" value="1.03"/>
+    <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom72" value="0"/>
+
+    <!-- QControlWP -->
+    <par type="DOUBLE" name="WPP_DXRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_DXRefMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_Kiwpx" value="0"/>
+    <par type="DOUBLE" name="WPP_Kpwpx" value="0"/>
+    <par type="DOUBLE" name="WPP_KwpqRef" value="1"/>
+    <par type="DOUBLE" name="WPP_Kwpqu" value="0"/>
+    <par type="INT" name="WPP_MwpqMode" value="0"/>
+    <par type="DOUBLE" name="WPP_RwpDropPu" value="0"/>
+    <par type="DOUBLE" name="WPP_tUqFilt" value="0.01"/>
+    <par type="DOUBLE" name="WPP_UwpqDipPu" value="0"/>
+    <par type="DOUBLE" name="WPP_UwpqRisePu" value="999"/>
+    <par type="DOUBLE" name="WPP_XErrMaxPu" value="0"/>
+    <par type="DOUBLE" name="WPP_XErrMinPu" value="-0"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMaxPu" value="1"/>
+    <par type="DOUBLE" name="WPP_XKiwpxMinPu" value="-1"/>
+    <par type="DOUBLE" name="WPP_XRefMaxPu" value="999"/>
+    <par type="DOUBLE" name="WPP_XRefMinPu" value="-999"/>
+    <par type="DOUBLE" name="WPP_XwpDropPu" value="0"/>
+
+    <!-- QControlWP tables -->    
+    <par type="DOUBLE" name="WPP_TableQwpMaxPwpFiltCom11" value="0"/>
+    <par type="DOUBLE" name="WPP_TableQwpMaxPwpFiltCom12" value="999"/>
+    <par type="DOUBLE" name="WPP_TableQwpMaxPwpFiltCom21" value="0.904762"/>
+    <par type="DOUBLE" name="WPP_TableQwpMaxPwpFiltCom22" value="999"/>
+    <par type="DOUBLE" name="WPP_TableQwpMaxPwpFiltCom31" value="1"/>
+    <par type="DOUBLE" name="WPP_TableQwpMaxPwpFiltCom32" value="999"/>
+
+    <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom11" value="0"/>
+    <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom12" value="-999"/>
+    <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom21" value="0.904762"/>
+    <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom22" value="-999"/>
+    <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom31" value="1"/>
+    <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom32" value="-999"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">

@@ -42,6 +42,11 @@
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
 
     <!-- Plant Control (bypassed) -->
+    <par type="DOUBLE" name="photovoltaics_tP" value="0.05"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="photovoltaics_PMinPu" value="0.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="photovoltaics_QMinPu" value="-0.8"/>
     <par type="BOOL" name="photovoltaics_RefFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_VCompFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_FreqFlag" value="true"/>
