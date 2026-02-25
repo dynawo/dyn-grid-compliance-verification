@@ -349,7 +349,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    "V(pu)",
+                    "V (pu base Unom)",
                 ]
             )
 
@@ -366,20 +366,24 @@ class Benchmark:
             if "time_10Pfloor_85U" in validations or "time_10Pfloor_clear" in validations:
                 tests.append("10Pfloor")
 
-            self._figures_description.append(["fig_P", "BusPDR_BUS_ActivePower", tests, "P(pu)"])
+            self._figures_description.append(
+                ["fig_P", "BusPDR_BUS_ActivePower", tests, "P (pu base Snom)"]
+            )
 
     def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Q = config.get_list("ReportCurves", "fig_Q")
         if pcs_benchmark_name in fig_Q:
             tests = []
-            self._figures_description.append(["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q(pu)"])
+            self._figures_description.append(
+                ["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q (pu base Snom)"]
+            )
 
     def __init_figures_ire(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Ire = config.get_list("ReportCurves", "fig_Ire")
         if pcs_benchmark_name in fig_Ire:
             tests = []
             self._figures_description.append(
-                ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
+                ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip (pu base Snom, Unom)"]
             )
 
     def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -387,7 +391,7 @@ class Benchmark:
         if pcs_benchmark_name in fig_Iim:
             tests = []
             self._figures_description.append(
-                ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
+                ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq (pu base Snom, Unom)"]
             )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -404,7 +408,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    r"$\omega$" + "(pu)",
+                    r"$\omega$ (Hz)",
                 ]
             )
 
@@ -428,7 +432,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    r"$\omega$" + "(pu)",
+                    r"$\omega$ (Hz)",
                 ]
             )
 
@@ -450,7 +454,7 @@ class Benchmark:
                         },
                     ],
                     tests,
-                    "I(pu)",
+                    "I (pu base Snom, Unom)",
                 ]
             )
 
@@ -475,7 +479,7 @@ class Benchmark:
                         },
                     ],
                     tests,
-                    "V(pu)",
+                    "V (pu base Unom)",
                 ]
             )
 
@@ -493,7 +497,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    r"$\theta$" + "(rad)",
+                    r"$\theta$ (rad)",
                 ]
             )
 

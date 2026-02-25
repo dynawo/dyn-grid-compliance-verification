@@ -81,6 +81,7 @@ def _add_curve2plot(
     if curve_name in curves:
         plot_curves.append(
             {
+                "name": curve_name,
                 "curve": list(curves[curve_name]),
                 "color": line_color,
                 "style": line_style,
