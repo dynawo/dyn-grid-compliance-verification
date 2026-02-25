@@ -505,7 +505,6 @@ class DynawoSimulator:
                     variable_translations, df_curves_imported, curves_translation, column
                 )
 
-        self._get_injected_current_curve(column_size, curves_translation)
         self._get_network_frequency_curve(curves_translation)
         return pd.DataFrame(curves_translation)
 
@@ -556,24 +555,6 @@ class DynawoSimulator:
         complex_column_array.real = np.multiply(df_curves[f"{column_name}re"], sign_real)
         complex_column_array.imag = np.multiply(df_curves[f"{column_name}im"], sign_imag)
         return complex_column_array.tolist()
-
-    def _get_injected_current_curve(self, column_size: int, curves_translation: dict) -> None:
-        cols = curves_translation.keys()
-        idpu_re = re.compile(r".*_InjectedActiveCurrent$")
-        iqpu_re = re.compile(r".*_InjectedReactiveCurrent$")
-        idpu_list = list(filter(idpu_re.match, cols))
-        iqpu_list = list(filter(iqpu_re.match, cols))
-
-        for iqpu_col in iqpu_list:
-            base_name = iqpu_col.replace("_InjectedReactiveCurrent", "")
-            for idpu_col in idpu_list:
-                if idpu_col.replace("_InjectedActiveCurrent", "") == base_name:
-                    complex_column = np.zeros(column_size, dtype=np.complex128)
-                    complex_column.real = curves_translation[idpu_col]
-                    complex_column.imag = curves_translation[iqpu_col]
-                    key = f"{base_name}_InjectedCurrent"
-                    curves_translation[key] = complex_column.tolist()
-                    break
 
     def _get_network_frequency_curve(self, curves_translation: dict) -> None:
         cols = curves_translation.keys()
