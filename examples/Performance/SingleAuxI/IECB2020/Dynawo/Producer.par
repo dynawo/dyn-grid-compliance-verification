@@ -140,7 +140,7 @@
     <par type="DOUBLE" name="WPP_Kiwpx" value="10"/>
     <par type="DOUBLE" name="WPP_Kpwpx" value="0.5"/>
     <par type="DOUBLE" name="WPP_KwpqRef" value="0"/>
-    <par type="DOUBLE" name="WPP_Kwpqu" value="0"/>
+    <par type="DOUBLE" name="WPP_Kwpqu" value="0.3"/>
     <par type="INT" name="WPP_MwpqMode" value="3"/>
     <par type="DOUBLE" name="WPP_RwpDropPu" value="0"/>
     <par type="DOUBLE" name="WPP_tUqFilt" value="0.01"/>
