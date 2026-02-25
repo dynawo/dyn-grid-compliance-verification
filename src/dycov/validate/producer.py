@@ -29,15 +29,15 @@ from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
     if not producer_config.has_option(section, "u_nom_at_PDR"):
-        raise ValueError("The parameter file must specify the u_nom")
+        raise ValueError("The parameter file must specify the u_nom_at_PDR")
     if not producer_config.has_option(section, "q_min_at_PDR"):
-        raise ValueError("The parameter file must specify the q_min")
+        raise ValueError("The parameter file must specify the q_min_at_PDR")
     if not producer_config.has_option(section, "q_max_at_PDR"):
-        raise ValueError("The parameter file must specify the q_max")
+        raise ValueError("The parameter file must specify the q_max_at_PDR")
     if not producer_config.has_option(section, "p_max_injection_at_PDR"):
-        raise ValueError("The parameter file must specify the p_max_injection")
+        raise ValueError("The parameter file must specify the p_max_injection_at_PDR")
     if needs_consumption and not producer_config.has_option(section, "p_max_consumption_at_PDR"):
-        raise ValueError("The parameter file must specify the p_max_consumption")
+        raise ValueError("The parameter file must specify the p_max_consumption_at_PDR")
     if not producer_config.has_option(section, "topology"):
         raise ValueError("The parameter file must specify the topology")
 
