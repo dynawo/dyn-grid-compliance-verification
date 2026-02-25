@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
@@ -24,9 +25,9 @@ def _resolve_dynawo_sh():
 
 
 def execute_tool(
-    producer_model_path: Path | None,
-    producer_curves_path: Path | None,
-    reference_curves_path: Path | None,
+    producer_model_path: Optional[Path],
+    producer_curves_path: Optional[Path],
+    reference_curves_path: Optional[Path],
 ):
     with TemporaryDirectory() as tmp_dir:
         output_dir = Path(tmp_dir)
