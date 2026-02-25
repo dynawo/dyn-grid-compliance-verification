@@ -103,9 +103,9 @@ class Translator:
     _control_modes: configparser.ConfigParser
     _family_level_map: dict
 
-    def get_generator_family_level(self, generator: Gen_params) -> tuple[str, str]:
+    def get_generator_family_level(self, generator: Gen_params) -> str:
         """
-        Determines the family and level of a generator based on its library.
+        Determines the family of a generator based on its library.
 
         Parameters
         ----------
@@ -114,18 +114,17 @@ class Translator:
 
         Returns
         -------
-        tuple[str, str]
-            A tuple containing the generator family and level. Returns empty strings
+        str
+            The generator family. Returns an empty string
             if the family or type is not found in the `FAMILY_LEVEL_MAP`.
         """
         if generator.lib in self._family_level_map:
             family = self._family_level_map[generator.lib]["family"]
-            level = self._family_level_map[generator.lib]["level"]
-            return family, level
-        return "", ""  # Return empty if family is not found
+            return family
+        return ""  # Return empty if family is not found
 
     def _get_control_modes_by_generator(
-        self, generator: Gen_params, generator_control_mode: str
+        self, generator: Gen_params, generator_control_mode: str, zone: int
     ) -> list[str]:
         """
         Retrieves a list of valid control modes for a given generator and control mode name.
@@ -136,6 +135,8 @@ class Translator:
             The generator parameters.
         generator_control_mode: str
             The name of the generator's control mode (e.g., "VoltageControl").
+        zone: int
+            The zone number.
 
         Returns
         -------
@@ -143,8 +144,8 @@ class Translator:
             A list of valid control mode names (sections) that apply to the generator.
             Returns an empty list if no matching control modes are found.
         """
-        family, level = self.get_generator_family_level(generator)
-        option = f"{generator_control_mode}_{family}_{level}"
+        family = self.get_generator_family_level(generator)
+        option = f"{generator_control_mode}_{family}_Zone{zone}"
         control_modes = self._control_modes.get("ControlModes", option, fallback="")
         if control_modes:
             return control_modes.split(",")
@@ -354,7 +355,11 @@ class Translator:
         return self._get_control_mode_parameters(control_mode)
 
     def is_valid_control_mode(
-        self, generator: Gen_params, generator_control_mode: str, control_mode_parameters: dict
+        self,
+        generator: Gen_params,
+        generator_control_mode: str,
+        control_mode_parameters: dict,
+        zone: int,
     ) -> tuple[bool, str]:
         """Check if the control mode is valid for the generator.
 
@@ -366,6 +371,8 @@ class Translator:
             The name of the generator's control mode to validate.
         generator_parameters: dict
             A dictionary of parameters associated with the generator's control mode.
+        zone: int
+            The zone number.
 
         Returns
         -------
@@ -375,7 +382,7 @@ class Translator:
             Valid control mode name or empty string if not valid
         """
         valid_control_modes = self._get_control_modes_by_generator(
-            generator, generator_control_mode
+            generator, generator_control_mode, zone
         )
 
         if not valid_control_modes:
@@ -388,7 +395,9 @@ class Translator:
 
         return False, ""
 
-    def is_reactive_control_mode(self, generator: Gen_params, control_mode_name: str) -> bool:
+    def is_reactive_control_mode(
+        self, generator: Gen_params, control_mode_name: str, zone: int
+    ) -> bool:
         """Check if the control mode is a reactive control mode.
 
         Parameters
@@ -397,13 +406,15 @@ class Translator:
             Generator parameters
         control_mode_name: str
             Control mode name
+        zone: int
+            Zone number
 
         Returns
         -------
         bool
             True if the control mode is a reactive control mode, False otherwise
         """
-        valid_control_modes = self._get_control_modes_by_generator(generator, "QSetpoint")
+        valid_control_modes = self._get_control_modes_by_generator(generator, "QSetpoint", zone)
         return True if control_mode_name in valid_control_modes else False
 
 
