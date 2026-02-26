@@ -555,6 +555,7 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().aux_load,
             control_mode,
             force_voltage_droop,
+            self.get_producer().get_zone(),
         )
         self.__adjust_event_value(event_params)
         self.__calculate_Xv_values(

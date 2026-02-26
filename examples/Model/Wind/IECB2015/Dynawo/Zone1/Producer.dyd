@@ -2,8 +2,8 @@
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!-- Producer -->
   <dyn:blackBoxModel id="StepUp_Xfmr" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr"/>
-  <dyn:blackBoxModel id="Wind_Turbine" lib="IECWT4BCurrentSource2015" parFile="Producer.par" parId="Wind_Turbine"/>
+  <dyn:blackBoxModel id="Wind_Turbine" lib="IECWPP4BCurrentSource2015" parFile="Producer.par" parId="Wind_Turbine"/>
 
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
-  <dyn:connect id1="Wind_Turbine" var1="WT_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
+  <dyn:connect id1="Wind_Turbine" var1="WPP_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
 </dyn:dynamicModelsArchitecture>
