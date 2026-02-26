@@ -350,39 +350,35 @@ class PerformanceValidator(Validator):
             compliance_values["static_diff"] = max_static_diff
 
         if compliance_list.contains_key(["imax_reac"], self._validations):
-            # Initialize outputs
-            imax_reac: float = -1  # -1 means "no failing generator found yet"
-            imax_reac_check: bool = True  # True => overall OK unless a failure appears
+            imax_reac = -1
+            imax_reac_check = True
 
-            # Fetch time once
             time_curve = self.__curve_list("time")
 
-            # Find Active/Reactive columns and pair them by base name
-            idpu_cols = self.__get_filtered_columns("_InjectedActiveCurrent")
-            iqpu_cols = self.__get_filtered_columns("_InjectedReactiveCurrent")
+            idpu_cols = self.__get_filtered_columns("_GEN_InjectedActiveCurrent")
+            iqpu_cols = self.__get_filtered_columns("_GEN_InjectedReactiveCurrent")
 
-            # Build maps base_name -> full column name
             def base_from_active(col: str) -> str:
-                return col.replace("_InjectedActiveCurrent", "")
+                return col.replace("_GEN_InjectedActiveCurrent", "")
 
             def base_from_reactive(col: str) -> str:
-                return col.replace("_InjectedReactiveCurrent", "")
+                return col.replace("_GEN_InjectedReactiveCurrent", "")
 
             idpu_map = {base_from_active(c): c for c in idpu_cols}
             iqpu_map = {base_from_reactive(c): c for c in iqpu_cols}
 
-            # Iterate only over generators that have BOTH Active and Reactive
-            common_bases = sorted(set(idpu_map.keys()) & set(iqpu_map.keys()))
-            for base_name in common_bases:
-                # Load real/imag curves
-                idpu = self.__curve_list(idpu_map[base_name])  # active (real)
-                iqpu = self.__curve_list(iqpu_map[base_name])  # reactive (imag)
+            # Columns names are expected to be in the format:
+            #   - <generator_id>_GEN_InjectedActiveCurrent
+            #   - <generator_id>_GEN_InjectedReactiveCurrent
+            # so we can match them based on the generator_id extracted from the column name
+            generator_ids = sorted(set(idpu_map.keys()) & set(iqpu_map.keys()))
+            for generator_id in generator_ids:
+                idpu = self.__curve_list(idpu_map[generator_id])
+                iqpu = self.__curve_list(iqpu_map[generator_id])
 
                 if idpu is None or iqpu is None:
-                    # Skip if any curve is missing
                     continue
 
-                # Enforce same length as time; trim to the shortest length to stay safe
                 n = min(len(time_curve), len(idpu), len(iqpu))
                 if n == 0:
                     continue
@@ -391,21 +387,19 @@ class PerformanceValidator(Validator):
                 idpu_local = idpu[:n]
                 iqpu_local = iqpu[:n]
 
-                # Build injected current magnitude (no complex numbers)
+                # Build injected current magnitude
                 injected_current = []
                 for r, x in zip(idpu_local, iqpu_local):
                     if r is None or x is None:
-                        injected_current.append(0.0)  # or skip the point if preferred
+                        injected_current.append(0.0)
                     else:
                         injected_current.append((r * r + x * x) ** 0.5)
 
-                # If your downstream expects the generator_id, take it as the base_name
-                generator_id = base_name.replace("_GEN", "")  # or however you want to extract it
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
                     self._generators_imax.get(generator_id),
                     time_local,
-                    injected_current,  # now computed on-the-fly
-                    idpu_local,  # keep passing active as separate input if needed
+                    injected_current,
+                    idpu_local,
                 )
 
                 # Track worst (minimum) violating value if a failure exists
@@ -414,7 +408,6 @@ class PerformanceValidator(Validator):
                     if imax_reac is None or imax_gen_reac < imax_reac:
                         imax_reac = imax_gen_reac
 
-            # Store compliance results
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
 
