@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Synchronous machine external parameters -->
+  <!-- Unit parameters -->
   <set id="Wind_Turbine">
     <par type="DOUBLE" name="WT4B_P0Pu" value="-0.7"/>
     <par type="DOUBLE" name="WT4B_Q0Pu" value="-0.2"/>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Synchronous machine external parameters -->
+  <!-- Unit parameters -->
   <set id="Synch_Gen">
     <par type="INT" name="generator_ExcitationPu" value="1"/>
     <par type="BOOL" name="generator_UseApproximation" value="true"/>
