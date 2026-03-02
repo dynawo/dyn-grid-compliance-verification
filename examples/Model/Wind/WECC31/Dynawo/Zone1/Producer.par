@@ -139,7 +139,7 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WTG3_RPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_SNom" value="100"/>
+    <par type="DOUBLE" name="WTG3_SNom" value="90"/>
     <par type="DOUBLE" name="WTG3_XPu" value="0.15"/>
     <par type="DOUBLE" name="WTG3_Pm0Pu" value="0.7"/>
     <par type="DOUBLE" name="WTG3_Theta0" value="0"/>
