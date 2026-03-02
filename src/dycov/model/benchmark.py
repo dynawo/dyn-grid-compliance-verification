@@ -367,7 +367,12 @@ class Benchmark:
                 tests.append("10Pfloor")
 
             self._figures_description.append(
-                ["fig_P", "BusPDR_BUS_ActivePower", tests, "P (pu base Snom)"]
+                [
+                    "fig_P",
+                    "BusPDR_BUS_ActivePower",
+                    tests,
+                    f"P (pu base Snom = {self._producer.s_nom}MVA)",
+                ]
             )
 
     def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -375,7 +380,12 @@ class Benchmark:
         if pcs_benchmark_name in fig_Q:
             tests = []
             self._figures_description.append(
-                ["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q (pu base Snom)"]
+                [
+                    "fig_Q",
+                    "BusPDR_BUS_ReactivePower",
+                    tests,
+                    f"Q (pu base Snom = {self._producer.s_nom}MVA)",
+                ]
             )
 
     def __init_figures_ire(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -383,7 +393,12 @@ class Benchmark:
         if pcs_benchmark_name in fig_Ire:
             tests = []
             self._figures_description.append(
-                ["fig_Ire", "BusPDR_BUS_ActiveCurrent", tests, "Ip (pu base Snom, Unom)"]
+                [
+                    "fig_Ire",
+                    "BusPDR_BUS_ActiveCurrent",
+                    tests,
+                    f"Ip (pu base Unom, Snom = {self._producer.s_nom}MVA)",
+                ]
             )
 
     def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -391,7 +406,12 @@ class Benchmark:
         if pcs_benchmark_name in fig_Iim:
             tests = []
             self._figures_description.append(
-                ["fig_Iim", "BusPDR_BUS_ReactiveCurrent", tests, "Iq (pu base Snom, Unom)"]
+                [
+                    "fig_Iim",
+                    "BusPDR_BUS_ReactiveCurrent",
+                    tests,
+                    f"Iq (pu base Unom, Snom = {self._producer.s_nom}MVA)",
+                ]
             )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -454,7 +474,7 @@ class Benchmark:
                         },
                     ],
                     tests,
-                    "I (pu base Snom, Unom)",
+                    "I (pu base Unom, Snom)",
                 ]
             )
 
