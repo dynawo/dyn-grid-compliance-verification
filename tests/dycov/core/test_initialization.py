@@ -292,12 +292,12 @@ class TestDycovInitializer:
         dycov_initializer._initialize_logger(debug=True)
 
         mock_init_handlers.assert_called_once_with(
-            "DEBUG",  # file_log_level
+            10,  # file_log_level
             self.mock_config.get_value.side_effect(
                 "Global", "file_formatter"
             ),  # file_formatter from mock_config
             self.mock_config.get_int.return_value,  # file_max_bytes
-            "DEBUG",  # console_log_level
+            10,  # console_log_level
             self.mock_config.get_value.side_effect(
                 "Global", "console_formatter"
             ),  # console_formatter from mock_config

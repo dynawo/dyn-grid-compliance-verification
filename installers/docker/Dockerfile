@@ -4,7 +4,7 @@
 # Developed by Grupo AIA
 #
 
-FROM python:3.11-slim-bookworm
+FROM python:3.13-slim-bookworm
 
 ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples

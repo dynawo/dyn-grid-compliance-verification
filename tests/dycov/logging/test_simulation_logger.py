@@ -23,7 +23,7 @@ class TestSimulationLogger:
     def test_init_handlers_adds_rotating_file_handler(self, tmp_path):
         logger = SimulationLogger("test_logger")
         log_dir = tmp_path
-        file_log_level = "INFO"
+        file_log_level = 10
         file_formatter = "%(asctime)s - %(levelname)s - %(message)s"
         file_max_bytes = 1024
 
@@ -48,7 +48,7 @@ class TestSimulationLogger:
         logger = SimulationLogger("test_logger")
         log_dir = tmp_path
         logger.init_handlers(
-            file_log_level="INFO",
+            file_log_level=10,
             file_formatter="%(message)s",
             file_max_bytes=1024,
             log_dir=log_dir,
@@ -60,7 +60,7 @@ class TestSimulationLogger:
     def test_init_handlers_nonexistent_log_dir_raises_exception(self, tmp_path):
         logger = SimulationLogger("test_logger")
         non_existent_dir = tmp_path / "does_not_exist"
-        file_log_level = "INFO"
+        file_log_level = 10
         file_formatter = "%(message)s"
         file_max_bytes = 1024
 
@@ -75,7 +75,7 @@ class TestSimulationLogger:
     def test_init_handlers_invalid_log_level_raises_error(self, tmp_path):
         logger = SimulationLogger("test_logger")
         log_dir = tmp_path
-        invalid_log_level = "NOTALEVEL"
+        invalid_log_level = 999  # Invalid log level (not a valid logging level)
         file_formatter = "%(message)s"
         file_max_bytes = 1024
 
