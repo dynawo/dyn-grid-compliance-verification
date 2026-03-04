@@ -26,5 +26,3 @@ StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_tapChanger_tap_value
 Wind_Turbine_GEN_InjectedActiveCurrent = Wind_Turbine_WT4B_injector_idPu
 Wind_Turbine_GEN_InjectedReactiveCurrent = Wind_Turbine_WT4B_injector_iqPu
 Wind_Turbine_GEN_MagnitudeControlledByAVRPu = Wind_Turbine_WT4B_injector_UPu
-Wind_Turbine_GEN_InjectedCurrent = Wind_Turbine_WT4B_injector_i
-
