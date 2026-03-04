@@ -23,6 +23,7 @@ def test_trafos():
         B=0.0,
         G=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         par_id="",
         terminals=(
             Terminal(connectedEquipment=None),
@@ -39,6 +40,7 @@ def test_trafos():
         B=0.0,
         G=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         par_id="",
         terminals=(
             Terminal(connectedEquipment=None),
@@ -444,6 +446,7 @@ def test_check_trafos():
         B=0.0,
         G=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         par_id="",
         terminals=(
             Terminal(connectedEquipment=None),
