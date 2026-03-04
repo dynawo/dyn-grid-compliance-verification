@@ -27,7 +27,7 @@ from dycov.curves.dynawo.io.jobs import JobsFile
 from dycov.curves.dynawo.io.par import ParFile
 from dycov.curves.dynawo.io.solvers import SolversFile
 from dycov.curves.dynawo.io.table import TableFile
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator, VoltDipResult
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.electrical.generator_variables import generator_variables
@@ -1047,6 +1047,7 @@ class DynawoCurves(ProducerCurves):
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
             s_nref=self._s_nref,
+            f_nom=self._f_nom,
         )
         solver = SolverParams(
             solver_id=self._solver_id,
@@ -1112,7 +1113,7 @@ class DynawoCurves(ProducerCurves):
         last_fault_xpu = min_val
         bisection_success = False
         hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 1e-5)
-        voltage_dip_check_result = None  # Initialize to None
+        voltage_dip_classification = None  # Initialize to None
         # Optimized: Removed `incomplete_bisection` flag, using `while True` with `break`
         while True:
             fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
@@ -1134,7 +1135,7 @@ class DynawoCurves(ProducerCurves):
                 if success:
                     bisection_success = True
                     last_fault_xpu = fault_xpu
-                    voltage_dip_check_result = DynawoSimulator.check_voltage_dip(
+                    voltage_dip_classification = DynawoSimulator.classify_voltage_dip(
                         self._pcs_name,
                         bm_name,
                         oc_name,
@@ -1151,22 +1152,26 @@ class DynawoCurves(ProducerCurves):
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
                 if success:
-                    if voltage_dip_check_result == 1:  # Required dip is greater than obtained
+                    if (
+                        voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE
+                    ):  # Required dip is greater than obtained
                         min_val = fault_xpu
-                    elif voltage_dip_check_result == -1:  # Required dip is less than obtained
+                    elif (
+                        voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL
+                    ):  # Required dip is less than obtained
                         max_val = fault_xpu
-                    else:  # voltage_dip_check_result == 0: Dip achieved
+                    else:  # voltage_dip_classification == VoltDipResult.DIP_CORRECT: Dip achieved
                         break  # Exit loop if dip is achieved
                 else:
                     self.__debug(bm_name, oc_name, "Simulation fails")
                     # If the simulation fails, adjust search range based on previous outcome
                     # if available
-                    if voltage_dip_check_result is not None:
-                        if voltage_dip_check_result == 1:
+                    if voltage_dip_classification is not None:
+                        if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                             max_val = fault_xpu
-                        elif voltage_dip_check_result == -1:
+                        elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
                             min_val = fault_xpu
-                    else:  # Fallback if voltage_dip_check_result is not yet set
+                    else:  # Fallback if voltage_dip_classification is not yet set
                         max_val = fault_xpu  # Default to reducing fault if first simulation fails
                 if self.__is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
                     break  # Exit loop if bisection is complete
@@ -1174,7 +1179,12 @@ class DynawoCurves(ProducerCurves):
             self.__error(bm_name, oc_name, "The simulation fails with any value for the fault")
             raise ValueError("Fault simulation fails")
         # Check if the exact dip was achieved, if not, raise error
-        if voltage_dip_check_result != 0:
+        if voltage_dip_classification == VoltDipResult.COLUMN_MISSING:
+            self.__error(
+                bm_name, oc_name, "The expected voltage curve is missing in the simulation output"
+            )
+            raise ValueError("Voltage curve missing")
+        elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
             self.__error(bm_name, oc_name, "The required dip was not achieved")
             raise ValueError("Fault dip unachievable")
         # Recover the last successful fault values and apply to original working directory
@@ -1306,6 +1316,7 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
             self.get_producer().s_nom,
             self._s_nref,
+            self._f_nom,
             save_file=False,  # No need to save output file for CCT check
             simulation_limit=self._sim_time + 10,
         )

@@ -105,11 +105,6 @@ The Tool uses the following keywords to define the dynamic model:
     Injected reactive current in per unit. It is required for Electrical Performance Verification and
     Model Validation.
 
-* ``'InjectedCurrent'``
-    Injected current in per unit, the tool calculates it from 'InjectedActiveCurrent' and
-    'InjectedReactiveCurrent'. It is required for Electrical Performance Verification and
-    Model Validation.
-
 * ``'InjectedCurrentMax'``
     Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
 
@@ -167,11 +162,6 @@ The Tool uses the following keywords to define the dynamic model:
 
 * ``'InjectedReactiveCurrent'``
     Injected reactive current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
-
-* ``'InjectedCurrent'``
-    Injected current in per unit, the tool calculates it from 'InjectedActiveCurrent' and
-    'InjectedReactiveCurrent'. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedCurrentMax'``
@@ -253,11 +243,6 @@ The Tool uses the following keywords to define the dynamic model:
 
 * ``'InjectedReactiveCurrent'``
     Injected reactive current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
-
-* ``'InjectedCurrent'``
-    Injected current in per unit, the tool calculates it from 'InjectedActiveCurrent' and
-    'InjectedReactiveCurrent'. It is required for Electrical Performance Verification and
     Model Validation.
 
 * ``'InjectedCurrentMax'``
