@@ -34,10 +34,6 @@
     <par type="DOUBLE" name="generator_UBaseLV" value="21"/>
     <par type="DOUBLE" name="generator_RTfPu" value="0"/>
     <par type="DOUBLE" name="generator_XTfPu" value="0"/>
-    <par type="DOUBLE" name="generator_P0Pu" value="-4.567"/>
-    <par type="DOUBLE" name="generator_Q0Pu" value="-0.599"/>
-    <par type="DOUBLE" name="generator_U0Pu" value="1.0086"/>
-    <par type="DOUBLE" name="generator_UPhase0" value="0.4"/>
     <par type="DOUBLE" name="governor_R" value="0.05"/>
     <par type="DOUBLE" name="governor_t1" value="0.5"/>
     <par type="DOUBLE" name="governor_t2" value="3"/>
