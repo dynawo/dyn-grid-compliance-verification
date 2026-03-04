@@ -50,6 +50,7 @@ class Xfmr_params(Equipment):
     B: float
     G: float
     rTfo: float
+    alphaTfo: float
 
 
 @dataclass
