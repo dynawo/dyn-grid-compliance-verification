@@ -81,25 +81,15 @@
     <!-- General -->
     <par type="DOUBLE" name="WT_SNom" value="90"/>
     <par type="DOUBLE" name="WT_tS" value="0.001"/>
-    <!-- Operating Point -->
-    <par type="DOUBLE" name="WT_P0Pu" value="-1"/>
-    <par type="DOUBLE" name="WT_Q0Pu" value="0.21"/>
-    <par type="DOUBLE" name="WT_U0Pu" value="1"/>
-    <par type="DOUBLE" name="WT_UPhase0" value="0.21949"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
-    <par type="DOUBLE" name="transformer_P10Pu" value="0.1"/>
-    <par type="DOUBLE" name="transformer_Q10Pu" value="0.05"/>
-    <par type="DOUBLE" name="transformer_U10Pu" value="1.0086"/>
-    <par type="DOUBLE" name="transformer_U1Phase0" value="0.4334"/>
-    <par type="DOUBLE" name="transformer_U20Pu" value="1.0"/>
+    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
