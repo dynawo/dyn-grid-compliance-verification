@@ -338,18 +338,18 @@ def _reference_traces(fig, reference_curves, curve_name):
 
 
 def _exclusion_windows(fig, results):
-    if "excl1_t0" in results:
+    if "event_exclusion_window_start" in results:
         fig.add_vrect(
-            x0=results["excl1_t0"],
-            x1=results["excl1_t"],
+            x0=results["event_exclusion_window_start"],
+            x1=results["event_exclusion_window_end"],
             line_width=0,
             opacity=0.5,
             fillcolor="#e8e8e8",
         )
-    if "excl2_t0" in results:
+    if "clear_exclusion_window_start" in results:
         fig.add_vrect(
-            x0=results["excl2_t0"],
-            x1=results["excl2_t"],
+            x0=results["clear_exclusion_window_start"],
+            x1=results["clear_exclusion_window_end"],
             line_width=0,
             opacity=0.5,
             fillcolor="#e8e8e8",

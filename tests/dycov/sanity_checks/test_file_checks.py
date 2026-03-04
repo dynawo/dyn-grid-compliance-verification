@@ -21,7 +21,7 @@ def _get_resources_path():
 
 
 def xml_check(xml_filename):
-    file_checks.check_well_formed_xml(_get_resources_path() / xml_filename)
+    file_checks.validate_xml_syntax(_get_resources_path() / xml_filename)
 
 
 def test_xmls():
