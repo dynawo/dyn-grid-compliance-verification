@@ -1047,6 +1047,7 @@ class DynawoCurves(ProducerCurves):
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
             s_nref=self._s_nref,
+            f_nom=self._f_nom,
         )
         solver = SolverParams(
             solver_id=self._solver_id,
@@ -1315,6 +1316,7 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().generators,
             self.get_producer().s_nom,
             self._s_nref,
+            self._f_nom,
             save_file=False,  # No need to save output file for CCT check
             simulation_limit=self._sim_time + 10,
         )
