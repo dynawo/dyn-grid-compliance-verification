@@ -153,7 +153,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
     mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
-    result = DynawoSimulator().check_voltage_dip(
+    result = DynawoSimulator().classify_voltage_dip(
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
     )
 
@@ -198,7 +198,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
     mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
-    result = DynawoSimulator().check_voltage_dip(
+    result = DynawoSimulator().classify_voltage_dip(
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
     )
 
