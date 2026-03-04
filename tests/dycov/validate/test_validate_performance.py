@@ -2,8 +2,8 @@ from dycov.model.compliance import Compliance
 from tests.dycov.utils import PERFORMANCE, execute_tool
 
 
-def test_perf_sm_curves():
-    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "GeneratorSynchronous", None)
+def test_perf_sm_producer_curves():
+    compliance = execute_tool(None, f"{PERFORMANCE}/ProducerCurves/GeneratorSynchronous/", None)
     assert [
         Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
@@ -17,8 +17,8 @@ def test_perf_sm_curves():
     ] == compliance
 
 
-def test_perf_ppm_curves():
-    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "Wind", None)
+def test_perf_ppm_producer_curves():
+    compliance = execute_tool(None, f"{PERFORMANCE}/ProducerCurves/Wind", None)
     assert [
         Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
