@@ -112,6 +112,7 @@
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
+    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.05"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.5"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.5"/>
