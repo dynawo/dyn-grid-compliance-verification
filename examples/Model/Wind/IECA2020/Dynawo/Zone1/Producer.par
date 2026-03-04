@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Synchronous machine external parameters -->
+  <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- Nominal -->
-    <par type="DOUBLE" name="WT_SNom" value="90"/>
-    <par type="DOUBLE" name="WT_tS" value="0.001"/>
     <!-- Electrical -->
     <par type="DOUBLE" name="WT_BesPu" value="0"/>
     <par type="DOUBLE" name="WT_GesPu" value="0"/>
@@ -105,11 +102,9 @@
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt62" value="180"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt71" value="0.9008"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt72" value="180"/>
-    <!-- Mechanical -->
-    <par type="DOUBLE" name="WT_CdrtPu" value="15"/>
-    <par type="DOUBLE" name="WT_Hgen" value="1"/>
-    <par type="DOUBLE" name="WT_Hwtr" value="5"/>
-    <par type="DOUBLE" name="WT_KdrtPu" value="500"/>
+    <!-- General -->
+    <par type="DOUBLE" name="WT_SNom" value="90"/>
+    <par type="DOUBLE" name="WT_tS" value="0.001"/>
     <!-- Operating Point -->
     <par type="DOUBLE" name="WT_P0Pu" value="-1"/>
     <par type="DOUBLE" name="WT_Q0Pu" value="0.21"/>
