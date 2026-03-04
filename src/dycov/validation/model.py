@@ -707,10 +707,10 @@ class ModelValidator(Validator):
                 't_P90_error': float, error in reaching 90% of the active power recovery.
                 't_P90_threshold': float, threshold for the t_P90 error.
                 't_P90_check': bool, compliance check for t_P90 error.
-                'excl1_t0': float, exclusion time start 1.
-                'excl1_t': float, exclusion time duration 1.
-                'excl2_t0': float, exclusion time start 2.
-                'excl2_t': float, exclusion time duration 2.
+                'event_exclusion_window_start': float, exclusion time start 1.
+                'event_exclusion_window_end': float, exclusion time duration 1.
+                'clear_exclusion_window_start': float, exclusion time start 2.
+                'clear_exclusion_window_end': float, exclusion time duration 2.
             }
         """
 
@@ -743,15 +743,12 @@ class ModelValidator(Validator):
         )
 
         # Show always the exclusion windows used in the validation
-        excl1_t0, excl1_t, excl2_t0, excl2_t = self._get_exclusion_times()
-        if excl2_t0 == 0.0 and excl2_t == 0.0:
-            results["excl1_t0"] = excl1_t0
-            results["excl1_t"] = excl1_t
-        else:
-            results["excl1_t0"] = excl1_t0
-            results["excl1_t"] = excl1_t
-            results["excl2_t0"] = excl2_t0
-            results["excl2_t"] = excl2_t
+        exclusion_windows = self._get_exclusion_windows()
+        results["event_exclusion_window_start"] = exclusion_windows.event_start
+        results["event_exclusion_window_end"] = exclusion_windows.event_end
+        if exclusion_windows.clear_start != 0.0 or exclusion_windows.clear_end != 0.0:
+            results["clear_exclusion_window_start"] = exclusion_windows.clear_start
+            results["clear_exclusion_window_end"] = exclusion_windows.clear_end
 
         results["curves"] = self._get_calculated_curves()
         if not self._get_reference_curves().empty:
