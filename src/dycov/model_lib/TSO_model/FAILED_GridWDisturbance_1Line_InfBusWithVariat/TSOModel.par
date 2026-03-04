@@ -6,6 +6,7 @@
     <par type="DOUBLE" name="infiniteBus_tUEvtStart" value="9999"/>
     <par type="DOUBLE" name="infiniteBus_tUEvtEnd" value="9999"/>
     <par type="DOUBLE" name="infiniteBus_UPhase" value="0"/>
+    <par type="DOUBLE" name="infiniteBus_UNom" value="{{bus_UNom}}"/>
     <par type="DOUBLE" name="infiniteBus_omega0Pu" value="1"/>
     <par type="DOUBLE" name="infiniteBus_omegaEvtPu" value="1.01"/>
     <par type="DOUBLE" name="infiniteBus_tOmegaEvtStart" value="20"/>
@@ -16,5 +17,8 @@
     <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
     <par type="DOUBLE" name="line_BPu" value="0.0"/>
     <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
   </set>
 </parametersSet>

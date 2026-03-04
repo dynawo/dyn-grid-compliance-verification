@@ -32,7 +32,7 @@ installers/Output
 
 # Exclude default results (for those cases when we run the tool in the src tree, which we shouldn't)
 .DyCoV_Results*/
-Results/
+Results*/
 
 # Exclude auto-generate docs
 docs/manual/source/usage/helps
