@@ -412,18 +412,18 @@ def _plot_response_characteristics(
 
 
 def _plot_exclusion_windows(results: dict):
-    if "excl1_t0" in results:
+    if "event_exclusion_window_start" in results:
         plt.axvspan(
-            xmin=results["excl1_t0"],
-            xmax=results["excl1_t"],
+            xmin=results["event_exclusion_window_start"],
+            xmax=results["event_exclusion_window_end"],
             color="#e8e8e8",
             linestyle="-",
             linewidth=0.2,
         )
-    if "excl2_t0" in results:
+    if "clear_exclusion_window_start" in results:
         plt.axvspan(
-            xmin=results["excl2_t0"],
-            xmax=results["excl2_t"],
+            xmin=results["clear_exclusion_window_start"],
+            xmax=results["clear_exclusion_window_end"],
             color="#e8e8e8",
             linestyle="-",
             linewidth=0.2,
