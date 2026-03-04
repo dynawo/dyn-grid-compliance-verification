@@ -16,6 +16,7 @@ import re
 import signal
 import subprocess
 import time
+from enum import IntEnum
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -29,6 +30,24 @@ from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
 VOLTAGE_DIP_THRESHOLD = 0.002
+
+
+def _is_frequency_column(column_name: str) -> bool:
+    frequency_patterns = [
+        r".*NetworkFrequencyPu$",
+        r".*RotorSpeedPu$",
+        r".*NetworkFrequencyReference$",
+    ]
+    return any(re.match(pattern, column_name) for pattern in frequency_patterns)
+
+
+class VoltDipResult(IntEnum):
+    """Result codes for voltage dip comparison."""
+
+    COLUMN_MISSING = -2  # Error: BusPDR_BUS_Voltage column not found
+    DIP_TOO_SMALL = -1  # Actual dip < expected (need more impedance)
+    DIP_CORRECT = 0  # Actual dip ≈ expected (within tolerance)
+    DIP_TOO_LARGE = 1  # Actual dip > expected (need less impedance)
 
 
 class _ProcRegistry:
@@ -78,6 +97,7 @@ class DynawoSimulator:
             run.generators,
             run.s_nom,
             run.s_nref,
+            run.f_nom,
             simulation_limit=max_sim_time,
         )
 
@@ -104,6 +124,7 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
+        f_nom: float,
         simulation_limit: float,
         save_file: bool = False,
     ) -> Tuple[bool, bool, str, pd.DataFrame, float]:
@@ -120,12 +141,13 @@ class DynawoSimulator:
             generators,
             s_nom,
             s_nref,
+            f_nom,
             save_file=save_file,
             simulation_limit=simulation_limit,
         )
 
     @staticmethod
-    def check_voltage_dip(
+    def classify_voltage_dip(
         pcs_name: str,
         bm_name: str,
         oc_name: str,
@@ -135,7 +157,8 @@ class DynawoSimulator:
         expected_dip: float,
     ) -> int:
         """
-        Checks if the desired voltage dip has occurred during the simulation.
+        Classifies the voltage dip magnitude relative to expected value.
+
         Parameters
         ----------
         pcs_name : str
@@ -152,22 +175,22 @@ class DynawoSimulator:
             The duration of the fault in seconds.
         expected_dip : float
             The required voltage drop (positive value).
+
         Returns
         -------
-        int
-            -1 if the actual voltage dip is less than the required dip.
-             1 if the actual voltage dip is greater than the required dip.
-             0 if the actual voltage dip is approximately equal to the required dip.
+        VoltDipResult
+            Classification of the voltage dip:
+            - COLUMN_MISSING: Required column not found in curves
+            - DIP_TOO_SMALL: Increase fault impedance
+            - DIP_CORRECT: Within tolerance
+            - DIP_TOO_LARGE: Decrease fault impedance
         """
         if expected_dip == 0.0:
-            return 0
+            return VoltDipResult.DIP_CORRECT
 
         bus_pdr_voltage_column = "BusPDR_BUS_Voltage"
         if bus_pdr_voltage_column not in curves.columns:
-            dycov_logging.get_logger("DynawoSimulator").error(
-                f"'{bus_pdr_voltage_column}' not found in curves DataFrame."
-            )
-            return -2  # Indicate an error if the column is missing
+            return VoltDipResult.COLUMN_MISSING
 
         time_values = curves["time"].tolist()
         voltage_values = curves[bus_pdr_voltage_column].tolist()
@@ -207,11 +230,11 @@ class DynawoSimulator:
         rtol = VOLTAGE_DIP_THRESHOLD
         atol = 0.1 * rtol
         if math.isclose(voltage_dip, expected_dip, rel_tol=rtol, abs_tol=atol):
-            return 0
+            return VoltDipResult.DIP_CORRECT
         elif expected_dip < voltage_dip:
-            return 1
+            return VoltDipResult.DIP_TOO_LARGE
         else:
-            return -1
+            return VoltDipResult.DIP_TOO_SMALL
 
     # ------
     # Engine
@@ -229,6 +252,7 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
+        f_nom: float,
         save_file: bool = True,
         simulation_limit: Optional[float] = None,
     ) -> tuple[bool, Optional[str], bool, pd.DataFrame, float]:
@@ -258,6 +282,8 @@ class DynawoSimulator:
             Nominal apparent power of the system.
         s_nref : float
             System-wide S base (SnRef).
+        f_nom : float
+            Nominal frequency of the system.
         save_file : bool, optional
             If True, the calculated curves DataFrame will be created and returned.
             Defaults to True.
@@ -297,7 +323,7 @@ class DynawoSimulator:
 
         if curves_csv_path.exists() and success and save_file:
             curves_calculated = self._create_curves(
-                variable_translations, curves_csv_path, generators, s_nom, s_nref
+                variable_translations, curves_csv_path, generators, s_nom, s_nref, f_nom
             )
 
         return success, log_output, has_error_in_timeline, curves_calculated, sim_time
@@ -429,7 +455,9 @@ class DynawoSimulator:
         generators: list,
         snom: float,
         snref: float,
+        fnom: float,
     ) -> pd.DataFrame:
+
         df_curves_imported = pd.read_csv(input_file, sep=";")
         df_curves_imported = df_curves_imported.loc[
             :, ~df_curves_imported.columns.str.contains("^Unnamed")
@@ -437,36 +465,36 @@ class DynawoSimulator:
 
         df_curves = self._translate_curves(variable_translations, df_curves_imported)
 
-        pdr_voltage_modulus = df_curves["Measurements_BUS_Voltage"].tolist()
-        pdr_active_power = df_curves["Measurements_BUS_ActivePower"].tolist()
-        pdr_reactive_power = df_curves["Measurements_BUS_ReactivePower"].tolist()
+        voltage_pu = df_curves["Measurements_BUS_Voltage"].to_numpy(dtype=float)
+        active_power_pu = df_curves["Measurements_BUS_ActivePower"].to_numpy(dtype=float)
+        reactive_power_pu = df_curves["Measurements_BUS_ReactivePower"].to_numpy(dtype=float)
 
-        rtol = 0.002
-        atol = 0.1 * rtol
+        relative_tol = 0.002
+        abs_tol = 0.1 * relative_tol
+
+        power_base_factor = snref / snom
+        active_power_pu = active_power_pu * power_base_factor
+        reactive_power_pu = reactive_power_pu * power_base_factor
 
         curves_dict = {
             "time": df_curves_imported["time"].tolist(),
-            "BusPDR_BUS_Voltage": pdr_voltage_modulus,
-            "BusPDR_BUS_ActivePower": pdr_active_power,
-            "BusPDR_BUS_ReactivePower": pdr_reactive_power,
+            "BusPDR_BUS_Voltage": voltage_pu.tolist(),
+            "BusPDR_BUS_ActivePower": active_power_pu.tolist(),
+            "BusPDR_BUS_ReactivePower": reactive_power_pu.tolist(),
         }
 
-        active_power_arr = np.array(pdr_active_power)
-        reactive_power_arr = np.array(pdr_reactive_power)
-        voltage_modulus_arr = np.array(pdr_voltage_modulus)
-
         curves_dict["BusPDR_BUS_ActiveCurrent"] = np.divide(
-            active_power_arr,
-            voltage_modulus_arr,
-            out=np.zeros_like(active_power_arr, dtype=float),
-            where=np.abs(voltage_modulus_arr) > atol,
+            active_power_pu,
+            voltage_pu,
+            out=np.zeros_like(active_power_pu),
+            where=np.abs(voltage_pu) > abs_tol,
         ).tolist()
 
         curves_dict["BusPDR_BUS_ReactiveCurrent"] = np.divide(
-            reactive_power_arr,
-            voltage_modulus_arr,
-            out=np.zeros_like(reactive_power_arr, dtype=float),
-            where=np.abs(voltage_modulus_arr) > atol,
+            reactive_power_pu,
+            voltage_pu,
+            out=np.zeros_like(reactive_power_pu),
+            where=np.abs(voltage_pu) > abs_tol,
         ).tolist()
 
         self._get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
@@ -474,8 +502,13 @@ class DynawoSimulator:
         for col in df_curves.columns:
             if "_TE_" in col or col == "time":
                 continue
-            if pd.api.types.is_complex_dtype(df_curves[col]):
+
+            if _is_frequency_column(col):
+                curves_dict[col] = (df_curves[col].astype(float) * fnom).tolist()
+
+            elif pd.api.types.is_complex_dtype(df_curves[col]):
                 curves_dict[col] = self._get_modulus(df_curves[col].tolist())
+
             else:
                 curves_dict[col] = df_curves[col].tolist()
 
@@ -505,7 +538,6 @@ class DynawoSimulator:
                     variable_translations, df_curves_imported, curves_translation, column
                 )
 
-        self._get_injected_current_curve(column_size, curves_translation)
         self._get_network_frequency_curve(curves_translation)
         return pd.DataFrame(curves_translation)
 
@@ -556,24 +588,6 @@ class DynawoSimulator:
         complex_column_array.real = np.multiply(df_curves[f"{column_name}re"], sign_real)
         complex_column_array.imag = np.multiply(df_curves[f"{column_name}im"], sign_imag)
         return complex_column_array.tolist()
-
-    def _get_injected_current_curve(self, column_size: int, curves_translation: dict) -> None:
-        cols = curves_translation.keys()
-        idpu_re = re.compile(r".*_InjectedActiveCurrent$")
-        iqpu_re = re.compile(r".*_InjectedReactiveCurrent$")
-        idpu_list = list(filter(idpu_re.match, cols))
-        iqpu_list = list(filter(iqpu_re.match, cols))
-
-        for iqpu_col in iqpu_list:
-            base_name = iqpu_col.replace("_InjectedReactiveCurrent", "")
-            for idpu_col in idpu_list:
-                if idpu_col.replace("_InjectedActiveCurrent", "") == base_name:
-                    complex_column = np.zeros(column_size, dtype=np.complex128)
-                    complex_column.real = curves_translation[idpu_col]
-                    complex_column.imag = curves_translation[iqpu_col]
-                    key = f"{base_name}_InjectedCurrent"
-                    curves_translation[key] = complex_column.tolist()
-                    break
 
     def _get_network_frequency_curve(self, curves_translation: dict) -> None:
         cols = curves_translation.keys()

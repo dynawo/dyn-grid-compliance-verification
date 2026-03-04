@@ -352,24 +352,62 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["imax_reac"], self._validations):
             imax_reac = -1
             imax_reac_check = True
-            filter_col = self.__get_filtered_columns("_GEN_InjectedCurrent")
-            for curve_name in filter_col:
-                generator_id = curve_name.replace("_GEN_InjectedCurrent", "")
-                injected_current = generator_id + "_GEN_" + "InjectedCurrent"
-                injected_active_current = generator_id + "_GEN_" + "InjectedActiveCurrent"
+
+            time_curve = self.__curve_list("time")
+
+            idpu_cols = self.__get_filtered_columns("_GEN_InjectedActiveCurrent")
+            iqpu_cols = self.__get_filtered_columns("_GEN_InjectedReactiveCurrent")
+
+            def base_from_active(col: str) -> str:
+                return col.replace("_GEN_InjectedActiveCurrent", "")
+
+            def base_from_reactive(col: str) -> str:
+                return col.replace("_GEN_InjectedReactiveCurrent", "")
+
+            idpu_map = {base_from_active(c): c for c in idpu_cols}
+            iqpu_map = {base_from_reactive(c): c for c in iqpu_cols}
+
+            # Columns names are expected to be in the format:
+            #   - <generator_id>_GEN_InjectedActiveCurrent
+            #   - <generator_id>_GEN_InjectedReactiveCurrent
+            # so we can match them based on the generator_id extracted from the column name
+            generator_ids = sorted(set(idpu_map.keys()) & set(iqpu_map.keys()))
+            for generator_id in generator_ids:
+                idpu = self.__curve_list(idpu_map[generator_id])
+                iqpu = self.__curve_list(iqpu_map[generator_id])
+
+                if idpu is None or iqpu is None:
+                    continue
+
+                n = min(len(time_curve), len(idpu), len(iqpu))
+                if n == 0:
+                    continue
+
+                time_local = time_curve[:n]
+                idpu_local = idpu[:n]
+                iqpu_local = iqpu[:n]
+
+                # Build injected current magnitude
+                injected_current = []
+                for r, x in zip(idpu_local, iqpu_local):
+                    if r is None or x is None:
+                        injected_current.append(0.0)
+                    else:
+                        injected_current.append((r * r + x * x) ** 0.5)
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
-                    self._generators_imax[generator_id],
-                    self.__curve_list("time"),
-                    self.__curve_list(injected_current),
-                    self.__curve_list(injected_active_current),
+                    self._generators_imax.get(generator_id),
+                    time_local,
+                    injected_current,
+                    idpu_local,
                 )
+
+                # Track worst (minimum) violating value if a failure exists
                 if not imax_gen_reac_check:
-                    if imax_reac_check:
+                    imax_reac_check = False
+                    if imax_reac is None or imax_gen_reac < imax_reac:
                         imax_reac = imax_gen_reac
-                        imax_reac_check = imax_gen_reac_check
-                    elif imax_gen_reac < imax_reac:
-                        imax_reac = imax_gen_reac
+
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
 
