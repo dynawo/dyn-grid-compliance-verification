@@ -1,65 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Synchronous machine external parameters -->
+  <!-- Unit parameters -->
   <set id="Bess">
-    <par type="DOUBLE" name="BESS_P0Pu" value="-0.7"/>
-    <par type="DOUBLE" name="BESS_Q0Pu" value="-0.2"/>
-    <par type="DOUBLE" name="BESS_U0Pu" value="1.0"/>
-    <par type="DOUBLE" name="BESS_UPhase0" value="0.00000144621"/>
 
-    <!-- Electrical Control -->
-    <par type="BOOL" name="BESS_QFlag" value="true"/>
-    <par type="BOOL" name="BESS_VFlag" value="true"/>
+    <!-- Electrical Control REEC -->
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
-    <par type="DOUBLE" name="BESS_tRv" value="0.01"/>
-    <par type="DOUBLE" name="BESS_VUpPu" value="1.35"/>
-    <par type="DOUBLE" name="BESS_VDipPu" value="0.9"/>
-    <par type="DOUBLE" name="BESS_VRef0Pu" value="1"/>
+    <par type="BOOL" name="BESS_QFlag" value="true"/>
+    <par type="BOOL" name="BESS_VFlag" value="true"/>
     <par type="DOUBLE" name="BESS_Dbd1Pu" value="-0.05"/>
     <par type="DOUBLE" name="BESS_Dbd2Pu" value="0.05"/>
-    <par type="DOUBLE" name="BESS_Kqv" value="2"/>
-    <par type="DOUBLE" name="BESS_Iqh1Pu" value="1.1"/>
-    <par type="DOUBLE" name="BESS_Iql1Pu" value="-1.1"/>
-    <par type="DOUBLE" name="BESS_Kqp" value="1"/>
-    <par type="DOUBLE" name="BESS_Kqi" value="0.7"/>
-    <par type="DOUBLE" name="BESS_VMaxPu" value="1.1"/>
-    <par type="DOUBLE" name="BESS_VMinPu" value="0.9"/>
-    <par type="DOUBLE" name="BESS_Kvp" value="1"/>
-    <par type="DOUBLE" name="BESS_Kvi" value="0.7"/>
-    <par type="DOUBLE" name="BESS_tIq" value="0.01"/>
-    <par type="DOUBLE" name="BESS_tPord" value="0.01"/>
     <par type="DOUBLE" name="BESS_DPMaxPu" value="999"/>
     <par type="DOUBLE" name="BESS_DPMinPu" value="-999"/>
     <par type="DOUBLE" name="BESS_IMaxPu" value="1.3"/>
-    <par type="DOUBLE" name="BESS_tP" value="0.05"/>
-    <par type="DOUBLE" name="BESS_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="BESS_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="BESS_Iqh1Pu" value="1.1"/>
+    <par type="DOUBLE" name="BESS_Iql1Pu" value="-1.1"/>
+    <par type="DOUBLE" name="BESS_Kqi" value="0.7"/>
+    <par type="DOUBLE" name="BESS_Kqp" value="1"/>
+    <par type="DOUBLE" name="BESS_Kqv" value="2"/>
+    <par type="DOUBLE" name="BESS_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="BESS_Kvp" value="1"/>
     <par type="DOUBLE" name="BESS_PMaxPu" value="0.75"/>
     <par type="DOUBLE" name="BESS_PMinPu" value="-0.75"/>
+    <par type="DOUBLE" name="BESS_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="BESS_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="BESS_tIq" value="0.01"/>
+    <par type="DOUBLE" name="BESS_tRv" value="0.01"/>
+    <par type="DOUBLE" name="BESS_tP" value="0.05"/>
+    <par type="DOUBLE" name="BESS_tPord" value="0.01"/>
+    <par type="DOUBLE" name="BESS_VDipPu" value="0.9"/>
+    <par type="DOUBLE" name="BESS_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="BESS_VMinPu" value="0.9"/>
+    <par type="DOUBLE" name="BESS_VRef0Pu" value="1"/>
+    <par type="DOUBLE" name="BESS_VUpPu" value="1.35"/>
 
-    <!-- Generator Control -->
-    <par type="DOUBLE" name="BESS_tG" value="0.02"/>
-    <par type="DOUBLE" name="BESS_tFilterGC" value="0.02"/>
-    <par type="DOUBLE" name="BESS_IqrMaxPu" value="20"/>
-    <par type="DOUBLE" name="BESS_IqrMinPu" value="-20"/>
-    <par type="DOUBLE" name="BESS_RrpwrPu" value="10"/>
-    <par type="BOOL" name="BESS_RateFlag" value="false"/>
-    <par type="DOUBLE" name="BESS_SOC0Pu" value="0.75"/>
+    <!-- Electrical Control REECc -->
     <par type="DOUBLE" name="BESS_SOCMaxPu" value="0.8"/>
     <par type="DOUBLE" name="BESS_SOCMinPu" value="0.2"/>
     <par type="DOUBLE" name="BESS_tBattery" value="9999"/>
-
-    <!-- PLL Control -->
-    <par type="DOUBLE" name="BESS_KiPLL" value="20"/>
-    <par type="DOUBLE" name="BESS_KpPLL" value="3"/>
-    <par type="DOUBLE" name="BESS_OmegaMaxPu" value="1.5"/>
-    <par type="DOUBLE" name="BESS_OmegaMinPu" value="0.5"/>
-
-    <!-- BaseWT4 -->
-    <par type="DOUBLE" name="BESS_SNom" value="60"/>
-    <par type="DOUBLE" name="BESS_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="BESS_XPu" value="1e-6"/>
     <par type="DOUBLE" name="BESS_VDLIp11" value="1.1"/>
     <par type="DOUBLE" name="BESS_VDLIp12" value="1.1"/>
     <par type="DOUBLE" name="BESS_VDLIp21" value="1.15"/>
@@ -76,25 +54,40 @@
     <par type="DOUBLE" name="BESS_VDLIq32" value="1"/>
     <par type="DOUBLE" name="BESS_VDLIq41" value="1.17"/>
     <par type="DOUBLE" name="BESS_VDLIq42" value="1"/>
-    <par type="DOUBLE" name="BESS_VRef1Pu" value="0"/>
-    <par type="BOOL" name="BESS_Lvplsw" value="false"/>
-    <par type="DOUBLE" name="BESS_zerox" value="0.1"/>
+
+    <!-- Generator Converter REGC -->
+    <par type="DOUBLE" name="BESS_IqrMaxPu" value="20"/>
+    <par type="DOUBLE" name="BESS_IqrMinPu" value="-20"/>
+    <par type="DOUBLE" name="BESS_RrpwrPu" value="10"/>
+    <par type="DOUBLE" name="BESS_tFilterGC" value="0.02"/>
+
+    <!-- Generator Converter REGCa -->
+    <par type="DOUBLE" name="BESS_tG" value="0.02"/>
     <par type="DOUBLE" name="BESS_brkpt" value="0.05"/>
     <par type="DOUBLE" name="BESS_lvpl1" value="1.22"/>
+    <par type="BOOL" name="BESS_Lvplsw" value="false"/>
+    <par type="DOUBLE" name="BESS_zerox" value="0.1"/>
+
+    <!-- PLL Control -->
+    <par type="DOUBLE" name="BESS_KiPLL" value="20"/>
+    <par type="DOUBLE" name="BESS_KpPLL" value="3"/>
+    <par type="DOUBLE" name="BESS_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="BESS_OmegaMinPu" value="0.5"/>
+
+    <!-- General -->
+    <par type="DOUBLE" name="BESS_SNom" value="60"/>
+    <par type="DOUBLE" name="BESS_RPu" value="1e-7"/>
+    <par type="DOUBLE" name="BESS_XPu" value="1e-6"/>
+    <par type="DOUBLE" name="BESS_SOC0Pu" value="0.75"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_SNom" value="60"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000455"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.040743"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
-    <par type="DOUBLE" name="transformer_P10Pu" value="0.1"/>
-    <par type="DOUBLE" name="transformer_Q10Pu" value="0.05"/>
-    <par type="DOUBLE" name="transformer_U10Pu" value="1.0086"/>
-    <par type="DOUBLE" name="transformer_U1Phase0" value="0.4334"/>
-    <par type="DOUBLE" name="transformer_U20Pu" value="1.0"/>
+    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>

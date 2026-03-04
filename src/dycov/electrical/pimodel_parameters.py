@@ -8,13 +8,15 @@
 #     demiguelm@aia.es
 #
 
+import cmath
+
 from dycov.model import parameters as mp
 
 
 def line_pimodel(line: mp.Line_params) -> mp.Pimodel_params:
-    """Obtains the pi-model parameters from the line parameters.
+    """Obtains the symmetric pi-model parameters from the line parameters.
 
-    Obtains the pi-model parameters from the Dynawo line model
+    Obtains the symmetric pi-model parameters from the Dynawo line model
     parameters R, X, G, B.
 
     Parameters
@@ -28,18 +30,24 @@ def line_pimodel(line: mp.Line_params) -> mp.Pimodel_params:
         Pi-model parameters
     """
 
-    ytr = 1 / complex(line.R, line.X)
-    ysh = complex(line.G, line.B)
+    Y = 1 / complex(line.R, line.X)
+    Ysh = complex(line.G, line.B)
 
-    return mp.Pimodel_params(Ytr=ytr, Ysh1=ysh, Ysh2=ysh)
+    Y11 = Y + Ysh
+    Y22 = Y + Ysh
+    Y12 = -Y
+    Y21 = -Y
+
+    return mp.Pimodel_params(Y11=Y11, Y12=Y12, Y21=Y21, Y22=Y22)
 
 
 def xfmr_pimodel(xfmr: mp.Xfmr_params) -> mp.Pimodel_params:
-    """Obtains the pi-model parameters from the transformer parameters.
+    """Obtains the general pi-model parameters from the transformer parameters.
 
-    Obtains the pi-model parameters from the Dynawo transformer model
-    parameters R, X, G, B, rTfo. It also follows the Dynawo conventions
+    Obtains the general pi-model parameters from the Dynawo transformer model
+    parameters R, X, G, B, rTfo, alphaTfo. It also follows the Dynawo conventions
     for terminal 1 and 2.
+
     Parameters
     ----------
     xfmr: Xfmr_params
@@ -51,9 +59,14 @@ def xfmr_pimodel(xfmr: mp.Xfmr_params) -> mp.Pimodel_params:
         Pi-model parameters
     """
 
-    y = 1 / complex(xfmr.R, xfmr.X)
-    ytr = xfmr.rTfo * y
-    ysh1 = (xfmr.rTfo - 1) * ytr
-    ysh2 = (1 - xfmr.rTfo) * y + complex(xfmr.G, xfmr.B)
+    rho = xfmr.rTfo * cmath.exp(1j * xfmr.alphaTfo)
+    a = 1 / rho
+    Y = 1 / complex(xfmr.R, xfmr.X)
+    Ysh = complex(xfmr.G, xfmr.B)
 
-    return mp.Pimodel_params(Ytr=ytr, Ysh1=ysh1, Ysh2=ysh2)
+    Y11 = Y / (a * a.conjugate())
+    Y22 = Y + Ysh
+    Y12 = -Y / a.conjugate()
+    Y21 = -Y / a
+
+    return mp.Pimodel_params(Y11=Y11, Y12=Y12, Y21=Y21, Y22=Y22)

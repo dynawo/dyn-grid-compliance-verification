@@ -50,6 +50,7 @@ class Xfmr_params(Equipment):
     B: float
     G: float
     rTfo: float
+    alphaTfo: float
 
 
 @dataclass
@@ -78,7 +79,7 @@ class Gen_params(Equipment):
 
 Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
 Pdr_params = namedtuple("Pdr_params", ["U", "S", "P", "Q"])
-Pimodel_params = namedtuple("Pimodel_params", ["Ytr", "Ysh1", "Ysh2"])
+Pimodel_params = namedtuple("Pimodel_params", ["Y11", "Y12", "Y21", "Y22"])
 Gen_init = namedtuple("Gen_init", ["id", "P0", "Q0", "U0", "UPhase0"])
 Load_init = namedtuple("Load_init", ["id", "lib", "P0", "Q0", "U0", "UPhase0"])
 

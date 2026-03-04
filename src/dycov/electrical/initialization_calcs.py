@@ -74,15 +74,18 @@ def init_calcs(
         s_grid = -pdr.S
     else:
         v_grid, _, s_grid = _calc_pimodel(
-            grid_line.Ytr, grid_line.Ysh1, grid_line.Ysh2, v_pdr, None, -pdr.S
+            grid_line.Y11, grid_line.Y12, grid_line.Y21, grid_line.Y22, v_pdr, s1=-pdr.S
         )
-        # Re-set phase angle globally. The grid sets the reference now:
-        angle = cmath.phase(v_grid)
-        v_pdr = cmath.rect(abs(pdr.U), -angle)
-        v_grid = cmath.rect(abs(v_grid), 0)
+
+    # Re-set phase angle globally. The grid sets the reference now:
+    angle = cmath.phase(v_grid)
+    v_pdr = cmath.rect(abs(pdr.U), -angle)
+    v_grid = cmath.rect(abs(v_grid), 0)
+
     # If the grid bus is not Inf (as in Pcs I8), calc also the PQ init params of the equiv gen
     if grid_load is not None:
-        s_grid = s_grid - complex(grid_load.P, grid_load.Q)
+        s_grid -= complex(grid_load.P, grid_load.Q)
+
     # We return both the grid bus voltage and PQ init params in one single object
     grid_init = mp.Gen_init(id=None, P0=s_grid.real, Q0=s_grid.imag, U0=abs(v_grid), UPhase0=0)
 
@@ -98,7 +101,7 @@ def init_calcs(
     else:
         int_id = (int_line.id,)
         line = line_pimodel(int_line)
-        v_int, _, s_int = _calc_pimodel(line.Ytr, line.Ysh1, line.Ysh2, v_pdr, None, pdr.S)
+        v_int, _, s_int = _calc_pimodel(line.Y11, line.Y12, line.Y21, line.Y22, v_pdr, s1=pdr.S)
         if int_line.terminals[0].connectedEquipment in ("Measurements", "BusPDR"):
             int_line.terminals[0].U0 = abs(v_pdr)
             int_line.terminals[0].UPhase0 = cmath.phase(v_pdr)
@@ -119,10 +122,10 @@ def init_calcs(
             int_line.terminals[0].Q0 = -s_int.imag
     # Next comes the plant-level transformer, if present
     if ppm_xfmr is not None:
-        xfmr = line_pimodel(ppm_xfmr)
+        xfmr = xfmr_pimodel(ppm_xfmr)
         v_int_ = v_int
         s_int_ = s_int
-        v_int, _, s_int = _calc_pimodel(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, None, s_int)
+        v_int, _, s_int = _calc_pimodel(xfmr.Y11, xfmr.Y12, xfmr.Y21, xfmr.Y22, v_int, s1=s_int)
         if ppm_xfmr.terminals[0].connectedEquipment in int_id:
             ppm_xfmr.terminals[0].U0 = abs(v_int_)
             ppm_xfmr.terminals[0].UPhase0 = cmath.phase(v_int_)
@@ -154,13 +157,14 @@ def init_calcs(
     #         step-up transformers
     #
     ##########################################################################
+
     if aux_load is None:
         _solve_gen_circuits(gens, gen_xfmrs, v_int, s_int)
     else:
         # solve first the powerflow for the aux load circuit
         xfmr = xfmr_pimodel(auxload_xfmr)
         pq = complex(aux_load.P, aux_load.Q)
-        i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, pq)
+        i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.Y11, xfmr.Y12, xfmr.Y21, xfmr.Y22, v_int, pq)
         aux_load.terminals[0].U0 = abs(v2_aux)
         aux_load.terminals[0].UPhase0 = cmath.phase(v2_aux)
         aux_load.terminals[0].P0 = aux_load.P
@@ -175,10 +179,14 @@ def init_calcs(
 
 # TODO: double-check whether this function is really needed or not
 def _zero_imp_line(conn_line: mp.Pimodel_params) -> bool:
-    if cmath.isinf(conn_line.Ytr) and conn_line.Ysh1 == 0 and conn_line.Ysh2 == 0:
-        return True
+    """Check whether the line is effectively zero impedance or not."""
 
-    return False
+    return (
+        cmath.isinf(conn_line.Y11)
+        and cmath.isinf(conn_line.Y22)
+        and conn_line.Y12 == 0
+        and conn_line.Y21 == 0
+    )
 
 
 # TODO: Is it necessary to take into account the possibility that the user enters P or Q as zero?
@@ -189,17 +197,16 @@ def _solve_gen_circuits(
     s_int: complex,
 ) -> None:
     # Calc total P,Q for calculating the sharing factors below, in case there are several units
-    tot_P = 0
-    tot_Q = 0
-    for gen in gens:
-        tot_P += gen.P
-        tot_Q += gen.Q
+    tot_P = sum(gen.P for gen in gens)
+    tot_Q = sum(gen.Q for gen in gens)
 
     for gen, gen_xfmr in zip(gens, gen_xfmrs):
         # Each gen supplies his own proportional share of the total S injection
         s_int_share = complex(s_int.real * gen.P / tot_P, s_int.imag * gen.Q / tot_Q)
         xfmr = xfmr_pimodel(gen_xfmr)
-        v_gen, _, s_gen = _calc_pimodel(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, None, s_int_share)
+        v_gen, _, s_gen = _calc_pimodel(
+            xfmr.Y11, xfmr.Y12, xfmr.Y21, xfmr.Y22, v_int, s1=s_int_share
+        )
         gen.terminals[0].U0 = abs(v_gen)
         gen.terminals[0].UPhase0 = cmath.phase(v_gen)
         gen.terminals[0].P0 = s_gen.real
@@ -225,9 +232,15 @@ def _solve_gen_circuits(
 
 
 def _calc_pimodel(
-    ytr: complex, ysh1: complex, ysh2: complex, v1: complex, i1: complex, s1: complex
+    y11: complex,
+    y12: complex,
+    y21: complex,
+    y22: complex,
+    v1: complex,
+    i1: complex = None,
+    s1: complex = None,
 ) -> tuple[complex, complex, complex]:
-    """Solves a pi-model circuit.
+    """Solves a general pi-model circuit.
 
     Solves a simple pi-model circuit. In our calculations, Terminal 1 always
     represents the bus where both voltage and current (or, equivalently, P & Q)
@@ -236,7 +249,7 @@ def _calc_pimodel(
     (tr) stands for transmission branch; (sh) stands for shunt admittance.
 
     On input:
-      ytr, ysh1, ysh2: the three admittance parameters of the pi model
+      y11, y12, y21, y22: the four admittance parameters of the pi model
       v1: complex voltage at terminal 1
       i1: complex current entering terminal 1
       s1: complex power flow entering terminal 1
@@ -249,53 +262,58 @@ def _calc_pimodel(
       s2: complex power flow leaving terminal 2
     """
 
-    if i1 is not None:
-        s1 = v1 * i1.conjugate()
-        v2 = v1
-        i2 = i1
-        s2 = s1
-    else:
-        v2 = v1 * (1 + ysh1 / ytr) - s1.conjugate() / (v1.conjugate() * ytr)
-        i2 = (v1 - v2) * ytr - v2 * ysh2
-        s2 = v2 * i2.conjugate()
+    if i1 is None:
+        i1 = s1.conjugate() / v1.conjugate()
+
+    v2 = (i1 - y11 * v1) / y12
+    i2 = -(y21 * v1 + y22 * v2)
+    s2 = v2 * i2.conjugate()
 
     return v2, i2, s2
 
 
 def _calc_twobus_pf(
-    ytr: complex, ysh1: complex, ysh2: complex, v1: complex, s2: complex
+    y11: complex, y12: complex, y21: complex, y22: complex, v1: complex, s2: complex
 ) -> tuple[complex, complex, complex]:
-    """Solves the two-bus load flow problem for a pi-model network.
+    """Solves the two-bus load flow problem for a general Y-bus network.
 
-    Solves the powerflow for a simple pi-model circuit. Terminal 1 here
-    represents the bus where voltage is known. The voltage and current on
-    terminal 2 are calculated by the analytic solution formulas. Notation: (tr)
-    stands for 'transmission' branch; (sh) stands for 'shunt' admittance.
+    For symmetric networks (Y12==Y21, e.g. lines or transformers with alpha=0),
+    uses the analytic sigma solver. For asymmetric networks (Y12!=Y21, e.g.
+    phase-shifting transformers), uses Newton iteration.
 
     On input:
-      ytr, ysh1, ysh2: the three admittance parameters of the pi model
-      v1: complex voltage at terminal 1
-      s2: complex power load at terminal 2
+      y11, y12, y21, y22: the four admittance parameters of the Y-bus
+      v1: complex voltage at terminal 1 (slack bus)
+      s2: complex power consumed at terminal 2
 
     On output:
-      i1: complex current at terminal 1
+      i1: complex current entering terminal 1
       v2: complex voltage at terminal 2
       i2: complex current leaving terminal 2
-
     """
-    # calculate the sigma constant in the reduced-voltage equation:
-    sigma = ((ysh2 + ytr) * s2).conjugate() / abs(ytr * v1) ** 2
+    if y12 == y21:
+        # Symmetric network (lines, transformers with alpha=0): use sigma solver
+        ytr = -y12
+        ysh2 = y22 + y12
+        sigma = ((ysh2 + ytr) * s2).conjugate() / abs(ytr * v1) ** 2
+        v = complex(0.5 + sqrt(0.25 - sigma.real - sigma.imag**2), -sigma.imag)
+        v2 = v * v1 * ytr / (ytr + ysh2)
+    else:
+        # Asymmetric network (phase-shifting transformer, alpha!=0):
+        # KCL at bus 2: Y21*V1 + Y22*V2 + conj(S2)/conj(V2) = 0
+        # Multiply by conj(V2): Y22*|V2|^2 + conj(Y21*V1)*V2 + conj(S2) = 0
+        # This is a quadratic in |V2| after separating real/imaginary parts.
+        # Solved iteratively via Newton starting from V2 = V1 as initial guess.
+        v2 = v1  # initial guess
+        for _ in range(50):
+            f = y21 * v1 + y22 * v2 + s2.conjugate() / v2.conjugate()
+            df = y22 - s2 / v2**2  # df/dV2
+            dv2 = -f / df
+            v2 += dv2
+            if abs(dv2) < 1e-12:
+                break
 
-    # solution to the reduced-voltage equation:
-    v = complex(0.5 + sqrt(0.25 - sigma.real - sigma.imag**2), -sigma.imag)
-
-    # undo the reduced-voltage transformation:
-    v2 = v * v1 * ytr / (ytr + ysh2)
-
-    # current flowing out of terminal 2:
     i2 = s2.conjugate() / v2.conjugate()
-
-    # current flowing into terminal 1:
-    i1 = (v1 - v2) * ytr + v1 * ysh1
+    i1 = y11 * v1 + y12 * v2
 
     return i1, v2, i2

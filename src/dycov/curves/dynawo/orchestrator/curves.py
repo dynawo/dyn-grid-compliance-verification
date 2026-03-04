@@ -381,15 +381,16 @@ class DynawoCurves(ProducerCurves):
         Calculates equivalent line parameters for initial calculations.
         """
         if not rte_lines:
-            return Pimodel_params(math.inf, 0, 0)  # No lines, infinite admittance
+            return Pimodel_params(math.inf, 0, 0, math.inf)  # No lines, infinite admittance
 
-        Ytr_sum, Ysh1_sum, Ysh2_sum = 0, 0, 0
+        Y11_sum, Y12_sum, Y21_sum, Y22_sum = 0, 0, 0, 0
         for line in rte_lines:
             pimodel_line = line_pimodel(line)
-            Ytr_sum += pimodel_line.Ytr
-            Ysh1_sum += pimodel_line.Ysh1
-            Ysh2_sum += pimodel_line.Ysh2
-        return Pimodel_params(Ytr_sum, Ysh1_sum, Ysh2_sum)
+            Y11_sum += pimodel_line.Y11
+            Y12_sum += pimodel_line.Y12
+            Y21_sum += pimodel_line.Y21
+            Y22_sum += pimodel_line.Y22
+        return Pimodel_params(Y11_sum, Y12_sum, Y21_sum, Y22_sum)
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:
