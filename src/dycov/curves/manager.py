@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 import logging
 from pathlib import Path
 
@@ -7,7 +16,7 @@ from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.curves import curves_factory
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Disconnection_Model, Simulation_result
+from dycov.model.parameters import Disconnection_Model, ExclusionWindows, Simulation_result
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
@@ -410,34 +419,41 @@ class CurvesManager:
 
         return self._curves[curve]
 
-    def get_exclusion_times(self) -> tuple[float, float, float, float]:
-        """Get the exclusion times.
+    def get_exclusion_windows(self) -> ExclusionWindows:
+        """Get the exclusion windows.
 
         Returns
         -------
-        float
-            Exclusion time before the event is triggered.
-        float
-            Exclusion time after the event is triggered.
-        float
-            Exclusion time before the event is cleared, if the event is cleared.
-        float
-            Exclusion time after the event is cleared, if the event is cleared.
+        ExclusionWindows
+            Named tuple with exclusion zone boundaries:
+            - event_start: Time before the event is triggered
+            - event_end: Time after the event is triggered
+            - clear_start: Time before the event is cleared (0.0 if no clearance)
+            - clear_end: Time after the event is cleared (0.0 if no clearance)
         """
-        _, t_to_b = self.__get_validation_windows("calculated", "before")
-        t_from_a, _ = self.__get_validation_windows("calculated", "after")
-        t_from_d, t_to_d = self.__get_validation_windows("calculated", "during")
-        excl1_t0 = t_to_b
-        if t_from_d < t_to_d:
-            excl1_t = t_from_d
-            excl2_t0 = t_to_d
-            excl2_t = t_from_a
-        else:
-            excl1_t = t_from_a
-            excl2_t0 = 0.0
-            excl2_t = 0.0
+        _, t_to_before = self.__get_validation_windows("calculated", "before")
+        t_from_after, _ = self.__get_validation_windows("calculated", "after")
+        t_from_during, t_to_during = self.__get_validation_windows("calculated", "during")
 
-        return excl1_t0, excl1_t, excl2_t0, excl2_t
+        event_start = t_to_before
+
+        if t_from_during < t_to_during:
+            # Event has a clearance phase
+            event_end = t_from_during
+            clear_start = t_to_during
+            clear_end = t_from_after
+        else:
+            # No clearance phase (permanent fault)
+            event_end = t_from_after
+            clear_start = 0.0
+            clear_end = 0.0
+
+        return ExclusionWindows(
+            event_start=event_start,
+            event_end=event_end,
+            clear_start=clear_start,
+            clear_end=clear_end,
+        )
 
     def get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Get the curves by windows.
