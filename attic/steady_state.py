@@ -37,7 +37,7 @@ def main():
     # Get curves file and steady time
 
     curves_file = args.curves_file
-    df_curves = pd.read_csv(curves_file, sep=";")
+    df_curves = pd.read_csv(curves_file, sep=";", skipinitialspace=True)
     steady_time = float(args.steady_time)
     curve_name = args.curve_name
 

@@ -1,9 +1,10 @@
 from dycov.model.compliance import Compliance
 from tests.dycov.utils import MODEL, execute_tool
 
+RESOURCES = "./resources"
 
-def test_model_validation_iec2015_curves():
-    print(f"MODEL: {MODEL}")
+
+def test_model_validation_ppm_producer_curves():
     compliance = execute_tool(
         None,
         MODEL / "Wind" / "IECB2015" / "ProducerCurves",
