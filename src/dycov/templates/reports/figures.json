@@ -79,13 +79,20 @@
 	"fig_Ustator_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
 	"fig_V_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
 	"fig_I_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
-	"fig_Tap_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf"
+	"fig_Tap_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
+	"fig_IpIt_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
+	"fig_IqIt_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf",
+	"fig_UIt_PCS_RTE-I5.ThreePhaseFault.TransientBolted.pdf"
   ],
   "RTE-I6": [
 	"fig_P_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
 	"fig_Q_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
 	"fig_Ustator_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
-	"fig_V_PCS_RTE-I6.GridVoltageDip.Qzero.pdf"
+	"fig_V_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
+	"fig_I_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
+	"fig_IpIt_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
+	"fig_IqIt_PCS_RTE-I6.GridVoltageDip.Qzero.pdf",
+	"fig_UIt_PCS_RTE-I6.GridVoltageDip.Qzero.pdf"
   ],
   "RTE-I7": [
 	"fig_P_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
@@ -97,7 +104,13 @@
 	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
 	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMin.pdf",
 	"fig_I_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
-	"fig_I_PCS_RTE-I7.GridVoltageSwell.QMin.pdf"
+	"fig_I_PCS_RTE-I7.GridVoltageSwell.QMin.pdf",
+	"fig_IpIt_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
+	"fig_IpIt_PCS_RTE-I7.GridVoltageSwell.QMin.pdf",
+	"fig_IqIt_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
+	"fig_IqIt_PCS_RTE-I7.GridVoltageSwell.QMin.pdf",
+	"fig_UIt_PCS_RTE-I7.GridVoltageSwell.QMax.pdf",
+	"fig_UIt_PCS_RTE-I7.GridVoltageSwell.QMin.pdf"
   ],
   "RTE-I10": [
 	"fig_P_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4.pdf",
@@ -256,7 +269,19 @@
 	"fig_V_PCS_RTE-I16z3.ThreePhaseFault.TransientBolted.pdf",
 	"fig_V_PCS_RTE-I16z3.GridVoltageDip.Qzero.pdf",
 	"fig_V_PCS_RTE-I16z3.GridVoltageSwell.QMax.pdf",
-	"fig_V_PCS_RTE-I16z3.GridVoltageSwell.QMin.pdf"
+	"fig_V_PCS_RTE-I16z3.GridVoltageSwell.QMin.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBolted.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageDip.Qzero.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageSwell.QMax.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageSwell.QMin.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBolted.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageDip.Qzero.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageSwell.QMax.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageSwell.QMin.pdf",
+	"fig_UIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBolted.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageDip.Qzero.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageSwell.QMax.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageSwell.QMin.pdf"
   ],
   "RTE-I2BESS": [
 	"fig_P_PCS_RTE-I2.USetPointStep.AReactanceConsumption.pdf",
@@ -288,7 +313,13 @@
 	"fig_Ustator_PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption.pdf",
 	"fig_Ustator_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection.pdf",
 	"fig_V_PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption.pdf",
-	"fig_V_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection.pdf"
+	"fig_V_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection.pdf",
+	"fig_IpIt_PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection.pdf",
+	"fig_IqIt_PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection.pdf",
+	"fig_UIt_PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption.pdf",
+	"fig_UIt_PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection.pdf"
   ],
   "RTE-I6BESS": [
 	"fig_P_PCS_RTE-I6.GridVoltageDip.QzeroConsumption.pdf",
@@ -298,7 +329,13 @@
 	"fig_Ustator_PCS_RTE-I6.GridVoltageDip.QzeroConsumption.pdf",
 	"fig_Ustator_PCS_RTE-I6.GridVoltageDip.QzeroInjection.pdf",
 	"fig_V_PCS_RTE-I6.GridVoltageDip.QzeroConsumption.pdf",
-	"fig_V_PCS_RTE-I6.GridVoltageDip.QzeroInjection.pdf"
+	"fig_V_PCS_RTE-I6.GridVoltageDip.QzeroInjection.pdf",
+	"fig_IpIt_PCS_RTE-I6.GridVoltageDip.QzeroConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I6.GridVoltageDip.QzeroInjection.pdf",
+	"fig_IqIt_PCS_RTE-I6.GridVoltageDip.QzeroConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I6.GridVoltageDip.QzeroInjection.pdf",
+	"fig_UIt_PCS_RTE-I6.GridVoltageDip.QzeroConsumption.pdf",
+	"fig_UIt_PCS_RTE-I6.GridVoltageDip.QzeroInjection.pdf"
   ],
   "RTE-I7BESS": [
 	"fig_I_PCS_RTE-I7.GridVoltageSwell.QMaxConsumption.pdf",
@@ -320,7 +357,19 @@
 	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMaxConsumption.pdf",
 	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMaxInjection.pdf",
 	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMinConsumption.pdf",
-	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMinInjection.pdf"
+	"fig_V_PCS_RTE-I7.GridVoltageSwell.QMinInjection.pdf",
+	"fig_IpIt_PCS_RTE-I7.GridVoltageSwell.QMaxConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I7.GridVoltageSwell.QMaxInjection.pdf",
+	"fig_IpIt_PCS_RTE-I7.GridVoltageSwell.QMinConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I7.GridVoltageSwell.QMinInjection.pdf",
+	"fig_IqIt_PCS_RTE-I7.GridVoltageSwell.QMaxConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I7.GridVoltageSwell.QMaxInjection.pdf",
+	"fig_IqIt_PCS_RTE-I7.GridVoltageSwell.QMinConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I7.GridVoltageSwell.QMinInjection.pdf",
+	"fig_UIt_PCS_RTE-I7.GridVoltageSwell.QMaxConsumption.pdf",
+	"fig_UIt_PCS_RTE-I7.GridVoltageSwell.QMaxInjection.pdf",
+	"fig_UIt_PCS_RTE-I7.GridVoltageSwell.QMinConsumption.pdf",
+	"fig_UIt_PCS_RTE-I7.GridVoltageSwell.QMinInjection.pdf"
   ],
   "RTE-I10BESS": [
 	"fig_P_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Consumption.pdf",
@@ -632,6 +681,30 @@
 	"fig_V_PCS_RTE-I16z3.USetPointStep.AReactanceConsumption.pdf",
 	"fig_V_PCS_RTE-I16z3.USetPointStep.AReactanceInjection.pdf",
 	"fig_V_PCS_RTE-I16z3.USetPointStep.BReactanceConsumption.pdf",
-	"fig_V_PCS_RTE-I16z3.USetPointStep.BReactanceInjection.pdf"
+	"fig_V_PCS_RTE-I16z3.USetPointStep.BReactanceInjection.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageDip.QzeroInjection.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption.pdf",
+	"fig_IpIt_PCS_RTE-I16z3.GridVoltageSwell.QMinInjection.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageDip.QzeroInjection.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption.pdf",
+	"fig_IqIt_PCS_RTE-I16z3.GridVoltageSwell.QMinInjection.pdf",
+	"fig_UIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption.pdf",
+	"fig_UIt_PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageDip.QzeroInjection.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption.pdf",
+	"fig_UIt_PCS_RTE-I16z3.GridVoltageSwell.QMinInjection.pdf"
   ]
 }

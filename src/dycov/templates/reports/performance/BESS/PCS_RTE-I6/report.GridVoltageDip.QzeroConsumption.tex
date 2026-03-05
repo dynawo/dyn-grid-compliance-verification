@@ -104,8 +104,13 @@
         the controllable Infinite Bus on TSO side).
         \item Active power supplied at the connection point (obtained from
         the controllable Infinite Bus on TSO side).
+        \item The injected active and reactive currents. All BESS
+        units are plotted on the same graph.
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
         All BESS units are plotted on the same graph.
+        \item Active current in low voltage at the injector terminal.
+        \item Reactive current in low voltage at the injector terminal.
+        \item Low voltage at the injector terminal.
     \end{itemize}
 
     \subsubsection{Simulation results}
@@ -150,6 +155,45 @@
         \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_IpIt_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active current in low voltage at the injector terminal.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_IqIt_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive current in low voltage at the injector terminal.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Low voltage at the injector terminal.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Injected active (light blue line) and reactive (violet line) currents. All PPM
+            units are plotted on the same graph.
         \end{minipage}
     \end{minipage}
     \\[2\baselineskip]
