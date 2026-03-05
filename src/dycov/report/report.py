@@ -615,6 +615,7 @@ def create_pdf(
     commonz3_include = ""
     if 1 in zones:
         commonz1_include = "\\input{{commonz1}}"
+
     if 3 in zones:
         commonz3_include = "\\input{{commonz3}}"
 

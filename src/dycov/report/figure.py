@@ -29,6 +29,10 @@ def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
         return column_name == "P"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
         return column_name == "Q"
+    if "InjectedActiveCurrent" in curve_name:
+        return column_name == "P"
+    if "InjectedReactiveCurrent" in curve_name:
+        return column_name == "Q"
     if curve_name == "BusPDR_BUS_Voltage":
         return column_name == "V"
     if curve_name == "NetworkFrequencyPu":
@@ -45,6 +49,10 @@ def _get_measurement_type(curve_name: str) -> str:
     if curve_name == "BusPDR_BUS_ActiveCurrent":
         return "active_current"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
+        return "reactive_current"
+    if "InjectedActiveCurrent" in curve_name:
+        return "active_current"
+    if "InjectedReactiveCurrent" in curve_name:
         return "reactive_current"
     if curve_name == "BusPDR_BUS_Voltage":
         return "voltage"
@@ -667,9 +675,73 @@ def create_plot(
     curve_name = None
     if isinstance(variable_names, str):
         curve_name = variable_names
+        _plot_curve(
+            time,
+            curve_name,
+            curves,
+            time_reference,
+            curves_reference,
+            time_range,
+            output_file,
+            results,
+            unit,
+            ymin,
+            ymax,
+            log_title,
+        )
     elif variable_names[0]["type"] == "bus":
         curve_name = "BusPDR" + "_BUS_" + variable_names[0]["variable"]
+        _plot_curve(
+            time,
+            curve_name,
+            curves,
+            time_reference,
+            curves_reference,
+            time_range,
+            output_file,
+            results,
+            unit,
+            ymin,
+            ymax,
+            log_title,
+        )
+    elif variable_names[0]["type"] == "generator":
+        curves_names = [
+            curve["name"]
+            for curve in curves
+            if curve["name"].endswith("_GEN_" + variable_names[0]["variable"])
+        ]
+        for curve_name in curves_names:
+            _plot_curve(
+                time,
+                curve_name,
+                curves,
+                time_reference,
+                curves_reference,
+                time_range,
+                output_file,
+                results,
+                unit,
+                ymin,
+                ymax,
+                log_title,
+            )
 
+
+def _plot_curve(
+    time: list,
+    curve_name: str,
+    curves: list,
+    time_reference: list,
+    curves_reference: list,
+    time_range: dict,
+    output_file: Path,
+    results: dict,
+    unit: str,
+    ymin: float,
+    ymax: float,
+    log_title: str,
+) -> None:
     _plot_response_characteristics(curve_name, results)
     _plot_exclusion_windows(results)
     _plot_mxe(curve_name, results)

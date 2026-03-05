@@ -27,6 +27,10 @@ def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
         return column_name == "P"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
         return column_name == "Q"
+    if "InjectedActiveCurrent" in curve_name:
+        return column_name == "P"
+    if "InjectedReactiveCurrent" in curve_name:
+        return column_name == "Q"
     if curve_name == "BusPDR_BUS_Voltage":
         return column_name == "V"
     if curve_name == "NetworkFrequencyPu":
@@ -43,6 +47,10 @@ def _get_measurement_type(curve_name: str) -> str:
     if curve_name == "BusPDR_BUS_ActiveCurrent":
         return "active_current"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
+        return "reactive_current"
+    if "InjectedActiveCurrent" in curve_name:
+        return "active_current"
+    if "InjectedReactiveCurrent" in curve_name:
         return "reactive_current"
     if curve_name == "BusPDR_BUS_Voltage":
         return "voltage"
