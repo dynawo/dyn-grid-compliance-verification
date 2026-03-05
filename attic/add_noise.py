@@ -13,7 +13,7 @@ def main():
     # Get curves file
 
     curves_file = args.curves_file
-    df_curves = pd.read_csv(curves_file, sep=";", skipinitialspace=Tru)
+    df_curves = pd.read_csv(curves_file, sep=";", skipinitialspace=True)
     time = df_curves["time"]
     df_curves.drop(columns=["time"])
 
