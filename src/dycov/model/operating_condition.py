@@ -60,7 +60,7 @@ class OperatingCondition:
         jobs_output_dir: Path,
         event_params: dict,
     ) -> dict:
-        validator.complete_parameters(
+        validator.initialize_validation_params(
             working_oc_dir,
             jobs_output_dir,
             event_params,

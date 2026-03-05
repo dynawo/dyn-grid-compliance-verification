@@ -127,7 +127,7 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 1. Choose a base directory of your choice and run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
    ```
 
    This script will install the DyCoV tool under your current directory in `$PWD/dycov`. 
@@ -162,9 +162,9 @@ The DyCoV application is now ready to use.
 
 1. Download the **distribution artifacts** (typically from the Release page):
 
-   - [dycov_rawimage.tar.gz](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
-   - [import_image.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/import_image.sh): Helper script for Linux Docker.
-   - [run_dycov_docker.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/run_dycov_docker.sh): Helper script for Linux Docker.
+   - [dycov_rawimage.tar.gz](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
+   - [import_image.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_image.sh): Helper script for Linux Docker.
+   - [run_dycov_docker.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_docker.sh): Helper script for Linux Docker.
 
 2. Install:
 

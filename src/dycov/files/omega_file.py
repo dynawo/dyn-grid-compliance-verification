@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
@@ -80,7 +81,7 @@ def _connect_generator(
     )
 
 
-def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> int:
+def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> Optional[int]:
     if grp is None:
         return grp
 
