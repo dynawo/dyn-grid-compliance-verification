@@ -73,6 +73,9 @@
         All PPM units are plotted on the same graph.
         \item The PPM's main transformer tap ratio. if it is a transformer with an
         automatic tap changer.
+        \item Active current in low voltage at the injector terminal.
+        \item Reactive current in low voltage at the injector terminal.
+        \item Low voltage at the injector terminal.
     \end{itemize}
 
     \subsubsection{Simulation results}
@@ -125,13 +128,41 @@
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
         \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_IpIt_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active current in low voltage at the injector terminal.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_IqIt_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive current in low voltage at the injector terminal.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Low voltage at the injector terminal.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
         \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
         \begin{minipage}[t]{0.8\textwidth}
             \small Injected active (light blue line) and reactive (violet line) currents. All PPM
             units are plotted on the same graph.
         \end{minipage}
     \end{minipage}
-    \hfill
+    \\[2\baselineskip]
+
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Tap_PCS_RTE-I5.ThreePhaseFault.TransientBolted}
