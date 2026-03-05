@@ -405,4 +405,4 @@ def read_curves(file: Path) -> pd.DataFrame:
     pd.DataFrame
         DataFrame containing curve data.
     """
-    return pd.read_csv(file, sep=";", skipinitialspace=Tru)
+    return pd.read_csv(file, sep=";", skipinitialspace=True)

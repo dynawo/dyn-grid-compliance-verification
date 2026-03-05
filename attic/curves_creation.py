@@ -28,7 +28,7 @@ def main():
     # Get curves file
 
     curves_file = args.curves_file
-    df_curves = pd.read_csv(curves_file, sep=";", skipinitialspace=Tru)
+    df_curves = pd.read_csv(curves_file, sep=";", skipinitialspace=True)
 
     cols = list(df_curves.columns)
 
