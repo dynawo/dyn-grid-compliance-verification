@@ -29,15 +29,15 @@ from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
     if not producer_config.has_option(section, "u_nom_at_PDR"):
-        raise ValueError("The parameter file must specify the u_nom")
+        raise ValueError("The parameter file must specify the u_nom_at_PDR")
     if not producer_config.has_option(section, "q_min_at_PDR"):
-        raise ValueError("The parameter file must specify the q_min")
+        raise ValueError("The parameter file must specify the q_min_at_PDR")
     if not producer_config.has_option(section, "q_max_at_PDR"):
-        raise ValueError("The parameter file must specify the q_max")
+        raise ValueError("The parameter file must specify the q_max_at_PDR")
     if not producer_config.has_option(section, "p_max_injection_at_PDR"):
-        raise ValueError("The parameter file must specify the p_max_injection")
+        raise ValueError("The parameter file must specify the p_max_injection_at_PDR")
     if needs_consumption and not producer_config.has_option(section, "p_max_consumption_at_PDR"):
-        raise ValueError("The parameter file must specify the p_max_consumption")
+        raise ValueError("The parameter file must specify the p_max_consumption_at_PDR")
     if not producer_config.has_option(section, "topology"):
         raise ValueError("The parameter file must specify the topology")
 
@@ -539,8 +539,8 @@ class ModelProducer(Producer):
         )
 
         if self.is_dynawo_model():
-            file_checks.check_well_formed_xml(self.get_producer_dyd())
-            file_checks.check_well_formed_xml(self.get_producer_par())
+            file_checks.validate_xml_syntax(self.get_producer_dyd())
+            file_checks.validate_xml_syntax(self.get_producer_par())
             if self.get_sim_type() > MODEL_VALIDATION:
                 file_checks.check_curves_files(
                     self._producer_model_path,

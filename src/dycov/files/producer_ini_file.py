@@ -30,7 +30,7 @@ def _create_producer_ini_file(
         f"p_max_consumption_at_PDR =\n"
         f"# u_nom is the nominal voltage at the PDR bus (in kV)\n"
         f"# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)\n"
-        f"u_nom =\n"
+        f"u_nom_at_PDR =\n"
         f"# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
         f"q_max_at_PDR =\n"
         f"# q_min is the minimum reactive power at the PDR bus (in MVar)\n"

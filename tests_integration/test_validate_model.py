@@ -1,14 +1,16 @@
+from pathlib import Path
+
 from dycov.model.compliance import Compliance
 from tests.dycov.utils import MODEL, execute_tool
 
-RESOURCES = "./resources"
+RESOURCES = Path(__file__).resolve().parent / "resources"
 
 
-def test_model_validation_wecca_model(dynawo_latest):
+def test_model_validation_WECC4A1_model(dynawo_latest):
     compliance = execute_tool(
-        f"{MODEL}/Wind/WECCA/Dynawo",
+        MODEL / "Wind" / "WECC4A1" / "Dynawo",
         None,
-        f"{MODEL}/Wind/WECCA/ReferenceCurves",
+        MODEL / "Wind" / "WECC4A1" / "ReferenceCurves",
     )
     assert [
         Compliance.Compliant,  # 0
@@ -40,9 +42,9 @@ def test_model_validation_wecca_model(dynawo_latest):
 
 def test_model_validation_partial_reference(dynawo_latest):
     compliance = execute_tool(
-        f"{MODEL}/Wind/WECCB/Dynawo",
+        MODEL / "Wind" / "WECC4B" / "Dynawo",
         None,
-        f"{RESOURCES}/partial_reference_curves",
+        RESOURCES / "partial_reference_curves",
     )
     assert [
         Compliance.Compliant,  # 0

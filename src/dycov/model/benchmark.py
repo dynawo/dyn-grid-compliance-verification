@@ -321,8 +321,8 @@ class Benchmark:
         self.__init_figures_v(validations, pcs_benchmark_name)
         self.__init_figures_p(validations, pcs_benchmark_name)
         self.__init_figures_q(validations, pcs_benchmark_name)
-        self.__init_figures_ire(validations, pcs_benchmark_name)
-        self.__init_figures_iim(validations, pcs_benchmark_name)
+        self.__init_figures_ip(validations, pcs_benchmark_name)
+        self.__init_figures_iq(validations, pcs_benchmark_name)
         self.__init_figures_w(validations, pcs_benchmark_name)
         self.__init_figures_wref(validations, pcs_benchmark_name)
         self.__init_figures_i(validations, pcs_benchmark_name)
@@ -351,7 +351,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    "V(pu)",
+                    "V (pu base Unom)",
                 ]
             )
 
@@ -368,59 +368,76 @@ class Benchmark:
             if "time_10Pfloor_85U" in validations or "time_10Pfloor_clear" in validations:
                 tests.append("10Pfloor")
 
-            self._figures_description.append(["fig_P", "BusPDR_BUS_ActivePower", tests, "P(pu)"])
+            if self._producer.is_dynawo_model():
+                p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
+            else:
+                p_label = "P (pu base Snom)"
+
+            self._figures_description.append(
+                [
+                    "fig_P",
+                    "BusPDR_BUS_ActivePower",
+                    tests,
+                    p_label,
+                ]
+            )
 
     def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Q = config.get_list("ReportCurves", "fig_Q")
         if pcs_benchmark_name in fig_Q:
             tests = []
-            self._figures_description.append(["fig_Q", "BusPDR_BUS_ReactivePower", tests, "Q(pu)"])
 
-    def __init_figures_ire(self, validations: list, pcs_benchmark_name: str) -> None:
+            if self._producer.is_dynawo_model():
+                q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
+            else:
+                q_label = "Q (pu base Snom)"
+
+            self._figures_description.append(
+                [
+                    "fig_Q",
+                    "BusPDR_BUS_ReactivePower",
+                    tests,
+                    q_label,
+                ]
+            )
+
+    def __init_figures_ip(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Ip = config.get_list("ReportCurves", "fig_Ip")
         if pcs_benchmark_name in fig_Ip:
             tests = []
-            if CURRENTS_AT_PDR:
-                self._figures_description.append(
-                    ["fig_Ip", "BusPDR_BUS_ActiveCurrent", tests, "Ip(pu)"]
-                )
-            else:
-                self._figures_description.append(
-                    [
-                        "fig_Ip",
-                        [
-                            {
-                                "type": "generator",
-                                "variable": "InjectedActiveCurrent",
-                            }
-                        ],
-                        tests,
-                        "Ip(pu)",
-                    ]
-                )
 
-    def __init_figures_iim(self, validations: list, pcs_benchmark_name: str) -> None:
+            if self._producer.is_dynawo_model():
+                ip_label = f"Ip (pu base Unom, Snom = {self._producer.s_nom}MVA)"
+            else:
+                ip_label = "Ip (pu base Unom, Snom)"
+
+            self._figures_description.append(
+                [
+                    "fig_Ip",
+                    "BusPDR_BUS_ActiveCurrent",
+                    tests,
+                    ip_label,
+                ]
+            )
+
+    def __init_figures_iq(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Iq = config.get_list("ReportCurves", "fig_Iq")
         if pcs_benchmark_name in fig_Iq:
             tests = []
-            if CURRENTS_AT_PDR:
-                self._figures_description.append(
-                    ["fig_Iq", "BusPDR_BUS_ReactiveCurrent", tests, "Iq(pu)"]
-                )
+
+            if self._producer.is_dynawo_model():
+                iq_label = f"Iq (pu base Unom, Snom = {self._producer.s_nom}MVA)"
             else:
-                self._figures_description.append(
-                    [
-                        "fig_Iq",
-                        [
-                            {
-                                "type": "generator",
-                                "variable": "InjectedReactiveCurrent",
-                            }
-                        ],
-                        tests,
-                        "Iq(pu)",
-                    ]
-                )
+                iq_label = "Iq (pu base Unom, Snom)"
+
+            self._figures_description.append(
+                [
+                    "fig_Iq",
+                    "BusPDR_BUS_ReactiveCurrent",
+                    tests,
+                    iq_label,
+                ]
+            )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_W = config.get_list("ReportCurves", "fig_W")
@@ -436,7 +453,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    r"$\omega$" + "(pu)",
+                    r"$\omega$ (Hz)",
                 ]
             )
 
@@ -460,14 +477,21 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    r"$\omega$" + "(pu)",
+                    r"$\omega$ (Hz)",
                 ]
             )
 
     def __init_figures_i(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_I = config.get_list("ReportCurves", "fig_I")
+
         if pcs_benchmark_name in fig_I:
             tests = []
+
+            if self._producer.is_dynawo_model():
+                i_label = f"I (pu base Unom, Snom = {self._producer.s_nom}MVA)"
+            else:
+                i_label = "I (pu base Unom, Snom)"
+
             self._figures_description.append(
                 [
                     "fig_I",
@@ -482,7 +506,7 @@ class Benchmark:
                         },
                     ],
                     tests,
-                    "I(pu)",
+                    i_label,
                 ]
             )
 
@@ -507,7 +531,7 @@ class Benchmark:
                         },
                     ],
                     tests,
-                    "V(pu)",
+                    "V (pu base Unom)",
                 ]
             )
 
@@ -525,7 +549,7 @@ class Benchmark:
                         }
                     ],
                     tests,
-                    r"$\theta$" + "(rad)",
+                    r"$\theta$ (rad)",
                 ]
             )
 
