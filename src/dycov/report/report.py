@@ -48,8 +48,6 @@ from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
 
-CURRENTS_AT_PDR = config.get_boolean("GridCode", "currents_at_pdr", False)
-
 
 # --- Process registry for LaTeX compilation ---
 class _ReportProcRegistry:
@@ -552,24 +550,6 @@ def prepare_pcs_report(
     )
 
 
-def _replace_current_placeholders(working_path: Path, common_file: str):
-    oc_template = _get_template(working_path, common_file)
-    oc_template.stream(
-        {
-            "supplied_at": (
-                "supplied at the connection point"
-                if CURRENTS_AT_PDR
-                else "supplied at the injector terminal"
-            ),
-            "measure_at": (
-                ", measured at the PDR bus"
-                if CURRENTS_AT_PDR
-                else ", measured at the injector terminals"
-            ),
-        }
-    ).dump(str(working_path / common_file))
-
-
 def create_pdf(
     sorted_summary: list,
     report_results: dict,
@@ -635,11 +615,9 @@ def create_pdf(
     commonz3_include = ""
     if 1 in zones:
         commonz1_include = "\\input{{commonz1}}"
-        _replace_current_placeholders(working_path, "commonz1.tex")
 
     if 3 in zones:
         commonz3_include = "\\input{{commonz3}}"
-        _replace_current_placeholders(working_path, "commonz3.tex")
 
     oc_template = _get_template(working_path, REPORT_NAME)
     oc_template.stream(
