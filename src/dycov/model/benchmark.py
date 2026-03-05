@@ -39,8 +39,6 @@ Summary = namedtuple(
     ],
 )
 
-CURRENTS_AT_PDR = config.get_boolean("GridCode", "currents_at_pdr", False)
-
 
 class Benchmark:
     """Second-level representation of the pcs described in the DTR.
