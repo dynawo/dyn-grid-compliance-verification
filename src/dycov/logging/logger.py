@@ -27,7 +27,7 @@ class DycovLogger(logging.getLoggerClass()):
 
     def _add_console_handler(
         self,
-        console_log_level: str,
+        console_log_level: int,
         console_formatter: str,
         disable_console: bool = False,
     ) -> None:
@@ -44,7 +44,7 @@ class DycovLogger(logging.getLoggerClass()):
 
     def _add_file_handler(
         self,
-        file_log_level: str,
+        file_log_level: int,
         file_formatter: str,
         file_max_bytes: int,
         log_dir: Path,
@@ -64,10 +64,10 @@ class DycovLogger(logging.getLoggerClass()):
 
     def init_handlers(
         self,
-        file_log_level: str,
+        file_log_level: int,
         file_formatter: str,
         file_max_bytes: int,
-        console_log_level: str,
+        console_log_level: int,
         console_formatter: str,
         log_dir: Path,
         disable_console: bool = False,

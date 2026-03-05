@@ -119,16 +119,16 @@ class DycovInitializer:
         if not log_dir.is_dir():
             manage_files.create_dir(log_dir)
 
-        file_log_level = config.get_value("Global", "file_log_level")
+        file_log_level = config.get_int("Global", "file_log_level", 20)
         file_formatter = config.get_value("Global", "file_formatter")
         file_max_bytes = config.get_int("Global", "file_log_max_bytes", 50 * 1024 * 1024)
 
-        console_log_level = config.get_value("Global", "console_log_level")
+        console_log_level = config.get_int("Global", "console_log_level", 20)
         console_formatter = config.get_value("Global", "console_formatter")
 
         if debug:
-            file_log_level = "DEBUG"
-            console_log_level = "DEBUG"
+            file_log_level = 10  # DEBUG level
+            console_log_level = 10  # DEBUG level
 
         dycov_logging.init_handlers(
             file_log_level,
