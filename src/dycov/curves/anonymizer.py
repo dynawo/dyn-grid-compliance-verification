@@ -32,6 +32,7 @@ def anonymize(
     frequency: float,
     results: Optional[Path] = None,
     curves_folder: Optional[Path] = None,
+    epsilon_relative: Optional[float] = None,
 ) -> None:
     """Creates a set of anonymized curves from the input set of curves.
 
@@ -52,10 +53,13 @@ def anonymize(
     curves_folder: Optional[Path]
         Path of a set of curves. If not provided, `output_folder` will be used
         as the source for curves. Defaults to None.
+    epsilon_relative: Optional[float]
+        Relative epsilon for curve simplification, as a fraction of each signal's
+        range. If None, no compression is applied. Defaults to None.
     """
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
-        f"and frequency {frequency} Hz"
+        f"and frequency {frequency} Hz and epsilon_relative {epsilon_relative}"
     )
     if curves_folder is None:
         curves_folder = output_folder
@@ -68,13 +72,33 @@ def anonymize(
         )
         _copy_from_path_from_pipeline(results, curves_folder)
 
-    _create_curves_files_ini_if_not_exists(curves_folder)
+    # Detect producer dirs AFTER copying, so files are already in place
+    curve_extensions = ["*.[eE][xX][pP]", "*.[cC][sS][vV]", "*.[cC][fF][fF]", "*.[dD][aA][tT]"]
+    producer_dirs = [
+        d
+        for d in sorted(curves_folder.iterdir())
+        if d.is_dir() and any(_get_files(d, curve_extensions))
+    ]
+    if not producer_dirs:
+        producer_dirs = [curves_folder]
 
-    metadata: Dict[str, Dict] = _extract_metadata_from_logs(curves_folder)
+    for curves_path in producer_dirs:
+        dycov_logging.get_logger("Anonymizer").info(f"Processing producer path: {curves_path}")
 
-    _create_dict_files_if_not_exist(curves_folder, metadata)
+        # output_path mirrors the producer subdir name under output_folder,
+        # but must never coincide with curves_path (source == destination causes data loss)
+        relative = curves_path.relative_to(curves_folder)
+        output_path = output_folder / relative
 
-    _process_curves(curves_folder, output_folder, noisestd, frequency)
+        _create_curves_files_ini_if_not_exists(curves_path)
+
+        metadata: Dict[str, Dict] = _extract_metadata_from_logs(curves_path)
+        _create_dict_files_if_not_exist(curves_path, metadata)
+        _process_curves(curves_path, output_path, noisestd, frequency, epsilon_relative)
+
+    dycov_logging.get_logger("Anonymizer").info(
+        f"Anonymization completed. Anonymized curves saved to {output_folder}"
+    )
 
 
 def _get_files(path: Path, extensions: List[str]) -> List[Path]:
@@ -209,7 +233,7 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
                 else:
                     curves_ini.write(f"{key} = {value}\n")
             curves_ini.write("\n\n")
-    dycov_logging.get_logger("Anonymizer").info(
+    dycov_logging.get_logger("Anonymizer").debug(
         f"Created CurvesFiles.ini at {curves_files_ini_path}"
     )
 
@@ -308,7 +332,7 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
                 f"CSV file {csv_file} not found when creating dictionary. "
                 "Headers will not be added."
             )
-    dycov_logging.get_logger("Anonymizer").info(f"Created dictionary file {dict_file}")
+    dycov_logging.get_logger("Anonymizer").debug(f"Created dictionary file {dict_file}")
 
 
 def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
@@ -463,6 +487,7 @@ def _process_curves(
     output_folder: Path,
     noisestd: float,
     frequency: float,
+    epsilon_relative: Optional[float] = None,
 ) -> None:
     """Processes all curve files in the specified folder, applies noise if
     `noisestd` is not None, and saves the anonymized curves and updated
@@ -481,6 +506,8 @@ def _process_curves(
     frequency: float
         Cut-off frequency for the low-pass filter (in Hz), used if noise is
         applied.
+    epsilon_relative: Optional[float] = 0.001
+        Relative epsilon for RDP compression. If None, no compression is applied.
     """
     curve_extensions = [
         "*.[eE][xX][pP]",
@@ -489,7 +516,7 @@ def _process_curves(
         "*.[dD][aA][tT]",
     ]
     for curves_path in _get_files(curves_folder, curve_extensions):
-        dycov_logging.get_logger("Anonymizer").info(f"Processing curve file: {curves_path.name}")
+        dycov_logging.get_logger("Anonymizer").debug(f"Processing curve file: {curves_path.name}")
         dict_file = curves_path.parent / f"{curves_path.stem}.dict"
 
         curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -517,10 +544,24 @@ def _process_curves(
                     df_imported_curve, noisestd, frequency, event_time, fault_duration
                 )
 
+            if epsilon_relative is not None:
+                original_len = len(df_imported_curve)
+                df_imported_curve = _simplify_curves(  # renamed
+                    df_imported_curve,
+                    event_time=event_time,
+                    event_duration=fault_duration,
+                    epsilon_relative=epsilon_relative,
+                )
+                dycov_logging.get_logger("Anonymizer").debug(
+                    f"Simplified {curves_path.stem}: "  # updated log message
+                    f"{original_len} → {len(df_imported_curve)} points "
+                    f"({100 * len(df_imported_curve) / original_len:.1f}%)"
+                )
+
             df_imported_curve = df_imported_curve.set_index("time")
             output_csv_path = output_folder / f"{curves_path.stem}.csv"
             _save_curve(df_imported_curve.reset_index(), output_csv_path)
-            dycov_logging.get_logger("Anonymizer").info(
+            dycov_logging.get_logger("Anonymizer").debug(
                 f"Saved anonymized curve to {output_csv_path}"
             )
 
@@ -534,7 +575,7 @@ def _process_curves(
             output_dict_path = output_folder / f"{curves_path.stem}.dict"
             with open(output_dict_path, "w") as file:
                 file.write(filedata)
-            dycov_logging.get_logger("Anonymizer").info(
+            dycov_logging.get_logger("Anonymizer").debug(
                 f"Saved updated dictionary file to {output_dict_path}"
             )
         else:
@@ -563,3 +604,90 @@ def _save_curve(curves: pd.DataFrame, path: Path, precision: int = 9):
 
     # Save to CSV without altering the original DataFrame
     curves_to_save.to_csv(path, sep=";", float_format="%.3e", index=False)
+
+
+def _rdp_mask_numpy(points: np.ndarray, epsilon: float) -> np.ndarray:
+    """Iterative RDP using numpy vectorized distance calculation.
+    Returns a boolean mask of points to keep.
+    """
+    mask = np.zeros(len(points), dtype=bool)
+    mask[0] = True
+    mask[-1] = True
+
+    # Stack-based iterative approach to avoid recursion limit
+    stack = [(0, len(points) - 1)]
+
+    while stack:
+        start, end = stack.pop()
+        if end - start < 2:
+            continue
+
+        # Vectorized perpendicular distance from all points to the line start→end
+        segment = points[end] - points[start]
+        segment_len = np.hypot(segment[0], segment[1])
+
+        if segment_len == 0.0:
+            dists = np.hypot(
+                points[start + 1 : end, 0] - points[start, 0],
+                points[start + 1 : end, 1] - points[start, 1],
+            )
+        else:
+            # Cross product magnitude / segment length = perpendicular distance
+            d = points[start + 1 : end] - points[start]
+            dists = np.abs(d[:, 0] * segment[1] - d[:, 1] * segment[0]) / segment_len
+
+        idx = np.argmax(dists)
+        max_dist = dists[idx]
+
+        if max_dist > epsilon:
+            pivot = start + 1 + idx
+            mask[pivot] = True
+            stack.append((start, pivot))
+            stack.append((pivot, end))
+
+    return mask
+
+
+def _simplify_curves(
+    df: pd.DataFrame,
+    event_time: float,
+    event_duration: float,
+    epsilon_relative: float = 0.001,
+    min_event_points: int = 20,
+) -> pd.DataFrame:
+    """Compress curve points using adaptive RDP simplification per signal range.
+
+    Flat regions outside the event are reduced to ~2 points.
+    The event zone retains at least min_event_points regardless of epsilon.
+    Resulting timestamps are non-uniform — requires interpolation before comparison.
+    """
+    time_vals = df["time"].to_numpy()
+    rows_to_keep = {0, len(df) - 1}
+
+    # Always protect event zone with a minimum point density
+    event_mask = (df["time"] > event_time) & (df["time"] <= event_time + event_duration)
+    event_indices = df.index[event_mask].tolist()
+    if len(event_indices) <= min_event_points:
+        rows_to_keep.update(event_indices)
+    else:
+        step = max(1, len(event_indices) // min_event_points)
+        rows_to_keep.update(event_indices[::step])
+
+    for col in df.columns:
+        if col == "time":
+            continue
+
+        values = df[col].to_numpy()
+        signal_range = np.ptp(values)
+
+        # Flat signal: keep only boundaries
+        if signal_range < 1e-6:
+            continue
+
+        # Epsilon relative to each signal's own range to handle mixed units (V, A, pu, Hz...)
+        epsilon = epsilon_relative * signal_range
+        points = np.column_stack([time_vals, values])
+        mask = _rdp_mask_numpy(points, epsilon)
+        rows_to_keep.update(np.where(mask)[0])
+
+    return df.iloc[sorted(rows_to_keep)].reset_index(drop=True)
