@@ -83,7 +83,7 @@ For Debian/Ubuntu systems, the following packages need to be installed:
 1. Run the following command:
 
    ```bash
-   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/linux_install.sh | bash
+   curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
    ```
 
    This script will:
