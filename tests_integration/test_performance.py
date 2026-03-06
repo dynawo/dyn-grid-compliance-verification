@@ -41,13 +41,13 @@ def test_perf_sm_complete(dynawo_latest):
 
 
 def test_perf_ppm_dynawo_model(dynawo_latest):
-    compliance = execute_tool(f"{PERFORMANCE}/SingleAux/WECC4B/Dynawo", None, None)
+    compliance = execute_tool(PERFORMANCE / "SingleAux" / "WECC4B" / "Dynawo", None, None)
     assert [
         Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
-        Compliance.NonCompliant,  # 4
+        Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.FailedSimulation,  # 6
     ] == compliance
