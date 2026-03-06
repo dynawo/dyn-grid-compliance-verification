@@ -26,11 +26,11 @@ set -o errexit -o pipefail
 ################################################################################
 
 # DyCoV and Dynawo versions to install
+TARGET_BRANCH="master"
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
-DYNAWO_ZIP_URL_DEFAULT="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/Dynawo_omc_v1.8.0.zip"
+DYNAWO_ZIP_URL_DEFAULT="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$TARGET_BRANCH/Dynawo_omc_v1.8.0.zip"
 DYNAWO_SHA256SUM="fbba80aa7ac6a990928b601e339a43ec49d538b956c97a51d038d1dcdea48768"
 # Default branch is master
-TARGET_BRANCH="master"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 
 # Script State Variables
