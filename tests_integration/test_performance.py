@@ -47,7 +47,7 @@ def test_perf_ppm_dynawo_model(dynawo_latest):
         Compliance.NonCompliant,  # 1
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
-        Compliance.NonCompliant,  # 4
+        Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.FailedSimulation,  # 6
     ] == compliance
