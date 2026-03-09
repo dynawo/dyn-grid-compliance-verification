@@ -12,8 +12,6 @@
     <par type="DOUBLE" name="BESS_RLvTrPu" value="0"/>
     <par type="DOUBLE" name="BESS_XLvTrPu" value="0.01"/>
     <!-- Electrical Control -->
-    <par type="BOOL" name="BESS_QFlag" value="true"/>
-    <par type="BOOL" name="BESS_VFlag" value="true"/>
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
     <par type="BOOL" name="BESS_QFlag" value="true"/>
