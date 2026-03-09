@@ -7,17 +7,11 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import cmath
 
-from dycov.electrical.initialization_calcs import init_calcs
-from dycov.electrical.pimodel_parameters import line_pimodel, xfmr_pimodel
-from dycov.model.parameters import (
-    Gen_params,
-    Line_params,
-    Pdr_params,
-    Pimodel_params,
-    Terminal,
-    Xfmr_params,
-)
+from dycov.electrical.initialization_calcs import _calc_pimodel, init_calcs
+from dycov.electrical.pimodel_parameters import line_pimodel
+from dycov.model.parameters import Gen_params, Line_params, Pdr_params, Terminal, Xfmr_params
 
 REL_ERR = 1.0e-9  # max allowed relative error
 ABS_ERR = 1.0e-6  # max allowed absolute error (for magnitudes near zero)
@@ -89,7 +83,7 @@ def _initialize_topo_s():
             Terminal(connectedEquipment=None),
         ),
     )
-    pdr = Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    pdr = Pdr_params(U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
     line = Line_params(
         id=None,
         lib=None,
@@ -179,7 +173,7 @@ def _initialize_topo_s_i():
             Terminal(connectedEquipment=None),
         ),
     )
-    pdr = Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    pdr = Pdr_params(U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
     line = Line_params(
         id=None,
         lib=None,
