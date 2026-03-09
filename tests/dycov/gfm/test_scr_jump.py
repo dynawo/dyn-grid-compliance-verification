@@ -41,6 +41,8 @@ FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 p_max_injection=1.2
 p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
 """
 
 gfm_overdamped_params = """
@@ -59,6 +61,8 @@ FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 p_max_injection=1.2
 p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
 """
 
 s_scrup1_oc1_params = """
@@ -78,23 +82,24 @@ FinalAllowedTunnelVariation=0.05
 FinalAllowedTunnelPn=0.02
 p_max_injection=1.2
 p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
 """
 
 
 # --- Helper classes for loading configuration ---
-class TestProducer(GFMProducer):
+class ProducerHelper(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._s_nref = 1.0
         self._f_nom = 1.0
 
 
-class TestParameters(GFMParameters):
+class ParametersHelper(GFMParameters):
     def __init__(self, config_str: str):
         Parameters.__init__(self, None, "", None, False)
         self._emt = True
-        self._producer = TestProducer(config_str)
+        self._producer = ProducerHelper(config_str)
         self._pcs_section = "DEFAULT"
         self._bm_section = "DEFAULT"
         self._oc_section = "DEFAULT"
@@ -107,13 +112,13 @@ def test_scr_jump_initialization():
     Tests that the SCRJump calculator is initialized correctly with different parameters.
     """
     # Test case 1: SCR step up
-    test_params = TestParameters(gfm_underdamped_params)
+    test_params = ParametersHelper(gfm_underdamped_params)
     scr_jump = SCRJump(gfm_params=test_params)
 
     assert scr_jump._final_scr == test_params.get_final_scr()
 
     # Test case 2: SCR step down
-    test_params = TestParameters(gfm_overdamped_params)
+    test_params = ParametersHelper(gfm_overdamped_params)
     scr_jump = SCRJump(gfm_params=test_params)
 
     assert scr_jump._final_scr == test_params.get_final_scr()
@@ -126,7 +131,7 @@ def test_scr_jump_overdamped_envelopes_event_at_0s():
     nb_points = 600
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    test_params = TestParameters(gfm_overdamped_params)
+    test_params = ParametersHelper(gfm_overdamped_params)
     scr_jump = SCRJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = scr_jump.calculate_envelopes(
         D=133.0, H=2.2, Xeff=0.25, time_array=time_array, event_time=event_time
@@ -137,11 +142,13 @@ def test_scr_jump_overdamped_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
 
 
 def test_scr_jump_underdamped_envelopes_event_at_0s():
@@ -151,7 +158,7 @@ def test_scr_jump_underdamped_envelopes_event_at_0s():
     nb_points = 1000
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    test_params = TestParameters(gfm_underdamped_params)
+    test_params = ParametersHelper(gfm_underdamped_params)
     scr_jump = SCRJump(gfm_params=test_params)
     magnitude, p_pcc, p_up, p_down = scr_jump.calculate_envelopes(
         D=140.0, H=5.0, Xeff=0.06, time_array=time_array, event_time=event_time
@@ -162,11 +169,13 @@ def test_scr_jump_underdamped_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )
 
 
 def test_scr_jump_s_scrup1_oc1():
@@ -179,7 +188,7 @@ def test_scr_jump_s_scrup1_oc1():
     nb_points = 10000
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    test_params = TestParameters(s_scrup1_oc1_params)
+    test_params = ParametersHelper(s_scrup1_oc1_params)
     scr_jump = SCRJump(gfm_params=test_params)
 
     magnitude, p_pcc, p_up, p_down = scr_jump.calculate_envelopes(
@@ -191,8 +200,10 @@ def test_scr_jump_s_scrup1_oc1():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - p_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - p_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - p_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - p_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - p_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
+    )

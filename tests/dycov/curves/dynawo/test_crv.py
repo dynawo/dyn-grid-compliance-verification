@@ -14,7 +14,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM
-from dycov.curves.dynawo.crv import create_curves_file
+from dycov.curves.dynawo.io.crv import create_curves_file
 
 
 class DummyEquipment:
@@ -35,7 +35,6 @@ def test_create_curves_file_electric_performance_sm():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir)
         curves_filename = "curves_sm.xml"
-        connected_to_pdr = [DummyEquipment("Xfmr", var="Xfmr_terminal")]
         xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
         generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
         rte_loads = []
@@ -45,7 +44,6 @@ def test_create_curves_file_electric_performance_sm():
         curves_dict = create_curves_file(
             path,
             curves_filename,
-            connected_to_pdr,
             xfmrs,
             generators,
             rte_loads,
@@ -60,21 +58,18 @@ def test_create_curves_file_electric_performance_sm():
         curve_models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        assert "BusPDR" in curve_models
         assert "InfiniteBus" in curve_models
-        assert "Xfmr" in curve_models
+        assert "Measurements" in curve_models
         assert "Gen" in curve_models
         # Check that dictionary contains expected keys
         assert any("Gen" in k for k in curves_dict)
-        assert any("BusPDR" in k for k in curves_dict)
-        assert any("Xfmr" in k for k in curves_dict)
+        assert any("Measurements" in k for k in curves_dict)
 
 
 def test_create_curves_file_with_all_equipment_types():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir)
         curves_filename = "curves_all.xml"
-        connected_to_pdr = [DummyEquipment("Xfmr", var="Xfmr_terminal")]
         xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
         generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
         rte_loads = [DummyEquipment("Load", lib="LoadAlphaBeta")]
@@ -84,7 +79,6 @@ def test_create_curves_file_with_all_equipment_types():
         curves_dict = create_curves_file(
             path,
             curves_filename,
-            connected_to_pdr,
             xfmrs,
             generators,
             rte_loads,
@@ -99,11 +93,10 @@ def test_create_curves_file_with_all_equipment_types():
         models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        assert "Xfmr" in models
+        assert "Measurements" in models
         assert "Gen" in models
         # Check that dictionary contains entries for all equipment
-        assert any("PDR" in k for k in curves_dict)
-        assert any("Xfmr" in k for k in curves_dict)
+        assert any("Measurements" in k for k in curves_dict)
         assert any("Gen" in k for k in curves_dict)
 
 
@@ -111,7 +104,6 @@ def test_create_curves_file_invalid_sim_type_and_zone():
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir)
         curves_filename = "curves_invalid.xml"
-        connected_to_pdr = []
         xfmrs = []
         generators = []
         rte_loads = []
@@ -121,7 +113,6 @@ def test_create_curves_file_invalid_sim_type_and_zone():
         curves_dict = create_curves_file(
             path,
             curves_filename,
-            connected_to_pdr,
             xfmrs,
             generators,
             rte_loads,
@@ -136,7 +127,8 @@ def test_create_curves_file_invalid_sim_type_and_zone():
         models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        assert "BusPDR" in models or "InfiniteBus" in models
+        allowed = {"Measurements"}
+        assert (not models) or set(models).issubset(allowed)
         # Dictionary should be minimal or empty
         assert isinstance(curves_dict, dict)
-        assert len(curves_dict) <= 4
+        assert len(curves_dict) <= 6

@@ -58,6 +58,39 @@ in the DTR documentation, in PCS I16.
 
 __ https://dynawo.github.io/
 
+.. _gfm_producer_input:
+
+GFM Producer Input (.ini file)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``dycov generateEnvelopes`` command requires a dedicated ``.ini`` file that specifies the characteristics of the Grid-Forming asset. This file must contain two main sections: ``[DEFAULT]`` for general parameters and ``[GFM Parameters]`` for the core GFM constants.
+
+Here is an example of a valid GFM producer file:
+
+.. code-block:: ini
+   :caption: Example GFM Producer INI File
+
+   [DEFAULT]
+   # Nominal voltage at the PDR Bus (in kV)
+   Unom = 20.0
+   # Maximum active power injection of the unit (in MW)
+   p_max_injection = 100.0
+   # Minimum active power injection of the unit (in MW)
+   p_min_injection = 0.0
+   # Maximum reactive power capability (in MVar)
+   q_max = 50.0
+   # Minimum reactive power capability (in MVar)
+   q_min = -50.0
+
+   [GFM Parameters]
+   # Damping constant (unitless or in pu)
+   D = 20.0
+   # Inertia constant (in seconds)
+   H = 3.5
+   # Effective reactance from the inverter to the PDR (in pu)
+   Xeff = 0.15
+   # Nominal apparent power of the GFM unit (in MVA)
+   Snom = 110.0
 
 Supported Dynamic Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -115,7 +148,7 @@ Currently supported models:
     * GeneratorSynchronousThreeWindingsProportionalRegulations
         Machine with three windings, a proportional governor on mechanical power and a
         proportional excitation voltage regulator
-    * SynchronousMachineI8SM
+    * GeneratorSynchronousThreeWindingsDTRI8
         Ad-hoc machine model for the I8 PCS
 * WECC Wind models:
     * WTG4AWeccCurrentSource1
@@ -170,8 +203,6 @@ Currently supported models:
 * Transformers:
     * TransformerFixedRatio
         Two winding transformer with a fixed ratio
-    * TransformerPhaseTapChanger
-        Two winding transformer with a fixed ratio and variable phase
     * TransformerRatioTapChanger
         Two winding transformer with a fixed phase and variable ratio
 
@@ -336,12 +367,12 @@ tool will check that the edited file is correct, notifying the user if there are
               <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
               <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
               <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
-              <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
-              <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal1" id2="BusPDR" var2="bus_terminal"/>
-              <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal2"/>
-              <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal2"/>
-              <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
-              <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'SynchronousMachineI8SM']-->
+              <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
+              <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
+              <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
+              <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
+              <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
+              <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
               <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
             </dyn:dynamicModelsArchitecture>
 
@@ -381,18 +412,15 @@ the user if there are any errors in it.
 
 .. code-block:: console
 
-            # p_{max_unite} as defined by the DTR in MW
-            p_max =
-            # u_nom is the nominal voltage in the PDR Bus (in kV)
+            # p_{max_unite} injection as defined by the DTR in MW 
+            p_max_injection_at_PDR =
+            # u_nom is the nominal voltage at the PDR bus (in kV)
             # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
             u_nom =
-            # s_nom is the nominal apparent power of all generating units (in MVA)
-            # This is the value that will be used for the base conversion in the PDR bus active/reactive power
-            s_nom =
-            # q_max is the maximum reactive power of the generator unit (in MVar)
-            q_max =
-            # q_min is the minimum reactive power of the generator unit (in MVar)
-            q_min =
+            # q_max is the maximum reactive power at the PDR bus (in MVar)
+            q_max_at_PDR =
+            # q_min is the minimum reactive power at the PDR bus (in MVar)
+            q_min_at_PDR =
             # topology
             topology = S+Aux
 

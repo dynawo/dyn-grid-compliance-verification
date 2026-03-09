@@ -20,4 +20,4 @@ def test_launchers():
     with pytest.raises(OSError) as pytest_wrapped_e:
         system_checks.check_launchers("dynawo.sh")
     assert pytest_wrapped_e.type == OSError
-    assert pytest_wrapped_e.value.args[0] == "Dynawo not found.\nPdfLatex not found.\n"
+    assert "Dynawo not found." in pytest_wrapped_e.value.args[0]

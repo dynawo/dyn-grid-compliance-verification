@@ -38,6 +38,10 @@ TimeTo90=0.01
 TimeForTunnel=0.06
 q_max=0.35
 q_min=-0.35
+VoltageStepAtGrid = 0.15*(Xeff+Xgrid)
+[GFM Parameters]
+Snom=1.0
+Xeff = 0.27
 """
 
 s_vol_ang_step_1_params = """
@@ -53,21 +57,24 @@ TimeTo90=0.01
 TimeForTunnel=0.06
 q_max=0.4
 q_min=-0.4
+VoltageStepAtGrid = 0.15*(Xeff+Xgrid)
+[GFM Parameters]
+Snom=1.0
+Xeff = 0.27
 """
 
 
-class TestProducer(GFMProducer):
+class ProducerHelper(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._s_nref = 1.0
 
 
-class TestParameters(GFMParameters):
+class ParametersHelper(GFMParameters):
     def __init__(self, config_str: str):
         Parameters.__init__(self, None, "", None, False)
         self._emt = True
-        self._producer = TestProducer(config_str)
+        self._producer = ProducerHelper(config_str)
         self._pcs_section = "DEFAULT"
         self._bm_section = "DEFAULT"
         self._oc_section = "DEFAULT"
@@ -76,10 +83,10 @@ class TestParameters(GFMParameters):
 
 
 def test_amplitude_step_initialization():
-    test_params = TestParameters(gfm_params)
+    test_params = ParametersHelper(gfm_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
 
-    assert amplitude_step._voltage_step == test_params.get_voltage_step()
+    assert amplitude_step._voltage_step == test_params.get_voltage_step_at_grid()
 
 
 def test_amplitude_step_envelopes_event_at_0s():
@@ -89,8 +96,8 @@ def test_amplitude_step_envelopes_event_at_0s():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    test_params = TestParameters(gfm_params)
-    test_params = TestParameters(gfm_params)
+    test_params = ParametersHelper(gfm_params)
+    test_params = ParametersHelper(gfm_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
     magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.26, time_array=time_array, event_time=event_time
@@ -101,11 +108,13 @@ def test_amplitude_step_envelopes_event_at_0s():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - q_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - q_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - q_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - q_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - q_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - q_up)), 0, abs_tol=epsilon
+    )
 
 
 def test_amplitude_step_envelopes_event_at_200ms():
@@ -115,7 +124,7 @@ def test_amplitude_step_envelopes_event_at_200ms():
     nb_points = 264
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    test_params = TestParameters(gfm_params)
+    test_params = ParametersHelper(gfm_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
     magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
         D=152.0, H=3.0, Xeff=0.26, time_array=time_array, event_time=event_time
@@ -126,11 +135,13 @@ def test_amplitude_step_envelopes_event_at_200ms():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - q_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - q_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - q_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - q_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - q_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - q_up)), 0, abs_tol=epsilon
+    )
 
 
 def test_s_vol_ang_step_1_amplitude_step():
@@ -140,7 +151,7 @@ def test_s_vol_ang_step_1_amplitude_step():
     nb_points = 2000
     time_array = np.linspace(start_time, end_time, nb_points)
 
-    test_params = TestParameters(s_vol_ang_step_1_params)
+    test_params = ParametersHelper(s_vol_ang_step_1_params)
     amplitude_step = AmplitudeStep(gfm_params=test_params)
     magnitude, q_pcc, q_up, q_down = amplitude_step.calculate_envelopes(
         D=133.0, H=10.0, Xeff=0.25, time_array=time_array, event_time=event_time
@@ -151,8 +162,10 @@ def test_s_vol_ang_step_1_amplitude_step():
     csv_data = pd.read_csv(csv_path / f"{title}.csv", sep=";")
 
     assert math.isclose(max(np.abs(csv_data["Time (s)"] - time_array)), 0, abs_tol=epsilon)
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PCC (pu)"] - q_pcc)), 0, abs_tol=epsilon)
+    assert math.isclose(max(np.abs(csv_data[f"{magnitude} PGU (pu)"] - q_pcc)), 0, abs_tol=epsilon)
     assert math.isclose(
-        max(np.abs(csv_data[f"{magnitude} down (pu)"] - q_down)), 0, abs_tol=epsilon
+        max(np.abs(csv_data[f"{magnitude} lower (pu)"] - q_down)), 0, abs_tol=epsilon
     )
-    assert math.isclose(max(np.abs(csv_data[f"{magnitude} up (pu)"] - q_up)), 0, abs_tol=epsilon)
+    assert math.isclose(
+        max(np.abs(csv_data[f"{magnitude} upper (pu)"] - q_up)), 0, abs_tol=epsilon
+    )

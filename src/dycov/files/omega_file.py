@@ -8,10 +8,12 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
-from dycov.curves.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Gen_params
 
 
@@ -19,10 +21,17 @@ def _connect_generator_by_lib(
     dyd_root: etree.Element, ns: str, omega_lib, generator: Gen_params, grp: str
 ) -> None:
     if omega_lib is None:
+        dycov_logging.get_logger("Omega File").debug(
+            f"Connect gen={generator.id} to InfiniteBusFromTable"
+        )
         _connect_generator_to_infinitebus(dyd_root, ns, generator)
     elif "DYNModelOmegaRef" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(
+            f"Connect gen={generator.id} to DYNModelOmegaRef"
+        )
         _connect_generator_to_dynmodelomegaref(dyd_root, ns, generator, grp)
     elif "SetPoint" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to SetPoint")
         _connect_generator_to_setpoint(dyd_root, ns, generator)
 
 
@@ -32,7 +41,7 @@ def _connect_generator_to_dynmodelomegaref(
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "RotorSpeedPu")
     _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value")
 
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     _connect_generator(
         dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
     )
@@ -44,7 +53,7 @@ def _connect_generator_to_dynmodelomegaref(
 def _connect_generator_to_setpoint(
     dyd_root: etree.Element, ns: str, generator: Gen_params
 ) -> None:
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     if variable:
         _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint")
 
@@ -52,7 +61,7 @@ def _connect_generator_to_setpoint(
 def _connect_generator_to_infinitebus(
     dyd_root: etree.Element, ns: str, generator: Gen_params
 ) -> None:
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     _connect_generator(
         dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
     )
@@ -72,7 +81,7 @@ def _connect_generator(
     )
 
 
-def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> int:
+def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> Optional[int]:
     if grp is None:
         return grp
 
@@ -119,6 +128,7 @@ def complete_omega(
     parset = None
     grp = None
     omega_ref = dyd_root.find(f"{{{dyd_ns}}}blackBoxModel[@id='OmegaRef']")
+
     if omega_ref is not None:
         lib = omega_ref.get("lib")
         par_id = omega_ref.get("parId")
@@ -126,8 +136,11 @@ def complete_omega(
         nbGen = parset.find(f"{{{par_ns}}}par[@name='nbGen']")
         if nbGen is not None:
             grp = int(nbGen.get("value"))
+        dycov_logging.get_logger("Omega File").debug(f"OmegaRef lib={lib} par_id={par_id}")
 
+    dycov_logging.get_logger("Omega File").debug(f"Generators {len(generators)}")
     for generator in generators:
+        dycov_logging.get_logger("Omega File").debug(f"Generator {generator.id}")
         _connect_generator_by_lib(dyd_root, dyd_ns, lib, generator, grp)
         grp = _add_generator_weight(parset, par_ns, grp)
 

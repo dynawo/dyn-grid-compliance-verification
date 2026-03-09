@@ -1,0 +1,16 @@
+\documentclass[crop,tikz]{standalone}
+\usepackage{circuitikz}
+\usetikzlibrary{arrows}
+\tikzset{
+  font={\fontsize{7pt}{7}\selectfont}}
+\begin{document}
+\begin{tikzpicture}
+    \draw   (0.2,0) to [vsourcesin,l=Group] (1,0)
+    to [draw,voosource,align=center,l={Group\\ transformer}]  node[above,yshift=0.5cm] {CB1} (5,0)
+    to [generic,l=Zc] (6.5,0) to (6.5,0)
+    to  (6.5,0) to  (8.0,0) node[draw,thick,circle,minimum width=9mm,fill=white]{$\infty$};
+    \draw (1.8,0.5) to (1.8,-0.5);
+    \draw (4.2,0.5) to (4.2,-0.5);
+    \draw (7.0,0.5) to (7.0,-0.5);
+\end{tikzpicture}
+\end{document}

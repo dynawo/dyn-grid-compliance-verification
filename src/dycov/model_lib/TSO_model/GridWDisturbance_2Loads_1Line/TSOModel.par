@@ -18,10 +18,10 @@
     <par type="DOUBLE" name="generator_RTfPu" value="0"/>
     <par type="DOUBLE" name="generator_XTfPu" value="0"/>
     <par type="DOUBLE" name="generator_SnTfo" value="340000"/>
-    <par type="DOUBLE" name="generator_UNomHV" value="225"/>
-    <par type="DOUBLE" name="generator_UNomLV" value="225"/>
-    <par type="DOUBLE" name="generator_UBaseHV" value="225"/>
-    <par type="DOUBLE" name="generator_UBaseLV" value="225"/>
+    <par type="DOUBLE" name="generator_UNomHV" value="{{gen_UNom}}"/>
+    <par type="DOUBLE" name="generator_UNomLV" value="{{gen_UNom}}"/>
+    <par type="DOUBLE" name="generator_UBaseHV" value="{{gen_UNom}}"/>
+    <par type="DOUBLE" name="generator_UBaseLV" value="{{gen_UNom}}"/>
     <par type="DOUBLE" name="generator_H" value="8"/>
     <par type="DOUBLE" name="generator_RaPu" value="0.003"/>
     <par type="DOUBLE" name="generator_XlPu" value="0.18"/>
@@ -33,7 +33,7 @@
     <par type="DOUBLE" name="generator_XqPu" value="0.65"/>
     <par type="DOUBLE" name="generator_XppqPu" value="0.25"/>
     <par type="DOUBLE" name="generator_Tppq0" value="0.11"/>
-    <par type="DOUBLE" name="generator_UNom" value="225"/>
+    <par type="DOUBLE" name="generator_UNom" value="{{gen_UNom}}"/>
     <par type="DOUBLE" name="generator_SNom" value="340000"/>
     <par type="DOUBLE" name="generator_PNomTurb" value="340000"/>
     <par type="DOUBLE" name="generator_PNomAlt" value="320000"/>
@@ -41,8 +41,10 @@
     <par type="DOUBLE" name="generator_Q0Pu" value="{{gen_Q0Pu}}"/>
     <par type="DOUBLE" name="generator_U0Pu" value="{{gen_U0Pu}}"/>
     <par type="DOUBLE" name="generator_UPhase0" value="{{gen_UPhase0}}"/>
-    <par type="DOUBLE" name="URef_ValueIn" value="0"/>
-    <par type="DOUBLE" name="Pm_ValueIn" value="0"/>
+    <par type="DOUBLE" name="governor_KGover" value="5"/>
+    <par type="DOUBLE" name="governor_tFirstOrderGover" value="2.5"/>
+    <par type="DOUBLE" name="voltageRegulator_Gain" value="15"/>
+    <par type="DOUBLE" name="voltageRegulator_tFirstOrderVR" value="0.3"/>
   </set>
   <set id="Load_EQ">
     <par type="DOUBLE" name="load_P0Pu" value="3000.000"/>
@@ -59,6 +61,9 @@
     <par type="DOUBLE" name="load_UPhase0" value="0.0"/>
     <par type="DOUBLE" name="load_alpha" value="0.0"/>
     <par type="DOUBLE" name="load_beta" value="0.0"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
   </set>
   <set id="DisconnectLoad">
     <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>

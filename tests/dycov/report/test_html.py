@@ -30,7 +30,7 @@ def test_plotly_figures_single_curve_success():
     reference_curves = pd.DataFrame({"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.4, 0.9]})
     results = {}
 
-    curve_names, html_out = html.plotly_figures(
+    curve_names, _, html_out = html.plotly_figures(
         [
             figure_description[0],
             [figure_description[1]],
@@ -72,7 +72,7 @@ def test_plotly_figures_with_additional_traces():
         "calc_ss_value": 1.0,
     }
 
-    curve_names, html_out = html.plotly_figures(
+    curve_names, _, html_out = html.plotly_figures(
         [
             figure_description[0],
             [figure_description[1]],
@@ -102,9 +102,11 @@ def test_create_html_success():
         templates_dir.mkdir(exist_ok=True)
         template_path = templates_dir / "template.html"
         template_path.write_text("{{ figures|length }} figures rendered")
+        js_path = templates_dir / "sync_charts.js"
+        js_path.write_text("// sync charts js dummy")
         # Prepare figures
         producer = "producer"
-        figures = ["<div>figure1</div>", "<div>figure2</div>"]
+        figures = [("figure1", "<div>figure1</div>"), ("figure2", "<div>figure2</div>")]
         operating_condition = "test_condition"
         # Patch __file__ to point to this test file for template resolution
         orig_file = html.__file__
@@ -119,6 +121,8 @@ def test_create_html_success():
             html.__file__ = orig_file
             if template_path.exists():
                 template_path.unlink()
+            if js_path.exists():
+                js_path.unlink()
             if templates_dir.exists():
                 try:
                     templates_dir.rmdir()
@@ -139,7 +143,7 @@ def test_plotly_figures_missing_reference_curves():
     reference_curves = None
     results = {}
 
-    curve_names, html_out = html.plotly_figures(
+    curve_names, _, html_out = html.plotly_figures(
         [
             figure_description[0],
             [figure_description[1]],
@@ -173,7 +177,7 @@ def test_plotly_figures_no_curve_names():
     )
     results = {}
 
-    curve_names, html_out = html.plotly_figures(
+    curve_names, _, html_out = html.plotly_figures(
         [
             figure_description[0],
             figure_description[1],
@@ -202,7 +206,7 @@ def test_plotly_figures_incomplete_results_dict():
     # results missing many keys
     results = {}
 
-    curve_names, html_out = html.plotly_figures(
+    curve_names, _, html_out = html.plotly_figures(
         [
             figure_description[0],
             [figure_description[1]],
@@ -243,7 +247,7 @@ def test_plotly_figures_multiple_curves():
     )
     results = {}
 
-    curve_names, html_out = html.plotly_figures(
+    curve_names, _, html_out = html.plotly_figures(
         [
             figure_description[0],
             figure_description[1],
@@ -269,7 +273,7 @@ def test_create_html_missing_template():
         if template_path.exists():
             template_path.unlink()
         producer = "producer"
-        figures = ["<div>figure1</div>"]
+        figures = [("figure1", "<div>figure1</div>")]
         operating_condition = "missing_template"
         orig_file = html.__file__
         html.__file__ = str(Path(__file__))

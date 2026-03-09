@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from typing import Dict, List
 
 from jinja2 import Environment, FileSystemLoader, Template, meta
 from lxml import etree
@@ -125,6 +126,67 @@ def modify_par_file(
     )
 
 
+def add_parameters(
+    path: Path,
+    filename: str,
+    solver_id: str,
+    parameters: List[Dict[str, str]],
+) -> None:
+    """Add or update parameters in a solver <set> within a PAR XML file.
+
+    Parameters
+    ----------
+    path : Path
+        Path where the PAR file is stored.
+    filename : str
+        PAR filename.
+    solver_id : str
+        Identifier of the <set> element to modify.
+    parameters : list[dict[str, str]]
+        List of parameter specs. Each item must contain:
+            - "type": str, parameter type (e.g., "double", "string", "INT").
+            - "name": str, parameter name.
+            - "value": str, parameter value.
+    """
+    par_tree = etree.parse(path / filename, etree.XMLParser(remove_blank_text=True))
+    par_root = par_tree.getroot()
+
+    nsmap = {"ns": etree.QName(par_root).namespace}
+    parset = par_root.xpath(f"//ns:set[@id='{solver_id}']", namespaces=nsmap)
+    ps = parset[0]
+
+    # Add or update each parameter from the list
+    for spec in parameters:
+        parameter_type = str(spec.get("type", ""))
+        parameter_name = str(spec.get("name", ""))
+        value = str(spec.get("value", ""))
+
+        # Find existing <par name="..."> under the target <set>
+        existing = ps.xpath(
+            f"./ns:par[@name='{parameter_name}']",
+            namespaces=nsmap,
+        )
+
+        if existing:
+            existing[0].set("type", parameter_type)
+            existing[0].set("value", value)
+        else:
+            etree.SubElement(
+                ps,
+                f"{{{nsmap['ns']}}}par" if nsmap["ns"] else "par",
+                type=parameter_type,
+                name=parameter_name,
+                value=value,
+            )
+
+    par_tree.write(
+        str(path / filename),
+        pretty_print=True,
+        xml_declaration=True,
+        encoding="UTF-8",
+    )
+
+
 def fault_par_file(
     path: Path,
     filename: str,
@@ -190,6 +252,12 @@ def fault_time(path: Path, time: float) -> None:
         ):
             fault_tbegin = model_output.get("value")
 
+        if (
+            model_output.get("name") == "line_tBegin"
+            and model_output.getparent().get("id") == "LineFault"
+        ):
+            fault_tbegin = model_output.get("value")
+
     if fault_tbegin is None:
         dycov_logging.get_logger("Files").info("No event to disconnect")
         return
@@ -209,6 +277,11 @@ def fault_time(path: Path, time: float) -> None:
         ):
             model_output.set("value", fault_tend)
 
+        if (
+            model_output.get("name") == "line_tEnd"
+            and model_output.getparent().get("id") == "LineFault"
+        ):
+            model_output.set("value", fault_tend)
     etree_par.write(
         path,
         pretty_print=True,

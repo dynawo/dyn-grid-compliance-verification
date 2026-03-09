@@ -11,6 +11,7 @@
 import math
 import shutil
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from dycov.curves.importer.importer import CurvesImporter
 
@@ -20,10 +21,10 @@ def _get_resources_path():
 
 
 def test_eurostag():
-    path = _get_resources_path() / "tmp"
-    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
-    try:
         importer = CurvesImporter(path, "fiche8")
         df_eurostag_curve = importer.get_curves_dataframe(0)
 
@@ -33,5 +34,3 @@ def test_eurostag():
         assert math.isclose(df_eurostag_curve["time"].iloc[-1], 9.882547, rel_tol=1e-5)
         assert "bus_PDR_V" in df_eurostag_curve
         assert "generator_Omega" in df_eurostag_curve
-    finally:
-        shutil.rmtree(path)

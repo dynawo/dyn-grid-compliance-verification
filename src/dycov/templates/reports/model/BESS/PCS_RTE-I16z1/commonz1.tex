@@ -6,10 +6,21 @@
 \definecolor{dark-green}{RGB}{16,128,16}
 
 %Snippet for the circuits
-\newcommand{\GridCircuitZone}{
+\newcommand{\GridCircuitZoneFault}{
     The grid model and its operational point is as in the following schematic:
     \begin{center}
-        \includestandalone[width=0.8\textwidth]{circuit_z1.tikz}
+        \includestandalone[width=0.8\textwidth]{circuit_z1_fault.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+}
+
+\newcommand{\GridCircuitZoneSetPoint}{
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_z1_setpoint.tikz}
     \end{center}
     \begin{center}
         \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
@@ -57,7 +68,7 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Ustator_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Magnitude controlled by voltage control, in pu.
+            \small Magnitude controlled by voltage control.
         \end{minipage}
     \end{minipage}
 %
@@ -81,7 +92,7 @@
     \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ire_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
             \small Active current output Ip, measured at the PDR bus.
         \end{minipage}
@@ -89,7 +100,7 @@
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Iim_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
             \small Reactive current output Iq, measured at the PDR bus.
         \end{minipage}

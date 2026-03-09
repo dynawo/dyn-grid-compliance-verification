@@ -28,12 +28,11 @@ class TestProducerIniFile:
             assert ini_file.exists()
             content = ini_file.read_text()
             assert "topology = S" in content
-            assert "p_max_injection =" in content
-            assert "p_max_consumption =" in content
-            assert "u_nom =" in content
-            assert "s_nom =" in content
-            assert "q_max =" in content
-            assert "q_min =" in content
+            assert "p_max_injection_at_PDR =" in content
+            assert "p_max_consumption_at_PDR =" in content
+            assert "u_nom_at_PDR =" in content
+            assert "q_max_at_PDR =" in content
+            assert "q_min_at_PDR =" in content
 
     def test_check_ini_parameters_all_values_present(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -41,16 +40,14 @@ class TestProducerIniFile:
             ini_file = target / "Producer.ini"
             ini_content = (
                 "[DEFAULT]\n"
-                "# p_{max_unite} as defined by the DTR in MW\n"
-                "p_max = 100\n"
-                "# u_nom is the nominal voltage in the PDR Bus (in kV)\n"
-                "u_nom = 225\n"
-                "# s_nom is the nominal apparent power of all generating units (in MVA)\n"
-                "s_nom = 200\n"
-                "# q_max is the maximum reactive power of all generating units (in MVar)\n"
-                "q_max = 50\n"
-                "# q_min is the minimum reactive power of all generating units (in MVar)\n"
-                "q_min = -50\n"
+                "# p_{max_unite} injection as defined by the DTR in MW\n"
+                "p_max_injection_in_PDR = 100\n"
+                "# u_nom is the nominal voltage at the PDR bus (in kV)\n"
+                "u_nom_at_PDR = 225\n"
+                "# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
+                "q_max_at_PDR = 50\n"
+                "# q_min is the minimum reactive power at the PDR bus (in MVar)\n"
+                "q_min_at_PDR = -50\n"
                 "# topology\n"
                 "topology = S\n"
             )
@@ -64,16 +61,14 @@ class TestProducerIniFile:
             ini_file = target / "Producer.ini"
             ini_content = (
                 "[DEFAULT]\n"
-                "# p_{max_unite} as defined by the DTR in MW\n"
-                "p_max =\n"
-                "# u_nom is the nominal voltage in the PDR Bus (in kV)\n"
-                "u_nom = 225\n"
-                "# s_nom is the nominal apparent power of all generating units (in MVA)\n"
-                "s_nom = 200\n"
-                "# q_max is the maximum reactive power of all generating units (in MVar)\n"
-                "q_max = 50\n"
-                "# q_min is the minimum reactive power of all generating units (in MVar)\n"
-                "q_min = -50\n"
+                "# p_{max_unite} injection as defined by the DTR in MW\n"
+                "p_max_injection_in_PDR =\n"
+                "# u_nom is the nominal voltage at the PDR bus (in kV)\n"
+                "u_nom_at_PDR = 225\n"
+                "# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
+                "q_max_at_PDR = 50\n"
+                "# q_min is the minimum reactive power at the PDR bus (in MVar)\n"
+                "q_min_at_PDR = -50\n"
                 "# topology\n"
                 "topology = S\n"
             )

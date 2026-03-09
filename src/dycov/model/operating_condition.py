@@ -60,7 +60,7 @@ class OperatingCondition:
         jobs_output_dir: Path,
         event_params: dict,
     ) -> dict:
-        validator.complete_parameters(
+        validator.initialize_validation_params(
             working_oc_dir,
             jobs_output_dir,
             event_params,
@@ -78,7 +78,7 @@ class OperatingCondition:
         if not validator.has_validations():
             results["compliance"] = None
 
-        if dycov_logging.getEffectiveLevel() != logging.DEBUG:
+        if dycov_logging.get_logger("OperatingCondition").getEffectiveLevel() != logging.DEBUG:
             with open(working_oc_dir / "results.json", "w") as outfile:
                 outfile.write(str(results))
 

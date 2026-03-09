@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
-  <dyn:modelicaModel id="SPOmega">
-    <dyn:unitDynamicModel id="setPointOmega" name="SetPointOmega"/>
-  </dyn:modelicaModel>
-</dyn:dynamicModelsArchitecture>

@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from dycov.files.producer_dyd_file import create_producer_dyd_file
 from dycov.files.producer_par_file import create_producer_par_file
@@ -10,32 +11,32 @@ def _get_resources_path():
 
 
 def generate_dyd_file(topology, template):
-    path = _get_resources_path() / "tmp"
-    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
-    content = ""
-    try:
-        create_producer_dyd_file(path, topology, template)
-        with open(path / "Producer.dyd") as f:
-            content = f.read()
-    finally:
-        shutil.rmtree(path)
-        return content
+        content = ""
+        try:
+            create_producer_dyd_file(path, topology, template)
+            with open(path / "Producer.dyd") as f:
+                content = f.read()
+        finally:
+            return content
 
 
 def generate_par_file():
-    path = _get_resources_path() / "tmp"
-    shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir)
+        shutil.copytree(_get_resources_path(), path, dirs_exist_ok=True)
 
-    content = ""
-    try:
-        create_producer_par_file("dynawo.sh", path, "performance_SM")
-        with open(path / "Producer.par") as f:
-            content = f.read()
-            print(content)
-    finally:
-        shutil.rmtree(path)
-        return content
+        content = ""
+        try:
+            create_producer_par_file("dynawo.sh", path, "performance_SM")
+            with open(path / "Producer.par") as f:
+                content = f.read()
+                print(content)
+        finally:
+            return content
 
 
 def get_reference_content(reference):

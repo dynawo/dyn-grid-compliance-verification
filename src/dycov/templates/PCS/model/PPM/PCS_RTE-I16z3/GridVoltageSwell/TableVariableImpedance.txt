@@ -8,5 +8,5 @@ double ImpedanceTable(10,3)
 {{delta_t_rec2}} 0 {{Xv_rec2}}
 {{delta_t_rec2}} 0 {{Xv_rec3}}
 {{delta_t_rec3}} 0 {{Xv_rec3}}
-{{delta_t_rec3}} 0 {{Xv_rec4}}
-{{simulation_stop}} 0 {{Xv_rec4}}
+{{delta_t_rec3}} 0 100
+{{simulation_stop}} 0 100

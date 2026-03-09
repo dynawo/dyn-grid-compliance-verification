@@ -13,7 +13,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.curves.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
 from dycov.files.model_parameters import find_bbmodel_by_type
 from dycov.logging.logging import dycov_logging
@@ -114,7 +114,6 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
             f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"
             f"{gen_ppm.get('id')}_GEN_InjectedActiveCurrent = \n"
             f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
-            f"{gen_ppm.get('id')}_GEN_InjectedCurrent = \n"
         )
 
     curves_dictionary += (
@@ -255,7 +254,6 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
                 # Common
                 f"{gen_ppm.get('id')}_GEN_InjectedActiveCurrent = \n"
                 f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
-                f"{gen_ppm.get('id')}_GEN_InjectedCurrent = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
             )
     else:
@@ -267,7 +265,6 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
                 # Common
                 f"{gen_ppm.get('id')}_GEN_InjectedActiveCurrent = \n"
                 f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
-                f"{gen_ppm.get('id')}_GEN_InjectedCurrent = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
                 # Zone3
                 f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"
@@ -442,14 +439,14 @@ def create_producer_curves(
         _get_model_templates(model_path, curves_path, template)
 
 
-def check_curves(target: Path) -> bool:
+def check_curves(curves: Path) -> bool:
     """Checks if all parameters in the INI file have a value defined. Additionally,
     checks if the defined curves files exist.
 
     Parameters
     ----------
-    target: Path
-        Target path
+    curves: Path
+        Curves path
 
     Returns
     -------
@@ -457,13 +454,14 @@ def check_curves(target: Path) -> bool:
         False if there are empty values in the PAR file
     """
 
-    ini_files = list(target.rglob("*.[iI][nN][iI]"))
+    ini_files = list(curves.rglob("*.[iI][nN][iI]"))
     if not ini_files:
-        dycov_logging.get_logger("Create Curves input").error(f"No INI files found in {target}.")
+        dycov_logging.get_logger("Create Curves input").error(f"No INI files found in {curves}.")
     for ini_file in ini_files:
         if ini_file.name != "CurvesFiles.ini":
             continue
 
+        target = ini_file.parent
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(ini_file)
 

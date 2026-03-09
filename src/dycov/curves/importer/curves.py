@@ -15,7 +15,13 @@ from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.files import manage_files
-from dycov.model.parameters import Disconnection_Model, Gen_init, Gen_params, Simulation_result
+from dycov.model.parameters import (
+    Disconnection_Model,
+    Gen_init,
+    Gen_params,
+    Simulation_result,
+    Terminal,
+)
 from dycov.model.producer import Producer
 
 
@@ -194,7 +200,7 @@ class ImportedCurves(ProducerCurves):
                     Gen_params(
                         id=gen_id,
                         lib="",
-                        connectedXmfr="",
+                        terminals=(Terminal(connectedEquipment=""),),
                         SNom="",
                         IMax="",
                         par_id="",
@@ -245,7 +251,7 @@ class ImportedCurves(ProducerCurves):
         config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Event"
         connect_event_to = config.get_value(config_section, "connect_event_to")
         step_value = 0.0
-        if config.has_key(config_section, "setpoint_step_value"):
+        if config.has_option(config_section, "setpoint_step_value"):
             step_value = self.obtain_value(
                 str(config.get_value(config_section, "setpoint_step_value"))
             )
