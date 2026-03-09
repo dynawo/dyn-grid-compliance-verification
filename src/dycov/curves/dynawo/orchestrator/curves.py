@@ -683,7 +683,7 @@ class DynawoCurves(ProducerCurves):
                     (
                         -pdr.P * setpoint_factor
                         if not gen.PccLocal
-                        else -gen.terminals[0].P0 * setpoint_factor
+                        else gen.terminals[0].P0 * setpoint_factor
                     )
                     for gen in self.get_producer().generators
                 ]
@@ -692,7 +692,7 @@ class DynawoCurves(ProducerCurves):
                     (
                         -pdr.Q * setpoint_factor
                         if not gen.PccLocal
-                        else -gen.terminals[0].Q0 * setpoint_factor
+                        else gen.terminals[0].Q0 * setpoint_factor
                     )
                     for gen in self.get_producer().generators
                 ]

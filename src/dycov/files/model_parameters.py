@@ -1059,9 +1059,9 @@ def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
 
 def _set_initial_pcc_power(parset, nsmap, lib, pdr):
     sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePowerPcc0Pu")
-    _set_parameter(parset, nsmap, active_power0, sign, pdr.P, create_if_missing=True)
+    _set_parameter(parset, nsmap, active_power0, sign, -pdr.P, create_if_missing=True)
     sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePowerPcc0Pu")
-    _set_parameter(parset, nsmap, reactive_power0, sign, pdr.Q, create_if_missing=True)
+    _set_parameter(parset, nsmap, reactive_power0, sign, -pdr.Q, create_if_missing=True)
 
 
 def _set_initial_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
