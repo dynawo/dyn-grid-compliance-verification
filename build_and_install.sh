@@ -5,7 +5,8 @@
 #   * it uses a venv named "dycov_venv"
 #   * it also pip-updates all dependencies to their latest version
 #   * it can install in editable mode and with developer dependencies
-# Assumes Python 3.9 or later and uv are installed.
+# Assumes uv are installed.
+# Python 3.13 is installed for the virtual environment.
 #
 # (c) 2022 RTE
 # Developed by Grupo AIA
@@ -16,8 +17,8 @@
 set -o nounset -o noclobber
 set -o errexit -o pipefail
 
+python_version="3.13"
 MY_VENV="$PWD/dycov_venv"
-python_cmd=""
 
 GREEN="\033[1;32m"
 NC="\033[0m"
@@ -35,43 +36,6 @@ Usage: $0 [OPTIONS]
     -h | --help       Show this help message
 EOF
 }
-
-# Searches for the newest compatible Python interpreter (3.9+).
-find_python_cmd() {
-    local best_interpreter=""
-    local available_interpreters=()
-
-    # Find all available and compatible interpreters
-    for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
-        # We capture the output in a variable using "|| true" inside the subshell.
-        # This prevents the 'command -v' failure (status 1) from triggering the ERR trap.
-        local interp_path
-        interp_path=$(command -v "$interpreter" 2>/dev/null || true)
-
-        if which "$interpreter" > /dev/null; then
-            if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
-                # Store the full path to avoid ambiguity
-                available_interpreters+=("$(which "$interpreter")")
-                local ver
-                ver=$("$interp_path" --version 2>&1 | awk '{print $2}')
-                if echo "$ver" | grep -Eq '^3\.(9|[1-9][0-9])\.'; then
-                     available_interpreters+=("$interp_path")
-                fi
-            fi
-        fi
-    done
-
-    # If we found any, sort them by version and pick the best one.
-    if [ ${#available_interpreters[@]} -gt 0 ]; then
-        # Get unique paths, get versions, sort, and extract the path of the newest one
-        best_interpreter=$(printf "%s\n" "${available_interpreters[@]}" | sort -u | while read -r interp; do
-            echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
-        done | sort -V -r | head -n 1 | awk '{print $2}')
-    fi
-
-    python_cmd="$best_interpreter"
-}
-
 
 #######################################
 # getopt-like input option processing
@@ -115,18 +79,12 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-find_python_cmd
-if [ -z "$python_cmd" ]; then
-    echo "ERROR: no valid python interpreter found (3.9+ required)."
-    exit 1
-fi
-
 #######################################
 # The real meat starts here
 #######################################
 
 colormsg "Step 1: Creating or verifying virtual environment '$MY_VENV'..."
-uv venv "$MY_VENV" --python "$python_cmd"
+uv venv "$MY_VENV" --python "$python_version"
 
 colormsg "Step 2: Activating environment and installing dependencies..."
 # shellcheck source=/dev/null

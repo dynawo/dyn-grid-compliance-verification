@@ -9,6 +9,7 @@
 #
 from collections import namedtuple
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -49,6 +50,7 @@ class Xfmr_params(Equipment):
     B: float
     G: float
     rTfo: float
+    alphaTfo: float
 
 
 @dataclass
@@ -69,6 +71,11 @@ class Gen_params(Equipment):
     Q: float
     VoltageDroop: float
     UseVoltageDroop: bool
+    PccLocal: bool
+    PMin: Optional[float] = None
+    PMax: Optional[float] = None
+    QMin: Optional[float] = None
+    QMax: Optional[float] = None
 
 
 @dataclass
@@ -91,4 +98,8 @@ Simulation_result = namedtuple(
 Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
 Disconnection_Model = namedtuple(
     "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
+)
+ExclusionWindows = namedtuple(
+    "ExclusionWindows",
+    ["event_start", "event_end", "clear_start", "clear_end"],
 )

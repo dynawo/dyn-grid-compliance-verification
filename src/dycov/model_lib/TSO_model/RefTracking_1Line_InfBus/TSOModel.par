@@ -3,12 +3,16 @@
   <set id="InfiniteBus">
     <par type="DOUBLE" name="infiniteBus_UPu" value="{{infiniteBus_U0Pu}}"/>
     <par type="DOUBLE" name="infiniteBus_UPhase" value="0"/>
+    <par type="DOUBLE" name="infiniteBus_UNom" value="{{bus_UNom}}"/>
   </set>
   <set id="Line">
     <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
     <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
     <par type="DOUBLE" name="line_BPu" value="0.0"/>
     <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
   </set>
   <!-- For each generator defined in the producer's input files, a definition for its 
   setpoint model will be added, followed by a set of parameters specific to that setpoint 

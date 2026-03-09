@@ -103,7 +103,7 @@ Linux
 
     .. code-block:: console
 
-       curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/linux_install.sh | bash
+       curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
 
    This script will install the DyCoV tool, together with a matching version of Dynawo,
    under your current directory in $PWD/dycov.  It will do so by cloning the latest
@@ -132,7 +132,7 @@ Windows
 
 #. Download the `DyCoV's Windows Installer`__.
 
-__ https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.8.1/DyCoV_win_Installer.exe
+__ https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download//DyCoV_win_Installer.exe
 
    In order to install the application, it is essential that the user has administrator rights. 
    If the user is an administrator, there are no problems in unblocking the executable:

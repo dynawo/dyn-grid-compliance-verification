@@ -526,6 +526,26 @@ def _add_results_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--compression' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-comp",
+        "--compression",
+        arg_type=float,
+        default=None,
+        help_msg="Relative epsilon for curve simplification using the Visvalingam-Whyatt"
+        " algorithm, as a fraction of each signal's range"
+        " (e.g. 0.001 = 0.1%). Default: None (no compression).",
+    )
+
+
 def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
     """Adds the 'generateEnvelopes' subparser to the given subparsers action.
 
@@ -656,4 +676,5 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_noisestd_argument(anonymize)
     _add_frequency_argument(anonymize)
     _add_results_argument(anonymize)
+    _add_compression_argument(anonymize)
     dycov_logging.get_logger("CliParsers").debug("Added 'anonymize' subparser.")

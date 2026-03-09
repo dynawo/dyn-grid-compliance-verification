@@ -634,7 +634,11 @@ def _append_generator(
 
     imax = _get_injected_current(parset, nsmap, lib)
     P, Q = _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini)
+    p_max, p_min, q_max, q_min = _get_generator_power_limits(
+        parset, nsmap, lib, gen_id, producer_ini
+    )
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
+    pcc_local = _get_generator_pcc_local(parset, nsmap, lib)
 
     generators.append(
         Gen_params(
@@ -645,9 +649,14 @@ def _append_generator(
             IMax=imax,
             par_id=par_id,
             P=P,
+            PMax=p_max,
+            PMin=p_min,
             Q=Q,
+            QMax=q_max,
+            QMin=q_min,
             VoltageDroop=droop_value,
             UseVoltageDroop=False,
+            PccLocal=pcc_local,
         )
     )
 
@@ -725,12 +734,31 @@ def _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini):
     return P, Q
 
 
+def _get_generator_power_limits(parset, nsmap, lib, gen_id, producer_ini):
+    _, P_max_str = _get_parameter(parset, nsmap, lib, "MaxActivePowerPu")
+    _, P_min_str = _get_parameter(parset, nsmap, lib, "MinActivePowerPu")
+    _, Q_max_str = _get_parameter(parset, nsmap, lib, "MaxReactivePowerPu")
+    _, Q_min_str = _get_parameter(parset, nsmap, lib, "MinReactivePowerPu")
+
+    p_max = float(P_max_str) if P_max_str is not None else 0.0
+    p_min = float(P_min_str) if P_min_str is not None else 0.0
+    q_max = float(Q_max_str) if Q_max_str is not None else 0.0
+    q_min = float(Q_min_str) if Q_min_str is not None else 0.0
+
+    return p_max, p_min, q_max, q_min
+
+
 def _get_generator_droop_and_snom(parset, nsmap, lib):
     _, VoltageDroop_str = _get_parameter(parset, nsmap, lib, "VoltageDroop")
     droop_value = float(VoltageDroop_str) if VoltageDroop_str is not None else 0.0
     _, s_nom_str = _get_parameter(parset, nsmap, lib, "NominalApparentPower")
     s_nom = float(s_nom_str) if s_nom_str is not None else 0.0
     return droop_value, s_nom
+
+
+def _get_generator_pcc_local(parset, nsmap, lib):
+    _, pcc_local = _get_parameter(parset, nsmap, lib, "PccLocal")
+    return bool(pcc_local) if pcc_local is not None else False
 
 
 def _get_line_values(
@@ -801,7 +829,8 @@ def _get_transformer_values(
         xfmr_rpu, xfmr_xpu, xfmr_gpu, xfmr_bpu = _convert_transformer_units(
             parset, nsmap, lib, s_nref
         )
-        xfmr_tapr = _get_tap_ratio(parset, nsmap, lib)
+        xfmr_tapr = _get_tap_rho(parset, nsmap, lib)
+        xfmr_tapa = _get_tap_alpha(parset, nsmap, lib)
         connected_equipment1 = _get_connected_equipment_by_terminal(
             dyd_root, transformer_id, "terminal1"
         )
@@ -818,6 +847,7 @@ def _get_transformer_values(
                 B=xfmr_bpu,
                 G=xfmr_gpu,
                 rTfo=xfmr_tapr,
+                alphaTfo=xfmr_tapa,
                 par_id=par_id,
                 terminals=(
                     Terminal(connectedEquipment=connected_equipment1),
@@ -860,9 +890,18 @@ def _convert_transformer_units(parset, nsmap, lib, s_nref):
     return xfmr_rpu, xfmr_xpu, xfmr_gpu, xfmr_bpu
 
 
-def _get_tap_ratio(parset, nsmap, lib):
+def _get_tap_rho(parset, nsmap, lib):
     _, rho_str = _get_parameter(parset, nsmap, lib, "Rho")
+    if rho_str is None:
+        return 1.0
     return float(rho_str)
+
+
+def _get_tap_alpha(parset, nsmap, lib):
+    _, alpha_str = _get_parameter(parset, nsmap, lib, "Alpha")
+    if alpha_str is None:
+        return 0.0
+    return float(alpha_str)
 
 
 def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
@@ -907,6 +946,8 @@ def _parse_load_metadata(bbmodel, dyd_root, par_root, nsmap):
 
 
 def _extract_load_parameters(parset, nsmap, lib):
+    sign_Pref, pref_value = _get_parameter(parset, nsmap, lib, "ActiveRefPu")
+    sign_Qref, qref_value = _get_parameter(parset, nsmap, lib, "ReactiveRefPu")
     sign_P, p0_value = _get_parameter(parset, nsmap, lib, "ActivePower0")
     sign_Q, q0_value = _get_parameter(parset, nsmap, lib, "ReactivePower0")
     _, u0_value = _get_parameter(parset, nsmap, lib, "Voltage0")
@@ -914,8 +955,12 @@ def _extract_load_parameters(parset, nsmap, lib):
     _, alpha_value = _get_parameter(parset, nsmap, lib, "Alpha")
     _, beta_value = _get_parameter(parset, nsmap, lib, "Beta")
 
-    aux_ppu = _resolve_value(p0_value, sign_P)
-    aux_qpu = _resolve_value(q0_value, sign_Q)
+    aux_ppu = _resolve_value(pref_value, sign_Pref)
+    if aux_ppu is None:
+        aux_ppu = _resolve_value(p0_value, sign_P)
+    aux_qpu = _resolve_value(qref_value, sign_Qref)
+    if aux_qpu is None:
+        aux_qpu = _resolve_value(q0_value, sign_Q)
     aux_upu = _resolve_value(u0_value, 1)
     aux_phpu = _resolve_value(ph0_value, 1)
 
@@ -959,23 +1004,23 @@ def _adjust_transformer(
 
 def _set_transformer_power(parset, nsmap, lib, p0pu, q0pu):
     sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower10")
-    _set_parameter(parset, nsmap, active_power0, sign, p0pu)
+    _set_parameter(parset, nsmap, active_power0, sign, p0pu, create_if_missing=True)
     sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower10")
-    _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
+    _set_parameter(parset, nsmap, reactive_power0, sign, q0pu, create_if_missing=True)
 
 
 def _set_transformer_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     sign = 1
     _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage10")
-    _set_parameter(parset, nsmap, voltage0, sign, u0pu)
+    _set_parameter(parset, nsmap, voltage0, sign, u0pu, create_if_missing=True)
     _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase10")
-    _set_parameter(parset, nsmap, phase0, sign, uphase0)
+    _set_parameter(parset, nsmap, phase0, sign, uphase0, create_if_missing=True)
 
 
 def _set_transformer_voltage(parset, nsmap, lib, u0pu):
     sign = 1
     _, voltage_setpoint = dynawo_translator.get_dynawo_variable(lib, "Voltage20")
-    _set_parameter(parset, nsmap, voltage_setpoint, sign, u0pu)
+    _set_parameter(parset, nsmap, voltage_setpoint, sign, u0pu, create_if_missing=True)
 
 
 def _adjust_generator(
@@ -1007,30 +1052,30 @@ def _adjust_generator(
 
 def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
     sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePower0Pu")
-    _set_parameter(parset, nsmap, active_power0, sign, p0pu)
+    _set_parameter(parset, nsmap, active_power0, sign, p0pu, create_if_missing=True)
     sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePower0Pu")
-    _set_parameter(parset, nsmap, reactive_power0, sign, q0pu)
+    _set_parameter(parset, nsmap, reactive_power0, sign, q0pu, create_if_missing=True)
 
 
 def _set_initial_pcc_power(parset, nsmap, lib, pdr):
     sign, active_power0 = dynawo_translator.get_dynawo_variable(lib, "ActivePowerPcc0Pu")
-    _set_parameter(parset, nsmap, active_power0, sign, pdr.P)
+    _set_parameter(parset, nsmap, active_power0, sign, pdr.P, create_if_missing=True)
     sign, reactive_power0 = dynawo_translator.get_dynawo_variable(lib, "ReactivePowerPcc0Pu")
-    _set_parameter(parset, nsmap, reactive_power0, sign, pdr.Q)
+    _set_parameter(parset, nsmap, reactive_power0, sign, pdr.Q, create_if_missing=True)
 
 
 def _set_initial_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     sign = 1
     _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "Voltage0Pu")
-    _set_parameter(parset, nsmap, voltage0, sign, u0pu)
+    _set_parameter(parset, nsmap, voltage0, sign, u0pu, create_if_missing=True)
     _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase0")
-    _set_parameter(parset, nsmap, phase0, sign, uphase0)
+    _set_parameter(parset, nsmap, phase0, sign, uphase0, create_if_missing=True)
 
 
 def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
     sign = 1
     _, voltage0 = dynawo_translator.get_dynawo_variable(lib, "VoltagePcc0Pu")
-    _set_parameter(parset, nsmap, voltage0, sign, pdr.U)
+    _set_parameter(parset, nsmap, voltage0, sign, pdr.U, create_if_missing=True)
     _, phase0 = dynawo_translator.get_dynawo_variable(lib, "PhasePcc0")
     _set_parameter(parset, nsmap, phase0, sign, pdr.UPhase)
 
@@ -1297,20 +1342,20 @@ def _adjust_load(
         return
 
     sign, active_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ActivePower0")
-    _set_parameter(parset, nsmap, active_power0, sign, load_p0pu)
+    _set_parameter(parset, nsmap, active_power0, sign, load_p0pu, create_if_missing=True)
 
     sign, reactive_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ReactivePower0")
-    _set_parameter(parset, nsmap, reactive_power0, sign, load_q0pu)
+    _set_parameter(parset, nsmap, reactive_power0, sign, load_q0pu, create_if_missing=True)
 
     sign = 1
     _, voltage0 = dynawo_translator.get_dynawo_variable(load_lib, "Voltage0")
-    _set_parameter(parset, nsmap, voltage0, sign, load_u0pu)
+    _set_parameter(parset, nsmap, voltage0, sign, load_u0pu, create_if_missing=True)
 
     _, phase0 = dynawo_translator.get_dynawo_variable(load_lib, "Phase0")
-    _set_parameter(parset, nsmap, phase0, sign, load_uphase0)
+    _set_parameter(parset, nsmap, phase0, sign, load_uphase0, create_if_missing=True)
 
 
-def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value):
+def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value, create_if_missing=False):
     # Validate parset contains exactly one element
     if not isinstance(parset, list) or len(parset) != 1 or not parameter_name:
         return
@@ -1318,6 +1363,16 @@ def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value):
     parameter = ps.xpath(f"ns:par[@name='{parameter_name}']", namespaces=nsmap)
     if parameter:
         parameter[0].set("value", str(sign * parameter_value))
+        return
+
+    if not create_if_missing:
+        return
+
+    new_par = etree.Element("par")
+    new_par.set("name", parameter_name)
+    new_par.set("type", "DOUBLE")
+    new_par.set("value", str(sign * parameter_value))
+    ps.append(new_par)
 
 
 def _get_parameter(parset, nsmap, lib, parameter_name):

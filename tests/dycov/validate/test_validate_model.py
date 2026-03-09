@@ -4,11 +4,11 @@ from tests.dycov.utils import MODEL, execute_tool
 RESOURCES = "./resources"
 
 
-def test_model_validation_iec2015_curves():
+def test_model_validation_ppm_producer_curves():
     compliance = execute_tool(
         None,
-        f"{MODEL}/Wind/IECB2015/ProducerCurves",
-        f"{MODEL}/Wind/IECB2015/ReferenceCurves",
+        MODEL / "Wind" / "IECB2015" / "ProducerCurves",
+        MODEL / "Wind" / "IECB2015" / "ReferenceCurves",
     )
     assert [
         Compliance.Compliant,  # 0
