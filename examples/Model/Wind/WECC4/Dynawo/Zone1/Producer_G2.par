@@ -3,6 +3,13 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
 
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WT4B_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="WT4B_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.01"/>
+    
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WT4B_PQFlag" value="false"/>
     <par type="BOOL" name="WT4B_PfFlag" value="false"/>
