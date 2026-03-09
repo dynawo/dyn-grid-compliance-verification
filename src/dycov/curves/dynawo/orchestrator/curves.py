@@ -698,7 +698,7 @@ class DynawoCurves(ProducerCurves):
                 ]
             elif "AVRSetpointPu" == connect_event_to:
                 pre_value = [
-                    (-pdr.U if not gen.PccLocal else -gen.terminals[0].U0)
+                    (pdr.U if not gen.PccLocal else gen.terminals[0].U0)
                     for gen in self.get_producer().generators
                 ]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
