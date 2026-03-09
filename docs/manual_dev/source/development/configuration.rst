@@ -196,11 +196,11 @@ the graphs that will be included in the *PCS* report, the list of its *Benchmark
 
     Reactive power output Q, measured at the PDR bus.
 
-* ``fig_Ire``
+* ``fig_Ip``
 
     Active current output Ire, measured at the PDR bus.
 
-* ``fig_Iim``
+* ``fig_Iq``
 
     Reactive current output Iim, measured at the PDR bus.
 

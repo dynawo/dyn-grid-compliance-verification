@@ -271,7 +271,8 @@ def handle_compile_command(
 def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     """Handles the 'anonymize' command.
 
-    Generates a new set of curves with generic variable names and optional noise.
+    Generates a new set of curves with generic variable names, optional noise,
+    and optional simplification of the curve points.
 
     Parameters
     ----------
@@ -288,6 +289,7 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
             frequency=args.frequency,
             results=Path(args.results) if args.results else None,
             curves_folder=Path(args.curves) if args.curves else None,
+            epsilon_relative=args.compression,
         )
         dycov_logging.get_logger("CommandHandlers").info("Anonymization completed successfully.")
         result_code = 0

@@ -41,6 +41,7 @@ class ParFile(FileVariables):
             "line_XPu",
             "line_RPu",
             "infiniteBus_U0Pu",
+            "bus_UNom",
             "gen_P0Pu",
             "gen_Q0Pu",
             "gen_U0Pu",
@@ -100,6 +101,7 @@ class ParFile(FileVariables):
         variables_dict["gen_U0Pu"] = rte_gen.U0
         variables_dict["gen_UPhase0"] = rte_gen.UPhase0
         variables_dict["gen_UNom"] = unom
+        variables_dict["bus_UNom"] = unom
 
         # Update event parameters
         variables_dict["event_start"] = event_params["start_time"]

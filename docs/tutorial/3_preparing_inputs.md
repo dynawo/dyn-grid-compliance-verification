@@ -139,18 +139,16 @@ Dynawo
   *examples/PPM/Dynawo/SingleAux/IEC2015*):
 
   ```ini
-  # p_{max_unite} as defined by the DTR in MW
-  p_max = 75
-  # u_nom is the nominal voltage in the PDR Bus (in kV)
+  # p_{max_unite} injection as defined by the DTR in MW 
+  p_max_injection_at_PDR = 75
+  # u_nom is the nominal voltage at the PDR bus (in kV)
   # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
-  u_nom = 225
+  u_nom_at_PDR = 225
   # s_nom is the nominal apparent power of all generating units (in MVA)
-  # This is the value that will be used for the base conversion in the PDR bus active/reactive power
-  s_nom = 100
-  # q_max is the maximum reactive power of the generator unit (in MVar)
-  q_max = 40
-  # q_min is the minimum reactive power of the generator unit (in MVar)
-  q_min = -40
+  # q_max is the maximum reactive power at the PDR bus (in MVar)
+  q_max_at_PDR = 40
+  # q_min is the minimum reactive power at the PDR bus (in MVar)
+  q_min_at_PDR = -40
   # topology
   topology = S+Aux
   ```
@@ -261,7 +259,6 @@ NetworkFrequencyPu =
 [WT_ID]_GEN_InjectedReactiveCurrent =
 [WT_ID]_GEN_AVRSetpointPu =
 [WT_ID]_GEN_MagnitudeControlledByAVRPu =
-[WT_ID]_GEN_InjectedCurrent =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:
 #    BusPDR_BUS_Voltage_a =
@@ -319,7 +316,7 @@ models to use instead of the placeholders that the tool has set are indicated:
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
-  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
+  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
   <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
@@ -338,7 +335,7 @@ In this step we are going to modify the file to leave it like the following exam
   <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
-  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
+  <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
   <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
@@ -659,18 +656,15 @@ Again the user must complete the generated INI file, giving value to all the
 parameters that the tool needs but cannot infer from the Dynawo model:
 
 ```ini
-# p_{max_unite} as defined by the DTR in MW
-p_max =
-# u_nom is the nominal voltage in the PDR Bus (in kV)
+# p_{max_unite} injection as defined by the DTR in MW 
+p_max_injection_at_PDR =
+# u_nom is the nominal voltage at the PDR bus (in kV)
 # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
 u_nom =
-# s_nom is the nominal apparent power of all generating units (in MVA)
-# This is the value that will be used for the base conversion in the PDR bus active/reactive power
-s_nom =
-# q_max is the maximum reactive power of the generator unit (in MVar)
-q_max =
-# q_min is the minimum reactive power of the generator unit (in MVar)
-q_min =
+# q_max is the maximum reactive power at the PDR bus (in MVar)
+q_max_at_PDR =
+# q_min is the minimum reactive power at the PDR bus (in MVar)
+q_min_at_PDR =
 # topology
 topology = S+Aux
 ```

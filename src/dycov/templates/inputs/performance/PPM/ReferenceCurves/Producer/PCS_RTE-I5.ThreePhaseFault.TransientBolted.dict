@@ -24,7 +24,6 @@ BusPDR_BUS_Voltage =
 [WT_ID]_GEN_AVRSetpointPu =
 [WT_ID]_GEN_InjectedActiveCurrent =
 [WT_ID]_GEN_InjectedReactiveCurrent =
-[WT_ID]_GEN_InjectedCurrent =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:
 #    BusPDR_BUS_Voltage_a =

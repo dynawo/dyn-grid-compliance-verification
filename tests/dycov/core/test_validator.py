@@ -289,7 +289,7 @@ def test_complete_producer_sets_all_attributes():
         jobs_output_dir = path / "jobs"
         event_params = {"duration_time": 2.5}
         cfg_oc_name = "cfg"
-        validator.complete_parameters(
+        validator.initialize_validation_params(
             working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC"
         )
         assert validator._time_cct == 2.5
@@ -375,7 +375,7 @@ def test_complete_producer_handles_missing_optional_producer():
         jobs_output_dir = path / "jobs2"
         event_params = {"duration_time": 1.0}
         cfg_oc_name = "cfg2"
-        validator.complete_parameters(
+        validator.initialize_validation_params(
             working_oc_dir, jobs_output_dir, event_params, cfg_oc_name, "OC"
         )
         assert validator._time_cct is None

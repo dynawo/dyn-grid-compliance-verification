@@ -8,10 +8,8 @@
 #     demiguelm@aia.es
 #
 
-import cmath
-
-from dycov.electrical.initialization_calcs import _calc_pimodel, init_calcs
-from dycov.electrical.pimodel_parameters import line_pimodel
+from dycov.electrical.initialization_calcs import init_calcs
+from dycov.electrical.pimodel_parameters import line_pimodel, xfmr_pimodel
 from dycov.model.parameters import (
     Gen_params,
     Line_params,
@@ -85,19 +83,33 @@ def _initialize_topo_s():
         G=0.0,
         B=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         terminals=(
             Terminal(connectedEquipment=None),
             Terminal(connectedEquipment=None),
         ),
     )
-    pdr = Pdr_params(U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
-    grid_line = Pimodel_params(Ytr=-12.562245359891353j, Ysh1=0.0j, Ysh2=0.0j)
+    pdr = Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    line = Line_params(
+        id=None,
+        lib=None,
+        R=0.0,
+        X=1 / 12.562245359891353,
+        G=0.0,
+        B=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
 
     print("\n\nTesting initialization calcs for Topology 'S':")
     print("\tInputs:")
-    print(f"\t\t{gen_xfmr = }")
-    print(f"\t\t{pdr = }")
-    print(f"\t\t{grid_line = }")
+    print(f"\t\t{gen_xfmr=}")
+    print(f"\t\t{pdr=}")
+    print(f"\t\t{grid_line=}")
 
     grid_init = init_calcs(
         gens=[gen],
@@ -112,8 +124,8 @@ def _initialize_topo_s():
     )
 
     print("\tOutputs:")
-    print(f"\t\t{grid_init = }")
-    print(f"\t\t{gen.terminals[0] = }")
+    print(f"\t\t{grid_init=}")
+    print(f"\t\t{gen.terminals[0]=}")
 
     assert _is_equal(grid_init.U0, 1.1009193919758402)
     assert _is_equal(grid_init.UPhase0, 0.0)
@@ -148,6 +160,7 @@ def _initialize_topo_s_i():
         G=0.0,
         B=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         terminals=(
             Terminal(connectedEquipment=None),
             Terminal(connectedEquipment=None),
@@ -166,15 +179,28 @@ def _initialize_topo_s_i():
             Terminal(connectedEquipment=None),
         ),
     )
-    pdr = Pdr_params(U=1.04444444444444444444, UPhase=0.0, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
-    grid_line = Pimodel_params(Ytr=-12.562245359891353j, Ysh1=0.0j, Ysh2=0.0j)
+    pdr = Pdr_params(U=1.04444444444444444444, S=-4.567 + 0.0j, P=-4.567, Q=0.0)
+    line = Line_params(
+        id=None,
+        lib=None,
+        R=0.0,
+        X=1 / 12.562245359891353,
+        G=0.0,
+        B=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connectedEquipment=None),
+            Terminal(connectedEquipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
 
     print("\n\nTesting initialization calcs for Topology 'S+i':")
     print("\tInputs:")
-    print(f"\t\t{gen_xfmr = }")
-    print(f"\t\t{int_line = }")
-    print(f"\t\t{pdr = }")
-    print(f"\t\t{grid_line = }")
+    print(f"\t\t{gen_xfmr=}")
+    print(f"\t\t{int_line=}")
+    print(f"\t\t{pdr=}")
+    print(f"\t\t{grid_line=}")
 
     grid_init = init_calcs(
         gens=[gen],
@@ -189,8 +215,8 @@ def _initialize_topo_s_i():
     )
 
     print("\tOutputs:")
-    print(f"\t\t{grid_init = }")
-    print(f"\t\t{gen.terminals[0] = }")
+    print(f"\t\t{grid_init=}")
+    print(f"\t\t{gen.terminals[0]=}")
 
     assert _is_equal(grid_init.U0, 1.1009193919758402)
     assert _is_equal(grid_init.UPhase0, 0.0)

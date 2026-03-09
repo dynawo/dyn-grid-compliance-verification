@@ -203,8 +203,6 @@ Currently supported models:
 * Transformers:
     * TransformerFixedRatio
         Two winding transformer with a fixed ratio
-    * TransformerPhaseTapChanger
-        Two winding transformer with a fixed ratio and variable phase
     * TransformerRatioTapChanger
         Two winding transformer with a fixed phase and variable ratio
 
@@ -373,7 +371,7 @@ tool will check that the edited file is correct, notifying the user if there are
               <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
               <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
               <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
-              <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerPhaseTapChanger', 'TransformerRatioTapChanger']-->
+              <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
               <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
               <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
             </dyn:dynamicModelsArchitecture>
@@ -414,18 +412,15 @@ the user if there are any errors in it.
 
 .. code-block:: console
 
-            # p_{max_unite} as defined by the DTR in MW
-            p_max =
-            # u_nom is the nominal voltage in the PDR Bus (in kV)
+            # p_{max_unite} injection as defined by the DTR in MW 
+            p_max_injection_at_PDR =
+            # u_nom is the nominal voltage at the PDR bus (in kV)
             # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
             u_nom =
-            # s_nom is the nominal apparent power of all generating units (in MVA)
-            # This is the value that will be used for the base conversion in the PDR bus active/reactive power
-            s_nom =
-            # q_max is the maximum reactive power of the generator unit (in MVar)
-            q_max =
-            # q_min is the minimum reactive power of the generator unit (in MVar)
-            q_min =
+            # q_max is the maximum reactive power at the PDR bus (in MVar)
+            q_max_at_PDR =
+            # q_min is the minimum reactive power at the PDR bus (in MVar)
+            q_min_at_PDR =
             # topology
             topology = S+Aux
 

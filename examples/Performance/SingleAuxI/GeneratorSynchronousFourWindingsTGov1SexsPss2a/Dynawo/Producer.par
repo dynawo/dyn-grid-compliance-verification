@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Synchronous machine external parameters -->
+  <!-- Unit parameters -->
   <set id="Synch_Gen">
     <par type="INT" name="generator_ExcitationPu" value="1"/>
     <par type="BOOL" name="generator_UseApproximation" value="true"/>
@@ -34,10 +34,6 @@
     <par type="DOUBLE" name="generator_UBaseLV" value="21"/>
     <par type="DOUBLE" name="generator_RTfPu" value="0"/>
     <par type="DOUBLE" name="generator_XTfPu" value="0"/>
-    <par type="DOUBLE" name="generator_P0Pu" value="-4.567"/>
-    <par type="DOUBLE" name="generator_Q0Pu" value="-0.599"/>
-    <par type="DOUBLE" name="generator_U0Pu" value="1.0086"/>
-    <par type="DOUBLE" name="generator_UPhase0" value="0.4"/>
     <par type="DOUBLE" name="governor_R" value="0.05"/>
     <par type="DOUBLE" name="governor_t1" value="0.5"/>
     <par type="DOUBLE" name="governor_t2" value="3"/>
@@ -100,10 +96,8 @@
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
   <set id="Aux_Load">
-    <par type="DOUBLE" name="load_P0Pu" value="0.1"/>
-    <par type="DOUBLE" name="load_Q0Pu" value="0.05"/>
-    <par type="DOUBLE" name="load_U0Pu" value="1.0086"/>
-    <par type="DOUBLE" name="load_UPhase0" value="0.4334"/>
+    <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
+    <par type="DOUBLE" name="load_QRefPu" value="0.005"/>
     <par type="DOUBLE" name="load_alpha" value="1.0"/>
     <par type="DOUBLE" name="load_beta" value="1.0"/>
   </set>

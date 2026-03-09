@@ -72,6 +72,7 @@ def make_transformers(topology="S"):
                 B=0.0,
                 G=0.0,
                 rTfo=0.9574,
+                alphaTfo=0.0,
                 par_id="",
                 terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
             )
@@ -86,6 +87,7 @@ def make_transformers(topology="S"):
                 B=0.0,
                 G=0.0,
                 rTfo=0.9574,
+                alphaTfo=0.0,
                 par_id="",
                 terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
             ),
@@ -97,6 +99,7 @@ def make_transformers(topology="S"):
                 B=0.0,
                 G=0.0,
                 rTfo=0.9574,
+                alphaTfo=0.0,
                 par_id="",
                 terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
             ),
@@ -112,6 +115,7 @@ def make_main_transformer():
         B=0.0,
         G=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         par_id="",
         terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
     )
@@ -141,6 +145,7 @@ def make_auxiliary_transformer():
         B=0.0,
         G=0.0,
         rTfo=0.9574,
+        alphaTfo=0.0,
         par_id="",
         terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
     )

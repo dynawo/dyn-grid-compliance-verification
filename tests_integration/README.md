@@ -75,8 +75,8 @@ Running with **no options** will:
 ### A) Validation — `dycov validate`
 
 *   **IEC Wind**: `IECA2015`, `IECA2020`, `IECA2020WithProtections`, `IECB2015`, `IECB2020`, `IECB2020WithProtections`
-*   **WECC Wind**: `WECCA`, `WECCB`, `WECC`
-*   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`
+*   **WECC Wind**: `WECC4A1`, `WECC4A2`, `WECC4B`, `WECC4`
+*   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`, `WECCVoltageSource3`, `WECCVoltageSource4`
 *   **WECC BESS**: `WECC`
 *   Paths per model:
     *   Input: `${examples_path}/Model/<Family>/<Model>/Dynawo`
@@ -87,7 +87,7 @@ Running with **no options** will:
 ### B) Performance — `dycov performance`
 
 *   **Topologies**: `Single`, `SingleAux`, `SingleAuxI`, `SingleI`
-*   **Models**: `GeneratorSynchronousFourWindingsTGov1SexsPss2a`, `IECB2015`, `IECB2020`, `WECCB`
+*   **Models**: `GeneratorSynchronousFourWindingsTGov1SexsPss2a`, `IECB2015`, `IECB2020`, `WECC4B`
 *   Paths per (topology, model):
     *   Input: `${examples_path}/Performance/<Topology>/<Model>/Dynawo`
     *   Output: `${results_path}/Performance/<Topology>/<Model>`

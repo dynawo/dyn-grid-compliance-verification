@@ -3,7 +3,7 @@
   <!-- Benchmark Case -->
   <dyn:blackBoxModel id="InfiniteBus" lib="InfiniteBus" parFile="TSOModel.par" parId="InfiniteBus"/>
   <dyn:blackBoxModel id="Line" lib="Line" parFile="TSOModel.par" parId="Line"/>
-  <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
+  <dyn:blackBoxModel id="BusPDR" lib="Bus" parFile="TSOModel.par" parId="PDR"/>
   <dyn:blackBoxModel id="VariableImpedantFault" lib="VariableImpedantFault" parFile="TSOModel.par" parId="VariableImpedantFault"/>
 
   <!-- "Measurements" is a pseudo-model acting as an ammeter (allows extracting measures of currents and PQ flows traversing it). 
