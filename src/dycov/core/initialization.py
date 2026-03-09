@@ -14,11 +14,9 @@ from importlib.metadata import version
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.prepare_tool import precompile
+from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
-
-LOGGER = dycov_logging.get_logger("Initialization")
+from dycov.logging.logging import dycov_logging, enable_warning_capture
 
 
 class DycovInitializer:
@@ -49,11 +47,20 @@ class DycovInitializer:
         self._setup_user_config(tool_path)
         self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
-        LOGGER.info(f"Starting DyCoV - version {version('dycov')}")
+        dycov_logging.get_logger("Initialization").info(
+            f"Starting DyCoV - version {version('dycov')}"
+        )
 
-        # Precompile Modelica models if a Dynawo launcher is provided.
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as
+        the ability to compile them from within it.
+        Precompile Modelica models if a Dynawo launcher is provided.
+
+        Example:
         if launcher_dwo:
             self._prepare_dynawo_models(launcher_dwo)
+        """
 
     def _setup_user_config(self, tool_path: Path):
         """
@@ -94,7 +101,14 @@ class DycovInitializer:
         Sets up the template directories and user model dictionaries.
         """
         self._configure_templates(tool_path)
+
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as
+        the ability to compile them from within it.
+
         self._configure_user_models()
+        """
 
     def _initialize_logger(self, debug: bool):
         """
@@ -105,16 +119,16 @@ class DycovInitializer:
         if not log_dir.is_dir():
             manage_files.create_dir(log_dir)
 
-        file_log_level = config.get_value("Global", "file_log_level")
+        file_log_level = config.get_int("Global", "file_log_level", 20)
         file_formatter = config.get_value("Global", "file_formatter")
         file_max_bytes = config.get_int("Global", "file_log_max_bytes", 50 * 1024 * 1024)
 
-        console_log_level = config.get_value("Global", "console_log_level")
+        console_log_level = config.get_int("Global", "console_log_level", 20)
         console_formatter = config.get_value("Global", "console_formatter")
 
         if debug:
-            file_log_level = "DEBUG"
-            console_log_level = "DEBUG"
+            file_log_level = 10  # DEBUG level
+            console_log_level = 10  # DEBUG level
 
         dycov_logging.init_handlers(
             file_log_level,
@@ -124,6 +138,7 @@ class DycovInitializer:
             console_formatter,
             log_dir,
         )
+        enable_warning_capture()
 
     def _template_cmd_config(self, template_path: Path):
         """
@@ -165,17 +180,17 @@ class DycovInitializer:
             self._copy_dummy_samples(tool_path, template)
 
         # Copy top-level READMEs and report-specific assets
-        manage_files.copy_files(tool_path / "templates" / "README.md", config_templates_dir)
+        manage_files.copy_from_path(tool_path / "templates" / "README.md", config_templates_dir)
         for template in templates_to_configure:
-            manage_files.copy_files(
+            manage_files.copy_from_path(
                 tool_path / "templates" / template / "README.md",
                 config_templates_dir / template,
             )
-        manage_files.copy_files(
+        manage_files.copy_from_path(
             tool_path / "templates" / "reports" / "TSO_logo.pdf",
             config_templates_dir / "reports",
         )
-        manage_files.copy_files(
+        manage_files.copy_from_path(
             tool_path / "templates" / "reports" / "fig_placeholder.pdf",
             config_templates_dir / "reports",
         )
@@ -184,24 +199,37 @@ class DycovInitializer:
         """
         Copies dummy sample files from the tool's templates to the user's configuration directory.
         """
-        categories = ["performance", "model"]
+        categories = ["performance", "model", "gfm"]
         models = ["SM", "PPM", "BESS"]
         for category in categories:
-            for model in models:
-                src = tool_path / "templates" / source / category / model / ".DummySample"
-                dest = (
-                    config.get_config_dir()
-                    / "templates"
-                    / source
-                    / category
-                    / model
-                    / ".DummySample"
-                )
+            if category == "gfm":
+                src = tool_path / "templates" / source / category / ".DummySample"
+                dest = config.get_config_dir() / "templates" / source / category / ".DummySample"
                 if src.exists():
                     try:
-                        manage_files.copy_path(src, dest, dirs_exist_ok=True)
+                        manage_files.copy_directory(src, dest, dirs_exist_ok=True)
                     except Exception as e:
-                        LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
+                        dycov_logging.get_logger("Initialization").error(
+                            f"Failed to copy {src} to {dest}: {e}"
+                        )
+            else:
+                for model in models:
+                    src = tool_path / "templates" / source / category / model / ".DummySample"
+                    dest = (
+                        config.get_config_dir()
+                        / "templates"
+                        / source
+                        / category
+                        / model
+                        / ".DummySample"
+                    )
+                    if src.exists():
+                        try:
+                            manage_files.copy_directory(src, dest, dirs_exist_ok=True)
+                        except Exception as e:
+                            dycov_logging.get_logger("Initialization").error(
+                                f"Failed to copy {src} to {dest}: {e}"
+                            )
 
     def _configure_user_models(self):
         """
@@ -308,7 +336,7 @@ class DycovInitializer:
         Logs warnings for deprecated parameters found in the user's configuration file.
         """
         for parameter in deprecated_parameters:
-            LOGGER.warning(
+            dycov_logging.get_logger("Initialization").warning(
                 f"Deprecated in {file_name}: section {parameter['section']} "
                 f"key {parameter['key']} value {parameter['value']}"
             )

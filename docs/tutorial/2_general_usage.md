@@ -16,14 +16,14 @@ Developed by Grupo AIA
 1. [First run](#first-run)
    1. [Assumptions](#assumptions)
    2. [Executables](#executables)
-   3. [First test](#firsts-test)
+   3. [First test](#first-test)
 1. [Results directory](#results-directory)
    1. [The structure of results](#the-structure-of-results)
    2. [The structure of a *PCS* output](#the-structure-of-a-pcs-output)
    3. [The structure of results when running with in debug mode (-d)](#the-structure-of-results-when-running-with-in-debug-mode--d)
 3. [Configuration](#configuration)
    1. [The structure of the `~/.config/dycov` dir](#the-structure-of-the-configdycov-dir)
-4. [Trouble Shooting](#trouble-shooting)
+4. [Troubleshooting](#troubleshooting)
    1. [Error compiling a dynamic model](#error-compiling-a-dynamic-model)
    2. [Failed Simulation](#failed-simulation)
 5. [Extra](#extra)
@@ -39,32 +39,24 @@ Developed by Grupo AIA
 
 For the first run of the tool we will assume that:
 
-* Dynawo v1.7.x (Release) already installed
-  ```
-  user@dynawo:~$ which dynawo.sh
-  /opt/dynawo/dynawo.sh
-  user@dynawo:~$ dynawo.sh version
+* Dynawo v1.7.x (Release) already installed (either globally or via the DyCoV installer)
+  ```bash
+  user@dynawo:~$ dynawo.sh --version
   1.7.0 (rev:master-311b916)
   ``` 
 
-* DyCoV (DyCoV) Tool already installed
-  ```
-  user@dynawo:~/work/repo_dycov$ git status
-  On branch main
-  Your branch is up to date with 'origin/main'.
+* DyCoV (DyCoV) Tool already installed.
 
-  nothing to commit, working tree clean
-  ``` 
-
-* Python venv activated
-  ```
-  user@dynawo:~/work/repo_dycov$ source dycov_venv/bin/activate
-  (dycov_venv) user@dynawo:~/work/repo_dycov$
+* DyCoV Environment activated.
+  If you installed via the Linux script, use the generated activation script:
+  ```bash
+  user@dynawo:~/work$ source dycov/activate_dycov
+  (dycov_venv) user@dynawo:~/work$
   ``` 
 
 * Fresh start, there is no `~/.config/dycov` created yet
-  ```
-  user@dynawo:~/work/repo_dycov$ ls -al ~/.config/dycov
+  ```bash
+  user@dynawo:~/work$ ls -al ~/.config/dycov
   ls: cannot access '/home/user/.config/dycov': No such file or directory
   ``` 
 
@@ -79,8 +71,8 @@ In this mode the tool runs a set of *Model Validation tests*. Some of these test
 resemble those of the *PCS* in the provisional operation notification (ION) stage 
 in the RTE's DTR, while some are different.
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov validate -h
+```bash
+(dycov_venv) user@dynawo:~/work$ dycov validate -h
 usage: dycov validate [-h] [-d] [-l LAUNCHER_DWO]
                      [-m PRODUCER_MODEL | -c PRODUCER_CURVES] [-p PCS]
                      [-o RESULTS_DIR] [-od]
@@ -114,8 +106,8 @@ In this mode the tool runs an execution pipeline consisting in a set of pre-defi
 tests, those of the *PCS* in the provisional operation notification (ION) stage in 
 the RTE's DTR.
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov performance -h
+```bash
+(dycov_venv) user@dynawo:~/work$ dycov performance -h
 usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL]
                     [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
@@ -143,14 +135,16 @@ the curves are used only for showing them on the graphs, along the simulated
 curves). Therefore, you must provide either a *PRODUCER_MODEL* or a
 *PRODUCER_CURVE* directory, or both.
 
-## Firsts test
+## First test
 
 The easiest way to start using the tool is to copy one or more of the available examples.
-``` 
-(dycov_venv) user@dynawo:~$ mkdir work/MyTests/
-(dycov_venv) user@dynawo:~$ cd work
-(dycov_venv) user@dynawo:~/work$ cp -a ~/work/repo_dycov/examples/SM/Dynawo/* MyTests
-(dycov_venv) user@dynawo:~/work$ tree MyTests
+(Assuming you are in the directory where `dycov` was installed, usually `$PWD/dycov`):
+
+```bash
+(dycov_venv) user@dynawo:~/dycov$ mkdir work/MyTests/
+(dycov_venv) user@dynawo:~/dycov$ cd work
+(dycov_venv) user@dynawo:~/dycov/work$ cp -a ../examples/SM/Dynawo/* MyTests
+(dycov_venv) user@dynawo:~/dycov/work$ tree MyTests
 MyTests
 ├── Single
 │   ├── Producer.dyd
@@ -173,8 +167,8 @@ MyTests
 Each entry point to the tool has parameters to customize its execution, below 
 are the parameters for the `dycov performance` executable:
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov performance -h
+```bash
+(dycov_venv) user@dynawo:~/dycov/work$ dycov performance -h
 usage: dycov performance [-h] [-d] [-l LAUNCHER_DWO] [-m PRODUCER_MODEL] [-c PRODUCER_CURVES] [-p PCS] [-o RESULTS_DIR] [-od]
 
 options:
@@ -225,8 +219,7 @@ options:
 
 * **-o, --results_dir**: 
   This parameter allows the user to set the path where the tool will save the 
-  execution results. If no specific path is declared for the results, a new *Results* 
-  directory will be created in the producer model path, or in the path of the producer
+  execution results. If no specific path is declared for the results, a new *Results* directory will be created in the producer model path, or in the path of the producer
   curves if there is no producer model, to save the results of the execution.
 
 * **-od, --only_dtr**: 
@@ -239,53 +232,7 @@ parameters described, while for the `dycov validate` executable the parameters
 they become positional arguments.
 
 
-
-The parameters of the executable `dycov compile` are:
-
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov compile -h
-usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
-
-Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $dycov_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
-                        XML file describing a custom Modelica model
-  -f, --force           force the recompilation of all Modelica models (the user's and the tool's own)
-```
-
-* **-m, --dynawo_model**: 
-  This parameter is used to force the compilation of a specific Dynawo dynamic model, 
-  all other dynamic models will be ignored whether they are previously compiled or not.
-
-* **-f, --force**: 
-  This parameter forces the compilation of all dynamic models, both the dynamic models 
-  created by the user in the relevant path, and the dynamic models of the tool. This 
-  configuration parameter is exclusive, so if it is used, the rest of the parameters 
-  must be ignored.
-
-* **-h, --help**: 
-  Displays the help message with all the configuration parameters available for the 
-  selected command.
-
-* **-l, --launcher_dwo**: 
-  This parameter allows the user to select the Dynawo executable that will be used to 
-  simulate the producer model, if given. If the parameter is ignored, the executable 
-  configured by default in the user's PATH will be used. 
-
-* **-d, --debug**: 
-  This parameter increases the information offered to the user about the execution 
-  of the command (it will be described in more detail later).
-
-
 And run one of the copied examples:
-* The first-time pre-compilation is automatically launched 
-  (6 assembled models used internally by the tool).
-* You can also re-compile at any time using `compile_dynawo_models`.
 * The console displays the current state of the tool execution in messages.
 * Once the execution is finished, a final report is automatically 
   opened with the summary of the execution and all the individual reports 
@@ -295,12 +242,8 @@ Note: console output also goes into the logfile, *dycov.log*.
 
 An example of the console output:
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI
-2024-02-01 11:52:16,161 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SetPointOmega.xml
-2024-02-01 11:52:16,164 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SetPointOmega.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
-2024-02-01 11:55:11,153 |            DyCoV.Dynawo |    INFO |            dynawo.py:117 | Precompile SynchronousMachineI8SM.xml
-2024-02-01 11:55:11,154 |            DyCoV.Dynawo |    INFO |            dynawo.py:152 | cd /home/user/work/repo_dycov/src/dycov/model_lib/modelica_models && /opt/dynawo/dynawo.sh jobs --generate-preassembled --model-list SynchronousMachineI8SM.xml --non-recursive-modelica-models-dir . --output-dir /home/user/.config/dycov/ddb
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ dycov performance -m SingleAuxI
 2024-02-01 11:56:27,637 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
 2024-02-01 11:56:40,688 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 2024-02-01 11:56:40,744 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
@@ -363,7 +306,7 @@ the results are saved.
 The *Results* directory is structured in:
 
 ```
-(dycov_venv) user@dynawo:~/work/MyTests$ tree Results -L 3
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ tree Results -L 3
 Results
 ├── PCS_RTE-I10
 │   └── Islanding
@@ -418,7 +361,7 @@ execute each *operating condition* individually with the Dynawo simulator.
 The *operating condition* directory is structured in:
 
 ```
-(dycov_venv) user@dynawo:~/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
+(dycov_venv) user@dynawo:~/dycov/work/MyTests/Results$ tree PCS_RTE-I10/Islanding/DeltaP10DeltaQ4 -L 1
 PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
 ├── curves_calculated.csv
 ├── curves_reference.csv
@@ -453,8 +396,7 @@ PCS_RTE-I10/Islanding/DeltaP10DeltaQ4
   Directory with the output generated by the dynamic simulation of the model 
   with Dynawo.
 
-By accessing the directory with the results of an *operating condition* 
-it is possible to experiment by modifying one or more parameters of the 
+By accessing the directory with the results of an *operating condition* it is possible to experiment by modifying one or more parameters of the 
 producer model, and obtain new curves with the Dynawo simulator. In the 
 following example, the H parameter ("Kinetic constant = kinetic energy 
 / rated power") of the producer's Synchronous Machine found in the 
@@ -465,10 +407,6 @@ by the user of the Dynawo simulator; future executions of the tool will
 not be affected by these changes.
 
 ```
-    <!-- Original value -->
-    <!-- par type="DOUBLE" name="generator_H" value="4.5"/ -->
-
-    <!-- Testing value -->
     <par type="DOUBLE" name="generator_H" value="6.5"/>
 ```
 
@@ -482,8 +420,8 @@ Synchronous Machine, and to avoid losing the results of the first
 verification, an alternative route is indicated for the results of the 
 new execution.
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5
 2024-02-05 15:13:48,978 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I4.ThreePhaseFault, OPER. COND.: TransientBolted
 2024-02-05 15:14:04,376 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 2024-02-05 15:14:04,425 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
@@ -505,8 +443,8 @@ new execution.
 
 Or, if desired, it is possible to validate a *PCS* only
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5 -p PCS_RTE-I10
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ dycov performance -m SingleAuxI -o SingleAuxI/Results_H6_5 -p PCS_RTE-I10
 2024-02-05 15:26:10,407 | DyCoV.Operating Condition |    INFO | operating_condition.py:585 | RUNNING BENCHMARK: PCS_RTE-I10.Islanding, OPER. COND.: DeltaP10DeltaQ4
 2024-02-05 15:26:16,310 |          DyCoV.PDFLatex |    INFO |            report.py:180 | PDF Done
 ```
@@ -522,8 +460,8 @@ file.
 
 The changes that apply to the *PCS* output directory:
 
-``` 
-(dycov_venv) user@dynawo:~/work/MyTests$ tree Results_debug/PCS_RTE-I4 -L 3
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/MyTests$ tree Results_debug/PCS_RTE-I4 -L 3
 Results_debug/PCS_RTE-I4
 └── ThreePhaseFault
     └── TransientBolted
@@ -545,8 +483,7 @@ Results_debug/PCS_RTE-I4
 * In PCS that calculate values using a bisection search algorithm, 
 * 2 new directories are maintained, each of the new directories 
 * containing the complete Dynawo model used in the search, as well 
-* as the output of the Dynawo execution. The *bisection_last_success* 
-* directory corresponds to the last simulation that completed 
+* as the output of the Dynawo execution. The *bisection_last_success* * directory corresponds to the last simulation that completed 
 * successfully, while the *bisection_last_failure* directory 
 * corresponds to the last simulation that failed.
 
@@ -557,8 +494,7 @@ Results_debug/PCS_RTE-I4
 
 A directory is created after the first run of the tool, it is designed 
 both to allow the user to modify the tool configuration 
-(`~/.config/dycov/config.ini`) and to expand the dynamic models available 
-for simulation with Dynawo (`~/.config/dycov/user_models`). 
+(`~/.config/dycov/config.ini`). 
 
 The `~/.config/dycov/` directory is structured in:
 
@@ -568,46 +504,30 @@ dycov$
 ├── config.ini
 ├── config.ini_ADVANCED
 ├── config.ini_BASIC
-├── ddb
-│   ├── compile.log
-│   ├── dynawo.version
-│   ├── SPOmega
-│   ├── SPOmega.desc.xml
-│   ├── SPOmega.extvar
-│   ├── SPOmega.mo
-│   ├── SPOmega.so
-│   ├── SynchronousMachineI8SM
-│   ├── SynchronousMachineI8SM.desc.xml
-│   ├── SynchronousMachineI8SM.extvar
-│   ├── SynchronousMachineI8SM_INIT.mo
-│   ├── SynchronousMachineI8SM.mo
-│   └── SynchronousMachineI8SM.so
 ├── log
 │   └── dycov.log
-├── templates
-│   ├── PCS
-│   │   ├── model
-│   │   │   ├── BESS
-│   │   │   └── PPM
-│   │   ├── performance
-│   │   │   ├── BESS
-│   │   │   ├── PPM
-│   │   │   └── SM
-│   │   └── README.md
-│   ├── README.md
-│   └── reports
-│       ├── fig_placeholder.pdf
-│       ├── model
-│       │   ├── BESS
-│       │   └── PPM
-│       ├── performance
-│       │   ├── BESS
-│       │   ├── PPM
-│       │   └── SM
-│       ├── README.md
-│       └── TSO_logo.pdf
-└── user_models
-    └── dictionary
+└── templates
+    ├── PCS
+    │   ├── model
+    │   │   ├── BESS
+    │   │   └── PPM
+    │   ├── performance
+    │   │   ├── BESS
+    │   │   ├── PPM
+    │   │   └── SM
+    │   └── README.md
+    ├── README.md
+    └── reports
+        ├── fig_placeholder.pdf
+        ├── model
+        │   ├── BESS
+        │   └── PPM
+        ├── performance
+        │   ├── BESS
+        │   ├── PPM
+        │   ├── SM
+        │   └── README.md
+        └── TSO_logo.pdf
 ```
 
 * **config.ini**: 
@@ -621,10 +541,6 @@ dycov$
   rename the config.ini_ADVANCED file to config.ini instead. The application 
   will then load its configuration from the config.ini file according to the 
   chosen settings.
-
-* **ddb**: 
-  In this path are the dynamic models compiled from the tool, the user's and 
-  the tool's own.
 
 * **templates**:
   In this path are the user *PCSs* to validate by the tool.
@@ -640,95 +556,8 @@ dycov$
   Contains the LaTeX templates for the reports corresponding to each *PCS* of the
   user. The templating system is Jinja.
 
-* **user_models**: 
-  In this path are the user dynamic models to be compiled from the tool.
 
-* **user_models/dictionary**: 
-  Dynawo is a tool that makes a large number of dynamic models available 
-  to the user to represent an electrical network model, where each dynamic 
-  model has its own parameters and nomenclature. This causes the tool to 
-  need to have a mechanism that allows the translation of its own variables 
-  into the corresponding parameters of the selected dynamic model. In this 
-  way the user can inform the tool of the variable-parameter relationships 
-  for their dynamic models. The variable-parameter relationship is expected 
-  as an INI file with the following structure:
-  * **[Caption]**: 
-    As the first line, the name of the dynamic model is reported in square 
-    brackets.
-  * **key = value**: 
-    Next, a line is declared for each model variable. This line relates a 
-    tool variable such as *key* with a dynamic model parameter such as *value*.
-
-Example of the content of an INI file:
-```
-[Model1]
-ActivePower = model1_activepower
-ReactivePower = model1_reactivepower
-...
-
-[Model2]
-ActivePower = model2_activepower
-ReactivePower = model2_reactivepower
-...
-```
-
-
-# Trouble shooting
-
-## Error compiling a dynamic model
-
-The tool allows the user to create new dynamic models to use in Dynawo simulation. 
-The procedure for using your own dynamic models is as follows:
-
-* Locate the files that define the dynamic model in the **user_models** directory 
-within the user configuration directory
-
-```
-dycov$
-├── config.ini
-...
-└── user_models
-    ├── NewDynamicModel.xml
-    ├── NewDynamicModel.mo
-    └── dictionary
-```
-
-* Run the `dycov compile` command to compile the dynamic models
-
-```
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov compile
-2025-01-23 12:33:51,929 |                    DyCoV.Dynawo |       INFO |                 dynawo.py:   51 | Precompile NewDynamicModel.xml
-2025-01-23 12:33:51,929 |                    DyCoV.Dynawo |       INFO |                 dynawo.py:   88 | cd /home/dycov/dycov_repo/src/dycov/model_lib/modelica_models && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --generate-preassembled --model-list NewDynamicModel.xml --non-recursive-modelica-models-dir . --output-dir /home/dycov/.config/dycov/ddb && cd /home/dycov/.config/dycov/ddb && /opt/Dynawo_v1.7.0_20241210/dynawo/dynawo.sh jobs --dump-model --model-file NewDynamicModel.so --output-file NewDynamicModel.desc.xml
-2025-01-23 12:34:50,475 |                    DyCoV.Dynawo |       INFO |                 dynawo.py:  143 | Compilation of NewDynamicModel succeeded
-```
-
-If the tool finishes successfully, the new compiled model should appear in the ddb directory 
-within the user configuration directory:
-
-```
-dycov$
-├── config.ini
-...
-├── ddb
-│   ├── NewDynamicModel.desc.xml
-│   ├── NewDynamicModel.extvar
-│   ├── NewDynamicModel.mo
-│   ├── NewDynamicModel.so
-...
-```
-
-If, on the other hand, an error has occurred when compiling the dynamic model, the tool saves 
-all the output generated by the Dynawo simulator in a log file. The file is called 
-**compile.log** and is located in the same directory as the compiled models.
-
-```
-dycov$
-├── config.ini
-...
-├── ddb
-│   ├── compile.log
-...
-```
+# Troubleshooting
 
 ## Failed Simulation
 
@@ -739,8 +568,7 @@ one of these problems has occurred:
 
 * Dynawo has exceeded the maximum timeout established in the simulation of the model
 
-The user can check the reason for the error in the *dycov.log* file left by the tool in the **log** 
-directory inside the user configuration directory.
+The user can check the reason for the error in the *dycov.log* file left by the tool in the **log** directory inside the user configuration directory.
 
 ```
 dycov$
@@ -778,8 +606,8 @@ It’s an interactive helper tool to aid the user in constructing the
 DYD/PAR/INI files for input to the tool. For now, there is the generate 
 option:
 
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov generate -h
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/repo_dycov$ dycov generate -h
 usage: dycov generate [-h] [-d] [-l LAUNCHER_DWO] -o RESULTS_DIR -t {S,S+i,S+Aux,S+Aux+i,M,M+i,M+Aux,M+Aux+i} -v {performance_SM,performance_PPM,model}
 
 options:
@@ -795,34 +623,13 @@ options:
                         enter the validation type
 ```
 
-## Model compilation of custom Dynawo assembled models
-
-Note: compilation of internally-defined assembled models is invoked automatically
-
-``` 
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov compile -h
-usage: dycov compile [-h] [-d] [-l LAUNCHER_DWO] [-m DYNAWO_MODEL] [-f]
-
-Use this command to compile a new Modelica model that you may want to use in your DYD files. If invoked with no model, it makes sure that *all* currently defined Modelica models (the tool's own and the user's, which live under $dycov_CONFIG/user_models/) are compiled. Therefore it should be run upon first install.
-
-options:
-  -h, --help            show this help message and exit
-  -d, --debug           more debug messages
-  -l LAUNCHER_DWO, --launcher_dwo LAUNCHER_DWO
-                        enter the path to the Dynawo launcher
-  -m DYNAWO_MODEL, --dynawo_model DYNAWO_MODEL
-                        XML file describing a custom Modelica model
-  -f, --force           force the recompilation of all Modelica models (the
-                        user's and the tool's own)
-```
-
 ## Curves Anonymizer
 
 In this mode the tool generates a set of curves with generic names from 
 the input curves to which a noise signal is added.
 
-```
-(dycov_venv) user@dynawo:~/work/repo_dycov$ dycov anonymize -h
+```bash
+(dycov_venv) user@dynawo:~/dycov/work/repo_dycov$ dycov anonymize -h
 usage: dycov anonymize [-h] [-d] [-c PRODUCER_CURVES] [-o RESULTS_DIR]
 	                      [-n NOISESTD] [-f FREQUENCY]
 	
@@ -840,4 +647,3 @@ optional arguments:
   -f FREQUENCY, --frequency FREQUENCY
                         enter the frequency used for the lowpass filter
 ```
-

@@ -12,7 +12,7 @@ This module provides functions for validating Dynawo model topologies based on
 expected and actual components and their connections.
 """
 
-from typing import List
+from typing import List, Optional
 
 from dycov.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params
 
@@ -36,10 +36,10 @@ def _check_topology_components(
     topology_name: str,
     generators: List[Gen_params],
     transformers: List[Xfmr_params],
-    auxiliary_load: Load_params,
-    auxiliary_transformer: Xfmr_params,
-    transformer: Xfmr_params,
-    internal_line: Line_params,
+    auxiliary_load: Optional[Load_params],
+    auxiliary_transformer: Optional[Xfmr_params],
+    main_transformer: Optional[Xfmr_params],
+    internal_line: Optional[Line_params],
     expected_gen_count: str,  # "single" or "multiple"
     expected_xfmr_count: str,  # "single" or "multiple"
     expect_aux_load: bool,
@@ -53,126 +53,134 @@ def _check_topology_components(
     internal_line_bus_connection: str,
     # "transformer and the PDR bus" or "transformer with id 'transformer' and the PDR bus"
 ) -> None:
-    expected_elements = True
-    unexpected_elements = False
-    valid_elements = True
+    """
+    Validate the topology configuration by checking expected components, their count,
+    and connections.
+
+    Raises:
+        ValueError: If the topology does not meet expected requirements.
+    """
+
     error_messages = []
 
-    # Check expected generator count
-    if expected_gen_count == "single":
-        if len(generators) != 1:
-            expected_elements = False
-            error_messages.append(_GENERATOR_ERROR_MESSAGE)
-        else:
-            # Validate the single generator based on topology name (S for Synch_Gen)
-            valid_elements = valid_elements and _is_valid_generator(
-                generators[0].id, add_sm=(topology_name[0] == "S")
+    def add_error(msg: str):
+        error_messages.append(f"  - {msg}")
+
+    # Declarative expectations
+    expectations = [
+        {
+            "name": "Generators",
+            "count": expected_gen_count,
+            "items": generators,
+            "validators": {
+                "single": lambda: _is_valid_generator(
+                    generators[0].id, add_sm=topology_name.startswith("S")
+                ),
+                "multiple": lambda: _is_valid_generators(generators),
+            },
+            "messages": {
+                "single": "A single generator is expected.",
+                "multiple": "Multiple generators are expected.",
+                "invalid_single": "Invalid generator configuration.",
+                "invalid_multiple": "Invalid generators configuration.",
+            },
+        },
+        {
+            "name": "Step-up Transformers",
+            "count": expected_xfmr_count,
+            "items": transformers,
+            "validators": {
+                "single": lambda: _is_valid_stepup_xfmr(transformers, generators),
+                "multiple": lambda: _is_valid_stepup_xfmr(transformers, generators),
+            },
+            "messages": {
+                "single": "A transformer with id 'StepUp_Xfmr' is expected.",
+                "multiple": "Multiple step-up transformers are expected.",
+                "invalid_single": "Invalid step-up transformer configuration.",
+                "invalid_multiple": "Invalid step-up transformers configuration.",
+            },
+        },
+    ]
+
+    # Validate generators and transformers
+    for exp in expectations:
+        if exp["count"] == "single":
+            if len(exp["items"]) != 1:
+                add_error(exp["messages"]["single"])
+            elif not exp["validators"]["single"]:
+                add_error(exp["messages"]["invalid_single"])
+        elif exp["count"] == "multiple":
+            if len(exp["items"]) <= 1:
+                add_error(exp["messages"]["multiple"])
+            elif not exp["validators"]["multiple"]:
+                add_error(exp["messages"]["invalid_multiple"])
+
+    # Validate optional components
+    def validate_optional(expect: bool, component, name: str, validator, expected_msg: str):
+        if expect:
+            if component is None:
+                add_error(expected_msg)
+            elif not validator(component):
+                add_error(f"Invalid {name} configuration.")
+        elif component is not None:
+            add_error(f"Unexpected {name} found.")
+
+    validate_optional(
+        expect_aux_load,
+        auxiliary_load,
+        "Aux_Load",
+        _is_valid_auxiliary_load,
+        "An auxiliary load with id 'Aux_Load' is expected.",
+    )
+    validate_optional(
+        expect_aux_xfmr,
+        auxiliary_transformer,
+        "AuxLoad_Xfmr",
+        _is_valid_auxiliary_transformer,
+        "A transformer with id 'AuxLoad_Xfmr' is expected.",
+    )
+    validate_optional(
+        expect_main_xfmr,
+        main_transformer,
+        "Main_Xfmr",
+        _is_valid_transformer,
+        "A transformer with id 'Main_Xfmr' is expected.",
+    )
+    validate_optional(
+        expect_internal_line,
+        internal_line,
+        "IntNetwork_Line",
+        _is_valid_internal_line,
+        "An internal line with id 'IntNetwork_Line' is expected.",
+    )
+
+    # Build final message if invalid
+    if error_messages:
+        full_message = (
+            f"The '{topology_name}' topology expects the following models:\n"
+            + "\n".join(error_messages)
+        )
+
+        # Add connection details
+        if expected_gen_count == "single" and len(generators) == 1:
+            full_message += (
+                f"\n  - 'StepUp_Xfmr' connected between the generator and the "
+                f"{generator_bus_connection}"
             )
-    elif expected_gen_count == "multiple":
-        if len(generators) <= 1:
-            expected_elements = False
-            error_messages.append(_MULTIPLE_GENERATOR_ERROR_MESSAGE)
-        else:
-            # Validate multiple generators
-            valid_elements = valid_elements and _is_valid_generators(generators)
 
-    # Check expected transformer count
-    if expected_xfmr_count == "single":
-        if len(transformers) != 1:
-            expected_elements = False
-            error_messages.append("  - A transformer with id 'StepUp_Xfmr'\n")
-        else:
-            # Validate the single step-up transformer
-            valid_elements = valid_elements and _is_valid_stepup_xfmr(transformers, generators)
-    elif expected_xfmr_count == "multiple":
-        if len(transformers) <= 1:
-            expected_elements = False
-            error_messages.append(
-                "  - A transformer for each generator, its id starts with 'StepUp_Xfmr'\n"
+        if expect_aux_load and auxiliary_load:
+            full_message += (
+                f"\n  - 'AuxLoad_Xfmr' connected between the auxiliary load and the "
+                f"{aux_load_bus_connection}"
             )
-        else:
-            # Validate multiple step-up transformers
-            valid_elements = valid_elements and _is_valid_stepup_xfmr(transformers, generators)
 
-    # Check for auxiliary load presence and validity
-    if expect_aux_load:
-        if auxiliary_load is None:
-            expected_elements = False
-            error_messages.append("  - An auxiliary load with id 'Aux_Load'\n")
-        else:
-            valid_elements = valid_elements and _is_valid_auxiliary_load(auxiliary_load)
-    elif auxiliary_load is not None:
-        # If aux load is not expected but present, flag as unexpected
-        unexpected_elements = True
+        if expect_main_xfmr and main_transformer:
+            full_message += f"\n  - 'Main_Xfmr' connected between the {main_xfmr_bus_connection}"
 
-    # Check for auxiliary transformer presence and validity
-    if expect_aux_xfmr:
-        if auxiliary_transformer is None:
-            expected_elements = False
-            error_messages.append("  - A transformer with id 'AuxLoad_Xfmr'\n")
-        else:
-            valid_elements = valid_elements and _is_valid_auxiliary_transformer(
-                auxiliary_transformer
+        if expect_internal_line and internal_line:
+            full_message += (
+                f"\n  - 'IntNetwork_Line' connected between the {internal_line_bus_connection}"
             )
-    elif auxiliary_transformer is not None:
-        # If aux transformer is not expected but present, flag as unexpected
-        unexpected_elements = True
-
-    # Check for main transformer presence and validity
-    if expect_main_xfmr:
-        if transformer is None:
-            expected_elements = False
-            error_messages.append("  - A transformer with id 'Main_Xfmr'\n")
-        else:
-            valid_elements = valid_elements and _is_valid_transformer(transformer)
-    elif transformer is not None:
-        # If main transformer is not expected but present, flag as unexpected
-        unexpected_elements = True
-
-    # Check for internal line presence and validity
-    if expect_internal_line:
-        if internal_line is None:
-            expected_elements = False
-            error_messages.append("  - An internal line with id 'IntNetwork_Line'\n")
-        else:
-            valid_elements = valid_elements and _is_valid_internal_line(internal_line)
-    elif internal_line is not None:
-        # If internal line is not expected but present, flag as unexpected
-        unexpected_elements = True
-
-    # Determine overall topology validity
-    valid_topology = expected_elements and not unexpected_elements and valid_elements
-
-    # If topology is not valid, construct and raise a ValueError with detailed messages
-    if not valid_topology:
-        base_message = f"The '{topology_name}' topology expects the following models:\n"
-        full_message = base_message + "".join(error_messages)
-
-        # Add specific connection messages if elements are expected and valid
-        if (
-            expected_gen_count == "single"
-            and len(generators) == 1
-            and _is_valid_generator(generators[0].id, add_sm=(topology_name[0] == "S"))
-        ):
-            full_message += "  - A transformer with id 'StepUp_Xfmr' connected between "
-            full_message += f"the generator and the {generator_bus_connection}\n"
-        if (
-            expect_aux_load
-            and auxiliary_load is not None
-            and _is_valid_auxiliary_load(auxiliary_load)
-        ):
-            full_message += "  - A transformer with id 'AuxLoad_Xfmr' connected between the "
-            full_message += f"auxiliary load and the {aux_load_bus_connection}\n"
-        if expect_main_xfmr and transformer is not None and _is_valid_transformer(transformer):
-            full_message += "  - A transformer with id 'Main_Xfmr' connected between the "
-            full_message += f"{main_xfmr_bus_connection}\n"
-        if (
-            expect_internal_line
-            and internal_line is not None
-            and _is_valid_internal_line(internal_line)
-        ):
-            full_message += "  - An internal line with id 'IntNetwork_Line' connected between "
-            full_message += f"the {internal_line_bus_connection}\n"
 
         raise ValueError(full_message)
 

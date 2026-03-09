@@ -19,17 +19,13 @@ from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 from dycov.model.pcs import Pcs
 
-LOGGER = dycov_logging.get_logger("GFMGeneration")
-
 
 def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     """
     Generates envelopes for a given PCS (Power Conversion System).
 
-    This function initializes a Pcs object with the provided parameters,
-    PCS name, and producer name. It then checks if the PCS is valid
-    before attempting to generate its envelopes. Error handling is
-    included to log exceptions during the generation process.
+    This function is designed to be called by a multiprocessing Pool. It
+    initializes a Pcs object and runs the envelope generation process.
 
     Parameters
     ----------
@@ -41,25 +37,27 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     pcs = Pcs(producer_name, pcs_name, parameters)
     try:
         if not pcs.is_valid():
-            LOGGER.error(f"{pcs.get_name()} is not a valid PCS")
+            dycov_logging.get_logger("GFMGeneration").error(f"{pcs.get_name()} is not a valid PCS")
             return
 
         pcs.generate()
     except (FileNotFoundError, IOError, ValueError) as e:
-        # Catch specific exceptions that might occur during file operations
-        # or value errors.
-        # Log the exception details based on the current logging level.
-        if dycov_logging.getEffectiveLevel() == logging.DEBUG:
-            LOGGER.exception(f"Aborted execution for {pcs.get_name()}. {e}")
+        # Catch specific exceptions that might occur during file operations or value errors.
+        if dycov_logging.get_logger("GFMGeneration").getEffectiveLevel() == logging.DEBUG:
+            dycov_logging.get_logger("GFMGeneration").exception(
+                f"Aborted execution for {pcs.get_name()}. {e}"
+            )
         else:
-            LOGGER.error(f"Aborted execution for {pcs.get_name()}. {e}")
+            dycov_logging.get_logger("GFMGeneration").error(
+                f"Aborted execution for {pcs.get_name()}. {e}"
+            )
         return
 
 
 class GFMGeneration:
     """
     A class to manage the generation of Grid Forming (GFM) envelopes
-    for PCS validation.
+    for multiple PCSs and producers.
 
     This class handles the initialization of the working environment,
     identification of PCS to validate, and the execution of the
@@ -69,11 +67,6 @@ class GFMGeneration:
     def __init__(self, parameters: GFMParameters) -> None:
         """
         Initializes the GFMGeneration class with simulation parameters.
-
-        This constructor sets up the GFM simulation parameters, defines
-        the path to templates, initializes the working environment,
-        identifies the PCS to be validated, and prepares the list of PCS
-        for processing.
 
         Parameters
         ----------
@@ -90,18 +83,12 @@ class GFMGeneration:
     def __initialize_working_environment(self) -> None:
         """
         Creates the tool's working directory and checks the output directory.
-
-        This method ensures that the necessary directories for the tool's
-        operation exist. It creates the working directory and checks if the
-        output directory already exists, prompting the user with a warning
-        and exiting if overwriting might occur without explicit consent.
         """
         manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
 
-        # Check if the results output path exists to prevent accidental
-        # overwriting if the user does not want to lose existing files.
+        # Check if the results output path exists to prevent accidental overwriting.
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
-            LOGGER.warning(
+            dycov_logging.get_logger("GFMGeneration").warning(
                 "Exiting. Please rename your current Results directory, "
                 "otherwise it will be erased and a new one will be created."
             )
@@ -110,19 +97,17 @@ class GFMGeneration:
 
     def __get_validation_pcs(self) -> list[str]:
         """
-        Determines the list of PCS to generate envelopes.
+        Determines the list of PCS to generate envelopes for.
 
-        This method populates the list of PCS based on selected PCS from
-        command-line arguments, configuration settings, and available
-        templates in predefined directories. It prioritizes selected PCS,
-        then configuration, and finally discovers from template directories.
+        It populates the list of PCS based on command-line arguments,
+        configuration settings, and available templates.
 
         Returns
         -------
         list[str]
             A sorted list of PCS names for which to generate envelopes.
         """
-        LOGGER.info("DyCoV Envelopes Generation")
+        dycov_logging.get_logger("GFMGeneration").info("DyCoV Envelopes Generation")
         validation_pcs: set[str] = set()
         if self._parameters.get_selected_pcs():
             validation_pcs.add(self._parameters.get_selected_pcs())
@@ -135,25 +120,16 @@ class GFMGeneration:
         self, validation_pcs: set[str], validation_key: str, validation_path: str
     ) -> None:
         """
-        Populates the set of PCS to generate envelopes from configuration
-        and template directories.
-
-        This helper method adds PCS names to the `validation_pcs` set.
-        It first checks the global configuration for PCS names under
-        `validation_key`. If no PCS are specified there, it then
-        scans the template directories (both in config and tool paths)
-        for subdirectories representing PCS templates.
+        Populates the set of PCS from configuration and template directories.
 
         Parameters
         ----------
         validation_pcs : set[str]
             The set to populate with PCS names. This set is modified in-place.
         validation_key : str
-            The configuration key (e.g., "gridforming_pcs") used to retrieve
-            PCS names from the global configuration.
+            The configuration key used to retrieve PCS names from global config.
         validation_path : str
-            The relative path within the templates directory where PCS
-            templates are located (e.g., "gfm").
+            The relative path within the templates directory for PCS templates.
         """
         tool_path = Path(__file__).resolve().parent.parent
         if not validation_pcs:
@@ -171,30 +147,26 @@ class GFMGeneration:
                 manage_files.list_directories(tool_path / self._templates_path / validation_path)
             )
 
+        # Remove any "aliases" items from the set, as they are not valid PCS names.
+        for item in list(validation_pcs):
+            if "aliases" in item:
+                validation_pcs.remove(item)
+
     def __prepare_pcs_list(self) -> list[tuple[GFMParameters, str, str]]:
         """
-        Prepares the list of PCS and their associated producers for validation.
-
-        This method iterates through all identified producer files and
-        for each producer, it associates all validation PCS. This creates
-        a comprehensive list of (parameters, pcs_name, producer_name) tuples
+        Prepares the list of all (parameters, pcs_name, producer_name) tuples
         to be processed for envelope generation.
 
         Returns
         -------
         list[tuple[GFMParameters, str, str]]
-            A list of tuples, each containing:
-            - GFMParameters: The simulation parameters object.
-            - str: The name of the PCS.
-            - str: The name of the producer associated with the PCS.
+            A comprehensive list of all simulation tasks to be run.
         """
         pcs_list: list[tuple[GFMParameters, str, str]] = []
-
         all_producer_files = self._parameters.get_producer().get_filenames()
+
         for producer_name in all_producer_files:
-            # For each producer, extend the pcs_list with all validation PCS.
-            # Each entry in the list will be a tuple:
-            # (parameters, pcs_name, producer_name).
+            # For each producer, create a task for each validation PCS.
             pcs_list.extend(
                 (self._parameters, pcs_name, producer_name) for pcs_name in self._validation_pcs
             )
@@ -204,32 +176,29 @@ class GFMGeneration:
         """
         Generates the GFM envelopes, either sequentially or in parallel.
 
-        This method orchestrates the envelope generation process. It can
-        run the generation for each PCS sequentially or distribute the
-        tasks across multiple processes for parallel execution, depending
-        on the `use_parallel` flag. After generation, it copies the
-        output files and cleans up the working directory.
+        After generation, it copies the output files and cleans up the
+        working directory.
 
         Parameters
         ----------
         use_parallel : bool
-            If True, use multiprocessing for parallel generation.
-            Defaults to False.
+            If True, use multiprocessing for parallel generation. Defaults to False.
         num_processes : int
-            The number of processes to use if `use_parallel` is True.
-            Defaults to 4.
+            The number of processes to use if `use_parallel` is True. Defaults to 4.
         """
         if use_parallel:
-            LOGGER.info(f"Generating envelopes in parallel using {num_processes} processes.")
+            dycov_logging.get_logger("GFMGeneration").info(
+                f"Generating envelopes in parallel using {num_processes} processes."
+            )
             with Pool(processes=num_processes) as pool:
                 pool.map(_generate_pcs, self._pcs_list)
         else:
-            LOGGER.info("Generating envelopes sequentially.")
+            dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")
             for pcs_tuple in self._pcs_list:
                 _generate_pcs(pcs_tuple)
 
         for _, pcs_name, producer_name in self._pcs_list:
-            manage_files.copy_output_files(
+            manage_files.copy_directory(
                 self._parameters.get_working_dir() / producer_name,
                 self._parameters.get_output_dir(),
                 pcs_name,

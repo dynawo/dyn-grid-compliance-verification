@@ -20,7 +20,7 @@ class SimulationLogger(logging.getLoggerClass()):
 
     def init_handlers(
         self,
-        file_log_level: str,
+        file_log_level: int,
         file_formatter: str,
         file_max_bytes: int,
         log_dir: Path,

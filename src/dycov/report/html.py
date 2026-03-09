@@ -338,18 +338,18 @@ def _reference_traces(fig, reference_curves, curve_name):
 
 
 def _exclusion_windows(fig, results):
-    if "excl1_t0" in results:
+    if "event_exclusion_window_start" in results:
         fig.add_vrect(
-            x0=results["excl1_t0"],
-            x1=results["excl1_t"],
+            x0=results["event_exclusion_window_start"],
+            x1=results["event_exclusion_window_end"],
             line_width=0,
             opacity=0.5,
             fillcolor="#e8e8e8",
         )
-    if "excl2_t0" in results:
+    if "clear_exclusion_window_start" in results:
         fig.add_vrect(
-            x0=results["excl2_t0"],
-            x1=results["excl2_t"],
+            x0=results["clear_exclusion_window_start"],
+            x1=results["clear_exclusion_window_end"],
             line_width=0,
             opacity=0.5,
             fillcolor="#e8e8e8",
@@ -407,6 +407,30 @@ def _plotly_figures(
     )
 
 
+def _update_layout(fig, curve_name, figure_description):
+    fig.update_layout(
+        title=curve_name,
+        xaxis_title="Time",
+        yaxis_title=figure_description,
+        template="plotly_dark",
+        font_color="#000000",
+        plot_bgcolor="#ffffff",
+        paper_bgcolor="#ffffff",
+    )
+    fig.update_xaxes(
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        showgrid=False,
+    )
+    fig.update_yaxes(
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        showgrid=False,
+    )
+
+
 def plotly_figures(
     figure_description: list,
     calculated_curves: pd.DataFrame,
@@ -446,30 +470,14 @@ def plotly_figures(
         )
 
     if curve_names:
-        fig.update_layout(
-            title=curve_names[0],
-            xaxis_title="Time",
-            yaxis_title=figure_description[3],
-            template="plotly_dark",
-            font_color="#000000",
-            plot_bgcolor="#ffffff",
-            paper_bgcolor="#ffffff",
+        _update_layout(fig, curve_names[0], figure_description[3])
+        return (
+            curve_names,
+            curve_names[0],
+            fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_names[0]),
         )
-        fig.update_xaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
-        fig.update_yaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
-        return curve_names, fig.to_html(full_html=False, include_plotlyjs="directory")
 
-    return curve_names, ""
+    return curve_names, "", ""
 
 
 def plotly_all_curves(
@@ -503,34 +511,20 @@ def plotly_all_curves(
 
         fig = go.Figure()
         _plotly_figures(fig, curve_name, [], calculated_curves, reference_curves, results, False)
-
-        fig.update_layout(
-            title=curve_name,
-            xaxis_title="Time",
-            yaxis_title="Magnitude",
-            template="plotly_dark",
-            font_color="#000000",
-            plot_bgcolor="#ffffff",
-            paper_bgcolor="#ffffff",
+        _update_layout(fig, curve_name, "Magnitude")
+        figures.append(
+            (
+                curve_name,
+                fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_name),
+            )
         )
-        fig.update_xaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
-        fig.update_yaxes(
-            showline=True,
-            linewidth=2,
-            linecolor="black",
-            showgrid=False,
-        )
-        figures.append(fig.to_html(full_html=False, include_plotlyjs="directory"))
 
     return figures
 
 
-def create_html(producer: str, figures: list, operating_condition: str, output_path: Path) -> None:
+def create_html(
+    producer: str, figures_to_plot: list, operating_condition: str, output_path: Path
+) -> None:
     """Create the HTML report using Jinja2.
 
     Parameters
@@ -556,8 +550,17 @@ def create_html(producer: str, figures: list, operating_condition: str, output_p
             html_output_dir,
         )
 
+    sync_charts_js = html_output_dir / "sync_charts.js"
+    if not sync_charts_js.exists():
+        shutil.copy(
+            Path(__file__).resolve().parent / "templates" / "sync_charts.js",
+            html_output_dir,
+        )
+
     # Instantiate the HTML file using Jinja
-    plotly_jinja_data = {"figures": figures}
+    chart_ids = [fig[0] for fig in figures_to_plot]
+    figures = [fig[1] for fig in figures_to_plot]
+    plotly_jinja_data = {"chart_ids": chart_ids, "figures": figures}
     output_html = html_output_dir / f"{producer}.{operating_condition}.html"
     input_template = Path(__file__).resolve().parent / "templates" / "template.html"
     with open(output_html, "w", encoding="utf-8") as output_file:

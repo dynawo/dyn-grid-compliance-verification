@@ -9,26 +9,72 @@
 #
 from collections import namedtuple
 from dataclasses import dataclass
-
-Line_params = namedtuple("Line_params", ["id", "lib", "connectedPdr", "R", "X", "B", "G"])
-Xfmr_params = namedtuple("Xfmr_params", ["id", "lib", "R", "X", "B", "G", "rTfo", "par_id"])
-Load_params = namedtuple(
-    "Load_params", ["id", "lib", "connectedXmfr", "P", "Q", "U", "UPhase", "Alpha", "Beta"]
-)
+from typing import Optional
 
 
 @dataclass
-class Gen_params:
+class Terminal:
+    connectedEquipment: str
+    U0: float = 1.0
+    UPhase0: float = 0.0
+    P0: float = 0.0
+    Q0: float = 0.0
+
+
+@dataclass
+class Equipment:
     id: str
     lib: str
-    connectedXmfr: str
+    par_id: str
+    terminals: tuple[Terminal, ...]
+
+
+@dataclass
+class Bus_params(Equipment):
+    VMin: float
+    VMax: float
+
+
+@dataclass
+class Line_params(Equipment):
+    R: float
+    X: float
+    B: float
+    G: float
+
+
+@dataclass
+class Xfmr_params(Equipment):
+    R: float
+    X: float
+    B: float
+    G: float
+    rTfo: float
+    alphaTfo: float
+
+
+@dataclass
+class Load_params(Equipment):
+    P: float
+    Q: float
+    U: float
+    UPhase: float
+    Alpha: float
+    Beta: float
+
+
+@dataclass
+class Gen_params(Equipment):
     SNom: float
     IMax: float
-    par_id: str
     P: float
     Q: float
     VoltageDroop: float
     UseVoltageDroop: bool
+    PMin: Optional[float] = None
+    PMax: Optional[float] = None
+    QMin: Optional[float] = None
+    QMax: Optional[float] = None
 
 
 Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
@@ -43,4 +89,8 @@ Simulation_result = namedtuple(
 Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
 Disconnection_Model = namedtuple(
     "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
+)
+ExclusionWindows = namedtuple(
+    "ExclusionWindows",
+    ["event_start", "event_end", "clear_start", "clear_end"],
 )

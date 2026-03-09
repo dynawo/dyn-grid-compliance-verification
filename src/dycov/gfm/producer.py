@@ -8,7 +8,6 @@
 #     demiguelm@aia.es
 #
 
-
 import configparser
 import re
 from pathlib import Path
@@ -18,10 +17,10 @@ from dycov.model.producer import Producer
 
 class GFMProducer(Producer):
     """
-    A class used to represent a producer from a INI file.
+    A class used to represent a producer from an INI file.
 
     This class extends the Producer class and provides methods to
-    access producer-related data stored in a INI file.
+    access producer-related data stored in an INI file.
     """
 
     def __init__(self, producer_ini: Path) -> None:
@@ -59,7 +58,7 @@ class GFMProducer(Producer):
         Returns
         -------
         list[str]
-            List of filenames.
+            List of filenames (stems).
         """
         pattern = re.compile(r".*.[iI][nN][iI]")
         return sorted(
@@ -72,7 +71,7 @@ class GFMProducer(Producer):
 
     def get_sim_type_str(self) -> str:
         """
-        Gets a string according to the type of validation executed.
+        Gets a string according to the type of validation being executed.
 
         Returns
         -------
@@ -81,9 +80,15 @@ class GFMProducer(Producer):
         """
         return "gfm"
 
+    def set_zone(self, zone: int, filename: str) -> None:
+        """
+        Dummy
+        """
+        pass
+
     def get_config(self) -> configparser.ConfigParser:
         """
-        Gets the producer settings for the GFM calculations
+        Gets the producer settings for the GFM calculations.
 
         Returns
         -------
@@ -94,18 +99,17 @@ class GFMProducer(Producer):
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """
-        Reads the producer INI file.
+        Reads and parses the producer INI file.
 
         Returns
         -------
         configparser.ConfigParser
-            The parsed configuration object containing producer settings.
+            The parsed configuration object.
         """
 
         def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
             """
             Helper function to get the producer INI file path.
-            It iterates through the directory to find a file matching the pattern.
 
             Parameters
             ----------
@@ -118,11 +122,6 @@ class GFMProducer(Producer):
             -------
             Path
                 The full path to the producer INI file.
-
-            Raises
-            ------
-            FileNotFoundError
-                If the producer INI file is not found in the specified path.
             """
             for file in path.resolve().iterdir():
                 if pattern.match(str(file)):
@@ -130,8 +129,8 @@ class GFMProducer(Producer):
             raise FileNotFoundError("Producer INI file not found.")
 
         pattern_ini = re.compile(r".*.[iI][nN][iI]")
-        producer_ini = __get_producer_ini(self.get_producer_path(), pattern_ini)
+        producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
 
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        producer_config.read(producer_ini)
+        producer_config.read(producer_ini_path)
         return producer_config

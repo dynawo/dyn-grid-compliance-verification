@@ -11,7 +11,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.curves.dynawo.translator import dynawo_translator
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
 
 PERFORMANCE_SM = 1
@@ -141,25 +141,25 @@ def _add_blackbox(
 def _add_connection(
     dyd_root: etree.Element,
     ns: str,
-    id1: str,
-    var1: str,
-    id2: str,
-    var2: str,
+    id_from: str,
+    var_from: str,
+    id_to: str,
+    var_to: str,
     show_comment: bool = False,
 ):
     if show_comment:
-        if var1 in PLACEHOLDER_TERMINALS:
-            _add_terminal_options(dyd_root, var1)
-        elif var2 in PLACEHOLDER_TERMINALS:
-            _add_terminal_options(dyd_root, var2)
+        if var_from in PLACEHOLDER_TERMINALS:
+            _add_terminal_options(dyd_root, var_from)
+        elif var_to in PLACEHOLDER_TERMINALS:
+            _add_terminal_options(dyd_root, var_to)
 
     etree.SubElement(
         dyd_root,
         f"{{{ns}}}connect",
-        id1=id1,
-        var1=var1,
-        id2=id2,
-        var2=var2,
+        id1=id_from,
+        var1=var_from,
+        id2=id_to,
+        var2=var_to,
     )
 
 
@@ -178,8 +178,9 @@ def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int, p
         gen_terminal = BESS_TERMINAL
     _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
     _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_saux_topology(
@@ -201,10 +202,11 @@ def _create_saux_topology(
     _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
     _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
     _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -224,10 +226,11 @@ def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, 
     _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
     _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
     _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+
+    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_sauxi_topology(
@@ -251,12 +254,13 @@ def _create_sauxi_topology(
     _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
     _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
     _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+
+    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
 
 
 def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -276,12 +280,13 @@ def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int, p
     _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
     _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
     _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+
+    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _create_maux_topology(
@@ -305,14 +310,15 @@ def _create_maux_topology(
     _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
     _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
     _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+
+    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
@@ -333,13 +339,14 @@ def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int, 
     _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
     _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
     _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+
+    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _create_mauxi_topology(
@@ -364,15 +371,16 @@ def _create_mauxi_topology(
     _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
     _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
     _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+
+    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_LINE_ID, LINE_TERMINAL1)
+    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL1, True)
+    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL1)
 
 
 def _check_dynamic_models(target: Path, filename: str) -> bool:
@@ -384,6 +392,7 @@ def _check_dynamic_models(target: Path, filename: str) -> bool:
         + dynawo_translator.get_line_models()
         + dynawo_translator.get_load_models()
         + dynawo_translator.get_transformer_models()
+        + ["Measurements"]
     )
 
     producer_dyd_tree = etree.parse(target / filename, etree.XMLParser(remove_blank_text=True))

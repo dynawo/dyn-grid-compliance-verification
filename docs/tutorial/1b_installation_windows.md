@@ -81,7 +81,7 @@ all of its dependencies (NumPy, etc.) will get installed under a
 
 ## Installation
 
-1. Download the [`DyCoV's Windows Installer`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/DyCoV_win_Installer.exe).
+1. Download the [`DyCoV's Windows Installer`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/DyCoV_win_Installer.exe).
 
 
 2. Next, execute the downloaded installer:
@@ -110,12 +110,6 @@ all of its dependencies (NumPy, etc.) will get installed under a
 
     ```console
        dycov -h
-    ```
-
-5. Upon the first use, the tool will automatically compile the Modelica models internally defined by the tool. You can also run this command explicitly, as follows:
-
-    ```console
-       dycov compile
     ```
 
 ## Build and install (for developers)
@@ -184,12 +178,3 @@ all of its dependencies (NumPy, etc.) will get installed under a
    ```
 
    - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
-
-* **Pre-Execution Compilation**
-   Before running the tool for the first time, it's recommended to compile the tool's resources:
-       
-   ```console
-   	dycov compile
-   ```
-
-   - This step ensures that all necessary files are generated and compiled for optimal performance.

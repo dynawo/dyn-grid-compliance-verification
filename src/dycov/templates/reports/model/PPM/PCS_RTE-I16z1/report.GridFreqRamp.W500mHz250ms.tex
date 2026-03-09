@@ -10,9 +10,10 @@
     \subsection{Ramp response to grid changes: frequency ramp}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a frequency ramp from +500mHz to 2Hz/s on the AC source.
+    is a frequency ramp on the grid side that increases +500 mHz (i.e., from 50 to 50.5 Hz)
+    at a rate of 2 Hz/s (i.e., the ramp lasts 250 ms).
 
-    \GridCircuitZone
+    \GridCircuitZoneSetPoint
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
