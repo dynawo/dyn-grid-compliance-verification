@@ -758,7 +758,7 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
 
 def _get_generator_pcc_local(parset, nsmap, lib):
     _, pcc_local = _get_parameter(parset, nsmap, lib, "PccLocal")
-    return bool(pcc_local) if pcc_local is not None else False
+    return pcc_local.lower() == "true" if pcc_local is not None else False
 
 
 def _get_line_values(
