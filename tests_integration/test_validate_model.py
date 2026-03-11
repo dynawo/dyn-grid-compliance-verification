@@ -6,7 +6,7 @@ from tests.dycov.utils import MODEL, execute_tool
 RESOURCES = Path(__file__).resolve().parent / "resources"
 
 
-def test_model_validation_WECC4A1_model(dynawo_latest):
+def test_model_validation_ppm_dynawo_model(dynawo_latest):
     compliance = execute_tool(
         MODEL / "Wind" / "WECC4A1" / "Dynawo",
         None,
@@ -21,11 +21,11 @@ def test_model_validation_WECC4A1_model(dynawo_latest):
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
         Compliance.Compliant,  # 7
-        Compliance.Compliant,  # 8
+        Compliance.NonCompliant,  # 8
         Compliance.Compliant,  # 9
         Compliance.InvalidTest,  # 10
         Compliance.NonCompliant,  # 11
-        Compliance.Compliant,  # 12
+        Compliance.NonCompliant,  # 12
         Compliance.NonCompliant,  # 13
         Compliance.NonCompliant,  # 14
         Compliance.Compliant,  # 15
@@ -33,14 +33,14 @@ def test_model_validation_WECC4A1_model(dynawo_latest):
         Compliance.Compliant,  # 17
         Compliance.NonCompliant,  # 18
         Compliance.Compliant,  # 19
-        Compliance.Compliant,  # 20
+        Compliance.NonCompliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
-        Compliance.SimulationTimeOut,  # 23
+        Compliance.FailedSimulation,  # 23
     ] == compliance
 
 
-def test_model_validation_partial_reference(dynawo_latest):
+def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
     compliance = execute_tool(
         MODEL / "Wind" / "WECC4B" / "Dynawo",
         None,
@@ -54,20 +54,20 @@ def test_model_validation_partial_reference(dynawo_latest):
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
-        Compliance.NonCompliant,  # 7
+        Compliance.Compliant,  # 7
         Compliance.WithoutReferenceCurves,  # 8
         Compliance.Compliant,  # 9
         Compliance.WithoutReferenceCurves,  # 10
         Compliance.NonCompliant,  # 11
-        Compliance.Compliant,  # 12
+        Compliance.NonCompliant,  # 12
         Compliance.NonCompliant,  # 13
         Compliance.NonCompliant,  # 14
-        Compliance.NonCompliant,  # 15
+        Compliance.Compliant,  # 15
         Compliance.WithoutReferenceCurves,  # 16
         Compliance.WithoutReferenceCurves,  # 17
         Compliance.NonCompliant,  # 18
         Compliance.Compliant,  # 19
-        Compliance.Compliant,  # 20
+        Compliance.NonCompliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
         Compliance.WithoutReferenceCurves,  # 23
