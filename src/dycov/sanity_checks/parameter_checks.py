@@ -258,6 +258,11 @@ def check_trafo(xfmrs: Xfmr_params) -> None:
             f"The admittance of the transformer {xfmrs.id} must be greater than zero."
         )
 
+    if xfmrs and xfmrs.alphaTfo != 0.0:
+        raise ValueError(
+            f"The alphaTfo parameter of the transformer {xfmrs.id} must be equal to zero."
+        )
+
 
 def check_auxiliary_load(load: Load_params) -> None:
     """Check whether the user-supplied auxiliary load parameters are consistent:

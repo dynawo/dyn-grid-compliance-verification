@@ -23,6 +23,8 @@ __pycache__/
 dist/
 *.egg-info/
 build/
+installers/docker/temp*/
+release_*/
 
 # Exclude the recommended virtual env:
 dycov_venv/

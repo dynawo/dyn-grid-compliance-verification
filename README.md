@@ -111,11 +111,13 @@ assuming a Debian/Ubuntu system:
                texlive-latex-extra texlive-science texlive-lang-french latexmk
   ```
 
-* Install a basic Python installation (version 3.9 or higher), containing at
-  least `pip`, `venv` and `git`:
+* Install a basic Python installation and `uv`:
    ```bash
-   apt install python3-minimal python3-pip python3-venv git
+   apt install python3-minimal git
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
+  > **Note:** `pip` and `venv` are no longer required directly, as `uv` manages
+  > the virtual environment and package installation.
 
 Note that the tool itself is a Python package. However, this package and all of
 its dependencies (NumPy, etc.) will get installed at the user-level, i.e.,
@@ -452,14 +454,14 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
    cd dycov_repo
    ```
 
-2. Ensure you have `uv` installed. If not, you can install it via pipx or pip:
-    ```bash
-    pip install uv
-    ```
+2. Ensure you have `uv` installed. If not, install it via the official installer:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
 
 3. Create the environment and install dependencies:
    ```bash
-   uv venv dycov_venv
+   uv venv dycov_venv --python 3.13
    source dycov_venv/bin/activate
    uv pip install -e .[dev,test]
    ```
@@ -490,8 +492,8 @@ The DyCoV application is now ready for development.
    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    cd dycov_repo
 
-   pip install uv  # if not already installed
-   uv venv dycov_venv
+   curl -LsSf https://astral.sh/uv/install.sh | sh  # if not already installed
+   uv venv dycov_venv --python 3.13
    source dycov_venv/bin/activate
    uv pip install -e .[dev,test]
    ```
@@ -515,13 +517,13 @@ The DyCoV application is now ready for development.
    ```bash
    apt update
    apt install -y python3 python3-pip python3-venv git curl unzip gcc g++ cmake
-   pip install uv
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
 3. Build and install DyCoV exactly as in Linux:
 
    ```bash
-   uv venv dycov_venv
+   uv venv dycov_venv --python 3.13
    source dycov_venv/bin/activate
    uv pip install -e .[dev,test]
    ```

@@ -25,12 +25,15 @@ set -o errexit -o pipefail
 # Config variables
 ################################################################################
 
+# Python version requirements
+python_cmd="3.13"
+
 # DyCoV and Dynawo versions to install
+TARGET_BRANCH="master"
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
-DYNAWO_ZIP_URL_DEFAULT="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/v0.9.2/Dynawo_omc_v1.8.0.zip"
+DYNAWO_ZIP_URL_DEFAULT="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$TARGET_BRANCH/Dynawo_omc_v1.8.0.zip"
 DYNAWO_SHA256SUM="fbba80aa7ac6a990928b601e339a43ec49d538b956c97a51d038d1dcdea48768"
 # Default branch is master
-TARGET_BRANCH="master"
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 
 # Script State Variables
@@ -47,7 +50,6 @@ TMP_LOCAL_REPO="$INSTALL_DIR/repo_dycov"
 VENV="dycov_venv"
 DATETIME=$(date '+%Y%m%d_%H%M%S')
 LOG_FILE_NAME="installation_$DATETIME.log"
-python_cmd=""
 
 # Console message colors
 RED='\033[1;31m'
@@ -145,41 +147,6 @@ confirm_and_delete() {
     esac
 }
 
-find_python_cmd() {
-    local best_interpreter=""
-    local available_interpreters=()
-
-    # Find all available and compatible interpreters
-    for interpreter in python3.12 python3.11 python3.10 python3.9 python3 python; do
-        # We capture the output in a variable using "|| true" inside the subshell.
-        # This prevents the 'command -v' failure (status 1) from triggering the ERR trap.
-        local interp_path
-        interp_path=$(command -v "$interpreter" 2>/dev/null || true)
-
-        if which "$interpreter" > /dev/null; then
-            if "$interpreter" --version 2>&1 | grep -Eq '(Python 3\.9\.|Python 3\.1[0-9]+\.)'; then
-                # Store the full path to avoid ambiguity
-                available_interpreters+=("$(which "$interpreter")")
-                local ver
-                ver=$("$interp_path" --version 2>&1 | awk '{print $2}')
-                if echo "$ver" | grep -Eq '^3\.(9|[1-9][0-9])\.'; then
-                     available_interpreters+=("$interp_path")
-                fi
-            fi
-        fi
-    done
-
-    # If we found any, sort them by version and pick the best one.
-    if [ ${#available_interpreters[@]} -gt 0 ]; then
-        # Get unique paths, get versions, sort, and extract the path of the newest one
-        best_interpreter=$(printf "%s\n" "${available_interpreters[@]}" | sort -u | while read -r interp; do
-            echo "$($interp --version 2>&1 | awk '{print $2}') $interp"
-        done | sort -V -r | head -n 1 | awk '{print $2}')
-    fi
-
-    python_cmd="$best_interpreter"
-}
-
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo "Options:"
@@ -238,19 +205,12 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk; do
+for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1
     fi
 done
-
-find_python_cmd
-if [ -z "$python_cmd" ]; then
-    color_err_msg "ERROR: No valid Python interpreter found (3.9+ required)."
-    exit 1
-fi
-color_msg "Dependencies verified successfully."
 
 color_msg ""
 color_msg "Starting the installation of the DyCoV tool in: $INSTALL_DIR"
@@ -359,13 +319,14 @@ fi
 # Create Virtual Environment and Install
 ################################################################################
 color_msg "Step 3: Creating virtual environment and installing the application..."
+# Check for uv using command -v
 if [ -d "${INSTALL_DIR}/$VENV" ]; then
     confirm_and_delete "${INSTALL_DIR}/$VENV"
 fi
 cd "$INSTALL_DIR"
 
 # 1. Create venv
-"$python_cmd" -m venv "$VENV"
+uv venv "$VENV" --python "$python_cmd"
 
 # 2. Install uv inside venv
 # shellcheck source=/dev/null
