@@ -105,7 +105,6 @@
     <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
     <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
-  </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
