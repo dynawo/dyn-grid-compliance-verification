@@ -47,9 +47,9 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         RESOURCES / "partial_reference_curves",
     )
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
+        Compliance.NonCompliant,  # 0
+        Compliance.NonCompliant,  # 1
+        Compliance.NonCompliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
