@@ -255,11 +255,9 @@ def handle_compile_command(
     try:
         if prepare_tool.precompile(dwo_launcher, model_name, force_recompile):
             dycov_logging.get_logger("CommandHandlers").info("Model compilation aborted by user.")
-            print("Compilation aborted by user.")
             result_code = 1
         else:
             dycov_logging.get_logger("CommandHandlers").info("Model(s) compiled successfully.")
-            print("Compilation finished successfully.")
             result_code = 0
     except Exception as e:
         dycov_logging.get_logger("CommandHandlers").error(f"Error compiling models: {e}")

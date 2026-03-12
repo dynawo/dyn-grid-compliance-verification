@@ -26,7 +26,6 @@ from dycov.model.producer import Producer
 def _purge_stale_temp_dirs(
     base_dir: Path, prefix: str, older_than: timedelta, exclude: Optional[Path] = None
 ) -> None:
-    print(f"Purging stale temp dirs in {base_dir} with prefix {prefix} older than {older_than}")
     try:
         now = datetime.now().timestamp()
         threshold = now - older_than.total_seconds()
