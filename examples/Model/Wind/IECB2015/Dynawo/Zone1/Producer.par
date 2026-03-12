@@ -70,9 +70,6 @@
     <!-- UfMeasurement -->
     <par type="DOUBLE" name="WPP_tphiFilt" value="0.02"/>
     <par type="BOOL" name="WPP_Mzc" value="false"/>
-    <par type="DOUBLE" name="WPP_DfMaxPu" value="1"/>
-    <par type="DOUBLE" name="WPP_tUFilt" value="0.01"/>
-    <par type="DOUBLE" name="WPP_tfFilt" value="0.01"/>
     <!-- Bypassing PCC -->
     <!-- MeasurementWP -->
     <par type="DOUBLE" name="WPP_DfMaxPu" value="1"/>
@@ -85,6 +82,10 @@
     <par type="DOUBLE" name="WPP_tLag" value="1e-5"/>
     <par type="DOUBLE" name="WPP_tLead" value="1e-5"/>
     <!-- PControlWP -->
+    <par type="DOUBLE" name="WPP_tpft" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tpfv" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tWPfFiltP" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tWPPFiltP" value="0.01"/>
     <par type="DOUBLE" name="WPP_DPRefMaxPu" value="999"/>
     <par type="DOUBLE" name="WPP_DPRefMinPu" value="-999"/>
     <par type="DOUBLE" name="WPP_DPwpRefMaxPu" value="999"/>
@@ -114,6 +115,11 @@
     <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom71" value="1.03"/>
     <par type="DOUBLE" name="WPP_TablePwpBiasfwpFiltCom72" value="0"/>
     <!-- QControlWP -->
+    <par type="DOUBLE" name="WPP_tWPPFiltQ" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tWPQFiltQ" value="0.01"/>
+    <par type="DOUBLE" name="WPP_tWPUFiltQ" value="0.01"/>
+    <par type="DOUBLE" name="WPP_txfv" value="0.1"/>
+    <par type="DOUBLE" name="WPP_txft" value="0.1"/>
     <par type="DOUBLE" name="WPP_DXRefMaxPu" value="999"/>
     <par type="DOUBLE" name="WPP_DXRefMinPu" value="-999"/>
     <par type="DOUBLE" name="WPP_Kiwpx" value="1e-5"/>

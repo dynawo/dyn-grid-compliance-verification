@@ -87,6 +87,11 @@
     <par type="DOUBLE" name="WTG4B_Kpg" value="1"/>
     <par type="DOUBLE" name="WTG4B_Kig" value="1e-5"/>
     <par type="DOUBLE" name="WTG4B_VFrz" value="0"/>
+    <par type="DOUBLE" name="WTG4B_PMaxPu" value="1"/>
+    <par type="DOUBLE" name="WTG4B_PMinPu" value="0"/>
+    <par type="DOUBLE" name="WTG4B_QMaxPu" value="0.8"/>
+    <par type="DOUBLE" name="WTG4B_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="WTG4B_tP" value="0.05"/>
 
     <!-- PLL Control -->
     <par type="DOUBLE" name="WTG4B_KiPLL" value="20"/>
