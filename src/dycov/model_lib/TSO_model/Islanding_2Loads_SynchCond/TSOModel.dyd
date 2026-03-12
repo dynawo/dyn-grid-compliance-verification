@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
   <!-- Benchmark Case -->
-  <dyn:blackBoxModel id="BusPDR" lib="Bus"/>
+  <dyn:blackBoxModel id="BusPDR" lib="Bus" parFile="TSOModel.par" parId="PDR"/>
   <dyn:blackBoxModel id="SyncCompensator" lib="GeneratorFictitious" parFile="TSOModel.par" parId="SyncCompensator"/>
   <dyn:blackBoxModel id="Main_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Main_Load"/>
   <dyn:blackBoxModel id="Secondary_load" lib="LoadAlphaBeta" parFile="TSOModel.par" parId="Secondary_Load"/>

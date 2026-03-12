@@ -27,4 +27,3 @@ Bess_GEN_InjectedActiveCurrent = Bess_GEN_InjectedActiveCurrent
 Bess_GEN_InjectedReactiveCurrent = Bess_GEN_InjectedReactiveCurrent
 Bess_GEN_AVRSetpointPu = Bess_GEN_AVRSetpointPu
 Bess_GEN_MagnitudeControlledByAVRPu = Bess_GEN_MagnitudeControlledByAVRPu
-Bess_GEN_InjectedCurrent = Bess_GEN_InjectedCurrent

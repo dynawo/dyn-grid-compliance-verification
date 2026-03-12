@@ -20,6 +20,7 @@ class DynawoRunInputs:
     generators: List[Any]
     s_nom: float
     s_nref: float
+    f_nom: float
 
 
 @dataclass

@@ -5,11 +5,15 @@
     <par type="STRING" name="infiniteBus_UPhaseTableName" value="TableUPhase"/>
     <par type="STRING" name="infiniteBus_OmegaRefPuTableName" value="TableOmegaRefPu"/>
     <par type="STRING" name="infiniteBus_TableFile" value="TableInfiniteBus.txt"/>
+    <par type="DOUBLE" name="infiniteBus_UNom" value="{{bus_UNom}}"/>
   </set>
   <set id="Line">
     <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
     <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
     <par type="DOUBLE" name="line_BPu" value="0.0"/>
     <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
   </set>
 </parametersSet>

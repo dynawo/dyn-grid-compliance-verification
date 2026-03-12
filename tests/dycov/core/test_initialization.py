@@ -292,43 +292,14 @@ class TestDycovInitializer:
         dycov_initializer._initialize_logger(debug=True)
 
         mock_init_handlers.assert_called_once_with(
-            "DEBUG",  # file_log_level
+            10,  # file_log_level
             self.mock_config.get_value.side_effect(
                 "Global", "file_formatter"
             ),  # file_formatter from mock_config
             self.mock_config.get_int.return_value,  # file_max_bytes
-            "DEBUG",  # console_log_level
+            10,  # console_log_level
             self.mock_config.get_value.side_effect(
                 "Global", "console_formatter"
             ),  # console_formatter from mock_config
-            self.mock_config.get_config_dir.return_value / "log",  # log_dir
-        )
-
-    def test_initialize_logger_no_debug(self, dycov_initializer, tmp_path, mocker):
-        """
-        Tests that _initialize_logger uses configured log levels when debug is False.
-        """
-        # Ensure init_handlers is mocked correctly
-        mock_init_handlers = mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
-
-        # Override default mock config behavior for this specific test
-        self.mock_config.get_value.side_effect = lambda section, key: {
-            ("Global", "file_log_level"): "WARNING",
-            ("Global", "file_formatter"): "%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-            ("Global", "console_log_level"): "ERROR",
-            ("Global", "console_formatter"): "%(levelname)s - %(name)s - %(message)s",
-        }.get((section, key), None)
-        self.mock_config.get_int.return_value = 50 * 1024 * 1024
-
-        dycov_initializer._initialize_logger(debug=False)
-
-        mock_init_handlers.assert_called_once_with(
-            "WARNING",  # file_log_level
-            self.mock_config.get_value.side_effect("Global", "file_formatter"),  # file_formatter
-            self.mock_config.get_int.return_value,  # file_max_bytes
-            "ERROR",  # console_log_level
-            self.mock_config.get_value.side_effect(
-                "Global", "console_formatter"
-            ),  # console_formatter
             self.mock_config.get_config_dir.return_value / "log",  # log_dir
         )

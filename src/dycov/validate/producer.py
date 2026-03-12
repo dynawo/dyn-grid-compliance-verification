@@ -539,8 +539,8 @@ class ModelProducer(Producer):
         )
 
         if self.is_dynawo_model():
-            file_checks.check_well_formed_xml(self.get_producer_dyd())
-            file_checks.check_well_formed_xml(self.get_producer_par())
+            file_checks.validate_xml_syntax(self.get_producer_dyd())
+            file_checks.validate_xml_syntax(self.get_producer_par())
             if self.get_sim_type() > MODEL_VALIDATION:
                 file_checks.check_curves_files(
                     self._producer_model_path,

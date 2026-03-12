@@ -84,8 +84,8 @@ exclude = [
 [tool.setuptools.package-data]
 "dycov" = [
     "report/templates/*",
-    "templates/*",
-    "model_lib/*",
+    "templates/**/*",
+    "model_lib/**/*",
     "**/*.ini",
     "curves/dynawo/tooling/Vsx64.cmd"
 ]

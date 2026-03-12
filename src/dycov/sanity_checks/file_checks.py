@@ -95,7 +95,7 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         )
 
 
-def check_well_formed_xml(xml_file: Path) -> None:
+def validate_xml_syntax(xml_file: Path) -> None:
     """
     Checks if the supplied file is a well-formed XML file.
 

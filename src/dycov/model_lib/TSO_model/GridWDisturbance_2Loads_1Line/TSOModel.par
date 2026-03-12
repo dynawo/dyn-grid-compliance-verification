@@ -62,6 +62,9 @@
     <par type="DOUBLE" name="load_alpha" value="0.0"/>
     <par type="DOUBLE" name="load_beta" value="0.0"/>
   </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
+  </set>
   <set id="DisconnectLoad">
     <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>
     <par type="BOOL" name="event_stateEvent1" value="true"/>

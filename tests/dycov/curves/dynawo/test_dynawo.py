@@ -93,12 +93,13 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
     generators = [DummyGen()]
     snom = 1.0
     snref = 1.0
+    fnom = 50.0
 
     # Case 1: Missing file
     missing_file = tmp_path / "missing.csv"
     with pytest.raises(FileNotFoundError):
         DynawoSimulator()._create_curves(
-            variable_translations, missing_file, generators, snom, snref
+            variable_translations, missing_file, generators, snom, snref, fnom
         )
 
     # Case 2: Malformed file
@@ -108,7 +109,7 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
 
     with pytest.raises(Exception):
         DynawoSimulator()._create_curves(
-            variable_translations, malformed_file, generators, snom, snref
+            variable_translations, malformed_file, generators, snom, snref, fnom
         )
 
 
@@ -152,7 +153,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
     mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
-    result = DynawoSimulator().check_voltage_dip(
+    result = DynawoSimulator().classify_voltage_dip(
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
     )
 
@@ -197,7 +198,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
     mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     # Act
-    result = DynawoSimulator().check_voltage_dip(
+    result = DynawoSimulator().classify_voltage_dip(
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
     )
 
@@ -304,6 +305,7 @@ def test_valid_input_file_processing(mocker, tmp_path):
     generators = [Gen()]
     snom = 100.0
     snref = 100.0
+    fnom = 50.0
 
     # Call function under test
     result = DynawoSimulator()._create_curves(
@@ -312,6 +314,7 @@ def test_valid_input_file_processing(mocker, tmp_path):
         generators=generators,
         snom=snom,
         snref=snref,
+        fnom=fnom,
     )
 
     # Assertions

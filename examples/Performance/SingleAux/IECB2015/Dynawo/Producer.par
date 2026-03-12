@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Synchronous machine external parameters -->
+  <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- Nominal -->
-    <par type="DOUBLE" name="WPP_SNom" value="90"/>
-    <par type="DOUBLE" name="WPP_tS" value="0.001"/>
     <!-- Electrical -->
     <par type="DOUBLE" name="WPP_BesPu" value="0"/>
     <par type="DOUBLE" name="WPP_GesPu" value="0"/>
@@ -116,25 +113,18 @@
     <par type="DOUBLE" name="WPP_Hgen" value="1"/>
     <par type="DOUBLE" name="WPP_Hwtr" value="5"/>
     <par type="DOUBLE" name="WPP_KdrtPu" value="500"/>
-    <!-- Operating Point -->
-    <par type="DOUBLE" name="WPP_P0Pu" value="-1"/>
-    <par type="DOUBLE" name="WPP_Q0Pu" value="0.21"/>
-    <par type="DOUBLE" name="WPP_U0Pu" value="1"/>
-    <par type="DOUBLE" name="WPP_UPhase0" value="0.21949"/>
+    <!-- General -->
+    <par type="DOUBLE" name="WPP_SNom" value="90"/>
+    <par type="DOUBLE" name="WPP_tS" value="0.001"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
-    <par type="DOUBLE" name="transformer_P10Pu" value="0.1"/>
-    <par type="DOUBLE" name="transformer_Q10Pu" value="0.05"/>
-    <par type="DOUBLE" name="transformer_U10Pu" value="1.0086"/>
-    <par type="DOUBLE" name="transformer_U1Phase0" value="0.4334"/>
-    <par type="DOUBLE" name="transformer_U20Pu" value="1.0"/>
+    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
@@ -149,10 +139,8 @@
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
   <set id="Aux_Load">
-    <par type="DOUBLE" name="load_P0Pu" value="0.01"/>
-    <par type="DOUBLE" name="load_Q0Pu" value="0.005"/>
-    <par type="DOUBLE" name="load_U0Pu" value="1.0086"/>
-    <par type="DOUBLE" name="load_UPhase0" value="0.4334"/>
+    <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
+    <par type="DOUBLE" name="load_QRefPu" value="0.005"/>
     <par type="DOUBLE" name="load_alpha" value="1.0"/>
     <par type="DOUBLE" name="load_beta" value="1.0"/>
   </set>

@@ -23,6 +23,8 @@ __pycache__/
 dist/
 *.egg-info/
 build/
+installers/docker/temp*/
+release_*/
 
 # Exclude the recommended virtual env:
 dycov_venv/
@@ -32,7 +34,7 @@ installers/Output
 
 # Exclude default results (for those cases when we run the tool in the src tree, which we shouldn't)
 .DyCoV_Results*/
-Results/
+Results*/
 
 # Exclude auto-generate docs
 docs/manual/source/usage/helps
