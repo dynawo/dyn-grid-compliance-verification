@@ -16,8 +16,6 @@ MEASUREMENT_PREFIX_MAP = {
     "BusPDR_BUS_ReactivePower": "Q",
     "BusPDR_BUS_ActiveCurrent": "Ip",
     "BusPDR_BUS_ReactiveCurrent": "Iq",
-    "InjectedActiveCurrent": "Ip",
-    "InjectedReactiveCurrent": "Iq",
 }
 
 

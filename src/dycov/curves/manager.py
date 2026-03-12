@@ -264,6 +264,7 @@ class CurvesManager:
             "producer",
             not self._producer.is_dynawo_model(),
         )
+
         ref_curves = self.__check_curves(
             measurement_names,
             self.get_curves("reference"),

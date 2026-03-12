@@ -545,7 +545,7 @@ def _append_generator(
     connected_equipment = _get_connected_equipment(dyd_root, gen_id)
     parset = _get_parset(par_root, par_id, nsmap)
 
-    imax = _get_injected_current(parset, nsmap, lib)
+    imax = _get_maximum_current(parset, nsmap, lib)
     P, Q = _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini)
     p_max, p_min, q_max, q_min = _get_generator_power_limits(
         parset, nsmap, lib, gen_id, producer_ini
@@ -599,8 +599,8 @@ def _get_parset(par_root, par_id, nsmap):
     return parset
 
 
-def _get_injected_current(parset, nsmap, lib):
-    sign, imaxpu_element = _get_parameter(parset, nsmap, lib, "InjectedCurrentMax")
+def _get_maximum_current(parset, nsmap, lib):
+    sign, imaxpu_element = _get_parameter(parset, nsmap, lib, "MaxCurrentAtConverter")
     return float(imaxpu_element) * sign if imaxpu_element is not None else None
 
 

@@ -76,7 +76,7 @@ def test_create_plot_saves_expected_plot():
         output_file = Path(tmpdir) / "plot.png"
         create_plot(
             time,
-            "InjectedActiveCurrent",
+            "IpInjTerminal",
             curves,
             time_reference,
             curves_reference,
@@ -147,16 +147,16 @@ def test_plot_functions_with_missing_config_values():
 def test_add_curve2plot_applies_color_and_style():
     df = pd.DataFrame(
         {
-            "InjectedActiveCurrent": [1, 2, 3],
-            "InjectedReactiveCurrent": [4, 5, 6],
+            "IpInjTerminal": [1, 2, 3],
+            "IqInjTerminal": [4, 5, 6],
             "AVRSetpointPu": [7, 8, 9],
             "Other": [10, 11, 12],
         }
     )
     plot_curves = []
-    _add_curve2plot("InjectedActiveCurrent", "InjectedActiveCurrent", df, plot_curves)
+    _add_curve2plot("IpInjTerminal", "IpInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#64b5cd"
-    _add_curve2plot("InjectedReactiveCurrent", "InjectedReactiveCurrent", df, plot_curves)
+    _add_curve2plot("IqInjTerminal", "IqInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8172b3"
     _add_curve2plot("AVRSetpointPu", "AVRSetpointPu", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8c8c8c"

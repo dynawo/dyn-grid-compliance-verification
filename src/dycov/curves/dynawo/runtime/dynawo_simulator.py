@@ -498,6 +498,7 @@ class DynawoSimulator:
         ).tolist()
 
         self._get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
+        self._get_injector_terminal_curves(snref, snom, generators, df_curves, curves_dict)
 
         for col in df_curves.columns:
             if "_TE_" in col or col == "time":
@@ -598,6 +599,62 @@ class DynawoSimulator:
                 network_frequency_list[0]
             ]
 
+    def _get_injector_terminal_curves(
+        self,
+        snref: float,
+        snom: float,
+        generators: list,
+        df_curves: pd.DataFrame,
+        curves_dict: dict,
+    ) -> None:
+        delete_columns = []
+        for generator in generators:
+            voltage_col = f"{generator.id}_GEN_UPuInjTerminal"
+            active_current_col = f"{generator.id}_GEN_IpInjTerminal"
+            reactive_current_col = f"{generator.id}_GEN_IqInjTerminal"
+            if (
+                voltage_col in df_curves.columns
+                and active_current_col in df_curves.columns
+                and reactive_current_col in df_curves.columns
+            ):
+                active_current = np.multiply(
+                    df_curves[active_current_col].to_numpy(dtype=float),
+                    snref / snom,
+                )
+                reactive_current = np.multiply(
+                    df_curves[reactive_current_col].to_numpy(dtype=float),
+                    snref / snom,
+                )
+                voltage = self._get_modulus(df_curves[voltage_col].tolist())
+                voltage_array = np.array(voltage, dtype=float)
+
+                curves_dict[voltage_col] = voltage
+
+                abs_tol = 0.1 * VOLTAGE_DIP_THRESHOLD  # = 0.0002
+                valid_mask = np.isfinite(voltage_array) & (np.abs(voltage_array) > abs_tol)
+                curves_dict[active_current_col] = np.divide(
+                    active_current,
+                    voltage_array,
+                    out=np.zeros_like(active_current),
+                    where=valid_mask,
+                ).tolist()
+                curves_dict[reactive_current_col] = np.divide(
+                    reactive_current,
+                    voltage_array,
+                    out=np.zeros_like(reactive_current),
+                    where=valid_mask,
+                ).tolist()
+
+                delete_columns.append(voltage_col)
+                delete_columns.append(active_current_col)
+                delete_columns.append(reactive_current_col)
+
+        # Columns are removed from df_curves to prevent the generic curve-copying loop
+        # in _create_curves from overwriting the transformed values stored in curves_dict.
+        for column in delete_columns:
+            if column in df_curves.columns:
+                del df_curves[column]
+
     def _get_magnitude_controlled_by_avr(
         self, generators: list, df_curves: pd.DataFrame, curves_dict: dict
     ) -> None:
@@ -628,6 +685,8 @@ class DynawoSimulator:
                     if has_q:
                         delete_columns.append(q_variable)
 
+        # Columns are removed from df_curves to prevent the generic curve-copying loop
+        # in _create_curves from overwriting the transformed values stored in curves_dict.
         for column in delete_columns:
             if column in df_curves.columns:
                 del df_curves[column]

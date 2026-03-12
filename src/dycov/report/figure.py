@@ -29,10 +29,12 @@ def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
         return column_name == "P"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
         return column_name == "Q"
-    if "InjectedActiveCurrent" in curve_name:
+    if "IpInjTerminal" in curve_name:
         return column_name == "P"
-    if "InjectedReactiveCurrent" in curve_name:
+    if "IqInjTerminal" in curve_name:
         return column_name == "Q"
+    if "UPuInjTerminal" in curve_name:
+        return column_name == "V"
     if curve_name == "BusPDR_BUS_Voltage":
         return column_name == "V"
     if curve_name == "NetworkFrequencyPu":
@@ -50,10 +52,12 @@ def _get_measurement_type(curve_name: str) -> str:
         return "active_current"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
         return "reactive_current"
-    if "InjectedActiveCurrent" in curve_name:
+    if "IpInjTerminal" in curve_name:
         return "active_current"
-    if "InjectedReactiveCurrent" in curve_name:
+    if "IqInjTerminal" in curve_name:
         return "reactive_current"
+    if "UPuInjTerminal" in curve_name:
+        return "voltage"
     if curve_name == "BusPDR_BUS_Voltage":
         return "voltage"
     if curve_name == "NetworkFrequencyPu":
@@ -72,10 +76,10 @@ def _add_curve2plot(
     if curve_name is None:
         return
 
-    if variable_tool_name == "InjectedActiveCurrent":
+    if variable_tool_name == "IpInjTerminal":
         line_color = "#64b5cd"
         line_style = "-"
-    elif variable_tool_name == "InjectedReactiveCurrent":
+    elif variable_tool_name == "IqInjTerminal":
         line_color = "#8172b3"
         line_style = "-"
     elif variable_tool_name == "AVRSetpointPu":
@@ -86,6 +90,7 @@ def _add_curve2plot(
     else:
         line_color = "#4c72b0"
         line_style = "-"
+
     if curve_name in curves:
         plot_curves.append(
             {
@@ -705,12 +710,20 @@ def create_plot(
             ymax,
             log_title,
         )
-    elif variable_names[0]["type"] == "generator":
-        curves_names = [
-            curve["name"]
-            for curve in curves
-            if curve["name"].endswith("_GEN_" + variable_names[0]["variable"])
-        ]
+    else:
+        curves_names = []
+        if variable_names[0]["type"] == "generator":
+            curves_names = [
+                curve["name"]
+                for curve in curves
+                if curve["name"].endswith("_GEN_" + variable_names[0]["variable"])
+            ]
+        elif variable_names[0]["type"] == "transformer":
+            curves_names = [
+                curve["name"]
+                for curve in curves
+                if curve["name"].endswith("_XFMR_" + variable_names[0]["variable"])
+            ]
         for curve_name in curves_names:
             _plot_curve(
                 time,
