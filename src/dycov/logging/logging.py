@@ -11,8 +11,8 @@
 import logging
 from typing import Optional
 
-from dycov.logging.logger import DycovLogger
 import dycov.logging.test_context as _test_context
+from dycov.logging.logger import DycovLogger
 
 
 def _get_instance() -> DycovLogger:
