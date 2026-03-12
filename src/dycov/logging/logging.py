@@ -9,8 +9,10 @@
 #
 
 import logging
+from typing import Optional
 
 from dycov.logging.logger import DycovLogger
+import dycov.logging.test_context as _test_context
 
 
 def _get_instance() -> DycovLogger:
@@ -28,6 +30,27 @@ def enable_warning_capture(force_runtimewarning_visible: bool = True) -> None:
         dycov_logging.enable_warning_capture(
             force_runtimewarning_visible=force_runtimewarning_visible
         )
+
+
+def set_test_context(
+    pcs: Optional[str] = None,
+    benchmark: Optional[str] = None,
+    oc: Optional[str] = None,
+) -> None:
+    """
+    Set the active test context for the current thread/process.
+    All subsequent log lines will be prefixed with [PCS.Benchmark.OC].
+
+    Usage:
+        from dycov.logging.logging import set_test_context
+        set_test_context(pcs="PCS_RTE-I16z1", benchmark="ThreePhaseFault", oc="TransientHiZTc800")
+    """
+    _test_context.set_test_context(pcs=pcs, benchmark=benchmark, oc=oc)
+
+
+def clear_test_context() -> None:
+    """Clear the active test context for the current thread/process."""
+    _test_context.clear_test_context()
 
 
 # Root logger for DyCoV
