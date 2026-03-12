@@ -97,15 +97,19 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'MagnitudeControlledByAVRPu'``
     Magnitude voltage amplitude in per unit. It is required.
 
-* ``'InjectedActiveCurrent'``
-    Injected active current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
+* ``'IpInjTerminal'``
+    Active current in low voltage at the injector terminal in per unit. It is required for 
+    Electrical Performance Verification and Model Validation.
 
-* ``'InjectedReactiveCurrent'``
-    Injected reactive current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
+* ``'IqInjTerminal'``
+    Reactive current in low voltage at the injector terminal in per unit. It is required for 
+    Electrical Performance Verification and Model Validation.
 
-* ``'InjectedCurrentMax'``
+* ``'UPuInjTerminal'``
+    Voltage amplitude in per unit at the injector terminal. It is required for 
+    Electrical Performance Verification and Model Validation.
+
+* ``'MaxCurrentAtConverter'``
     Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
 
 * ``'ActivePowerSetpointPu'``
@@ -156,15 +160,19 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'MagnitudeControlledByAVRPu'``
     Magnitude voltage amplitude in per unit. It is required.
 
-* ``'InjectedActiveCurrent'``
-    Injected active current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
+* ``'IpInjTerminal'``
+    Active current in low voltage at the injector terminal in per unit. It is required for 
+    Electrical Performance Verification and Model Validation.
 
-* ``'InjectedReactiveCurrent'``
-    Injected reactive current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
+* ``'IqInjTerminal'``
+    Reactive current in low voltage at the injector terminal in per unit. It is required for 
+    Electrical Performance Verification and Model Validation.
 
-* ``'InjectedCurrentMax'``
+* ``'UPuInjTerminal'``
+    Voltage amplitude in per unit at the injector terminal. It is required for 
+    Electrical Performance Verification and Model Validation.
+
+* ``'MaxCurrentAtConverter'``
     Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
 
 * ``'ActivePowerSetpointPu'``
@@ -237,15 +245,19 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'MagnitudeControlledByAVRPu'``
     Magnitude voltage amplitude in per unit. It is required.
 
-* ``'InjectedActiveCurrent'``
-    Injected active current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
+* ``'IpInjTerminal'``
+    Active current in low voltage at the injector terminal in per unit. It is required for 
+    Electrical Performance Verification and Model Validation.
 
-* ``'InjectedReactiveCurrent'``
-    Injected reactive current in per unit. It is required for Electrical Performance Verification and
-    Model Validation.
+* ``'IqInjTerminal'``
+    Reactive current in low voltage at the injector terminal in per unit. It is required for 
+    Electrical Performance Verification and Model Validation.
 
-* ``'InjectedCurrentMax'``
+* ``'UPuInjTerminal'``
+    Voltage amplitude in per unit at the injector terminal. It is required for 
+    Electrical Performance Verification and Model Validation.
+
+* ``'MaxCurrentAtConverter'``
     Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
 
 * ``'ActivePowerSetpointPu'``
