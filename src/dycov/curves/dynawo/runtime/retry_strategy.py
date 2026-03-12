@@ -60,7 +60,6 @@ class SolverRetryStrategy:
         max_sim_time: Optional[float],
     ) -> Tuple[bool, bool, str, pd.DataFrame, float]:
         logger = dycov_logging.get_logger("ProducerCurves")
-        title = f"{run.pcs_name}.{bm_name}.{oc_name}:"
 
         # 1) Baseline
         success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
@@ -71,7 +70,7 @@ class SolverRetryStrategy:
             return success, time_exceeds, log, curves_df, sim_time
 
         # 2) Reduce min step
-        logger.warning(f"{title} Retry: reducing minimum time step")
+        logger.warning("Retry: reducing minimum time step")
         self._reduce_min_step(solver, working_oc_dir)
         success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -81,7 +80,7 @@ class SolverRetryStrategy:
             return success, time_exceeds, log, curves_df, sim_time
 
         # 3) Increase required accuracy
-        logger.warning(f"{title} Retry: increasing required accuracy")
+        logger.warning("Retry: increasing required accuracy")
         self._increase_accuracy(solver, working_oc_dir)
         success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -92,7 +91,7 @@ class SolverRetryStrategy:
 
         # 4) Add parameters for small networks
         if self.settings.add_parameters_small_network:
-            logger.warning(f"{title} Retry: adding parameters for small networks")
+            logger.warning("Retry: adding parameters for small networks")
             self._add_parameters_small_networks(solver, working_oc_dir)
             success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -103,7 +102,7 @@ class SolverRetryStrategy:
 
         # 5) Flip solver type
         if self.settings.enable_solver_flip:
-            logger.warning(f"{title} Retry: flipping solver type SIM <-> IDA")
+            logger.warning("Retry: flipping solver type SIM <-> IDA")
             self._flip_solver(solver)
             replace_placeholders.modify_jobs_file(
                 working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
@@ -113,7 +112,7 @@ class SolverRetryStrategy:
             )
 
         if time_exceeds:
-            logger.warning(f"{title} Simulation time exceeds the maximum allowed ({max_sim_time})")
+            logger.warning("Simulation time exceeds the maximum allowed ({max_sim_time})")
         return success, time_exceeds, log, curves_df, sim_time
 
     # --- mutations & file updates ---
