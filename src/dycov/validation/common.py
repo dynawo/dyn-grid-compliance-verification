@@ -417,7 +417,7 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
 
 
 def check_generator_imax(
-    imax: float, time: list, injected_current: list, injected_active_current: list
+    imax: float, time: list, current_at_converter: list, active_current_at_converter: list
 ) -> tuple[int, bool]:
     """Check that, if Imax is reached, reactive support is priorized over active power supply.
 
@@ -427,9 +427,9 @@ def check_generator_imax(
         IMax value of the generator
     time: list
         List of time instants that make up the curve
-    injected_current: list
+    current_at_converter: list
         Curve of the injected current
-    injected_active_current: float
+    active_current_at_converter: float
         Curve of the injected active current
 
     Returns
@@ -440,27 +440,27 @@ def check_generator_imax(
         True if the injected active current does not increase, False otherwise
     """
     # Get curves file and steady time
-    if len(time) != len(injected_current):
+    if len(time) != len(current_at_converter):
         raise ValueError("curve values and time values have different length")
 
     pos = 0
-    while pos < len(injected_current) and injected_current[pos] < imax:
+    while pos < len(current_at_converter) and current_at_converter[pos] < imax:
         pos += 1
 
-    if pos >= len(injected_current):
-        pos = len(injected_current) - 1
+    if pos >= len(current_at_converter):
+        pos = len(current_at_converter) - 1
 
-    id_max = injected_active_current[pos]
+    id_max = active_current_at_converter[pos]
 
     # Cut list values
-    injected_active_current = injected_active_current[pos:]
+    active_current_at_converter = active_current_at_converter[pos:]
     time = time[pos:]
 
     id_not_increase = True
     first_id_value = -1
-    for i in range(len(injected_active_current)):
-        pos = len(injected_active_current) - (i + 1)
-        if injected_active_current[pos] > id_max:
+    for i in range(len(active_current_at_converter)):
+        pos = len(active_current_at_converter) - (i + 1)
+        if active_current_at_converter[pos] > id_max:
             first_id_value = time[pos]
             id_not_increase = False
             break

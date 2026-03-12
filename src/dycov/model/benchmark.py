@@ -324,6 +324,7 @@ class Benchmark:
         self.__init_figures_w(validations, pcs_benchmark_name)
         self.__init_figures_wref(validations, pcs_benchmark_name)
         self.__init_figures_i(validations, pcs_benchmark_name)
+        self.__init_figures_uit(validations, pcs_benchmark_name)
         self.__init_figures_ustator(validations, pcs_benchmark_name)
         self.__init_figures_theta(validations, pcs_benchmark_name)
         self.__init_figures_tap(validations, pcs_benchmark_name)
@@ -496,15 +497,34 @@ class Benchmark:
                     [
                         {
                             "type": "generator",
-                            "variable": "InjectedActiveCurrent",
+                            "variable": "IpInjTerminal",
                         },
                         {
                             "type": "generator",
-                            "variable": "InjectedReactiveCurrent",
+                            "variable": "IqInjTerminal",
                         },
                     ],
                     tests,
                     i_label,
+                ]
+            )
+
+    def __init_figures_uit(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_UIt = config.get_list("ReportCurves", "fig_UIt")
+        if pcs_benchmark_name in fig_UIt:
+            tests = []
+
+            self._figures_description.append(
+                [
+                    "fig_UIt",
+                    [
+                        {
+                            "type": "generator",
+                            "variable": "UPuInjTerminal",
+                        }
+                    ],
+                    tests,
+                    "V (pu base Unom)",
                 ]
             )
 

@@ -65,14 +65,12 @@
         \item Reactive power supplied at the connection point.
         \item Active current supplied at the connection point.
         \item Reactive current supplied at the connection point.
-        \item The injected active and reactive currents. All BESS
-        units are plotted on the same graph.
         \item Magnitude controlled by the AVR: modulus of the voltage at the REPC.
         All BESS units are plotted on the same graph.
         \item The BESS's main transformer tap ratio, if it is a transformer with an
         automatic tap changer.
-        \item Active current in low voltage at the injector terminal.
-        \item Reactive current in low voltage at the injector terminal.
+        \item The active and reactive currents in low voltage at the injector terminal. All BESS
+        units are plotted on the same graph.
         \item Low voltage at the injector terminal.
     \end{itemize}
 
@@ -135,21 +133,13 @@
     \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_IpIt_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I16z3.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Active current output Ip, measured in low voltage at the injector terminal.
+            \small active (light blue line) and reactive (violet line) currents in low voltage 
+            at the injector terminal. All PPM units are plotted on the same graph.
         \end{minipage}
     \end{minipage}
     \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_IqIt_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive current output Iq, measured in low voltage at the injector terminal.
-        \end{minipage}
-    \end{minipage}
-
-    \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I16z3.\DTRPcs.\OCname}
@@ -157,7 +147,8 @@
             \small Low voltage at the injector terminal.
         \end{minipage}
     \end{minipage}
-    \hfill
+
+    \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Tap_PCS_RTE-I16z3.\DTRPcs.\OCname}
