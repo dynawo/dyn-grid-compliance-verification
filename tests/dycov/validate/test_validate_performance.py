@@ -3,7 +3,7 @@ from tests.dycov.utils import PERFORMANCE, execute_tool
 
 
 def test_perf_sm_producer_curves():
-    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "GeneratorSynchronous", None)
+    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "SM", None)
     assert [
         Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
@@ -18,7 +18,7 @@ def test_perf_sm_producer_curves():
 
 
 def test_perf_ppm_producer_curves():
-    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "Wind", None)
+    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "PPM", None)
     assert [
         Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1
@@ -27,4 +27,24 @@ def test_perf_ppm_producer_curves():
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
+    ] == compliance
+
+
+def test_perf_bess_producer_curves():
+    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "BESS", None)
+    assert [
+        Compliance.Compliant,  # 0
+        Compliance.NonCompliant,  # 1
+        Compliance.Compliant,  # 2
+        Compliance.NonCompliant,  # 3
+        Compliance.Compliant,  # 4
+        Compliance.Compliant,  # 5
+        Compliance.Compliant,  # 6
+        Compliance.NonCompliant,  # 7
+        Compliance.NonCompliant,  # 8
+        Compliance.NonCompliant,  # 9
+        Compliance.NonCompliant,  # 10
+        Compliance.Compliant,  # 11
+        Compliance.Compliant,  # 12
+        Compliance.Compliant,  # 13
     ] == compliance
