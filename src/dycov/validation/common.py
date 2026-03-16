@@ -62,9 +62,7 @@ def check_time(
         return "-", time_check
 
 
-def is_invalid_test(
-    time: list, voltage: list, active: list, reactive: list, t_event: float, log_title: str
-):
+def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_event: float):
     """Check if the results of a step-response test are completely flat (no response).
     This is used for checking for a common error, i.e., the event not producing any effect.
 
@@ -93,7 +91,7 @@ def is_invalid_test(
     # TODO: we should assert(t_event >= time[0]), but not here -- do it at init time
     idx_t_event = np.argmin(abs(np.array(time) - t_event)) - 1
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Start values: V: {voltage[0]}, P: {active[0]}, Q: {reactive[0]}"
+        f"Start values: V: {voltage[0]}, P: {active[0]}, Q: {reactive[0]}"
     )
 
     # Get the steady-state value right before the event
@@ -101,7 +99,7 @@ def is_invalid_test(
     p_init = active[idx_t_event]
     q_init = reactive[idx_t_event]
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Steady-state values: V: {v_init}, P: {p_init}, Q: {q_init}"
+        f"Steady-state values: V: {v_init}, P: {p_init}, Q: {q_init}"
     )
 
     # Get max diff between values after event vs the steady-state value right before
@@ -109,7 +107,7 @@ def is_invalid_test(
     p_max_diff = max(abs(np.array(active[idx_t_event:]) - p_init))
     q_max_diff = max(abs(np.array(reactive[idx_t_event:]) - q_init))
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Max diff: V: {v_max_diff}, P: {p_max_diff}, Q: {q_max_diff}"
+        f"Max diff: V: {v_max_diff}, P: {p_max_diff}, Q: {q_max_diff}"
     )
 
     # Check if this max diff is smaller than the tolerances
@@ -119,7 +117,7 @@ def is_invalid_test(
     p_flat = math.isclose(p_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
     q_flat = math.isclose(q_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Flat Curves: V: {v_flat}, P: {p_flat}, Q: {q_flat}"
+        f"Flat Curves: V: {v_flat}, P: {p_flat}, Q: {q_flat}"
     )
 
     return v_flat and p_flat and q_flat
