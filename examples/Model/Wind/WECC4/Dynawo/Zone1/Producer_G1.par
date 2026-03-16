@@ -22,8 +22,8 @@
     <par type="DOUBLE" name="WT4A_Kvp" value="1"/>
     <par type="DOUBLE" name="WT4A_PMaxPu" value="1"/>
     <par type="DOUBLE" name="WT4A_PMinPu" value="0"/>
-    <par type="DOUBLE" name="WT4A_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WT4A_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="WT4A_QMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="WT4A_QMinPu" value="-1.0"/>
     <par type="DOUBLE" name="WT4A_tIq" value="0.01"/>
     <par type="DOUBLE" name="WT4A_tRv" value="0.01"/>
     <par type="DOUBLE" name="WT4A_tP" value="0.05"/>
@@ -83,13 +83,13 @@
     <par type="DOUBLE" name="WT4A_Kshaft" value="200"/>
 
     <!-- General -->
-    <par type="DOUBLE" name="WT4A_SNom" value="90"/>
+    <par type="DOUBLE" name="WT4A_SNom" value="4"/>
     <par type="DOUBLE" name="WT4A_RPu" value="1e-7"/>
     <par type="DOUBLE" name="WT4A_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
+    <par type="DOUBLE" name="transformer_SNom" value="4"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
