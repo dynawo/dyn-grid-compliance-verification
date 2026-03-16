@@ -7,7 +7,7 @@ RESOURCES = "./resources"
 def test_model_validation_ppm_producer_curves():
     compliance = execute_tool(
         None,
-        MODEL / "Wind" / "IECB2015" / "ProducerCurves",
+        MODEL / "ProducerCurves" / "PPM",
         MODEL / "Wind" / "IECB2015" / "ReferenceCurves",
     )
     assert [
