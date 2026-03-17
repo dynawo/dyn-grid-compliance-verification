@@ -3,11 +3,10 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
+# marinjl@aia.es
+# omsg@aia.es
+# demiguelm@aia.es
 #
-
 import tempfile
 from pathlib import Path
 
@@ -27,6 +26,7 @@ from dycov.report.figure import (
     create_plot,
     get_common_time_range,
 )
+from dycov.report.types import FigureDescription
 
 matplotlib.use("Agg")
 
@@ -72,6 +72,7 @@ def test_create_plot_saves_expected_plot():
     additional_curves = ["10P", "freq_1"]
     results = {"AVR_5_crvs": [[1, 1, 1, 1, 1]], "time_85U": 2, "sim_t_event_start": 0}
     unit = "MW"
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = Path(tmpdir) / "plot.png"
         create_plot(
@@ -92,7 +93,6 @@ def test_create_plot_saves_expected_plot():
 
 
 def test_get_common_time_range_includes_all_events():
-    # Setup
     time = [0, 1, 2, 3, 4]
     curves = {"time": time, "BusPDR_BUS_ActivePower": [0, 1, 2, 3, 4]}
     results = {
@@ -101,9 +101,14 @@ def test_get_common_time_range_includes_all_events():
         "sim_t_event_end": 3.0,
         "calc_settling_time": 3.5,
     }
-    figures_description = {"OC": [("desc", [{"type": "bus", "variable": "ActivePower"}])]}
+
+    figures_description = {
+        "OC": [FigureDescription("desc", [{"type": "bus", "variable": "ActivePower"}], [], "")]
+    }
+
     unit_characteristics = {}
     operating_condition = "OC.Benchmark"
+
     xmin, xmax = get_common_time_range(
         operating_condition,
         unit_characteristics,
@@ -116,25 +121,26 @@ def test_get_common_time_range_includes_all_events():
 
 
 def test_plot_functions_with_missing_config_values():
-    # Remove config values if present
     reset = ConfigReset()
     reset.set("Global", "graph_rel_tol", "")
     reset.set("Global", "graph_abs_tol", "")
     reset.set("Global", "graph_preevent_trange_pct", "")
     reset.set("Global", "graph_postevent_trange_pct", "")
     try:
-        # Should fallback to defaults and not raise
         time_curve = [0, 1, 2, 3, 4]
         curve = [1, 2, 3, 4, 5]
         unit_characteristics = {}
         operating_condition = "OC.Benchmark"
         sim_t_event_end = 4
+
         _get_xrange_for_curve = __import__(
             "dycov.report.figure", fromlist=["_get_xrange_for_curve"]
         )._get_xrange_for_curve
+
         xmin, xmax = _get_xrange_for_curve(
             operating_condition, unit_characteristics, time_curve, curve, sim_t_event_end
         )
+
         assert isinstance(xmin, (float, type(None)))
         assert isinstance(xmax, (float, type(None)))
     finally:
@@ -153,19 +159,23 @@ def test_add_curve2plot_applies_color_and_style():
             "Other": [10, 11, 12],
         }
     )
+
     plot_curves = []
+
     _add_curve2plot("IpInjTerminal", "IpInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#64b5cd"
+
     _add_curve2plot("IqInjTerminal", "IqInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8172b3"
+
     _add_curve2plot("AVRSetpointPu", "AVRSetpointPu", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8c8c8c"
+
     _add_curve2plot("Other", "Other", df, plot_curves)
     assert plot_curves[-1]["color"] == "#4c72b0"
 
 
 def test_get_yrange_applies_explicit_range_for_low_variation():
-    # Setup config for low variation threshold
     reset = ConfigReset()
     reset.set("Global", "graph_minvariaton_yrange_pct", "100")
     reset.set("Global", "graph_bottom_yrange_pct", "10")
@@ -202,7 +212,7 @@ def test_plot_additional_curves_renders_all_types():
     }
     ymin, ymax = 0, 2
     last_val = 1
-    # Should not raise
+
     _plot_additional_curves(time, additional_curves, results, last_val, ymin, ymax)
 
 
@@ -217,7 +227,7 @@ def test_plot_response_characteristics_annotations():
         "calc_settling_time": 3.0,
         "calc_ss_value": 2.5,
     }
-    # Should not raise and should annotate
+
     _plot_response_characteristics("BusPDR_BUS_ActivePower", results)
 
 
@@ -234,34 +244,31 @@ def test_is_controlled_magnitude_identifies_correct_combinations():
 
 def test_plot_functions_with_unsupported_curve_types():
     # Should not raise
-    # Pass a dict as a curve
     try:
         _get_yrange([{"curve": {"a": 1, "b": 2}}])
     except Exception:
-        pass  # Acceptable: dicts can't be max/min'ed, but should not crash the whole suite
+        pass
 
-    # Pass an object as a curve
     class Dummy:
         pass
 
     try:
         _get_yrange([{"curve": Dummy()}])
     except Exception:
-        pass  # Acceptable
+        pass
 
 
 def test_get_xrange_aggregates_curve_ranges():
-    # Setup
     def fake_get_xrange_for_curve(
         operating_condition, unit_characteristics, time_curve, curve, sim_t_event_end
     ):
         return min(time_curve), max(time_curve)
 
-    # Patch in the function
     import dycov.report.figure as figure_mod
 
     orig = figure_mod._get_xrange_for_curve
     figure_mod._get_xrange_for_curve = fake_get_xrange_for_curve
+
     try:
         curves = [
             {"curve": [1, 2, 3]},
@@ -272,27 +279,34 @@ def test_get_xrange_aggregates_curve_ranges():
         operating_condition = "OC.Benchmark"
         unit_characteristics = {}
         sim_t_event_end = 2
+
         xmin, xmax = _get_xrange(
-            operating_condition, unit_characteristics, time_curve, curves, sim_t_event_end
+            operating_condition,
+            unit_characteristics,
+            time_curve,
+            curves,
+            sim_t_event_end,
         )
+
         assert xmin == 0
         assert xmax == 2
+
     finally:
         figure_mod._get_xrange_for_curve = orig
 
 
 def test_plot_functions_with_invalid_config_types():
-    # Set config values to invalid types
     reset = ConfigReset()
     reset.set("Global", "graph_minvariaton_yrange_pct", "not_a_number")
     reset.set("Global", "graph_bottom_yrange_pct", "not_a_number")
     reset.set("Global", "graph_top_yrange_pct", "not_a_number")
+
     try:
         curve = [1, 1, 1, 1, 1]
         try:
             _get_yrange([{"curve": curve}])
         except Exception:
-            pass  # Acceptable: should not crash the suite
+            pass
     finally:
         reset.remove("Global", "graph_minvariaton_yrange_pct")
         reset.remove("Global", "graph_bottom_yrange_pct")

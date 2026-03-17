@@ -544,7 +544,7 @@ def _get_time_range(
     xmax = -99999
     figure_key = operating_condition.rsplit(".", 1)[0]
     for figure_description in figures_description[figure_key]:
-        plot_curves = get_curves2plot(figure_description[1], curves)
+        plot_curves = get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
 

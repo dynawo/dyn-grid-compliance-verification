@@ -14,16 +14,14 @@ import pandas as pd
 import pytest
 
 from dycov.report import html
+from dycov.report.types import FigureDescription
 
 
 def test_plotly_figures_single_curve_success():
-    # Prepare minimal valid data for a single curve
-    figure_description = [
-        "desc",
-        {"type": "bus", "variable": "ActivePower"},
-        [],
-        "Power [pu]",
-    ]
+    figure_description = FigureDescription(
+        "desc", [{"type": "bus", "variable": "ActivePower"}], [], "Power [pu]"
+    )
+
     calculated_curves = pd.DataFrame(
         {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
     )
@@ -31,30 +29,26 @@ def test_plotly_figures_single_curve_success():
     results = {}
 
     curve_names, _, html_out = html.plotly_figures(
-        [
-            figure_description[0],
-            [figure_description[1]],
-            figure_description[2],
-            figure_description[3],
-        ],
+        figure_description,
         calculated_curves,
         reference_curves,
         results,
     )
+
     assert curve_names == ["BusPDR_BUS_ActivePower"]
     assert isinstance(html_out, str)
-    assert "<html" not in html_out  # Should be a fragment, not full HTML
+    assert "<html" not in html_out
     assert "plotly" in html_out.lower()
 
 
 def test_plotly_figures_with_additional_traces():
-    # Prepare data with additional traces and response characteristics
-    figure_description = [
+    figure_description = FigureDescription(
         "desc",
-        {"type": "bus", "variable": "ActivePower"},
+        [{"type": "bus", "variable": "ActivePower"}],
         ["10P", "5P", "freq_1", "AVR5"],
         "Power [pu]",
-    ]
+    )
+
     calculated_curves = pd.DataFrame(
         {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
     )
@@ -73,44 +67,42 @@ def test_plotly_figures_with_additional_traces():
     }
 
     curve_names, _, html_out = html.plotly_figures(
-        [
-            figure_description[0],
-            [figure_description[1]],
-            figure_description[2],
-            figure_description[3],
-        ],
+        figure_description,
         calculated_curves,
         reference_curves,
         results,
     )
+
     assert curve_names == ["BusPDR_BUS_ActivePower"]
     assert isinstance(html_out, str)
     assert "plotly" in html_out.lower()
 
 
 def test_create_html_success():
-    # Prepare a temporary directory and a dummy template
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir)
         html_dir = output_path / "HTML"
         html_dir.mkdir()
-        # Create a dummy plotly.min.js
-        plotly_js = html_dir / "plotly.min.js"
-        plotly_js.write_text("// plotly js dummy")
-        # Create a dummy template
+
+        # Create dummy plotly.min.js
+        (html_dir / "plotly.min.js").write_text("// plotly js dummy")
+
+        # Create dummy template
         templates_dir = Path(__file__).resolve().parent / "templates"
         templates_dir.mkdir(exist_ok=True)
         template_path = templates_dir / "template.html"
         template_path.write_text("{{ figures|length }} figures rendered")
+
         js_path = templates_dir / "sync_charts.js"
         js_path.write_text("// sync charts js dummy")
-        # Prepare figures
+
         producer = "producer"
         figures = [("figure1", "<div>figure1</div>"), ("figure2", "<div>figure2</div>")]
         operating_condition = "test_condition"
-        # Patch __file__ to point to this test file for template resolution
+
         orig_file = html.__file__
         html.__file__ = str(Path(__file__))
+
         try:
             html.create_html(producer, figures, operating_condition, output_path)
             output_html = html_dir / f"{producer}.{operating_condition}.html"
@@ -123,20 +115,17 @@ def test_create_html_success():
                 template_path.unlink()
             if js_path.exists():
                 js_path.unlink()
-            if templates_dir.exists():
-                try:
-                    templates_dir.rmdir()
-                except Exception:
-                    pass
+            try:
+                templates_dir.rmdir()
+            except Exception:
+                pass
 
 
 def test_plotly_figures_missing_reference_curves():
-    figure_description = [
-        "desc",
-        {"type": "bus", "variable": "ActivePower"},
-        [],
-        "Power [pu]",
-    ]
+    figure_description = FigureDescription(
+        "desc", [{"type": "bus", "variable": "ActivePower"}], [], "Power [pu]"
+    )
+
     calculated_curves = pd.DataFrame(
         {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
     )
@@ -144,85 +133,58 @@ def test_plotly_figures_missing_reference_curves():
     results = {}
 
     curve_names, _, html_out = html.plotly_figures(
-        [
-            figure_description[0],
-            [figure_description[1]],
-            figure_description[2],
-            figure_description[3],
-        ],
+        figure_description,
         calculated_curves,
         reference_curves,
         results,
     )
+
     assert curve_names == ["BusPDR_BUS_ActivePower"]
     assert isinstance(html_out, str)
 
 
 def test_plotly_figures_no_curve_names():
-    figure_description = [
-        "desc",
-        [],
-        [],
-        "Power [pu]",
-    ]
-    calculated_curves = pd.DataFrame(
-        {
-            "time": [0, 1, 2],
-        }
-    )
-    reference_curves = pd.DataFrame(
-        {
-            "time": [0, 1, 2],
-        }
-    )
+    figure_description = FigureDescription("desc", [], [], "Power [pu]")
+
+    calculated_curves = pd.DataFrame({"time": [0, 1, 2]})
+    reference_curves = pd.DataFrame({"time": [0, 1, 2]})
     results = {}
 
     curve_names, _, html_out = html.plotly_figures(
-        [
-            figure_description[0],
-            figure_description[1],
-            figure_description[2],
-            figure_description[3],
-        ],
+        figure_description,
         calculated_curves,
         reference_curves,
         results,
     )
+
     assert curve_names == []
     assert html_out == ""
 
 
 def test_plotly_figures_incomplete_results_dict():
-    figure_description = [
-        "desc",
-        {"type": "bus", "variable": "ActivePower"},
-        [],
-        "Power [pu]",
-    ]
+    figure_description = FigureDescription(
+        "desc", [{"type": "bus", "variable": "ActivePower"}], [], "Power [pu]"
+    )
+
     calculated_curves = pd.DataFrame(
         {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
     )
     reference_curves = pd.DataFrame({"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.4, 0.9]})
-    # results missing many keys
     results = {}
 
     curve_names, _, html_out = html.plotly_figures(
-        [
-            figure_description[0],
-            [figure_description[1]],
-            figure_description[2],
-            figure_description[3],
-        ],
+        figure_description,
         calculated_curves,
         reference_curves,
         results,
     )
+
     assert curve_names == ["BusPDR_BUS_ActivePower"]
     assert isinstance(html_out, str)
 
 
 def test_plotly_figures_multiple_curves():
-    figure_description = [
+    figure_description = FigureDescription(
         "desc",
         [
             {"type": "bus", "variable": "ActivePower"},
@@ -230,15 +192,16 @@ def test_plotly_figures_multiple_curves():
         ],
         [],
         "Power [pu]",
-    ]
-    calculated_curves = pd.DataFrame(
+    )
+
+    calculated = pd.DataFrame(
         {
             "time": [0, 1, 2],
             "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0],
             "BusPDR_BUS_ReactivePower": [0.0, -0.5, -1.0],
         }
     )
-    reference_curves = pd.DataFrame(
+    reference = pd.DataFrame(
         {
             "time": [0, 1, 2],
             "BusPDR_BUS_ActivePower": [0.0, 0.4, 0.9],
@@ -248,17 +211,16 @@ def test_plotly_figures_multiple_curves():
     results = {}
 
     curve_names, _, html_out = html.plotly_figures(
-        [
-            figure_description[0],
-            figure_description[1],
-            figure_description[2],
-            figure_description[3],
-        ],
-        calculated_curves,
-        reference_curves,
+        figure_description,
+        calculated,
+        reference,
         results,
     )
-    assert set(curve_names) == {"BusPDR_BUS_ActivePower", "BusPDR_BUS_ReactivePower"}
+
+    assert set(curve_names) == {
+        "BusPDR_BUS_ActivePower",
+        "BusPDR_BUS_ReactivePower",
+    }
     assert isinstance(html_out, str)
 
 
@@ -267,16 +229,20 @@ def test_create_html_missing_template():
         output_path = Path(tmpdir)
         html_dir = output_path / "HTML"
         html_dir.mkdir()
+
         # Remove template if exists
         templates_dir = Path(__file__).resolve().parent / "templates"
         template_path = templates_dir / "template.html"
         if template_path.exists():
             template_path.unlink()
+
         producer = "producer"
         figures = [("figure1", "<div>figure1</div>")]
         operating_condition = "missing_template"
+
         orig_file = html.__file__
         html.__file__ = str(Path(__file__))
+
         try:
             with pytest.raises(FileNotFoundError):
                 html.create_html(producer, figures, operating_condition, output_path)
@@ -293,162 +259,58 @@ def test_plotly_all_curves_skips_plotted_and_time():
             "curve3": [7, 8, 9],
         }
     )
-    results = {
-        "curves": calculated_curves,
-        "reference_curves": None,
-    }
+    results = {"curves": calculated_curves, "reference_curves": None}
     plotted_curves = ["curve2", "curve3"]
+
     figures = html.plotly_all_curves(plotted_curves, results)
-    # Only curve1 should be plotted (not time, not curve2, not curve3)
+
     assert len(figures) == 1
     assert "curve1" in figures[0]
 
 
-# Returns "active_power" when curve_name is "BusPDR_BUS_ActivePower"
 def test_returns_active_power_for_active_power_curve():
-    # Arrange
-    curve_name = "BusPDR_BUS_ActivePower"
-
-    # Act
-    result = html._get_measurement_type(curve_name)
-
-    # Assert
-    assert result == "active_power"
+    assert html._get_measurement_type("BusPDR_BUS_ActivePower") == "active_power"
 
 
-# Returns "reactive_power" when curve_name is "BusPDR_BUS_ReactivePower"
 def test_returns_reactive_power_for_reactive_power_curve():
-    # Arrange
-    curve_name = "BusPDR_BUS_ReactivePower"
-
-    # Act
-    result = html._get_measurement_type(curve_name)
-
-    # Assert
-    assert result == "reactive_power"
+    assert html._get_measurement_type("BusPDR_BUS_ReactivePower") == "reactive_power"
 
 
-# Returns "active_current" when curve_name is "BusPDR_BUS_ActiveCurrent"
 def test_returns_active_current_for_active_current_curve():
-    # Arrange
-    curve_name = "BusPDR_BUS_ActiveCurrent"
-
-    # Act
-    result = html._get_measurement_type(curve_name)
-
-    # Assert
-    assert result == "active_current"
+    assert html._get_measurement_type("BusPDR_BUS_ActiveCurrent") == "active_current"
 
 
-# Returns "reactive_current" when curve_name is "BusPDR_BUS_ReactiveCurrent"
 def test_returns_reactive_current_for_reactive_current_curve():
-    # Arrange
-    curve_name = "BusPDR_BUS_ReactiveCurrent"
-
-    # Act
-    result = html._get_measurement_type(curve_name)
-
-    # Assert
-    assert result == "reactive_current"
+    assert html._get_measurement_type("BusPDR_BUS_ReactiveCurrent") == "reactive_current"
 
 
-# Returns "voltage" when curve_name is "BusPDR_BUS_Voltage"
 def test_returns_voltage_for_voltage_curve():
-    # Arrange
-    curve_name = "BusPDR_BUS_Voltage"
-
-    # Act
-    result = html._get_measurement_type(curve_name)
-
-    # Assert
-    assert result == "voltage"
+    assert html._get_measurement_type("BusPDR_BUS_Voltage") == "voltage"
 
 
-# Returns "frequency" when curve_name is "NetworkFrequencyPu"
 def test_returns_frequency_for_network_frequency_curve():
-    # Arrange
-    curve_name = "NetworkFrequencyPu"
-
-    # Act
-    result = html._get_measurement_type(curve_name)
-
-    # Assert
-    assert result == "frequency"
+    assert html._get_measurement_type("NetworkFrequencyPu") == "frequency"
 
 
-# Return true when curve_name is "BusPDR_BUS_ActivePower" and column_name is "P"
 def test_active_power_with_p_returns_true():
-    # Arrange
-    curve_name = "BusPDR_BUS_ActivePower"
-    column_name = "P"
-
-    # Act
-    result = html._is_controlled_magnitude(curve_name, column_name)
-
-    # Assert
-    assert result is True
+    assert html._is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
 
 
-# Return true when curve_name is "BusPDR_BUS_RectivePower" and column_name is "Q"
 def test_reactive_power_with_q_returns_true():
-    # Arrange
-    curve_name = "BusPDR_BUS_ReactivePower"
-    column_name = "Q"
-
-    # Act
-    result = html._is_controlled_magnitude(curve_name, column_name)
-
-    # Assert
-    assert result is True
+    assert html._is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
 
 
-# Return true when curve_name is "BusPDR_BUS_ActiveCurrent" and column_name is "P"
 def test_active_current_with_p_returns_true():
-    # Arrange
-    curve_name = "BusPDR_BUS_ActiveCurrent"
-    column_name = "P"
-
-    # Act
-    result = html._is_controlled_magnitude(curve_name, column_name)
-
-    # Assert
-    assert result is True
+    assert html._is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
 
 
-# Return true when curve_name is "BusPDR_BUS_RectiveCurrent" and column_name is "Q"
 def test_reactive_current_with_q_returns_true():
-    # Arrange
-    curve_name = "BusPDR_BUS_ReactiveCurrent"
-    column_name = "Q"
-
-    # Act
-    result = html._is_controlled_magnitude(curve_name, column_name)
-
-    # Assert
-    assert result is True
+    assert html._is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
 
 
-# Return true when curve_name is "BusPDR_BUS_Voltage" and column_name is "V"
 def test_voltage_with_v_returns_true():
-    # Arrange
-    curve_name = "BusPDR_BUS_Voltage"
-    column_name = "V"
-
-    # Act
-    result = html._is_controlled_magnitude(curve_name, column_name)
-
-    # Assert
-    assert result is True
+    assert html._is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
 
 
-# Return true when curve_name is "NetworkFrequencyPu" and column_name is "$\\omega"
 def test_network_frequency_with_omega_returns_true():
-    # Arrange
-    curve_name = "NetworkFrequencyPu"
-    column_name = "$\\omega"
-
-    # Act
-    result = html._is_controlled_magnitude(curve_name, column_name)
-
-    # Assert
-    assert result is True
+    assert html._is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
