@@ -21,6 +21,7 @@ from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
 from dycov.model.parameters import Simulation_result
 from dycov.model.producer import Producer
+from dycov.report.types import FigureDescription
 from dycov.validation import compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
@@ -341,17 +342,12 @@ class Benchmark:
                 tests.append("85U")
 
             self._figures_description.append(
-                [
-                    "fig_V",
-                    [
-                        {
-                            "type": "bus",
-                            "variable": "Voltage",
-                        }
-                    ],
-                    tests,
-                    "V (pu base Unom)",
-                ]
+                FigureDescription(
+                    name="fig_V",
+                    variables=[{"type": "bus", "variable": "Voltage"}],
+                    tests=tests,
+                    ylabel="V (pu base Unom)",
+                )
             )
 
     def __init_figures_p(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -373,12 +369,12 @@ class Benchmark:
                 p_label = "P (pu base Snom)"
 
             self._figures_description.append(
-                [
-                    "fig_P",
-                    "BusPDR_BUS_ActivePower",
-                    tests,
-                    p_label,
-                ]
+                FigureDescription(
+                    name="fig_P",
+                    variables="BusPDR_BUS_ActivePower",
+                    tests=tests,
+                    ylabel=p_label,
+                )
             )
 
     def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -392,12 +388,12 @@ class Benchmark:
                 q_label = "Q (pu base Snom)"
 
             self._figures_description.append(
-                [
-                    "fig_Q",
-                    "BusPDR_BUS_ReactivePower",
-                    tests,
-                    q_label,
-                ]
+                FigureDescription(
+                    name="fig_Q",
+                    variables="BusPDR_BUS_ReactivePower",
+                    tests=tests,
+                    ylabel=q_label,
+                )
             )
 
     def __init_figures_ip(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -411,12 +407,12 @@ class Benchmark:
                 ip_label = "Ip (pu base Unom, Snom)"
 
             self._figures_description.append(
-                [
-                    "fig_Ip",
-                    "BusPDR_BUS_ActiveCurrent",
-                    tests,
-                    ip_label,
-                ]
+                FigureDescription(
+                    name="fig_Ip",
+                    variables="BusPDR_BUS_ActiveCurrent",
+                    tests=tests,
+                    ylabel=ip_label,
+                )
             )
 
     def __init_figures_iq(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -430,30 +426,26 @@ class Benchmark:
                 iq_label = "Iq (pu base Unom, Snom)"
 
             self._figures_description.append(
-                [
-                    "fig_Iq",
-                    "BusPDR_BUS_ReactiveCurrent",
-                    tests,
-                    iq_label,
-                ]
+                FigureDescription(
+                    name="fig_Iq",
+                    variables="BusPDR_BUS_ReactiveCurrent",
+                    tests=tests,
+                    ylabel=iq_label,
+                )
             )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_W = config.get_list("ReportCurves", "fig_W")
         if pcs_benchmark_name in fig_W:
             tests = []
+
             self._figures_description.append(
-                [
-                    "fig_W",
-                    [
-                        {
-                            "type": "generator",
-                            "variable": "RotorSpeedPu",
-                        }
-                    ],
-                    tests,
-                    r"$\omega$ (Hz)",
-                ]
+                FigureDescription(
+                    name="fig_W",
+                    variables=[{"type": "generator", "variable": "RotorSpeedPu"}],
+                    tests=tests,
+                    ylabel=r"$\omega$ (Hz)",
+                )
             )
 
     def __init_figures_wref(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -466,25 +458,22 @@ class Benchmark:
                 tests.append("freq_200")
             if "freq_250" in validations:
                 tests.append("freq_250")
+
             self._figures_description.append(
-                [
-                    "fig_WRef",
-                    [
-                        {
-                            "type": "generator",
-                            "variable": "NetworkFrequencyPu",
-                        }
-                    ],
-                    tests,
-                    r"$\omega$ (Hz)",
-                ]
+                FigureDescription(
+                    name="fig_WRef",
+                    variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+                    tests=tests,
+                    ylabel=r"$\omega$ (Hz)",
+                )
             )
 
     def __init_figures_i(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_I = config.get_list("ReportCurves", "fig_I")
-
         if pcs_benchmark_name in fig_I:
             tests = []
+            if "imax_reac" in validations:
+                tests.append("imax_reac")
 
             if self._producer.is_dynawo_model():
                 i_label = f"I (pu base Unom, Snom = {self._producer.s_nom}MVA)"
@@ -492,21 +481,15 @@ class Benchmark:
                 i_label = "I (pu base Unom, Snom)"
 
             self._figures_description.append(
-                [
-                    "fig_I",
-                    [
-                        {
-                            "type": "generator",
-                            "variable": "IpInjTerminal",
-                        },
-                        {
-                            "type": "generator",
-                            "variable": "IqInjTerminal",
-                        },
+                FigureDescription(
+                    name="fig_I",
+                    variables=[
+                        {"type": "generator", "variable": "IpInjTerminal"},
+                        {"type": "generator", "variable": "IqInjTerminal"},
                     ],
-                    tests,
-                    i_label,
-                ]
+                    tests=tests,
+                    ylabel=i_label,
+                )
             )
 
     def __init_figures_uit(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -515,17 +498,12 @@ class Benchmark:
             tests = []
 
             self._figures_description.append(
-                [
-                    "fig_UIt",
-                    [
-                        {
-                            "type": "generator",
-                            "variable": "UPuInjTerminal",
-                        }
-                    ],
-                    tests,
-                    "V (pu base Unom)",
-                ]
+                FigureDescription(
+                    name="fig_UIt",
+                    variables=[{"type": "generator", "variable": "UPuInjTerminal"}],
+                    tests=tests,
+                    ylabel="V (pu base Unom)",
+                )
             )
 
     def __init_figures_ustator(self, validations: list, pcs_benchmark_name: str) -> None:
@@ -536,57 +514,43 @@ class Benchmark:
                 tests.append("AVR5")
 
             self._figures_description.append(
-                [
-                    "fig_Ustator",
-                    [
-                        {
-                            "type": "generator",
-                            "variable": "MagnitudeControlledByAVRPu",
-                        },
-                        {
-                            "type": "generator",
-                            "variable": "AVRSetpointPu",
-                        },
+                FigureDescription(
+                    name="fig_Ustator",
+                    variables=[
+                        {"type": "generator", "variable": "MagnitudeControlledByAVRPu"},
+                        {"type": "generator", "variable": "AVRSetpointPu"},
                     ],
-                    tests,
-                    "V (pu base Unom)",
-                ]
+                    tests=tests,
+                    ylabel="V (pu base Unom)",
+                )
             )
 
     def __init_figures_theta(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Theta = config.get_list("ReportCurves", "fig_Theta")
         if pcs_benchmark_name in fig_Theta:
             tests = []
+
             self._figures_description.append(
-                [
-                    "fig_Theta",
-                    [
-                        {
-                            "type": "generator",
-                            "variable": "InternalAngle",
-                        }
-                    ],
-                    tests,
-                    r"$\theta$ (rad)",
-                ]
+                FigureDescription(
+                    name="fig_Theta",
+                    variables=[{"type": "generator", "variable": "InternalAngle"}],
+                    tests=tests,
+                    ylabel=r"$\theta$ (rad)",
+                )
             )
 
     def __init_figures_tap(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Tap = config.get_list("ReportCurves", "fig_Tap")
         if pcs_benchmark_name in fig_Tap:
             tests = []
+
             self._figures_description.append(
-                [
-                    "fig_Tap",
-                    [
-                        {
-                            "type": "transformer",
-                            "variable": "Tap",
-                        }
-                    ],
-                    tests,
-                    "Pos",
-                ]
+                FigureDescription(
+                    name="fig_Tap",
+                    variables=[{"type": "transformer", "variable": "Tap"}],
+                    tests=tests,
+                    ylabel="Pos",
+                )
             )
 
     def __has_required_curves(
@@ -672,7 +636,7 @@ class Benchmark:
                 op_cond.get_name(),
             )
             self.__debug(
-                f"Succes: {simulation_result.success} "
+                f"Success: {simulation_result.success} "
                 f"Has curves: {has_curves} "
                 f"Time exceeds: {simulation_result.time_exceeds} "
                 f"Error message: {simulation_result.error_message} "
@@ -709,8 +673,17 @@ class Benchmark:
             else:
                 compliance = Compliance.WithoutCurves
                 results = {"compliance": False, "curves": None}
-
             results["summary"] = compliance
+
+            if self._validator.is_defined_imax_reac():
+                gen_imax = self._curves_manager.get_generators_imax()
+                voltage_dip = self._curves_manager.get_voltage_dip()
+                gen_reactive_current_target = {
+                    key: 2 * voltage_dip if 2 * voltage_dip < gen_imax[key] else gen_imax[key]
+                    for key in gen_imax
+                }
+                results["reactive_current_target"] = gen_reactive_current_target
+
             summary_list.append(
                 Summary(
                     self._producer_name,
@@ -754,12 +727,12 @@ class Benchmark:
         """
         return self._name
 
-    def get_figures_description(self) -> dict:
+    def get_figures_description(self) -> list:
         """Get the figure description.
 
         Returns
         -------
-        dict
-            Description of every figure to plot by benchmark
+        list
+            List of figure descriptions for the benchmark
         """
         return self._figures_description

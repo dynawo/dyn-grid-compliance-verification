@@ -16,6 +16,7 @@ import plotly.graph_objects as go
 from jinja2 import Template
 
 from dycov.configuration.cfg import config
+from dycov.report.types import FigureDescription
 
 
 def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
@@ -419,11 +420,11 @@ def _plotly_figures(
     )
 
 
-def _update_layout(fig, curve_name, figure_description):
+def _update_layout(fig, curve_name, yaxis_title):
     fig.update_layout(
         title=curve_name,
         xaxis_title="Time",
-        yaxis_title=figure_description,
+        yaxis_title=yaxis_title,
         template="plotly_dark",
         font_color="#000000",
         plot_bgcolor="#ffffff",
@@ -444,7 +445,7 @@ def _update_layout(fig, curve_name, figure_description):
 
 
 def plotly_figures(
-    figure_description: list,
+    figure_description: FigureDescription,
     calculated_curves: pd.DataFrame,
     reference_curves: pd.DataFrame,
     results: dict,
@@ -453,8 +454,8 @@ def plotly_figures(
 
     Parameters
     ----------
-    figure_description: list
-        List of figure description
+    figure_description: FigureDescription
+        Description of the figure to plot
     calculated_curves: DataFrame
         DataFrame with the calculated curves
     reference_curves: DataFrame
@@ -467,14 +468,14 @@ def plotly_figures(
     str
         HTML string of the plotly figures
     """
-    curve_names = _get_curve_names(figure_description[1], calculated_curves)
+    curve_names = _get_curve_names(figure_description.variables, calculated_curves)
 
     fig = go.Figure()
     for curve_name in curve_names:
         _plotly_figures(
             fig,
             curve_name,
-            figure_description[2],
+            figure_description.tests,
             calculated_curves,
             reference_curves,
             results,
@@ -482,7 +483,7 @@ def plotly_figures(
         )
 
     if curve_names:
-        _update_layout(fig, curve_names[0], figure_description[3])
+        _update_layout(fig, curve_names[0], figure_description.ylabel)
         return (
             curve_names,
             curve_names[0],

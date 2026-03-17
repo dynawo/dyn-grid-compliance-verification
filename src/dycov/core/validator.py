@@ -228,6 +228,17 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         """
         return compliance_list.contains_key(["time_cct"], self._validations)
 
+    def is_defined_imax_reac(self) -> bool:
+        """
+        Checks if 'imax_reac' validation is defined in the list of validations.
+
+        Returns
+        -------
+        bool
+            True if 'imax_reac' validation is defined, False otherwise.
+        """
+        return compliance_list.contains_key(["imax_reac"], self._validations)
+
     def set_time_cct(self, time_cct: float) -> None:
         """
         Sets the maximum critical clearing time (CCT).

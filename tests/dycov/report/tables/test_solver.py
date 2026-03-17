@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+from dycov.curves.dynawo.orchestrator.curves import SolverParam
 from dycov.report.tables.solver import create_map
 
 
@@ -14,8 +15,8 @@ class TestCreateMap:
     def test_create_map_with_valid_solver(self):
         results = {
             "solver": {
-                "max_iter": [1000.0, 500.0],
-                "method": ["newton", "bisection"],
+                "max_iter": SolverParam(1000.0, 500.0),
+                "method": SolverParam("newton", "bisection"),
             }
         }
         expected = [
@@ -27,7 +28,7 @@ class TestCreateMap:
     def test_create_map_escapes_underscores(self):
         results = {
             "solver": {
-                "param_with_underscore": ["value_with_underscore", "default_value"],
+                "param_with_underscore": SolverParam("value_with_underscore", "default_value"),
             }
         }
         expected = [["param\\_with\\_underscore", "value\\_with\\_underscore (default\\_value)"]]
@@ -36,14 +37,14 @@ class TestCreateMap:
     def test_create_map_formats_floats(self):
         results = {
             "solver": {
-                "float_param": [0.000123456, 123456.789],
+                "float_param": SolverParam(0.000123456, 123456.789),
             }
         }
         expected = [["float\\_param", "0.000123 (1.23e+05)"]]
         assert create_map(results) == expected
 
     def test_create_map_missing_solver_key(self):
-        results = {"not_solver": {"some_param": [1, 2]}}
+        results = {"not_solver": {"some_param": SolverParam(1, 2)}}
         assert create_map(results) == []
 
     def test_create_map_empty_solver_dict(self):
@@ -57,9 +58,9 @@ class TestCreateMap:
 
         results = {
             "solver": {
-                "custom_type": [Dummy(), Dummy()],
-                "int_param": [42, 7],
-                "none_param": [None, None],
+                "custom_type": SolverParam(Dummy(), Dummy()),
+                "int_param": SolverParam(42, 7),
+                "none_param": SolverParam(None, None),
             }
         }
         expected = [

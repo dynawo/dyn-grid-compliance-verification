@@ -348,27 +348,28 @@ def _generate_figures(
         reference_curves = None
 
     for figure_description in figures_description[figure_key]:
-        plot_curves = figure.get_curves2plot(figure_description[1], curves)
+        plot_curves = figure.get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
 
         plot_reference_curves = None
         if reference_curves is not None:
             plot_reference_curves = figure.get_curves2plot(
-                figure_description[1], reference_curves, is_reference=True
+                figure_description.variables, reference_curves, is_reference=True
             )
         figure.create_plot(
             list(curves["time"]),
-            figure_description[1],
+            figure_description.variables,
             plot_curves,
             list(reference_curves["time"]) if reference_curves is not None else None,
             plot_reference_curves,
             {"min": xmin, "max": xmax},
-            working_path / (f"{producer_name}_{figure_description[0]}_{operating_condition}.pdf"),
-            figure_description[2],
+            working_path
+            / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
+            figure_description.tests,
             oc_results,
-            figure_description[3],
-            f"{figure_description[0]}.{operating_condition}",
+            figure_description.ylabel,
+            f"{figure_description.name}.{operating_condition}",
         )
 
         try:
@@ -380,11 +381,11 @@ def _generate_figures(
                 figures.append((div_id, html_figure))
         except Exception as e:
             dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: "
+                f"{figure_description.name}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
             dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: {e}"
+                f"{figure_description.name}.{operating_condition}: {e}"
             )
 
     return plotted_curves, figures
