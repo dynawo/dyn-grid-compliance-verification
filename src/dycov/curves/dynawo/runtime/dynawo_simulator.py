@@ -445,14 +445,9 @@ class DynawoSimulator:
 
         time_values = curves["time"].tolist()
         voltage_values = curves[bus_pdr_voltage_column].tolist()
-        print(
-            f"Computing voltage dip for {pcs_name}.{bm_name}.{oc_name} with fault_start={fault_start}, "
-            f"fault_duration={fault_duration}"
-        )
         clamped_duration = DynawoSimulator._clamp_fault_duration(
             pcs_name, bm_name, oc_name, fault_start, fault_duration, time_values
         )
-        print(f"Fault duration after clamping: {clamped_duration:.4f} seconds")
         trimmed = DynawoSimulator._trim_curves(
             time_values, voltage_values, fault_start, clamped_duration
         )
@@ -512,10 +507,6 @@ class DynawoSimulator:
             if t - (fault_start + fault_duration) < -TIME_EPSILON:
                 end_idx = i
 
-        print(
-            f"Trimming curves: pre_idx={pre_idx}, start_idx={start_idx}, end_idx={end_idx}, "
-            f"fault_start={fault_start}, fault_duration={fault_duration}"
-        )
         return TrimmedCurves(
             pre_time=time_values[: pre_idx + 1],
             post_time=time_values[start_idx + 1 : end_idx + 1],
