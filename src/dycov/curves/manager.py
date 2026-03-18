@@ -177,7 +177,7 @@ class CurvesManager:
             )
         if not self.get_curves("reference").empty:
             self.__save_curve(
-                self.get_curves("calculated"), working_oc_dir / "curves_reference.csv"
+                self.get_curves("reference"), working_oc_dir / "curves_reference.csv"
             )
 
     def __save_curve(self, curves: pd.DataFrame, path: Path, precision: int = 9):
