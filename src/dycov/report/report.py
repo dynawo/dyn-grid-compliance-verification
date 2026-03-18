@@ -359,16 +359,14 @@ def _generate_figures(
             )
         figure.create_plot(
             list(curves["time"]),
-            figure_description.variables,
+            figure_description,
             plot_curves,
             list(reference_curves["time"]) if reference_curves is not None else None,
             plot_reference_curves,
             {"min": xmin, "max": xmax},
             working_path
             / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
-            figure_description.tests,
             oc_results,
-            figure_description.ylabel,
             f"{figure_description.name}.{operating_condition}",
         )
 

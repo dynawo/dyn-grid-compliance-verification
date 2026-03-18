@@ -14,12 +14,13 @@ import pandas as pd
 import pytest
 
 from dycov.report import html
+from dycov.report.curve_classification import get_measurement_type, is_controlled_magnitude
 from dycov.report.types import FigureDescription
 
 
 def test_plotly_figures_single_curve_success():
     figure_description = FigureDescription(
-        "desc", [{"type": "bus", "variable": "ActivePower"}], [], "Power [pu]"
+        name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel="Power [pu]"
     )
 
     calculated_curves = pd.DataFrame(
@@ -42,11 +43,15 @@ def test_plotly_figures_single_curve_success():
 
 
 def test_plotly_figures_with_additional_traces():
+    from dycov.report.types import DynamicBand, FinalValueBand, FrequencyBand
+
     figure_description = FigureDescription(
-        "desc",
-        [{"type": "bus", "variable": "ActivePower"}],
-        ["10P", "5P", "freq_1", "AVR5"],
-        "Power [pu]",
+        name="desc",
+        variables=[{"type": "bus", "variable": "ActivePower"}],
+        ylabel="Power [pu]",
+        tolerance_band=FinalValueBand(upper=10.0, lower=10.0, color="#55a868"),
+        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        dynamic_band=DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs"),
     )
 
     calculated_curves = pd.DataFrame(
@@ -123,7 +128,7 @@ def test_create_html_success():
 
 def test_plotly_figures_missing_reference_curves():
     figure_description = FigureDescription(
-        "desc", [{"type": "bus", "variable": "ActivePower"}], [], "Power [pu]"
+        name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel="Power [pu]"
     )
 
     calculated_curves = pd.DataFrame(
@@ -144,7 +149,7 @@ def test_plotly_figures_missing_reference_curves():
 
 
 def test_plotly_figures_no_curve_names():
-    figure_description = FigureDescription("desc", [], [], "Power [pu]")
+    figure_description = FigureDescription(name="desc", variables=[], ylabel="Power [pu]")
 
     calculated_curves = pd.DataFrame({"time": [0, 1, 2]})
     reference_curves = pd.DataFrame({"time": [0, 1, 2]})
@@ -163,7 +168,7 @@ def test_plotly_figures_no_curve_names():
 
 def test_plotly_figures_incomplete_results_dict():
     figure_description = FigureDescription(
-        "desc", [{"type": "bus", "variable": "ActivePower"}], [], "Power [pu]"
+        name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel="Power [pu]"
     )
 
     calculated_curves = pd.DataFrame(
@@ -185,13 +190,12 @@ def test_plotly_figures_incomplete_results_dict():
 
 def test_plotly_figures_multiple_curves():
     figure_description = FigureDescription(
-        "desc",
-        [
+        name="desc",
+        variables=[
             {"type": "bus", "variable": "ActivePower"},
             {"type": "bus", "variable": "ReactivePower"},
         ],
-        [],
-        "Power [pu]",
+        ylabel="Power [pu]",
     )
 
     calculated = pd.DataFrame(
@@ -265,52 +269,52 @@ def test_plotly_all_curves_skips_plotted_and_time():
     figures = html.plotly_all_curves(plotted_curves, results)
 
     assert len(figures) == 1
-    assert "curve1" in figures[0]
+    assert figures[0][0] == "curve1"
 
 
 def test_returns_active_power_for_active_power_curve():
-    assert html._get_measurement_type("BusPDR_BUS_ActivePower") == "active_power"
+    assert get_measurement_type("BusPDR_BUS_ActivePower") == "active_power"
 
 
 def test_returns_reactive_power_for_reactive_power_curve():
-    assert html._get_measurement_type("BusPDR_BUS_ReactivePower") == "reactive_power"
+    assert get_measurement_type("BusPDR_BUS_ReactivePower") == "reactive_power"
 
 
 def test_returns_active_current_for_active_current_curve():
-    assert html._get_measurement_type("BusPDR_BUS_ActiveCurrent") == "active_current"
+    assert get_measurement_type("BusPDR_BUS_ActiveCurrent") == "active_current"
 
 
 def test_returns_reactive_current_for_reactive_current_curve():
-    assert html._get_measurement_type("BusPDR_BUS_ReactiveCurrent") == "reactive_current"
+    assert get_measurement_type("BusPDR_BUS_ReactiveCurrent") == "reactive_current"
 
 
 def test_returns_voltage_for_voltage_curve():
-    assert html._get_measurement_type("BusPDR_BUS_Voltage") == "voltage"
+    assert get_measurement_type("BusPDR_BUS_Voltage") == "voltage"
 
 
 def test_returns_frequency_for_network_frequency_curve():
-    assert html._get_measurement_type("NetworkFrequencyPu") == "frequency"
+    assert get_measurement_type("NetworkFrequencyPu") == "frequency"
 
 
 def test_active_power_with_p_returns_true():
-    assert html._is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
 
 
 def test_reactive_power_with_q_returns_true():
-    assert html._is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
 
 
 def test_active_current_with_p_returns_true():
-    assert html._is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
 
 
 def test_reactive_current_with_q_returns_true():
-    assert html._is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
 
 
 def test_voltage_with_v_returns_true():
-    assert html._is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
+    assert is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
 
 
 def test_network_frequency_with_omega_returns_true():
-    assert html._is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
+    assert is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True

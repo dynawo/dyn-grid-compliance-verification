@@ -16,16 +16,16 @@ import pandas as pd
 import pytest
 
 from dycov.configuration.cfg import config
+from dycov.report.curve_classification import is_controlled_magnitude
 from dycov.report.figure import (
     _add_curve2plot,
     _get_xrange,
     _get_yrange,
-    _is_controlled_magnitude,
-    _plot_additional_curves,
-    _plot_response_characteristics,
     create_plot,
     get_common_time_range,
 )
+from dycov.report.figure_decorations import draw_additional_curves, draw_response_characteristics
+from dycov.report.figure_renderer import MatplotlibRenderer
 from dycov.report.types import FigureDescription
 
 matplotlib.use("Agg")
@@ -69,23 +69,25 @@ def test_create_plot_saves_expected_plot():
     time_reference = [0, 1, 2, 3, 4]
     curves_reference = [{"curve": [0, 0.5, 1, 1.5, 2], "color": "#dd8452", "style": "-"}]
     time_range = {"min": 0, "max": 4}
-    additional_curves = ["10P", "freq_1"]
     results = {"AVR_5_crvs": [[1, 1, 1, 1, 1]], "time_85U": 2, "sim_t_event_start": 0}
     unit = "MW"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = Path(tmpdir) / "plot.png"
+        figure_description = FigureDescription(
+            name="IpInjTerminal",
+            variables="IpInjTerminal",
+            ylabel=unit,
+        )
         create_plot(
             time,
-            "IpInjTerminal",
+            figure_description,
             curves,
             time_reference,
             curves_reference,
             time_range,
             output_file,
-            additional_curves,
             results,
-            unit,
             log_title="",
         )
         assert output_file.exists()
@@ -103,7 +105,11 @@ def test_get_common_time_range_includes_all_events():
     }
 
     figures_description = {
-        "OC": [FigureDescription("desc", [{"type": "bus", "variable": "ActivePower"}], [], "")]
+        "OC": [
+            FigureDescription(
+                name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel=""
+            )
+        ]
     }
 
     unit_characteristics = {}
@@ -193,18 +199,9 @@ def test_get_yrange_applies_explicit_range_for_low_variation():
 
 
 def test_plot_additional_curves_renders_all_types():
+    from dycov.report.types import DynamicBand, EventMarker, FinalValueBand, FrequencyBand
+
     time = [0, 1, 2, 3, 4]
-    additional_curves = [
-        "10P",
-        "5P",
-        "10Pfloor",
-        "5Pfloor",
-        "85U",
-        "freq_1",
-        "freq_200",
-        "freq_250",
-        "AVR5",
-    ]
     results = {
         "time_85U": 2,
         "sim_t_event_start": 0,
@@ -213,7 +210,17 @@ def test_plot_additional_curves_renders_all_types():
     ymin, ymax = 0, 2
     last_val = 1
 
-    _plot_additional_curves(time, additional_curves, results, last_val, ymin, ymax)
+    renderer = MatplotlibRenderer()
+    figure_description_test = FigureDescription(
+        name="test",
+        variables="BusPDR_BUS_ActivePower",
+        ylabel="",
+        tolerance_band=FinalValueBand(upper=10.0, lower=10.0, color="#55a868"),
+        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        dynamic_band=DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs"),
+        event_markers=[EventMarker(source_key="time_85U")],
+    )
+    draw_additional_curves(renderer, figure_description_test, time, last_val, results, ymin, ymax)
 
 
 def test_plot_response_characteristics_annotations():
@@ -228,18 +235,19 @@ def test_plot_response_characteristics_annotations():
         "calc_ss_value": 2.5,
     }
 
-    _plot_response_characteristics("BusPDR_BUS_ActivePower", results)
+    renderer = MatplotlibRenderer()
+    draw_response_characteristics(renderer, "BusPDR_BUS_ActivePower", results)
 
 
 def test_is_controlled_magnitude_identifies_correct_combinations():
-    assert _is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
-    assert _is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ActivePower", "Q") is False
-    assert _is_controlled_magnitude("UnknownCurve", "P") is False
+    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
+    assert is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
+    assert is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "Q") is False
+    assert is_controlled_magnitude("UnknownCurve", "P") is False
 
 
 def test_plot_functions_with_unsupported_curve_types():
