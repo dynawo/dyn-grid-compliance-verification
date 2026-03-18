@@ -321,6 +321,7 @@ def create_plot(
     output_file: Path,
     results: dict,
     log_title: str,
+    band_ref_val: float | None = None,
 ) -> None:
     """Draw a figure.
 
@@ -348,7 +349,7 @@ def create_plot(
 
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
 
-    last_val = curves[0]["curve"][-1]
+    last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
 
     renderer = MatplotlibRenderer()
     ymin, ymax = draw_additional_curves(
