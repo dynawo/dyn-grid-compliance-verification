@@ -86,6 +86,8 @@ def get_measurement_type(curve_name: str) -> str:
 def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyle:
     if is_reference:
         return CurveStyle(color="#dd8452", style="-")
+    if "modIInjTerminal" in variable_name:
+        return CurveStyle(color="#e2c22e", style="-")
     if "IpInjTerminal" in variable_name:
         return CurveStyle(color="#64b5cd", style="-")
     if "IqInjTerminal" in variable_name:
@@ -96,6 +98,8 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
 
 
 def get_variable_label(variable_name: str) -> str:
+    if "modIInjTerminal" in variable_name:
+        return "|I|"
     for key, label in _VARIABLE_LABELS.items():
         if key in variable_name:
             return label

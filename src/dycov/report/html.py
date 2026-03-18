@@ -42,7 +42,12 @@ def _get_curve_names(
         for name in variable_names:
             if name["type"] == "generator":
                 curve_names.extend(
-                    [col for col in curves if col.endswith("_GEN_" + name["variable"])]
+                    [
+                        col
+                        for col in curves
+                        if col.endswith("_GEN_" + name["variable"])
+                        and "modIInjTerminal" not in col
+                    ]
                 )
             elif name["type"] == "transformer":
                 curve_names.extend(
@@ -50,6 +55,12 @@ def _get_curve_names(
                 )
             elif name["type"] == "bus":
                 curve_names.extend(["BusPDR" + "_BUS_" + name["variable"]])
+
+    ip_names = [n for n in curve_names if "IpInjTerminal" in n]
+    if ip_names:
+        mag_names = [col for col in curves.columns if "modIInjTerminal" in col]
+        for insert_pos, mag_name in enumerate(mag_names):
+            curve_names.insert(insert_pos, mag_name)
 
     return curve_names
 
@@ -67,15 +78,19 @@ def _plotly_figures(
     calculated_curves,
     reference_curves,
     results,
+    band_ref_val: float | None = None,
 ):
     renderer = PlotlyRenderer(fig)
-    is_iq_curve = "IqInjTerminal" in curve_name or curve_name == "BusPDR_BUS_ReactiveCurrent"
+    is_iq_curve = "IqInjTerminal" in curve_name
     if is_iq_curve or not _has_iq_curve(figure_description.variables):
+        last_val = (
+            band_ref_val if band_ref_val is not None else calculated_curves[curve_name].iloc[-1]
+        )
         draw_additional_curves(
             renderer,
             figure_description,
             calculated_curves["time"],
-            calculated_curves[curve_name].iloc[-1],
+            last_val,
             results,
             ymin=0.0,
             ymax=0.0,
@@ -132,6 +147,7 @@ def plotly_figures(
     calculated_curves: pd.DataFrame,
     reference_curves: pd.DataFrame,
     results: dict,
+    band_ref_val: float | None = None,
 ) -> str:
     """Create plotly figures for the curves.
 
@@ -165,6 +181,7 @@ def plotly_figures(
             calculated_curves,
             reference_curves,
             results,
+            band_ref_val=band_ref_val,
         )
 
     if curve_names:
@@ -172,8 +189,10 @@ def plotly_figures(
         _update_layout(fig, title, figure_description.ylabel)
         return (
             curve_names,
-            curve_names[0],
-            fig.to_html(full_html=False, include_plotlyjs="directory", div_id=curve_names[0]),
+            figure_description.name,
+            fig.to_html(
+                full_html=False, include_plotlyjs="directory", div_id=figure_description.name
+            ),
         )
 
     return curve_names, "", ""
