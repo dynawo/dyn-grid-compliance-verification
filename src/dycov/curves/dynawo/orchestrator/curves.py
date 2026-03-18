@@ -1622,7 +1622,8 @@ class DynawoCurves(ProducerCurves):
                 bm_name,
                 oc_name,
                 f"Simulation finished in {self._sim_time}s: "
-                f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} has_curves={outcome.has_curves}",
+                f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
+                f"has_curves={outcome.has_curves}",
             )
         except ValueError as e:
             error_message = str(e)

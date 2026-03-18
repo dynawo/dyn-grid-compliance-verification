@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator, SimulationResult
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
 from dycov.logging.logging import dycov_logging
