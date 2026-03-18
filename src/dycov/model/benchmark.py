@@ -21,7 +21,13 @@ from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
 from dycov.model.parameters import Simulation_result
 from dycov.model.producer import Producer
-from dycov.report.types import FigureDescription
+from dycov.report.types import (
+    DynamicBand,
+    EventMarker,
+    FigureDescription,
+    FinalValueBand,
+    FrequencyBand,
+)
 from dycov.validation import compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
@@ -332,226 +338,230 @@ class Benchmark:
 
     def __init_figures_v(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_V = config.get_list("ReportCurves", "fig_V")
-        if pcs_benchmark_name in fig_V:
-            tests = []
-            if (
-                "time_5P_85U" in validations
-                or "time_10P_85U" in validations
-                or "time_10Pfloor_85U" in validations
-            ):
-                tests.append("85U")
+        if pcs_benchmark_name not in fig_V:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_V",
-                    variables=[{"type": "bus", "variable": "Voltage"}],
-                    tests=tests,
-                    ylabel="V (pu base Unom)",
-                )
+        has_85u = (
+            "time_5P_85U" in validations
+            or "time_10P_85U" in validations
+            or "time_10Pfloor_85U" in validations
+        )
+        event_markers = [EventMarker(source_key="time_85U")] if has_85u else []
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_V",
+                variables=[{"type": "bus", "variable": "Voltage"}],
+                ylabel="V (pu base Unom)",
+                event_markers=event_markers,
             )
+        )
 
     def __init_figures_p(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_P = config.get_list("ReportCurves", "fig_P")
-        if pcs_benchmark_name in fig_P:
-            tests = []
-            if "time_5P" in validations:
-                tests.append("5P")
-            if "time_10P" in validations:
-                tests.append("10P")
-            if "time_10P_85U" in validations:
-                tests.append("10P")
-            if "time_10Pfloor_85U" in validations or "time_10Pfloor_clear" in validations:
-                tests.append("10Pfloor")
+        if pcs_benchmark_name not in fig_P:
+            return
 
-            if self._producer.is_dynawo_model():
-                p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
-            else:
-                p_label = "P (pu base Snom)"
+        tolerance_band = None
+        if "time_10Pfloor_85U" in validations or "time_10Pfloor_clear" in validations:
+            tolerance_band = FinalValueBand(upper=None, lower=10.0, color="#55a868")
+        elif "time_5P" in validations:
+            tolerance_band = FinalValueBand(upper=5.0, lower=5.0, color="#c44e52")
+        elif "time_10P" in validations or "time_10P_85U" in validations:
+            tolerance_band = FinalValueBand(upper=10.0, lower=10.0, color="#55a868")
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_P",
-                    variables="BusPDR_BUS_ActivePower",
-                    tests=tests,
-                    ylabel=p_label,
-                )
+        if self._producer.is_dynawo_model():
+            p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            p_label = "P (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_P",
+                variables="BusPDR_BUS_ActivePower",
+                ylabel=p_label,
+                tolerance_band=tolerance_band,
             )
+        )
 
     def __init_figures_q(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Q = config.get_list("ReportCurves", "fig_Q")
-        if pcs_benchmark_name in fig_Q:
-            tests = []
+        if pcs_benchmark_name not in fig_Q:
+            return
 
-            if self._producer.is_dynawo_model():
-                q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
-            else:
-                q_label = "Q (pu base Snom)"
+        if self._producer.is_dynawo_model():
+            q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            q_label = "Q (pu base Snom)"
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_Q",
-                    variables="BusPDR_BUS_ReactivePower",
-                    tests=tests,
-                    ylabel=q_label,
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_Q",
+                variables="BusPDR_BUS_ReactivePower",
+                ylabel=q_label,
             )
+        )
 
     def __init_figures_ip(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Ip = config.get_list("ReportCurves", "fig_Ip")
-        if pcs_benchmark_name in fig_Ip:
-            tests = []
+        if pcs_benchmark_name not in fig_Ip:
+            return
 
-            if self._producer.is_dynawo_model():
-                ip_label = f"Ip (pu base Unom, Snom = {self._producer.s_nom}MVA)"
-            else:
-                ip_label = "Ip (pu base Unom, Snom)"
+        if self._producer.is_dynawo_model():
+            ip_label = f"Ip (pu base Unom, Snom = {self._producer.s_nom}MVA)"
+        else:
+            ip_label = "Ip (pu base Unom, Snom)"
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_Ip",
-                    variables="BusPDR_BUS_ActiveCurrent",
-                    tests=tests,
-                    ylabel=ip_label,
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_Ip",
+                variables="BusPDR_BUS_ActiveCurrent",
+                ylabel=ip_label,
             )
+        )
 
     def __init_figures_iq(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Iq = config.get_list("ReportCurves", "fig_Iq")
-        if pcs_benchmark_name in fig_Iq:
-            tests = []
+        if pcs_benchmark_name not in fig_Iq:
+            return
 
-            if self._producer.is_dynawo_model():
-                iq_label = f"Iq (pu base Unom, Snom = {self._producer.s_nom}MVA)"
-            else:
-                iq_label = "Iq (pu base Unom, Snom)"
+        if self._producer.is_dynawo_model():
+            iq_label = f"Iq (pu base Unom, Snom = {self._producer.s_nom}MVA)"
+        else:
+            iq_label = "Iq (pu base Unom, Snom)"
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_Iq",
-                    variables="BusPDR_BUS_ReactiveCurrent",
-                    tests=tests,
-                    ylabel=iq_label,
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_Iq",
+                variables="BusPDR_BUS_ReactiveCurrent",
+                ylabel=iq_label,
             )
+        )
 
     def __init_figures_w(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_W = config.get_list("ReportCurves", "fig_W")
-        if pcs_benchmark_name in fig_W:
-            tests = []
+        if pcs_benchmark_name not in fig_W:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_W",
-                    variables=[{"type": "generator", "variable": "RotorSpeedPu"}],
-                    tests=tests,
-                    ylabel=r"$\omega$ (Hz)",
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_W",
+                variables=[{"type": "generator", "variable": "RotorSpeedPu"}],
+                ylabel=r"$\omega$ (Hz)",
             )
+        )
 
     def __init_figures_wref(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_WRef = config.get_list("ReportCurves", "fig_WRef")
-        if pcs_benchmark_name in fig_WRef:
-            tests = []
-            if "freq_1" in validations:
-                tests.append("freq_1")
-            if "freq_200" in validations:
-                tests.append("freq_200")
-            if "freq_250" in validations:
-                tests.append("freq_250")
+        if pcs_benchmark_name not in fig_WRef:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_WRef",
-                    variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
-                    tests=tests,
-                    ylabel=r"$\omega$ (Hz)",
-                )
+        frequency_band = None
+        if "freq_1" in validations:
+            frequency_band = FrequencyBand(upper=1.0, lower=1.0)
+        elif "freq_250" in validations:
+            frequency_band = FrequencyBand(upper=0.250, lower=0.250)
+        elif "freq_200" in validations:
+            frequency_band = FrequencyBand(upper=0.2, lower=0.2)
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_WRef",
+                variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+                ylabel=r"$\omega$ (Hz)",
+                frequency_band=frequency_band,
             )
+        )
 
     def __init_figures_i(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_I = config.get_list("ReportCurves", "fig_I")
-        if pcs_benchmark_name in fig_I:
-            tests = []
-            if "imax_reac" in validations:
-                tests.append("imax_reac")
+        if pcs_benchmark_name not in fig_I:
+            return
 
-            if self._producer.is_dynawo_model():
-                i_label = f"I (pu base Unom, Snom = {self._producer.s_nom}MVA)"
-            else:
-                i_label = "I (pu base Unom, Snom)"
+        tolerance_band = (
+            FinalValueBand(upper=20.0, lower=10.0, color="#c44e52")
+            if "imax_reac" in validations
+            else None
+        )
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_I",
-                    variables=[
-                        {"type": "generator", "variable": "IpInjTerminal"},
-                        {"type": "generator", "variable": "IqInjTerminal"},
-                    ],
-                    tests=tests,
-                    ylabel=i_label,
-                )
+        if self._producer.is_dynawo_model():
+            i_label = f"I (pu base Unom, Snom = {self._producer.s_nom}MVA)"
+        else:
+            i_label = "I (pu base Unom, Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_I",
+                variables=[
+                    {"type": "generator", "variable": "IpInjTerminal"},
+                    {"type": "generator", "variable": "IqInjTerminal"},
+                ],
+                ylabel=i_label,
+                tolerance_band=tolerance_band,
             )
+        )
 
     def __init_figures_uit(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_UIt = config.get_list("ReportCurves", "fig_UIt")
-        if pcs_benchmark_name in fig_UIt:
-            tests = []
+        if pcs_benchmark_name not in fig_UIt:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_UIt",
-                    variables=[{"type": "generator", "variable": "UPuInjTerminal"}],
-                    tests=tests,
-                    ylabel="V (pu base Unom)",
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_UIt",
+                variables=[{"type": "generator", "variable": "UPuInjTerminal"}],
+                ylabel="V (pu base Unom)",
             )
+        )
 
     def __init_figures_ustator(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Ustator = config.get_list("ReportCurves", "fig_Ustator")
-        if pcs_benchmark_name in fig_Ustator:
-            tests = []
-            if "AVR_5" in validations:
-                tests.append("AVR5")
+        if pcs_benchmark_name not in fig_Ustator:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_Ustator",
-                    variables=[
-                        {"type": "generator", "variable": "MagnitudeControlledByAVRPu"},
-                        {"type": "generator", "variable": "AVRSetpointPu"},
-                    ],
-                    tests=tests,
-                    ylabel="V (pu base Unom)",
-                )
+        dynamic_band = (
+            DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs")
+            if "AVR_5" in validations
+            else None
+        )
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_Ustator",
+                variables=[
+                    {"type": "generator", "variable": "MagnitudeControlledByAVRPu"},
+                    {"type": "generator", "variable": "AVRSetpointPu"},
+                ],
+                ylabel="V (pu base Unom)",
+                dynamic_band=dynamic_band,
             )
+        )
 
     def __init_figures_theta(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Theta = config.get_list("ReportCurves", "fig_Theta")
-        if pcs_benchmark_name in fig_Theta:
-            tests = []
+        if pcs_benchmark_name not in fig_Theta:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_Theta",
-                    variables=[{"type": "generator", "variable": "InternalAngle"}],
-                    tests=tests,
-                    ylabel=r"$\theta$ (rad)",
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_Theta",
+                variables=[{"type": "generator", "variable": "InternalAngle"}],
+                ylabel=r"$\theta$ (rad)",
             )
+        )
 
     def __init_figures_tap(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Tap = config.get_list("ReportCurves", "fig_Tap")
-        if pcs_benchmark_name in fig_Tap:
-            tests = []
+        if pcs_benchmark_name not in fig_Tap:
+            return
 
-            self._figures_description.append(
-                FigureDescription(
-                    name="fig_Tap",
-                    variables=[{"type": "transformer", "variable": "Tap"}],
-                    tests=tests,
-                    ylabel="Pos",
-                )
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_Tap",
+                variables=[{"type": "transformer", "variable": "Tap"}],
+                ylabel="Pos",
             )
+        )
 
     def __has_required_curves(
         self,
