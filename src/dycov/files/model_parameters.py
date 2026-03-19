@@ -632,7 +632,7 @@ def _append_generator(
     connected_equipment = _get_connected_equipment(dyd_root, gen_id)
     parset = _get_parset(par_root, par_id, nsmap)
 
-    imax = _get_injected_current(parset, nsmap, lib)
+    imax = _get_maximum_current(parset, nsmap, lib)
     P, Q = _get_generator_power_values(parset, nsmap, lib, gen_id, producer_ini)
     p_max, p_min, q_max, q_min = _get_generator_power_limits(
         parset, nsmap, lib, gen_id, producer_ini
@@ -688,8 +688,8 @@ def _get_parset(par_root, par_id, nsmap):
     return parset
 
 
-def _get_injected_current(parset, nsmap, lib):
-    sign, imaxpu_element = _get_parameter(parset, nsmap, lib, "InjectedCurrentMax")
+def _get_maximum_current(parset, nsmap, lib):
+    sign, imaxpu_element = _get_parameter(parset, nsmap, lib, "MaxCurrentAtConverter")
     return float(imaxpu_element) * sign if imaxpu_element is not None else None
 
 
@@ -1045,9 +1045,15 @@ def _adjust_generator(
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
     control_mode_name = _apply_control_mode(generator, parset, nsmap, generator_control_mode)
-    _apply_voltage_droop(
-        generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop
-    )
+    if not config.get_boolean("General", "skip_voltage_droop_adjustment", default=False):
+        _apply_voltage_droop(
+            generator,
+            parset,
+            nsmap,
+            generator_control_mode,
+            control_mode_name,
+            force_voltage_droop,
+        )
 
 
 def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):

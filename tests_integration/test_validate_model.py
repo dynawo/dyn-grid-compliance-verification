@@ -55,9 +55,9 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
 
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
+        Compliance.NonCompliant,  # 0
+        Compliance.NonCompliant,  # 1
+        Compliance.NonCompliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5

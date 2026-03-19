@@ -57,8 +57,8 @@
     <par type="DOUBLE" name="WT_XDropPu" value="0"/>
     <!-- QLimiter -->
     <par type="BOOL" name="WT_QlConst" value="true"/>
-    <par type="DOUBLE" name="WT_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WT_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="WT_QMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="WT_QMinPu" value="-1.0"/>
     <par type="DOUBLE" name="WT_tPFiltql" value="0.01"/>
     <par type="DOUBLE" name="WT_tUFiltql" value="0.01"/>
     <!-- GridProtection -->
@@ -73,12 +73,12 @@
     <par type="DOUBLE" name="WT_tUFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tfFilt" value="0.01"/>
     <!-- General -->
-    <par type="DOUBLE" name="WT_SNom" value="90"/>
+    <par type="DOUBLE" name="WT_SNom" value="4"/>
     <par type="DOUBLE" name="WT_tS" value="0.001"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
+    <par type="DOUBLE" name="transformer_SNom" value="4"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>

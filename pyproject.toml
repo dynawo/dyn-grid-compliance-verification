@@ -31,7 +31,7 @@ authors = [
 readme = "README.md"
 license = "MPL-2.0"  # SPDX identifier
 license-files = ["LICENSE"]
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 keywords = ["Power Systems", "Dynamic modeling", "verification", "validation"]
 
 # Use the official classifiers published by PyPI (PEP 301): https://pypi.org/classifiers/
@@ -111,8 +111,8 @@ exclude = [
 ]
 
 # Set the Python version to target for compatibility.
-# The project requires >=3.9
-target-version = "py39"
+# The project requires >=3.13
+target-version = "py313"
 
 # Define the source directory.
 src = ["src"]

@@ -230,7 +230,7 @@ class InputTemplateGenerator:
 
     def create_input_template(
         self, launcher_dwo: Path, target: Path, topology: str, template: str
-    ) -> None:
+    ) -> int:
         """Create an input template in target path with the selected topology.
 
         Parameters
@@ -248,6 +248,11 @@ class InputTemplateGenerator:
             * 'performance_BESS' if it is electrical performance for Storage Model
             * 'model_PPM' if it is model validation for Power Park Module Model
             * 'model_BESS' if it is model validation for Storage Model
+
+        Returns
+        -------
+        int
+            0 if the template was created successfully, 1 if the output path already exists.
         """
 
         if target.exists():
@@ -271,4 +276,5 @@ class InputTemplateGenerator:
         # Create and validate curves files
         self._create_curves_template(target, topology, template)
 
-        print("Done")
+        dycov_logging.get_logger("Input Template Generator").info("Done")
+        return 0
