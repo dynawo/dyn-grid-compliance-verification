@@ -75,8 +75,8 @@
     <par type="DOUBLE" name="WPP_XDropPu" value="0"/>
     <!-- QLimiter -->
     <par type="BOOL" name="WPP_QlConst" value="true"/>
-    <par type="DOUBLE" name="WPP_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WPP_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="WPP_QMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="WPP_QMinPu" value="-1.0"/>
     <!-- GridProtection -->
     <par type="DOUBLE" name="WPP_fOverPu" value="1.1"/>
     <par type="DOUBLE" name="WPP_fUnderPu" value="0.9"/>
@@ -175,12 +175,12 @@
     <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom31" value="1"/>
     <par type="DOUBLE" name="WPP_TableQwpMinPwpFiltCom32" value="-999"/>
     <!-- General -->
-    <par type="DOUBLE" name="WPP_SNom" value="90"/>
+    <par type="DOUBLE" name="WPP_SNom" value="4"/>
     <par type="DOUBLE" name="WPP_tS" value="0.001"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
+    <par type="DOUBLE" name="transformer_SNom" value="4"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>

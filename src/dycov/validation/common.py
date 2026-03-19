@@ -62,9 +62,7 @@ def check_time(
         return "-", time_check
 
 
-def is_invalid_test(
-    time: list, voltage: list, active: list, reactive: list, t_event: float, log_title: str
-):
+def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_event: float):
     """Check if the results of a step-response test are completely flat (no response).
     This is used for checking for a common error, i.e., the event not producing any effect.
 
@@ -93,7 +91,7 @@ def is_invalid_test(
     # TODO: we should assert(t_event >= time[0]), but not here -- do it at init time
     idx_t_event = np.argmin(abs(np.array(time) - t_event)) - 1
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Start values: V: {voltage[0]}, P: {active[0]}, Q: {reactive[0]}"
+        f"Start values: V: {voltage[0]}, P: {active[0]}, Q: {reactive[0]}"
     )
 
     # Get the steady-state value right before the event
@@ -101,7 +99,7 @@ def is_invalid_test(
     p_init = active[idx_t_event]
     q_init = reactive[idx_t_event]
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Steady-state values: V: {v_init}, P: {p_init}, Q: {q_init}"
+        f"Steady-state values: V: {v_init}, P: {p_init}, Q: {q_init}"
     )
 
     # Get max diff between values after event vs the steady-state value right before
@@ -109,7 +107,7 @@ def is_invalid_test(
     p_max_diff = max(abs(np.array(active[idx_t_event:]) - p_init))
     q_max_diff = max(abs(np.array(reactive[idx_t_event:]) - q_init))
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Max diff: V: {v_max_diff}, P: {p_max_diff}, Q: {q_max_diff}"
+        f"Max diff: V: {v_max_diff}, P: {p_max_diff}, Q: {q_max_diff}"
     )
 
     # Check if this max diff is smaller than the tolerances
@@ -119,7 +117,7 @@ def is_invalid_test(
     p_flat = math.isclose(p_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
     q_flat = math.isclose(q_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
     dycov_logging.get_logger("Common Validation").debug(
-        f"{log_title} Flat Curves: V: {v_flat}, P: {p_flat}, Q: {q_flat}"
+        f"Flat Curves: V: {v_flat}, P: {p_flat}, Q: {q_flat}"
     )
 
     return v_flat and p_flat and q_flat
@@ -417,7 +415,7 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
 
 
 def check_generator_imax(
-    imax: float, time: list, injected_current: list, injected_active_current: list
+    imax: float, time: list, current_at_converter: list, active_current_at_converter: list
 ) -> tuple[int, bool]:
     """Check that, if Imax is reached, reactive support is priorized over active power supply.
 
@@ -427,9 +425,9 @@ def check_generator_imax(
         IMax value of the generator
     time: list
         List of time instants that make up the curve
-    injected_current: list
+    current_at_converter: list
         Curve of the injected current
-    injected_active_current: float
+    active_current_at_converter: float
         Curve of the injected active current
 
     Returns
@@ -440,27 +438,27 @@ def check_generator_imax(
         True if the injected active current does not increase, False otherwise
     """
     # Get curves file and steady time
-    if len(time) != len(injected_current):
+    if len(time) != len(current_at_converter):
         raise ValueError("curve values and time values have different length")
 
     pos = 0
-    while pos < len(injected_current) and injected_current[pos] < imax:
+    while pos < len(current_at_converter) and current_at_converter[pos] < imax:
         pos += 1
 
-    if pos >= len(injected_current):
-        pos = len(injected_current) - 1
+    if pos >= len(current_at_converter):
+        pos = len(current_at_converter) - 1
 
-    id_max = injected_active_current[pos]
+    id_max = active_current_at_converter[pos]
 
     # Cut list values
-    injected_active_current = injected_active_current[pos:]
+    active_current_at_converter = active_current_at_converter[pos:]
     time = time[pos:]
 
     id_not_increase = True
     first_id_value = -1
-    for i in range(len(injected_active_current)):
-        pos = len(injected_active_current) - (i + 1)
-        if injected_active_current[pos] > id_max:
+    for i in range(len(active_current_at_converter)):
+        pos = len(active_current_at_converter) - (i + 1)
+        if active_current_at_converter[pos] > id_max:
             first_id_value = time[pos]
             id_not_increase = False
             break

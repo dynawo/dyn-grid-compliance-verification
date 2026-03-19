@@ -112,8 +112,8 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
         curves_dictionary += (
             f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
             f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"
-            f"{gen_ppm.get('id')}_GEN_InjectedActiveCurrent = \n"
-            f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
+            f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
+            f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
         )
 
     curves_dictionary += (
@@ -252,8 +252,8 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
         for gen_ppm in gens:
             curves_dictionary += (
                 # Common
-                f"{gen_ppm.get('id')}_GEN_InjectedActiveCurrent = \n"
-                f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
+                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
             )
     else:
@@ -263,8 +263,8 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
         for gen_ppm in gens:
             curves_dictionary += (
                 # Common
-                f"{gen_ppm.get('id')}_GEN_InjectedActiveCurrent = \n"
-                f"{gen_ppm.get('id')}_GEN_InjectedReactiveCurrent = \n"
+                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
                 # Zone3
                 f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"

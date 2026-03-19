@@ -29,14 +29,14 @@ def create_map(results: dict) -> list:
 
     solver = results["solver"]
     for key, value in solver.items():
-        if type(value[0]) is float:
-            conf_value = f"{value[0]:.3g}".strip()
+        if type(value.actual) is float:
+            conf_value = f"{value.actual:.3g}".strip()
         else:
-            conf_value = str(value[0]).replace("_", r"\_")
-        if type(value[1]) is float:
-            default_value = f"{value[1]:.3g}".strip()
+            conf_value = str(value.actual).replace("_", r"\_")
+        if type(value.default) is float:
+            default_value = f"{value.default:.3g}".strip()
         else:
-            default_value = str(value[1]).replace("_", r"\_")
+            default_value = str(value.default).replace("_", r"\_")
         solver_parameters.append([key.replace("_", r"\_"), f"{conf_value} ({default_value})"])
 
     return solver_parameters

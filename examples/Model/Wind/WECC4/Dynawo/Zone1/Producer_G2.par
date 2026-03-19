@@ -14,7 +14,7 @@
     <par type="DOUBLE" name="WTG4B_IMaxPu" value="1.3"/>
     <par type="DOUBLE" name="WTG4B_Iqh1Pu" value="1.1"/>
     <par type="DOUBLE" name="WTG4B_Iql1Pu" value="-1.1"/>
-    <par type="DOUBLE" name="WTG4B_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WTG4B_Kqi" value="0.7"/>
     <par type="DOUBLE" name="WTG4B_Kqp" value="1"/>
     <par type="DOUBLE" name="WTG4B_Kqv" value="2"/>
     <par type="DOUBLE" name="WTG4B_Kvi" value="0.7"/>
@@ -100,27 +100,13 @@
     <par type="DOUBLE" name="WTG4B_OmegaMinPu" value="0.5"/>
 
     <!-- General -->
-    <par type="DOUBLE" name="WTG4B_SNom" value="90"/>
+    <par type="DOUBLE" name="WTG4B_SNom" value="4"/>
     <par type="DOUBLE" name="WTG4B_RPu" value="1e-7"/>
     <par type="DOUBLE" name="WTG4B_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
-  <set id="StepUp_Xfmr1">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
-    <par type="DOUBLE" name="transformer_BPu" value="0"/>
-    <par type="DOUBLE" name="transformer_GPu" value="0"/>
-    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
-    <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
-    <par type="INT" name="transformer_NbTap" value="21"/>
-    <par type="INT" name="transformer_Tap0" value="10"/>
-  </set>
-  <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
+    <par type="DOUBLE" name="transformer_SNom" value="4"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>

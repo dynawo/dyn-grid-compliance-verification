@@ -19,10 +19,10 @@
     <par type="DOUBLE" name="BESS_Kqv" value="2"/>
     <par type="DOUBLE" name="BESS_Kvi" value="0.7"/>
     <par type="DOUBLE" name="BESS_Kvp" value="1"/>
-    <par type="DOUBLE" name="BESS_PMaxPu" value="0.75"/>
-    <par type="DOUBLE" name="BESS_PMinPu" value="-0.75"/>
-    <par type="DOUBLE" name="BESS_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="BESS_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="BESS_PMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="BESS_PMinPu" value="-1.0"/>
+    <par type="DOUBLE" name="BESS_QMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="BESS_QMinPu" value="-1.0"/>
     <par type="DOUBLE" name="BESS_tIq" value="0.01"/>
     <par type="DOUBLE" name="BESS_tRv" value="0.01"/>
     <par type="DOUBLE" name="BESS_tP" value="0.05"/>
@@ -98,14 +98,14 @@
     <par type="DOUBLE" name="BESS_OmegaMinPu" value="0.5"/>
 
     <!-- General -->
-    <par type="DOUBLE" name="BESS_SNom" value="60"/>
+    <par type="DOUBLE" name="BESS_SNom" value="0.5"/>
     <par type="DOUBLE" name="BESS_RPu" value="1e-7"/>
     <par type="DOUBLE" name="BESS_XPu" value="1e-6"/>
     <par type="DOUBLE" name="BESS_SOC0Pu" value="0.75"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="60"/>
+    <par type="DOUBLE" name="transformer_SNom" value="0.5"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000455"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.040743"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
