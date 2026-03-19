@@ -45,16 +45,16 @@ def test_model_validation_bess_producer_curves():
         MODEL / "BESS" / "WECC" / "ReferenceCurves",
     )
     assert [
-        Compliance.NonCompliant,  # 0
-        Compliance.NonCompliant,  # 1
-        Compliance.NonCompliant,  # 2
+        Compliance.Compliant,  # 0
+        Compliance.Compliant,  # 1
+        Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
-        Compliance.NonCompliant,  # 7
-        Compliance.NonCompliant,  # 8
-        Compliance.NonCompliant,  # 9
+        Compliance.Compliant,  # 7
+        Compliance.Compliant,  # 8
+        Compliance.Compliant,  # 9
         Compliance.Compliant,  # 10
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
