@@ -98,6 +98,7 @@ def _validate_pcs(pcs_args) -> tuple:
         _prepare_report_pcs(pcs_results, parameters, path_latex_files)
         return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
     except (FileNotFoundError, IOError, ValueError) as e:
+        raise e
         if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
             dycov_logging.get_logger("Validation").exception(
                 f"Aborted execution for {pcs.get_name()}. {e}"

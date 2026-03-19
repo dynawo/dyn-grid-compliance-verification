@@ -34,9 +34,7 @@ NO_FAULT_SENTINEL = 9999.0
 ABS_TOLERANCE_FACTOR = 0.1
 TIME_EPSILON = 1e-4
 
-SimulationResult = namedtuple(
-    "SimulationResult", "succeeded log has_timeline_error curves sim_time"
-)
+DynawoResult = namedtuple("DynawoResult", "succeeded log has_timeline_error curves sim_time")
 TrimmedCurves = namedtuple("TrimmedCurves", "pre_time post_time pre_voltage post_voltage")
 
 
@@ -59,7 +57,7 @@ class DynawoSimulator:
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
-    ) -> SimulationResult:
+    ) -> DynawoResult:
         """
         Baseline execution with configured limits.
 
@@ -84,7 +82,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        SimulationResult
+        DynawoResult
             A named tuple containing:
             - bool: True if the simulation completed successfully (no errors in log,
               no timeout, "succeeded" in stderr).
@@ -122,7 +120,7 @@ class DynawoSimulator:
             log_path = str(output_dir / jobs_output_dir / "logs/dynawo.log")
             log = f"Simulation Fails, logs in {log_path}"
 
-        return SimulationResult(
+        return DynawoResult(
             succeeded=succeeded,
             log=log,
             has_timeline_error=result.has_timeline_error,
@@ -145,7 +143,7 @@ class DynawoSimulator:
         f_nom: float,
         simulation_limit: float,
         save_file: bool = False,
-    ) -> SimulationResult:
+    ) -> DynawoResult:
         """
         Thin wrapper without retry (useful for CCT flows).
 
@@ -182,7 +180,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        SimulationResult
+        DynawoResult
             A named tuple containing:
             - bool: True if the simulation completed successfully (no errors in log,
               no timeout, "succeeded" in stderr).
@@ -333,7 +331,7 @@ class DynawoSimulator:
         f_nom: float,
         save_file: bool = True,
         simulation_limit: float | None = None,
-    ) -> SimulationResult:
+    ) -> DynawoResult:
         """
         Runs a dynamic simulation with Dynamic and processes the results.
 
@@ -372,7 +370,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        SimulationResult
+        DynawoResult
             A named tuple containing:
             - bool: True if the simulation completed successfully (no errors in log,
               no timeout, "succeeded" in stderr).
@@ -406,7 +404,7 @@ class DynawoSimulator:
             succeeded,
         )
 
-        return SimulationResult(
+        return DynawoResult(
             succeeded=succeeded,
             log=log,
             has_timeline_error=timeline_error,

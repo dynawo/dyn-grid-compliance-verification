@@ -16,7 +16,12 @@ from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.curves import curves_factory
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Disconnection_Model, ExclusionWindows, Simulation_result
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    DisconnectionModel,
+    ExclusionWindows,
+)
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
@@ -56,9 +61,11 @@ class CurvesManager:
         self._producer = producer
         self._pcs_name = pcs_name
         self._producer_name = producer_name
+        self._reference_curves_path: Path | None = None
         self._before_filters_curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
         self._windows = {"calculated": dict(), "reference": dict()}
+        self._missed_curves = {"calculated": [], "reference": []}
 
         self._producer_curves_generator = curves_factory.get_producer(
             parameters,
@@ -84,17 +91,11 @@ class CurvesManager:
 
         return self._before_filters_curves[curve]
 
-    def __get_producer_curves_generator(self):
-        return self._producer_curves_generator
-
-    def __get_reference_curves_generator(self):
-        return self._reference_curves_generator
-
     def __has_reference_curves(self) -> bool:
         return self._producer.has_reference_curves_path()
 
     def __get_reference_curves_path(self) -> Path:
-        if not hasattr(self, "_reference_curves_path"):
+        if self._reference_curves_path is None:
             self._reference_curves_path = self._producer.get_reference_curves_path()
         return self._reference_curves_path
 
@@ -112,7 +113,7 @@ class CurvesManager:
             (
                 reference_event_start_time,
                 self._curves["reference"],
-            ) = self.__get_reference_curves_generator().obtain_reference_curve(
+            ) = self._reference_curves_generator.obtain_reference_curve(
                 working_oc_dir,
                 self._producer_name,
                 self._pcs_name,
@@ -126,7 +127,7 @@ class CurvesManager:
             event_params,
             simulation_result,
             self._curves["calculated"],
-        ) = self.__get_producer_curves_generator().obtain_simulated_curve(
+        ) = self._producer_curves_generator.obtain_simulated_curve(
             working_oc_dir,
             self._producer_name,
             self._pcs_name,
@@ -151,24 +152,25 @@ class CurvesManager:
         curves_name: str,
         review_curves_set: bool,
     ) -> bool:
-        has_curves = True
-        if review_curves_set:
-            if curves.empty:
-                dycov_logging.get_logger("Curves Manager").warning(
-                    f"Test without {curves_name} curves file"
-                )
-                has_curves = False
-            else:
-                missed_curves = []
-                for key in measurement_names:
-                    if key not in curves:
-                        missed_curves.append(key)
-                        has_curves = False
-                if not has_curves:
-                    dycov_logging.get_logger("Curves Manager").warning(
-                        f"Test without {curves_name} curve for keys {missed_curves}"
-                    )
-        return has_curves
+        if not review_curves_set:
+            return True
+
+        if curves.empty:
+            dycov_logging.get_logger("Curves Manager").warning(
+                f"Test without {curves_name} curves file"
+            )
+            return False
+
+        self._missed_curves[curves_name] = []
+        missed_curves = [key for key in measurement_names if key not in curves]
+        if missed_curves:
+            dycov_logging.get_logger("Curves Manager").warning(
+                f"Test without {curves_name} curve for keys {missed_curves}"
+            )
+            self._missed_curves[curves_name] = missed_curves
+            return False
+
+        return True
 
     def __save_curves(self, working_oc_dir: Path):
         if not self.get_curves("calculated").empty:
@@ -181,19 +183,15 @@ class CurvesManager:
             )
 
     def __save_curve(self, curves: pd.DataFrame, path: Path, precision: int = 9):
-        # Create a copy to avoid modifying the original DataFrame
         curves_to_save = curves.copy()
 
         if "time" in curves_to_save:
-            # Format 'time' column with specified precision
             curves_to_save["time"] = pd.to_numeric(curves_to_save["time"], errors="coerce").map(
                 lambda x: f"{x:.{precision}f}" if pd.notna(x) else ""
             )
-            # Ensure 'time' is the first column
             cols = ["time"] + [col for col in curves_to_save.columns if col != "time"]
             curves_to_save = curves_to_save[cols]
 
-        # Save to CSV without altering the original DataFrame
         curves_to_save.to_csv(path, sep=";", float_format="%.3e", index=False)
 
     def __get_signal_processing_windows(self, curve: str, windows: str) -> tuple[float, float]:
@@ -201,6 +199,21 @@ class CurvesManager:
 
     def __get_validation_windows(self, curve: str, windows: str) -> tuple[float, float]:
         return self._windows[curve]["validate"][windows]
+
+    def get_missed_curves(self, curves_name: str) -> list:
+        """Get the missed curves for curves set
+
+        Parameters
+        ----------
+        curves_name: str
+            Name of the curves set (calculated or reference)
+
+        Returns
+        -------
+        list
+            Missed column names
+        """
+        return self._missed_curves[curves_name]
 
     def get_solver(self) -> dict:
         """Get the solver.
@@ -210,14 +223,14 @@ class CurvesManager:
         dict
             Solver parameters.
         """
-        return self.__get_producer_curves_generator().get_solver()
+        return self._producer_curves_generator.get_solver()
 
     def has_required_curves(
         self,
         measurement_names: list,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, Simulation_result, int]:
+    ) -> CurvesCheckResult:
         """Check if all curves are present.
 
         Parameters
@@ -231,40 +244,23 @@ class CurvesManager:
 
         Returns
         -------
-        Path
-            Working path.
-        Path
-            Simulator output path.
-        dict
-            Event parameters
-        Simulation_result
-            Information about the simulation result.
-        int
-            0 all curves are present
-            1 producer's curves are missing
-            2 reference curves are missing
-            3 all curves are missing
+        CurvesCheckResult
+            Result object containing paths, event params, simulation result, and
+            curves availability status.
         """
         (
             working_oc_dir,
             jobs_output_dir,
             event_params,
             simulation_result,
-        ) = self.__obtain_curve(
-            bm_name,
-            oc_name,
-        )
+        ) = self.__obtain_curve(bm_name, oc_name)
 
-        # If the tool has the model, it is assumed that the simulated curves are always available,
-        #  if they are not available it is due to a failure in the simulation, this event is
-        #  handled differently.
         sim_curves = self.__check_curves(
             measurement_names,
             self.get_curves("calculated"),
-            "producer",
+            "calculated",
             not self._producer.is_dynawo_model(),
         )
-
         ref_curves = self.__check_curves(
             measurement_names,
             self.get_curves("reference"),
@@ -273,23 +269,23 @@ class CurvesManager:
         )
 
         if sim_curves and ref_curves:
-            has_curves = 0
+            availability = CurvesAvailability.ALL
         elif not sim_curves and ref_curves:
-            has_curves = 1
+            availability = CurvesAvailability.NO_PRODUCER
         elif sim_curves and not ref_curves:
-            has_curves = 2
+            availability = CurvesAvailability.NO_REFERENCE
         else:
             dycov_logging.get_logger("Curves Manager").warning("Test without curves")
-            has_curves = 3
+            availability = CurvesAvailability.NONE
 
         self.__save_curves(working_oc_dir)
 
-        return (
-            working_oc_dir,
-            jobs_output_dir,
-            event_params,
-            simulation_result,
-            has_curves,
+        return CurvesCheckResult(
+            working_oc_dir=working_oc_dir,
+            jobs_output_dir=jobs_output_dir,
+            event_params=event_params,
+            simulation_result=simulation_result,
+            availability=availability,
         )
 
     def apply_signal_processing(
@@ -485,7 +481,7 @@ class CurvesManager:
         float
             The nominal voltage of the generator.
         """
-        return self.__get_producer_curves_generator().get_generator_u_dim()
+        return self._producer_curves_generator.get_generator_u_dim()
 
     def get_time_cct(
         self,
@@ -511,7 +507,7 @@ class CurvesManager:
         float
             The critical clearing time (CCT) for the fault.
         """
-        return self.__get_producer_curves_generator().get_time_cct(
+        return self._producer_curves_generator.get_time_cct(
             working_oc_dir,
             jobs_output_dir,
             fault_duration,
@@ -527,7 +523,7 @@ class CurvesManager:
         dict
             Get maximum continuous current by generator.
         """
-        return self.__get_producer_curves_generator().get_generators_imax()
+        return self._producer_curves_generator.get_generators_imax()
 
     def get_voltage_dip(self) -> float | None:
         """Get the voltage dip.
@@ -537,19 +533,19 @@ class CurvesManager:
         float | None
             The voltage dip value.
         """
-        return self.__get_producer_curves_generator().get_voltage_dip()
+        return self._producer_curves_generator.get_voltage_dip()
 
-    def get_disconnection_model(self) -> Disconnection_Model:
+    def get_disconnection_model(self) -> DisconnectionModel:
         """Get all equipment in the model that can be disconnected in the simulation.
         When there is no model to simulate, it is not possible to detect the equipment
         that has been disconnected.
 
         Returns
         -------
-        Disconnection_Model
+        DisconnectionModel
             Equipment that can be disconnected.
         """
-        return self.__get_producer_curves_generator().get_disconnection_model()
+        return self._producer_curves_generator.get_disconnection_model()
 
     def get_setpoint_variation(self, pcs_bm_oc_name: str) -> float:
         """Get the setpoint variation.
@@ -564,7 +560,7 @@ class CurvesManager:
         float
             The variation in the setpoint for the given pcs_bm_oc_name.
         """
-        return self.__get_producer_curves_generator().get_setpoint_variation(pcs_bm_oc_name)
+        return self._producer_curves_generator.get_setpoint_variation(pcs_bm_oc_name)
 
     def is_field_measurements(self) -> bool:
         """Check if the reference curves are field measurements.
@@ -574,4 +570,4 @@ class CurvesManager:
         bool
             True if the reference signals are field measurements, False otherwise.
         """
-        return self.__get_reference_curves_generator().is_field_measurements()
+        return self._reference_curves_generator.is_field_measurements()
