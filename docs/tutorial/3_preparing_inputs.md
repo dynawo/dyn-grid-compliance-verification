@@ -255,8 +255,9 @@ NetworkFrequencyPu =
 # Replace "[XFMR_ID]" with the transformer id associating to the Wind Turbine or PV Array
 [XFMR_ID]_XFMR_Tap =
 # Replace "[WT_ID]" with the Wind Turbine id or PV Array id
-[WT_ID]_GEN_InjectedActiveCurrent =
-[WT_ID]_GEN_InjectedReactiveCurrent =
+[WT_ID]_GEN_IpInjTerminal =
+[WT_ID]_GEN_IqInjTerminal =
+[WT_ID]_GEN_UPuInjTerminal =
 [WT_ID]_GEN_AVRSetpointPu =
 [WT_ID]_GEN_MagnitudeControlledByAVRPu =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled

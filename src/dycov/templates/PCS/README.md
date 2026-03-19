@@ -74,6 +74,7 @@ benchmarks.
     fig_WRef =
     fig_I =
     fig_Tap =
+    fig_UIt =
    ```
    
 # Add a new PCS

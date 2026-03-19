@@ -9,6 +9,7 @@
 #
 from pathlib import Path
 
+import numpy as np
 from lxml import etree
 
 from dycov.configuration.cfg import config
@@ -354,57 +355,51 @@ class PerformanceValidator(Validator):
 
             time_curve = self.__curve_list("time")
 
-            idpu_cols = self.__get_filtered_columns("_GEN_InjectedActiveCurrent")
-            iqpu_cols = self.__get_filtered_columns("_GEN_InjectedReactiveCurrent")
-
-            def base_from_active(col: str) -> str:
-                return col.replace("_GEN_InjectedActiveCurrent", "")
-
-            def base_from_reactive(col: str) -> str:
-                return col.replace("_GEN_InjectedReactiveCurrent", "")
-
-            idpu_map = {base_from_active(c): c for c in idpu_cols}
-            iqpu_map = {base_from_reactive(c): c for c in iqpu_cols}
+            active_current = {
+                c.replace("_GEN_IpInjTerminal", ""): c
+                for c in self.__get_filtered_columns("_GEN_IpInjTerminal")
+            }
+            reactive_current = {
+                c.replace("_GEN_IqInjTerminal", ""): c
+                for c in self.__get_filtered_columns("_GEN_IqInjTerminal")
+            }
 
             # Columns names are expected to be in the format:
-            #   - <generator_id>_GEN_InjectedActiveCurrent
-            #   - <generator_id>_GEN_InjectedReactiveCurrent
+            #   - <generator_id>_GEN_IpInjTerminal
+            #   - <generator_id>_GEN_IqInjTerminal
             # so we can match them based on the generator_id extracted from the column name
-            generator_ids = sorted(set(idpu_map.keys()) & set(iqpu_map.keys()))
+            generator_ids = sorted(set(active_current.keys()) & set(reactive_current.keys()))
             for generator_id in generator_ids:
-                idpu = self.__curve_list(idpu_map[generator_id])
-                iqpu = self.__curve_list(iqpu_map[generator_id])
+                ip = self.__curve_list(active_current[generator_id])
+                iq = self.__curve_list(reactive_current[generator_id])
 
-                if idpu is None or iqpu is None:
+                if ip is None or iq is None:
                     continue
 
-                n = min(len(time_curve), len(idpu), len(iqpu))
+                n = min(len(time_curve), len(ip), len(iq))
                 if n == 0:
                     continue
 
-                time_local = time_curve[:n]
-                idpu_local = idpu[:n]
-                iqpu_local = iqpu[:n]
+                t = time_curve[:n]
+                ip = np.array(ip[:n], dtype=float)  # None → NaN
+                iq = np.array(iq[:n], dtype=float)  # None → NaN
 
-                # Build injected current magnitude
-                injected_current = []
-                for r, x in zip(idpu_local, iqpu_local):
-                    if r is None or x is None:
-                        injected_current.append(0.0)
-                    else:
-                        injected_current.append((r * r + x * x) ** 0.5)
+                # I = sqrt(Ip² + Iq²), NaN where either component was None
+                current_magnitude = np.hypot(ip, iq)
+                # Replace NaN (originated from None values) with 0.0
+                current_magnitude = np.where(np.isnan(current_magnitude), 0.0, current_magnitude)
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
                     self._generators_imax.get(generator_id),
-                    time_local,
-                    injected_current,
-                    idpu_local,
+                    t,
+                    current_magnitude,
+                    ip,
                 )
 
-                # Track worst (minimum) violating value if a failure exists
+                # Track worst (minimum) violating value across all generators
                 if not imax_gen_reac_check:
                     imax_reac_check = False
-                    if imax_reac is None or imax_gen_reac < imax_reac:
+                    if imax_reac == -1 or imax_gen_reac < imax_reac:
                         imax_reac = imax_gen_reac
 
             compliance_values["imax_reac"] = imax_reac

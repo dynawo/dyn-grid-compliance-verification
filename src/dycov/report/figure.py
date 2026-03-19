@@ -18,40 +18,14 @@ from matplotlib.ticker import FormatStrFormatter
 
 from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
-
-
-def _is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
-    if curve_name == "BusPDR_BUS_ActivePower":
-        return column_name == "P"
-    if curve_name == "BusPDR_BUS_ReactivePower":
-        return column_name == "Q"
-    if curve_name == "BusPDR_BUS_ActiveCurrent":
-        return column_name == "P"
-    if curve_name == "BusPDR_BUS_ReactiveCurrent":
-        return column_name == "Q"
-    if curve_name == "BusPDR_BUS_Voltage":
-        return column_name == "V"
-    if curve_name == "NetworkFrequencyPu":
-        return column_name == "$\\omega"
-
-    return False
-
-
-def _get_measurement_type(curve_name: str) -> str:
-    if curve_name == "BusPDR_BUS_ActivePower":
-        return "active_power"
-    if curve_name == "BusPDR_BUS_ReactivePower":
-        return "reactive_power"
-    if curve_name == "BusPDR_BUS_ActiveCurrent":
-        return "active_current"
-    if curve_name == "BusPDR_BUS_ReactiveCurrent":
-        return "reactive_current"
-    if curve_name == "BusPDR_BUS_Voltage":
-        return "voltage"
-    if curve_name == "NetworkFrequencyPu":
-        return "frequency"
-
-    return ""
+from dycov.report.curve_classification import get_curve_style
+from dycov.report.figure_decorations import (
+    draw_additional_curves,
+    draw_exclusion_windows,
+    draw_mxe,
+    draw_response_characteristics,
+)
+from dycov.report.figure_renderer import MatplotlibRenderer
 
 
 def _add_curve2plot(
@@ -63,28 +37,17 @@ def _add_curve2plot(
 ) -> None:
     if curve_name is None:
         return
+    if variable_tool_name == "AVRSetpointPu" and is_reference:
+        return
 
-    if variable_tool_name == "InjectedActiveCurrent":
-        line_color = "#64b5cd"
-        line_style = "-"
-    elif variable_tool_name == "InjectedReactiveCurrent":
-        line_color = "#8172b3"
-        line_style = "-"
-    elif variable_tool_name == "AVRSetpointPu":
-        if is_reference:
-            return
-        line_color = "#8c8c8c"
-        line_style = ":"
-    else:
-        line_color = "#4c72b0"
-        line_style = "-"
+    curve_style = get_curve_style(variable_tool_name, is_reference)
     if curve_name in curves:
         plot_curves.append(
             {
                 "name": curve_name,
                 "curve": list(curves[curve_name]),
-                "color": line_color,
-                "style": line_style,
+                "color": curve_style.color,
+                "style": curve_style.style,
             }
         )
 
@@ -216,269 +179,6 @@ def _get_yrange_for_curve(curve: list) -> tuple[float, float]:
     return yrange_min, yrange_max
 
 
-def _plot_additional_curves(
-    time: list,
-    additional_curves: list,
-    results: dict,
-    last_val: float,
-    ymin: float,
-    ymax: float,
-) -> tuple[float, float]:
-    _plot_additional_time_curves(additional_curves, results, last_val)
-    ymin, ymax = _plot_additional_frequency_curves(additional_curves, ymin, ymax)
-    _plot_additional_avr_curves(time, additional_curves, results)
-
-    return ymin, ymax
-
-
-def _plot_additional_time_curves(
-    additional_curves: list,
-    results: dict,
-    last_val: float,
-) -> None:
-    # Plot first the additional info
-    if "10P" in additional_curves:
-        # Get the tube
-        if abs(last_val) <= 1:
-            mean_val_max = last_val + 0.1
-            mean_val_min = last_val - 0.1
-
-        # If the value is more than 1, we use relative value
-        else:
-            mean_val_max = last_val + abs(0.1 * last_val)
-            mean_val_min = last_val - abs(0.1 * last_val)
-
-        plt.axhline(y=mean_val_max, color="#55a868", linestyle="--")
-        plt.axhline(y=mean_val_min, color="#55a868", linestyle="--")
-
-    if "5P" in additional_curves:
-        # Get the tube
-        if abs(last_val) <= 1:
-            mean_val_max = last_val + 0.05
-            mean_val_min = last_val - 0.05
-
-        # If the value is more than 1, we use relative value
-        else:
-            mean_val_max = last_val + abs(0.05 * last_val)
-            mean_val_min = last_val - abs(0.05 * last_val)
-
-        plt.axhline(y=mean_val_max, color="#c44e52", linestyle="--")
-        plt.axhline(y=mean_val_min, color="#c44e52", linestyle="--")
-
-    if "10Pfloor" in additional_curves:
-        # Get the tube
-        if abs(last_val) <= 1:
-            mean_val_min = last_val - 0.1
-
-        # If the value is more than 1, we use relative value
-        else:
-            mean_val_min = last_val - abs(0.1 * last_val)
-
-        plt.axhline(y=mean_val_min, color="#55a868", linestyle="--")
-
-    if "5Pfloor" in additional_curves:
-        # Get the tube
-        if abs(last_val) <= 1:
-            mean_val_min = last_val - 0.05
-
-        # If the value is more than 1, we use relative value
-        else:
-            mean_val_min = last_val - abs(0.05 * last_val)
-
-        plt.axhline(y=mean_val_min, color="#c44e52", linestyle="--")
-
-    if "85U" in additional_curves:
-        val_85 = results["time_85U"] + results["sim_t_event_start"]
-        plt.axvline(x=val_85, color="0.8", linestyle="--")
-
-
-def _plot_additional_frequency_curves(
-    additional_curves: list,
-    ymin: float,
-    ymax: float,
-) -> tuple[float, float]:
-    f_nom = config.get_float("Global", "f_nom", 50.0)
-
-    if "freq_1" in additional_curves:
-        plt.axhline(y=(f_nom + 1) / f_nom, color="#c44e52", linestyle="--")
-        if ymax and ymax < (f_nom + 1.5) / f_nom:
-            ymax = (f_nom + 1.5) / f_nom
-        plt.axhline(y=(f_nom - 1) / f_nom, color="#c44e52", linestyle="--")
-        if ymin and ymin > (f_nom - 1.5) / f_nom:
-            ymin = (f_nom - 1.5) / f_nom
-
-    if "freq_200" in additional_curves:
-        plt.axhline(y=(f_nom + 0.2) / f_nom, color="#55a868", linestyle="--")
-        if ymax and ymax < (f_nom + 0.25) / f_nom:
-            ymax = (f_nom + 0.25) / f_nom
-        plt.axhline(y=(f_nom - 0.2) / f_nom, color="#55a868", linestyle="--")
-        if ymin and ymin > (f_nom - 0.25) / f_nom:
-            ymin = (f_nom - 0.25) / f_nom
-
-    if "freq_250" in additional_curves:
-        plt.axhline(y=(f_nom + 0.250) / f_nom, color="#c44e52", linestyle="--")
-        if ymax and ymax < (f_nom + 0.3) / f_nom:
-            ymax = (f_nom + 0.3) / f_nom
-        plt.axhline(y=(f_nom - 0.250) / f_nom, color="#c44e52", linestyle="--")
-        if ymin and ymin > (f_nom - 0.3) / f_nom:
-            ymin = (f_nom - 0.3) / f_nom
-
-    return ymin, ymax
-
-
-def _plot_additional_avr_curves(
-    time: list,
-    additional_curves: list,
-    results: dict,
-) -> tuple[float, float]:
-    if "AVR5" in additional_curves:
-        # Get the tube
-        percent = 0.05
-        for AVR_5_crv in results["AVR_5_crvs"]:
-            line_max = []
-            line_min = []
-            for i in AVR_5_crv:
-                mean_val = i
-                if mean_val <= 1:
-                    mean_val_max = mean_val + percent
-                    mean_val_min = mean_val - percent
-                # If the value is more than 1, we use relative value
-                else:
-                    mean_val_max = mean_val + abs(percent * mean_val)
-                    mean_val_min = mean_val - abs(percent * mean_val)
-
-                line_max.append(mean_val_max)
-                line_min.append(mean_val_min)
-
-            plt.plot(time, line_max, color="#c44e52", linestyle="--")
-            plt.plot(time, line_min, color="#c44e52", linestyle="--")
-
-
-def _plot_response_characteristics(
-    curve_name: str,
-    results: dict,
-):
-    if "calc_reaction_target" in results:
-        if curve_name in results["calc_reaction_target"]:
-            treaction = results["calc_reaction_time"] + results["sim_t_event_start"]
-            target = results["calc_reaction_target"][curve_name]
-            plt.axhline(y=target, color="#bee7fa", linestyle="-", linewidth=0.2)
-            plt.axvline(x=treaction, color="#f7d7f6", linestyle="-", linewidth=0.2)
-
-    if "calc_rise_target" in results:
-        if curve_name in results["calc_rise_target"]:
-            trise = results["calc_rise_time"] + results["sim_t_event_start"]
-            target = results["calc_rise_target"][curve_name]
-            plt.axhline(y=target, color="#bee7fa", linestyle="-", linewidth=0.2)
-            plt.axvline(x=trise, color="#f7d7f6", linestyle="-", linewidth=0.2)
-            plt.scatter(trise, target, color="#fcb1fa")
-            offset_y = 5.0
-            if (
-                results["calc_rise_target"][curve_name]
-                > results["calc_reaction_target"][curve_name]
-            ):
-                offset_y = -10.0
-            plt.annotate(
-                f"{trise:.4f}s",
-                xy=(trise, target),
-                xytext=(2.5, offset_y),
-                textcoords="offset points",
-                color="#ff82fc",
-                fontsize="small",
-            )
-
-    if "calc_settling_tube" in results:
-        if curve_name in results["calc_settling_tube"]:
-            tsettling = results["calc_settling_time"] + results["sim_t_event_start"]
-            ss_value = results["calc_ss_value"]
-            tube = results["calc_settling_tube"][curve_name]
-            plt.axhspan(ymin=tube[0], ymax=tube[1], color="#d7f7e0", linestyle="-", linewidth=0.2)
-            plt.axvline(x=tsettling, color="#f7d7f6", linestyle="-", linewidth=0.2)
-            plt.scatter(tsettling, ss_value, color="#fcb1fa")
-            offset_y = 5.0
-            if "calc_rise_target" in results and (
-                results["calc_rise_target"][curve_name]
-                > results["calc_reaction_target"][curve_name]
-            ):
-                offset_y = -10.0
-            plt.annotate(
-                f"{tsettling:.4f}s",
-                xy=(tsettling, ss_value),
-                xytext=(2.5, offset_y),
-                textcoords="offset points",
-                color="#ff82fc",
-                fontsize="small",
-            )
-
-
-def _plot_exclusion_windows(results: dict):
-    if "event_exclusion_window_start" in results:
-        plt.axvspan(
-            xmin=results["event_exclusion_window_start"],
-            xmax=results["event_exclusion_window_end"],
-            color="#e8e8e8",
-            linestyle="-",
-            linewidth=0.2,
-        )
-    if "clear_exclusion_window_start" in results:
-        plt.axvspan(
-            xmin=results["clear_exclusion_window_start"],
-            xmax=results["clear_exclusion_window_end"],
-            color="#e8e8e8",
-            linestyle="-",
-            linewidth=0.2,
-        )
-
-
-def _plot_mxe(
-    curve_name: str,
-    results: dict,
-):
-    measurement_type = _get_measurement_type(curve_name)
-    if "setpoint_tracking_controlled_magnitude_name" in results:
-        measurement_type = "tc_controlled_magnitude"
-        if not _is_controlled_magnitude(
-            curve_name, results["setpoint_tracking_controlled_magnitude_name"]
-        ):
-            return
-
-    before_mxe = None
-    during_mxe = None
-    after_mxe = None
-    if "before_mxe_" + measurement_type + "_position" in results:
-        mxe_position = results["before_mxe_" + measurement_type + "_position"]
-        before_mxe = results["before_mxe_" + measurement_type + "_value"]
-        plt.axvline(x=mxe_position[0], color="#9acd83", linestyle="-", linewidth=0.2)
-
-    if "during_mxe_" + measurement_type + "_position" in results:
-        mxe_position = results["during_mxe_" + measurement_type + "_position"]
-        during_mxe = results["during_mxe_" + measurement_type + "_value"]
-        plt.axvline(x=mxe_position[0], color="#9acd83", linestyle="-", linewidth=0.2)
-
-    if "after_mxe_" + measurement_type + "_position" in results:
-        mxe_position = results["after_mxe_" + measurement_type + "_position"]
-        after_mxe = results["after_mxe_" + measurement_type + "_value"]
-        plt.axvline(x=mxe_position[0], color="#9acd83", linestyle="-", linewidth=0.2)
-
-    text = ""
-    if before_mxe is not None:
-        text += f"Before: {before_mxe:.3f}\n"
-    if during_mxe is not None:
-        text += f"During: {during_mxe:.3f}\n"
-    if after_mxe is not None:
-        text += f"After: {after_mxe:.3f}\n"
-    if len(text) > 0:
-        plt.annotate(
-            "MXE:\n" + text,
-            xy=(1, 0),
-            xytext=(-60, 5),
-            xycoords="axes fraction",
-            textcoords="offset points",
-            color="#9acd83",
-            fontsize="small",
-        )
-
-
 def _save_plot(
     time: list,
     curves: list,
@@ -490,10 +190,13 @@ def _save_plot(
     ymin: float,
     ymax: float,
 ) -> None:
-    # Plot later the reference curves
+    from dycov.report.figure_decorations import _COLOR_REFERENCE
+
     if time_reference is not None and curves_reference is not None:
         for curve_reference in curves_reference:
-            plt.plot(time_reference, curve_reference["curve"], color="#dd8452", linestyle="-")
+            plt.plot(
+                time_reference, curve_reference["curve"], color=_COLOR_REFERENCE, linestyle="-"
+            )
 
     # Plot finally the calculated curves
     for curve in curves:
@@ -530,7 +233,7 @@ def _get_time_range(
     xmax = -99999
     figure_key = operating_condition.rsplit(".", 1)[0]
     for figure_description in figures_description[figure_key]:
-        plot_curves = get_curves2plot(figure_description[1], curves)
+        plot_curves = get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
 
@@ -608,15 +311,14 @@ def get_common_time_range(
 
 def create_plot(
     time: list,
-    variable_names: Union[str, list],
+    figure_description,
     curves: list,
     time_reference: list,
     curves_reference: list,
     time_range: dict,
     output_file: Path,
-    additional_curves: list,
     results: dict,
-    unit: str,
+    band_ref_val: float | None = None,
 ) -> None:
     """Draw a figure.
 
@@ -624,8 +326,8 @@ def create_plot(
     ----------
     time: list
         Calculate times
-    variable_names: Union[str, list]
-        Curves to plot
+    figure_description: FigureDescription
+        Description of the figure to plot
     curves: list
         Calculate curves, with color and style
     time_reference: list
@@ -636,40 +338,95 @@ def create_plot(
         Time range to be displayed
     output_file: Path
         File where the graph will be saved
-    additional_curves: list
-        Additional curves to draw
     results: dict
         Results of the validations applied in the pcs
-    unit: str
-        Units name to be plotted on the vertical axis
     """
-    # It is important the order in which the lines are drawn, since the last ones to be drawn
-    #  are those that remains visible in the areas where 2 or more curves coincide.
-    #  Curve priority, the first must always be visible, the last only in areas that do not
-    #  coincide with other curves.
-    #       1- Calculated curves
-    #       2- Reference curves
-    #       3- Additional curves (limits, setpoints, etc.)
-
     plt.clf()
     plt.figure()
 
-    # Cut curves
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
 
-    last_val = curves[0]["curve"][-1]
+    last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
 
-    ymin, ymax = _plot_additional_curves(time, additional_curves, results, last_val, ymin, ymax)
+    renderer = MatplotlibRenderer()
+    ymin, ymax = draw_additional_curves(
+        renderer, figure_description, time, last_val, results, ymin, ymax
+    )
 
-    curve_name = None
+    variable_names = figure_description.variables
+    unit = figure_description.ylabel
+
     if isinstance(variable_names, str):
-        curve_name = variable_names
+        _plot_curve(
+            time,
+            variable_names,
+            curves,
+            time_reference,
+            curves_reference,
+            time_range,
+            output_file,
+            results,
+            unit,
+            ymin,
+            ymax,
+        )
     elif variable_names[0]["type"] == "bus":
-        curve_name = "BusPDR" + "_BUS_" + variable_names[0]["variable"]
+        curve_name = "BusPDR_BUS_" + variable_names[0]["variable"]
+        _plot_curve(
+            time,
+            curve_name,
+            curves,
+            time_reference,
+            curves_reference,
+            time_range,
+            output_file,
+            results,
+            unit,
+            ymin,
+            ymax,
+        )
+    else:
+        variable_type = variable_names[0]["type"]
+        suffix_map = {"generator": "_GEN_", "transformer": "_XFMR_"}
+        suffix = suffix_map.get(variable_type, "")
+        curves_names = [
+            curve["name"]
+            for curve in curves
+            if curve["name"].endswith(suffix + variable_names[0]["variable"])
+        ]
+        for curve_name in curves_names:
+            _plot_curve(
+                time,
+                curve_name,
+                curves,
+                time_reference,
+                curves_reference,
+                time_range,
+                output_file,
+                results,
+                unit,
+                ymin,
+                ymax,
+            )
 
-    _plot_response_characteristics(curve_name, results)
-    _plot_exclusion_windows(results)
-    _plot_mxe(curve_name, results)
+
+def _plot_curve(
+    time: list,
+    curve_name: str,
+    curves: list,
+    time_reference: list,
+    curves_reference: list,
+    time_range: dict,
+    output_file: Path,
+    results: dict,
+    unit: str,
+    ymin: float,
+    ymax: float,
+) -> None:
+    renderer = MatplotlibRenderer()
+    draw_response_characteristics(renderer, curve_name, results)
+    draw_exclusion_windows(renderer, results)
+    draw_mxe(renderer, curve_name, results)
     _save_plot(
         time,
         curves,

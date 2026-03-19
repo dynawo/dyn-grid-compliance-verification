@@ -169,8 +169,8 @@ class ImportedCurves(ProducerCurves):
                 generators_imax = {}
                 # Populate generators_imax from config metadata
                 for key in importer.config["Curves-Metadata"].keys():
-                    if key.endswith("_GEN_MaxInjectedCurrentPu"):
-                        generator_id = key.replace("_GEN_MaxInjectedCurrentPu", "")
+                    if key.endswith("_GEN_MaxCurrentAtConverterPu"):
+                        generator_id = key.replace("_GEN_MaxCurrentAtConverterPu", "")
                         generators_imax[generator_id] = float(
                             importer.config.get("Curves-Metadata", key)
                         )
