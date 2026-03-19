@@ -29,7 +29,7 @@ def test_xmls():
 
     with pytest.raises(etree.XMLSyntaxError) as pytest_wrapped_e:
         xml_check("badformed.xml")
-    assert pytest_wrapped_e.type == etree.XMLSyntaxError
+    assert pytest_wrapped_e.type is etree.XMLSyntaxError
     assert pytest_wrapped_e.value.code == 76
     assert (
         pytest_wrapped_e.value.args[0]
@@ -42,4 +42,4 @@ def test_curves_file():
 
     with pytest.raises(FileNotFoundError) as pytest_wrapped_e:
         file_checks.check_curves_files(None, _get_resources_path() / "Non-Curves", "")
-    assert pytest_wrapped_e.type == FileNotFoundError
+    assert pytest_wrapped_e.type is FileNotFoundError

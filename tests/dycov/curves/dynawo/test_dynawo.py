@@ -81,7 +81,6 @@ def test_is_stable_raises_on_length_mismatch():
 
 
 def test_create_curves_handles_missing_or_malformed_file(tmp_path):
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
     variable_translations = {
         "BusPDR_BUS_Voltage": ["BusPDR_BUS_Voltage"],
@@ -246,7 +245,6 @@ def test_empty_input_lists():
 
 
 def test_valid_input_file_processing(mocker, tmp_path):
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
     mock_df_import = pd.DataFrame({"time": [0.0, 1.0, 2.0], "Unnamed: 0": [0, 1, 2]})
     mocker.patch("pandas.read_csv", return_value=mock_df_import)
@@ -270,8 +268,8 @@ def test_valid_input_file_processing(mocker, tmp_path):
     class Gen:
         def __init__(self):
             self.id = "GEN1"
-            self.UseVoltageDroop = True
-            self.VoltageDroop = 0.1
+            self.use_voltage_droop = True
+            self.voltage_droop = 0.1
 
     generators = [Gen()]
     snom = 100.0
@@ -307,7 +305,6 @@ def test_valid_input_file_processing(mocker, tmp_path):
 
 
 def test_prepare_complex_column_applies_sign_conventions():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
     column_name = "test_column"
     column_size = 3
@@ -340,7 +337,6 @@ def test_prepare_complex_column_applies_sign_conventions():
 
 
 def test_translate_curves_with_missing_columns():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
     df_curves_imported = pd.DataFrame(
         {"time": [0.0, 1.0, 2.0], "existing_column": [1.0, 2.0, 3.0]}
@@ -363,13 +359,12 @@ def test_translate_curves_with_missing_columns():
 
 
 def test_process_generators_with_variable_in_columns():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
     class Generator:
         def __init__(self, id_):
             self.id = id_
-            self.UseVoltageDroop = True
-            self.VoltageDroop = 0.1
+            self.use_voltage_droop = True
+            self.voltage_droop = 0.1
 
     generators = [Generator("GEN1"), Generator("GEN2"), Generator("GEN3")]
 
@@ -406,7 +401,6 @@ def test_process_generators_with_variable_in_columns():
 
 
 def test_empty_generators_list():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 
     generators = []
     df_curves = pd.DataFrame({"OtherColumn1": [1.0, 2.0, 3.0], "OtherColumn2": [4.0, 5.0, 6.0]})

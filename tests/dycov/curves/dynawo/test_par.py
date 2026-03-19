@@ -12,7 +12,7 @@ import pytest
 
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.par import ParFile
-from dycov.model.parameters import Gen_init
+from dycov.model.parameters import GenInit
 
 
 # Helper: Minimal stub for Producer and Parameters for ProducerCurves
@@ -65,7 +65,7 @@ def working_dir_with_template(tmp_path):
 
 @pytest.fixture
 def rte_gen():
-    return Gen_init(id="G1", P0=0.8, Q0=0.2, U0=1.05, UPhase0=0.0)
+    return GenInit(id="G1", p0=0.8, q0=0.2, u0=1.05, u_phase0=0.0)
 
 
 @pytest.fixture
@@ -122,11 +122,11 @@ def test_complete_file_populates_variables_dict_correctly(
         rp.dump_file = orig_dump
     assert captured["line_XPu"] == 0.04
     assert captured["line_RPu"] == 0.03
-    assert captured["infiniteBus_U0Pu"] == rte_gen.U0
-    assert captured["gen_P0Pu"] == rte_gen.P0
-    assert captured["gen_Q0Pu"] == rte_gen.Q0
-    assert captured["gen_U0Pu"] == rte_gen.U0
-    assert captured["gen_UPhase0"] == rte_gen.UPhase0
+    assert captured["infiniteBus_U0Pu"] == rte_gen.u0
+    assert captured["gen_P0Pu"] == rte_gen.p0
+    assert captured["gen_Q0Pu"] == rte_gen.q0
+    assert captured["gen_U0Pu"] == rte_gen.u0
+    assert captured["gen_UPhase0"] == rte_gen.u_phase0
     assert captured["event_start"] == event_params["start_time"]
     assert captured["event_end"] == event_params["start_time"] + event_params["duration_time"]
     assert captured["event_pre_value"] == event_params["pre_value"]
