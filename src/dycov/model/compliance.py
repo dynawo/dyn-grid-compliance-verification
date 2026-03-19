@@ -44,4 +44,5 @@ class Compliance(Enum):
             Compliance.Compliant,
             Compliance.NonCompliant,
             Compliance.FaultDipUnachievable,
+            Compliance.WithoutReferenceCurves,
         ]

@@ -37,7 +37,9 @@ def _check_measure_curve_error(
     measurement: str,
     error_type: str,
     threshold: float,
-) -> tuple[float, bool]:
+) -> tuple[float, bool, float, bool]:
+    if measurement not in compliance_values:
+        return None, None, None, None
     error_value = compliance_values[measurement][error_type]
     if threshold:
         error_check = _check_value_by_threshold(error_value, threshold)
@@ -58,7 +60,7 @@ def _check_measure_curve_error_by_event(
     measure: str,
     error: str,
     window_thresholds: dict,
-) -> tuple[float, bool]:
+) -> tuple[float, bool, float, bool]:
     curve_value_error, curve_check_error, curve_terror, curve_yerror = _check_measure_curve_error(
         compliance_values,
         measure,
@@ -72,7 +74,7 @@ def _check_setpoint_tracking_by_window(
     compliance_values: dict,
     measure: str,
     error: str,
-) -> tuple[float, bool, float, bool, float, bool]:
+) -> tuple[float, bool, list, float, bool, list, float, bool, list]:
     windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values()
     (
         before_value,
@@ -403,6 +405,7 @@ def calculate_errors(
             calculated_curves["time"],
             calculated_curves[key],
             reference_curves[key],
+            key,
         )
 
         results[key] = {
