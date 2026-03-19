@@ -89,7 +89,7 @@ class TableFile(FileVariables):
         enabled = config.get_boolean("Dynawo", "transition_enabled", False)
         points = config.get_int("Dynawo", "transition_points", 3)
         half_width = config.get_float("Dynawo", "transition_half_width", 0.01)
-        dycov_logging.debug(
+        dycov_logging.get_logger("TableFile").debug(
             f"Post-processing {filename} with smoothing enabled={enabled}, "
             f"points={points}, half_width={half_width}"
         )

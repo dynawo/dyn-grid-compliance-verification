@@ -57,13 +57,13 @@
     <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="0.5"/>
 
     <!-- General -->
-    <par type="DOUBLE" name="photovoltaics_SNom" value="90"/>
+    <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
     <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
     <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
+    <par type="DOUBLE" name="transformer_SNom" value="0.25"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>

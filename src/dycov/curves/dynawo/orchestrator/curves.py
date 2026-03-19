@@ -190,9 +190,7 @@ class DynawoCurves(ProducerCurves):
         """
         Centralized logger formatter (keeps one single format place).
         """
-        getattr(dycov_logging.get_logger("ProducerCurves"), level)(
-            f"{self.__get_log_title(bm_name, oc_name)} {message}"
-        )
+        getattr(dycov_logging.get_logger("ProducerCurves"), level)(f"{message}")
 
     def __debug(self, bm_name: str, oc_name: str, message: str) -> None:
         """

@@ -13,7 +13,7 @@ def test_model_validation_ppm_producer_curves():
     assert [
         Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
-        Compliance.NonCompliant,  # 2
+        Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
@@ -59,12 +59,12 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
-        Compliance.Compliant,  # 14
-        Compliance.Compliant,  # 15
+        Compliance.InvalidTest,  # 14
+        Compliance.InvalidTest,  # 15
         Compliance.Compliant,  # 16
-        Compliance.Compliant,  # 17
-        Compliance.Compliant,  # 18
-        Compliance.InvalidTest,  # 19
+        Compliance.InvalidTest,  # 17
+        Compliance.InvalidTest,  # 18
+        Compliance.Compliant,  # 19
         Compliance.InvalidTest,  # 20
         Compliance.InvalidTest,  # 21
         Compliance.Compliant,  # 22

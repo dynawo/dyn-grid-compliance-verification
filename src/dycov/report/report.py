@@ -419,7 +419,6 @@ def _generate_figures(
             working_path
             / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
             oc_results,
-            f"{figure_description.name}.{operating_condition}",
             band_ref_val=iq_last_val,
         )
 
@@ -495,7 +494,6 @@ def _create_full_tex(
             unit_characteristics,
             figures_description,
             oc_results,
-            operating_condition,
         )
         if config.get_boolean("Debug", "show_figs_t0", False):
             xmin = None

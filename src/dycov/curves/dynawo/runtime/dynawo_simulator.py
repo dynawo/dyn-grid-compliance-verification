@@ -299,7 +299,6 @@ class DynawoSimulator:
             return VoltDipResult.COLUMN_MISSING
 
         dycov_logging.get_logger("DynawoSimulator").debug(
-            f"{pcs_name}.{bm_name}.{oc_name}: "
             f"Calculated Voltage dip: {voltage_dip:.4f}, Expected dip: {expected_dip:.4f}"
         )
 

@@ -189,7 +189,6 @@ def _save_plot(
     unit: str,
     ymin: float,
     ymax: float,
-    log_title: str,
 ) -> None:
     from dycov.report.figure_decorations import _COLOR_REFERENCE
 
@@ -209,12 +208,12 @@ def _save_plot(
         try:
             plt.xlim(time_range["min"], time_range["max"])
         except UserWarning as uw:
-            dycov_logging.get_logger("Figures").warning(f"{log_title}: X-axis warning {uw}")
+            dycov_logging.get_logger("Figures").warning(f"X-axis warning {uw}")
     if ymin is not None:
         try:
             plt.ylim(ymin, ymax)
         except UserWarning as uw:
-            dycov_logging.get_logger("Figures").warning(f"{log_title}: Y-axis warning {uw}")
+            dycov_logging.get_logger("Figures").warning(f"Y-axis warning {uw}")
 
     plt.xlabel("t(s)", fontsize=16)
     plt.ylabel(unit, fontsize=16)
@@ -261,7 +260,6 @@ def get_common_time_range(
     unit_characteristics: dict,
     figures_description: dict,
     results: dict,
-    log_title: str,
 ) -> tuple[float, float]:
     """For a set of given curves, it obtains the minimum temporal range necessary to visualize all
     variations.
@@ -292,7 +290,7 @@ def get_common_time_range(
 
     if xmin == 99999 and xmax == -99999:
         dycov_logging.get_logger("Figures").warning(
-            f"{log_title}: All curves appear to be flat in {operating_condition};"
+            f"All curves appear to be flat in {operating_condition};"
             " something must be wrong with the simulation"
         )
 
@@ -320,7 +318,6 @@ def create_plot(
     time_range: dict,
     output_file: Path,
     results: dict,
-    log_title: str,
     band_ref_val: float | None = None,
 ) -> None:
     """Draw a figure.
@@ -372,7 +369,6 @@ def create_plot(
             unit,
             ymin,
             ymax,
-            log_title,
         )
     elif variable_names[0]["type"] == "bus":
         curve_name = "BusPDR_BUS_" + variable_names[0]["variable"]
@@ -388,7 +384,6 @@ def create_plot(
             unit,
             ymin,
             ymax,
-            log_title,
         )
     else:
         variable_type = variable_names[0]["type"]
@@ -412,7 +407,6 @@ def create_plot(
                 unit,
                 ymin,
                 ymax,
-                log_title,
             )
 
 
@@ -428,7 +422,6 @@ def _plot_curve(
     unit: str,
     ymin: float,
     ymax: float,
-    log_title: str,
 ) -> None:
     renderer = MatplotlibRenderer()
     draw_response_characteristics(renderer, curve_name, results)
@@ -444,7 +437,6 @@ def _plot_curve(
         unit,
         ymin,
         ymax,
-        log_title,
     )
 
 
