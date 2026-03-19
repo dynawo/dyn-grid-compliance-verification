@@ -101,7 +101,7 @@ def test_is_invalid_test_returns_true_for_flat_curves():
     active = [2, 2, 2, 2, 2, 2]
     reactive = [3, 3, 3, 3, 3, 3]
     t_event = 2
-    assert common.is_invalid_test(time, voltage, active, reactive, t_event, log_title="") is True
+    assert common.is_invalid_test(time, voltage, active, reactive, t_event) is True
 
 
 def test_get_AVR_x_returns_true_within_tolerance():
@@ -116,13 +116,13 @@ def test_get_AVR_x_returns_true_within_tolerance():
 
 
 def test_check_generator_imax_prioritizes_reactive_support():
-    # After reaching imax, injected_active_current does not increase
+    # After reaching imax, active_current_at_converter does not increase
     imax = 5
     time = [0, 1, 2, 3, 4, 5]
-    injected_current = [1, 3, 5, 5, 5, 5]
-    injected_active_current = [2, 2, 2, 2, 2, 2]
+    current_at_converter = [1, 3, 5, 5, 5, 5]
+    active_current_at_converter = [2, 2, 2, 2, 2, 2]
     first_id_value, id_not_increase = common.check_generator_imax(
-        imax, time, injected_current, injected_active_current
+        imax, time, current_at_converter, active_current_at_converter
     )
     assert id_not_increase is True
     assert first_id_value == -1
@@ -268,10 +268,10 @@ def test_get_value_error_returns_zero_for_perfect_match():
 def test_check_generator_imax_raises_value_error_on_length_mismatch():
     imax = 5
     time = [0, 1, 2]
-    injected_current = [1, 2]
-    injected_active_current = [1, 2]
+    current_at_converter = [1, 2]
+    active_current_at_converter = [1, 2]
     with pytest.raises(ValueError, match="different length"):
-        common.check_generator_imax(imax, time, injected_current, injected_active_current)
+        common.check_generator_imax(imax, time, current_at_converter, active_current_at_converter)
 
 
 def test_maximum_error_raises_value_error_on_length_mismatch():

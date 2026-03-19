@@ -71,6 +71,7 @@ def execute_tool(
             compliance = md.validate(use_parallel=True, num_processes=4)
         except Exception as e:
             compliance = str(e)
+            raise e
         finally:
             config.set_value("Dynawo", "simulation_limit", str(old_timeout))
             return compliance

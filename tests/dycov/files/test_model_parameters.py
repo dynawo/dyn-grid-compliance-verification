@@ -55,7 +55,7 @@ def create_simple_dyd_and_par(
     par_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
     # Generator params
     set_gen = etree.SubElement(par_root, f"{{{ns}}}set", id="parGen")
-    etree.SubElement(set_gen, f"{{{ns}}}par", name="InjectedCurrentMax", value="100.0")
+    etree.SubElement(set_gen, f"{{{ns}}}par", name="MaxCurrentAtConverter", value="100.0")
     etree.SubElement(set_gen, f"{{{ns}}}par", name="ActivePower0Pu", value="0.1")
     etree.SubElement(set_gen, f"{{{ns}}}par", name="ReactivePower0Pu", value="0.05")
     etree.SubElement(set_gen, f"{{{ns}}}par", name="VoltageDroop", value="0.01")

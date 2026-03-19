@@ -12,12 +12,27 @@ import logging
 import warnings
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Optional
 
 import colorama
 
 from dycov.logging.custom_formatter import CustomFormatter
+from dycov.logging.test_context import clear_test_context, get_test_context, set_test_context
 
 colorama.init()
+
+
+class _ContextAdapter(logging.LoggerAdapter):
+    """
+    LoggerAdapter that injects the active test context (PCS.Benchmark.OC)
+    from the current thread into every log record.
+    """
+
+    def process(self, msg, kwargs):
+        context = get_test_context()
+        if context:
+            msg = f"{context}: {msg}"
+        return msg, kwargs
 
 
 class DycovLogger(logging.getLoggerClass()):
@@ -113,18 +128,29 @@ class DycovLogger(logging.getLoggerClass()):
         if force_runtimewarning_visible:
             warnings.simplefilter("always", category=RuntimeWarning)
 
-        # Examples to further control warnings (uncomment as needed):
-        # - Ignore specific messages/modules:
-        # warnings.filterwarnings(
-        #     "ignore",
-        #     message=r"overflow encountered",
-        #     category=RuntimeWarning,
-        #     module=r"scipy\.interpolate\._cubic"
-        # )
-        # - Treat RuntimeWarnings as errors:
-        # warnings.filterwarnings("error", category=RuntimeWarning)
+    def set_test_context(
+        self,
+        pcs: Optional[str] = None,
+        benchmark: Optional[str] = None,
+        oc: Optional[str] = None,
+    ) -> None:
+        """
+        Set the active test context for the current thread.
+        All subsequent log calls from this thread will include [PCS.Benchmark.OC].
+        Safe to use with parallel threads — each thread has its own context.
+        """
+        set_test_context(pcs, benchmark, oc)
 
-    def get_logger(self, name: str):
-        logger = self.getChild(name)
-        logger.setLevel(self.getEffectiveLevel())
-        return logger
+    def clear_test_context(self) -> None:
+        """Clear the active test context for the current thread."""
+        clear_test_context()
+
+    def get_logger(self, name: str) -> _ContextAdapter:
+        """
+        Return a context-aware child logger for the given name.
+        The returned adapter automatically prepends [PCS.Benchmark.OC]
+        to every message based on the calling thread's active context.
+        """
+        child = self.getChild(name)
+        child.setLevel(self.getEffectiveLevel())
+        return _ContextAdapter(child, {})

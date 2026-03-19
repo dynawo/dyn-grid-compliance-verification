@@ -288,11 +288,26 @@ class ProducerCurves:
             Simulation output dir
         fault_duration: float
             Fault duration in seconds
+        bm_name: str
+            Benchmark name
+        oc_name: str
+            Operating Condition name
 
         Returns
         -------
         float
             The critical clearing time (CCT) for the fault.
+        """
+        pass
+
+    @abstractmethod
+    def get_voltage_dip(self) -> float | None:
+        """Get the voltage dip.
+
+        Returns
+        -------
+        float | None
+            The voltage dip value.
         """
         pass
 

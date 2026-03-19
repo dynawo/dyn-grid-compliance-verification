@@ -9,6 +9,7 @@
 #
 import logging
 import math
+from collections import namedtuple
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -27,7 +28,11 @@ from dycov.curves.dynawo.io.jobs import JobsFile
 from dycov.curves.dynawo.io.par import ParFile
 from dycov.curves.dynawo.io.solvers import SolversFile
 from dycov.curves.dynawo.io.table import TableFile
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator, VoltDipResult
+from dycov.curves.dynawo.runtime.dynawo_simulator import (
+    DynawoSimulator,
+    SimulationResult,
+    VoltDipResult,
+)
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.electrical.generator_variables import generator_variables
@@ -52,6 +57,11 @@ from dycov.validation import common
 
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
+BOLTED_FAULT_XPU = 1e-5
+CCT_REL_TOL = 0.0001
+
+SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
+SolverParam = namedtuple("SolverParam", "actual default")
 
 # ----------------------------
 # Private file/paths constants
@@ -148,6 +158,11 @@ class DynawoCurves(ProducerCurves):
         self._relAccuracy = 0.0  # Only for IDA solver
         self.__reset_solver()
 
+        self._voltage_dip = None
+
+    # ----------------------------
+    # Small private helpers (DRY)
+    # ----------------------------
     def __cfg_section(self, pcs_name: str, bm_name: str, oc_name: str, suffix: str = "") -> str:
         """
         Compose '<PCS>.<BM>.<OC>' optionally with a suffix like '.Model' or '.Event'.
@@ -175,9 +190,7 @@ class DynawoCurves(ProducerCurves):
         """
         Centralized logger formatter (keeps one single format place).
         """
-        getattr(dycov_logging.get_logger("ProducerCurves"), level)(
-            f"{self.__get_log_title(bm_name, oc_name)} {message}"
-        )
+        getattr(dycov_logging.get_logger("ProducerCurves"), level)(f"{message}")
 
     def __debug(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -348,7 +361,6 @@ class DynawoCurves(ProducerCurves):
         float
             The requested generator value.
         """
-        # Optimized: Use a dictionary for direct lookup instead of if/elif chain
         value_map = {
             "P0": -gen.P0,
             "Q0": -gen.Q0,
@@ -368,7 +380,6 @@ class DynawoCurves(ProducerCurves):
         """
         if event_params["connect_to"] != "AVRSetpointPu":
             return
-        # Optimized: Iterate through generators once to update pre_value
         for i, generator in enumerate(self.get_producer().generators):
             if generator.UseVoltageDroop:
                 if not generator.PccLocal:
@@ -498,11 +509,9 @@ class DynawoCurves(ProducerCurves):
                 line_xpu,
             )
 
-        # Optimized: Refactored line parameter calculation into a helper method
         conn_line = self.__get_lines_for_initial_calcs(rte_lines)
 
         # Sort step-up transformers to match generator order if needed
-        # Optimized: Using a dictionary for faster lookup, then building sorted list
         xfmr_map = {xfmr.id: xfmr for xfmr in self.get_producer().stepup_xfmrs}
         sorted_stepup_xfmrs = [
             xfmr_map[gen.terminals[0].connectedEquipment]
@@ -703,7 +712,6 @@ class DynawoCurves(ProducerCurves):
                 ]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
-        # Optimized: Determine fault_duration more concisely
         fault_duration = 0.0
         if config.has_option(config_section, "fault_duration"):
             fault_duration = config.get_float(config_section, "fault_duration", 0.0)
@@ -713,7 +721,6 @@ class DynawoCurves(ProducerCurves):
                 config_section, f"fault_duration_{generator_type}", 0.0
             )
         self.__log(bm_name, oc_name, f"\tfault_duration={fault_duration}")
-        # Optimized: Determine step_value more concisely
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
             step_value = self.obtain_value(
@@ -753,7 +760,6 @@ class DynawoCurves(ProducerCurves):
         line_rpu = 0.0
         line_xpu = 0.0
         self._has_line = False  # Reset flag
-        # Optimized: Consolidated logic for line parameter calculation
         if config.has_option(config_section, "line_XPu"):
             self._has_line = True
             line_xpu_definition = config.get_value(config_section, "line_XPu")
@@ -856,7 +862,6 @@ class DynawoCurves(ProducerCurves):
             pdr_p_cfg, p_max_parameter, self.get_producer().p_max_pu, -1
         )
 
-        # Optimized: Simplified conditional logic for ini_pdr_q
         ini_pdr_q = 0.0
         if "Qmin" in pdr_q_cfg:
             ini_pdr_q = model_parameters.extract_defined_value(
@@ -926,7 +931,6 @@ class DynawoCurves(ProducerCurves):
             List of Load_init objects with completed load parameters.
         """
 
-        # Optimized: Nested helper function for clarity and reduced repetition
         def _get_load_value(param_name: str, default_key: str, default_value: float) -> float:
             """Helper function to get a single load parameter value."""
             try:
@@ -991,7 +995,7 @@ class DynawoCurves(ProducerCurves):
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[bool, bool, bool, pd.DataFrame]:
+    ) -> SimulateOutcome:
         """
         Runs the Dynawo simulation and checks for success, time exceedance, and
         curves availability.
@@ -1009,28 +1013,48 @@ class DynawoCurves(ProducerCurves):
             Operating Condition name.
         Returns
         -------
-        tuple[bool, bool, bool, pd.DataFrame]
-            A tuple containing:
-            - success: True if simulation succeeded, False otherwise.
-            - time_exceeds: True if simulation time exceeded limit.
-            - has_dynawo_curves: True if Dynawo curves file was generated.
-            - curves_calculated: DataFrame of calculated curves.
+        SimulateOutcome
+            Result containing success flag, time exceedance, curves availability and curves data.
         """
-        # Run Base Mode
-        success, time_exceeds, log, curves_calculated = self.__execute_simulation(
+        result = self.__execute_simulation(
             output_dir,
             working_oc_dir,
             jobs_output_dir,
             bm_name,
             oc_name,
         )
-        if not success:
-            self.__warning(bm_name, oc_name, log)
+        if not result.succeeded:
+            self.__warning(bm_name, oc_name, result.log)
         else:
             self.__debug(bm_name, oc_name, "Simulation successful")
-        # Check if there is a curves file
-        has_dynawo_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and success
-        return success, time_exceeds, has_dynawo_curves, curves_calculated
+        has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
+        return SimulateOutcome(
+            succeeded=result.succeeded,
+            time_exceeds=result.sim_time > self._sim_time,
+            has_curves=has_curves,
+            curves=result.curves,
+        )
+
+    def __build_run_inputs(self) -> DynawoRunInputs:
+        return DynawoRunInputs(
+            pcs_name=self._pcs_name,
+            launcher_dwo=self._launcher_dwo,
+            curves_dict=self._curves_dict,
+            generators=self.get_producer().generators,
+            s_nom=self.get_producer().s_nom,
+            s_nref=self._s_nref,
+            f_nom=self._f_nom,
+        )
+
+    def __build_solver_params(self) -> SolverParams:
+        return SolverParams(
+            solver_id=self._solver_id,
+            solver_lib=self._solver_lib,
+            minimum_time_step=self._minimum_time_step,
+            minimal_acceptable_step=self._minimal_acceptable_step,
+            absAccuracy=self._absAccuracy,
+            relAccuracy=self._relAccuracy if hasattr(self, "_relAccuracy") else None,
+        )
 
     def __execute_simulation(
         self,
@@ -1039,11 +1063,10 @@ class DynawoCurves(ProducerCurves):
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
-        max_sim_time: float = None,
-    ) -> tuple[bool, bool, str, pd.DataFrame]:
+        max_sim_time: float | None = None,
+    ) -> SimulationResult:
         """
         Executes Dynawo simulation using a dedicated retry strategy.
-        Returns (success, time_exceeds, log, curves_calculated).
         Parameters
         ----------
         output_dir : Path
@@ -1056,40 +1079,19 @@ class DynawoCurves(ProducerCurves):
             Benchmark name.
         oc_name : str
             Operating Condition name.
-        max_sim_time : float, optional
+        max_sim_time : float | None, optional
             Maximum allowed simulation time, by default None (uses config value).
         Returns
         -------
-        tuple[bool, bool, str, pd.DataFrame]
-            A tuple containing:
-            - success: True if simulation succeeded, False otherwise.
-            - time_exceeds: True if simulation time exceeded limit.
-            - log: Log message.
-            - curves_calculated: DataFrame of calculated curves.
+        SimulationResult
+            Result of the simulation run.
         """
         if max_sim_time is None:
             max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
         strategy = SolverRetryStrategy(RetrySettings.from_config())
-        run_inputs = DynawoRunInputs(
-            pcs_name=self._pcs_name,
-            launcher_dwo=self._launcher_dwo,
-            curves_dict=self._curves_dict,
-            generators=self.get_producer().generators,
-            s_nom=self.get_producer().s_nom,
-            s_nref=self._s_nref,
-            f_nom=self._f_nom,
-        )
-        solver = SolverParams(
-            solver_id=self._solver_id,
-            solver_lib=self._solver_lib,
-            minimum_time_step=self._minimum_time_step,
-            minimal_acceptable_step=self._minimal_acceptable_step,
-            absAccuracy=self._absAccuracy,
-            relAccuracy=self._relAccuracy if hasattr(self, "_relAccuracy") else None,
-        )
-        success, time_exceeds, log, curves_df, sim_time = strategy.run(
-            run=run_inputs,
-            solver=solver,
+        result = strategy.run(
+            run=self.__build_run_inputs(),
+            solver=self.__build_solver_params(),
             output_dir=output_dir,
             working_oc_dir=working_oc_dir,
             jobs_output_dir=jobs_output_dir,
@@ -1097,9 +1099,9 @@ class DynawoCurves(ProducerCurves):
             oc_name=oc_name,
             max_sim_time=max_sim_time,
         )
-        if success:
-            self._sim_time = sim_time  # persist for later routines (e.g., CCT)
-        return success, time_exceeds, log, curves_df
+        if result.succeeded:
+            self._sim_time = result.sim_time  # persist for later routines (e.g., CCT)
+        return result
 
     def __get_hiz_fault(
         self,
@@ -1144,7 +1146,6 @@ class DynawoCurves(ProducerCurves):
         bisection_success = False
         hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 1e-5)
         voltage_dip_classification = None  # Initialize to None
-        # Optimized: Removed `incomplete_bisection` flag, using `while True` with `break`
         while True:
             fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
             with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
@@ -1158,51 +1159,47 @@ class DynawoCurves(ProducerCurves):
                     fault_xpu,
                     fault_rpu=fault_rpu,
                 )
-                success, _, _, curves_calculated = self.__simulate(
+                fault_outcome = self.__simulate(
                     output_dir, working_oc_dir_fault, jobs_output_dir, bm_name, oc_name
                 )
                 self.__reset_solver()  # Restore the solver to the default values
-                if success:
+                if fault_outcome.succeeded:
                     bisection_success = True
                     last_fault_xpu = fault_xpu
                     voltage_dip_classification = DynawoSimulator.classify_voltage_dip(
                         self._pcs_name,
                         bm_name,
                         oc_name,
-                        curves_calculated,
+                        fault_outcome.curves,
                         fault_start,
                         fault_duration,
                         abs(dip),
                     )
                 if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
                     target_dir_name = (
-                        "bisection_last_success" if success else "bisection_last_failure"
+                        "bisection_last_success"
+                        if fault_outcome.succeeded
+                        else "bisection_last_failure"
                     )
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
-                if success:
-                    if (
-                        voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE
-                    ):  # Required dip is greater than obtained
+                if fault_outcome.succeeded:
+                    if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                         min_val = fault_xpu
-                    elif (
-                        voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL
-                    ):  # Required dip is less than obtained
+                    elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
                         max_val = fault_xpu
-                    else:  # voltage_dip_classification == VoltDipResult.DIP_CORRECT: Dip achieved
-                        break  # Exit loop if dip is achieved
+                    else:
+                        break
                 else:
                     self.__debug(bm_name, oc_name, "Simulation fails")
-                    # If the simulation fails, adjust search range based on previous outcome
-                    # if available
                     if voltage_dip_classification is not None:
                         if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                             max_val = fault_xpu
                         elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
                             min_val = fault_xpu
-                    else:  # Fallback if voltage_dip_classification is not yet set
-                        max_val = fault_xpu  # Default to reducing fault if first simulation fails
+                    else:
+                        max_val = fault_xpu
                 if self.__is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
                     break  # Exit loop if bisection is complete
         if not bisection_success:
@@ -1245,7 +1242,7 @@ class DynawoCurves(ProducerCurves):
             Fault duration.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        fault_xpu = 1e-5  # Very low reactance for a bolted fault
+        fault_xpu = BOLTED_FAULT_XPU
         fault_rpu = self.__fault_rpu_from_xpu(fault_xpu, fault_r_factor)
         self.__modify_fault(
             working_oc_dir,
@@ -1335,7 +1332,7 @@ class DynawoCurves(ProducerCurves):
             fault_duration,
         )
         # Run Dynawo simulation
-        ret_val, _, _, _, _ = DynawoSimulator.run_simple(
+        cct_result = DynawoSimulator.run_simple(
             self._pcs_name,
             bm_name,
             oc_name,
@@ -1347,11 +1344,10 @@ class DynawoCurves(ProducerCurves):
             self.get_producer().s_nom,
             self._s_nref,
             self._f_nom,
-            save_file=False,  # No need to save output file for CCT check
+            save_file=False,
             simulation_limit=self._sim_time + 10,
         )
-        # If the simulation fails, it's unstable
-        if not ret_val:
+        if not cct_result.succeeded:
             return False
         # Create the expected curves from the output
         curves_temp = pd.read_csv(
@@ -1359,7 +1355,6 @@ class DynawoCurves(ProducerCurves):
             sep=";",
         )
         # Check the stability of each generator's internal angle
-        # Optimized: Use all() with a generator expression for efficiency
         return all(
             common.is_stable(
                 list(curves_temp["time"]),
@@ -1404,96 +1399,86 @@ class DynawoCurves(ProducerCurves):
         )
         return math.isclose(max_val, min_val, rel_tol=rel_tol)
 
-    def get_solver(self) -> dict:
+    def get_solver(self) -> dict[str, SolverParam]:
         """
-        Gets the current and default solver parameters.
+        Gets the current and default solver parameters for the report.
+
         Returns
         -------
-        dict
-            A dictionary containing current and default solver parameters.
+        dict[str, SolverParam]
+            Parameter name mapped to a SolverParam(actual, default) entry.
         """
+        P = SolverParam
         solver_parameters = {
-            "lib": (self._solver_lib, config.get_value("Dynawo", "solver_lib")),
-            "parId": (
+            "lib": P(self._solver_lib, config.get_value("Dynawo", "solver_lib")),
+            "parId": P(
                 self._solver_id,
                 config.get_value("Dynawo", "solver_lib").replace("dynawo_Solver", ""),
             ),
         }
-        # Optimized: Use a helper dictionary to define common keys and their default values
-        common_solver_params = {
-            "minimalAcceptableStep": (
-                "_minimal_acceptable_step",
-                "ida_minimalAcceptableStep",
-                1e-6,
-            ),
-        }
         if self._solver_id == "IDA":
-            ida_params = {
-                "order": (
-                    config.get_int("Dynawo", "ida_order", 2),
-                    config.get_int("Dynawo", "ida_order", 2),
-                ),
-                "initStep": (
-                    config.get_float("Dynawo", "ida_initStep", 1e-9),
-                    config.get_float("Dynawo", "ida_initStep", 1e-6),
-                ),
-                "minStep": (
-                    self._minimum_time_step,
-                    config.get_float("Dynawo", "ida_minStep", 1e-6),
-                ),
-                "maxStep": (
-                    config.get_float("Dynawo", "ida_maxStep", 1.0),
-                    config.get_float("Dynawo", "ida_maxStep", 1.0),
-                ),
-                "absAccuracy": (
-                    self._absAccuracy,
-                    config.get_float("Dynawo", "ida_absAccuracy", 1e-6),
-                ),
-                "relAccuracy": (
-                    self._relAccuracy,
-                    config.get_float("Dynawo", "ida_relAccuracy", 1e-4),
-                ),
-            }
-            solver_parameters.update(ida_params)
-            # Add common param specifically for IDA
-            solver_parameters["minimalAcceptableStep"] = (
-                getattr(self, common_solver_params["minimalAcceptableStep"][0]),
-                config.get_float(
-                    "Dynawo",
-                    common_solver_params["minimalAcceptableStep"][1],
-                    common_solver_params["minimalAcceptableStep"][2],
-                ),
+            solver_parameters.update(
+                {
+                    "order": P(
+                        config.get_int("Dynawo", "ida_order", 2),
+                        config.get_int("Dynawo", "ida_order", 2),
+                    ),
+                    "initStep": P(
+                        config.get_float("Dynawo", "ida_initStep", 1e-9),
+                        config.get_float("Dynawo", "ida_initStep", 1e-6),
+                    ),
+                    "minStep": P(
+                        self._minimum_time_step,
+                        config.get_float("Dynawo", "ida_minStep", 1e-6),
+                    ),
+                    "maxStep": P(
+                        config.get_float("Dynawo", "ida_maxStep", 1.0),
+                        config.get_float("Dynawo", "ida_maxStep", 1.0),
+                    ),
+                    "absAccuracy": P(
+                        self._absAccuracy,
+                        config.get_float("Dynawo", "ida_absAccuracy", 1e-6),
+                    ),
+                    "relAccuracy": P(
+                        self._relAccuracy,
+                        config.get_float("Dynawo", "ida_relAccuracy", 1e-4),
+                    ),
+                    "minimalAcceptableStep": P(
+                        self._minimal_acceptable_step,
+                        config.get_float("Dynawo", "ida_minimalAcceptableStep", 1e-6),
+                    ),
+                }
             )
         else:  # SIM solver
-            sim_params = {
-                "hMin": (self._minimum_time_step, config.get_float("Dynawo", "sim_hMin", 0.01)),
-                "hMax": (
-                    config.get_float("Dynawo", "sim_hMax", 0.01),
-                    config.get_float("Dynawo", "sim_hMax", 0.01),
-                ),
-                "kReduceStep": (
-                    config.get_float("Dynawo", "sim_kReduceStep", 0.5),
-                    config.get_float("Dynawo", "sim_kReduceStep", 0.5),
-                ),
-                "maxNewtonTry": (
-                    config.get_int("Dynawo", "sim_maxNewtonTry", 10),
-                    config.get_int("Dynawo", "sim_maxNewtonTry", 10),
-                ),
-                "linearSolverName": (
-                    config.get_value("Dynawo", "sim_linearSolverName"),
-                    config.get_value("Dynawo", "sim_linearSolverName"),
-                ),
-                "fnormtol": (self._absAccuracy, config.get_float("Dynawo", "sim_fnormtol", 0.01)),
-            }
-            solver_parameters.update(sim_params)
-            # Add common param specifically for SIM
-            solver_parameters["minimalAcceptableStep"] = (
-                getattr(self, common_solver_params["minimalAcceptableStep"][0]),
-                config.get_float(
-                    "Dynawo",
-                    common_solver_params["minimalAcceptableStep"][1],
-                    common_solver_params["minimalAcceptableStep"][2],
-                ),
+            solver_parameters.update(
+                {
+                    "hMin": P(
+                        self._minimum_time_step, config.get_float("Dynawo", "sim_hMin", 0.01)
+                    ),
+                    "hMax": P(
+                        config.get_float("Dynawo", "sim_hMax", 0.01),
+                        config.get_float("Dynawo", "sim_hMax", 0.01),
+                    ),
+                    "kReduceStep": P(
+                        config.get_float("Dynawo", "sim_kReduceStep", 0.5),
+                        config.get_float("Dynawo", "sim_kReduceStep", 0.5),
+                    ),
+                    "maxNewtonTry": P(
+                        config.get_int("Dynawo", "sim_maxNewtonTry", 10),
+                        config.get_int("Dynawo", "sim_maxNewtonTry", 10),
+                    ),
+                    "linearSolverName": P(
+                        config.get_value("Dynawo", "sim_linearSolverName"),
+                        config.get_value("Dynawo", "sim_linearSolverName"),
+                    ),
+                    "fnormtol": P(
+                        self._absAccuracy, config.get_float("Dynawo", "sim_fnormtol", 0.01)
+                    ),
+                    "minimalAcceptableStep": P(
+                        self._minimal_acceptable_step,
+                        config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
+                    ),
+                }
             )
         return solver_parameters
 
@@ -1542,7 +1527,7 @@ class DynawoCurves(ProducerCurves):
         # Perform bisection to find the maximum duration the fault admits without losing stability
         time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
-        cct_rel_tol = 0.0001  # Defined directly for CCT bisection
+        cct_rel_tol = CCT_REL_TOL
         while True:
             self.__debug(
                 bm_name,
@@ -1618,13 +1603,11 @@ class DynawoCurves(ProducerCurves):
             bm_name,
             oc_name,
         )
-        success = False
-        time_exceeds = False
-        has_dynawo_curves = False
         event_params = dict()
-        curves_calculated = pd.DataFrame()
+        outcome = SimulateOutcome(
+            succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
+        )
         try:
-            # Calculate initialization values and replace in input files
             event_params = self.__complete_model(
                 working_oc_dir,
                 pcs_name,
@@ -1633,7 +1616,6 @@ class DynawoCurves(ProducerCurves):
                 reference_event_start_time,
             )
             pcs_bm_oc_name = self.__cfg_section(pcs_name, bm_name, oc_name)
-            # Handle different fault types
             if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
                 self.__get_hiz_fault(
                     output_dir,
@@ -1651,30 +1633,39 @@ class DynawoCurves(ProducerCurves):
                     event_params["start_time"],
                     event_params["duration_time"],
                 )
-            # Run the simulation
-            success, time_exceeds, has_dynawo_curves, curves_calculated = self.__simulate(
+            outcome = self.__simulate(
                 output_dir,
                 working_oc_dir,
                 jobs_output_dir,
                 bm_name,
                 oc_name,
             )
+            self._voltage_dip = DynawoSimulator.measure_voltage_dip(
+                self._pcs_name,
+                bm_name,
+                oc_name,
+                outcome.curves,
+                event_params["start_time"],
+                event_params["duration_time"],
+            )
+
             self.__debug(
                 bm_name,
                 oc_name,
                 f"Simulation finished in {self._sim_time}s: "
-                f"{success=} {time_exceeds=} {has_dynawo_curves=}",
+                f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
+                f"has_curves={outcome.has_curves}",
             )
         except ValueError as e:
             error_message = str(e)
         simulation_result = Simulation_result(
-            success, time_exceeds, has_dynawo_curves, error_message
+            outcome.succeeded, outcome.time_exceeds, outcome.has_curves, error_message
         )
         return (
             jobs_output_dir,
             event_params,
             simulation_result,
-            curves_calculated,
+            outcome.curves,
         )
 
     def get_disconnection_model(self) -> Disconnection_Model:
@@ -1705,6 +1696,16 @@ class DynawoCurves(ProducerCurves):
         for generator in self.get_producer().generators:
             generators_imax[generator.id] = generator.IMax
         return generators_imax
+
+    def get_voltage_dip(self) -> float | None:
+        """
+        Get the voltage dip.
+        Returns
+        -------
+        float | None
+            Voltage dip value if defined, otherwise None.
+        """
+        return self._voltage_dip
 
     def get_simulation_start(self) -> float:
         """
