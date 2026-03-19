@@ -36,3 +36,61 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 22
         Compliance.Compliant,  # 23
     ] == compliance
+
+
+def test_model_validation_bess_producer_curves():
+    compliance = execute_tool(
+        None,
+        MODEL / "ProducerCurves" / "BESS",
+        MODEL / "BESS" / "WECC" / "ReferenceCurves",
+    )
+    assert [
+        Compliance.Compliant,  # 0
+        Compliance.Compliant,  # 1
+        Compliance.Compliant,  # 2
+        Compliance.Compliant,  # 3
+        Compliance.Compliant,  # 4
+        Compliance.Compliant,  # 5
+        Compliance.Compliant,  # 6
+        Compliance.Compliant,  # 7
+        Compliance.Compliant,  # 8
+        Compliance.Compliant,  # 9
+        Compliance.Compliant,  # 10
+        Compliance.Compliant,  # 11
+        Compliance.Compliant,  # 12
+        Compliance.Compliant,  # 13
+        Compliance.InvalidTest,  # 14
+        Compliance.InvalidTest,  # 15
+        Compliance.Compliant,  # 16
+        Compliance.InvalidTest,  # 17
+        Compliance.InvalidTest,  # 18
+        Compliance.Compliant,  # 19
+        Compliance.InvalidTest,  # 20
+        Compliance.InvalidTest,  # 21
+        Compliance.Compliant,  # 22
+        Compliance.Compliant,  # 23
+        Compliance.Compliant,  # 24
+        Compliance.Compliant,  # 25
+        Compliance.Compliant,  # 26
+        Compliance.Compliant,  # 27
+        Compliance.Compliant,  # 28
+        Compliance.Compliant,  # 29
+        Compliance.Compliant,  # 30
+        Compliance.Compliant,  # 31
+        Compliance.Compliant,  # 32
+        Compliance.Compliant,  # 33
+        Compliance.Compliant,  # 34
+        Compliance.Compliant,  # 35
+        Compliance.Compliant,  # 36
+        Compliance.Compliant,  # 37
+        Compliance.Compliant,  # 38
+        Compliance.Compliant,  # 39
+        Compliance.Compliant,  # 40
+        Compliance.Compliant,  # 41
+        Compliance.Compliant,  # 42
+        Compliance.Compliant,  # 43
+        Compliance.Compliant,  # 44
+        Compliance.Compliant,  # 45
+        Compliance.WithoutProducerCurves,  # 46
+        Compliance.WithoutProducerCurves,  # 47
+    ] == compliance
