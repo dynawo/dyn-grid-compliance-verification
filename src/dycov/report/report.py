@@ -368,7 +368,6 @@ def _generate_figures(
             figure_description[2],
             oc_results,
             figure_description[3],
-            f"{figure_description[0]}.{operating_condition}",
         )
 
         try:
@@ -439,7 +438,6 @@ def _create_full_tex(
             unit_characteristics,
             figures_description,
             oc_results,
-            operating_condition,
         )
         if config.get_boolean("Debug", "show_figs_t0", False):
             xmin = None

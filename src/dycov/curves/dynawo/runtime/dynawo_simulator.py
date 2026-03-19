@@ -223,7 +223,6 @@ class DynawoSimulator:
         voltage_dip = pre_fault_voltage - post_fault_voltage
 
         dycov_logging.get_logger("DynawoSimulator").debug(
-            f"{pcs_name}.{bm_name}.{oc_name}: "
             f"Calculated Voltage dip: {voltage_dip:.4f}, Expected dip: {expected_dip:.4f}"
         )
 
@@ -394,7 +393,7 @@ class DynawoSimulator:
             for line in log:
                 if "ERROR" in line:
                     dycov_logging.get_logger("DynawoSimulator").debug(
-                        f"{pcs_name}.{bm_name}.{oc_name}: Error found in: {line.strip()}"
+                        f"Error found in: {line.strip()}"
                     )
                     return True
         return False
