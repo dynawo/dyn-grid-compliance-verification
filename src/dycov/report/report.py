@@ -16,6 +16,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 from dycov.configuration.cfg import config
@@ -33,6 +35,7 @@ from dycov.curves.dynawo.runtime.dynawo_precompile import get_dynawo_version
 from dycov.files.manage_files import copy_latex_files, move_report
 from dycov.logging.logging import dycov_logging
 from dycov.report import figure, html
+from dycov.report.curve_classification import get_curve_style
 from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
@@ -328,6 +331,53 @@ def _get_template(path, template_file):
     return template
 
 
+def _get_iq_last_val(plot_curves: list) -> float | None:
+    """Return the last value of the first Iq curve found, or None."""
+    for curve in plot_curves:
+        if "IqInjTerminal" in curve["name"]:
+            return curve["curve"][-1]
+    return None
+
+
+def _add_current_magnitude(plot_curves: list) -> None:
+    """Compute |I| = hypot(Ip, Iq) and append it to plot_curves if both are present."""
+    ip_curves = [c for c in plot_curves if "IpInjTerminal" in c["name"]]
+    iq_curves = [c for c in plot_curves if "IqInjTerminal" in c["name"]]
+    if not ip_curves or not iq_curves:
+        return
+
+    curve_style = get_curve_style("modIInjTerminal")
+    insert_pos = 0
+    for ip, iq in zip(ip_curves, iq_curves):
+        gen_id = ip["name"].split("_GEN_")[0] if "_GEN_" in ip["name"] else ""
+        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        plot_curves.insert(
+            insert_pos,
+            {
+                "name": mag_name,
+                "curve": list(np.hypot(ip["curve"], iq["curve"])),
+                "color": curve_style.color,
+                "style": curve_style.style,
+            },
+        )
+        insert_pos += 1
+
+
+def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of curves with current_magnitude columns added if Ip and Iq are present."""
+    ip_cols = [c for c in curves.columns if "IpInjTerminal" in c]
+    iq_cols = [c for c in curves.columns if "IqInjTerminal" in c]
+    if not ip_cols or not iq_cols:
+        return curves
+
+    curves = curves.copy()
+    for ip_col, iq_col in zip(ip_cols, iq_cols):
+        gen_id = ip_col.split("_GEN_")[0] if "_GEN_" in ip_col else ""
+        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        curves[mag_name] = np.hypot(curves[ip_col], curves[iq_col])
+    return curves
+
+
 def _generate_figures(
     working_path: Path,
     producer_name: str,
@@ -341,49 +391,55 @@ def _generate_figures(
     plotted_curves = list()
     figures = list()
 
-    curves = oc_results["curves"]
+    curves = _inject_current_magnitude_df(oc_results["curves"])
     if "reference_curves" in oc_results:
         reference_curves = oc_results["reference_curves"]
     else:
         reference_curves = None
 
     for figure_description in figures_description[figure_key]:
-        plot_curves = figure.get_curves2plot(figure_description[1], curves)
+        plot_curves = figure.get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
+        _add_current_magnitude(plot_curves)
+        iq_last_val = _get_iq_last_val(plot_curves)
 
         plot_reference_curves = None
         if reference_curves is not None:
             plot_reference_curves = figure.get_curves2plot(
-                figure_description[1], reference_curves, is_reference=True
+                figure_description.variables, reference_curves, is_reference=True
             )
         figure.create_plot(
             list(curves["time"]),
-            figure_description[1],
+            figure_description,
             plot_curves,
             list(reference_curves["time"]) if reference_curves is not None else None,
             plot_reference_curves,
             {"min": xmin, "max": xmax},
-            working_path / (f"{producer_name}_{figure_description[0]}_{operating_condition}.pdf"),
-            figure_description[2],
+            working_path
+            / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
             oc_results,
-            figure_description[3],
+            band_ref_val=iq_last_val,
         )
 
         try:
             html_curves, div_id, html_figure = html.plotly_figures(
-                figure_description, curves, reference_curves, oc_results
+                figure_description,
+                curves,
+                reference_curves,
+                oc_results,
+                band_ref_val=iq_last_val,
             )
             plotted_curves.extend(html_curves)
             if html_figure:
                 figures.append((div_id, html_figure))
         except Exception as e:
             dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: "
+                f"{figure_description.name}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
             dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: {e}"
+                f"{figure_description.name}.{operating_condition}: {e}"
             )
 
     return plotted_curves, figures
@@ -613,6 +669,7 @@ def create_pdf(
     commonz3_include = ""
     if 1 in zones:
         commonz1_include = "\\input{{commonz1}}"
+
     if 3 in zones:
         commonz3_include = "\\input{{commonz3}}"
 

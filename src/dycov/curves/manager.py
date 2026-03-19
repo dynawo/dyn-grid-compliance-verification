@@ -264,6 +264,7 @@ class CurvesManager:
             "producer",
             not self._producer.is_dynawo_model(),
         )
+
         ref_curves = self.__check_curves(
             measurement_names,
             self.get_curves("reference"),
@@ -527,6 +528,16 @@ class CurvesManager:
             Get maximum continuous current by generator.
         """
         return self.__get_producer_curves_generator().get_generators_imax()
+
+    def get_voltage_dip(self) -> float | None:
+        """Get the voltage dip.
+
+        Returns
+        -------
+        float | None
+            The voltage dip value.
+        """
+        return self.__get_producer_curves_generator().get_voltage_dip()
 
     def get_disconnection_model(self) -> Disconnection_Model:
         """Get all equipment in the model that can be disconnected in the simulation.

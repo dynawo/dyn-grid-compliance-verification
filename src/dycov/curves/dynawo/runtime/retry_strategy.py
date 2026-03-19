@@ -11,12 +11,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
-
-import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator, SimulationResult
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
 from dycov.logging.logging import dycov_logging
@@ -29,7 +26,7 @@ class RetrySettings:
     add_parameters_small_network: bool = True
     enable_solver_flip: bool = True
     allowed_retries: int = 4
-    simulations_retryed: int = 0
+    attempt_count: int = 0
 
     @staticmethod
     def from_config() -> "RetrySettings":
@@ -45,7 +42,7 @@ class RetrySettings:
 
 
 class SolverRetryStrategy:
-    def __init__(self, settings: Optional[RetrySettings] = None):
+    def __init__(self, settings: RetrySettings | None = None):
         self.settings = settings or RetrySettings.from_config()
 
     def run(
@@ -57,63 +54,75 @@ class SolverRetryStrategy:
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
-        max_sim_time: Optional[float],
-    ) -> Tuple[bool, bool, str, pd.DataFrame, float]:
+        max_sim_time: float | None,
+    ) -> SimulationResult:
         logger = dycov_logging.get_logger("ProducerCurves")
 
-        # 1) Baseline
-        success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
+        result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        self.settings.simulations_retryed += 1
-        if success or self.settings.simulations_retryed > self.settings.allowed_retries:
-            return success, time_exceeds, log, curves_df, sim_time
+        if result.succeeded or self._retries_exhausted():
+            return result
 
         # 2) Reduce min step
         logger.warning("Retry: reducing minimum time step")
         self._reduce_min_step(solver, working_oc_dir)
-        success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
+        result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        self.settings.simulations_retryed += 1
-        if success or self.settings.simulations_retryed > self.settings.allowed_retries:
-            return success, time_exceeds, log, curves_df, sim_time
+        if result.succeeded or self._retries_exhausted():
+            return result
 
         # 3) Increase required accuracy
         logger.warning("Retry: increasing required accuracy")
         self._increase_accuracy(solver, working_oc_dir)
-        success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
+        result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        self.settings.simulations_retryed += 1
-        if success or self.settings.simulations_retryed > self.settings.allowed_retries:
-            return success, time_exceeds, log, curves_df, sim_time
+        if result.succeeded or self._retries_exhausted():
+            return result
 
-        # 4) Add parameters for small networks
         if self.settings.add_parameters_small_network:
             logger.warning("Retry: adding parameters for small networks")
             self._add_parameters_small_networks(solver, working_oc_dir)
-            success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
+            result = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
-            self.settings.simulations_retryed += 1
-            if success or self.settings.simulations_retryed > self.settings.allowed_retries:
-                return success, time_exceeds, log, curves_df, sim_time
+            if result.succeeded or self._retries_exhausted():
+                return result
 
-        # 5) Flip solver type
         if self.settings.enable_solver_flip:
             logger.warning("Retry: flipping solver type SIM <-> IDA")
             self._flip_solver(solver)
             replace_placeholders.modify_jobs_file(
                 working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
             )
-            success, time_exceeds, log, curves_df, sim_time = DynawoSimulator.run_base(
+            result = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
 
-        if time_exceeds:
-            logger.warning("Simulation time exceeds the maximum allowed ({max_sim_time})")
-        return success, time_exceeds, log, curves_df, sim_time
+        if result.sim_time > (max_sim_time or float("inf")):
+            logger.warning(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
+        return result
+
+    # --- attempt helper ---
+    def _attempt(
+        self,
+        run: DynawoRunInputs,
+        output_dir: Path,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        bm_name: str,
+        oc_name: str,
+        max_sim_time: float | None,
+    ) -> SimulationResult:
+        self.settings.attempt_count += 1
+        return DynawoSimulator.run_base(
+            run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
+        )
+
+    def _retries_exhausted(self) -> bool:
+        return self.settings.attempt_count > self.settings.allowed_retries
 
     # --- mutations & file updates ---
     def _reduce_min_step(self, solver: SolverParams, working_oc_dir: Path) -> None:
