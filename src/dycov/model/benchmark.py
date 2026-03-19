@@ -16,7 +16,7 @@ from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging.logging import dycov_logging, set_test_context
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
 from dycov.model.parameters import Simulation_result
@@ -128,15 +128,15 @@ class Benchmark:
 
     def __info(self, message):
         """Debug function to print the PCS information."""
-        dycov_logging.get_logger("Benchmark").info(f"{self.__get_log_title()} {message}")
+        dycov_logging.get_logger("Benchmark").info(f"{message}")
 
     def __debug(self, message):
         """Debug function to print the PCS information."""
-        dycov_logging.get_logger("Benchmark").debug(f"{self.__get_log_title()} {message}")
+        dycov_logging.get_logger("Benchmark").debug(f"{message}")
 
     def __warning(self, message):
         """Debug function to print the PCS information."""
-        dycov_logging.get_logger("Benchmark").warning(f"{self.__get_log_title()} {message}")
+        dycov_logging.get_logger("Benchmark").warning(f"{message}")
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
@@ -626,14 +626,16 @@ class Benchmark:
         """
         success = False
 
-        # Check for operating conditions in the Pcs
-
-        # Validate each operating condition
         for op_cond in self._oc_list:
-            dycov_logging.get_logger("Benchmark").info(
-                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, "
-                f"OPER. COND.: {op_cond.get_name()}"
+            # Set the test context for this process so all log lines from here
+            # onwards (including deep calls into validators, retry strategies, etc.)
+            # are automatically tagged with [PCS.Benchmark.OC].
+            set_test_context(
+                pcs=self._pcs_name,
+                benchmark=self._name,
+                oc=op_cond.get_name(),
             )
+            dycov_logging.get_logger("Benchmark").info("Validate")
             (
                 working_path,
                 jobs_output_dir,
@@ -714,10 +716,12 @@ class Benchmark:
 
     def generate(self):
         for op_cond in self._oc_list:
-            dycov_logging.get_logger("Benchmark").info(
-                f"RUNNING PCS: {self._pcs_name}, BENCHMARK: {self._name}, "
-                f"OPER. COND.: {op_cond.get_name()}"
+            set_test_context(
+                pcs=self._pcs_name,
+                benchmark=self._name,
+                oc=op_cond.get_name(),
             )
+            dycov_logging.get_logger("Benchmark").info("Generate")
             working_oc_dir = (
                 self._working_dir
                 / self._producer_name

@@ -327,7 +327,6 @@ class PerformanceValidator(Validator):
             self.__curve_list("BusPDR_BUS_ActivePower"),
             self.__curve_list("BusPDR_BUS_ReactivePower"),
             t_event_start,
-            self._get_log_title(),
         )
 
         if compliance_list.contains_key(["static_diff"], self._validations):
