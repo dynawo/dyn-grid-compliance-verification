@@ -101,7 +101,7 @@ def test_is_invalid_test_returns_true_for_flat_curves():
     active = [2, 2, 2, 2, 2, 2]
     reactive = [3, 3, 3, 3, 3, 3]
     t_event = 2
-    assert common.is_invalid_test(time, voltage, active, reactive, t_event, log_title="") is True
+    assert common.is_invalid_test(time, voltage, active, reactive, t_event) is True
 
 
 def test_get_AVR_x_returns_true_within_tolerance():

@@ -950,9 +950,15 @@ def _adjust_generator(
     control_mode_name = _apply_control_mode(
         generator, parset, nsmap, generator_control_mode, force_voltage_droop
     )
-    _apply_voltage_droop(
-        generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop
-    )
+    if not config.get_boolean("General", "skip_voltage_droop_adjustment", default=False):
+        _apply_voltage_droop(
+            generator,
+            parset,
+            nsmap,
+            generator_control_mode,
+            control_mode_name,
+            force_voltage_droop,
+        )
 
 
 def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):

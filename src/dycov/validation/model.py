@@ -383,7 +383,6 @@ class ModelValidator(Validator):
                 list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
                 list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
                 start_event,
-                self._get_log_title(),
             ),
         }
 
