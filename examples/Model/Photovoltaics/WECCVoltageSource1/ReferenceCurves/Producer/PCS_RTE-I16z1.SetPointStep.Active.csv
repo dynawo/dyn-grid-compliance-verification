@@ -1,7 +1,7 @@
-time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;StepUp_Xfmr_XFMR_Tap;Wind_Turbine_GEN_ActivePowerSetpointPu;Wind_Turbine_GEN_ReactivePowerSetpointPu;Wind_Turbine_GEN_AVRSetpointPu;Wind_Turbine_GEN_InjectedActiveCurrent;Wind_Turbine_GEN_InjectedReactiveCurrent
-0.000000000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.320e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
-19.999996000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.320e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
-19.999996000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
-20.035068000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
-20.036068000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.965e-01;4.251e-01
-100.000000000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.965e-01;4.251e-01
+time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Wind_Turbine_GEN_MagnitudeControlledByAVRPu;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;StepUp_Xfmr_XFMR_Tap;Wind_Turbine_GEN_ActivePowerSetpointPu;Wind_Turbine_GEN_ReactivePowerSetpointPu;Wind_Turbine_GEN_AVRSetpointPu;Wind_Turbine_GEN_InjectedActiveCurrent;Wind_Turbine_GEN_InjectedReactiveCurrent
+0.000000000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.320e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
+19.999996000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.320e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
+19.999996000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
+20.035068000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.966e-01;4.251e-01
+20.036068000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.965e-01;4.251e-01
+100.000000000;1.044e+00;8.320e-01;-4.440e-01;7.966e-01;-4.251e-01;1.044e+00;1.044e+00;2.080e-03;-1.110e-03;1.000e+01;8.319e-01;-4.439e-01;-4.439e-01;7.965e-01;4.251e-01
