@@ -12,7 +12,6 @@ from abc import ABC, abstractmethod
 
 
 class FigureRenderer(ABC):
-
     @abstractmethod
     def add_hline(
         self, y: float, color: str, style: str = "--", linewidth: float = 1.0
@@ -48,7 +47,6 @@ class FigureRenderer(ABC):
 
 
 class MatplotlibRenderer(FigureRenderer):
-
     _STYLE_MAP = {
         "--": "--",
         "-": "-",
@@ -126,7 +124,6 @@ class MatplotlibRenderer(FigureRenderer):
 
 
 class PlotlyRenderer(FigureRenderer):
-
     _STYLE_MAP = {
         "--": "dash",
         "-": "solid",

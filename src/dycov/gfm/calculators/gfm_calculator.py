@@ -44,6 +44,7 @@ class GFMCalculator:
         self._min_ratio = gfm_params.get_min_ratio()
         self._max_ratio = gfm_params.get_max_ratio()
         self._is_emt_flag = gfm_params.is_emt()
+        self._emt_initial_delay = gfm_params.get_emt_initial_delay()
         self._initial_voltage = gfm_params.get_initial_voltage()
         self._grid_voltage = gfm_params.get_grid_voltage()
         self._base_angular_frequency = gfm_params.get_base_angular_frequency()
