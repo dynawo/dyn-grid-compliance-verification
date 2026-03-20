@@ -27,11 +27,11 @@ class Compliance(Enum):
         elif self == Compliance.UndefinedValidations:
             return "Undefined validations"
         elif self == Compliance.WithoutCurves:
-            return "Test without curves"
+            return "Missing some curves"
         elif self == Compliance.WithoutReferenceCurves:
-            return "Test without reference curves"
+            return "Missing some reference curves"
         elif self == Compliance.WithoutProducerCurves:
-            return "Test without producer curves"
+            return "Missing some producer curves"
         elif self == Compliance.FaultSimulationFails:
             return "Fault simulation fails"
         elif self == Compliance.FaultDipUnachievable:

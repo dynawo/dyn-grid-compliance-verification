@@ -304,7 +304,7 @@ def _pcs_replace(
                 )
                 oc_subst_dict2 |= {
                     "missedColumns": (
-                        "\\noindent\\textcolor{red}{Missed curves:}\n"
+                        "\\noindent\\textcolor{red}{Missing curves:}\n"
                         "\\begin{itemize}\n"
                         f"{missed_list}\n"
                         "\\end{itemize}\n"
