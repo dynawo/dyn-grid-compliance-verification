@@ -98,11 +98,11 @@ The Tool uses the following keywords to define the dynamic model:
     Magnitude voltage amplitude in per unit. It is required.
 
 * ``'IpInjTerminal'``
-    Active current in low voltage at the injector terminal in per unit. It is required for 
+    Active current at the injector's low voltage terminal in per unit. It is required for 
     Electrical Performance Verification and Model Validation.
 
 * ``'IqInjTerminal'``
-    Reactive current in low voltage at the injector terminal in per unit. It is required for 
+    Reactive current at the injector's low voltage terminal in per unit. It is required for 
     Electrical Performance Verification and Model Validation.
 
 * ``'UPuInjTerminal'``
@@ -161,11 +161,11 @@ The Tool uses the following keywords to define the dynamic model:
     Magnitude voltage amplitude in per unit. It is required.
 
 * ``'IpInjTerminal'``
-    Active current in low voltage at the injector terminal in per unit. It is required for 
+    Active current at the injector's low voltage terminal in per unit. It is required for 
     Electrical Performance Verification and Model Validation.
 
 * ``'IqInjTerminal'``
-    Reactive current in low voltage at the injector terminal in per unit. It is required for 
+    Reactive current at the injector's low voltage terminal in per unit. It is required for 
     Electrical Performance Verification and Model Validation.
 
 * ``'UPuInjTerminal'``
@@ -246,11 +246,11 @@ The Tool uses the following keywords to define the dynamic model:
     Magnitude voltage amplitude in per unit. It is required.
 
 * ``'IpInjTerminal'``
-    Active current in low voltage at the injector terminal in per unit. It is required for 
+    Active current at the injector's low voltage terminal in per unit. It is required for 
     Electrical Performance Verification and Model Validation.
 
 * ``'IqInjTerminal'``
-    Reactive current in low voltage at the injector terminal in per unit. It is required for 
+    Reactive current at the injector's low voltage terminal in per unit. It is required for 
     Electrical Performance Verification and Model Validation.
 
 * ``'UPuInjTerminal'``
