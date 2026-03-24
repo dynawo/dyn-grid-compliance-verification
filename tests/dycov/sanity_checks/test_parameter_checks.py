@@ -10,46 +10,46 @@
 
 import pytest
 
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
+from dycov.model.parameters import GenParams, LineParams, LoadParams, Terminal, XfmrParams
 from dycov.sanity_checks import parameter_checks
 
 
 def test_trafos():
-    xfmr = Xfmr_params(
+    xfmr = XfmrParams(
         id=None,
         lib=None,
-        R=0.0003,
-        X=0.0268,
-        B=0.0,
-        G=0.0,
-        rTfo=0.9574,
-        alphaTfo=0.0,
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
         par_id="",
         terminals=(
-            Terminal(connectedEquipment=None),
-            Terminal(connectedEquipment=None),
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
         ),
     )
     parameter_checks.check_trafo(xfmr)
 
-    bad_xfmr = Xfmr_params(
+    bad_xfmr = XfmrParams(
         id="Xfmr",
         lib=None,
-        R=0.0003,
-        X=-0.0268,
-        B=0.0,
-        G=0.0,
-        rTfo=0.9574,
-        alphaTfo=0.0,
+        r=0.0003,
+        x=-0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
         par_id="",
         terminals=(
-            Terminal(connectedEquipment=None),
-            Terminal(connectedEquipment=None),
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
         ),
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_trafo(bad_xfmr)
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "The admittance of the transformer Xfmr must be greater than zero."
@@ -57,35 +57,35 @@ def test_trafos():
 
 
 def test_auxiliary_loads():
-    load = Load_params(
+    load = LoadParams(
         id=None,
         lib=None,
-        P=0.1,
-        Q=0.05,
-        U=1.0,
-        UPhase=0.0,
-        Alpha=None,
-        Beta=None,
+        p=0.1,
+        q=0.05,
+        u=1.0,
+        u_phase=0.0,
+        alpha=None,
+        beta=None,
         par_id=None,
-        terminals=(Terminal(connectedEquipment=None),),
+        terminals=(Terminal(connected_equipment=None),),
     )
     parameter_checks.check_auxiliary_load(load)
 
-    bad_load = Load_params(
+    bad_load = LoadParams(
         id=None,
         lib=None,
-        P=-0.1,
-        Q=0.05,
-        U=1.0,
-        UPhase=0.0,
-        Alpha=None,
-        Beta=None,
+        p=-0.1,
+        q=0.05,
+        u=1.0,
+        u_phase=0.0,
+        alpha=None,
+        beta=None,
         par_id=None,
-        terminals=(Terminal(connectedEquipment=None),),
+        terminals=(Terminal(connected_equipment=None),),
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_auxiliary_load(bad_load)
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "The active flow of the auxiliary load must be greater than zero."
@@ -93,41 +93,41 @@ def test_auxiliary_loads():
 
 
 def test_generators():
-    sm = Gen_params(
+    sm = GenParams(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
     )
-    ppm = Gen_params(
+    ppm = GenParams(
         id=None,
         lib="WTG4AWeccCurrentSource1",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
     )
-    bess = Gen_params(
+    bess = GenParams(
         id=None,
         lib="BESSWeccCurrentSource",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
     )
     sm_models, ppm_models, bess_models = parameter_checks.check_generators([sm])
     assert sm_models == 1
@@ -144,7 +144,7 @@ def test_generators():
 
     with pytest.raises(ValueError) as pytest_wrapped_e:
         sm_models, ppm_models, bess_models = parameter_checks.check_generators([sm, ppm])
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "The supplied network contains two or more different generator model types."
@@ -152,37 +152,37 @@ def test_generators():
 
 
 def test_internal_lines():
-    line = Line_params(
+    line = LineParams(
         id="Line",
         lib=None,
-        R=0.02,
-        X=0.004,
-        B=0.0,
-        G=0.0,
+        r=0.02,
+        x=0.004,
+        b=0.0,
+        g=0.0,
         par_id="",
         terminals=(
-            Terminal(connectedEquipment=None),
-            Terminal(connectedEquipment=None),
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
         ),
     )
     parameter_checks.check_internal_line(line)
 
-    bad_line = Line_params(
+    bad_line = LineParams(
         id="Line",
         lib=None,
-        R=-0.02,
-        X=0.004,
-        B=0.0,
-        G=0.0,
+        r=-0.02,
+        x=0.004,
+        b=0.0,
+        g=0.0,
         par_id="",
         terminals=(
-            Terminal(connectedEquipment=None),
-            Terminal(connectedEquipment=None),
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
         ),
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_internal_line(bad_line)
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "The reactance and admittance of the internal line must be greater than zero."
@@ -190,35 +190,35 @@ def test_internal_lines():
 
 
 def test_producer_params_consistency():
-    gen1 = Gen_params(
+    gen1 = GenParams(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
-        PMax=0.5,
-        QMax=0.3,
-        QMin=-0.3,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
+        p_max=0.5,
+        q_max=0.3,
+        q_min=-0.3,
     )
-    gen2 = Gen_params(
+    gen2 = GenParams(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
-        PMax=0.5,
-        QMax=0.3,
-        QMin=-0.3,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
+        p_max=0.5,
+        q_max=0.3,
+        q_min=-0.3,
     )
     parameter_checks.check_producer_params_consistency(
         [gen1, gen2], p_max_pu=1.0, q_max_pu=0.6, q_min_pu=-0.6
@@ -228,26 +228,26 @@ def test_producer_params_consistency():
         parameter_checks.check_producer_params_consistency(
             [gen1, gen2], p_max_pu=1.2, q_max_pu=0.6, q_min_pu=-0.6
         )
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "Inconsistency detected: INI values are less restrictive than PAR values."
     )
 
-    gen_none = Gen_params(
+    gen_none = GenParams(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
-        PMax=None,
-        QMax=None,
-        QMin=None,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
+        p_max=None,
+        q_max=None,
+        q_min=None,
     )
     parameter_checks.check_producer_params_consistency(
         [gen_none], p_max_pu=0.5, q_max_pu=0.5, q_min_pu=-0.3
@@ -257,7 +257,7 @@ def test_producer_params_consistency():
         parameter_checks.check_producer_params_consistency(
             [gen1], p_max_pu=0.5, q_max_pu=0.5, q_min_pu=-0.3
         )
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "Inconsistency detected: INI values are less restrictive than PAR values."
@@ -265,17 +265,17 @@ def test_producer_params_consistency():
 
 
 def test_check_generators_with_zone3():
-    sm = Gen_params(
+    sm = GenParams(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
     )
     sm_models, ppm_models, bess_models = parameter_checks.check_generators([sm], [sm])
     assert sm_models == 2
@@ -284,7 +284,7 @@ def test_check_generators_with_zone3():
 
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_generators([sm], [sm, sm])
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "The model validation must contain the same number of generators in both zones."
@@ -292,33 +292,33 @@ def test_check_generators_with_zone3():
 
 
 def test_check_generators_zone3_different_types():
-    sm = Gen_params(
+    sm = GenParams(
         id=None,
         lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
     )
-    ppm = Gen_params(
+    ppm = GenParams(
         id=None,
         lib="WTG4AWeccCurrentSource1",
-        terminals=(Terminal(connectedEquipment=""),),
-        SNom=90,
-        IMax=100.0,
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
         par_id="",
-        P=0.1,
-        Q=0.05,
-        VoltageDroop=None,
-        UseVoltageDroop=False,
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
     )
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_generators([sm], [ppm])
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
         == "The supplied network contains two or more different generator model types."
@@ -340,7 +340,7 @@ def test_check_sampling_interval():
     # Invalid sampling interval
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_sampling_interval(sampling_interval=0.01, cutoff=50.0)
-    assert pytest_wrapped_e.type == ValueError
+    assert pytest_wrapped_e.type is ValueError
     assert "Unexpected sampling interval" in pytest_wrapped_e.value.args[0]
 
 
@@ -416,17 +416,17 @@ def test_check_solver():
 
 def test_check_auxiliary_load_with_alpha_beta_warning():
     """Test check_auxiliary_load with alpha and beta both zero."""
-    load = Load_params(
+    load = LoadParams(
         id=None,
         lib=None,
-        P=0.1,
-        Q=0.05,
-        U=1.0,
-        UPhase=0.0,
-        Alpha=0,
-        Beta=0,
+        p=0.1,
+        q=0.05,
+        u=1.0,
+        u_phase=0.0,
+        alpha=0,
+        beta=0,
         par_id=None,
-        terminals=(Terminal(connectedEquipment=None),),
+        terminals=(Terminal(connected_equipment=None),),
     )
     parameter_checks.check_auxiliary_load(load)
 
@@ -438,19 +438,19 @@ def test_check_auxiliary_load_none():
 
 def test_check_trafos():
     """Test check_trafos function."""
-    xfmr = Xfmr_params(
+    xfmr = XfmrParams(
         id="Xfmr1",
         lib=None,
-        R=0.0003,
-        X=0.0268,
-        B=0.0,
-        G=0.0,
-        rTfo=0.9574,
-        alphaTfo=0.0,
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
         par_id="",
         terminals=(
-            Terminal(connectedEquipment=None),
-            Terminal(connectedEquipment=None),
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
         ),
     )
     parameter_checks.check_trafos([xfmr])

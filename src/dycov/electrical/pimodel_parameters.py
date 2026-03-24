@@ -11,7 +11,7 @@
 from dycov.model import parameters as mp
 
 
-def line_pimodel(line: mp.Line_params) -> mp.Pimodel_params:
+def line_pimodel(line: mp.LineParams) -> mp.PimodelParams:
     """Obtains the pi-model parameters from the line parameters.
 
     Obtains the pi-model parameters from the Dynawo line model
@@ -19,22 +19,22 @@ def line_pimodel(line: mp.Line_params) -> mp.Pimodel_params:
 
     Parameters
     ----------
-    line: Line_params
+    line: LineParams
         Params of the line
 
     Returns
     -------
-    Pimodel_params
+    PimodelParams
         Pi-model parameters
     """
 
-    ytr = 1 / complex(line.R, line.X)
-    ysh = complex(line.G, line.B)
+    ytr = 1 / complex(line.r, line.x)
+    ysh = complex(line.g, line.b)
 
-    return mp.Pimodel_params(Ytr=ytr, Ysh1=ysh, Ysh2=ysh)
+    return mp.PimodelParams(y_tr=ytr, y_sh1=ysh, y_sh2=ysh)
 
 
-def xfmr_pimodel(xfmr: mp.Xfmr_params) -> mp.Pimodel_params:
+def xfmr_pimodel(xfmr: mp.XfmrParams) -> mp.PimodelParams:
     """Obtains the pi-model parameters from the transformer parameters.
 
     Obtains the pi-model parameters from the Dynawo transformer model
@@ -42,18 +42,18 @@ def xfmr_pimodel(xfmr: mp.Xfmr_params) -> mp.Pimodel_params:
     for terminal 1 and 2.
     Parameters
     ----------
-    xfmr: Xfmr_params
+    xfmr: XfmrParams
         Params of the transformer
 
     Returns
     -------
-    Pimodel_params
+    PimodelParams
         Pi-model parameters
     """
 
-    y = 1 / complex(xfmr.R, xfmr.X)
-    ytr = xfmr.rTfo * y
-    ysh1 = (xfmr.rTfo - 1) * ytr
-    ysh2 = (1 - xfmr.rTfo) * y + complex(xfmr.G, xfmr.B)
+    y = 1 / complex(xfmr.r, xfmr.x)
+    ytr = xfmr.r_tfo * y
+    ysh1 = (xfmr.r_tfo - 1) * ytr
+    ysh2 = (1 - xfmr.r_tfo) * y + complex(xfmr.g, xfmr.b)
 
-    return mp.Pimodel_params(Ytr=ytr, Ysh1=ysh1, Ysh2=ysh2)
+    return mp.PimodelParams(y_tr=ytr, y_sh1=ysh1, y_sh2=ysh2)

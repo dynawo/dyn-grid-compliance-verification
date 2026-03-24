@@ -80,8 +80,8 @@ def test_valid_input_file_processing(mocker, tmp_path):
     class Gen:
         def __init__(self):
             self.id = "GEN1"
-            self.UseVoltageDroop = True
-            self.VoltageDroop = 0.1
+            self.use_voltage_droop = True
+            self.voltage_droop = 0.1
 
     generators = [Gen()]
     snom = 100.0
@@ -164,8 +164,8 @@ def test_process_generators_with_variable_in_columns():
     class Generator:
         def __init__(self, id_):
             self.id = id_
-            self.UseVoltageDroop = True
-            self.VoltageDroop = 0.1
+            self.use_voltage_droop = True
+            self.voltage_droop = 0.1
 
     generators = [Generator("GEN1"), Generator("GEN2"), Generator("GEN3")]
 
@@ -201,6 +201,7 @@ def test_process_generators_with_variable_in_columns():
 
 
 def test_empty_generators_list():
+
     df_curves = pd.DataFrame({"OtherColumn1": [1.0, 2.0, 3.0], "OtherColumn2": [4.0, 5.0, 6.0]})
     original_df = df_curves.copy()
 

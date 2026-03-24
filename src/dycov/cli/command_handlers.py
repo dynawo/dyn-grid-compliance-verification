@@ -394,20 +394,20 @@ def _run_verification(
         )
 
         # SUCCESS: always delete the temporary directory
-        params.cleanup_working_dir(preserve_on_debug=False)
+        params.cleanup_working_dir()
         return 0
 
     except KeyboardInterrupt:
         dycov_logging.get_logger("CommandHandlers").error("Execution interrupted by user")
         # Keep artifacts if we are in DEBUG mode (rename to output_dir); otherwise, delete.
-        params.cleanup_working_dir(preserve_on_debug=False)
+        params.cleanup_working_dir()
         return 130
 
     except Exception as e:
         dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
         # Keep artifacts if we are in DEBUG mode (rename to output_dir); if not, delete.
         try:
-            params.cleanup_working_dir(preserve_on_debug=False)
+            params.cleanup_working_dir()
         finally:
             pass
 
@@ -451,7 +451,7 @@ def _generate_envelopes(
         )
 
         # SUCCESS: always delete the temporary directory
-        params.cleanup_working_dir(preserve_on_debug=False)
+        params.cleanup_working_dir()
         return 0
 
     except Exception as e:

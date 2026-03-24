@@ -7,7 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from collections import namedtuple
+from dataclasses import dataclass
 from pathlib import Path
 
 from dycov.configuration.cfg import config
@@ -19,7 +19,7 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging, set_test_context
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import Simulation_result
+from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -32,19 +32,30 @@ from dycov.validation import compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
 
-Summary = namedtuple(
-    "Summary",
-    [
-        "producer_name",
-        "id",
-        "zone",
-        "pcs",
-        "benchmark",
-        "operating_condition",
-        "compliance",
-        "report_name",
-    ],
-)
+
+@dataclass(frozen=True)
+class Summary:
+    producer_name: str
+    id: int
+    zone: int
+    pcs: str
+    benchmark: str
+    operating_condition: str
+    compliance: Compliance
+    report_name: str
+
+
+_FAILED_RESULTS: dict = {"compliance": False, "curves": None}
+
+
+def _compliance_for_missing_curves(availability: CurvesAvailability) -> Compliance:
+    match availability:
+        case CurvesAvailability.NO_PRODUCER:
+            return Compliance.WithoutProducerCurves
+        case CurvesAvailability.NO_REFERENCE:
+            return Compliance.WithoutReferenceCurves
+        case _:
+            return Compliance.WithoutCurves
 
 
 class Benchmark:
@@ -116,7 +127,6 @@ class Benchmark:
         ]
 
     def __create_operating_condition_working_paths(self, oc_names: list):
-        # Create a specific folder by operating condition
         for oc_name in oc_names:
             working_oc_dir = (
                 self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
@@ -127,20 +137,17 @@ class Benchmark:
         return f"{self._pcs_name}.{self._name}:"
 
     def __info(self, message):
-        """Debug function to print the PCS information."""
         dycov_logging.get_logger("Benchmark").info(f"{message}")
 
     def __debug(self, message):
-        """Debug function to print the PCS information."""
         dycov_logging.get_logger("Benchmark").debug(f"{message}")
 
     def __warning(self, message):
-        """Debug function to print the PCS information."""
         dycov_logging.get_logger("Benchmark").warning(f"{message}")
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
-    ) -> tuple[list, CurvesManager, Validator]:
+    ) -> tuple[list, CurvesManager | None, Validator | None]:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         oc_names = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         self.__create_operating_condition_working_paths(oc_names)
@@ -183,11 +190,7 @@ class Benchmark:
         return oc_names, curves_manager, validator
 
     def __initialize_validation_by_benchmark(self) -> list:
-        # Prepare the validation list by pcs.benchmark
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-
-        # Read to all validations available the pcs list on which
-        #  on will be applied
         validations = []
 
         # Performance-Validations
@@ -563,12 +566,12 @@ class Benchmark:
             )
         )
 
-    def __has_required_curves(
+    def __get_curves_check_result(
         self,
         measurement_names: list,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[Path, Path, dict, Simulation_result, int]:
+    ) -> CurvesCheckResult:
         return self._curves_manager.has_required_curves(measurement_names, bm_name, oc_name)
 
     def __validate(
@@ -579,6 +582,7 @@ class Benchmark:
         event_params: dict,
         success: bool,
         has_simulated_curves: bool,
+        has_reference: bool = True,
     ):
         op_cond_success, results = op_cond.validate(
             self._validator,
@@ -587,6 +591,7 @@ class Benchmark:
             event_params,
             success,
             has_simulated_curves,
+            has_reference=has_reference,
         )
 
         # Statuses for the Summary Report
@@ -627,85 +632,87 @@ class Benchmark:
         success = False
 
         for op_cond in self._oc_list:
-            # Set the test context for this process so all log lines from here
-            # onwards (including deep calls into validators, retry strategies, etc.)
-            # are automatically tagged with [PCS.Benchmark.OC].
             set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
             )
             dycov_logging.get_logger("Benchmark").info("Validate")
-            (
-                working_path,
-                jobs_output_dir,
-                event_params,
-                simulation_result,
-                has_curves,
-            ) = self.__has_required_curves(
+            curves_result = self.__get_curves_check_result(
                 self._validator.get_measurement_names(),
                 self._name,
                 op_cond.get_name(),
             )
+            sim = curves_result.simulation_result
             self.__debug(
-                f"Success: {simulation_result.success} "
-                f"Has curves: {has_curves} "
-                f"Time exceeds: {simulation_result.time_exceeds} "
-                f"Error message: {simulation_result.error_message} "
+                f"Success: {sim.success} "
+                f"Has curves: {curves_result.availability} "
+                f"Time exceeds: {sim.time_exceeds} "
+                f"Error: {sim.error} "
             )
-            if simulation_result.error_message is not None:
-                self.__debug(f"Error message: {simulation_result.error_message}")
+
+            if sim.error is not None:
                 compliance = Compliance.InvalidTest
-                if simulation_result.error_message == "Fault simulation fails":
-                    compliance = Compliance.FaultSimulationFails
-                elif simulation_result.error_message == "Fault dip unachievable":
-                    compliance = Compliance.FaultDipUnachievable
-                results = {"compliance": False, "curves": None}
-            elif simulation_result.time_exceeds:
+                match sim.error:
+                    case SimulationError.FAULT_SIMULATION_FAILS:
+                        compliance = Compliance.FaultSimulationFails
+                    case SimulationError.FAULT_DIP_UNACHIEVABLE:
+                        compliance = Compliance.FaultDipUnachievable
+                    case _:
+                        pass
+                results = {**_FAILED_RESULTS}
+            elif sim.time_exceeds:
                 compliance = Compliance.SimulationTimeOut
-                results = {"compliance": False, "curves": None}
-            elif has_curves == 0:
+                results = {**_FAILED_RESULTS}
+            elif curves_result.availability == CurvesAvailability.ALL:
                 op_cond_success, results, compliance = self.__validate(
                     op_cond,
-                    working_path,
-                    jobs_output_dir,
-                    event_params,
-                    simulation_result.success,
-                    simulation_result.has_simulated_curves,
+                    curves_result.working_oc_dir,
+                    curves_result.jobs_output_dir,
+                    curves_result.event_params,
+                    sim.success,
+                    sim.has_simulated_curves,
                 )
                 results["solver"] = self._curves_manager.get_solver()
-                # If there is a correct simulation, the report must be created
                 success |= op_cond_success
-            elif has_curves == 1:
-                compliance = Compliance.WithoutProducerCurves
-                results = {"compliance": False, "curves": None}
-            elif has_curves == 2:
-                compliance = Compliance.WithoutReferenceCurves
-                results = {"compliance": False, "curves": None}
+            elif curves_result.availability == CurvesAvailability.NO_REFERENCE:
+                op_cond_success, results, compliance = self.__validate(
+                    op_cond,
+                    curves_result.working_oc_dir,
+                    curves_result.jobs_output_dir,
+                    curves_result.event_params,
+                    sim.success,
+                    sim.has_simulated_curves,
+                    has_reference=False,
+                )
+                if compliance.show_report():
+                    compliance = _compliance_for_missing_curves(curves_result.availability)
+                results["solver"] = self._curves_manager.get_solver()
+                success |= op_cond_success
             else:
-                compliance = Compliance.WithoutCurves
-                results = {"compliance": False, "curves": None}
+                compliance = _compliance_for_missing_curves(curves_result.availability)
+                results = {**_FAILED_RESULTS}
+
             results["summary"] = compliance
+            results["missed_columns"] = self._curves_manager.get_missed_curves("reference")
 
             if self._validator.is_defined_imax_reac():
                 gen_imax = self._curves_manager.get_generators_imax()
                 voltage_dip = self._curves_manager.get_voltage_dip()
-                gen_reactive_current_target = {
-                    key: 2 * voltage_dip if 2 * voltage_dip < gen_imax[key] else gen_imax[key]
-                    for key in gen_imax
+                results["reactive_current_target"] = {
+                    key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
                 }
-                results["reactive_current_target"] = gen_reactive_current_target
 
             summary_list.append(
                 Summary(
-                    self._producer_name,
-                    int(self._pcs_id),
-                    int(self._pcs_zone),
-                    self._pcs_name,
-                    self._name,
-                    op_cond.get_name(),
-                    compliance,
-                    self._report_name,
+                    producer_name=self._producer_name,
+                    id=int(self._pcs_id),
+                    zone=int(self._pcs_zone),
+                    pcs=self._pcs_name,
+                    benchmark=self._name,
+                    operating_condition=op_cond.get_name(),
+                    compliance=compliance,
+                    report_name=self._report_name,
                 )
             )
             pcs_results[

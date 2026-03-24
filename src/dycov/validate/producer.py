@@ -369,7 +369,7 @@ class ModelProducer(Producer):
             self.__read_producer_ini(),
             self._s_nref,
         )
-        self.s_nom = sum(gen.SNom for gen in self.generators)
+        self.s_nom = sum(gen.s_nom for gen in self.generators)
 
         # Check sanity of the producer network
         topology_checks.check_topology(

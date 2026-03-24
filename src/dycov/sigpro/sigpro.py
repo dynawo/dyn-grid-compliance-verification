@@ -150,18 +150,25 @@ def resample_to_common_tgrid(sim_curves, ref_curves):
     rs_ref_curves = dict()
     rs_sim_curves["time"] = new_tgrid
     rs_ref_curves["time"] = new_tgrid
-    for col in ref_curves:
-        if "time" == col or col not in sim_curves:
+    for col in sim_curves:
+        if col == "time":
             continue
+
         sim_values = sim_curves[col][sim_uniq_idx]
-        ref_values = ref_curves[col][ref_uniq_idx]
+        if col in ref_curves:
+            ref_values = ref_curves[col][ref_uniq_idx]
+        else:
+            ref_values = np.full_like(sim_values, np.nan, dtype=float)
 
         # Capture RuntimeWarnings during interpolation and log them at debug level
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always", RuntimeWarning)
 
             rs_sim_curves[col] = PchipInterpolator(sim_times, sim_values)(new_tgrid)
-            rs_ref_curves[col] = PchipInterpolator(ref_times, ref_values)(new_tgrid)
+            if np.isnan(ref_values).all():
+                rs_ref_curves[col] = np.full_like(new_tgrid, np.nan, dtype=float)
+            else:
+                rs_ref_curves[col] = PchipInterpolator(ref_times, ref_values)(new_tgrid)
             for warn in w:
                 if issubclass(warn.category, RuntimeWarning):
                     dycov_logging.get_logger("SigPro").debug(

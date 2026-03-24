@@ -201,13 +201,13 @@ def get_magnitude_controlled_by_avr(
             curves_dict[variable] = df_curves[variable].tolist()
             columns_to_remove.append(variable)
         elif has_u:
-            use_droop = generator.UseVoltageDroop
+            use_droop = generator.use_voltage_droop
             has_q = q_variable in df_curves.columns
             if use_droop and has_q:
                 curve_u = df_curves[u_variable].to_numpy()
                 curve_q = df_curves[q_variable].to_numpy()
                 curves_dict[variable] = np.add(
-                    curve_u, np.multiply(curve_q, generator.VoltageDroop)
+                    curve_u, np.multiply(curve_q, generator.voltage_droop)
                 ).tolist()
                 columns_to_remove.extend([u_variable, q_variable])
             else:

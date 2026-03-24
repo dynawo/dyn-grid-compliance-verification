@@ -12,9 +12,7 @@ This module provides functions for validating Dynawo model topologies based on
 expected and actual components and their connections.
 """
 
-from typing import List, Optional
-
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params
+from dycov.model.parameters import GenParams, LineParams, LoadParams, XfmrParams
 
 _GENERATOR_ERROR_MESSAGE = (
     "  - A generator with id:\n"
@@ -34,12 +32,12 @@ _MULTIPLE_GENERATOR_ERROR_MESSAGE = (
 
 def _check_topology_components(
     topology_name: str,
-    generators: List[Gen_params],
-    transformers: List[Xfmr_params],
-    auxiliary_load: Optional[Load_params],
-    auxiliary_transformer: Optional[Xfmr_params],
-    main_transformer: Optional[Xfmr_params],
-    internal_line: Optional[Line_params],
+    generators: list[GenParams],
+    transformers: list[XfmrParams],
+    auxiliary_load: LoadParams | None,
+    auxiliary_transformer: XfmrParams | None,
+    main_transformer: XfmrParams | None,
+    internal_line: LineParams | None,
     expected_gen_count: str,  # "single" or "multiple"
     expected_xfmr_count: str,  # "single" or "multiple"
     expect_aux_load: bool,
@@ -185,75 +183,48 @@ def _check_topology_components(
         raise ValueError(full_message)
 
 
-def _is_valid_generators(generators: List[Gen_params]) -> bool:
-    # Iterate through each generator
-    for generator in generators:
-        # For multiple generators, 'Synch_Gen' is not allowed as per original messages.
-        if not _is_valid_generator(generator.id, add_sm=False):
-            return False  # Return False if any generator is invalid
-    return True  # All generators are valid
+def _is_valid_generators(generators: list[GenParams]) -> bool:
+    return all(_is_valid_generator(g.id, add_sm=False) for g in generators)
 
 
 def _is_valid_generator(gen_id: str, add_sm: bool = True) -> bool:
-    # Define valid generator types
     gen_types = ["Wind_Turbine", "PV_Array", "Bess"]
-    # Add 'Synch_Gen' to valid types if add_sm is True (for 'S' topologies)
     if add_sm:
         gen_types.append("Synch_Gen")
-    # Check if the generator ID contains any of the valid generator type substrings
-    if any(gen_type in gen_id for gen_type in gen_types):
-        return True  # Generator ID is valid
-    return False  # Generator ID is not valid
+    return any(gen_type in gen_id for gen_type in gen_types)
 
 
-def _is_valid_stepup_xfmr(transformers: List[Xfmr_params], generators: List[Gen_params]) -> bool:
-    # Extract IDs of transformers that start with 'StepUp_Xfmr'
-    ids = [
-        stepup_xfmr.id for stepup_xfmr in transformers if stepup_xfmr.id.startswith("StepUp_Xfmr")
-    ]
-    # Check if the count of valid step-up transformers matches the number of generators
+def _is_valid_stepup_xfmr(transformers: list[XfmrParams], generators: list[GenParams]) -> bool:
+    ids = [t.id for t in transformers if t.id.startswith("StepUp_Xfmr")]
     return len(generators) == len(ids)
 
 
-def _is_valid_auxiliary_transformer(auxiliary_transformer: Xfmr_params) -> bool:
-    # Check if the auxiliary transformer exists and its ID is 'AuxLoad_Xfmr'
-    if auxiliary_transformer is not None and auxiliary_transformer.id == "AuxLoad_Xfmr":
-        return True  # Auxiliary transformer is valid
-    return False  # Auxiliary transformer is not valid
+def _is_valid_auxiliary_transformer(auxiliary_transformer: XfmrParams) -> bool:
+    return auxiliary_transformer is not None and auxiliary_transformer.id == "AuxLoad_Xfmr"
 
 
-def _is_valid_transformer(transformer: Xfmr_params) -> bool:
-    # Check if the main transformer exists and its ID is 'Main_Xfmr'
-    if transformer is not None and transformer.id == "Main_Xfmr":
-        return True  # Main transformer is valid
-    return False  # Main transformer is not valid
+def _is_valid_transformer(transformer: XfmrParams) -> bool:
+    return transformer is not None and transformer.id == "Main_Xfmr"
 
 
-def _is_valid_auxiliary_load(auxiliary_load: Load_params) -> bool:
-    # Check if the auxiliary load exists and its ID is 'Aux_Load'
-    if auxiliary_load is not None and auxiliary_load.id == "Aux_Load":
-        return True  # Auxiliary load is valid
-    return False  # Auxiliary load is not valid
+def _is_valid_auxiliary_load(auxiliary_load: LoadParams) -> bool:
+    return auxiliary_load is not None and auxiliary_load.id == "Aux_Load"
 
 
-def _is_valid_internal_line(internal_line: Line_params) -> bool:
-    # Check if the internal line exists and its ID is 'IntNetwork_Line'
-    if internal_line is not None and internal_line.id == "IntNetwork_Line":
-        return True  # Internal line is valid
-    return False  # Internal line is not valid
+def _is_valid_internal_line(internal_line: LineParams) -> bool:
+    return internal_line is not None and internal_line.id == "IntNetwork_Line"
 
 
 def check_topology(
     topology: str,
-    generators: List[Gen_params],
-    transformers: List[Xfmr_params],
-    auxiliary_load: Load_params,
-    auxiliary_transformer: Xfmr_params,
-    transformer: Xfmr_params,
-    internal_line: Line_params,
+    generators: list[GenParams],
+    transformers: list[XfmrParams],
+    auxiliary_load: LoadParams | None,
+    auxiliary_transformer: XfmrParams | None,
+    transformer: XfmrParams | None,
+    internal_line: LineParams | None,
 ) -> None:
-    """
-    Checks if one of the 8 allowed topologies has been selected, and if the correct devices
+    """Checks if one of the 8 allowed topologies has been selected, and if the correct devices
     have been defined for the selected topology.
 
     Parameters
@@ -264,13 +235,13 @@ def check_topology(
         Producer model generators.
     transformers: list
         Transformers connected to the generators of the producer model.
-    auxiliary_load: Load_params
+    auxiliary_load: LoadParams | None
         Auxiliary load connected to the generators of the producer model.
-    auxiliary_transformer: Xfmr_params
+    auxiliary_transformer: XfmrParams | None
         Transformer connected to the auxiliary load of the producer model.
-    transformer: Xfmr_params
+    transformer: XfmrParams | None
         Transformer that groups all the transformer of the producer model.
-    internal_line: Line_params
+    internal_line: LineParams | None
         Internal line of the producer model.
 
     Raises
@@ -279,7 +250,6 @@ def check_topology(
         If an invalid topology is selected or if the required devices for the
         selected topology are not correctly defined.
     """
-    # Define configurations for each allowed topology
     topology_configs = {
         "s": {
             "expected_gen_count": "single",
@@ -379,35 +349,8 @@ def check_topology(
         },
     }
 
-    topology_lower = (
-        topology.casefold()
-    )  # Convert topology name to lowercase for case-insensitive matching
-    if topology_lower in topology_configs:
-        config = topology_configs[
-            topology_lower
-        ]  # Get the configuration for the selected topology
-        # Call the base topology check function with the determined configuration
-        _check_topology_components(
-            topology,
-            generators,
-            transformers,
-            auxiliary_load,
-            auxiliary_transformer,
-            transformer,
-            internal_line,
-            config["expected_gen_count"],
-            config["expected_xfmr_count"],
-            config["expect_aux_load"],
-            config["expect_aux_xfmr"],
-            config["expect_main_xfmr"],
-            config["expect_internal_line"],
-            config["generator_bus_connection"],
-            config["aux_load_bus_connection"],
-            config["main_xfmr_bus_connection"],
-            config["internal_line_bus_connection"],
-        )
-    else:
-        # Raise an error if the selected topology is not one of the 8 allowed options
+    topology_lower = topology.casefold()
+    if topology_lower not in topology_configs:
         raise ValueError(
             "Select one of the 8 available topologies:\n"
             "  - S\n"
@@ -419,3 +362,24 @@ def check_topology(
             "  - M+Aux\n"
             "  - M+Aux+i\n"
         )
+
+    cfg = topology_configs[topology_lower]
+    _check_topology_components(
+        topology,
+        generators,
+        transformers,
+        auxiliary_load,
+        auxiliary_transformer,
+        transformer,
+        internal_line,
+        cfg["expected_gen_count"],
+        cfg["expected_xfmr_count"],
+        cfg["expect_aux_load"],
+        cfg["expect_aux_xfmr"],
+        cfg["expect_main_xfmr"],
+        cfg["expect_internal_line"],
+        cfg["generator_bus_connection"],
+        cfg["aux_load_bus_connection"],
+        cfg["main_xfmr_bus_connection"],
+        cfg["internal_line_bus_connection"],
+    )
