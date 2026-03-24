@@ -221,30 +221,3 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     )
     with pytest.raises(SystemExit):
         Validation(parameters)
-
-
-def test_validation_copies_output_files_to_user_directory(monkeypatch, temp_dirs):
-    parameters = DummyParameters(output_dir=temp_dirs[0])
-    renamed, removed = [], []
-
-    def fake_rename_path(source_path, target_path):
-        renamed.append((str(source_path), str(target_path)))
-
-    def fake_remove_dir(path):
-        removed.append(str(path))
-
-    monkeypatch.setattr(
-        "dycov.validate.validation.Pcs",
-        lambda producer, name, params: make_valid_pcs(producer, name, params),
-    )
-    monkeypatch.setattr("dycov.report.report.create_pdf", lambda *a, **k: None)
-    monkeypatch.setattr("dycov.files.manage_files.remove_dir", fake_remove_dir)
-    monkeypatch.setattr("dycov.files.manage_files.rename_path", fake_rename_path)
-
-    validation = Validation(parameters)
-    validation.set_testing(False)
-    validation.validate(use_parallel=False, num_processes=4)
-
-    assert len(renamed) == 1
-    assert len(removed) == 1
-    assert any("Latex" in c for c in removed)

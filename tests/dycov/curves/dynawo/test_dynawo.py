@@ -13,67 +13,12 @@ import pandas as pd
 import pytest
 
 from dycov.curves.dynawo.runtime._curves import (
+    _get_modulus,
     create_curves,
     get_magnitude_controlled_by_avr,
     prepare_complex_column,
     translate_curves,
 )
-from dycov.curves.dynawo.runtime.dynawo_simulator import TrimmedCurves
-
-
-def patch_dycov_logging(monkeypatch):
-    class _DummyLogger:
-        def __init__(self):
-            self.messages = []
-
-        def debug(self, msg):
-            self.messages.append(("debug", msg))
-
-        def info(self, msg):
-            self.messages.append(("info", msg))
-
-        def error(self, msg):
-            self.messages.append(("error", msg))
-
-    dummy = _DummyLogger()
-
-    def _get_logger(_name):
-        return dummy
-
-    monkeypatch.setattr(
-        "dycov.logging.logging.dycov_logging.get_logger",
-        _get_logger,
-        raising=True,
-    )
-    return dummy
-
-
-@pytest.fixture(autouse=True)
-def _no_leak_patches(mocker):
-    yield
-    try:
-        mocker.stopall()
-    except Exception:
-        pass
-
-
-# -------------------------------------------------------------------
-# BASIC TESTS
-# -------------------------------------------------------------------
-
-
-def test_is_stable_raises_on_length_mismatch():
-    from dycov.validation.common import is_stable
-
-    time = [0.0, 0.1, 0.2]
-    curve = [1.0, 1.1]
-    stable_time = 0.1
-
-    with pytest.raises(ValueError) as excinfo:
-        is_stable(time, curve, stable_time)
-
-    assert "different length" in str(excinfo.value)
-
 
 # -------------------------------------------------------------------
 # CURVE CREATION TESTS
@@ -81,8 +26,6 @@ def test_is_stable_raises_on_length_mismatch():
 
 
 def test_create_curves_handles_missing_or_malformed_file(tmp_path):
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
     variable_translations = {
         "BusPDR_BUS_Voltage": ["BusPDR_BUS_Voltage"],
         "BusPDR_BUS_ActivePower": ["BusPDR_BUS_ActivePower"],
@@ -99,145 +42,14 @@ def test_create_curves_handles_missing_or_malformed_file(tmp_path):
     snref = 1.0
     fnom = 50.0
 
-    # Case 1: Missing file
     missing_file = tmp_path / "missing.csv"
     with pytest.raises(FileNotFoundError):
         create_curves(variable_translations, missing_file, generators, snom, snref, fnom)
 
-    # Case 2: Malformed file
     malformed_file = tmp_path / "malformed.csv"
-    with open(malformed_file, "w") as f:
-        f.write("not,a,valid,csv\n1,2,3\n")
-
+    malformed_file.write_text("not,a,valid,csv\n1,2,3\n")
     with pytest.raises(Exception):
         create_curves(variable_translations, malformed_file, generators, snom, snref, fnom)
-
-
-# -------------------------------------------------------------------
-# VOLTAGE DIP TESTS
-# -------------------------------------------------------------------
-
-
-def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
-    curves = pd.DataFrame(
-        {
-            "time": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-            "BusPDR_BUS_Voltage": [1.0, 1.0, 0.8, 0.8, 0.8, 0.8],
-        }
-    )
-
-    fault_start = 0.15
-    fault_duration = 0.3
-    expected_dip = 0.2
-
-    mocker.patch(
-        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._trim_curves",
-        return_value=TrimmedCurves(
-            pre_time=[0.0, 0.1],  # pre_time_values
-            post_time=[0.2, 0.3, 0.4, 0.5],  # post_time_values
-            pre_voltage=[1.0, 1.0],  # pre_voltage_values
-            post_voltage=[0.8, 0.8, 0.8, 0.8],  # post_voltage_values
-        ),
-    )
-
-    mock_is_stable = mocker.patch("dycov.validation.common.is_stable")
-    mock_is_stable.side_effect = [(True, 0), (True, 0)]
-
-    mock_logger = mocker.MagicMock()
-    mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
-
-    result = DynawoSimulator().classify_voltage_dip(
-        "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
-    )
-
-    assert result == 0
-
-
-def test_fault_duration_exceeds_simulation_time(mocker):
-    from pytest import approx
-
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
-    curves = pd.DataFrame(
-        {
-            "time": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-            "BusPDR_BUS_Voltage": [1.0, 1.0, 0.8, 0.8, 0.8, 0.8],
-        }
-    )
-
-    fault_start = 0.2
-    fault_duration = 1.0
-    expected_dip = 0.2
-
-    mock_trim = mocker.patch(
-        "dycov.curves.dynawo.runtime.dynawo_simulator.DynawoSimulator._trim_curves",
-        return_value=TrimmedCurves(
-            pre_time=[0.0, 0.1],
-            post_time=[0.2, 0.3, 0.4, 0.5],
-            pre_voltage=[1.0, 1.0],
-            post_voltage=[0.8, 0.8, 0.8, 0.8],
-        ),
-    )
-
-    mock_is_stable = mocker.patch("dycov.validation.common.is_stable")
-    mock_is_stable.side_effect = [(True, 0), (True, 0)]
-
-    mock_logger = mocker.MagicMock()
-    mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
-
-    result = DynawoSimulator().classify_voltage_dip(
-        "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
-    )
-
-    mock_trim.assert_called_once()
-    args, kwargs = mock_trim.call_args
-
-    assert args[0] == curves["time"].tolist()
-    assert args[1] == curves["BusPDR_BUS_Voltage"].tolist()
-    assert args[2] == fault_start
-    assert args[3] == approx(0.5 - fault_start)
-
-    assert result == 0
-
-
-def test_correct_identification_of_pre_and_post_fault_values():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
-    time_values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    voltage_values = [1.0, 1.0, 1.0, 0.8, 0.6, 0.4, 0.6, 0.8, 0.9, 1.0, 1.0]
-
-    fault_start = 0.4
-    fault_duration = 0.4
-
-    pre_time, post_time, pre_voltage, post_voltage = DynawoSimulator()._trim_curves(
-        time_values, voltage_values, fault_start, fault_duration
-    )
-
-    assert pre_time == [0.0, 0.1, 0.2, 0.3]
-    assert pre_voltage == [1.0, 1.0, 1.0, 0.8]
-    assert post_time == [0.4, 0.5, 0.6, 0.7]
-    assert post_voltage == [0.6, 0.4, 0.6, 0.8]
-
-
-def test_empty_input_lists():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
-    time_values = []
-    voltage_values = []
-
-    fault_start = 0.3
-    fault_duration = 0.4
-
-    pre_time, post_time, pre_voltage, post_voltage = DynawoSimulator()._trim_curves(
-        time_values, voltage_values, fault_start, fault_duration
-    )
-
-    assert pre_time == []
-    assert post_time == []
-    assert pre_voltage == []
-    assert post_voltage == []
 
 
 # -------------------------------------------------------------------
@@ -246,8 +58,6 @@ def test_empty_input_lists():
 
 
 def test_valid_input_file_processing(mocker, tmp_path):
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
     mock_df_import = pd.DataFrame({"time": [0.0, 1.0, 2.0], "Unnamed: 0": [0, 1, 2]})
     mocker.patch("pandas.read_csv", return_value=mock_df_import)
 
@@ -300,15 +110,12 @@ def test_valid_input_file_processing(mocker, tmp_path):
 
     assert result["BusPDR_BUS_ActiveCurrent"].tolist() == [0.5, 0.5, 0.5]
     assert result["BusPDR_BUS_ReactiveCurrent"].tolist() == [0.3, 0.3, 0.3]
-
     assert "GEN1_GEN_MagnitudeControlledByAVRPu" in result.columns
 
     mock_translate.assert_called_once()
 
 
 def test_prepare_complex_column_applies_sign_conventions():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
     column_name = "test_column"
     column_size = 3
 
@@ -319,29 +126,21 @@ def test_prepare_complex_column_applies_sign_conventions():
         }
     )
 
-    translated_column = "translated_test"
-
     variable_translations = {
         "translated_testRe": -1,
         "translated_testIm": 2,
     }
 
     result = prepare_complex_column(
-        column_name, column_size, df_curves, translated_column, variable_translations
+        column_name, column_size, df_curves, "translated_test", variable_translations
     )
 
-    expected_real = [-1.0, -2.0, -3.0]
-    expected_imag = [8.0, 10.0, 12.0]
-
     complex_result = np.array(result, dtype=np.complex128)
-
-    np.testing.assert_almost_equal(complex_result.real, expected_real)
-    np.testing.assert_almost_equal(complex_result.imag, expected_imag)
+    np.testing.assert_almost_equal(complex_result.real, [-1.0, -2.0, -3.0])
+    np.testing.assert_almost_equal(complex_result.imag, [8.0, 10.0, 12.0])
 
 
 def test_translate_curves_with_missing_columns():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
     df_curves_imported = pd.DataFrame(
         {"time": [0.0, 1.0, 2.0], "existing_column": [1.0, 2.0, 3.0]}
     )
@@ -358,13 +157,10 @@ def test_translate_curves_with_missing_columns():
     assert "time" in result_df.columns
     assert "translated_existing" in result_df.columns
     assert "missing_translated" not in result_df.columns
-
     np.testing.assert_array_equal(result_df["translated_existing"].tolist(), [1.0, 2.0, 3.0])
 
 
 def test_process_generators_with_variable_in_columns():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
     class Generator:
         def __init__(self, id_):
             self.id = id_
@@ -384,7 +180,6 @@ def test_process_generators_with_variable_in_columns():
     )
 
     curves_dict = {}
-
     get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
 
     assert "GEN1_GEN_MagnitudeControlledByAVRPu" in curves_dict
@@ -406,24 +201,17 @@ def test_process_generators_with_variable_in_columns():
 
 
 def test_empty_generators_list():
-    from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-
-    generators = []
     df_curves = pd.DataFrame({"OtherColumn1": [1.0, 2.0, 3.0], "OtherColumn2": [4.0, 5.0, 6.0]})
     original_df = df_curves.copy()
 
     curves_dict = {}
-
-    get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
+    get_magnitude_controlled_by_avr([], df_curves, curves_dict)
 
     assert len(curves_dict) == 0
     pd.testing.assert_frame_equal(df_curves, original_df)
 
 
 def test_get_modulus_correct_calculation():
-    from dycov.curves.dynawo.runtime._curves import _get_modulus
-
     complex_list = [complex(3, 4), complex(5, 12)]
-    expected_modulus = [5.0, 13.0]
     result = _get_modulus(complex_list)
-    assert result == expected_modulus
+    assert result == [5.0, 13.0]

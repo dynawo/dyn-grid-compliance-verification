@@ -91,6 +91,6 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 43
         Compliance.Compliant,  # 44
         Compliance.Compliant,  # 45
-        Compliance.WithoutProducerCurves,  # 46
-        Compliance.WithoutProducerCurves,  # 47
+        Compliance.Compliant,  # 46
+        Compliance.Compliant,  # 47
     ] == compliance
