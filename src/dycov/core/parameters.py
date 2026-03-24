@@ -10,6 +10,7 @@
 
 import atexit
 import getpass
+import logging
 import shutil
 import tempfile
 import threading
@@ -20,6 +21,7 @@ from typing import Optional
 from dycov.configuration.cfg import config
 from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
 from dycov.files import manage_files
+from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
 
 
@@ -94,7 +96,8 @@ class Parameters:
         def _cleanup_on_exit():
             try:
                 # Preserve in DEBUG, remove otherwise (no logs emitted)
-                manage_files.remove_dir(wd)
+                if dycov_logging.get_logger("Parameters").getEffectiveLevel() != logging.DEBUG:
+                    manage_files.remove_dir(wd)
             except Exception:
                 try:
                     manage_files.remove_dir(wd)
@@ -187,7 +190,11 @@ class Parameters:
         if not wd:
             return
         try:
-            manage_files.remove_dir(wd)
+            if (
+                not preserve_on_debug
+                or dycov_logging.get_logger("Parameters").getEffectiveLevel() != logging.DEBUG
+            ):
+                manage_files.remove_dir(wd)
         except Exception:
             try:
                 manage_files.remove_dir(wd)

@@ -24,9 +24,7 @@ from dycov.curves.dynawo.runtime._process import (
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
 from dycov.files import manage_files
 
-SimulationResult = namedtuple(
-    "SimulationResult", "succeeded log has_timeline_error curves sim_time"
-)
+DynawoResult = namedtuple("DynawoResult", "succeeded log has_timeline_error curves sim_time")
 
 
 class DynawoSimulator:
@@ -39,8 +37,9 @@ class DynawoSimulator:
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
-    ) -> SimulationResult:
-        """Baseline execution with configured limits.
+    ) -> DynawoResult:
+        """
+        Baseline execution with configured limits.
 
         Parameters
         ----------
@@ -63,7 +62,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        SimulationResult
+        DynawoResult
             A named tuple containing:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
@@ -98,7 +97,7 @@ class DynawoSimulator:
             log_path = str(output_dir / jobs_output_dir / "logs/dynawo.log")
             log = f"Simulation Fails, logs in {log_path}"
 
-        return SimulationResult(
+        return DynawoResult(
             succeeded=succeeded,
             log=log,
             has_timeline_error=result.has_timeline_error,
@@ -121,8 +120,9 @@ class DynawoSimulator:
         f_nom: float,
         simulation_limit: float,
         save_file: bool = False,
-    ) -> SimulationResult:
-        """Thin wrapper without retry (useful for CCT flows).
+    ) -> DynawoResult:
+        """
+        Thin wrapper without retry (useful for CCT flows).
 
         Parameters
         ----------
@@ -156,7 +156,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        SimulationResult
+        DynawoResult
             A named tuple containing:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
@@ -204,8 +204,9 @@ class DynawoSimulator:
         f_nom: float,
         save_file: bool = True,
         simulation_limit: float | None = None,
-    ) -> SimulationResult:
-        """Runs a dynamic simulation with Dynawo and processes the results.
+    ) -> DynawoResult:
+        """
+        Runs a dynamic simulation with Dynamic and processes the results.
 
         Parameters
         ----------
@@ -242,7 +243,7 @@ class DynawoSimulator:
 
         Returns
         -------
-        SimulationResult
+        DynawoResult
             A named tuple containing:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
@@ -273,7 +274,7 @@ class DynawoSimulator:
             succeeded,
         )
 
-        return SimulationResult(
+        return DynawoResult(
             succeeded=succeeded,
             log=log,
             has_timeline_error=timeline_error,

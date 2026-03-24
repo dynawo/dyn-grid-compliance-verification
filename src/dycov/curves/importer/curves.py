@@ -17,22 +17,40 @@ from dycov.curves.importer.importer import CurvesImporter
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files
 from dycov.model.parameters import (
-    Disconnection_Model,
-    Gen_init,
-    Gen_params,
-    Simulation_result,
+    DisconnectionModel,
+    GenInit,
+    GenParams,
+    SimulationResult,
     Terminal,
 )
 from dycov.model.producer import Producer
 
 
 def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
-    gens = []
-    for generator in generators:
-        voltage = curves[generator.id + "_AVRSetpointPu"]
-        U0 = voltage.iloc[0]
-        gens.append(Gen_init(generator.id, 0, 0, U0, 0))
-    return gens
+    """Initializes generator parameters based on provided curves.
+
+    Parameters
+    ----------
+    generators : list
+        List of GenParams objects representing generators.
+    curves : pd.DataFrame
+        DataFrame containing curve data, including AVRSetpointPu for each generator.
+
+    Returns
+    -------
+    list
+        List of GenInit objects with initialized voltage (u0).
+    """
+    return [
+        GenInit(
+            id=generator.id,
+            p0=0,
+            q0=0,
+            u0=curves[generator.id + "_AVRSetpointPu"].iloc[0],
+            u_phase0=0,
+        )
+        for generator in generators
+    ]
 
 
 def _get_config_value(config, section, option, default=0.0):
@@ -108,22 +126,34 @@ class ImportedCurves(ProducerCurves):
         return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
     def __get_generators(self, curves: pd.DataFrame) -> list:
+        """Identifies generators from the curve data based on a naming convention.
+
+        Parameters
+        ----------
+        curves : pd.DataFrame
+            The DataFrame containing curve data.
+
+        Returns
+        -------
+        list
+            A list of GenParams objects representing the identified generators.
+        """
         generators = []
         for key in curves.keys():
             if key.endswith("_AVRSetpointPu"):
                 gen_id = key.replace("_AVRSetpointPu", "")
                 generators.append(
-                    Gen_params(
+                    GenParams(
                         id=gen_id,
                         lib="",
-                        terminals=(Terminal(connectedEquipment=""),),
-                        SNom="",
-                        IMax="",
+                        terminals=(Terminal(connected_equipment=""),),
+                        s_nom="",
+                        i_max="",
                         par_id="",
-                        P="",
-                        Q="",
-                        VoltageDroop="",
-                        UseVoltageDroop=False,
+                        p="",
+                        q="",
+                        voltage_droop="",
+                        use_voltage_droop=False,
                     )
                 )
         self.get_producer().set_generators(generators)
@@ -210,7 +240,36 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
+        """Read the input curves to get the simulated curves.
+
+        Parameters
+        ----------
+        working_oc_dir: Path
+            Temporal working path
+        producer_name: str
+            Producer name
+        pcs_name: str
+            PCS name
+        bm_name: str
+            Benchmark name
+        oc_name: str
+            Operating Condition name
+        reference_event_start_time: float
+            Instant of time when the event is triggered in reference curves
+            (not directly used but can be for future validation).
+
+        Returns
+        -------
+        str
+            Simulation output directory (represented as '.').
+        dict
+            Event parameters.
+        SimulationResult
+            Information about the simulation result.
+        DataFrame
+           Simulation calculated curves.
+        """
         event_params, success, has_imported_curves, curves_df = self._obtain_curves(
             working_oc_dir,
             producer_name,
@@ -229,11 +288,30 @@ class ImportedCurves(ProducerCurves):
             event_params["duration_time"],
         )
 
-        simulation_result = Simulation_result(success, False, has_imported_curves, None)
+        simulation_result = SimulationResult(
+            success=success,
+            time_exceeds=False,
+            has_simulated_curves=has_imported_curves,
+            error=None,
+        )
         return ".", event_params, simulation_result, curves_df
 
-    def get_disconnection_model(self) -> Disconnection_Model:
-        return Disconnection_Model(None, None, [], None)
+    def get_disconnection_model(self) -> DisconnectionModel:
+        """Get all equipment in the model that can be disconnected in the simulation.
+        When there is no model to simulate, it is not possible to detect the equipment
+        that has been disconnected.
+
+        Returns
+        -------
+        DisconnectionModel
+            Equipment that can be disconnected.
+        """
+        return DisconnectionModel(
+            None,
+            None,
+            [],
+            None,
+        )
 
     def get_generators_imax(self) -> dict:
         return self._generators_imax

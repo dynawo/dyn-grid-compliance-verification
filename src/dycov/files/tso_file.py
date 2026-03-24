@@ -13,11 +13,11 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
-from dycov.model.parameters import Gen_params
+from dycov.model.parameters import GenParams
 
 
 def _connect_generator_to_setpoint(
-    dyd_root: etree.Element, ns: str, generator: Gen_params, connect_to: str
+    dyd_root: etree.Element, ns: str, generator: GenParams, connect_to: str
 ) -> None:
     setpoint_id = f"SetPoint_{generator.id}"
     _create_model(dyd_root, ns, setpoint_id, "Step", "TSOModel.par", setpoint_id)
@@ -54,7 +54,7 @@ def _connect_generator(
 
 
 def _add_setpoint_parameters(
-    par_root: etree.Element, ns: str, generator: Gen_params, event_params: dict, pre_value: float
+    par_root: etree.Element, ns: str, generator: GenParams, event_params: dict, pre_value: float
 ) -> None:
     parset = etree.SubElement(
         par_root,
@@ -123,8 +123,7 @@ def complete_setpoint(
     par_root = par_tree.getroot()
     par_ns = etree.QName(dyd_root).namespace
 
-    for i in range(len(generators)):
-        generator = generators[i]
+    for i, generator in enumerate(generators):
         pre_value = event_params["pre_value"][i]
         _connect_generator_to_setpoint(dyd_root, dyd_ns, generator, event_params["connect_to"])
         _add_setpoint_parameters(par_root, par_ns, generator, event_params, pre_value)

@@ -20,7 +20,7 @@ from lxml import etree
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
+from dycov.model.parameters import GenParams, LineParams, LoadParams, Terminal, XfmrParams
 
 # Numeric values: supports integers, decimals, and leading sign; allows ".5" style.
 NUMERIC_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$")
@@ -62,7 +62,7 @@ def get_producer_values(
     producer_par: Path,
     producer_ini: configparser.ConfigParser,
     s_nref: float,
-) -> tuple[list, list, Load_params, Xfmr_params, Xfmr_params, Line_params]:
+) -> tuple[list, list, LoadParams, XfmrParams, XfmrParams, LineParams]:
     """Gets the equipment parameters of the producer model.
 
     Parameters
@@ -82,13 +82,13 @@ def get_producer_values(
         Parameters of the generators
     list
         Parameters of the transformers connected to the generators
-    Load_params
+    LoadParams
         Parameters of the load
-    Xfmr_params
+    XfmrParams
         Parameters of the transformer connected to the load
-    Xfmr_params
+    XfmrParams
         Parameters of the main transformer connecting the power plant to the transmission network
-    Line_params
+    LineParams
         Internal line parameters of the producer model
     """
 
@@ -191,7 +191,7 @@ def get_pcs_load_params(pcs_dyd: Path, pcs_par: Path) -> list:
     return loads
 
 
-def get_grid_load(loads: list) -> Load_params:
+def get_grid_load(loads: list) -> LoadParams:
     """Gets the Equivalent load parameters.
 
     Parameters
@@ -201,7 +201,7 @@ def get_grid_load(loads: list) -> Load_params:
 
     Returns
     -------
-    Load_params
+    LoadParams
         An equivalent load parameters
     """
     if len(loads) == 0:
@@ -210,20 +210,20 @@ def get_grid_load(loads: list) -> Load_params:
     ppu = 0
     qpu = 0
     for load in loads:
-        ppu += load.P0
-        qpu += load.Q0
+        ppu += load.p0
+        qpu += load.q0
 
-    return Load_params(
+    return LoadParams(
         id=None,
         lib=None,
-        P=ppu,
-        Q=qpu,
-        U=None,
-        UPhase=None,
-        Alpha=None,
-        Beta=None,
+        p=ppu,
+        q=qpu,
+        u=None,
+        u_phase=None,
+        alpha=None,
+        beta=None,
         par_id=None,
-        terminals=(Terminal(connectedEquipment=None),),
+        terminals=(Terminal(connected_equipment=None),),
     )
 
 
@@ -425,7 +425,7 @@ def adjust_producer_init(
     producer_par: Path,
     generators: list,
     xfmrs: list,
-    aux_load: Load_params,
+    aux_load: LoadParams,
     generator_control_mode: str,
     force_voltage_droop: bool,
 ) -> None:
@@ -441,7 +441,7 @@ def adjust_producer_init(
         All the producer's generators
     xfmrs: list
         Parameters for the transformers
-    aux_load: Load_params
+    aux_load: LoadParams
         Initial values to the producer's auxiliary load
     generator_control_mode: str
         Control mode
@@ -456,19 +456,19 @@ def adjust_producer_init(
         _adjust_transformer(
             producer_par_root,
             xfmr,
-            xfmr.terminals[0].P0,
-            xfmr.terminals[0].Q0,
-            xfmr.terminals[0].U0,
-            xfmr.terminals[0].UPhase0,
-            xfmr.terminals[1].U0,
+            xfmr.terminals[0].p0,
+            xfmr.terminals[0].q0,
+            xfmr.terminals[0].u0,
+            xfmr.terminals[0].u_phase0,
+            xfmr.terminals[1].u0,
         )
         _adjust_generator(
             producer_par_root,
             generator,
-            generator.terminals[0].P0,
-            generator.terminals[0].Q0,
-            generator.terminals[0].U0,
-            generator.terminals[0].UPhase0,
+            generator.terminals[0].p0,
+            generator.terminals[0].q0,
+            generator.terminals[0].u0,
+            generator.terminals[0].u_phase0,
             generator_control_mode,
             force_voltage_droop,
         )
@@ -478,10 +478,10 @@ def adjust_producer_init(
             producer_par_root,
             aux_load.id,
             aux_load.lib,
-            aux_load.terminals[0].P0,
-            aux_load.terminals[0].Q0,
-            aux_load.terminals[0].U0,
-            aux_load.terminals[0].UPhase0,
+            aux_load.terminals[0].p0,
+            aux_load.terminals[0].q0,
+            aux_load.terminals[0].u0,
+            aux_load.terminals[0].u_phase0,
         )
 
     producer_par_tree.write(path / producer_par.name, pretty_print=True)
@@ -518,8 +518,8 @@ def _validate_generator_flows(generators: list) -> None:
     if not generators:
         return
 
-    total_p = sum(g.P for g in generators)
-    total_q = sum(g.Q for g in generators)
+    total_p = sum(g.p for g in generators)
+    total_q = sum(g.q for g in generators)
 
     if not math.isclose(total_p, 1.0, rel_tol=1e-6):
         dycov_logging.get_logger("Model Parameters").error("Generator P flows do not add up to 1")
@@ -553,21 +553,21 @@ def _append_generator(
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
 
     generators.append(
-        Gen_params(
+        GenParams(
             id=gen_id,
             lib=lib,
-            terminals=(Terminal(connectedEquipment=connected_equipment),),
-            SNom=s_nom,
-            IMax=imax,
+            terminals=(Terminal(connected_equipment=connected_equipment),),
+            s_nom=s_nom,
+            i_max=imax,
             par_id=par_id,
-            P=P,
-            PMax=p_max,
-            PMin=p_min,
-            Q=Q,
-            QMax=q_max,
-            QMin=q_min,
-            VoltageDroop=droop_value,
-            UseVoltageDroop=False,
+            p=P,
+            p_max=p_max,
+            p_min=p_min,
+            q=Q,
+            q_max=q_max,
+            q_min=q_min,
+            voltage_droop=droop_value,
+            use_voltage_droop=False,
         )
     )
 
@@ -697,17 +697,17 @@ def _get_line_values(
         connected_equipment2 = _get_connected_equipment_by_terminal(dyd_root, line_id, "terminal2")
 
         lines.append(
-            Line_params(
+            LineParams(
                 id=line_id,
                 lib=lib,
-                R=line_rpu,
-                X=line_xpu,
-                B=line_bpu,
-                G=line_gpu,
+                r=line_rpu,
+                x=line_xpu,
+                b=line_bpu,
+                g=line_gpu,
                 par_id=par_id,
                 terminals=(
-                    Terminal(connectedEquipment=connected_equipment1),
-                    Terminal(connectedEquipment=connected_equipment2),
+                    Terminal(connected_equipment=connected_equipment1),
+                    Terminal(connected_equipment=connected_equipment2),
                 ),
             )
         )
@@ -745,19 +745,19 @@ def _get_transformer_values(
         )
 
         transformers.append(
-            Xfmr_params(
+            XfmrParams(
                 id=transformer_id,
                 lib=lib,
-                R=xfmr_rpu,
-                X=xfmr_xpu,
-                B=xfmr_bpu,
-                G=xfmr_gpu,
-                rTfo=xfmr_tapr,
-                alphaTfo=xfmr_tapa,
+                r=xfmr_rpu,
+                x=xfmr_xpu,
+                b=xfmr_bpu,
+                g=xfmr_gpu,
+                r_tfo=xfmr_tapr,
+                alpha_tfo=xfmr_tapa,
                 par_id=par_id,
                 terminals=(
-                    Terminal(connectedEquipment=connected_equipment1),
-                    Terminal(connectedEquipment=connected_equipment2),
+                    Terminal(connected_equipment=connected_equipment1),
+                    Terminal(connected_equipment=connected_equipment2),
                 ),
             )
         )
@@ -825,17 +825,17 @@ def _get_load_values(dyd_root: etree.Element, par_root: etree.Element) -> list:
         connected_equipment = _get_connected_equipment(dyd_root, load_id)
 
         loads.append(
-            Load_params(
+            LoadParams(
                 id=load_id,
                 lib=lib,
-                P=aux_ppu,
-                Q=aux_qpu,
-                U=aux_upu,
-                UPhase=aux_phpu,
-                Alpha=alpha,
-                Beta=beta,
+                p=aux_ppu,
+                q=aux_qpu,
+                u=aux_upu,
+                u_phase=aux_phpu,
+                alpha=alpha,
+                beta=beta,
                 par_id=par_id,
-                terminals=(Terminal(connectedEquipment=connected_equipment),),
+                terminals=(Terminal(connected_equipment=connected_equipment),),
             )
         )
 
@@ -931,7 +931,7 @@ def _set_transformer_voltage(parset, nsmap, lib, u0pu):
 
 def _adjust_generator(
     producer_par_root: etree.Element,
-    generator: Gen_params,
+    generator: GenParams,
     generator_p0pu: float,
     generator_q0pu: float,
     generator_u0pu: float,
@@ -1092,14 +1092,14 @@ def _validate_or_apply_default_voltage_droop(
 def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
     if "MwpqMode" in voltage_droop_parameters:
         if voltage_droop_parameters["MwpqMode"] == "3":
-            generator.UseVoltageDroop = True
+            generator.use_voltage_droop = True
 
     if all(p in voltage_droop_parameters for p in ["RefFlag", "VCompFlag"]):
         if voltage_droop_parameters["RefFlag"].lower() != "true":
             return
         if voltage_droop_parameters["VCompFlag"].lower() != "false":
             return
-        generator.UseVoltageDroop = True
+        generator.use_voltage_droop = True
 
 
 def _get_voltage_droop_parameters(generator, parset, nsmap) -> dict:

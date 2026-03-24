@@ -12,12 +12,10 @@ This module contains functions for validating various numerical and configuratio
 parameters of Dynawo models, including generator, transformer, load, and simulation settings.
 """
 
-from typing import List
-
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params
+from dycov.model.parameters import GenParams, LineParams, LoadParams, XfmrParams
 from dycov.validation import common
 
 
@@ -41,7 +39,7 @@ def check_t_fault(start_time: float, event_time: float, range_len: float) -> Non
         )
 
 
-def check_pre_stable(time: List[float], curve: List[float]) -> None:
+def check_pre_stable(time: list[float], curve: list[float]) -> None:
     """Check that the curve is stable.
 
     Parameters
@@ -113,7 +111,7 @@ def check_producer_params(
 
 
 def check_producer_params_consistency(
-    generators: List[Gen_params],
+    generators: list[GenParams],
     p_max_pu: float = 0.0,
     q_max_pu: float = 0.0,
     q_min_pu: float = 0.0,
@@ -146,9 +144,9 @@ def check_producer_params_consistency(
     """
 
     # Aggregate PAR values
-    gen_p_max = sum(g.PMax for g in generators if g.PMax is not None)
-    gen_q_max = sum(g.QMax for g in generators if g.QMax is not None)
-    gen_q_min = sum(g.QMin for g in generators if g.QMin is not None)
+    gen_p_max = sum(g.p_max for g in generators if g.p_max is not None)
+    gen_q_max = sum(g.q_max for g in generators if g.q_max is not None)
+    gen_q_min = sum(g.q_min for g in generators if g.q_min is not None)
 
     log = dycov_logging.get_logger("Sanity Checks")
     has_error = False
@@ -186,7 +184,7 @@ def check_producer_params_consistency(
 
 
 def check_generators(
-    generators_z1: List[Gen_params], generators_z3: List[Gen_params] = None
+    generators_z1: list[GenParams], generators_z3: list[GenParams] = None
 ) -> tuple[int, int, int]:
     """Check whether the user-supplied generators parameters are consistent:
     * The number of generators in each zone must be the same.
@@ -212,16 +210,11 @@ def check_generators(
                 "The model validation must contain the same number of generators in both zones."
             )
 
-    sm_models = 0
-    ppm_models = 0
-    bess_models = 0
-    for generator in generators:
-        if generator.lib in dynawo_translator.get_synchronous_machine_models():
-            sm_models += 1
-        if generator.lib in dynawo_translator.get_power_park_models():
-            ppm_models += 1
-        if generator.lib in dynawo_translator.get_storage_models():
-            bess_models += 1
+    sm_models = sum(
+        1 for g in generators if g.lib in dynawo_translator.get_synchronous_machine_models()
+    )
+    ppm_models = sum(1 for g in generators if g.lib in dynawo_translator.get_power_park_models())
+    bess_models = sum(1 for g in generators if g.lib in dynawo_translator.get_storage_models())
 
     total = len(generators)
     if sm_models < total and ppm_models < total and bess_models < total:
@@ -231,7 +224,7 @@ def check_generators(
     return sm_models, ppm_models, bess_models
 
 
-def check_trafos(xfmrs: List[Xfmr_params]) -> None:
+def check_trafos(xfmrs: list[XfmrParams]) -> None:
     """Check whether the user-supplied transformers parameters are consistent:
     * The admittance of each transformer must be greater than 0.
 
@@ -244,57 +237,57 @@ def check_trafos(xfmrs: List[Xfmr_params]) -> None:
         check_trafo(xfmr)
 
 
-def check_trafo(xfmrs: Xfmr_params) -> None:
+def check_trafo(xfmrs: XfmrParams) -> None:
     """Check whether the user-supplied tranformer parameters are consistent:
     * The admittance of the transformer must be greater than 0.
 
     Parameters
     ----------
-    xfmr: Xfmr_params
+    xfmr: XfmrParams
         Transformer parameters.
     """
-    if xfmrs and xfmrs.X <= 0:
+    if xfmrs and xfmrs.x <= 0:
         raise ValueError(
             f"The admittance of the transformer {xfmrs.id} must be greater than zero."
         )
 
-    if xfmrs and xfmrs.alphaTfo != 0.0:
+    if xfmrs and xfmrs.alpha_tfo != 0.0:
         raise ValueError(
             f"The alphaTfo parameter of the transformer {xfmrs.id} must be equal to zero."
         )
 
 
-def check_auxiliary_load(load: Load_params) -> None:
+def check_auxiliary_load(load: LoadParams) -> None:
     """Check whether the user-supplied auxiliary load parameters are consistent:
     * The active flow of the auxiliary load must be greater than zero.
     * Auxiliary load expected to be defined with non-zero alpha and beta values.
 
     Parameters
     ----------
-    load: Load_params
+    load: LoadParams
         Auxiliary load parameters.
     """
     if load is None:
         return
-    if load.P <= 0:
+    if load.p <= 0:
         raise ValueError("The active flow of the auxiliary load must be greater than zero.")
-    if load.Alpha is not None and load.Alpha == 0 and load.Beta is not None and load.Beta == 0:
+    if load.alpha is not None and load.alpha == 0 and load.beta is not None and load.beta == 0:
         dycov_logging.get_logger("Sanity Checks").warning(
             "The auxiliary load is defined with alpha = 0 and beta = 0, "
             "this configuration can cause unexpected results in bolted fault tests."
         )
 
 
-def check_internal_line(line: Line_params) -> None:
+def check_internal_line(line: LineParams) -> None:
     """Check whether the user-supplied internal line parameters are consistent:
     * The reactance and admittance of the internal line must be greater than zero.
 
     Parameters
     ----------
-    line: Line_params
+    line: LineParams
         Internal line parameters.
     """
-    if line and (line.R <= 0 or line.X <= 0):
+    if line and (line.r <= 0 or line.x <= 0):
         raise ValueError(
             "The reactance and admittance of the internal line must be greater than zero."
         )
