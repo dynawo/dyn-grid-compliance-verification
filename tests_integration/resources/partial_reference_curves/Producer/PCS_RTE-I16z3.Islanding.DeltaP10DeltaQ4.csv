@@ -1,4 +1,4 @@
-time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ReactiveCurrent;StepUp_Xfmr_XFMR_Tap;Wind_Turbine_GEN_InjectedActiveCurrent;Wind_Turbine_GEN_InjectedReactiveCurrent;Wind_Turbine_GEN_AVRSetpointPu;Wind_Turbine_GEN_MagnitudeControlledByAVRPu;Wind_Turbine_GEN_NetworkFrequencyPu;Wind_Turbine_GEN_InjectedCurrent;NetworkFrequencyPu
+time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ReactiveCurrent;StepUp_Xfmr_XFMR_Tap;Wind_Turbine_GEN_IpInjTerminal;Wind_Turbine_GEN_IqInjTerminal;Wind_Turbine_GEN_AVRSetpointPu;Wind_Turbine_GEN_MagnitudeControlledByAVRPu;Wind_Turbine_GEN_NetworkFrequencyPu;Wind_Turbine_GEN_InjectedCurrent;NetworkFrequencyPu
 7.048222;1.044414468;0.600003839;6.13E-07;1.78E-06;10.00010558;0.583919825;-0.013293993;1.044790254;1.044791255;1.000000386;0.584069658;0.999997491
 8.186494;1.044157277;0.600001963;9.16E-08;5.85E-07;10.00003684;0.584060571;-0.013611996;1.044833531;1.044534259;0.999992474;0.584230725;0.999998929
 8.98839;1.043136377;0.600003362;4.56E-07;4.89E-07;10.00002709;0.584597464;-0.014910998;1.044821609;1.043515257;1.000000644;0.5848044;0.999994038
