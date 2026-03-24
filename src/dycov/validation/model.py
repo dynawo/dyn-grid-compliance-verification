@@ -652,6 +652,7 @@ class ModelValidator(Validator):
         working_path: Path,
         sim_output_path: str,
         event_params: dict,
+        has_reference: bool = True,
     ) -> dict:
         """Model Validation.
 
@@ -665,6 +666,8 @@ class ModelValidator(Validator):
             Simulator output path (Not used in this validator).
         event_params: dict
             Event parameters
+        has_reference: bool
+            Whether all reference curves are available.
 
         Returns
         -------
@@ -710,6 +713,7 @@ class ModelValidator(Validator):
                 'event_exclusion_window_end': float, exclusion time duration 1.
                 'clear_exclusion_window_start': float, exclusion time start 2.
                 'clear_exclusion_window_end': float, exclusion time duration 2.
+                'incomplete_curves': bool, present and True when reference curves are missing.
             }
         """
 
@@ -741,7 +745,6 @@ class ModelValidator(Validator):
             event_params["connect_to"],
         )
 
-        # Show always the exclusion windows used in the validation
         exclusion_windows = self._get_exclusion_windows()
         results["event_exclusion_window_start"] = exclusion_windows.event_start
         results["event_exclusion_window_end"] = exclusion_windows.event_end
@@ -752,6 +755,9 @@ class ModelValidator(Validator):
         results["curves"] = self._get_calculated_curves()
         if not self._get_reference_curves().empty:
             results["reference_curves"] = self._get_reference_curves()
+
+        if not has_reference:
+            results["incomplete_curves"] = True
 
         return results
 

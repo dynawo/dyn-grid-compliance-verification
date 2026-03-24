@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 
 from dycov.core.validator import Validator
-from dycov.model.parameters import Disconnection_Model
+from dycov.model.parameters import DisconnectionModel
 
 
 class DummyProducer:
@@ -58,8 +58,8 @@ class DummyCurvesManager:
             Dummy time_cct value. Defaults to 0.5.
         generators_imax : dict, optional
             Dummy generators_imax value. Defaults to {"gen1": 100.0}.
-        disconnection_model : Disconnection_Model, optional
-            Dummy disconnection_model. Defaults to a new Disconnection_Model instance.
+        disconnection_model : DisconnectionModel, optional
+            Dummy disconnection_model. Defaults to a new DisconnectionModel instance.
         setpoint_variation : float, optional
             Dummy setpoint_variation. Defaults to 0.0.
         calculated_curves : dict, optional
@@ -75,7 +75,7 @@ class DummyCurvesManager:
         self._disconnection_model = (
             disconnection_model
             if disconnection_model is not None
-            else Disconnection_Model(auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[])
+            else DisconnectionModel(auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[])
         )
         self._setpoint_variation = setpoint_variation
         self._calculated_curves = (
@@ -227,7 +227,7 @@ def test_set_disconnection_model():
         pcs_name="PCS",
         bm_name="BM",
     )
-    dm = Disconnection_Model(
+    dm = DisconnectionModel(
         auxload=["a"], auxload_xfmr=["b"], stepup_xfmrs=["c"], gen_intline=["d"]
     )
     validator.set_disconnection_model(dm)
@@ -271,7 +271,7 @@ def test_complete_producer_sets_all_attributes():
             generator_u_dim=111.1,
             time_cct=2.5,
             generators_imax={"g1": 10.0},
-            disconnection_model=Disconnection_Model(
+            disconnection_model=DisconnectionModel(
                 auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
             ),
             setpoint_variation=0.99,
@@ -294,7 +294,7 @@ def test_complete_producer_sets_all_attributes():
         )
         assert validator._time_cct == 2.5
         assert validator._generators_imax == {"g1": 10.0}
-        assert validator._disconnection_model == Disconnection_Model(
+        assert validator._disconnection_model == DisconnectionModel(
             auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
         )
         assert validator._setpoint_variation == 0.99
@@ -356,7 +356,7 @@ def test_complete_producer_handles_missing_optional_producer():
         path = Path(tmp_dir)
         curves_manager = DummyCurvesManager(
             generators_imax={"g2": 20.0},
-            disconnection_model=Disconnection_Model(
+            disconnection_model=DisconnectionModel(
                 auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
             ),
             setpoint_variation=0.0,
@@ -380,7 +380,7 @@ def test_complete_producer_handles_missing_optional_producer():
         )
         assert validator._time_cct is None
         assert validator._generators_imax == {"g2": 20.0}
-        assert validator._disconnection_model == Disconnection_Model(
+        assert validator._disconnection_model == DisconnectionModel(
             auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
         )
         assert validator._setpoint_variation == 0.0

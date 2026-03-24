@@ -59,6 +59,7 @@ class OperatingCondition:
         working_oc_dir: Path,
         jobs_output_dir: Path,
         event_params: dict,
+        has_reference: bool = True,
     ) -> dict:
         validator.initialize_validation_params(
             working_oc_dir,
@@ -72,9 +73,9 @@ class OperatingCondition:
             working_oc_dir,
             jobs_output_dir,
             event_params,
+            has_reference=has_reference,
         )
 
-        # Operational point without defining its validations
         if not validator.has_validations():
             results["compliance"] = None
 
@@ -92,6 +93,7 @@ class OperatingCondition:
         event_params: dict,
         success: bool,
         has_simulated_curves: bool,
+        has_reference: bool = True,
     ) -> tuple[bool, dict]:
         """Validate the Benchmark.
 
@@ -107,8 +109,8 @@ class OperatingCondition:
             True if simulation is success
         has_simulated_curves: bool
             True if simulation calculated curves
-        curves: dict
-            Calculated and reference curves
+        has_reference: bool
+            Whether all reference curves are available.
 
         Returns
         -------
@@ -118,12 +120,12 @@ class OperatingCondition:
             Validation results of the OperatingCondition
         """
         if has_simulated_curves:
-            # Validate results
             results = self.__validate(
                 validator,
                 working_path,
                 jobs_output_dir,
                 event_params,
+                has_reference=has_reference,
             )
         else:
             results = {"compliance": False, "curves": None}

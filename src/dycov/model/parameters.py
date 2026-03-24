@@ -7,18 +7,40 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from collections import namedtuple
 from dataclasses import dataclass
+from enum import IntEnum
+from pathlib import Path
 from typing import Optional
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+
+class SimulationError(IntEnum):
+    FAULT_SIMULATION_FAILS = 1
+    FAULT_DIP_UNACHIEVABLE = 2
+
+
+class CurvesAvailability(IntEnum):
+    ALL = 0
+    NO_PRODUCER = 1
+    NO_REFERENCE = 2
+    NONE = 3
+
+
+# ---------------------------------------------------------------------------
+# Network model dataclasses
+# ---------------------------------------------------------------------------
 
 
 @dataclass
 class Terminal:
-    connectedEquipment: str
-    U0: float = 1.0
-    UPhase0: float = 0.0
-    P0: float = 0.0
-    Q0: float = 0.0
+    connected_equipment: str
+    u0: float = 1.0
+    u_phase0: float = 0.0
+    p0: float = 0.0
+    q0: float = 0.0
 
 
 @dataclass
@@ -30,67 +52,135 @@ class Equipment:
 
 
 @dataclass
-class Bus_params(Equipment):
-    VMin: float
-    VMax: float
+class BusParams(Equipment):
+    v_min: float
+    v_max: float
 
 
 @dataclass
-class Line_params(Equipment):
-    R: float
-    X: float
-    B: float
-    G: float
+class LineParams(Equipment):
+    r: float
+    x: float
+    b: float
+    g: float
 
 
 @dataclass
-class Xfmr_params(Equipment):
-    R: float
-    X: float
-    B: float
-    G: float
-    rTfo: float
-    alphaTfo: float
+class XfmrParams(Equipment):
+    r: float
+    x: float
+    b: float
+    g: float
+    r_tfo: float
+    alpha_tfo: float
 
 
 @dataclass
-class Load_params(Equipment):
-    P: float
-    Q: float
-    U: float
-    UPhase: float
-    Alpha: float
-    Beta: float
+class LoadParams(Equipment):
+    p: float
+    q: float
+    u: float
+    u_phase: float
+    alpha: float
+    beta: float
 
 
 @dataclass
-class Gen_params(Equipment):
-    SNom: float
-    IMax: float
-    P: float
-    Q: float
-    VoltageDroop: float
-    UseVoltageDroop: bool
-    PMin: Optional[float] = None
-    PMax: Optional[float] = None
-    QMin: Optional[float] = None
-    QMax: Optional[float] = None
+class GenParams(Equipment):
+    s_nom: float
+    i_max: float
+    p: float
+    q: float
+    voltage_droop: float
+    use_voltage_droop: bool
+    p_min: Optional[float] = None
+    p_max: Optional[float] = None
+    q_min: Optional[float] = None
+    q_max: Optional[float] = None
 
 
-Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
-Pdr_params = namedtuple("Pdr_params", ["U", "S", "P", "Q"])
-Pimodel_params = namedtuple("Pimodel_params", ["Ytr", "Ysh1", "Ysh2"])
-Gen_init = namedtuple("Gen_init", ["id", "P0", "Q0", "U0", "UPhase0"])
-Load_init = namedtuple("Load_init", ["id", "lib", "P0", "Q0", "U0", "UPhase0"])
+# ---------------------------------------------------------------------------
+# Simulation / validation result dataclasses
+# ---------------------------------------------------------------------------
 
-Simulation_result = namedtuple(
-    "Simulation_result", ["success", "time_exceeds", "has_simulated_curves", "error_message"]
-)
-Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
-Disconnection_Model = namedtuple(
-    "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
-)
-ExclusionWindows = namedtuple(
-    "ExclusionWindows",
-    ["event_start", "event_end", "clear_start", "clear_end"],
-)
+
+@dataclass(frozen=True)
+class PdrEquipments:
+    id: str
+    var: str
+
+
+@dataclass(frozen=True)
+class PdrParams:
+    u: float
+    s: float
+    p: float
+    q: float
+
+
+@dataclass(frozen=True)
+class PimodelParams:
+    y_tr: float
+    y_sh1: float
+    y_sh2: float
+
+
+@dataclass(frozen=True)
+class GenInit:
+    id: str
+    p0: float
+    q0: float
+    u0: float
+    u_phase0: float
+
+
+@dataclass(frozen=True)
+class LoadInit:
+    id: str
+    lib: str
+    p0: float
+    q0: float
+    u0: float
+    u_phase0: float
+
+
+@dataclass(frozen=True)
+class SimulationResult:
+    success: bool
+    time_exceeds: bool
+    has_simulated_curves: bool
+    error: Optional[SimulationError] = None
+
+
+@dataclass(frozen=True)
+class Stability:
+    p: float
+    q: float
+    v: float
+    theta: float
+    pi: float
+
+
+@dataclass(frozen=True)
+class DisconnectionModel:
+    auxload: object
+    auxload_xfmr: object
+    stepup_xfmrs: object
+    gen_intline: object
+
+
+@dataclass(frozen=True)
+class ExclusionWindows:
+    event_start: float
+    event_end: float
+    clear_start: float
+    clear_end: float
+
+
+@dataclass(frozen=True)
+class CurvesCheckResult:
+    working_oc_dir: Path
+    jobs_output_dir: Path
+    event_params: dict
+    simulation_result: SimulationResult
+    availability: CurvesAvailability
