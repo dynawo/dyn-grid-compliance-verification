@@ -232,9 +232,6 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
         "BusPDR_BUS_ReactiveCurrent = \n"
     )
 
-    for xfmr in xfmrs:
-        curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"
-
     curves_dictionary += (
         "NetworkFrequencyPu = \n"
         "# To represent a signal that is in raw abc three-phase form, the affected signal must "
@@ -249,24 +246,17 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
         curves_dictionary += (
             "\n\n# Wind Turbines or PV Arrays in Zone1 \n[Curves-Dictionary-Zone1] \n"
         )
-        for gen_ppm in gens:
-            curves_dictionary += (
-                # Common
-                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-            )
     else:
         curves_dictionary += (
             "\n\n# Wind Turbines or PV Arrays in Zone3 \n[Curves-Dictionary-Zone3] \n"
         )
+        for xfmr in xfmrs:
+            curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"
         for gen_ppm in gens:
             curves_dictionary += (
-                # Common
                 f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-                # Zone3
                 f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"
             )
 

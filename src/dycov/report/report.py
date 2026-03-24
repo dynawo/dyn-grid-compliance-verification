@@ -184,7 +184,8 @@ def _get_reports(
 ) -> list:
     reports = []
     for pcs in sorted_summary:
-        pcs_results = report_results[f"{pcs.producer_name}_{pcs.pcs}"]
+        key = f"{pcs.producer_name}_{pcs.pcs}"
+        pcs_results = report_results[key]
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
         if any(report_name.replace(".tex", "") in report for report in reports):
             continue

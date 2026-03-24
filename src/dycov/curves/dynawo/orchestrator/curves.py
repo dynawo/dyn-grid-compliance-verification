@@ -28,13 +28,10 @@ from dycov.curves.dynawo.io.jobs import JobsFile
 from dycov.curves.dynawo.io.par import ParFile
 from dycov.curves.dynawo.io.solvers import SolversFile
 from dycov.curves.dynawo.io.table import TableFile
-from dycov.curves.dynawo.runtime.dynawo_simulator import (
-    DynawoResult,
-    DynawoSimulator,
-    VoltDipResult,
-)
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
+from dycov.curves.voltage_dip import VoltDipResult, classify_voltage_dip, measure_voltage_dip
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
@@ -196,13 +193,13 @@ class DynawoCurves(ProducerCurves):
         """
         return f"{self._pcs_name}.{bm_name}.{oc_name}:"
 
-    def __log_msg(self, level: str, bm_name: str, oc_name: str, message: str) -> None:
+    def __log_msg(self, level: str, message: str) -> None:
         """
         Centralized logger formatter (keeps one single format place).
         """
         getattr(dycov_logging.get_logger("ProducerCurves"), level)(f"{message}")
 
-    def __debug(self, bm_name: str, oc_name: str, message: str) -> None:
+    def __debug(self, message: str) -> None:
         """
         Logs a debug message with PCS information.
         Parameters
@@ -214,9 +211,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The debug message.
         """
-        self.__log_msg("debug", bm_name, oc_name, message)
+        self.__log_msg("debug", message)
 
-    def __warning(self, bm_name: str, oc_name: str, message: str) -> None:
+    def __warning(self, message: str) -> None:
         """
         Logs a warning message with PCS information.
         Parameters
@@ -228,9 +225,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The warning message.
         """
-        self.__log_msg("warning", bm_name, oc_name, message)
+        self.__log_msg("warning", message)
 
-    def __error(self, bm_name: str, oc_name: str, message: str) -> None:
+    def __error(self, message: str) -> None:
         """
         Logs an error message with PCS information.
         Parameters
@@ -242,7 +239,7 @@ class DynawoCurves(ProducerCurves):
         message : str
             The error message.
         """
-        self.__log_msg("error", bm_name, oc_name, message)
+        self.__log_msg("error", message)
 
     def __log(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -257,7 +254,7 @@ class DynawoCurves(ProducerCurves):
             The informational message.
         """
         self._logger.info(message)
-        self.__debug(bm_name, oc_name, message)
+        self.__debug(message)
 
     @staticmethod
     def __fault_rpu_from_xpu(xpu: float, r_factor: float) -> float:
@@ -551,8 +548,6 @@ class DynawoCurves(ProducerCurves):
             and event_params["start_time"] != reference_event_start_time
         ):
             self.__warning(
-                bm_name,
-                oc_name,
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
                 f"({event_params['start_time']}).",
@@ -1001,9 +996,9 @@ class DynawoCurves(ProducerCurves):
             oc_name,
         )
         if not result.succeeded:
-            self.__warning(bm_name, oc_name, result.log)
+            self.__warning(result.log)
         else:
-            self.__debug(bm_name, oc_name, "Simulation successful")
+            self.__debug("Simulation successful")
         has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
         return SimulateOutcome(
             succeeded=result.succeeded,
@@ -1127,8 +1122,8 @@ class DynawoCurves(ProducerCurves):
             fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
             with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
                 fault_rpu = self.__fault_rpu_from_xpu(fault_xpu, fault_r_factor)
-                self.__debug(bm_name, oc_name, f"Bisection between {max_val} and {min_val}")
-                self.__debug(bm_name, oc_name, f"Fault XPU in {fault_xpu}")
+                self.__debug(f"Bisection between {max_val} and {min_val}")
+                self.__debug(f"Fault XPU in {fault_xpu}")
                 self.__modify_fault(
                     working_oc_dir_fault,
                     fault_start,
@@ -1143,7 +1138,7 @@ class DynawoCurves(ProducerCurves):
                 if fault_outcome.succeeded:
                     bisection_success = True
                     last_fault_xpu = fault_xpu
-                    voltage_dip_classification = DynawoSimulator.classify_voltage_dip(
+                    voltage_dip_classification = classify_voltage_dip(
                         self._pcs_name,
                         bm_name,
                         oc_name,
@@ -1169,7 +1164,7 @@ class DynawoCurves(ProducerCurves):
                     else:
                         break
                 else:
-                    self.__debug(bm_name, oc_name, "Simulation fails")
+                    self.__debug("Simulation fails")
                     if voltage_dip_classification is not None:
                         if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                             max_val = fault_xpu
@@ -1180,16 +1175,14 @@ class DynawoCurves(ProducerCurves):
                 if self.__is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
                     break  # Exit loop if bisection is complete
         if not bisection_success:
-            self.__error(bm_name, oc_name, "The simulation fails with any value for the fault")
+            self.__error("The simulation fails with any value for the fault")
             raise ValueError("Fault simulation fails")
         # Check if the exact dip was achieved, if not, raise error
         if voltage_dip_classification == VoltDipResult.COLUMN_MISSING:
-            self.__error(
-                bm_name, oc_name, "The expected voltage curve is missing in the simulation output"
-            )
+            self.__error("The expected voltage curve is missing in the simulation output")
             raise ValueError("Voltage curve missing")
         elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
-            self.__error(bm_name, oc_name, "The required dip was not achieved")
+            self.__error("The required dip was not achieved")
             raise ValueError("Fault dip unachievable")
         # Recover the last successful fault values and apply to original working directory
         last_fault_rpu = self.__fault_rpu_from_xpu(last_fault_xpu, fault_r_factor)
@@ -1263,7 +1256,7 @@ class DynawoCurves(ProducerCurves):
         # until an unstable simulation is achieved.
         min_val = fault_duration
         max_val = fault_duration * 2
-        self.__debug(bm_name, oc_name, f"Max time CCT in {max_val}")
+        self.__debug(f"Max time CCT in {max_val}")
         while self.__run_time_cct(
             working_oc_dir_attempt,
             jobs_output_dir,
@@ -1273,7 +1266,7 @@ class DynawoCurves(ProducerCurves):
         ):
             min_val = max_val
             max_val *= 1.5
-            self.__debug(bm_name, oc_name, f"Max time CCT in {max_val}")
+            self.__debug(f"Max time CCT in {max_val}")
         return min_val, max_val
 
     def __run_time_cct(
@@ -1368,8 +1361,6 @@ class DynawoCurves(ProducerCurves):
             True if the bisection method is complete, False otherwise.
         """
         self.__debug(
-            bm_name,
-            oc_name,
             "Bisection method is complete: "
             f"{max_val=}, {min_val=}, {rel_tol=}, "
             f"is complete: {math.isclose(max_val, min_val, rel_tol=rel_tol)}",
@@ -1499,20 +1490,18 @@ class DynawoCurves(ProducerCurves):
             oc_name,
         )
         manage_files.remove_dir(working_oc_dir_fault_max)  # Clean up temporary dir
-        self.__debug(bm_name, oc_name, "Upper time to find clear time: " + str(max_val))
-        self.__debug(bm_name, oc_name, "Lower time to find clear time: " + str(min_val))
+        self.__debug("Upper time to find clear time: " + str(max_val))
+        self.__debug("Lower time to find clear time: " + str(min_val))
         # Perform bisection to find the maximum duration the fault admits without losing stability
         time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
         cct_rel_tol = CCT_REL_TOL
         while True:
             self.__debug(
-                bm_name,
-                oc_name,
                 f"Attempt {counter} to find clear time. Used fault time: {time}",
             )
             with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
-                self.__debug(bm_name, oc_name, f"Run time CCT in {time}")
+                self.__debug(f"Run time CCT in {time}")
                 steady_state = self.__run_time_cct(
                     working_oc_dir_fault,
                     jobs_output_dir,
@@ -1618,7 +1607,7 @@ class DynawoCurves(ProducerCurves):
                 bm_name,
                 oc_name,
             )
-            self._voltage_dip = DynawoSimulator.measure_voltage_dip(
+            self._voltage_dip = measure_voltage_dip(
                 self._pcs_name,
                 bm_name,
                 oc_name,
@@ -1628,8 +1617,6 @@ class DynawoCurves(ProducerCurves):
             )
 
             self.__debug(
-                bm_name,
-                oc_name,
                 f"Simulation finished in {self._sim_time}s: "
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",
