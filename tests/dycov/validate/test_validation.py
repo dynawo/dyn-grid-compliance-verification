@@ -21,7 +21,6 @@ from dycov.core.global_variables import (
     REPORT_NAME,
 )
 from dycov.model.pcs import Pcs
-from dycov.report.LatexReportException import LatexReportException
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
 

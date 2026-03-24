@@ -14,14 +14,14 @@ import pandas as pd
 
 from dycov.curves.manager import CurvesManager
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Disconnection_Model, ExclusionWindows
+from dycov.model.parameters import DisconnectionModel, ExclusionWindows
 from dycov.model.producer import Producer
 from dycov.validation import compliance_list
 
 
-class Validator(ABC):  # Inherit from ABC to define an abstract base class
-    """
-    An abstract base class defining the interface for validating simulation results.
+class Validator(ABC):
+    """Abstract base class defining the interface for validating simulation results.
+
     Concrete validator classes must inherit from this class and implement its abstract methods.
     """
 
@@ -34,157 +34,52 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         pcs_name: str,
         bm_name: str,
     ):
-        """
-        Initializes the Validator with necessary components and parameters.
-
-        Parameters
-        ----------
-        curves_manager: CurvesManager
-            Manages the retrieval and processing of curves.
-        producer: Producer
-            Represents the producer model used in the simulation.
-        validations: list
-            A list of validations to be performed.
-        is_field_measurements: bool
-            Indicates if the measurements are from the field.
-        pcs_name: str
-            Name of the PCS (Power Conversion System).
-        bm_name: str
-            Name of the Benchmark.
-        """
         self._curves_manager = curves_manager
         self._producer = producer
         self._validations = validations
         self._is_field_measurements = is_field_measurements
         self._pcs_name = pcs_name
         self._bm_name = bm_name
-        self._time_cct: float = None
+        self._time_cct: float | None = None
         self._generators_imax: dict = {}
-        self._disconnection_model: Disconnection_Model = None
+        self._disconnection_model: DisconnectionModel | None = None
         self._setpoint_variation: float = 0.0
-        self._oc_name: str = None  # Operating Condition name
-
-    def _get_log_title(self) -> str:
-        """
-        Generates a standardized title for log messages.
-
-        Returns
-        -------
-        str
-            The formatted log title including PCS, Benchmark, and Operating Condition names.
-        """
-        return f"{self._pcs_name}.{self._bm_name}.{self._oc_name}:"
+        self._oc_name: str | None = None
 
     def _log_message(self, level: str, message: str) -> None:
-        """
-        Logs a message with the specified level and includes the standardized log title.
+        logger = dycov_logging.get_logger("Validator")
+        match level:
+            case "info":
+                logger.info(message)
+            case "debug":
+                logger.debug(message)
+            case "warning":
+                logger.warning(message)
+            case _:
+                logger.debug(message)
 
-        Parameters
-        ----------
-        level: str
-            The logging level (e.g., "info", "debug", "warning").
-        message: str
-            The message to be logged.
-        """
-        full_message = f"{self._get_log_title()} {message}"
-        if level == "info":
-            dycov_logging.get_logger("Validator").info(full_message)
-        elif level == "debug":
-            dycov_logging.get_logger("Validator").debug(full_message)
-        elif level == "warning":
-            dycov_logging.get_logger("Validator").warning(full_message)
-
-    def _get_calculated_curves(self) -> dict:
-        """
-        Retrieves the calculated curves from the curves manager.
-
-        Returns
-        -------
-        dict
-            A dictionary of calculated curves.
-        """
+    def _get_calculated_curves(self) -> pd.DataFrame:
         return self._curves_manager.get_curves("calculated")
 
-    def _get_reference_curves(self) -> dict:
-        """
-        Retrieves the reference curves from the curves manager.
-
-        Returns
-        -------
-        dict
-            A dictionary of reference curves.
-        """
+    def _get_reference_curves(self) -> pd.DataFrame:
         return self._curves_manager.get_curves("reference")
 
     def _get_calculated_curve_by_name(self, name: str) -> pd.DataFrame:
-        """
-        Retrieves a specific calculated curve by its name.
-
-        Parameters
-        ----------
-        name: str
-            The name of the calculated curve to retrieve.
-
-        Returns
-        -------
-        pd.DataFrame
-            The DataFrame of the requested calculated curve, or an empty DataFrame if not found.
-        """
         curves = self._get_calculated_curves()
         return curves.get(name, pd.DataFrame())
 
-    def _get_reference_curve_by_name(self, name: str) -> pd.DataFrame:
-        """
-        Retrieves a specific reference curve by its name.
-
-        Parameters
-        ----------
-        name: str
-            The name of the reference curve to retrieve.
-
-        Returns
-        -------
-        pd.DataFrame
-            The DataFrame of the requested reference curve, or None if not found.
-        """
+    def _get_reference_curve_by_name(self, name: str) -> pd.DataFrame | None:
         curves = self._get_reference_curves()
         return curves.get(name, None)
 
     def _get_exclusion_windows(self) -> ExclusionWindows:
-        """
-        Retrieves exclusion windows from the curves manager.
-
-        Returns
-        -------
-        ExclusionWindows
-            Named tuple with exclusion zone boundaries:
-            - event_start: Time before the event is triggered
-            - event_end: Time after the event is triggered
-            - clear_start: Time before the event is cleared (0.0 if no clearance)
-            - clear_end: Time after the event is cleared (0.0 if no clearance)
-        """
         return self._curves_manager.get_exclusion_windows()
 
     def _get_curves_by_windows(self, windows: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Retrieves calculated and reference curves filtered by specified windows.
-
-        Parameters
-        ----------
-        windows: str
-            The window type to apply for filtering curves.
-
-        Returns
-        -------
-        tuple[pd.DataFrame, pd.DataFrame]
-            A tuple containing two DataFrames:
-            (calculated_curves_in_window, reference_curves_in_window).
-        """
         return self._curves_manager.get_curves_by_windows(windows)
 
     def set_oc_name(self, oc_name: str) -> None:
-        """
-        Sets the operating condition name for the validator.
+        """Set the operating condition name.
 
         Parameters
         ----------
@@ -194,19 +89,17 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         self._oc_name = oc_name
 
     def has_validations(self) -> bool:
-        """
-        Checks if the validator has any defined validations.
+        """Check if any validations are defined.
 
         Returns
         -------
         bool
             True if validations are defined, False otherwise.
         """
-        return False if not self._validations else True
+        return bool(self._validations)
 
     def get_sim_type(self) -> int:
-        """
-        Gets the type of simulation being validated.
+        """Get the type of simulation being validated.
 
         Returns
         -------
@@ -218,8 +111,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         return self._producer.get_sim_type()
 
     def is_defined_cct(self) -> bool:
-        """
-        Checks if 'time_cct' validation is defined in the list of validations.
+        """Check if 'time_cct' validation is defined.
 
         Returns
         -------
@@ -229,8 +121,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         return compliance_list.contains_key(["time_cct"], self._validations)
 
     def is_defined_imax_reac(self) -> bool:
-        """
-        Checks if 'imax_reac' validation is defined in the list of validations.
+        """Check if 'imax_reac' validation is defined.
 
         Returns
         -------
@@ -240,8 +131,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         return compliance_list.contains_key(["imax_reac"], self._validations)
 
     def set_time_cct(self, time_cct: float) -> None:
-        """
-        Sets the maximum critical clearing time (CCT).
+        """Set the maximum critical clearing time (CCT).
 
         Parameters
         ----------
@@ -251,8 +141,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         self._time_cct = time_cct
 
     def set_generators_imax(self, generators_imax: dict) -> None:
-        """
-        Sets the maximum continuous current for generators.
+        """Set the maximum continuous current for generators.
 
         Parameters
         ----------
@@ -262,21 +151,18 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         """
         self._generators_imax = generators_imax
 
-    def set_disconnection_model(self, disconnection_model: Disconnection_Model) -> None:
-        """
-        Sets the disconnection model, detailing equipment that can be disconnected during
-        simulation.
+    def set_disconnection_model(self, disconnection_model: DisconnectionModel) -> None:
+        """Set the disconnection model.
 
         Parameters
         ----------
-        disconnection_model: Disconnection_Model
+        disconnection_model: DisconnectionModel
             An object representing the disconnection model.
         """
         self._disconnection_model = disconnection_model
 
     def set_setpoint_variation(self, setpoint_variation: float) -> None:
-        """
-        Sets the setpoint variation value.
+        """Set the setpoint variation value.
 
         Parameters
         ----------
@@ -286,8 +172,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         self._setpoint_variation = setpoint_variation
 
     def get_generator_u_dim(self) -> float:
-        """
-        Gets the generator Udim (rated voltage).
+        """Get the generator Udim (rated voltage).
 
         Returns
         -------
@@ -304,9 +189,7 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         cfg_oc_name: str,
         oc_name: str,
     ) -> None:
-        """
-        Initialize the validation parameters by retrieving necessary values from the curves
-        manager.
+        """Initialize the validation parameters from the curves manager.
 
         Parameters
         ----------
@@ -341,10 +224,9 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
         results_path: Path,
         sim_output_path: str,
         event_params: dict,
+        has_reference: bool = True,
     ) -> dict:
-        """
-        Abstract method to validate the simulation results.
-        This method must be implemented by concrete subclasses.
+        """Validate the simulation results.
 
         Parameters
         ----------
@@ -356,23 +238,22 @@ class Validator(ABC):  # Inherit from ABC to define an abstract base class
             Path to the simulator's output.
         event_params: dict
             Event parameters relevant to the validation.
+        has_reference: bool
+            Whether reference curves are available. When False, only validations
+            that do not require reference curves are executed.
 
         Returns
         -------
         dict
             Dictionary containing the compliance results.
         """
-        pass
 
     @abstractmethod
     def get_measurement_names(self) -> list:
-        """
-        Abstract method to get the list of required curve names for the validation.
-        This method must be implemented by concrete subclasses.
+        """Get the list of required curve names for the validation.
 
         Returns
         -------
         list
             A list of strings, where each string is the name of a required curve.
         """
-        pass

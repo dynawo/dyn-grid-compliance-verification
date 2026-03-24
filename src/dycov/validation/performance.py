@@ -682,6 +682,7 @@ class PerformanceValidator(Validator):
         working_path: Path,
         sim_output_path: str,
         event_params: dict,
+        has_reference: bool = True,
     ) -> dict:
         """Electric Performance Verification.
 
