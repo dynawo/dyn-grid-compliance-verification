@@ -20,8 +20,8 @@ def test_perf_sm_producer_curves():
 def test_perf_ppm_producer_curves():
     compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "PPM", None)
     assert [
-        Compliance.NonCompliant,  # 0
-        Compliance.NonCompliant,  # 1
+        Compliance.Compliant,  # 0
+        Compliance.Compliant,  # 1
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
@@ -42,7 +42,7 @@ def test_perf_bess_producer_curves():
         Compliance.Compliant,  # 6
         Compliance.NonCompliant,  # 7
         Compliance.NonCompliant,  # 8
-        Compliance.NonCompliant,  # 9
+        Compliance.Compliant,  # 9
         Compliance.NonCompliant,  # 10
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12

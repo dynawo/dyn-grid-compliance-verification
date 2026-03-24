@@ -26,4 +26,3 @@ Synch_Gen_GEN_InternalAngle = Synch_Gen_GEN_InternalAngle
 Synch_Gen_GEN_AVRSetpointPu = Synch_Gen_GEN_AVRSetpointPu
 Synch_Gen_GEN_MagnitudeControlledByAVRPu = Synch_Gen_GEN_MagnitudeControlledByAVRPu
 Synch_Gen_GEN_NetworkFrequencyPu = Synch_Gen_GEN_NetworkFrequencyPu
-
