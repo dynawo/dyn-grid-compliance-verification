@@ -279,6 +279,15 @@ class ImportedCurves(ProducerCurves):
             self.get_producer().get_producer_curves_path(),
         )
 
+        self._voltage_dip = measure_voltage_dip(
+            pcs_name,
+            bm_name,
+            oc_name,
+            curves_df,
+            event_params["start_time"],
+            event_params["duration_time"],
+        )
+
         simulation_result = SimulationResult(
             success=success,
             time_exceeds=False,
