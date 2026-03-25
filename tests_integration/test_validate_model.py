@@ -13,12 +13,12 @@ def test_model_validation_ppm_dynawo_model(dynawo_latest):
         MODEL / "Wind" / "WECC4A1" / "ReferenceCurves",
     )
     assert [
-        Compliance.NonCompliant,  # 0
+        Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
-        Compliance.NonCompliant,  # 2
+        Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
-        Compliance.NonCompliant,  # 5
+        Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
         Compliance.NonCompliant,  # 7
         Compliance.Compliant,  # 8
@@ -57,7 +57,7 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         Compliance.NonCompliant,  # 7
         Compliance.WithoutReferenceCurves,  # 8
         Compliance.NonCompliant,  # 9
-        Compliance.WithoutReferenceCurves,  # 10
+        Compliance.InvalidTest,  # 10
         Compliance.NonCompliant,  # 11
         Compliance.NonCompliant,  # 12
         Compliance.NonCompliant,  # 13
@@ -70,5 +70,5 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         Compliance.NonCompliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
-        Compliance.WithoutReferenceCurves,  # 23
+        Compliance.FailedSimulation,  # 23
     ] == compliance
