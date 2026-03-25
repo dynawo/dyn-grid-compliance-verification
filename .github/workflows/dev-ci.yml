@@ -37,6 +37,12 @@ jobs:
       - name: Create venv
         run: uv venv
 
+      # Ensure pip exists in venv (cross-platform)
+      - name: Ensure pip exists in venv
+        run: |
+          uv run python -m ensurepip --upgrade || true
+          uv run python -m pip install --upgrade pip setuptools wheel
+
       # Install dev & test deps from your pyproject extras
       - name: Install dev & test dependencies
         run: uv pip install -e ".[dev,test]"
