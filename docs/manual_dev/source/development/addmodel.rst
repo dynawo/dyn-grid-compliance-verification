@@ -91,7 +91,7 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'InternalAngle'``
     Internal angle in rad. It is required for Electrical Performance Verification.
 
-* ``'AVRSetpointPu'``
+* ``'VoltageSetpointPu'``
     Control voltage in per unit. It is required.
 
 * ``'MagnitudeControlledByAVRPu'``
@@ -154,7 +154,7 @@ The Tool uses the following keywords to define the dynamic model:
 * ``'InternalAngle'``
     Internal angle in rad. It is required for Electrical Performance Verification.
 
-* ``'AVRSetpointPu'``
+* ``'VoltageSetpointPu'``
     Control voltage in per unit. It is required.
 
 * ``'MagnitudeControlledByAVRPu'``
@@ -239,7 +239,7 @@ The Tool uses the following keywords to define the dynamic model:
     Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
     *InfiniteBus*.
 
-* ``'AVRSetpointPu'``
+* ``'VoltageSetpointPu'``
     Control voltage in per unit. It is required.
 
 * ``'MagnitudeControlledByAVRPu'``

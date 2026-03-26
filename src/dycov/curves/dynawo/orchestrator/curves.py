@@ -377,13 +377,13 @@ class DynawoCurves(ProducerCurves):
 
     def __adjust_event_value(self, event_params: dict) -> None:
         """
-        Adjusts the event 'pre_value' for AVRSetpointPu if voltage drop is enabled.
+        Adjusts the event 'pre_value' for VoltageSetpointPu if voltage drop is enabled.
         Parameters
         ----------
         event_params : dict
             Dictionary containing event parameters.
         """
-        if event_params["connect_to"] != "AVRSetpointPu":
+        if event_params["connect_to"] != "VoltageSetpointPu":
             return
         for i, generator in enumerate(self.get_producer().generators):
             if generator.use_voltage_droop:
@@ -680,7 +680,7 @@ class DynawoCurves(ProducerCurves):
                     -gen.terminals[0].q0 * setpoint_factor
                     for gen in self.get_producer().generators
                 ]
-            elif "AVRSetpointPu" == connect_event_to:
+            elif "VoltageSetpointPu" == connect_event_to:
                 pre_value = [gen.terminals[0].u0 for gen in self.get_producer().generators]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")

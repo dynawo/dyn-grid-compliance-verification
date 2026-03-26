@@ -109,7 +109,7 @@ models, ``WPP_xWPRefPu`` in the case of IEC models, etc. Therefore the tool has 
 maintain an internal "master dictionary" that maps these different names to a common
 name, thanks to which the parameters can be identified and be read or written by the
 tool. For instance, in the example given all these names map to a common name
-``AVRSetpointPu``.
+``VoltageSetpointPu``.
 
 This is internal and the user does not need to be concerned with this translation, but
 it means that **in order to support a new Dynawo model (or an updated one), this
@@ -456,7 +456,7 @@ are correct.
             StepUp_Xfmr_XFMR_Tap =
             Synch_Gen_GEN_RotorSpeedPu =
             Synch_Gen_GEN_InternalAngle =
-            Synch_Gen_GEN_AVRSetpointPu =
+            Synch_Gen_GEN_VoltageSetpointPu =
             Synch_Gen_GEN_MagnitudeControlledByAVRP =
             Synch_Gen_GEN_NetworkFrequencyPu =
             # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled

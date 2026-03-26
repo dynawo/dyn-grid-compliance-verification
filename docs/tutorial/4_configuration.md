@@ -650,7 +650,7 @@ Running the above example with the **console_log_level = DEBUG** parameter:
 2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmin
 2025-01-21 12:03:50,934 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=0.95*Udim
 2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
+2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='VoltageSetpointPu'
 2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
 2025-01-21 12:03:50,935 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
 2025-01-21 12:03:50,936 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=0.1
@@ -661,7 +661,7 @@ Running the above example with the **console_log_level = DEBUG** parameter:
 2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_Q=Qmax
 2025-01-21 12:03:59,238 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       pdr_U=1.05*Udim
 2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 | Event definition:
-2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='AVRSetpointPu'
+2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       connect_event_to='VoltageSetpointPu'
 2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       sim_t_event_start=30.0
 2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       fault_duration_HTB2=0.0
 2025-01-21 12:03:59,239 |            DyCoV.ProducerCurves |      DEBUG |                 curves.py:   84 |       setpoint_step_value=-0.1

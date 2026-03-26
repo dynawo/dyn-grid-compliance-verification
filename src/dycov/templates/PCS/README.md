@@ -44,7 +44,7 @@ and the configuration of the new benchmarks in their corresponding sections.
     pdr_Q = 0
     pdr_U = Udim
     # Event definition
-    connection_event = AVRSetpointPu
+    connection_event = VoltageSetpointPu
     time_event = 20
     value0_event = U0
     height_event = 0.02*Udim

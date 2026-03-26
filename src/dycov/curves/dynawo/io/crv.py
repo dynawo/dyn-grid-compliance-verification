@@ -304,7 +304,7 @@ def _is_composed_setpoint(
     """
     control_variable = ""
     if control_mode == "USetpoint":
-        control_variable = "AVRSetpointPu"
+        control_variable = "VoltageSetpointPu"
     elif control_mode == "QSetpoint":
         control_variable = "ReactivePowerSetpointPu"
     else:
@@ -358,7 +358,7 @@ def _add_generators_curves(
                 # the U and Q curves are needed to be able to perform the calculation
                 # in the tool.
                 if variable == "MagnitudeControlledByAVRPu":
-                    # Handle specific case for combined AVR variables
+                    # Handle specific case for combined Plant-level voltage regulation variables
                     for sub_variable in [
                         "MagnitudeControlledByAVRUPu",
                         "MagnitudeControlledByAVRQPu",
