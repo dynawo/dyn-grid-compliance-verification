@@ -277,7 +277,7 @@ def draw_reference_curve(
         return
     if curve_name not in reference_curves:
         return
-    if "AVRSetpointPu" in curve_name:
+    if "VoltageSetpointPu" in curve_name:
         return
 
     renderer.add_curve(

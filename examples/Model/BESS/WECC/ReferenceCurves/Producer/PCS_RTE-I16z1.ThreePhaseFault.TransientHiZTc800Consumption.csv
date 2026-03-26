@@ -1,4 +1,4 @@
-time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;StepUp_Xfmr_XFMR_Tap;Bess_GEN_ActivePowerSetpointPu;Bess_GEN_ReactivePowerSetpointPu;Bess_GEN_AVRSetpointPu
+time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;StepUp_Xfmr_XFMR_Tap;Bess_GEN_ActivePowerSetpointPu;Bess_GEN_ReactivePowerSetpointPu;Bess_GEN_VoltageSetpointPu
 0.000000000;1.044e+00;-6.667e-01;-9.146e-09;-6.383e-01;2.233e-09;1.044e+00;-4.000e-01;-5.926e-09;1.000e+01;-6.666e-01;9.960e-03;9.960e-03
 29.999994000;1.044e+00;-6.667e-01;-4.073e-09;-6.383e-01;3.084e-07;1.044e+00;-4.000e-01;7.435e-09;1.000e+01;-6.666e-01;9.960e-03;9.960e-03
 29.999994000;3.712e-01;1.329e-01;-1.041e+00;3.580e-01;-2.803e+00;3.712e-01;7.973e-02;-6.244e-01;1.000e+01;-6.666e-01;9.960e-03;9.960e-03
