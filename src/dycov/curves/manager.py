@@ -108,7 +108,8 @@ class CurvesManager:
             self._working_dir / self._producer_name / self._pcs_name / bm_name / oc_name
         )
 
-        reference_event_start_time = None
+        self._simulated_event_start_time = None
+        self._reference_event_start_time = None
         if self.__has_reference_curves():
             (
                 reference_event_start_time,
@@ -121,7 +122,7 @@ class CurvesManager:
                 oc_name,
                 self.__get_reference_curves_path(),
             )
-
+            self._reference_event_start_time = reference_event_start_time
         (
             jobs_output_dir,
             event_params,
@@ -133,8 +134,9 @@ class CurvesManager:
             self._pcs_name,
             bm_name,
             oc_name,
-            reference_event_start_time,
+            self._reference_event_start_time,
         )
+        self._simulated_event_start_time = event_params["start_time"]
 
         self.__copy_curves_to_before_filters()
 
@@ -370,6 +372,13 @@ class CurvesManager:
         # low-pass filter has already been applied (therefore, no aliasing is produced).
         calculated_curves, reference_curves = sigpro.resample_to_common_tgrid(
             calculated_curves, reference_curves
+        )
+
+        # Apply alignment of event times
+        calculated_curves = sigpro.apply_time_shift(
+            calculated_curves,
+            t_event_curves=self._simulated_event_start_time,
+            t_event_reference=self._reference_event_start_time,
         )
 
         # In the second resampling the curves are trimmed to ensure that both sets start and end
