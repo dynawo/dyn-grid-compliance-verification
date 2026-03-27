@@ -88,7 +88,13 @@ $existingDistros = & wsl --list --quiet 2>&1
 $existingDistros = $existingDistros | ForEach-Object { "$_".Trim("`0").Trim() } | Where-Object { $_ -ne "" }
 
 if ($existingDistros -contains $DistroName) {
-    Write-Host "`nWARNING: A WSL distribution named '$DistroName' already exists." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "WARNING: A WSL distribution named '$DistroName' already exists." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Reinstalling will permanently delete the existing distribution," -ForegroundColor Yellow
+    Write-Host "  including any files stored inside it." -ForegroundColor Yellow
+    Write-Host "  Files on your Windows drives (C:\, D:\, etc.) are NOT affected." -ForegroundColor Yellow
+    Write-Host ""
     $response = Read-Host "Do you want to remove it and reinstall? [y/N]"
     if ($response -notmatch '^[yY]') {
         Exit-WithPause "Installation cancelled by user." 0
