@@ -185,6 +185,22 @@ The DyCoV application is now ready to use.
 
 ## Windows installation
 
+### Updating to a new version (WSL)
+
+Each new release of Dycov is a complete, standalone distribution. Updating replaces the existing installation entirely.
+
+> [!WARNING]
+> The update process permanently deletes the existing `DycovApp` distribution, **including any files stored inside it**.
+> However, files on your Windows drives (`C:\`, `D:\`, etc.) are not affected.
+
+**Before updating**, if you have files inside the distribution that you want to keep, move them to a Windows drive. From inside the Dycov session:
+
+```bash
+mv ~/my_results /mnt/c/Users/MyUser/Documents/
+```
+
+**To update**, simply run `import_wsl.bat` again with the new release files. The installer will detect the existing distribution and ask for confirmation before replacing it.
+
 ### Installation
 
 > [!NOTE]  
