@@ -121,7 +121,17 @@ if ($LASTEXITCODE -ne 0) {
 Write-Info "Distribution imported successfully."
 
 ###############################################################################
-# Step 4 — Create desktop shortcut
+# Step 4 — Copy launcher script to permanent location
+###############################################################################
+
+Write-Step "Copying launcher to installation directory..."
+
+$RunScriptInstalled = Join-Path $InstallRoot $RunScript
+Copy-Item $RunScriptPath $RunScriptInstalled -Force
+Write-Info "Launcher copied to: $RunScriptInstalled"
+
+###############################################################################
+# Step 5 — Create desktop shortcut
 ###############################################################################
 
 Write-Step "Creating shortcuts..."
@@ -134,7 +144,7 @@ if ($PwshCmd) {
     $PwshExe = (Get-Command powershell).Source
 }
 
-$ShortcutArgs = "-NonInteractive -NoProfile -ExecutionPolicy Bypass -File `"$RunScriptPath`""
+$ShortcutArgs = "-NonInteractive -NoProfile -ExecutionPolicy Bypass -File `"$RunScriptInstalled`""
 
 # Desktop shortcut
 $DesktopPath    = [Environment]::GetFolderPath("Desktop")
@@ -142,7 +152,7 @@ $DesktopLnk     = Join-Path $DesktopPath "$ShortcutName.lnk"
 $DesktopShortcut = $WshShell.CreateShortcut($DesktopLnk)
 $DesktopShortcut.TargetPath       = $PwshExe
 $DesktopShortcut.Arguments        = $ShortcutArgs
-$DesktopShortcut.WorkingDirectory = $ScriptDir
+$DesktopShortcut.WorkingDirectory = $InstallRoot
 $DesktopShortcut.Description      = "Launch the Dycov simulation tool"
 $DesktopShortcut.Save()
 Write-Info "Desktop shortcut created: $DesktopLnk"
@@ -153,7 +163,7 @@ $StartMenuLnk     = Join-Path $StartMenuPath "$ShortcutName.lnk"
 $StartMenuShortcut = $WshShell.CreateShortcut($StartMenuLnk)
 $StartMenuShortcut.TargetPath       = $PwshExe
 $StartMenuShortcut.Arguments        = $ShortcutArgs
-$StartMenuShortcut.WorkingDirectory = $ScriptDir
+$StartMenuShortcut.WorkingDirectory = $InstallRoot
 $StartMenuShortcut.Description      = "Launch the Dycov simulation tool"
 $StartMenuShortcut.Save()
 Write-Info "Start Menu shortcut created: $StartMenuLnk"
@@ -170,6 +180,8 @@ Write-Host ""
 Write-Host "  To launch Dycov:" -ForegroundColor Cyan
 Write-Host "    - Double-click the '$ShortcutName' shortcut on your Desktop" -ForegroundColor Cyan
 Write-Host "    - Or find it in the Start Menu" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  You can now delete the downloaded installation files." -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to close..." -ForegroundColor Yellow
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
