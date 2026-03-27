@@ -24,7 +24,4 @@ BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
 StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_XFMR_Tap
 Wind_Turbine_GEN_MagnitudeControlledByAVRPu = Wind_Turbine_GEN_MagnitudeControlledByAVRPu
 Wind_Turbine_GEN_AVRSetpointPu = Wind_Turbine_GEN_AVRSetpointPu
-Wind_Turbine_GEN_IpInjTerminal = Wind_Turbine_GEN_IpInjTerminal 
-Wind_Turbine_GEN_IqInjTerminal = Wind_Turbine_GEN_IqInjTerminal 
-Wind_Turbine_GEN_UPuInjTerminal = Wind_Turbine_GEN_UPuInjTerminal 
 Wind_Turbine_GEN_NetworkFrequencyPu = Wind_Turbine_GEN_NetworkFrequencyPu

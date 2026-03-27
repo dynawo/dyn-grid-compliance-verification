@@ -22,6 +22,3 @@ BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
 BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
 BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
 NetworkFrequencyPu = NetworkFrequencyPu
-StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_XFMR_Tap
-Bess_GEN_AVRSetpointPu = Bess_GEN_AVRSetpointPu
-Bess_GEN_MagnitudeControlledByAVRPu = Bess_GEN_MagnitudeControlledByAVRPu

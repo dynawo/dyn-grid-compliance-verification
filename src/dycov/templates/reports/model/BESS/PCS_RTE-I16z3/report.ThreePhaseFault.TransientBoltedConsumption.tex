@@ -1,3 +1,5 @@
+    {{ waterMarkText }}
+
     \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
     \renewcommand{\OCname}{TransientBoltedConsumption}
 
@@ -69,7 +71,7 @@
         All BESS units are plotted on the same graph.
         \item The BESS's main transformer tap ratio, if it is a transformer with an
         automatic tap changer.
-        \item The active and reactive currents in low voltage at the injector terminal. All BESS
+        \item The active and reactive currents at the injector's low voltage terminal. All BESS
         units are plotted on the same graph.
         \item Low voltage at the injector terminal.
     \end{itemize}
@@ -181,6 +183,8 @@
     \end{center}
 
     \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
 
     \noindent Compliance thresholds on the curves:
     \begin{center}

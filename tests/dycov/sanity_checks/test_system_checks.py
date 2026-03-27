@@ -19,5 +19,5 @@ from dycov.sanity_checks import system_checks
 def test_launchers():
     with pytest.raises(OSError) as pytest_wrapped_e:
         system_checks.check_launchers("dynawo.sh")
-    assert pytest_wrapped_e.type == OSError
+    assert pytest_wrapped_e.type is OSError
     assert "Dynawo not found." in pytest_wrapped_e.value.args[0]

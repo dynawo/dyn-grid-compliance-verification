@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from dycov.model.parameters import Gen_params
+from dycov.model.parameters import GenParams
 
 
 def _load_dictionary(filename: str, variables: configparser.ConfigParser):
@@ -103,13 +103,13 @@ class Translator:
     _control_modes: configparser.ConfigParser
     _family_level_map: dict
 
-    def get_generator_family_level(self, generator: Gen_params) -> str:
+    def get_generator_family_level(self, generator: GenParams) -> str:
         """
         Determines the family of a generator based on its library.
 
         Parameters
         ----------
-        generator: Gen_params
+        generator: GenParams
             Generator parameters, including its library (lib).
 
         Returns
@@ -124,14 +124,14 @@ class Translator:
         return ""  # Return empty if family is not found
 
     def _get_control_modes_by_generator(
-        self, generator: Gen_params, generator_control_mode: str, zone: int
+        self, generator: GenParams, generator_control_mode: str, zone: int
     ) -> list[str]:
         """
         Retrieves a list of valid control modes for a given generator and control mode name.
 
         Parameters
         ----------
-        generator: Gen_params
+        generator: GenParams
             The generator parameters.
         generator_control_mode: str
             The name of the generator's control mode (e.g., "VoltageControl").
@@ -147,10 +147,9 @@ class Translator:
         family = self.get_generator_family_level(generator)
         option = f"{generator_control_mode}_{family}_Zone{zone}"
         control_modes = self._control_modes.get("ControlModes", option, fallback="")
-        if control_modes:
-            return control_modes.split(",")
-        else:
+        if not control_modes:
             return []
+        return control_modes.split(",")
 
     def _get_control_mode_parameters(self, control_mode: str) -> dict[str, str]:
         """
@@ -196,7 +195,6 @@ class Translator:
         """
         sign = 1
         translated_name = None
-        # Check each configuration parser for the variable
         if self._bus.has_option(lib, name):
             translated_name = self._bus.get(lib, name)
         elif self._synchronous_machine.has_option(lib, name):
@@ -214,7 +212,6 @@ class Translator:
         elif self._control_modes.has_option(lib, name):
             translated_name = self._control_modes.get(lib, name)
 
-        # Check for negative sign prefix
         if translated_name and translated_name.startswith("-"):
             sign = -1
             translated_name = translated_name[1:]
@@ -246,8 +243,6 @@ class Translator:
         if not suffix:
             return None
 
-        # The configuration files store variables for the PAR file; in the case of curves,
-        # the ID of the element must be concatenated with the variable using the character '_'.
         return equipment_id + "_" + suffix
 
     def get_bus_models(self) -> list[str]:
@@ -356,7 +351,7 @@ class Translator:
 
     def is_valid_control_mode(
         self,
-        generator: Gen_params,
+        generator: GenParams,
         generator_control_mode: str,
         control_mode_parameters: dict,
         zone: int,
@@ -365,7 +360,7 @@ class Translator:
 
         Parameters
         ----------
-        generator: Gen_params
+        generator: GenParams
             The generator parameters.
         generator_control_mode: str
             The name of the generator's control mode to validate.
@@ -396,13 +391,13 @@ class Translator:
         return False, ""
 
     def is_reactive_control_mode(
-        self, generator: Gen_params, control_mode_name: str, zone: int
+        self, generator: GenParams, control_mode_name: str, zone: int
     ) -> bool:
         """Check if the control mode is a reactive control mode.
 
         Parameters
         ----------
-        generator: Gen_params
+        generator: GenParams
             Generator parameters
         control_mode_name: str
             Control mode name
@@ -472,5 +467,4 @@ def _get_instance() -> Translator:
     )
 
 
-# Global instance of the Translator, loaded once when the module is imported
 dynawo_translator = _get_instance()

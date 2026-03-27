@@ -12,7 +12,7 @@ import pytest
 
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.table import TableFile
-from dycov.model.parameters import Gen_init
+from dycov.model.parameters import GenInit
 
 
 class DummyProducer:
@@ -66,7 +66,7 @@ def working_dir(tmp_path):
 
 @pytest.fixture
 def rte_gen():
-    return Gen_init(id="G1", P0=0.1, Q0=0.2, U0=1.05, UPhase0=0.0)
+    return GenInit(id="G1", p0=0.1, q0=0.2, u0=1.05, u_phase0=0.0)
 
 
 @pytest.fixture
@@ -85,8 +85,8 @@ def test_complete_file_replaces_placeholders_successfully(working_dir, rte_gen, 
     output = (working_dir / "TableInfiniteBus.txt").read_text()
     assert "start_event=10.0" in output
     assert "end_event=15.0" in output
-    assert f"bus_u0pu={rte_gen.U0}" in output
-    assert f"bus_upu={rte_gen.U0 + float(event_params_base['step_value'])}" in output
+    assert f"bus_u0pu={rte_gen.u0}" in output
+    assert f"bus_upu={rte_gen.u0 + float(event_params_base['step_value'])}" in output
 
 
 def test_complete_file_sets_bus_upu_for_avr_setpoint(working_dir, rte_gen, event_params_base):
@@ -95,7 +95,7 @@ def test_complete_file_sets_bus_upu_for_avr_setpoint(working_dir, rte_gen, event
     table = TableFile(DummyProducerCurves(), "BM", "OC")
     table.complete_file(working_dir, rte_gen, params)
     output = (working_dir / "TableInfiniteBus.txt").read_text()
-    expected_value = rte_gen.U0 + float(params["step_value"])
+    expected_value = rte_gen.u0 + float(params["step_value"])
     assert f"bus_upu={expected_value}" in output
 
 

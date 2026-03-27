@@ -9,7 +9,7 @@
 #
 import pytest
 
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Terminal, Xfmr_params
+from dycov.model.parameters import GenParams, LineParams, LoadParams, Terminal, XfmrParams
 from dycov.sanity_checks import topology_checks
 
 
@@ -19,44 +19,44 @@ from dycov.sanity_checks import topology_checks
 def make_generator(gen_type="S"):
     if gen_type == "S":
         return [
-            Gen_params(
+            GenParams(
                 id="Synch_Gen",
                 lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a",
-                terminals=(Terminal(connectedEquipment=""),),
-                SNom=90,
-                IMax=100.0,
+                terminals=(Terminal(connected_equipment=""),),
+                s_nom=90,
+                i_max=100.0,
                 par_id="",
-                P=0.1,
-                Q=0.05,
-                VoltageDroop=None,
-                UseVoltageDroop=False,
+                p=0.1,
+                q=0.05,
+                voltage_droop=None,
+                use_voltage_droop=False,
             )
         ]
     elif gen_type == "M":
         return [
-            Gen_params(
+            GenParams(
                 id="Wind_Turbine1",
                 lib="WTG4AWeccCurrentSource1",
-                terminals=(Terminal(connectedEquipment=""),),
-                SNom=90,
-                IMax=100.0,
+                terminals=(Terminal(connected_equipment=""),),
+                s_nom=90,
+                i_max=100.0,
                 par_id="",
-                P=0.1,
-                Q=0.05,
-                VoltageDroop=None,
-                UseVoltageDroop=False,
+                p=0.1,
+                q=0.05,
+                voltage_droop=None,
+                use_voltage_droop=False,
             ),
-            Gen_params(
+            GenParams(
                 id="Wind_Turbine2",
                 lib="WTG4AWeccCurrentSource1",
-                terminals=(Terminal(connectedEquipment=""),),
-                SNom=90,
-                IMax=120.0,
+                terminals=(Terminal(connected_equipment=""),),
+                s_nom=90,
+                i_max=120.0,
                 par_id="",
-                P=0.12,
-                Q=0.025,
-                VoltageDroop=None,
-                UseVoltageDroop=False,
+                p=0.12,
+                q=0.025,
+                voltage_droop=None,
+                use_voltage_droop=False,
             ),
         ]
 
@@ -64,103 +64,103 @@ def make_generator(gen_type="S"):
 def make_transformers(topology="S"):
     if topology == "S":
         return [
-            Xfmr_params(
+            XfmrParams(
                 id="StepUp_Xfmr",
                 lib=None,
-                R=0.0003,
-                X=0.0268,
-                B=0.0,
-                G=0.0,
-                rTfo=0.9574,
-                alphaTfo=0.0,
+                r=0.0003,
+                x=0.0268,
+                b=0.0,
+                g=0.0,
+                r_tfo=0.9574,
+                alpha_tfo=0.0,
                 par_id="",
-                terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
+                terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
             )
         ]
     elif topology == "M":
         return [
-            Xfmr_params(
+            XfmrParams(
                 id="StepUp_Xfmr1",
                 lib=None,
-                R=0.0003,
-                X=0.0268,
-                B=0.0,
-                G=0.0,
-                rTfo=0.9574,
-                alphaTfo=0.0,
+                r=0.0003,
+                x=0.0268,
+                b=0.0,
+                g=0.0,
+                r_tfo=0.9574,
+                alpha_tfo=0.0,
                 par_id="",
-                terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
+                terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
             ),
-            Xfmr_params(
+            XfmrParams(
                 id="StepUp_Xfmr2",
                 lib=None,
-                R=0.0003,
-                X=0.0268,
-                B=0.0,
-                G=0.0,
-                rTfo=0.9574,
-                alphaTfo=0.0,
+                r=0.0003,
+                x=0.0268,
+                b=0.0,
+                g=0.0,
+                r_tfo=0.9574,
+                alpha_tfo=0.0,
                 par_id="",
-                terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
+                terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
             ),
         ]
 
 
 def make_main_transformer():
-    return Xfmr_params(
+    return XfmrParams(
         id="Main_Xfmr",
         lib=None,
-        R=0.0003,
-        X=0.0268,
-        B=0.0,
-        G=0.0,
-        rTfo=0.9574,
-        alphaTfo=0.0,
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
         par_id="",
-        terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
+        terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
     )
 
 
 def make_auxiliary_load():
-    return Load_params(
+    return LoadParams(
         id="Aux_Load",
         lib=None,
         par_id="",
-        terminals=(Terminal(connectedEquipment=""),),
-        P=0.1,
-        Q=0.05,
-        U=1.0,
-        UPhase=0.0,
-        Alpha=None,
-        Beta=None,
+        terminals=(Terminal(connected_equipment=""),),
+        p=0.1,
+        q=0.05,
+        u=1.0,
+        u_phase=0.0,
+        alpha=None,
+        beta=None,
     )
 
 
 def make_auxiliary_transformer():
-    return Xfmr_params(
+    return XfmrParams(
         id="AuxLoad_Xfmr",
         lib=None,
-        R=0.0003,
-        X=0.0268,
-        B=0.0,
-        G=0.0,
-        rTfo=0.9574,
-        alphaTfo=0.0,
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
         par_id="",
-        terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
+        terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
     )
 
 
 def make_internal_line():
-    return Line_params(
+    return LineParams(
         id="IntNetwork_Line",
         lib=None,
-        R=0.01,
-        X=0.01,
-        B=0.1,
-        G=0.3,
+        r=0.01,
+        x=0.01,
+        b=0.1,
+        g=0.3,
         par_id="",
-        terminals=(Terminal(connectedEquipment=""), Terminal(connectedEquipment="")),
+        terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
     )
 
 

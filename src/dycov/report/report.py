@@ -184,7 +184,8 @@ def _get_reports(
 ) -> list:
     reports = []
     for pcs in sorted_summary:
-        pcs_results = report_results[f"{pcs.producer_name}_{pcs.pcs}"]
+        key = f"{pcs.producer_name}_{pcs.pcs}"
+        pcs_results = report_results[key]
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
         if any(report_name.replace(".tex", "") in report for report in reports):
             continue
@@ -290,13 +291,29 @@ def _pcs_replace(
         oc_report = config.get_value(operating_condition, "report_name")
         if oc_report is not None:
             oc_report_name = f"{producer_name}.{oc_report}"
-            # Process only "Compliant" and "Non-compliant" results;
-            # thus ignoring FAILED simulations:
             if oc_results["summary"].show_report():
                 subreports.append(f"\\input{{{oc_report_name.replace('.tex', '')}}}")
 
-            oc_template = _get_template(working_path, oc_report_name)
             oc_subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
+            if not oc_results["missed_columns"]:
+                oc_subst_dict2 |= {"missedColumns": ""}
+                oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{}"}
+            else:
+                missed_list = "\n".join(
+                    f"    \\item \\textcolor{{red}}{{{col.replace("_", "\_")}}}"
+                    for col in oc_results["missed_columns"]
+                )
+                oc_subst_dict2 |= {
+                    "missedColumns": (
+                        "\\noindent\\textcolor{red}{Missing curves:}\n"
+                        "\\begin{itemize}\n"
+                        f"{missed_list}\n"
+                        "\\end{itemize}\n"
+                    )
+                }
+                oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{INVALID}"}
+
+            oc_template = _get_template(working_path, oc_report_name)
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
 
     subst_dict = subst_dict | {"subReports": subreports}

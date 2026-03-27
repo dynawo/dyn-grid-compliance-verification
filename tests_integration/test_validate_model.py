@@ -20,9 +20,9 @@ def test_model_validation_ppm_dynawo_model(dynawo_latest):
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
-        Compliance.Compliant,  # 7
-        Compliance.NonCompliant,  # 8
-        Compliance.Compliant,  # 9
+        Compliance.NonCompliant,  # 7
+        Compliance.Compliant,  # 8
+        Compliance.NonCompliant,  # 9
         Compliance.InvalidTest,  # 10
         Compliance.NonCompliant,  # 11
         Compliance.NonCompliant,  # 12
@@ -53,11 +53,11 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
-        Compliance.Compliant,  # 6
-        Compliance.Compliant,  # 7
+        Compliance.NonCompliant,  # 6
+        Compliance.NonCompliant,  # 7
         Compliance.WithoutReferenceCurves,  # 8
-        Compliance.Compliant,  # 9
-        Compliance.WithoutReferenceCurves,  # 10
+        Compliance.NonCompliant,  # 9
+        Compliance.InvalidTest,  # 10
         Compliance.NonCompliant,  # 11
         Compliance.NonCompliant,  # 12
         Compliance.NonCompliant,  # 13
@@ -70,5 +70,5 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         Compliance.NonCompliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
-        Compliance.WithoutReferenceCurves,  # 23
+        Compliance.FailedSimulation,  # 23
     ] == compliance
