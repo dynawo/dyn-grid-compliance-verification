@@ -14,11 +14,11 @@ from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Gen_params
+from dycov.model.parameters import GenParams
 
 
 def _connect_generator_by_lib(
-    dyd_root: etree.Element, ns: str, omega_lib, generator: Gen_params, grp: str
+    dyd_root: etree.Element, ns: str, omega_lib, generator: GenParams, grp: str
 ) -> None:
     if omega_lib is None:
         dycov_logging.get_logger("Omega File").debug(
@@ -36,7 +36,7 @@ def _connect_generator_by_lib(
 
 
 def _connect_generator_to_dynmodelomegaref(
-    dyd_root: etree.Element, ns: str, generator: Gen_params, grp: str
+    dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "RotorSpeedPu")
     _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value")
@@ -50,16 +50,14 @@ def _connect_generator_to_dynmodelomegaref(
     _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}")
 
 
-def _connect_generator_to_setpoint(
-    dyd_root: etree.Element, ns: str, generator: Gen_params
-) -> None:
+def _connect_generator_to_setpoint(dyd_root: etree.Element, ns: str, generator: GenParams) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     if variable:
         _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint")
 
 
 def _connect_generator_to_infinitebus(
-    dyd_root: etree.Element, ns: str, generator: Gen_params
+    dyd_root: etree.Element, ns: str, generator: GenParams
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     _connect_generator(

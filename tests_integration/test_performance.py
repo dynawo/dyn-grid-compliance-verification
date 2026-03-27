@@ -26,7 +26,7 @@ def test_perf_sm_dynawo_model(dynawo_latest):
 def test_perf_sm_complete(dynawo_latest):
     compliance = execute_tool(
         PERFORMANCE / "SingleAuxI" / "GeneratorSynchronousFourWindingsTGov1SexsPss2a" / "Dynawo",
-        PERFORMANCE / "ProducerCurves" / "GeneratorSynchronous",
+        PERFORMANCE / "ProducerCurves" / "SM",
         None,
     )
 
@@ -79,7 +79,7 @@ def test_perf_ppm_curves():
 def test_perf_ppm_complete():
     compliance = execute_tool(
         PERFORMANCE / "SingleAux" / "IECB2020" / "Dynawo",
-        PERFORMANCE / "ProducerCurves" / "Wind",
+        PERFORMANCE / "ProducerCurves" / "PPM",
         None,
     )
 

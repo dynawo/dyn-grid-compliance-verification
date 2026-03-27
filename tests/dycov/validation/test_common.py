@@ -224,7 +224,7 @@ def test_maximum_error_position_raises_value_error_on_length_mismatch():
     signal = pd.Series([1, 2, 3])
     reference = pd.Series([1, 2])
     with pytest.raises(ValueError, match="different length"):
-        common.maximum_error_position(time, signal, reference)
+        common.maximum_error_position(time, signal, reference, "")
 
 
 def test_get_reached_time_returns_correct_time_and_value():

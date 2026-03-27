@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator, SimulationResult
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
 from dycov.logging.logging import dycov_logging
@@ -55,7 +55,7 @@ class SolverRetryStrategy:
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None,
-    ) -> SimulationResult:
+    ) -> DynawoResult:
         logger = dycov_logging.get_logger("ProducerCurves")
 
         result = self._attempt(
@@ -115,7 +115,7 @@ class SolverRetryStrategy:
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None,
-    ) -> SimulationResult:
+    ) -> DynawoResult:
         self.settings.attempt_count += 1
         return DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time

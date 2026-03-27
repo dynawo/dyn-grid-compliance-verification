@@ -17,8 +17,6 @@ BusPDR_BUS_ActiveCurrent =
 BusPDR_BUS_ReactiveCurrent =
 BusPDR_BUS_Voltage =
 NetworkFrequencyPu =
-# Replace "[XFMR_ID]" with the transformer id associating to the Wind Turbine or PV Array
-[XFMR_ID]_XFMR_Tap =
 # Replace "[WT_ID]" with the Wind Turbine id or PV Array id
 [WT_ID]_GEN_MagnitudeControlledByAVRPu =
 [WT_ID]_GEN_AVRSetpointPu =

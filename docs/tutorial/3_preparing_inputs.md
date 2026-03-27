@@ -745,7 +745,9 @@ BusPDR_BUS_ActivePower = BusPDR_BUS_ActivePower
 BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
 BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
 BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
-StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_XFMR_Tap
+Wind_Turbine_GEN_IpInjTerminal = Wind_Turbine_GEN_IpInjTerminal 
+Wind_Turbine_GEN_IqInjTerminal = Wind_Turbine_GEN_IqInjTerminal 
+Wind_Turbine_GEN_UPuInjTerminal = Wind_Turbine_GEN_UPuInjTerminal 
 NetworkFrequencyPu = NetworkFrequencyPu
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:

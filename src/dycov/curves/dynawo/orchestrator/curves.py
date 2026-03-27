@@ -28,13 +28,10 @@ from dycov.curves.dynawo.io.jobs import JobsFile
 from dycov.curves.dynawo.io.par import ParFile
 from dycov.curves.dynawo.io.solvers import SolversFile
 from dycov.curves.dynawo.io.table import TableFile
-from dycov.curves.dynawo.runtime.dynawo_simulator import (
-    DynawoSimulator,
-    SimulationResult,
-    VoltDipResult,
-)
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
+from dycov.curves.voltage_dip import VoltDipResult, classify_voltage_dip, measure_voltage_dip
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
@@ -43,13 +40,14 @@ from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging.logging import dycov_logging
 from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import (
-    Disconnection_Model,
-    Gen_params,
-    Load_init,
-    Load_params,
-    Pdr_params,
-    Pimodel_params,
-    Simulation_result,
+    DisconnectionModel,
+    GenParams,
+    LoadInit,
+    LoadParams,
+    PdrParams,
+    PimodelParams,
+    SimulationError,
+    SimulationResult,
 )
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
@@ -69,6 +67,15 @@ SolverParam = namedtuple("SolverParam", "actual default")
 _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
 _CURVES_CSV = "curves/curves.csv"
+
+_ERROR_MAP = {
+    "Fault simulation fails": SimulationError.FAULT_SIMULATION_FAILS,
+    "Fault dip unachievable": SimulationError.FAULT_DIP_UNACHIEVABLE,
+}
+
+
+def _to_simulation_error(message: str) -> SimulationError | None:
+    return _ERROR_MAP.get(message)
 
 
 class DynawoCurves(ProducerCurves):
@@ -186,13 +193,13 @@ class DynawoCurves(ProducerCurves):
         """
         return f"{self._pcs_name}.{bm_name}.{oc_name}:"
 
-    def __log_msg(self, level: str, bm_name: str, oc_name: str, message: str) -> None:
+    def __log_msg(self, level: str, message: str) -> None:
         """
         Centralized logger formatter (keeps one single format place).
         """
         getattr(dycov_logging.get_logger("ProducerCurves"), level)(f"{message}")
 
-    def __debug(self, bm_name: str, oc_name: str, message: str) -> None:
+    def __debug(self, message: str) -> None:
         """
         Logs a debug message with PCS information.
         Parameters
@@ -204,9 +211,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The debug message.
         """
-        self.__log_msg("debug", bm_name, oc_name, message)
+        self.__log_msg("debug", message)
 
-    def __warning(self, bm_name: str, oc_name: str, message: str) -> None:
+    def __warning(self, message: str) -> None:
         """
         Logs a warning message with PCS information.
         Parameters
@@ -218,9 +225,9 @@ class DynawoCurves(ProducerCurves):
         message : str
             The warning message.
         """
-        self.__log_msg("warning", bm_name, oc_name, message)
+        self.__log_msg("warning", message)
 
-    def __error(self, bm_name: str, oc_name: str, message: str) -> None:
+    def __error(self, message: str) -> None:
         """
         Logs an error message with PCS information.
         Parameters
@@ -232,7 +239,7 @@ class DynawoCurves(ProducerCurves):
         message : str
             The error message.
         """
-        self.__log_msg("error", bm_name, oc_name, message)
+        self.__log_msg("error", message)
 
     def __log(self, bm_name: str, oc_name: str, message: str) -> None:
         """
@@ -247,7 +254,7 @@ class DynawoCurves(ProducerCurves):
             The informational message.
         """
         self._logger.info(message)
-        self.__debug(bm_name, oc_name, message)
+        self.__debug(message)
 
     @staticmethod
     def __fault_rpu_from_xpu(xpu: float, r_factor: float) -> float:
@@ -347,12 +354,12 @@ class DynawoCurves(ProducerCurves):
 
         return output_dir, jobs_output_dir
 
-    def _obtain_gen_value(self, gen: Gen_params, value_definition: str) -> float:
+    def _obtain_gen_value(self, gen: GenParams, value_definition: str) -> float:
         """
         Obtains a specific generator value based on the definition.
         Parameters
         ----------
-        gen : Gen_params
+        gen : GenParams
             Generator parameters object.
         value_definition : str
             The type of value to obtain (e.g., "P0", "Q0", "U0").
@@ -362,48 +369,48 @@ class DynawoCurves(ProducerCurves):
             The requested generator value.
         """
         value_map = {
-            "P0": -gen.P0,
-            "Q0": -gen.Q0,
-            "U0": gen.U0,
+            "P0": -gen.p0,
+            "Q0": -gen.q0,
+            "U0": gen.u0,
         }
         return value_map.get(value_definition, 0.0)
 
-    def __adjust_event_value(self, event_params: dict, pdr: Pdr_params) -> None:
+    def __adjust_event_value(self, event_params: dict, pdr: PdrParams) -> None:
         """
         Adjusts the event 'pre_value' for AVRSetpointPu if voltage drop is enabled.
         Parameters
         ----------
         event_params : dict
             Dictionary containing event parameters.
-        pdr : Pdr_params
+        pdr : PdrParams
             PDR parameters.
         """
         if event_params["connect_to"] != "AVRSetpointPu":
             return
         for i, generator in enumerate(self.get_producer().generators):
-            if generator.UseVoltageDroop:
+            if generator.use_voltage_droop:
                 if not generator.PccLocal:
-                    event_params["pre_value"][i] = pdr.U + generator.VoltageDroop * pdr.Q
+                    event_params["pre_value"][i] = pdr.u + generator.voltage_droop * pdr.q
                 else:
                     event_params["pre_value"][i] = (
-                        generator.terminals[0].U0
-                        + generator.VoltageDroop * generator.terminals[0].Q0
+                        generator.terminals[0].u0
+                        + generator.voltage_droop * generator.terminals[0].q0
                     )
 
-    def __get_lines_for_initial_calcs(self, rte_lines: list) -> Pimodel_params:
+    def __get_lines_for_initial_calcs(self, rte_lines: list) -> PimodelParams:
         """
         Calculates equivalent line parameters for initial calculations.
         """
         if not rte_lines:
-            return Pimodel_params(math.inf, 0, 0)  # No lines, infinite admittance
+            return PimodelParams(math.inf, 0, 0)  # No lines, infinite admittance
 
-        Ytr_sum, Ysh1_sum, Ysh2_sum = 0, 0, 0
+        y_tr_sum, y_sh1_sum, y_sh2_sum = 0, 0, 0
         for line in rte_lines:
             pimodel_line = line_pimodel(line)
-            Ytr_sum += pimodel_line.Ytr
-            Ysh1_sum += pimodel_line.Ysh1
-            Ysh2_sum += pimodel_line.Ysh2
-        return Pimodel_params(Ytr_sum, Ysh1_sum, Ysh2_sum)
+            y_tr_sum += pimodel_line.y_tr
+            y_sh1_sum += pimodel_line.y_sh1
+            y_sh2_sum += pimodel_line.y_sh2
+        return PimodelParams(y_tr_sum, y_sh1_sum, y_sh2_sum)
 
     def __calculate_Xv(self, Udip, Zcc, Uinf):
         if Uinf == Udip:
@@ -514,9 +521,9 @@ class DynawoCurves(ProducerCurves):
         # Sort step-up transformers to match generator order if needed
         xfmr_map = {xfmr.id: xfmr for xfmr in self.get_producer().stepup_xfmrs}
         sorted_stepup_xfmrs = [
-            xfmr_map[gen.terminals[0].connectedEquipment]
+            xfmr_map[gen.terminals[0].connected_equipment]
             for gen in self.get_producer().generators
-            if gen.terminals[0].connectedEquipment in xfmr_map
+            if gen.terminals[0].connected_equipment in xfmr_map
         ]
 
         # Perform initial calculations for the system
@@ -548,8 +555,6 @@ class DynawoCurves(ProducerCurves):
             and event_params["start_time"] != reference_event_start_time
         ):
             self.__warning(
-                bm_name,
-                oc_name,
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
                 f"({event_params['start_time']}).",
@@ -575,7 +580,7 @@ class DynawoCurves(ProducerCurves):
             event_params,
             line_xpu,
             line_rpu,
-            rte_gen.U0,
+            rte_gen.u0,
             pcs_name,
             bm_name,
             oc_name,
@@ -659,7 +664,7 @@ class DynawoCurves(ProducerCurves):
         pcs_name: str,
         bm_name: str,
         oc_name: str,
-        pdr: Pdr_params,
+        pdr: PdrParams,
     ) -> dict:
         """
         Retrieves event parameters from the configuration.
@@ -671,7 +676,7 @@ class DynawoCurves(ProducerCurves):
             Benchmark name.
         oc_name : str
             Operating Condition name.
-        pdr : Pdr_params
+        pdr : PdrParams
             PDR parameters.
 
         Returns
@@ -690,24 +695,24 @@ class DynawoCurves(ProducerCurves):
             if "ActivePowerSetpointPu" == connect_event_to:
                 pre_value = [
                     (
-                        -pdr.P * setpoint_factor
-                        if not gen.PccLocal
-                        else -gen.terminals[0].P0 * setpoint_factor
+                        -pdr.p * setpoint_factor
+                        if not gen.pcc_local
+                        else -gen.terminals[0].p0 * setpoint_factor
                     )
                     for gen in self.get_producer().generators
                 ]
             elif "ReactivePowerSetpointPu" == connect_event_to:
                 pre_value = [
                     (
-                        -pdr.Q * setpoint_factor
-                        if not gen.PccLocal
-                        else -gen.terminals[0].Q0 * setpoint_factor
+                        -pdr.q * setpoint_factor
+                        if not gen.pcc_local
+                        else -gen.terminals[0].q0 * setpoint_factor
                     )
                     for gen in self.get_producer().generators
                 ]
             elif "AVRSetpointPu" == connect_event_to:
                 pre_value = [
-                    (pdr.U if not gen.PccLocal else gen.terminals[0].U0)
+                    (pdr.u if not gen.pcc_local else gen.terminals[0].u0)
                     for gen in self.get_producer().generators
                 ]
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
@@ -817,7 +822,7 @@ class DynawoCurves(ProducerCurves):
             line_xpu,
         )
 
-    def __get_pdr(self, pcs_name: str, bm_name: str, oc_name: str, u_dim: float) -> Pdr_params:
+    def __get_pdr(self, pcs_name: str, bm_name: str, oc_name: str, u_dim: float) -> PdrParams:
         """
         Retrieves and calculates PDR (Point of Designate Response) parameters.
         Parameters
@@ -832,7 +837,7 @@ class DynawoCurves(ProducerCurves):
             Dimensionless voltage.
         Returns
         -------
-        Pdr_params
+        PdrParams
             PDR parameters (U, complex power, active power, reactive power).
         """
         config_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Model")
@@ -880,7 +885,7 @@ class DynawoCurves(ProducerCurves):
             model_parameters.extract_defined_value(pdr_u_cfg, "Udim", u_dim)
             / self.get_producer().u_nom
         )
-        return Pdr_params(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
+        return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def __get_grid_load(
         self,
@@ -888,7 +893,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         u_dim: float,
-    ) -> Load_params:
+    ) -> LoadParams:
         """
         Retrieves grid load parameters.
         Parameters
@@ -903,7 +908,7 @@ class DynawoCurves(ProducerCurves):
             Dimensionless voltage.
         Returns
         -------
-        Load_params
+        LoadParams
             Grid load parameters.
         """
         config_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Model")
@@ -928,7 +933,7 @@ class DynawoCurves(ProducerCurves):
         Returns
         -------
         list
-            List of Load_init objects with completed load parameters.
+            List of LoadInit objects with completed load parameters.
         """
 
         def _get_load_value(param_name: str, default_key: str, default_value: float) -> float:
@@ -946,13 +951,13 @@ class DynawoCurves(ProducerCurves):
 
         loads = []
         for load in self._rte_loads:
-            p = _get_load_value(load.P, "pmax", self.get_producer().p_max_pu)
-            q = _get_load_value(load.Q, "pmax", self.get_producer().p_max_pu)
-            u = _get_load_value(load.U, "udim", u_dim) / self.get_producer().u_nom
+            p = _get_load_value(load.p, "pmax", self.get_producer().p_max_pu)
+            q = _get_load_value(load.q, "pmax", self.get_producer().p_max_pu)
+            u = _get_load_value(load.u, "udim", u_dim) / self.get_producer().u_nom
             uphase = _get_load_value(
-                load.UPhase, "NA", 1.0
+                load.u_phase, "NA", 1.0
             )  # 'NA' for no specific default extraction logic
-            loads.append(Load_init(load.id, "", p, q, u, uphase))
+            loads.append(LoadInit(load.id, "", p, q, u, uphase))
         return loads
 
     def __modify_fault(
@@ -1024,9 +1029,9 @@ class DynawoCurves(ProducerCurves):
             oc_name,
         )
         if not result.succeeded:
-            self.__warning(bm_name, oc_name, result.log)
+            self.__warning(result.log)
         else:
-            self.__debug(bm_name, oc_name, "Simulation successful")
+            self.__debug("Simulation successful")
         has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
         return SimulateOutcome(
             succeeded=result.succeeded,
@@ -1064,7 +1069,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
-    ) -> SimulationResult:
+    ) -> DynawoResult:
         """
         Executes Dynawo simulation using a dedicated retry strategy.
         Parameters
@@ -1083,7 +1088,7 @@ class DynawoCurves(ProducerCurves):
             Maximum allowed simulation time, by default None (uses config value).
         Returns
         -------
-        SimulationResult
+        DynawoResult
             Result of the simulation run.
         """
         if max_sim_time is None:
@@ -1150,8 +1155,8 @@ class DynawoCurves(ProducerCurves):
             fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
             with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
                 fault_rpu = self.__fault_rpu_from_xpu(fault_xpu, fault_r_factor)
-                self.__debug(bm_name, oc_name, f"Bisection between {max_val} and {min_val}")
-                self.__debug(bm_name, oc_name, f"Fault XPU in {fault_xpu}")
+                self.__debug(f"Bisection between {max_val} and {min_val}")
+                self.__debug(f"Fault XPU in {fault_xpu}")
                 self.__modify_fault(
                     working_oc_dir_fault,
                     fault_start,
@@ -1166,7 +1171,7 @@ class DynawoCurves(ProducerCurves):
                 if fault_outcome.succeeded:
                     bisection_success = True
                     last_fault_xpu = fault_xpu
-                    voltage_dip_classification = DynawoSimulator.classify_voltage_dip(
+                    voltage_dip_classification = classify_voltage_dip(
                         self._pcs_name,
                         bm_name,
                         oc_name,
@@ -1192,7 +1197,7 @@ class DynawoCurves(ProducerCurves):
                     else:
                         break
                 else:
-                    self.__debug(bm_name, oc_name, "Simulation fails")
+                    self.__debug("Simulation fails")
                     if voltage_dip_classification is not None:
                         if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                             max_val = fault_xpu
@@ -1203,16 +1208,14 @@ class DynawoCurves(ProducerCurves):
                 if self.__is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
                     break  # Exit loop if bisection is complete
         if not bisection_success:
-            self.__error(bm_name, oc_name, "The simulation fails with any value for the fault")
+            self.__error("The simulation fails with any value for the fault")
             raise ValueError("Fault simulation fails")
         # Check if the exact dip was achieved, if not, raise error
         if voltage_dip_classification == VoltDipResult.COLUMN_MISSING:
-            self.__error(
-                bm_name, oc_name, "The expected voltage curve is missing in the simulation output"
-            )
+            self.__error("The expected voltage curve is missing in the simulation output")
             raise ValueError("Voltage curve missing")
         elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
-            self.__error(bm_name, oc_name, "The required dip was not achieved")
+            self.__error("The required dip was not achieved")
             raise ValueError("Fault dip unachievable")
         # Recover the last successful fault values and apply to original working directory
         last_fault_rpu = self.__fault_rpu_from_xpu(last_fault_xpu, fault_r_factor)
@@ -1286,7 +1289,7 @@ class DynawoCurves(ProducerCurves):
         # until an unstable simulation is achieved.
         min_val = fault_duration
         max_val = fault_duration * 2
-        self.__debug(bm_name, oc_name, f"Max time CCT in {max_val}")
+        self.__debug(f"Max time CCT in {max_val}")
         while self.__run_time_cct(
             working_oc_dir_attempt,
             jobs_output_dir,
@@ -1296,7 +1299,7 @@ class DynawoCurves(ProducerCurves):
         ):
             min_val = max_val
             max_val *= 1.5
-            self.__debug(bm_name, oc_name, f"Max time CCT in {max_val}")
+            self.__debug(f"Max time CCT in {max_val}")
         return min_val, max_val
 
     def __run_time_cct(
@@ -1391,8 +1394,6 @@ class DynawoCurves(ProducerCurves):
             True if the bisection method is complete, False otherwise.
         """
         self.__debug(
-            bm_name,
-            oc_name,
             "Bisection method is complete: "
             f"{max_val=}, {min_val=}, {rel_tol=}, "
             f"is complete: {math.isclose(max_val, min_val, rel_tol=rel_tol)}",
@@ -1522,20 +1523,18 @@ class DynawoCurves(ProducerCurves):
             oc_name,
         )
         manage_files.remove_dir(working_oc_dir_fault_max)  # Clean up temporary dir
-        self.__debug(bm_name, oc_name, "Upper time to find clear time: " + str(max_val))
-        self.__debug(bm_name, oc_name, "Lower time to find clear time: " + str(min_val))
+        self.__debug("Upper time to find clear time: " + str(max_val))
+        self.__debug("Lower time to find clear time: " + str(min_val))
         # Perform bisection to find the maximum duration the fault admits without losing stability
         time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
         cct_rel_tol = CCT_REL_TOL
         while True:
             self.__debug(
-                bm_name,
-                oc_name,
                 f"Attempt {counter} to find clear time. Used fault time: {time}",
             )
             with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
-                self.__debug(bm_name, oc_name, f"Run time CCT in {time}")
+                self.__debug(f"Run time CCT in {time}")
                 steady_state = self.__run_time_cct(
                     working_oc_dir_fault,
                     jobs_output_dir,
@@ -1568,7 +1567,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
         """
         Runs Dynawo to get the simulated curves for a given operating condition.
         Parameters
@@ -1587,11 +1586,11 @@ class DynawoCurves(ProducerCurves):
             Instant of time when the event is triggered in reference curves.
         Returns
         -------
-        tuple[str, dict, Simulation_result, pd.DataFrame]
+        tuple[str, dict, SimulationResult, pd.DataFrame]
             A tuple containing:
             - str: Simulation output directory (jobs_output_dir).
             - dict: Event parameters.
-            - Simulation_result: Information about the simulation result (success, errors).
+            - SimulationResult: Information about the simulation result (success, errors).
             - pd.DataFrame: Simulation calculated curves.
         """
         error_message = None
@@ -1607,6 +1606,7 @@ class DynawoCurves(ProducerCurves):
         outcome = SimulateOutcome(
             succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
         )
+        error_message = None
         try:
             event_params = self.__complete_model(
                 working_oc_dir,
@@ -1640,7 +1640,7 @@ class DynawoCurves(ProducerCurves):
                 bm_name,
                 oc_name,
             )
-            self._voltage_dip = DynawoSimulator.measure_voltage_dip(
+            self._voltage_dip = measure_voltage_dip(
                 self._pcs_name,
                 bm_name,
                 oc_name,
@@ -1650,15 +1650,13 @@ class DynawoCurves(ProducerCurves):
             )
 
             self.__debug(
-                bm_name,
-                oc_name,
                 f"Simulation finished in {self._sim_time}s: "
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",
             )
         except ValueError as e:
-            error_message = str(e)
-        simulation_result = Simulation_result(
+            error_message = _to_simulation_error(str(e))
+        simulation_result = SimulationResult(
             outcome.succeeded, outcome.time_exceeds, outcome.has_curves, error_message
         )
         return (
@@ -1668,16 +1666,16 @@ class DynawoCurves(ProducerCurves):
             outcome.curves,
         )
 
-    def get_disconnection_model(self) -> Disconnection_Model:
+    def get_disconnection_model(self) -> DisconnectionModel:
         """
         Get all equipment in the model that can be disconnected in the simulation.
         Returns
         -------
-        Disconnection_Model
+        DisconnectionModel
             Equipment that can be disconnected, including auxiliary load,
             auxiliary load transformer, step-up transformers, and internal line.
         """
-        return Disconnection_Model(
+        return DisconnectionModel(
             self.get_producer().aux_load,
             self.get_producer().auxload_xfmr,
             [stepup_xfmr.id for stepup_xfmr in self.get_producer().stepup_xfmrs],
@@ -1694,7 +1692,7 @@ class DynawoCurves(ProducerCurves):
         """
         generators_imax = {}
         for generator in self.get_producer().generators:
-            generators_imax[generator.id] = generator.IMax
+            generators_imax[generator.id] = generator.i_max
         return generators_imax
 
     def get_voltage_dip(self) -> float | None:

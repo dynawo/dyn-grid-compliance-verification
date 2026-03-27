@@ -17,13 +17,12 @@ BusPDR_BUS_ActiveCurrent =
 BusPDR_BUS_ReactiveCurrent =
 BusPDR_BUS_Voltage =
 NetworkFrequencyPu =
-# Replace "[XFMR_ID]" with the transformer id associating to the Wind Turbine or PV Array
-[XFMR_ID]_XFMR_Tap =
-# Replace "[WT_ID]" with the Wind Turbine id or PV Array id
-[WT_ID]_GEN_AVRSetpointPu =
-[WT_ID]_GEN_MagnitudeControlledByAVRPu =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:
 #    BusPDR_BUS_Voltage_a =
 #    BusPDR_BUS_Voltage_b =
 #    BusPDR_BUS_Voltage_c =
+# Replace "[WT_ID]" with the Wind Turbine id or PV Array id
+[WT_ID]_GEN_IpInjTerminal =
+[WT_ID]_GEN_IqInjTerminal =
+[WT_ID]_GEN_UPuInjTerminal =
