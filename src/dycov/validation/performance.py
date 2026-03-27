@@ -733,7 +733,8 @@ class PerformanceValidator(Validator):
                 'stabilized': bool,  # Stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
                 'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
-                'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status (if applicable)
+                'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
+                    (if applicable)
                 'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
                 'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
