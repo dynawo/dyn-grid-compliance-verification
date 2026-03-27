@@ -41,8 +41,6 @@
         \item Reactive power supplied at the connection point.
         \item Active current supplied at the connection point.
         \item Reactive current supplied at the connection point.
-        \item Magnitude controlled by voltage control: modulus of the voltage at the REPC.
-        All PPM units are plotted on the same graph.
     \end{itemize}
 
     \subsubsection{Simulation results}
@@ -61,21 +59,13 @@
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ustator_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Magnitude controlled by voltage control.
-        \end{minipage}
-    \end{minipage}
-%
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
         \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus.
         \end{minipage}
     \end{minipage}
-    \hfill
+%
+    \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I16z1.\DTRPcs.\OCname}
@@ -83,8 +73,7 @@
             \small Reactive power output Q, measured at the PDR bus.
         \end{minipage}
     \end{minipage}
-%
-    \vspace{0.5cm}
+    \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z1.\DTRPcs.\OCname}
@@ -92,12 +81,96 @@
             \small Active current output Ip, measured at the PDR bus.
         \end{minipage}
     \end{minipage}
-    \hfill
+%
+    \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
             \small Reactive current output Iq, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+}
+
+\newcommand{\GridCurvesZoneIt}{
+
+    \subsubsection{Simulation}
+    As required by the DTR PCS \DTRPcs, the figures below show the
+    following magnitudes:
+    \begin{itemize}
+        \item Voltage at connection point.
+        \item Active power supplied at the connection point.
+        \item Reactive power supplied at the connection point.
+        \item Active current supplied at the connection point.
+        \item Reactive current supplied at the connection point.
+        \item Active, reactive, and magnitude currents at the injector's low voltage terminal, 
+        with all BESS units displayed on a single plot.
+        \item Low voltage at the injector terminal.
+    \end{itemize}
+
+    \subsubsection{Simulation results}
+    The blue line shows the calculated curve and the orange line shows the reference curve.
+
+% For now we won't use floats for figures, to get more precise placement
+    \noindent
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_V_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude measured at the PDR bus.
+%     The vertical dashed line marks the rise time $T_{85U}$.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Real power output P, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+%
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power output Q, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active current output Ip, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+%
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive current output Iq, measured at the PDR bus.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small active (light blue), reactive (violet), and magnitude (yellow) currents at 
+            the injector's low voltage terminal. All PPM units shown on one plot.
+        \end{minipage}
+    \end{minipage}
+
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Low voltage at the injector terminal.
         \end{minipage}
     \end{minipage}
 }

@@ -16,16 +16,16 @@ from dycov.model import parameters as mp
 
 
 def init_calcs(
-    gens: tuple[mp.Gen_params, ...],
-    gen_xfmrs: tuple[mp.Xfmr_params, ...],
-    aux_load: mp.Load_params,
-    auxload_xfmr: mp.Xfmr_params,
-    ppm_xfmr: mp.Xfmr_params,
-    int_line: mp.Line_params,
-    pdr: mp.Pdr_params,
-    grid_line: mp.Pimodel_params,
-    grid_load: mp.Load_params,
-) -> mp.Gen_init:
+    gens: tuple[mp.GenParams, ...],
+    gen_xfmrs: tuple[mp.XfmrParams, ...],
+    aux_load: mp.LoadParams,
+    auxload_xfmr: mp.XfmrParams,
+    ppm_xfmr: mp.XfmrParams,
+    int_line: mp.LineParams,
+    pdr: mp.PdrParams,
+    grid_line: mp.PimodelParams,
+    grid_load: mp.LoadParams,
+) -> mp.GenInit:
     """Calculates initialization parameters for generators.
 
     Calculates initialization parameters for the producer's
@@ -40,24 +40,24 @@ def init_calcs(
         Params of the producer's generating units
     gen_xfmrs: tuple
         Params of their step-up transformers (a tuple)
-    aux_load: Load_params
+    aux_load: LoadParams
         Params of the auxiliary load (if present)
-    auxload_xfmr: Xfmr_params
+    auxload_xfmr: XfmrParams
         Params of the auxiliary load transformer (if present)
-    ppm_xfmr: Xfmr_params
+    ppm_xfmr: XfmrParams
         Params of the plant transformer (if present)
-    int_line: Line_params
+    int_line: LineParams
         Params of the "internal network" line (if present)
-    pdr: Pdr_params
+    pdr: PdrParams
         Params at the PDR bus (U, S)
-    grid_line: Pimodel_params
+    grid_line: PimodelParams
         Params of the equiv line on the grid side (zero-impedance if not used)
-    grid_load: Load_params
+    grid_load: LoadParams
         Params of the equiv load on the grid side (if not Inf Bus, as in Pcs I8)
 
     Returns
     -------
-    Gen_init
+    GenInit
         Params for the initialization of TSO's bus side (P, Q, U, angle)
     """
 
@@ -65,26 +65,26 @@ def init_calcs(
     # First loadflow: calculate voltage and current at the grid bus
     # [THIS STEP IS COMMON TO ALL TOPOLOGIES]
     #####################################################################
-    v_pdr = cmath.rect(abs(pdr.U), 0)
+    v_pdr = cmath.rect(abs(pdr.u), 0)
     # Sign convention: we expect Pdr to be negative; therefore we need
     # to flip its sign here in this call. All other loadflows below do
     # not need this, as they are looking in the opposite direction.
     if _zero_imp_line(grid_line):
         v_grid = v_pdr
-        s_grid = -pdr.S
+        s_grid = -pdr.s
     else:
         v_grid, _, s_grid = _calc_pimodel(
-            grid_line.Ytr, grid_line.Ysh1, grid_line.Ysh2, v_pdr, None, -pdr.S
+            grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, -pdr.s
         )
         # Re-set phase angle globally. The grid sets the reference now:
-        pdr.UPhase = -cmath.phase(v_grid)
-        v_pdr = cmath.rect(abs(pdr.U), pdr.UPhase)
+        pdr.u_phase = -cmath.phase(v_grid)
+        v_pdr = cmath.rect(abs(pdr.u), pdr.u_phase)
         v_grid = cmath.rect(abs(v_grid), 0)
     # If the grid bus is not Inf (as in Pcs I8), calc also the PQ init params of the equiv gen
     if grid_load is not None:
-        s_grid = s_grid - complex(grid_load.P, grid_load.Q)
+        s_grid = s_grid - complex(grid_load.p, grid_load.q)
     # We return both the grid bus voltage and PQ init params in one single object
-    grid_init = mp.Gen_init(id=None, P0=s_grid.real, Q0=s_grid.imag, U0=abs(v_grid), UPhase0=0)
+    grid_init = mp.GenInit(id=None, p0=s_grid.real, q0=s_grid.imag, u0=abs(v_grid), u_phase0=0)
 
     ##########################################################################
     # Second loadflow: calculate voltage and current at the other side of the
@@ -94,53 +94,53 @@ def init_calcs(
     int_id = ("Measurements", "BusPDR")
     if int_line is None:
         v_int = v_pdr
-        s_int = pdr.S
+        s_int = pdr.s
     else:
         int_id = (int_line.id,)
         line = line_pimodel(int_line)
-        v_int, _, s_int = _calc_pimodel(line.Ytr, line.Ysh1, line.Ysh2, v_pdr, None, pdr.S)
-        if int_line.terminals[0].connectedEquipment in ("Measurements", "BusPDR"):
-            int_line.terminals[0].U0 = abs(v_pdr)
-            int_line.terminals[0].UPhase0 = cmath.phase(v_pdr)
-            int_line.terminals[0].P0 = pdr.S.real
-            int_line.terminals[0].Q0 = pdr.S.imag
-            int_line.terminals[1].U0 = abs(v_int)
-            int_line.terminals[1].UPhase0 = cmath.phase(v_int)
-            int_line.terminals[1].P0 = -s_int.real
-            int_line.terminals[1].Q0 = -s_int.imag
+        v_int, _, s_int = _calc_pimodel(line.y_tr, line.y_sh1, line.y_sh2, v_pdr, None, pdr.s)
+        if int_line.terminals[0].connected_equipment in ("Measurements", "BusPDR"):
+            int_line.terminals[0].u0 = abs(v_pdr)
+            int_line.terminals[0].u_phase0 = cmath.phase(v_pdr)
+            int_line.terminals[0].p0 = pdr.s.real
+            int_line.terminals[0].q0 = pdr.s.imag
+            int_line.terminals[1].u0 = abs(v_int)
+            int_line.terminals[1].u_phase0 = cmath.phase(v_int)
+            int_line.terminals[1].p0 = -s_int.real
+            int_line.terminals[1].q0 = -s_int.imag
         else:
-            int_line.terminals[1].U0 = abs(v_pdr)
-            int_line.terminals[1].UPhase0 = cmath.phase(v_pdr)
-            int_line.terminals[1].P0 = pdr.S.real
-            int_line.terminals[1].Q0 = pdr.S.imag
-            int_line.terminals[0].U0 = abs(v_int)
-            int_line.terminals[0].UPhase0 = cmath.phase(v_int)
-            int_line.terminals[0].P0 = -s_int.real
-            int_line.terminals[0].Q0 = -s_int.imag
+            int_line.terminals[1].u0 = abs(v_pdr)
+            int_line.terminals[1].u_phase0 = cmath.phase(v_pdr)
+            int_line.terminals[1].p0 = pdr.s.real
+            int_line.terminals[1].q0 = pdr.s.imag
+            int_line.terminals[0].u0 = abs(v_int)
+            int_line.terminals[0].u_phase0 = cmath.phase(v_int)
+            int_line.terminals[0].p0 = -s_int.real
+            int_line.terminals[0].q0 = -s_int.imag
     # Next comes the plant-level transformer, if present
     if ppm_xfmr is not None:
         xfmr = line_pimodel(ppm_xfmr)
         v_int_ = v_int
         s_int_ = s_int
-        v_int, _, s_int = _calc_pimodel(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, None, s_int)
-        if ppm_xfmr.terminals[0].connectedEquipment in int_id:
-            ppm_xfmr.terminals[0].U0 = abs(v_int_)
-            ppm_xfmr.terminals[0].UPhase0 = cmath.phase(v_int_)
-            ppm_xfmr.terminals[0].P0 = s_int_.real
-            ppm_xfmr.terminals[0].Q0 = s_int_.imag
-            ppm_xfmr.terminals[1].U0 = abs(v_int)
-            ppm_xfmr.terminals[1].UPhase0 = cmath.phase(v_int)
-            ppm_xfmr.terminals[1].P0 = -s_int.real
-            ppm_xfmr.terminals[1].Q0 = -s_int.imag
+        v_int, _, s_int = _calc_pimodel(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int)
+        if ppm_xfmr.terminals[0].connected_equipment in int_id:
+            ppm_xfmr.terminals[0].u0 = abs(v_int_)
+            ppm_xfmr.terminals[0].u_phase0 = cmath.phase(v_int_)
+            ppm_xfmr.terminals[0].p0 = s_int_.real
+            ppm_xfmr.terminals[0].q0 = s_int_.imag
+            ppm_xfmr.terminals[1].u0 = abs(v_int)
+            ppm_xfmr.terminals[1].u_phase0 = cmath.phase(v_int)
+            ppm_xfmr.terminals[1].p0 = -s_int.real
+            ppm_xfmr.terminals[1].q0 = -s_int.imag
         else:
-            ppm_xfmr.terminals[1].U0 = abs(v_int_)
-            ppm_xfmr.terminals[1].UPhase0 = cmath.phase(v_int_)
-            ppm_xfmr.terminals[1].P0 = s_int_.real
-            ppm_xfmr.terminals[1].Q0 = s_int_.imag
-            ppm_xfmr.terminals[0].U0 = abs(v_int)
-            ppm_xfmr.terminals[0].UPhase0 = cmath.phase(v_int)
-            ppm_xfmr.terminals[0].P0 = -s_int.real
-            ppm_xfmr.terminals[0].Q0 = -s_int.imag
+            ppm_xfmr.terminals[1].u0 = abs(v_int_)
+            ppm_xfmr.terminals[1].u_phase0 = cmath.phase(v_int_)
+            ppm_xfmr.terminals[1].p0 = s_int_.real
+            ppm_xfmr.terminals[1].q0 = s_int_.imag
+            ppm_xfmr.terminals[0].u0 = abs(v_int)
+            ppm_xfmr.terminals[0].u_phase0 = cmath.phase(v_int)
+            ppm_xfmr.terminals[0].p0 = -s_int.real
+            ppm_xfmr.terminals[0].q0 = -s_int.imag
 
     ##########################################################################
     # Now things are different depending on the topology:
@@ -159,12 +159,12 @@ def init_calcs(
     else:
         # solve first the powerflow for the aux load circuit
         xfmr = xfmr_pimodel(auxload_xfmr)
-        pq = complex(aux_load.P, aux_load.Q)
-        i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, pq)
-        aux_load.terminals[0].U0 = abs(v2_aux)
-        aux_load.terminals[0].UPhase0 = cmath.phase(v2_aux)
-        aux_load.terminals[0].P0 = aux_load.P
-        aux_load.terminals[0].Q0 = aux_load.Q
+        pq = complex(aux_load.p, aux_load.q)
+        i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, pq)
+        aux_load.terminals[0].u0 = abs(v2_aux)
+        aux_load.terminals[0].u_phase0 = cmath.phase(v2_aux)
+        aux_load.terminals[0].p0 = aux_load.p
+        aux_load.terminals[0].q0 = aux_load.q
         # Now we can solve the generators' circuits
         i_gens = s_int.conjugate() / v_int.conjugate() - i1_aux
         s_int_gens = v_int * i_gens.conjugate()
@@ -173,55 +173,50 @@ def init_calcs(
     return grid_init
 
 
-# TODO: double-check whether this function is really needed or not
-def _zero_imp_line(conn_line: mp.Pimodel_params) -> bool:
-    if cmath.isinf(conn_line.Ytr) and conn_line.Ysh1 == 0 and conn_line.Ysh2 == 0:
-        return True
-
-    return False
+def _zero_imp_line(conn_line: mp.PimodelParams) -> bool:
+    return cmath.isinf(conn_line.y_tr) and conn_line.y_sh1 == 0 and conn_line.y_sh2 == 0
 
 
-# TODO: Is it necessary to take into account the possibility that the user enters P or Q as zero?
 def _solve_gen_circuits(
-    gens: tuple[mp.Gen_params, ...],
-    gen_xfmrs: tuple[mp.Xfmr_params, ...],
+    gens: tuple[mp.GenParams, ...],
+    gen_xfmrs: tuple[mp.XfmrParams, ...],
     v_int: complex,
     s_int: complex,
 ) -> None:
-    # Calc total P,Q for calculating the sharing factors below, in case there are several units
     tot_P = 0
     tot_Q = 0
     for gen in gens:
-        tot_P += gen.P
-        tot_Q += gen.Q
+        tot_P += gen.p
+        tot_Q += gen.q
 
     for gen, gen_xfmr in zip(gens, gen_xfmrs):
-        # Each gen supplies his own proportional share of the total S injection
-        s_int_share = complex(s_int.real * gen.P / tot_P, s_int.imag * gen.Q / tot_Q)
+        s_int_share = complex(s_int.real * gen.p / tot_P, s_int.imag * gen.q / tot_Q)
         xfmr = xfmr_pimodel(gen_xfmr)
-        v_gen, _, s_gen = _calc_pimodel(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, None, s_int_share)
-        gen.terminals[0].U0 = abs(v_gen)
-        gen.terminals[0].UPhase0 = cmath.phase(v_gen)
-        gen.terminals[0].P0 = s_gen.real
-        gen.terminals[0].Q0 = s_gen.imag
-        if gen_xfmr.terminals[0].connectedEquipment == gen.id:
-            gen_xfmr.terminals[1].U0 = abs(v_int)
-            gen_xfmr.terminals[1].UPhase0 = cmath.phase(v_int)
-            gen_xfmr.terminals[1].P0 = s_int.real
-            gen_xfmr.terminals[1].Q0 = s_int.imag
-            gen_xfmr.terminals[0].U0 = abs(v_gen)
-            gen_xfmr.terminals[0].UPhase0 = cmath.phase(v_gen)
-            gen_xfmr.terminals[0].P0 = -s_gen.real
-            gen_xfmr.terminals[0].Q0 = -s_gen.imag
+        v_gen, _, s_gen = _calc_pimodel(
+            xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int_share
+        )
+        gen.terminals[0].u0 = abs(v_gen)
+        gen.terminals[0].u_phase0 = cmath.phase(v_gen)
+        gen.terminals[0].p0 = s_gen.real
+        gen.terminals[0].q0 = s_gen.imag
+        if gen_xfmr.terminals[0].connected_equipment == gen.id:
+            gen_xfmr.terminals[1].u0 = abs(v_int)
+            gen_xfmr.terminals[1].u_phase0 = cmath.phase(v_int)
+            gen_xfmr.terminals[1].p0 = s_int.real
+            gen_xfmr.terminals[1].q0 = s_int.imag
+            gen_xfmr.terminals[0].u0 = abs(v_gen)
+            gen_xfmr.terminals[0].u_phase0 = cmath.phase(v_gen)
+            gen_xfmr.terminals[0].p0 = -s_gen.real
+            gen_xfmr.terminals[0].q0 = -s_gen.imag
         else:
-            gen_xfmr.terminals[0].U0 = abs(v_int)
-            gen_xfmr.terminals[0].UPhase0 = cmath.phase(v_int)
-            gen_xfmr.terminals[0].P0 = s_int.real
-            gen_xfmr.terminals[0].Q0 = s_int.imag
-            gen_xfmr.terminals[1].U0 = abs(v_gen)
-            gen_xfmr.terminals[1].UPhase0 = cmath.phase(v_gen)
-            gen_xfmr.terminals[1].P0 = -s_gen.real
-            gen_xfmr.terminals[1].Q0 = -s_gen.imag
+            gen_xfmr.terminals[0].u0 = abs(v_int)
+            gen_xfmr.terminals[0].u_phase0 = cmath.phase(v_int)
+            gen_xfmr.terminals[0].p0 = s_int.real
+            gen_xfmr.terminals[0].q0 = s_int.imag
+            gen_xfmr.terminals[1].u0 = abs(v_gen)
+            gen_xfmr.terminals[1].u_phase0 = cmath.phase(v_gen)
+            gen_xfmr.terminals[1].p0 = -s_gen.real
+            gen_xfmr.terminals[1].q0 = -s_gen.imag
 
 
 def _calc_pimodel(

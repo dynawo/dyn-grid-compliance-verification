@@ -16,7 +16,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
-from dycov.model.parameters import Disconnection_Model, Simulation_result
+from dycov.model.parameters import DisconnectionModel, SimulationResult
 from dycov.model.producer import Producer
 
 
@@ -238,7 +238,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
         """Obtain the simulated curves.
 
         Parameters
@@ -262,7 +262,7 @@ class ProducerCurves:
             Simulation output dir
         dict
             Event parameters
-        Simulation_result
+        SimulationResult
             Information about the simulation result.
         DataFrame
            Simulation calculated curves
@@ -312,16 +312,16 @@ class ProducerCurves:
         pass
 
     @abstractmethod
-    def get_disconnection_model(self) -> Disconnection_Model:
+    def get_disconnection_model(self) -> DisconnectionModel:
         """Get all equipment in the model that can be disconnected in the simulation.
 
         This method should be implemented by subclasses to return an instance
-        of the Disconnection_Model class, which contains the equipment that can be
+        of the DisconnectionModel class, which contains the equipment that can be
         disconnected.
 
         Returns
         -------
-        Disconnection_Model
+        DisconnectionModel
             Equipment that can be disconnected.
         """
         pass

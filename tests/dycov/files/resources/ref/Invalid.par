@@ -153,7 +153,7 @@
     <par type="INT" name="pss_transducerOmega_initType" value="1"/>
     <par type="DOUBLE" name="pss_transducerOmega_k" value="1"/>
     <par type="DOUBLE" name="pss_transducerOmega_y_start" value="0"/>
-    <par type="INT" name="pss_transducerPGen_initType" value="1"/>
+    <par type="INT" name="pss_transducerPGenInitType" value="1"/>
     <par type="DOUBLE" name="pss_washoutOmega1_a_1_" value="1"/>
     <par type="DOUBLE" name="pss_washoutOmega1_b_1_" value="0"/>
     <par type="INT" name="pss_washoutOmega1_initType" value="1"/>

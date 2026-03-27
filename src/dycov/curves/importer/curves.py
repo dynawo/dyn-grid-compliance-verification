@@ -14,12 +14,13 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
+from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files
 from dycov.model.parameters import (
-    Disconnection_Model,
-    Gen_init,
-    Gen_params,
-    Simulation_result,
+    DisconnectionModel,
+    GenInit,
+    GenParams,
+    SimulationResult,
     Terminal,
 )
 from dycov.model.producer import Producer
@@ -31,45 +32,28 @@ def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
     Parameters
     ----------
     generators : list
-        List of Gen_params objects representing generators.
+        List of GenParams objects representing generators.
     curves : pd.DataFrame
         DataFrame containing curve data, including AVRSetpointPu for each generator.
 
     Returns
     -------
     list
-        List of Gen_init objects with initialized voltage (U0).
+        List of GenInit objects with initialized voltage (u0).
     """
-    gens = []
-    for generator in generators:
-        # Extract voltage from curves for the specific generator
-        voltage = curves[generator.id + "_AVRSetpointPu"]
-        # Get the initial voltage value
-        U0 = voltage.iloc[0]
-        # Append initialized generator to the list
-        gens.append(Gen_init(generator.id, 0, 0, U0, 0))
-    return gens
+    return [
+        GenInit(
+            id=generator.id,
+            p0=0,
+            q0=0,
+            u0=curves[generator.id + "_AVRSetpointPu"].iloc[0],
+            u_phase0=0,
+        )
+        for generator in generators
+    ]
 
 
 def _get_config_value(config, section, option, default=0.0):
-    """Retrieves a float value from the configuration, with a default fallback.
-
-    Parameters
-    ----------
-    config : configparser.ConfigParser
-        The configuration object.
-    section : str
-        The section in the configuration.
-    option : str
-        The option within the section.
-    default : float, optional
-        The default value to return if the option is not found, by default 0.0.
-
-    Returns
-    -------
-    float
-        The retrieved configuration value or the default value.
-    """
     if config.has_option(section, option):
         return float(config.get(section, option))
     return default
@@ -86,19 +70,12 @@ class ImportedCurves(ProducerCurves):
         self,
         producer: Producer,
     ):
-        """
-        Initializes the ImportedCurves with a producer.
-
-        Parameters
-        ----------
-        producer : Producer
-            The producer associated with these curves.
-        """
         super().__init__(producer)
         self._is_field_measurements = False
         self._generators = []
         self._gens = []
         self._generators_imax = {}
+        self._voltage_dip = None
 
     def _get_common_curve_data(
         self,
@@ -109,78 +86,47 @@ class ImportedCurves(ProducerCurves):
         success: bool,
         is_reference: bool = False,
     ) -> tuple[bool, float, float, pd.DataFrame]:
-        """
-        Retrieves common curve data from the importer.
-
-        Parameters
-        ----------
-        working_oc_dir : Path
-            Temporal working path.
-        pcs_name : str
-            PCS name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        success : bool
-            Indicates if file copying was successful.
-        is_reference : bool, optional
-            True if obtaining reference curves, by default False.
-
-        Returns
-        -------
-        tuple[bool, float, float, pd.DataFrame]
-            A tuple containing:
-            - has_imported_curves (bool): True if curves were successfully imported.
-            - sim_t_event_start (float): Simulation event start time.
-            - fault_duration (float): Duration of the fault.
-            - df_imported_curves (pd.DataFrame): Imported curves data.
-        """
         has_imported_curves = False
         sim_t_event_start = 0.0
         fault_duration = 0.0
         df_imported_curves = pd.DataFrame()
 
-        if success:
-            importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_name, bm_name, oc_name))
-            df_imported_curves = importer.get_curves_dataframe(self._producer.get_zone())
+        if not success:
+            return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
-            if not df_imported_curves.empty:
-                has_imported_curves = True
-                if not is_reference:
-                    # Discover generators from the imported curves and initialize them
-                    self._generators = self.__get_generators(df_imported_curves)
-                    self._gens = _get_generators_ini(self._generators, df_imported_curves)
+        importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_name, bm_name, oc_name))
+        df_imported_curves = importer.get_curves_dataframe(self._producer.get_zone())
 
-                sim_t_event_start = _get_config_value(
-                    importer.config, "Curves-Metadata", "sim_t_event_start"
-                )
-                fault_duration = _get_config_value(
-                    importer.config, "Curves-Metadata", "fault_duration"
-                )
+        if df_imported_curves.empty:
+            return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
-                if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
-                    self._is_field_measurements = (
-                        importer.config.get("Curves-Metadata", "is_field_measurements").lower()
-                        == "true"
-                    )
-                self.get_producer().set_is_field_measurements(self._is_field_measurements)
+        has_imported_curves = True
+        if not is_reference:
+            self._generators = self.__get_generators(df_imported_curves)
+            self._gens = _get_generators_ini(self._generators, df_imported_curves)
 
-                generators_imax = {}
-                # Populate generators_imax from config metadata
-                for key in importer.config["Curves-Metadata"].keys():
-                    if key.endswith("_GEN_MaxCurrentAtConverterPu"):
-                        generator_id = key.replace("_GEN_MaxCurrentAtConverterPu", "")
-                        generators_imax[generator_id] = float(
-                            importer.config.get("Curves-Metadata", key)
-                        )
-                self._generators_imax = generators_imax
+        sim_t_event_start = _get_config_value(
+            importer.config, "Curves-Metadata", "sim_t_event_start"
+        )
+        fault_duration = _get_config_value(importer.config, "Curves-Metadata", "fault_duration")
+
+        if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
+            self._is_field_measurements = (
+                importer.config.get("Curves-Metadata", "is_field_measurements").lower() == "true"
+            )
+        self.get_producer().set_is_field_measurements(self._is_field_measurements)
+
+        generators_imax = {}
+        for key in importer.config["Curves-Metadata"].keys():
+            if key.endswith("_GEN_MaxInjectedCurrentPu"):
+                generator_id = key.replace("_GEN_MaxInjectedCurrentPu", "")
+                generators_imax[generator_id] = float(importer.config.get("Curves-Metadata", key))
+        self._generators_imax = generators_imax
 
         return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
     def __get_generators(self, curves: pd.DataFrame) -> list:
-        """
-        Identifies generators from the curve data based on a naming convention.
+        """Identifies generators from the curve data based on a naming convention.
 
         Parameters
         ----------
@@ -190,24 +136,24 @@ class ImportedCurves(ProducerCurves):
         Returns
         -------
         list
-            A list of Gen_params objects representing the identified generators.
+            A list of GenParams objects representing the identified generators.
         """
         generators = []
         for key in curves.keys():
             if key.endswith("_AVRSetpointPu"):
                 gen_id = key.replace("_AVRSetpointPu", "")
                 generators.append(
-                    Gen_params(
+                    GenParams(
                         id=gen_id,
                         lib="",
-                        terminals=(Terminal(connectedEquipment=""),),
-                        SNom=0.0,
-                        IMax=0.0,
+                        terminals=(Terminal(connected_equipment=""),),
+                        s_nom=0.0,
+                        i_max=0.0,
                         par_id="",
-                        P=0.0,
-                        Q=0.0,
-                        VoltageDroop=0.0,
-                        UseVoltageDroop=False,
+                        p=0.0,
+                        q=0.0,
+                        voltage_droop=0.0,
+                        use_voltage_droop=False,
                     )
                 )
         self.get_producer().set_generators(generators)
@@ -221,29 +167,6 @@ class ImportedCurves(ProducerCurves):
         sim_t_event_start: float,
         fault_duration: float,
     ) -> dict:
-        """
-        Processes and constructs event parameters based on configuration.
-
-        Parameters
-        ----------
-        pcs_name : str
-            PCS name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        sim_t_event_start : float
-            Simulation event start time.
-        fault_duration : float
-            Duration of the fault.
-
-        Returns
-        -------
-        dict
-            A dictionary containing event parameters.
-        """
-        # Modify the PMax value depending on the PCS initialization:
-        # PmaxInjection (default) or PmaxConsumption
         config_section = get_cfg_oc_name(pcs_name, bm_name, oc_name) + ".Model"
         pdr_p = config.get_value(config_section, "pdr_P")
         self.get_producer().set_consumption("PmaxConsumption" in pdr_p)
@@ -274,36 +197,6 @@ class ImportedCurves(ProducerCurves):
         curves_path: Path,
         is_reference: bool = False,
     ) -> tuple[dict, bool, bool, pd.DataFrame]:
-        """
-        Obtains curves by copying files and importing data.
-
-        Parameters
-        ----------
-        working_oc_dir : Path
-            Temporal working path.
-        producer_name : str
-            Producer name.
-        pcs_name : str
-            PCS name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        curves_path : Path
-            Path to the curves.
-        is_reference : bool, optional
-            True if obtaining reference curves, by default False.
-
-        Returns
-        -------
-        tuple[dict, bool, bool, pd.DataFrame]
-            A tuple containing:
-            - event_params (dict): Dictionary of event parameters.
-            - success (bool): True if base curve files were successfully copied.
-            - has_imported_curves (bool): True if curves were successfully imported.
-            - df_imported_curves (pd.DataFrame): Imported curves data.
-        """
-        # Copy base case and producers file
         success = manage_files.copy_base_curves_files(
             curves_path / producer_name,
             working_oc_dir,
@@ -323,13 +216,6 @@ class ImportedCurves(ProducerCurves):
         return event_params, success, has_imported_curves, df_imported_curves
 
     def get_solver(self) -> dict:
-        """There is no solver in this curve format.
-
-        Returns
-        -------
-        dict
-            Solver parameters.
-        """
         return {}
 
     def obtain_reference_curve(
@@ -341,34 +227,9 @@ class ImportedCurves(ProducerCurves):
         oc_name: str,
         curves: Path,
     ) -> tuple[float, pd.DataFrame]:
-        """Obtain the reference curves.
-
-        Parameters
-        ----------
-        working_oc_dir: Path
-            Temporal working path
-        producer_name: str
-            Producer name
-        pcs_name: str
-            PCS name
-        bm_name: str
-            Benchmark name
-        oc_name: str
-            Operating Condition name
-        curves: Path
-            Reference curves path
-
-        Returns
-        -------
-        float
-            Instant of time when the event is triggered
-        DataFrame
-           Curves imported from the file
-        """
         event_params, _, _, curves_df = self._obtain_curves(
             working_oc_dir, producer_name, pcs_name, bm_name, oc_name, curves, is_reference=True
         )
-
         return event_params["start_time"], curves_df
 
     def obtain_simulated_curve(
@@ -379,7 +240,7 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
         """Read the input curves to get the simulated curves.
 
         Parameters
@@ -404,7 +265,7 @@ class ImportedCurves(ProducerCurves):
             Simulation output directory (represented as '.').
         dict
             Event parameters.
-        Simulation_result
+        SimulationResult
             Information about the simulation result.
         DataFrame
            Simulation calculated curves.
@@ -418,20 +279,34 @@ class ImportedCurves(ProducerCurves):
             self.get_producer().get_producer_curves_path(),
         )
 
-        simulation_result = Simulation_result(success, False, has_imported_curves, None)
+        self._voltage_dip = measure_voltage_dip(
+            pcs_name,
+            bm_name,
+            oc_name,
+            curves_df,
+            event_params["start_time"],
+            event_params["duration_time"],
+        )
+
+        simulation_result = SimulationResult(
+            success=success,
+            time_exceeds=False,
+            has_simulated_curves=has_imported_curves,
+            error=None,
+        )
         return ".", event_params, simulation_result, curves_df
 
-    def get_disconnection_model(self) -> Disconnection_Model:
+    def get_disconnection_model(self) -> DisconnectionModel:
         """Get all equipment in the model that can be disconnected in the simulation.
         When there is no model to simulate, it is not possible to detect the equipment
         that has been disconnected.
 
         Returns
         -------
-        Disconnection_Model
+        DisconnectionModel
             Equipment that can be disconnected.
         """
-        return Disconnection_Model(
+        return DisconnectionModel(
             None,
             None,
             [],
@@ -439,21 +314,10 @@ class ImportedCurves(ProducerCurves):
         )
 
     def get_generators_imax(self) -> dict:
-        """Get the maximum current (Imax) for each generator.
-
-        Returns
-        -------
-        dict
-            Maximum continuous current by generator.
-        """
         return self._generators_imax
 
-    def is_field_measurements(self) -> bool:
-        """Check if the reference curves are field measurements.
+    def get_voltage_dip(self) -> float | None:
+        return self._voltage_dip
 
-        Returns
-        -------
-        bool
-            True if the reference signals are field measurements.
-        """
+    def is_field_measurements(self) -> bool:
         return self._is_field_measurements
