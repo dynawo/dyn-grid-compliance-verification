@@ -731,6 +731,8 @@ class DynawoCurves(ProducerCurves):
             step_value = self.obtain_value(
                 str(config.get_value(config_section, "setpoint_step_value"))
             )
+            if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
+                step_value *= setpoint_factor
         self.__log(bm_name, oc_name, f"\tsetpoint_step_value={step_value}")
         return {
             "start_time": start_time,
