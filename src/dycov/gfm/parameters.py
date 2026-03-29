@@ -406,4 +406,5 @@ class GFMParameters(Parameters):
                 pass
 
         from dycov.gfm import constants
+
         return constants.EMT_FINAL_DELAY_S

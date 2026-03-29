@@ -43,6 +43,8 @@ class GFMCalculator:
         self._scr = gfm_params.get_scr()
         self._min_ratio = gfm_params.get_min_ratio()
         self._max_ratio = gfm_params.get_max_ratio()
+        self._is_emt_flag = gfm_params.is_emt()
+        self._emt_initial_delay = gfm_params.get_emt_initial_delay()
         self._initial_voltage = gfm_params.get_initial_voltage()
         self._grid_voltage = gfm_params.get_grid_voltage()
         self._base_angular_frequency = gfm_params.get_base_angular_frequency()
@@ -50,8 +52,6 @@ class GFMCalculator:
         self._margin_high = gfm_params.get_margin_high()
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
-        self._is_emt_flag = gfm_params.is_emt()
-        self._emt_initial_delay = gfm_params.get_emt_initial_delay()
 
         # Attributes for INI dump validation
         self._d_vals = None
@@ -323,18 +323,15 @@ class GFMCalculator:
             - upper_envelope_limited: The final, limited upper envelope.
         """
 
-        limit_max = max_power - tunnel_value
-        limit_min = min_power + tunnel_value
-
         if use_opposite_signs:
             # This checks if the initial power and the angle change have opposite signs.
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * lower_envelope_unlimited,
-                        limit_min,
+                        -1 + tunnel_value,
                     ),
-                    limit_max,
+                    1 - tunnel_value,
                 )
                 upper_envelope_limited = np.minimum(
                     np.maximum(
@@ -343,6 +340,7 @@ class GFMCalculator:
                     ),
                     max_power,
                 )
+
             else:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
@@ -354,19 +352,18 @@ class GFMCalculator:
                 upper_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * upper_envelope_unlimited,
-                        limit_min,
+                        -1 + tunnel_value,
                     ),
-                    limit_max,
+                    1 - tunnel_value,
                 )
 
         else:
-            # Standard logic (used in most calculators)
             lower_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - sign * lower_envelope_unlimited,
-                    limit_min,
+                    -1 + tunnel_value,
                 ),
-                limit_max,
+                1 - tunnel_value,
             )
             upper_envelope_limited = np.minimum(
                 np.maximum(
