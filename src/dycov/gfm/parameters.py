@@ -676,15 +676,14 @@ class GFMParameters(Parameters):
         return False
 
     def get_emt_initial_delay(self) -> float:
-        """Retrieves the requisite initial delay specifically mapped for EMT simulation frameworks.
-
-        In the absence of an explicit INI definition, it automatically reverts to utilizing
-        the systemic baseline constant.
+        """
+        Gets the initial delay for EMT simulations from the producer configuration.
+        Defaults to the standard EMT_FINAL_DELAY_S if not defined in the INI file.
 
         Returns
         -------
         float
-            The evaluated EMT initial delay parameter, measured in seconds (s).
+            The EMT initial delay in seconds.
         """
         if self._producer._config.has_option("GFM Parameters", "emt_initial_delay"):
             try:

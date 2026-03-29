@@ -371,7 +371,7 @@ class GFMCalculator:
                 )
 
         else:
-            # Standard unified execution branch handling symmetrical capability bounding
+            # Standard logic
             lower_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - sign * lower_envelope_unlimited,
