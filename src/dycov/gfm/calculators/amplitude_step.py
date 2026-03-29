@@ -129,13 +129,13 @@ class AmplitudeStep(GFMCalculator):
             initial_pcc_val = q_pcc[0] if not np.isscalar(q_pcc) else q_pcc
 
             iq_up_final = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, q_up
+                self._emt_initial_delay, initial_upper_val, time_array, q_up
             )
             iq_down_final = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, q_down
+                self._emt_initial_delay, initial_lower_val, time_array, q_down
             )
             iq_pcc_final = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, q_pcc
+                self._emt_initial_delay, initial_pcc_val, time_array, q_pcc
             )
         else:
             iq_up_final = q_up
