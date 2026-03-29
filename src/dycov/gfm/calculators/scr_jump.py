@@ -581,16 +581,16 @@ class SCRJump(GFMCalculator):
                 )
 
                 upper_envelope = self._apply_delay(
-                    constants.EMT_FINAL_DELAY_S, initial_upper_val, time_array, upper_envelope
+                    self._emt_initial_delay, initial_upper_val, time_array, upper_envelope
                 )
                 lower_envelope = self._apply_delay(
-                    constants.EMT_FINAL_DELAY_S + constants.SCR_BOUND_DELAY_S,
+                    self._emt_initial_delay + constants.SCR_BOUND_DELAY_S,
                     initial_lower_val,
                     time_array,
                     lower_envelope,
                 )
                 power_at_pcc = self._apply_delay(
-                    constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+                    self._emt_initial_delay, initial_pcc_val, time_array, power_at_pcc
                 )
             else:
                 initial_lower_val = (
@@ -616,16 +616,16 @@ class SCRJump(GFMCalculator):
                 )
 
                 upper_envelope = self._apply_delay(
-                    constants.EMT_FINAL_DELAY_S + constants.SCR_BOUND_DELAY_S,
+                    self._emt_initial_delay + constants.SCR_BOUND_DELAY_S,
                     initial_upper_val,
                     time_array,
                     upper_envelope,
                 )
                 lower_envelope = self._apply_delay(
-                    constants.EMT_FINAL_DELAY_S, initial_lower_val, time_array, lower_envelope
+                    self._emt_initial_delay, initial_lower_val, time_array, lower_envelope
                 )
                 power_at_pcc = self._apply_delay(
-                    constants.EMT_FINAL_DELAY_S, initial_pcc_val, time_array, power_at_pcc
+                    self._emt_initial_delay, initial_pcc_val, time_array, power_at_pcc
                 )
             else:
                 initial_upper_val = (
