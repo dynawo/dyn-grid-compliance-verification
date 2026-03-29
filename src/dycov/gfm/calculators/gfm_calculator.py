@@ -52,6 +52,8 @@ class GFMCalculator:
         self._margin_high = gfm_params.get_margin_high()
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
+        self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
+        self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
         # Attributes for INI dump validation
         self._d_vals = None
@@ -323,20 +325,23 @@ class GFMCalculator:
             - upper_envelope_limited: The final, limited upper envelope.
         """
 
+        limit_max = self._pmax_mois_tunnel
+        limit_min = self._pmin_mois_tunnel
+
         if use_opposite_signs:
             # This checks if the initial power and the angle change have opposite signs.
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * lower_envelope_unlimited,
-                        -1 + tunnel_value,
+                        limit_min,  # CAMBIO: Antes era -1 + tunnel_value
                     ),
-                    1 - tunnel_value,
+                    limit_max,  # CAMBIO: Antes era 1 - tunnel_value
                 )
                 upper_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * upper_envelope_unlimited,
-                        -max_power,
+                        min_power,  # CAMBIO: Antes era -max_power
                     ),
                     max_power,
                 )
@@ -345,30 +350,31 @@ class GFMCalculator:
                 lower_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * lower_envelope_unlimited,
-                        -max_power,
+                        min_power,  # CAMBIO: Antes era -max_power
                     ),
                     max_power,
                 )
                 upper_envelope_limited = np.minimum(
                     np.maximum(
                         initial_power - sign * upper_envelope_unlimited,
-                        -1 + tunnel_value,
+                        limit_min,  # CAMBIO: Antes era -1 + tunnel_value
                     ),
-                    1 - tunnel_value,
+                    limit_max,  # CAMBIO: Antes era 1 - tunnel_value
                 )
 
         else:
+            # Standard logic
             lower_envelope_limited = np.minimum(
                 np.maximum(
                     initial_power - sign * lower_envelope_unlimited,
-                    -1 + tunnel_value,
+                    limit_min,  # CAMBIO: Antes era -1 + tunnel_value
                 ),
-                1 - tunnel_value,
+                limit_max,  # CAMBIO: Antes era 1 - tunnel_value
             )
             upper_envelope_limited = np.minimum(
                 np.maximum(
-                    initial_power - 1 * sign * upper_envelope_unlimited,
-                    min_power,
+                    initial_power - sign * upper_envelope_unlimited,
+                    min_power,  # CAMBIO: El -1 * sign original se ha limpiado a - sign
                 ),
                 max_power,
             )
