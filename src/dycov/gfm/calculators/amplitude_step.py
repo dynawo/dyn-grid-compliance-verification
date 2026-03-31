@@ -16,18 +16,20 @@ from dycov.logging.logging import dycov_logging
 
 
 class AmplitudeStep(GFMCalculator):
-    """Calculator class dedicated to handling the GFM amplitude step response.
+    """
+    Calculator class dedicated to handling the GFM amplitude step response.
 
-    This module mathematically performs all core calculations for reactive current deviations
-    (delta_iq) and synthesizes the corresponding bounding envelopes triggered by voltage amplitude
-    variations within the grid.
+    This module mathematically performs all core calculations for reactive current
+    deviations (delta_iq) and synthesizes the corresponding bounding envelopes
+    triggered by voltage amplitude variations within the grid.
     """
 
     def __init__(
         self,
         gfm_params: GFMParameters,
     ) -> None:
-        """Initializes the AmplitudeStep calculator with the specified Grid Forming parameters.
+        """
+        Initializes the AmplitudeStep calculator with the specified Grid Forming parameters.
 
         Parameters
         ----------
@@ -45,7 +47,8 @@ class AmplitudeStep(GFMCalculator):
         self._Xgrid = gfm_params.get_grid_reactance()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves the list of parameter names relevant for rendering AmplitudeStep plots.
+        """
+        Retrieves the list of parameter names relevant for rendering AmplitudeStep plots.
 
         Returns
         -------
@@ -68,8 +71,9 @@ class AmplitudeStep(GFMCalculator):
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates the reactive current deviation (delta_iq) and its bounding envelopes (PCC,
-        upper, and lower) evaluated across an amplitude step event timeframe.
+        """
+        Calculates the reactive current deviation (delta_iq) and its bounding envelopes
+        (PCC, upper, and lower) evaluated across an amplitude step event timeframe.
 
         Parameters
         ----------
@@ -155,7 +159,8 @@ class AmplitudeStep(GFMCalculator):
     def _get_delta_iq(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Derives the reactive current deviations (delta_iq) and their extreme boundary
+        """
+        Derives the reactive current deviations (delta_iq) and their extreme boundary
         conditions, establishing the mathematical foundations for the step response.
 
         Note: Parameters D, H, and event_time are maintained in the signature to strictly
@@ -204,7 +209,8 @@ class AmplitudeStep(GFMCalculator):
         delta_iq_max: np.ndarray,
         Xeff: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Translates raw reactive current derivations into final physical limits, applying
+        """
+        Translates raw reactive current derivations into final physical limits, applying
         saturation algorithms based on the plant's absolute operational boundaries.
 
         Parameters
@@ -255,10 +261,11 @@ class AmplitudeStep(GFMCalculator):
             -self._max_reactive_power - tunnel,
         )
 
-        # Step 4: Synthesize the primary expected trace mapping the core response trajectory
-        # This raw curve must inherently respect the absolute physical capabilities
-        # (Qmax and -Qmax).
+        # 4. Calculate the expected reactive power curve (Qexpected)
+        # This is the base curve, saturated by the plant's Qmax/Qmin limits.
+        # Formula: MAX(MIN(Q0 - SIGN(Vstep) * delta_iq_base, Qmax), -Qmax)
 
+        # Derive the unconstrained nominal trajectory based on vector direction
         # Derive the unconstrained nominal trajectory based on vector direction
         q_expected_unclamped = self._initial_reactive_power - sign_K * delta_iq_base
 
@@ -273,8 +280,9 @@ class AmplitudeStep(GFMCalculator):
         return q_expected, q_up, q_down
 
     def _get_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Mathematically resolves the fundamental delta_iq trajectory utilizing a standard first-
-        order exponential response equation.
+        """
+        Mathematically resolves the fundamental delta_iq trajectory utilizing a standard
+        first-order exponential response equation.
 
         Parameters
         ----------
@@ -306,7 +314,8 @@ class AmplitudeStep(GFMCalculator):
         Xeff: float,
         time_array: np.ndarray,
     ) -> np.ndarray:
-        """A structural wrapper executing the base delta_iq waveform generation process.
+        """
+        A structural wrapper executing the base delta_iq waveform generation process.
 
         Parameters
         ----------
@@ -324,7 +333,8 @@ class AmplitudeStep(GFMCalculator):
         return delta_iq
 
     def _get_delta_iq_min(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Synthesizes the specific delta_iq bounding array designated for the lower envelope.
+        """
+        Synthesizes the specific delta_iq bounding array designated for the lower envelope.
 
         This mechanism scales the foundational base curve and strictly clips it against
         an upper limitation defined by the steady-state maximum minus the tolerance tunnel,
@@ -368,7 +378,8 @@ class AmplitudeStep(GFMCalculator):
         return delta_iq_lower
 
     def _get_delta_iq_max(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Synthesizes the specific delta_iq bounding array designated for the upper envelope.
+        """
+        Synthesizes the specific delta_iq bounding array designated for the upper envelope.
 
         This algorithm establishes a static steady-state plateau and introduces a decaying
         transient "boost" mapped to the initial reaction phase, simulating brief reactive power
@@ -428,8 +439,9 @@ class AmplitudeStep(GFMCalculator):
         return delta_iq_upper
 
     def _get_tunnel(self, Xeff: float) -> float:
-        """Calculates and maps the mathematical static tolerance margin ("tunnel"), outlining the
-        required operational variance boundary relative to the impedance.
+        """
+        Calculates and maps the mathematical static tolerance margin ("tunnel"),
+        outlining the required operational variance boundary relative to the impedance.
 
         Parameters
         ----------

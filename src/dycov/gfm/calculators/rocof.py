@@ -16,19 +16,21 @@ from dycov.logging.logging import dycov_logging
 
 
 class RoCoF(GFMCalculator):
-    """Calculator class dedicated to handling the GFM response to a RoCoF (Rate of Change of
-    Frequency) event.
+    """
+    Calculator class dedicated to handling the GFM response to a RoCoF
+    (Rate of Change of Frequency) event.
 
-    This class performs all core calculations for active power envelopes, mathematically
-    differentiating between overdamped and underdamped system responses based on the damping
-    characteristics.
+    This class performs all core calculations for active power envelopes,
+    mathematically differentiating between overdamped and underdamped
+    system responses based on the damping characteristics.
     """
 
     def __init__(
         self,
         gfm_params: GFMParameters,
     ) -> None:
-        """Initializes the RoCoF calculator with the specified Grid Forming parameters.
+        """
+        Initializes the RoCoF calculator with the specified Grid Forming parameters.
 
         Parameters
         ----------
@@ -53,7 +55,8 @@ class RoCoF(GFMCalculator):
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves the list of parameter names relevant for rendering RoCoF plots.
+        """
+        Retrieves the list of parameter names relevant for rendering RoCoF plots.
 
         Returns
         -------
@@ -66,8 +69,9 @@ class RoCoF(GFMCalculator):
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates the active power deviation (delta_p) and its bounding envelopes (PCC, upper,
-        and lower) evaluated across the event timeframe.
+        """
+        Calculates the active power deviation (delta_p) and its bounding envelopes
+        (PCC, upper, and lower) evaluated across the event timeframe.
 
         Parameters
         ----------
@@ -93,7 +97,7 @@ class RoCoF(GFMCalculator):
         """
         dycov_logging.get_logger("RoCoF").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
-        (delta_p_array, p_peak_array, t_response_array) = self._get_delta_p(
+        delta_p_array, p_peak_array, t_response_array = self._get_delta_p(
             D=D, H=H, Xeff=Xeff, time_array=time_array, event_time=event_time
         )
 
@@ -123,8 +127,9 @@ class RoCoF(GFMCalculator):
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list, list, list]:
-        """Computes the delta_p sequences across nominal, minimum, and maximum parameter
-        variations.
+        """
+        Computes the delta_p sequences across nominal, minimum, and maximum
+        parameter variations.
 
         Parameters
         ----------
@@ -181,8 +186,9 @@ class RoCoF(GFMCalculator):
     def _calculate_delta_p_for_damping(
         self, D: float, H: float, x_total: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """Evaluates the appropriate mathematical strategy (overdamped vs. underdamped) and applies
-        the superposition principle to model the finite duration of the event.
+        """
+        Evaluates the appropriate mathematical strategy (overdamped vs. underdamped)
+        and applies the superposition principle to model the finite duration of the event.
 
         Parameters
         ----------
@@ -235,8 +241,9 @@ class RoCoF(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, x_total: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Analytically solves the differential equations governing an overdamped system step
-        response.
+        """
+        Analytically solves the differential equations governing an overdamped
+        system step response.
 
         Parameters
         ----------
@@ -308,8 +315,9 @@ class RoCoF(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, x_total: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Analytically solves the differential equations governing an underdamped system step
-        response.
+        """
+        Analytically solves the differential equations governing an underdamped
+        system step response.
 
         Parameters
         ----------
@@ -386,8 +394,9 @@ class RoCoF(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Computes the final active power envelopes by sequentially applying boundary limitations
-        and dynamic logic rules specific to RoCoF events.
+        """
+        Computes the final active power envelopes by sequentially applying
+        boundary limitations and dynamic logic rules specific to RoCoF events.
 
         Parameters
         ----------
@@ -480,8 +489,9 @@ class RoCoF(GFMCalculator):
         return p_pcc, p_up_limited, p_down_limited
 
     def _get_tunnel(self, p_peak_array: list[float]) -> float:
-        """Calculates the static tolerance margin "tunnel" value defining the acceptable
-        operational band.
+        """
+        Calculates the static tolerance margin "tunnel" value defining the
+        acceptable operational band.
 
         Parameters
         ----------
