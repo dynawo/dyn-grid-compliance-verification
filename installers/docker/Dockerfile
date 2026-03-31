@@ -6,7 +6,7 @@
 
 FROM python:3.13-slim-bookworm
 
-ARG dycov_PKG=dycov-0.9.3-py3-none-any.whl
+ARG dycov_PKG=dycov-0.9.4-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
 ARG DYNAWO_DIR_NAME=dynawo_build
 

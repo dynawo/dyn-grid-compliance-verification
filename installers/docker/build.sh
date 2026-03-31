@@ -114,7 +114,7 @@ if [[ "$PKG_BASENAME" != *"$VERSION"* ]]; then
 fi
 
 
-# Extract numeric part of TAG ("v0.9.3" → "0.9.3")
+# Extract numeric part of TAG ("v0.9.4" → "0.9.4")
 TAG_VERSION="${TAG#v}"
 
 # Ensure TAG matches project version
