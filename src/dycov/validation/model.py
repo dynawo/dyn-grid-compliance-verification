@@ -44,7 +44,7 @@ def _get_column_name(
         return "P"
     if modified_setpoint == "ReactivePowerSetpointPu":
         return "Q"
-    if modified_setpoint == "AVRSetpointPu":
+    if modified_setpoint == "VoltageSetpointPu":
         return "V"
     if modified_setpoint == "NetworkFrequencyPu":
         return "$\\omega"
@@ -59,7 +59,7 @@ def _get_measurement_name(
         return "BusPDR_BUS_ActivePower"
     if modified_setpoint == "ReactivePowerSetpointPu":
         return "BusPDR_BUS_ReactivePower"
-    if modified_setpoint == "AVRSetpointPu":
+    if modified_setpoint == "VoltageSetpointPu":
         return "BusPDR_BUS_Voltage"
     if modified_setpoint == "NetworkFrequencyPu":
         return "NetworkFrequencyPu"
