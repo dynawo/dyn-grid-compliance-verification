@@ -22,7 +22,6 @@ from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
 from dycov.curves.voltage_dip import VoltDipResult, classify_voltage_dip
 from dycov.files import manage_files, replace_placeholders
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import SimulationError
 from dycov.model.producer import Producer
 from dycov.validation import common
 

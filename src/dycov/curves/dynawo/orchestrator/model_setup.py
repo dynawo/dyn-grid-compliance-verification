@@ -24,8 +24,7 @@ from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
 from dycov.files import model_parameters, omega_file, tso_file
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import GenParams, LoadInit, LoadParams, PdrParams, PimodelParams
-from dycov.model.producer import Producer
+from dycov.model.parameters import LoadInit, LoadParams, PdrParams, PimodelParams
 
 _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
