@@ -20,7 +20,7 @@ NetworkFrequencyPu =
 # Replace "[GEN_ID]" with the Generator id, Wind Turbine id or PV Array id
 [GEN_ID]_GEN_RotorSpeedPu =
 [GEN_ID]_GEN_InternalAngle =
-[GEN_ID]_GEN_AVRSetpointPu =
+[GEN_ID]_GEN_VoltageSetpointPu =
 [GEN_ID]_GEN_MagnitudeControlledByAVRP =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:

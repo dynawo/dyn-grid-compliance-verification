@@ -214,7 +214,7 @@ def test_voltage_dip_threshold_selection():
 def test_get_measurement_name_mapping():
     assert checks._get_measurement_name("ActivePowerSetpointPu") == "BusPDR_BUS_ActivePower"
     assert checks._get_measurement_name("ReactivePowerSetpointPu") == "BusPDR_BUS_ReactivePower"
-    assert checks._get_measurement_name("AVRSetpointPu") == "BusPDR_BUS_Voltage"
+    assert checks._get_measurement_name("VoltageSetpointPu") == "BusPDR_BUS_Voltage"
     assert checks._get_measurement_name("NetworkFrequencyPu") == "NetworkFrequencyPu"
     assert checks._get_measurement_name("UnknownSetpoint") == "BusPDR_BUS_ReactivePower"
 

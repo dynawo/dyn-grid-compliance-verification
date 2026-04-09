@@ -159,7 +159,7 @@ def test_add_curve2plot_applies_color_and_style():
         {
             "IpInjTerminal": [1, 2, 3],
             "IqInjTerminal": [4, 5, 6],
-            "AVRSetpointPu": [7, 8, 9],
+            "VoltageSetpointPu": [7, 8, 9],
             "Other": [10, 11, 12],
         }
     )
@@ -172,7 +172,7 @@ def test_add_curve2plot_applies_color_and_style():
     _add_curve2plot("IqInjTerminal", "IqInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8172b3"
 
-    _add_curve2plot("AVRSetpointPu", "AVRSetpointPu", df, plot_curves)
+    _add_curve2plot("VoltageSetpointPu", "VoltageSetpointPu", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8c8c8c"
 
     _add_curve2plot("Other", "Other", df, plot_curves)

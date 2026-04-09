@@ -76,10 +76,10 @@ def test_returns_q_column_name():
     assert result == "Q"
 
 
-# Returns "V" when input is "AVRSetpointPu"
+# Returns "V" when input is "VoltageSetpointPu"
 def test_returns_v_column_name():
     # Arrange
-    modified_setpoint = "AVRSetpointPu"
+    modified_setpoint = "VoltageSetpointPu"
 
     # Act
     result = _get_column_name(modified_setpoint)
@@ -136,10 +136,10 @@ def test_returns_reactive_power_measurement_name():
     assert result == "BusPDR_BUS_ReactivePower"
 
 
-# Returns "BusPDR_BUS_Voltage" when modified_setpoint is "AVRSetpointPu"
+# Returns "BusPDR_BUS_Voltage" when modified_setpoint is "VoltageSetpointPu"
 def test_returns_voltage_power_measurement_name():
     # Arrange
-    modified_setpoint = "AVRSetpointPu"
+    modified_setpoint = "VoltageSetpointPu"
 
     # Act
     result = _get_measurement_name(modified_setpoint)

@@ -37,7 +37,7 @@ def _add_curve2plot(
 ) -> None:
     if curve_name is None:
         return
-    if variable_tool_name == "AVRSetpointPu" and is_reference:
+    if variable_tool_name == "VoltageSetpointPu" and is_reference:
         return
 
     curve_style = get_curve_style(variable_tool_name, is_reference)
