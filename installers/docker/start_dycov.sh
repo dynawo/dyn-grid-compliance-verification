@@ -12,7 +12,8 @@ set -o errexit -o pipefail
 
 # --- DEFAULTS FOR WSL STANDALONE ---
 # If running via Docker, these are injected by run_dycov_docker.sh.
-# If running via WSL direct exec, these might be missing, so we default to 1000.
+# If running via WSL, run_dycov_wsl.ps1 calls this script explicitly,
+# so these defaults apply in both standalone cases.
 dycov_UID=${dycov_UID:-1000}
 dycov_GID=${dycov_GID:-1000}
 dycov_USER=${dycov_USER:-"dycov_user"}
