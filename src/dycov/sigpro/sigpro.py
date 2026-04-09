@@ -22,26 +22,26 @@ from dycov.sigpro import lp_filters
 ZERO_THRESHOLD = 1.0e-10
 
 
-def shortfft(x, fs):
+def _shortfft(x, fs):
     f, t, Zxx = signal.stft(x, fs, nperseg=100, noverlap=99)
     return f, t, Zxx
 
 
-def positive_sequence(abc):
+def _positive_sequence(abc):
     a = np.exp(2j * np.pi / 3)
     A = (1 / 3) * np.linalg.inv(np.array([[1, 1, 1], [1, a**2, a], [1, a, a**2]]))
     return A.dot(abc)
 
 
-def abc_to_psrms(abc, fs):
+def _abc_to_psrms(abc, fs):
     Zxx_abc_50 = []
     for x in abc:
-        f, t, Zxx = shortfft(x, fs)
+        f, t, Zxx = _shortfft(x, fs)
         idx = np.argmin(np.abs(f - 50))
         Zxx_abc_50.append(
             Zxx[idx][0:-1]
         )  # the stft function returns a 1 element longer array than the input
-    ps = positive_sequence(Zxx_abc_50)[1]
+    ps = _positive_sequence(Zxx_abc_50)[1]
     return (1 / np.sqrt(2)) * np.abs(ps)
 
 
@@ -50,12 +50,12 @@ def ensure_rms_signals(curves):
     fs = 1 / time_step
 
     processed_curve_dict = {}
-    abc_items, rms_items = find_abc_signal(curves)
+    abc_items, rms_items = _find_abc_signal(curves)
     for abc_item in abc_items:
         a = curves[abc_item + "_a"]
         b = curves[abc_item + "_b"]
         c = curves[abc_item + "_c"]
-        ps_rms = abc_to_psrms([a, b, c], fs)
+        ps_rms = _abc_to_psrms([a, b, c], fs)
         processed_curve_dict[abc_item] = ps_rms
 
     for rms_item in rms_items:
@@ -64,7 +64,7 @@ def ensure_rms_signals(curves):
     return pd.DataFrame.from_dict(processed_curve_dict, orient="columns")
 
 
-def find_abc_signal(curves):
+def _find_abc_signal(curves):
     abc_items = []
     rms_items = []
     for col in curves.columns:
@@ -225,7 +225,7 @@ def lowpass_filter(signal, fc=15, fs=1000, filter="critdamped", padding_method="
     return lp_filters.apply_filtfilt(b, a, signal, padding_method)
 
 
-def get_time_positions(time_values, t_from, t_to):
+def _get_time_positions(time_values, t_from, t_to):
     w_init_pos = np.searchsorted(time_values, t_from)
     w_end_pos = np.searchsorted(time_values, t_to)
 
@@ -269,18 +269,18 @@ def filter_curves(curves, windows, f_cutoff=15, filter_name="critdamped"):
                 c_filt = c
 
                 t_from, t_to = windows["before"]
-                w_init, w_end = get_time_positions(time_values, t_from, t_to)
+                w_init, w_end = _get_time_positions(time_values, t_from, t_to)
                 c_filt[w_init:w_end] = lowpass_filter(c[w_init:w_end], f_cutoff, fs, filter_name)
 
                 t_from, t_to = windows["during"]
                 if t_to > t_from:
-                    w_init, w_end = get_time_positions(time_values, t_from, t_to)
+                    w_init, w_end = _get_time_positions(time_values, t_from, t_to)
                     c_filt[w_init:w_end] = lowpass_filter(
                         c[w_init:w_end], f_cutoff, fs, filter_name
                     )
 
                 t_from, t_to = windows["after"]
-                w_init, w_end = get_time_positions(time_values, t_from, t_to)
+                w_init, w_end = _get_time_positions(time_values, t_from, t_to)
                 c_filt[w_init:w_end] = lowpass_filter(c[w_init:w_end], f_cutoff, fs, filter_name)
 
             # TODO: double-check if this is still necessary
@@ -290,3 +290,35 @@ def filter_curves(curves, windows, f_cutoff=15, filter_name="critdamped"):
 
     lowpass_curve_dict["time"] = curves["time"]
     return pd.DataFrame.from_dict(lowpass_curve_dict, orient="columns")
+
+
+def apply_time_shift(curves: pd.DataFrame, t_event_curves: float, t_event_reference: float):
+    """
+    Applies a time shift to align the event time of these curves with the reference event time.
+
+    If both event times are equal, no shift is applied.
+
+    Validates that the event time falls within the curve's time range, since otherwise the
+    shift would be semantically incorrect.
+    """
+
+    if "time" not in curves.columns:
+        raise ValueError("Curves do not contain a 'time' column.")
+
+    # Validate event time location
+    tmin, tmax = curves["time"].min(), curves["time"].max()
+    if not (tmin <= t_event_curves <= tmax):
+        raise ValueError(
+            f"Event time {t_event_curves} is outside the curve time range [{tmin}, {tmax}]."
+        )
+
+    # Compute the required shift
+    shift = t_event_reference - t_event_curves
+
+    # If no shift is needed, return curves untouched
+    if abs(shift) < 1e-12:
+        return curves
+
+    shifted = curves.copy()
+    shifted["time"] = shifted["time"] + shift
+    return shifted
