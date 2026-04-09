@@ -80,7 +80,7 @@ test must be added to the corresponding parameter.
 
 * ``AVR_5``
 
-    Check that the magnitude controlled by the AVR (generator_UStatorPu_value) never deviates more than 5% from its setpoint.
+    Check that the magnitude controlled by the Plant-level voltage regulation (generator_UStatorPu_value) never deviates more than 5% from its setpoint.
 
 * ``time_10P_85U``
 

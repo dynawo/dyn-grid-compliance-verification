@@ -34,7 +34,7 @@ def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
     generators : list
         List of GenParams objects representing generators.
     curves : pd.DataFrame
-        DataFrame containing curve data, including AVRSetpointPu for each generator.
+        DataFrame containing curve data, including VoltageSetpointPu for each generator.
 
     Returns
     -------
@@ -46,7 +46,7 @@ def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
             id=generator.id,
             p0=0,
             q0=0,
-            u0=curves[generator.id + "_AVRSetpointPu"].iloc[0],
+            u0=curves[generator.id + "_VoltageSetpointPu"].iloc[0],
             u_phase0=0,
         )
         for generator in generators
@@ -140,8 +140,8 @@ class ImportedCurves(ProducerCurves):
         """
         generators = []
         for key in curves.keys():
-            if key.endswith("_AVRSetpointPu"):
-                gen_id = key.replace("_AVRSetpointPu", "")
+            if key.endswith("_VoltageSetpointPu"):
+                gen_id = key.replace("_VoltageSetpointPu", "")
                 generators.append(
                     GenParams(
                         id=gen_id,

@@ -78,8 +78,12 @@ BUILD_SH="$REPO_ROOT/installers/docker/build.sh"
 EXPORT_SH="$REPO_ROOT/installers/docker/export_image.sh"
 IMPORT_SH="$REPO_ROOT/installers/docker/import_image.sh"
 RUN_SH="$REPO_ROOT/installers/docker/run_dycov_docker.sh"
+IMPORT_WSL_BAT="$REPO_ROOT/installers/wsl/import_wsl.bat"
+IMPORT_WSL_PS1="$REPO_ROOT/installers/wsl/import_wsl.ps1"
+RUN_WSL_PS1="$REPO_ROOT/installers/wsl/run_dycov_wsl.ps1"
 
-for f in "$LINUX_INSTALL" "$PYPROJECT" "$BUILD_SH" "$EXPORT_SH" "$IMPORT_SH" "$RUN_SH"; do
+for f in "$LINUX_INSTALL" "$PYPROJECT" "$BUILD_SH" "$EXPORT_SH" "$IMPORT_SH" "$RUN_SH" \
+          "$IMPORT_WSL_BAT" "$IMPORT_WSL_PS1" "$RUN_WSL_PS1"; do
     [[ -f "$f" ]] || error "Expected file not found: $f"
 done
 
@@ -162,11 +166,28 @@ RAW_IMAGE=$(find "$REPO_ROOT/installers/docker" -maxdepth 1 -name "dycov_rawimag
 ###############################################################################
 step "Step 6: Collecting release artifacts..."
 
-mv "$RAW_IMAGE"  "$OUTPUT_DIR/dycov_rawimage.tar.gz"
-cp "$IMPORT_SH"  "$OUTPUT_DIR/import_image.sh"
-cp "$RUN_SH"     "$OUTPUT_DIR/run_dycov_docker.sh"
+mv "$RAW_IMAGE"       "$OUTPUT_DIR/dycov_rawimage.tar.gz"
+cp "$IMPORT_SH"       "$OUTPUT_DIR/import_image.sh"
+cp "$RUN_SH"          "$OUTPUT_DIR/run_dycov_docker.sh"
+cp "$IMPORT_WSL_BAT"  "$OUTPUT_DIR/import_wsl.bat"
+cp "$IMPORT_WSL_PS1"  "$OUTPUT_DIR/import_wsl.ps1"
+cp "$RUN_WSL_PS1"     "$OUTPUT_DIR/run_dycov_wsl.ps1"
 
 info "All artifacts ready."
+
+###############################################################################
+# Step 7 — Remove Docker images
+###############################################################################
+step "Step 7: Removing Docker images..."
+
+for tag in "dycov:latest" "dycov:${VERSION}"; do
+    if docker image inspect "$tag" > /dev/null 2>&1; then
+        docker rmi "$tag"
+        info "Removed image: $tag"
+    else
+        info "Image not found, skipping: $tag"
+    fi
+done
 
 ###############################################################################
 # Summary

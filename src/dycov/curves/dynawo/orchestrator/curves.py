@@ -377,7 +377,7 @@ class DynawoCurves(ProducerCurves):
 
     def __adjust_event_value(self, event_params: dict, pdr: PdrParams) -> None:
         """
-        Adjusts the event 'pre_value' for AVRSetpointPu if voltage drop is enabled.
+        Adjusts the event 'pre_value' for VoltageSetpointPu if voltage drop is enabled.
         Parameters
         ----------
         event_params : dict
@@ -385,7 +385,7 @@ class DynawoCurves(ProducerCurves):
         pdr : PdrParams
             PDR parameters.
         """
-        if event_params["connect_to"] != "AVRSetpointPu":
+        if event_params["connect_to"] != "VoltageSetpointPu":
             return
         for i, generator in enumerate(self.get_producer().generators):
             if generator.use_voltage_droop:

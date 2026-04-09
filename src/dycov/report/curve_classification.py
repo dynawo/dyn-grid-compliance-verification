@@ -16,8 +16,8 @@ _XFMR_SUFFIX = "_XFMR_"
 _VARIABLE_LABELS = {
     "IpInjTerminal": "Ip",
     "IqInjTerminal": "Iq",
-    "AVRSetpointPu": "AVR Setpoint",
-    "MagnitudeControlledByAVRPu": "AVR Magnitude",
+    "VoltageSetpointPu": "Plant-level voltage regulation Setpoint",
+    "MagnitudeControlledByAVRPu": "Plant-level voltage regulation Magnitude",
     "UPuInjTerminal": "Voltage",
     "RotorSpeedPu": "Rotor Speed",
     "NetworkFrequencyPu": "Frequency",
@@ -92,7 +92,7 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
         return CurveStyle(color="#64b5cd", style="-")
     if "IqInjTerminal" in variable_name:
         return CurveStyle(color="#8172b3", style="-")
-    if "AVRSetpointPu" in variable_name:
+    if "VoltageSetpointPu" in variable_name:
         return CurveStyle(color="#8c8c8c", style=":")
     return CurveStyle(color="#4c72b0", style="-")
 
@@ -145,7 +145,7 @@ def build_figure_title(variables) -> str:
         dict.fromkeys(
             get_variable_label(v["variable"])
             for v in variables
-            if v["variable"] != "AVRSetpointPu"
+            if v["variable"] != "VoltageSetpointPu"
         )
     )
     magnitude = " / ".join(variable_labels)
