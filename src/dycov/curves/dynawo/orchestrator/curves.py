@@ -8,70 +8,36 @@
 # demiguelm@aia.es
 #
 import logging
-import math
 from collections import namedtuple
-from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.core.parameters import Parameters
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
-from dycov.curves.dynawo.dictionary.translator import dynawo_translator
-from dycov.curves.dynawo.io import crv
-from dycov.curves.dynawo.io.dyd import DydFile
-from dycov.curves.dynawo.io.jobs import JobsFile
-from dycov.curves.dynawo.io.par import ParFile
-from dycov.curves.dynawo.io.solvers import SolversFile
-from dycov.curves.dynawo.io.table import TableFile
-from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
+from dycov.curves.dynawo.orchestrator.bisection import BisectionEngine
+from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
-from dycov.curves.voltage_dip import VoltDipResult, classify_voltage_dip, measure_voltage_dip
-from dycov.electrical.generator_variables import generator_variables
-from dycov.electrical.initialization_calcs import init_calcs
-from dycov.electrical.pimodel_parameters import line_pimodel
-from dycov.files import manage_files, model_parameters, omega_file, replace_placeholders, tso_file
+from dycov.curves.voltage_dip import measure_voltage_dip
+from dycov.files import manage_files, model_parameters
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging.logging import dycov_logging
 from dycov.logging.simulation_logger import SimulationLogger
-from dycov.model.parameters import (
-    DisconnectionModel,
-    GenParams,
-    LoadInit,
-    LoadParams,
-    PdrParams,
-    PimodelParams,
-    SimulationError,
-    SimulationResult,
-)
+from dycov.model.parameters import DisconnectionModel, SimulationError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
-from dycov.validation import common
 
-# Number of decimal places to round for bisection method calculations
-BISECTION_ROUND = 10
-BOLTED_FAULT_XPU = 1e-5
-CCT_REL_TOL = 0.0001
-
-SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
-SolverParam = namedtuple("SolverParam", "actual default")
-
-# ----------------------------
-# Private file/paths constants
-# ----------------------------
-_TSO_PAR = "TSOModel.par"
-_TSO_DYD = "TSOModel.dyd"
 _CURVES_CSV = "curves/curves.csv"
 
 _ERROR_MAP = {
     "Fault simulation fails": SimulationError.FAULT_SIMULATION_FAILS,
     "Fault dip unachievable": SimulationError.FAULT_DIP_UNACHIEVABLE,
 }
+
+SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
+SolverParam = namedtuple("SolverParam", "actual default")
 
 
 def _to_simulation_error(message: str) -> SimulationError | None:
@@ -80,12 +46,17 @@ def _to_simulation_error(message: str) -> SimulationError | None:
 
 class DynawoCurves(ProducerCurves):
     """
-    Manages the generation and processing of Dynawo simulation files and curves.
-    This class handles the complete workflow for running Dynawo simulations,
-    from preparing input files based on configuration to executing the simulation
-    and processing its outputs. It supports various simulation types and fault
-    scenarios, including high impedance and bolted faults, and calculates
-    critical clearing times (CCT).
+    Orchestrates the full Dynawo simulation workflow for one producer.
+
+    Responsibilities:
+    - Solver lifecycle: reset, build params, retry strategy.
+    - Environment preparation: copy base-case and producer files.
+    - Delegation to ModelSetup (model file completion) and
+      BisectionEngine (HIZ / bolted / CCT search algorithms).
+    - Post-simulation bookkeeping: voltage-dip measurement, result assembly.
+
+    Model setup details live in ModelSetup; bisection algorithms live in
+    BisectionEngine.  This class owns the public ProducerCurves interface.
     """
 
     def __init__(
@@ -100,7 +71,6 @@ class DynawoCurves(ProducerCurves):
         stable_time: float,
     ):
         """
-        Initializes the DynawoCurves object with simulation and producer parameters.
         Parameters
         ----------
         parameters : Parameters
@@ -118,7 +88,7 @@ class DynawoCurves(ProducerCurves):
         job_name : str
             Name of the job file.
         stable_time : float
-            Time used to check for stability in simulations (e.g., CCT).
+            Time horizon used to evaluate stability in CCT calculations.
         """
         super().__init__(producer)
         self._output_dir = parameters.get_output_dir()
@@ -130,7 +100,6 @@ class DynawoCurves(ProducerCurves):
         self._job_name = job_name
         self._stable_time = stable_time
 
-        # Read default values from configuration
         self._f_nom = config.get_float("Dynawo", "f_nom", 50.0)
         self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
@@ -138,149 +107,41 @@ class DynawoCurves(ProducerCurves):
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
         parameter_checks.check_simulation_duration(self.get_simulation_duration())
 
-        # Simulation limit time, used in CCT calculations
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
-        # Initialize the simulation logger
         logging.setLoggerClass(SimulationLogger)
         self._logger = logging.getLogger("ProducerCurves")
 
-        # Internal variables for Dynawo files and simulation state
-        self._dyd_file = None
-        self._par_file = None
-        self._crv_file = None
-        self._jobs_file = None
-        self._table_file = None
-        self._solvers_file = None
-        self._curves_dict = {}
-        self._rte_loads = []  # To store RTE loads
-        self._has_line = False  # Flag to indicate if a line is present
-
-        # Solver parameters (initialized to defaults and reset as needed)
+        # Solver parameters — initialised by __reset_solver
         self._solver_id = ""
         self._solver_lib = ""
         self._minimum_time_step = 0.0
         self._minimal_acceptable_step = 0.0
         self._absAccuracy = 0.0
-        self._relAccuracy = 0.0  # Only for IDA solver
+        self._relAccuracy = 0.0
         self.__reset_solver()
 
         self._voltage_dip = None
 
-    # ----------------------------
-    # Small private helpers (DRY)
-    # ----------------------------
-    def __cfg_section(self, pcs_name: str, bm_name: str, oc_name: str, suffix: str = "") -> str:
-        """
-        Compose '<PCS>.<BM>.<OC>' optionally with a suffix like '.Model' or '.Event'.
-        """
-        base = get_cfg_oc_name(pcs_name, bm_name, oc_name)
-        return base + suffix if suffix else base
+        # Collaborators (created once; ModelSetup state is refreshed per OC)
+        self._setup = ModelSetup(self, pcs_name, self._s_nref, self._f_nom)
+        self._bisection = self._build_bisection_engine()
 
-    def __get_log_title(self, bm_name: str, oc_name: str) -> str:
-        """
-        Generates a standardized log title for debugging and warning messages.
-        Parameters
-        ----------
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        Returns
-        -------
-        str
-            Formatted log title.
-        """
-        return f"{self._pcs_name}.{bm_name}.{oc_name}:"
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
-    def __log_msg(self, level: str, message: str) -> None:
-        """
-        Centralized logger formatter (keeps one single format place).
-        """
-        getattr(dycov_logging.get_logger("ProducerCurves"), level)(f"{message}")
+    def _log(self, message: str, level: str = "debug") -> None:
+        getattr(dycov_logging.get_logger("ProducerCurves"), level)(message)
 
     def __debug(self, message: str) -> None:
-        """
-        Logs a debug message with PCS information.
-        Parameters
-        ----------
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        message : str
-            The debug message.
-        """
-        self.__log_msg("debug", message)
+        self._log(message, "debug")
 
     def __warning(self, message: str) -> None:
-        """
-        Logs a warning message with PCS information.
-        Parameters
-        ----------
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        message : str
-            The warning message.
-        """
-        self.__log_msg("warning", message)
-
-    def __error(self, message: str) -> None:
-        """
-        Logs an error message with PCS information.
-        Parameters
-        ----------
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        message : str
-            The error message.
-        """
-        self.__log_msg("error", message)
-
-    def __log(self, bm_name: str, oc_name: str, message: str) -> None:
-        """
-        Logs an informational message and also sends it to debug log.
-        Parameters
-        ----------
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        message : str
-            The informational message.
-        """
-        self._logger.info(message)
-        self.__debug(message)
-
-    @staticmethod
-    def __fault_rpu_from_xpu(xpu: float, r_factor: float) -> float:
-        """rpu = xpu / r_factor (with 0 guard)."""
-        return (xpu / r_factor) if r_factor != 0.0 else 0.0
-
-    @contextmanager
-    def __isolated_copy(self, src_dir: Path):
-        """
-        Create an isolated temp directory and copy src_dir contents there.
-        Yields the temp working directory.
-        """
-        with TemporaryDirectory(prefix="dynawo_") as temp_dir:
-            work = (
-                Path(temp_dir)
-                / f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            )
-            manage_files.copy_directory(src_dir, work)
-            yield work
+        self._log(message, "warning")
 
     def __reset_solver(self) -> None:
-        """
-        Resets the solver parameters to their default configured values.
-        This is crucial for ensuring simulations start with a consistent solver state,
-        especially after adjustments for failed simulations.
-        """
+        """Resets all solver parameters to their configured defaults."""
         self._solver_lib = config.get_value("Dynawo", "solver_lib", "dynawo_SolverIDA")
         self._solver_id = self._solver_lib.replace("dynawo_Solver", "")
         if self._solver_id == "IDA":
@@ -290,16 +151,27 @@ class DynawoCurves(ProducerCurves):
             )
             self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
             self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-4)
-        else:  # Assuming "SIM" solver
+        else:
             self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 1e-6)
             self._minimal_acceptable_step = config.get_float(
                 "Dynawo", "sim_minimalAcceptableStep", 1e-6
             )
             self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
-            # Ensure _relAccuracy is not set for SIM solver, or set to None
             if hasattr(self, "_relAccuracy"):
                 delattr(self, "_relAccuracy")
         parameter_checks.check_solver(self._solver_id, self._solver_lib)
+
+    def _build_bisection_engine(self) -> BisectionEngine:
+        return BisectionEngine(
+            pcs_name=self._pcs_name,
+            launcher_dwo=self._launcher_dwo,
+            producer=self.get_producer(),
+            s_nref=self._s_nref,
+            f_nom=self._f_nom,
+            sim_time=self._sim_time,
+            stable_time=self._stable_time,
+            curves_dict=self._setup.curves_dict,
+        )
 
     def __prepare_oc_validation(
         self,
@@ -309,32 +181,17 @@ class DynawoCurves(ProducerCurves):
         oc_name: str,
     ) -> tuple[Path, Path]:
         """
-        Prepares the working directory for an operating condition validation.
-        This includes copying base case and producer files and setting up logging.
-        Parameters
-        ----------
-        working_oc_dir : Path
-            Temporal working path for the simulation.
-        pcs_name : str
-            PCS.Benchmark name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
+        Copies base-case and producer files into working_oc_dir.
+
         Returns
         -------
         tuple[Path, Path]
-            A tuple containing:
-            - output_dir: The final output directory for the simulation results.
-            - jobs_output_dir: The output directory specified in the job file.
+            (output_dir, jobs_output_dir)
         """
         op_path = self._model_path / oc_name
         op_path_name = op_path.resolve().name
-
-        # Create a specific folder by operational point
         output_dir = self._output_dir / self._pcs_name / bm_name / op_path_name
 
-        # Copy base case and producers file
         manage_files.copy_base_case_files(
             ModelFiles(
                 self._model_path,
@@ -348,673 +205,14 @@ class DynawoCurves(ProducerCurves):
             ),
             working_oc_dir,
         )
-
-        # Get output dir read from job file
         jobs_output_dir = model_parameters.find_output_dir(working_oc_dir, "TSOModel")
-
         return output_dir, jobs_output_dir
-
-    def _obtain_gen_value(self, gen: GenParams, value_definition: str) -> float:
-        """
-        Obtains a specific generator value based on the definition.
-        Parameters
-        ----------
-        gen : GenParams
-            Generator parameters object.
-        value_definition : str
-            The type of value to obtain (e.g., "P0", "Q0", "U0").
-        Returns
-        -------
-        float
-            The requested generator value.
-        """
-        value_map = {
-            "P0": -gen.p0,
-            "Q0": -gen.q0,
-            "U0": gen.u0,
-        }
-        return value_map.get(value_definition, 0.0)
-
-    def __adjust_event_value(self, event_params: dict) -> None:
-        """
-        Adjusts the event 'pre_value' for VoltageSetpointPu if voltage drop is enabled.
-        Parameters
-        ----------
-        event_params : dict
-            Dictionary containing event parameters.
-        """
-        if event_params["connect_to"] != "VoltageSetpointPu":
-            return
-        for i, generator in enumerate(self.get_producer().generators):
-            if generator.use_voltage_droop:
-                event_params["pre_value"][i] = (
-                    generator.terminals[0].u0 + generator.voltage_droop * generator.terminals[0].q0
-                )
-
-    def __get_lines_for_initial_calcs(self, rte_lines: list) -> PimodelParams:
-        """
-        Calculates equivalent line parameters for initial calculations.
-        """
-        if not rte_lines:
-            return PimodelParams(math.inf, 0, 0)  # No lines, infinite admittance
-
-        y_tr_sum, y_sh1_sum, y_sh2_sum = 0, 0, 0
-        for line in rte_lines:
-            pimodel_line = line_pimodel(line)
-            y_tr_sum += pimodel_line.y_tr
-            y_sh1_sum += pimodel_line.y_sh1
-            y_sh2_sum += pimodel_line.y_sh2
-        return PimodelParams(y_tr_sum, y_sh1_sum, y_sh2_sum)
-
-    def __calculate_Xv(self, Udip, Zcc, Uinf):
-        if Uinf == Udip:
-            dycov_logging.get_logger("ProducerCurves").error(
-                "Uinf cannot be equal to Udip to avoid division by zero."
-            )
-            raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
-        Zv = (Udip * Zcc) / (Uinf - Udip)
-        ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
-        Xv = (Zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
-        if Xv == 0.0:
-            dycov_logging.get_logger("ProducerCurves").warning(
-                "Xv is zero, which may indicate an issue with the calculation."
-            )
-            Xv = 1e-3  # Avoid zero value
-        return Xv
-
-    def __calculate_Xv_values(
-        self,
-        event_params,
-        line_xpu,
-        line_rpu,
-        rte_gen_U0,
-        pcs_name,
-        bm_name,
-        oc_name,
-        generator_variables,
-    ):
-        Zcc = math.sqrt(line_xpu * line_xpu + line_rpu * line_rpu)
-        Uinf = rte_gen_U0
-        model_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Model")
-        generator_type = generator_variables.get_generator_type(self.get_producer().u_nom)
-        u_list_options = [
-            s
-            for s in config.get_options(model_section)
-            if s.startswith("u_") and s.endswith(generator_type)
-        ]
-        for option in u_list_options:
-            name_Xv = f"Xv_{option[2:]}".replace(f"_{generator_type}", "")
-            u_value_from_config = config.get_float(model_section, option, -999.0)
-            event_params[name_Xv] = self.__calculate_Xv(u_value_from_config, Zcc, Uinf)
-
-    def __complete_model(
-        self,
-        working_oc_dir: Path,
-        pcs_name: str,
-        bm_name: str,
-        oc_name: str,
-        reference_event_start_time: float,
-    ) -> dict:
-        """
-        Completes the Dynawo model by calculating initial conditions, event parameters,
-        and modifying input files accordingly.
-        Parameters
-        ----------
-        working_oc_dir : Path
-            Temporal working path for the simulation.
-        pcs_name : str
-            PCS name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        reference_event_start_time : float
-            Instant of time when the event is triggered in reference curves.
-        Returns
-        -------
-        dict
-            Event parameters after completion.
-        """
-        self.__log(
-            bm_name,
-            oc_name,
-            f"Unom: {self.get_producer().u_nom}, "
-            f"Generator type: {generator_variables.get_generator_type(self.get_producer().u_nom)}",
-        )
-        self.__log(
-            bm_name,
-            oc_name,
-            f"Model definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
-        )
-
-        # Read the load parameters in the TSO network, if exists
-        self._rte_loads = model_parameters.get_pcs_load_params(
-            working_oc_dir / _TSO_DYD,
-            working_oc_dir / _TSO_PAR,
-        )
-
-        u_dim = self.get_generator_u_dim()
-        pdr = self.__get_pdr(pcs_name, bm_name, oc_name, u_dim)
-
-        # Calculates the initialization parameters and replace the placeholders by
-        # its values in the input files of Dynawo.
-        line_rpu, line_xpu = self.__get_line(pcs_name, bm_name, oc_name)
-
-        rte_lines = []
-        if self._has_line:
-            # Read lines configuration from TSO network
-            rte_lines = model_parameters.get_pcs_lines_params(
-                working_oc_dir / _TSO_DYD,
-                working_oc_dir / _TSO_PAR,
-                line_rpu,
-                line_xpu,
-            )
-
-        conn_line = self.__get_lines_for_initial_calcs(rte_lines)
-
-        # Sort step-up transformers to match generator order if needed
-        xfmr_map = {xfmr.id: xfmr for xfmr in self.get_producer().stepup_xfmrs}
-        sorted_stepup_xfmrs = [
-            xfmr_map[gen.terminals[0].connected_equipment]
-            for gen in self.get_producer().generators
-            if gen.terminals[0].connected_equipment in xfmr_map
-        ]
-
-        # Perform initial calculations for the system
-        rte_gen = init_calcs(
-            tuple(self.get_producer().generators),
-            tuple(sorted_stepup_xfmrs),
-            self.get_producer().aux_load,
-            self.get_producer().auxload_xfmr,
-            self.get_producer().ppm_xfmr,
-            self.get_producer().intline,
-            pdr,
-            conn_line,
-            self.__get_grid_load(pcs_name, bm_name, oc_name, u_dim),
-        )
-
-        self.__log(
-            bm_name,
-            oc_name,
-            f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
-        )
-        event_params = self.__get_event_parameters(
-            pcs_name,
-            bm_name,
-            oc_name,
-        )
-        if (
-            reference_event_start_time is not None
-            and event_params["start_time"] != reference_event_start_time
-        ):
-            self.__warning(
-                f"The simulation will use the 'sim_t_event_start' value present in the Reference "
-                f"Curves ({reference_event_start_time}), instead of the value configured "
-                f"({event_params['start_time']}).",
-            )
-            event_params["start_time"] = reference_event_start_time
-
-        # Modify producer par to add generator init values
-        section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
-        control_mode = config.get_value(section, "setpoint_change_test_type")
-        force_voltage_droop = config.get_boolean(self._pcs_name, "force_voltage_droop", False)
-        model_parameters.adjust_producer_init(
-            working_oc_dir,
-            self.get_producer().get_producer_par(),
-            self.get_producer().generators,
-            sorted_stepup_xfmrs,
-            self.get_producer().aux_load,
-            control_mode,
-            force_voltage_droop,
-            self.get_producer().get_zone(),
-        )
-        self.__adjust_event_value(event_params)
-        self.__calculate_Xv_values(
-            event_params,
-            line_xpu,
-            line_rpu,
-            rte_gen.u0,
-            pcs_name,
-            bm_name,
-            oc_name,
-            generator_variables,
-        )
-
-        # Initialize Dynawo file handlers
-        pcs_bm_name = f"{pcs_name}{CASE_SEPARATOR}{bm_name}"
-        self._jobs_file = JobsFile(self, pcs_bm_name, oc_name)
-        self._par_file = ParFile(self, pcs_bm_name, oc_name)
-        self._dyd_file = DydFile(self, pcs_bm_name, oc_name)
-        self._table_file = TableFile(self, pcs_bm_name, oc_name)
-        self._solvers_file = SolversFile(self, pcs_bm_name, oc_name)
-
-        # Complete Dynawo input files
-        self._jobs_file.complete_file(
-            working_oc_dir, self._solver_id, self._solver_lib, event_params
-        )
-        self._par_file.complete_file(
-            working_oc_dir, line_rpu, line_xpu, rte_gen, event_params, self.get_producer().u_nom
-        )
-        self._dyd_file.complete_file(working_oc_dir, event_params)
-        self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
-        self._solvers_file.complete_file(working_oc_dir)
-
-        # Read the generators parameters in the TSO network, if exists
-        rte_generators = model_parameters.get_pcs_generators_params(
-            working_oc_dir / _TSO_DYD,
-            working_oc_dir / _TSO_PAR,
-        )
-
-        # Complete Omega and TSO files
-        dycov_logging.get_logger("ProducerCurves").debug("Complete omega file")
-        omega_file.complete_omega(
-            working_oc_dir,
-            "Omega.dyd",
-            "Omega.par",
-            self.get_producer().generators + rte_generators,
-        )
-        tso_file.complete_setpoint(
-            working_oc_dir,
-            _TSO_DYD,
-            _TSO_PAR,
-            self.get_producer().generators,
-            config.get_value(pcs_bm_name, "TSO_model"),
-            event_params,
-        )
-
-        # Collect all transformers for CRV file creation
-        xmfrs = self.get_producer().stepup_xfmrs[:]
-        if self.get_producer().auxload_xfmr:
-            xmfrs.append(self.get_producer().auxload_xfmr)
-        if self.get_producer().ppm_xfmr:
-            xmfrs.append(self.get_producer().ppm_xfmr)
-
-        # Create CRV (curves) file
-        self._curves_dict = crv.create_curves_file(
-            working_oc_dir,
-            "TSOModel.crv",
-            xmfrs,
-            self.get_producer().generators,
-            self._rte_loads,
-            self.get_producer().get_sim_type(),
-            self.get_producer().get_zone(),
-            control_mode,
-        )
-        return event_params
-
-    def __get_event_parameters(
-        self,
-        pcs_name: str,
-        bm_name: str,
-        oc_name: str,
-    ) -> dict:
-        """
-        Retrieves event parameters from the configuration.
-        Parameters
-        ----------
-        pcs_name : str
-            PCS.Benchmark name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        Returns
-        -------
-        dict
-            A dictionary containing event parameters.
-        """
-        config_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Event")
-        connect_event_to = config.get_value(config_section, "connect_event_to")
-        self.__log(bm_name, oc_name, f"\t{connect_event_to=}")
-        pre_value = 1.0  # Default pre_value
-        # Active/Reactive power in PDR are in pu (base UNom, SnRef)
-        # but Active/Reactive power setpoint are in pu (base SNom)
-        setpoint_factor = self._s_nref / self.get_producer().s_nom
-        if connect_event_to:
-            if "ActivePowerSetpointPu" == connect_event_to:
-                pre_value = [
-                    -gen.terminals[0].p0 * setpoint_factor
-                    for gen in self.get_producer().generators
-                ]
-            elif "ReactivePowerSetpointPu" == connect_event_to:
-                pre_value = [
-                    -gen.terminals[0].q0 * setpoint_factor
-                    for gen in self.get_producer().generators
-                ]
-            elif "VoltageSetpointPu" == connect_event_to:
-                pre_value = [gen.terminals[0].u0 for gen in self.get_producer().generators]
-        start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
-        self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
-        fault_duration = 0.0
-        if config.has_option(config_section, "fault_duration"):
-            fault_duration = config.get_float(config_section, "fault_duration", 0.0)
-        else:
-            generator_type = generator_variables.get_generator_type(self.get_producer().u_nom)
-            fault_duration = config.get_float(
-                config_section, f"fault_duration_{generator_type}", 0.0
-            )
-        self.__log(bm_name, oc_name, f"\tfault_duration={fault_duration}")
-        step_value = 0.0
-        if config.has_option(config_section, "setpoint_step_value"):
-            step_value = self.obtain_value(
-                str(config.get_value(config_section, "setpoint_step_value"))
-            )
-            if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
-                step_value *= setpoint_factor
-        self.__log(bm_name, oc_name, f"\tsetpoint_step_value={step_value}")
-        return {
-            "start_time": start_time,
-            "duration_time": fault_duration,
-            "pre_value": pre_value,
-            "step_value": step_value,
-            "connect_to": connect_event_to,
-        }
-
-    def __get_line(
-        self,
-        pcs_name: str,
-        bm_name: str,
-        oc_name: str,
-    ) -> tuple[float, float]:
-        """
-        Calculates line resistance (rpu) and reactance (xpu) based on configuration.
-        Parameters
-        ----------
-        pcs_name : str
-            PCS.Benchmark name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        Returns
-        -------
-        tuple[float, float]
-            A tuple containing line_rpu and line_xpu.
-        """
-        config_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Model")
-        line_rpu = 0.0
-        line_xpu = 0.0
-        self._has_line = False  # Reset flag
-        if config.has_option(config_section, "line_XPu"):
-            self._has_line = True
-            line_xpu_definition = config.get_value(config_section, "line_XPu")
-            self.__log(bm_name, oc_name, f"\tline_XPu={line_xpu_definition}")
-            xpu_multiplier = 1.0
-            line_xtype = line_xpu_definition
-            if "*" in line_xpu_definition:
-                parts = line_xpu_definition.split("*")
-                xpu_multiplier = float(parts[0])
-                line_xtype = parts[1]
-            try:
-                line_xpu = float(line_xtype)
-            except ValueError:
-                line_xpu = xpu_multiplier * generator_variables.calculate_line_xpu(
-                    line_xtype,
-                    self.get_producer().p_max_pu * -1,
-                    self.get_producer().s_nom,
-                    self.get_producer().u_nom,
-                    self._s_nref,
-                )
-            if self.get_producer().get_zone() == 3:  # Specific for Zone 3 (TSO)
-                xpu_r_factor = config.get_float("GridCode", "XPu_r_factor", 0.0)
-                line_rpu = line_xpu / xpu_r_factor if xpu_r_factor != 0.0 else 0.0
-            else:
-                line_rpu = 0.0
-        elif config.has_option(config_section, "SCR"):
-            self._has_line = True
-            scr = config.get_float(config_section, "SCR", 0.0)
-            self.__log(bm_name, oc_name, f"\tSCR={scr}")
-            scr_r_factor = config.get_float("GridCode", "SCR_r_factor", 0.0)
-            if scr != 0:
-                line_xpu = 1.0 / (scr * self.get_producer().p_max_pu)
-                line_rpu = line_xpu / scr_r_factor if scr_r_factor != 0.0 else 0.0
-            # else: line_xpu and line_rpu remain 0, _has_line remains False
-            # (as initialized or explicitly set)
-        elif config.has_option(config_section, "Zcc"):
-            self._has_line = True
-            scc = generator_variables.get_scc(self.get_producer().u_nom)
-            udim = generator_variables.get_generator_u_dim(self.get_producer().u_nom)
-            uc_pu = udim / self.get_producer().u_nom
-            scc_pu = scc / self._s_nref
-            ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
-            if ztanphi < 1.0:
-                ztanphi = 1.0
-            if scc != 0:
-                zcc = uc_pu**2 / scc_pu
-                self.__log(bm_name, oc_name, f"\tZcc={zcc}")
-                line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
-                line_rpu = line_xpu / ztanphi
-            # else: line_xpu and line_rpu remain 0, _has_line remains False
-
-        self.complete_unit_characteristics(line_xpu)
-        return (
-            line_rpu,
-            line_xpu,
-        )
-
-    def __get_pdr(self, pcs_name: str, bm_name: str, oc_name: str, u_dim: float) -> PdrParams:
-        """
-        Retrieves and calculates PDR (Point of Designate Response) parameters.
-        Parameters
-        ----------
-        pcs_name : str
-            PCS.Benchmark name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        u_dim : float
-            Dimensionless voltage.
-        Returns
-        -------
-        PdrParams
-            PDR parameters (U, complex power, active power, reactive power).
-        """
-        config_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Model")
-        # Read PDR params from configuration
-        pdr_p_cfg = config.get_value(config_section, "pdr_P")
-        self.__log(bm_name, oc_name, f"\tpdr_P={pdr_p_cfg}")
-        pdr_q_cfg = config.get_value(config_section, "pdr_Q")
-        self.__log(bm_name, oc_name, f"\tpdr_Q={pdr_q_cfg}")
-        pdr_u_cfg = config.get_value(config_section, "pdr_U")
-        self.__log(bm_name, oc_name, f"\tpdr_U={pdr_u_cfg}")
-
-        # Modify the PMax value depending on the PCS initialization:
-        # PmaxInjection (default) or PmaxConsumption
-        self.get_producer().set_consumption("PmaxConsumption" in pdr_p_cfg)
-
-        # For BESS producers, p_max_parameter is defined as PmaxInjection or PmaxConsumption
-        # for other types of producers, p_max_parameter is always defined as Pmax
-        p_max_parameter = (
-            "PmaxConsumption"
-            if "PmaxConsumption" in pdr_p_cfg
-            else "PmaxInjection" if "PmaxInjection" in pdr_p_cfg else "Pmax"
-        )
-
-        # Sign convention: the initializations expects Pdr to be negative;
-        # therefore we need to flip its sign.
-        ini_pdr_p = model_parameters.extract_defined_value(
-            pdr_p_cfg, p_max_parameter, self.get_producer().p_max_pu, -1
-        )
-
-        ini_pdr_q = 0.0
-        if "Qmin" in pdr_q_cfg:
-            ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, "Qmin", self.get_producer().q_min_pu, -1
-            )
-        elif "Qmax" in pdr_q_cfg:
-            ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, "Qmax", self.get_producer().q_max_pu, -1
-            )
-        else:
-            ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, p_max_parameter, self.get_producer().p_max_pu, -1
-            )
-
-        ini_pdr_u = (
-            model_parameters.extract_defined_value(pdr_u_cfg, "Udim", u_dim)
-            / self.get_producer().u_nom
-        )
-        return PdrParams(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
-
-    def __get_grid_load(
-        self,
-        pcs_name: str,
-        bm_name: str,
-        oc_name: str,
-        u_dim: float,
-    ) -> LoadParams:
-        """
-        Retrieves grid load parameters.
-        Parameters
-        ----------
-        pcs_name : str
-            PCS.Benchmark name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        u_dim : float
-            Dimensionless voltage.
-        Returns
-        -------
-        LoadParams
-            Grid load parameters.
-        """
-        config_section = self.__cfg_section(pcs_name, bm_name, oc_name, ".Model")
-        self._init_loads = self.__complete_loads(config_section, bm_name, oc_name, u_dim)
-        return model_parameters.get_grid_load(self._init_loads)
-
-    def __complete_loads(
-        self, config_section: str, bm_name: str, oc_name: str, u_dim: float
-    ) -> list:
-        """
-        Completes load parameters by reading from configuration or using defaults.
-        Parameters
-        ----------
-        config_section : str
-            Configuration section for the model.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        u_dim : float
-            Dimensionless voltage.
-        Returns
-        -------
-        list
-            List of LoadInit objects with completed load parameters.
-        """
-
-        def _get_load_value(param_name: str, default_key: str, default_value: float) -> float:
-            """Helper function to get a single load parameter value."""
-            try:
-                # Try to convert directly to float if it's a numeric string
-                return float(param_name)
-            except ValueError:
-                # Otherwise, it's a config key, retrieve from config and extract value
-                cfg_value = config.get_value(config_section, param_name)
-                self.__log(bm_name, oc_name, f"\t{param_name}={cfg_value}")
-                return model_parameters.extract_defined_value(
-                    cfg_value, default_key, default_value
-                )
-
-        loads = []
-        for load in self._rte_loads:
-            p = _get_load_value(load.p, "pmax", self.get_producer().p_max_pu)
-            q = _get_load_value(load.q, "pmax", self.get_producer().p_max_pu)
-            u = _get_load_value(load.u, "udim", u_dim) / self.get_producer().u_nom
-            uphase = _get_load_value(
-                load.u_phase, "NA", 1.0
-            )  # 'NA' for no specific default extraction logic
-            loads.append(LoadInit(load.id, "", p, q, u, uphase))
-        return loads
-
-    def __modify_fault(
-        self,
-        working_oc_dir: Path,
-        fault_start: float,
-        fault_duration: float,
-        fault_xpu: float,
-        fault_rpu: float,
-    ) -> None:
-        """
-        Modifies the TSOModel.par file to include fault parameters.
-        Parameters
-        ----------
-        working_oc_dir : Path
-            Working directory.
-        fault_start : float
-            Fault start time.
-        fault_duration : float
-            Fault duration.
-        fault_xpu : float
-            Fault reactance in per unit.
-        fault_rpu : float
-            Fault resistance in per unit.
-        """
-        if self.get_producer().get_zone() != 1:
-            return
-        replace_placeholders.fault_par_file(
-            working_oc_dir,
-            _TSO_PAR,
-            fault_start + fault_duration,  # Fault end time
-            fault_xpu,
-            fault_rpu,
-        )
-
-    def __simulate(
-        self,
-        output_dir: Path,
-        working_oc_dir: Path,
-        jobs_output_dir: Path,
-        bm_name: str,
-        oc_name: str,
-    ) -> SimulateOutcome:
-        """
-        Runs the Dynawo simulation and checks for success, time exceedance, and
-        curves availability.
-        Parameters
-        ----------
-        output_dir : Path
-            The final output directory for the simulation results.
-        working_oc_dir : Path
-            Working directory for the simulation.
-        jobs_output_dir : Path
-            Output directory specified in the job file.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        Returns
-        -------
-        SimulateOutcome
-            Result containing success flag, time exceedance, curves availability and curves data.
-        """
-        result = self.__execute_simulation(
-            output_dir,
-            working_oc_dir,
-            jobs_output_dir,
-            bm_name,
-            oc_name,
-        )
-        if not result.succeeded:
-            self.__warning(result.log)
-        else:
-            self.__debug("Simulation successful")
-        has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
-        return SimulateOutcome(
-            succeeded=result.succeeded,
-            time_exceeds=result.sim_time > self._sim_time,
-            has_curves=has_curves,
-            curves=result.curves,
-        )
 
     def __build_run_inputs(self) -> DynawoRunInputs:
         return DynawoRunInputs(
             pcs_name=self._pcs_name,
             launcher_dwo=self._launcher_dwo,
-            curves_dict=self._curves_dict,
+            curves_dict=self._setup.curves_dict,
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
             s_nref=self._s_nref,
@@ -1039,27 +237,24 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
-    ) -> DynawoResult:
+    ):
         """
-        Executes Dynawo simulation using a dedicated retry strategy.
+        Runs Dynawo via SolverRetryStrategy and returns a DynawoResult.
+
         Parameters
         ----------
         output_dir : Path
-            The final output directory for the simulation results.
+            Final output directory for saved results.
         working_oc_dir : Path
-            Working directory for the simulation.
+            Working directory for the current run.
         jobs_output_dir : Path
-            Output directory specified in the job file.
+            Output sub-directory declared in the job file.
         bm_name : str
             Benchmark name.
         oc_name : str
             Operating Condition name.
-        max_sim_time : float | None, optional
-            Maximum allowed simulation time, by default None (uses config value).
-        Returns
-        -------
-        DynawoResult
-            Result of the simulation run.
+        max_sim_time : float | None
+            Simulation time limit override; defaults to config value.
         """
         if max_sim_time is None:
             max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
@@ -1075,309 +270,221 @@ class DynawoCurves(ProducerCurves):
             max_sim_time=max_sim_time,
         )
         if result.succeeded:
-            self._sim_time = result.sim_time  # persist for later routines (e.g., CCT)
+            self._sim_time = result.sim_time
         return result
 
-    def __get_hiz_fault(
+    def __simulate(
         self,
         output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
-        fault_start: float,
-        fault_duration: float,
-        dip: float,
         bm_name: str,
         oc_name: str,
-    ) -> None:
+    ) -> SimulateOutcome:
         """
-        Determines the fault impedance for a high impedance fault using bisection.
+        Runs the simulation and packages the result as a SimulateOutcome.
+
         Parameters
         ----------
         output_dir : Path
-            Output directory for simulation results.
+            Final output directory for saved results.
         working_oc_dir : Path
-            Working directory for the simulation.
+            Working directory for the current run.
         jobs_output_dir : Path
-            Output directory specified in the job file.
-        fault_start : float
-            Fault start time.
-        fault_duration : float
-            Fault duration.
-        dip : float
-            Desired voltage dip.
+            Output sub-directory declared in the job file.
         bm_name : str
             Benchmark name.
         oc_name : str
             Operating Condition name.
-        Raises
-        ------
-        ValueError
-            If the simulation fails for any fault value or if the required dip is unachievable.
         """
-        fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        max_val = config.get_float("Global", "maximum_hiz_fault", 10.0)
-        min_val = config.get_float("Global", "minimum_hiz_fault", 1e-10)
-        last_fault_xpu = min_val
-        bisection_success = False
-        hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 1e-5)
-        voltage_dip_classification = None  # Initialize to None
-        while True:
-            fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
-            with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
-                fault_rpu = self.__fault_rpu_from_xpu(fault_xpu, fault_r_factor)
-                self.__debug(f"Bisection between {max_val} and {min_val}")
-                self.__debug(f"Fault XPU in {fault_xpu}")
-                self.__modify_fault(
-                    working_oc_dir_fault,
-                    fault_start,
-                    fault_duration,
-                    fault_xpu,
-                    fault_rpu=fault_rpu,
-                )
-                fault_outcome = self.__simulate(
-                    output_dir, working_oc_dir_fault, jobs_output_dir, bm_name, oc_name
-                )
-                self.__reset_solver()  # Restore the solver to the default values
-                if fault_outcome.succeeded:
-                    bisection_success = True
-                    last_fault_xpu = fault_xpu
-                    voltage_dip_classification = classify_voltage_dip(
-                        self._pcs_name,
-                        bm_name,
-                        oc_name,
-                        fault_outcome.curves,
-                        fault_start,
-                        fault_duration,
-                        abs(dip),
-                    )
-                if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
-                    target_dir_name = (
-                        "bisection_last_success"
-                        if fault_outcome.succeeded
-                        else "bisection_last_failure"
-                    )
-                    manage_files.rename_path(
-                        working_oc_dir_fault, working_oc_dir / target_dir_name
-                    )
-                if fault_outcome.succeeded:
-                    if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
-                        min_val = fault_xpu
-                    elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
-                        max_val = fault_xpu
-                    else:
-                        break
-                else:
-                    self.__debug("Simulation fails")
-                    if voltage_dip_classification is not None:
-                        if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
-                            max_val = fault_xpu
-                        elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
-                            min_val = fault_xpu
-                    else:
-                        max_val = fault_xpu
-                if self.__is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
-                    break  # Exit loop if bisection is complete
-        if not bisection_success:
-            self.__error("The simulation fails with any value for the fault")
-            raise ValueError("Fault simulation fails")
-        # Check if the exact dip was achieved, if not, raise error
-        if voltage_dip_classification == VoltDipResult.COLUMN_MISSING:
-            self.__error("The expected voltage curve is missing in the simulation output")
-            raise ValueError("Voltage curve missing")
-        elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
-            self.__error("The required dip was not achieved")
-            raise ValueError("Fault dip unachievable")
-        # Recover the last successful fault values and apply to original working directory
-        last_fault_rpu = self.__fault_rpu_from_xpu(last_fault_xpu, fault_r_factor)
-        self.__modify_fault(
-            working_oc_dir,
-            fault_start,
-            fault_duration,
-            last_fault_xpu,
-            last_fault_rpu,
+        result = self.__execute_simulation(
+            output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name
+        )
+        if not result.succeeded:
+            self.__warning(result.log)
+        else:
+            self.__debug("Simulation successful")
+        has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
+        return SimulateOutcome(
+            succeeded=result.succeeded,
+            time_exceeds=result.sim_time > self._sim_time,
+            has_curves=has_curves,
+            curves=result.curves,
         )
 
-    def __get_bolted_fault(
+    # ------------------------------------------------------------------
+    # Public interface (ProducerCurves)
+    # ------------------------------------------------------------------
+
+    def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
-        fault_start: float,
-        fault_duration: float,
-    ) -> None:
+        producer_name: str,
+        pcs_name: str,
+        bm_name: str,
+        oc_name: str,
+        reference_event_start_time: float,
+    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
         """
-        Applies a bolted fault (very low impedance fault) to the model.
+        Runs Dynawo to get the simulated curves for a given operating condition.
+
         Parameters
         ----------
         working_oc_dir : Path
-            Working directory.
-        fault_start : float
-            Fault start time.
-        fault_duration : float
-            Fault duration.
-        """
-        fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        fault_xpu = BOLTED_FAULT_XPU
-        fault_rpu = self.__fault_rpu_from_xpu(fault_xpu, fault_r_factor)
-        self.__modify_fault(
-            working_oc_dir,
-            fault_start,
-            fault_duration,
-            fault_xpu,
-            fault_rpu,
-        )
+            Temporal working path.
+        producer_name : str
+            Producer name (kept for interface consistency, not used directly).
+        pcs_name : str
+            PCS.Benchmark name.
+        bm_name : str
+            Benchmark name.
+        oc_name : str
+            Operating Condition name.
+        reference_event_start_time : float
+            Instant of time when the event is triggered in the reference curves.
 
-    def __get_max_duration(
+        Returns
+        -------
+        tuple[str, dict, SimulationResult, pd.DataFrame]
+            (jobs_output_dir, event_params, simulation_result, curves)
+        """
+        self.__reset_solver()
+        output_dir, jobs_output_dir = self.__prepare_oc_validation(
+            working_oc_dir, pcs_name, bm_name, oc_name
+        )
+        event_params: dict = {}
+        outcome = SimulateOutcome(
+            succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
+        )
+        error_message = None
+        try:
+            event_params = self._setup.complete_model(
+                working_oc_dir, pcs_name, bm_name, oc_name, reference_event_start_time
+            )
+            # Sync curves_dict into bisection engine after model setup
+            self._bisection.curves_dict = self._setup.curves_dict
+            self._bisection.sim_time = self._sim_time
+
+            pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)
+            if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
+                self._bisection.find_hiz_fault(
+                    output_dir,
+                    working_oc_dir,
+                    jobs_output_dir,
+                    event_params["start_time"],
+                    event_params["duration_time"],
+                    event_params["step_value"],
+                    bm_name,
+                    oc_name,
+                    simulate_fn=self.__simulate,
+                    reset_solver_fn=self.__reset_solver,
+                )
+            elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
+                self._bisection.apply_bolted_fault(
+                    working_oc_dir,
+                    event_params["start_time"],
+                    event_params["duration_time"],
+                )
+            outcome = self.__simulate(
+                output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name
+            )
+            self._voltage_dip = measure_voltage_dip(
+                self._pcs_name,
+                bm_name,
+                oc_name,
+                outcome.curves,
+                event_params["start_time"],
+                event_params["duration_time"],
+            )
+            self.__debug(
+                f"Simulation finished in {self._sim_time}s: "
+                f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
+                f"has_curves={outcome.has_curves}",
+            )
+        except ValueError as e:
+            error_message = _to_simulation_error(str(e))
+
+        simulation_result = SimulationResult(
+            outcome.succeeded, outcome.time_exceeds, outcome.has_curves, error_message
+        )
+        return jobs_output_dir, event_params, simulation_result, outcome.curves
+
+    def get_time_cct(
         self,
-        working_oc_dir_attempt: Path,
+        working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_duration: float,
         bm_name: str,
         oc_name: str,
-    ) -> tuple[float, float]:
+    ) -> float:
         """
-        Finds the maximum fault duration for stability before bisection for CCT.
-        Parameters
-        ----------
-        working_oc_dir_attempt : Path
-            Temporary working directory for this attempt.
-        jobs_output_dir : Path
-            Output directory specified in the job file.
-        fault_duration : float
-            Initial fault duration to start checking from.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        Returns
-        -------
-        tuple[float, float]
-            A tuple containing:
-            - min_val: The maximum stable duration found.
-            - max_val: The minimum unstable duration found.
-        """
-        # For a given fault duration time, it is checked if the
-        # simulation is stable, if it is, the time is doubled
-        # until an unstable simulation is achieved.
-        min_val = fault_duration
-        max_val = fault_duration * 2
-        self.__debug(f"Max time CCT in {max_val}")
-        while self.__run_time_cct(
-            working_oc_dir_attempt,
-            jobs_output_dir,
-            max_val,
-            bm_name,
-            oc_name,
-        ):
-            min_val = max_val
-            max_val *= 1.5
-            self.__debug(f"Max time CCT in {max_val}")
-        return min_val, max_val
+        Finds by bisection the Critical Clearing Time (CCT) for a fault.
 
-    def __run_time_cct(
-        self,
-        working_oc_dir_attempt: Path,
-        jobs_output_dir: Path,
-        fault_duration: float,
-        bm_name: str,
-        oc_name: str,
-    ) -> bool:
-        """
-        Runs a Dynawo simulation for a given fault duration and checks for stability.
         Parameters
         ----------
-        working_oc_dir_attempt : Path
-            Temporary working directory for this attempt.
+        working_oc_dir : Path
+            Temporal working path (must contain completed model files).
         jobs_output_dir : Path
-            Output directory specified in the job file.
+            Simulation output directory.
         fault_duration : float
-            Fault duration to test.
+            Initial fault duration in seconds.
         bm_name : str
             Benchmark name.
         oc_name : str
             Operating Condition name.
+
         Returns
         -------
-        bool
-            True if the simulation is stable, False otherwise.
+        float
+            The critical clearing time (CCT).
         """
-        # Modify the fault time in the TSOModel.par file
-        replace_placeholders.fault_time(
-            working_oc_dir_attempt / _TSO_PAR,
-            fault_duration,
-        )
-        # Run Dynawo simulation
-        cct_result = DynawoSimulator.run_simple(
-            self._pcs_name,
-            bm_name,
-            oc_name,
-            self._launcher_dwo,
-            self._curves_dict,
-            working_oc_dir_attempt,
-            jobs_output_dir,
-            self.get_producer().generators,
-            self.get_producer().s_nom,
-            self._s_nref,
-            self._f_nom,
-            save_file=False,
-            simulation_limit=self._sim_time + 10,
-        )
-        if not cct_result.succeeded:
-            return False
-        # Create the expected curves from the output
-        curves_temp = pd.read_csv(
-            working_oc_dir_attempt / jobs_output_dir / _CURVES_CSV,
-            sep=";",
-        )
-        # Check the stability of each generator's internal angle
-        return all(
-            common.is_stable(
-                list(curves_temp["time"]),
-                list(
-                    curves_temp[
-                        dynawo_translator.get_curve_variable(gen.id, gen.lib, "InternalAngle")
-                    ]
-                ),
-                self._stable_time,
-            )[0]
-            for gen in self.get_producer().generators
+        self._bisection.sim_time = self._sim_time
+        return self._bisection.find_cct(
+            working_oc_dir, jobs_output_dir, fault_duration, bm_name, oc_name
         )
 
-    def __is_bisection_complete(
-        self, max_val: float, min_val: float, rel_tol: float, bm_name: str, oc_name: str
-    ) -> bool:
+    def get_disconnection_model(self) -> DisconnectionModel:
         """
-        Check if the bisection method is complete based on a relative tolerance.
-        Parameters
-        ----------
-        max_val : float
-            Maximum value in the bisection method.
-        min_val : float
-            Minimum value in the bisection method.
-        rel_tol : float
-            Relative tolerance to consider the bisection method complete.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        Returns
-        -------
-        bool
-            True if the bisection method is complete, False otherwise.
+        Returns all equipment in the model that can be disconnected.
         """
-        self.__debug(
-            "Bisection method is complete: "
-            f"{max_val=}, {min_val=}, {rel_tol=}, "
-            f"is complete: {math.isclose(max_val, min_val, rel_tol=rel_tol)}",
+        producer = self.get_producer()
+        return DisconnectionModel(
+            producer.aux_load,
+            producer.auxload_xfmr,
+            [xfmr.id for xfmr in producer.stepup_xfmrs],
+            producer.intline,
         )
-        return math.isclose(max_val, min_val, rel_tol=rel_tol)
+
+    def get_generators_imax(self) -> dict:
+        """
+        Returns the maximum current (Imax) for each generator, keyed by generator ID.
+        """
+        return {gen.id: gen.i_max for gen in self.get_producer().generators}
+
+    def get_voltage_dip(self) -> float | None:
+        """Returns the measured voltage dip, or None if not yet computed."""
+        return self._voltage_dip
+
+    def get_simulation_start(self) -> float:
+        """Returns the simulation start time."""
+        return self._simulation_start
+
+    def get_simulation_duration(self) -> float:
+        """Returns the simulation duration (stop - start)."""
+        return self._simulation_stop - self._simulation_start
+
+    def get_simulation_precision(self) -> float:
+        """Returns the simulation precision."""
+        return self._simulation_precision
 
     def get_solver(self) -> dict[str, SolverParam]:
         """
-        Gets the current and default solver parameters for the report.
+        Returns the current and default solver parameters, used for reporting.
 
         Returns
         -------
         dict[str, SolverParam]
-            Parameter name mapped to a SolverParam(actual, default) entry.
+            Parameter name mapped to SolverParam(actual, default).
         """
         P = SolverParam
         solver_parameters = {
@@ -1420,7 +527,7 @@ class DynawoCurves(ProducerCurves):
                     ),
                 }
             )
-        else:  # SIM solver
+        else:
             solver_parameters.update(
                 {
                     "hMin": P(
@@ -1453,254 +560,29 @@ class DynawoCurves(ProducerCurves):
             )
         return solver_parameters
 
-    def get_time_cct(
-        self,
-        working_oc_dir: Path,
-        jobs_output_dir: Path,
-        fault_duration: float,
-        bm_name: str,
-        oc_name: str,
-    ) -> float:
+    # ------------------------------------------------------------------
+    # ProducerCurves abstract method delegated to setup
+    # ------------------------------------------------------------------
+
+    def _obtain_gen_value(self, gen, value_definition: str) -> float:
         """
-        Finds by bisection the critical clearing time (CCT) for a fault.
+        Obtains a specific generator value based on the definition.
+
         Parameters
         ----------
-        working_oc_dir : Path
-            Temporal working path.
-        jobs_output_dir : Path
-            Simulation output directory.
-        fault_duration : float
-            Initial fault duration in seconds.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
+        gen : GenParams
+            Generator parameters object.
+        value_definition : str
+            The type of value to obtain (e.g., "P0", "Q0", "U0").
+
         Returns
         -------
         float
-            The critical clearing time (CCT) for the fault.
+            The requested generator value.
         """
-        # Define the initial range for bisection from the configured time
-        # to a value where the simulation is not stable.
-        working_oc_dir_fault_max = manage_files.clone_as_subdirectory(
-            working_oc_dir, "fault_time_execution_max"
-        )
-        min_val, max_val = self.__get_max_duration(
-            working_oc_dir_fault_max,
-            jobs_output_dir,
-            fault_duration,
-            bm_name,
-            oc_name,
-        )
-        manage_files.remove_dir(working_oc_dir_fault_max)  # Clean up temporary dir
-        self.__debug("Upper time to find clear time: " + str(max_val))
-        self.__debug("Lower time to find clear time: " + str(min_val))
-        # Perform bisection to find the maximum duration the fault admits without losing stability
-        time = round(((max_val + min_val) / 2), BISECTION_ROUND)
-        counter = 0
-        cct_rel_tol = CCT_REL_TOL
-        while True:
-            self.__debug(
-                f"Attempt {counter} to find clear time. Used fault time: {time}",
-            )
-            with self.__isolated_copy(working_oc_dir) as working_oc_dir_fault:
-                self.__debug(f"Run time CCT in {time}")
-                steady_state = self.__run_time_cct(
-                    working_oc_dir_fault,
-                    jobs_output_dir,
-                    time,
-                    bm_name,
-                    oc_name,
-                )
-                if steady_state:
-                    min_val = time
-                else:
-                    max_val = time
-                if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
-                    target_dir_name = (
-                        "bisection_last_success" if steady_state else "bisection_last_failure"
-                    )
-                    manage_files.rename_path(
-                        working_oc_dir_fault, working_oc_dir / target_dir_name
-                    )
-            time = round(((max_val + min_val) / 2), BISECTION_ROUND)
-            if self.__is_bisection_complete(max_val, min_val, cct_rel_tol, bm_name, oc_name):
-                break  # Exit loop if bisection is complete
-            counter += 1
-        return time
-
-    def obtain_simulated_curve(
-        self,
-        working_oc_dir: Path,
-        producer_name: str,
-        pcs_name: str,
-        bm_name: str,
-        oc_name: str,
-        reference_event_start_time: float,
-    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
-        """
-        Runs Dynawo to get the simulated curves for a given operating condition.
-        Parameters
-        ----------
-        working_oc_dir : Path
-            Temporal working path.
-        producer_name : str
-            Producer name (not directly used, but kept for interface consistency).
-        pcs_name : str
-            PCS.Benchmark name.
-        bm_name : str
-            Benchmark name.
-        oc_name : str
-            Operating Condition name.
-        reference_event_start_time : float
-            Instant of time when the event is triggered in reference curves.
-        Returns
-        -------
-        tuple[str, dict, SimulationResult, pd.DataFrame]
-            A tuple containing:
-            - str: Simulation output directory (jobs_output_dir).
-            - dict: Event parameters.
-            - SimulationResult: Information about the simulation result (success, errors).
-            - pd.DataFrame: Simulation calculated curves.
-        """
-        error_message = None
-        self.__reset_solver()
-        # Prepare environment by copying base case and producer files
-        output_dir, jobs_output_dir = self.__prepare_oc_validation(
-            working_oc_dir,
-            pcs_name,
-            bm_name,
-            oc_name,
-        )
-        event_params = dict()
-        outcome = SimulateOutcome(
-            succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
-        )
-        error_message = None
-        try:
-            event_params = self.__complete_model(
-                working_oc_dir,
-                pcs_name,
-                bm_name,
-                oc_name,
-                reference_event_start_time,
-            )
-            pcs_bm_oc_name = self.__cfg_section(pcs_name, bm_name, oc_name)
-            if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
-                self.__get_hiz_fault(
-                    output_dir,
-                    working_oc_dir,
-                    jobs_output_dir,
-                    event_params["start_time"],
-                    event_params["duration_time"],
-                    event_params["step_value"],
-                    bm_name,
-                    oc_name,
-                )
-            elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
-                self.__get_bolted_fault(
-                    working_oc_dir,
-                    event_params["start_time"],
-                    event_params["duration_time"],
-                )
-            outcome = self.__simulate(
-                output_dir,
-                working_oc_dir,
-                jobs_output_dir,
-                bm_name,
-                oc_name,
-            )
-            self._voltage_dip = measure_voltage_dip(
-                self._pcs_name,
-                bm_name,
-                oc_name,
-                outcome.curves,
-                event_params["start_time"],
-                event_params["duration_time"],
-            )
-
-            self.__debug(
-                f"Simulation finished in {self._sim_time}s: "
-                f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
-                f"has_curves={outcome.has_curves}",
-            )
-        except ValueError as e:
-            error_message = _to_simulation_error(str(e))
-        simulation_result = SimulationResult(
-            outcome.succeeded, outcome.time_exceeds, outcome.has_curves, error_message
-        )
-        return (
-            jobs_output_dir,
-            event_params,
-            simulation_result,
-            outcome.curves,
-        )
-
-    def get_disconnection_model(self) -> DisconnectionModel:
-        """
-        Get all equipment in the model that can be disconnected in the simulation.
-        Returns
-        -------
-        DisconnectionModel
-            Equipment that can be disconnected, including auxiliary load,
-            auxiliary load transformer, step-up transformers, and internal line.
-        """
-        return DisconnectionModel(
-            self.get_producer().aux_load,
-            self.get_producer().auxload_xfmr,
-            [stepup_xfmr.id for stepup_xfmr in self.get_producer().stepup_xfmrs],
-            self.get_producer().intline,
-        )
-
-    def get_generators_imax(self) -> dict:
-        """
-        Get the maximum current (Imax) for each generator.
-        Returns
-        -------
-        dict
-            Maximum continuous current by generator, keyed by generator ID.
-        """
-        generators_imax = {}
-        for generator in self.get_producer().generators:
-            generators_imax[generator.id] = generator.i_max
-        return generators_imax
-
-    def get_voltage_dip(self) -> float | None:
-        """
-        Get the voltage dip.
-        Returns
-        -------
-        float | None
-            Voltage dip value if defined, otherwise None.
-        """
-        return self._voltage_dip
-
-    def get_simulation_start(self) -> float:
-        """
-        Get the simulation start time.
-        Returns
-        -------
-        float
-            Simulation start time.
-        """
-        return self._simulation_start
-
-    def get_simulation_duration(self) -> float:
-        """
-        Get the simulation duration time.
-        Returns
-        -------
-        float
-            Simulation duration time.
-        """
-        return self._simulation_stop - self._simulation_start
-
-    def get_simulation_precision(self) -> float:
-        """
-        Get the simulation precision.
-        Returns
-        -------
-        float
-            Simulation precision.
-        """
-        return self._simulation_precision
+        value_map = {
+            "P0": -gen.p0,
+            "Q0": -gen.q0,
+            "U0": gen.u0,
+        }
+        return value_map.get(value_definition, 0.0)
