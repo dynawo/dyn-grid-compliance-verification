@@ -124,7 +124,7 @@ its dependencies (NumPy, etc.) will get installed at the user-level, i.e.,
 inside the user's `$HOME` directory, under a _Python virtual environment_.
 
 
-### Installation
+### Native installation
 
 1. Choose a base directory of your choice and run the following command:
 
@@ -153,8 +153,53 @@ inside the user's `$HOME` directory, under a _Python virtual environment_.
 The DyCoV application is now ready to use.
 
 
+### Docker installation
+
+*Best for: servers or users who prefer isolated containers to keep their system clean.*
+
+1. Download the following files from the Release page and place them in the same folder:
+   - [`dycov_rawimage.tar.gz`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
+   - [`import_image.sh`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_image.sh): Imports the image restoring the required Docker metadata.
+   - [`run_dycov_docker.sh`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_docker.sh): Launches the container.
+
+2. Grant execution permissions to the helper scripts:
+   ```bash
+   chmod +x import_image.sh run_dycov_docker.sh
+   ```
+
+3. Import the image:
+   ```bash
+   ./import_image.sh dycov_rawimage.tar.gz
+   ```
+
+4. Create a folder for your simulation projects and run the tool, mapping your user ID
+   to avoid permission issues with generated files:
+   ```bash
+   mkdir my_project
+   ./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_project/
+   ```
+
+The DyCoV application is now ready to use.
+
+
 
 ## Windows installation
+
+### Updating to a new version (WSL)
+
+Each new release of Dycov is a complete, standalone distribution. Updating replaces the existing installation entirely.
+
+> [!WARNING]
+> The update process permanently deletes the existing `DycovApp` distribution, **including any files stored inside it**.
+> However, files on your Windows drives (`C:\`, `D:\`, etc.) are not affected.
+
+**Before updating**, if you have files inside the distribution that you want to keep, move them to a Windows drive. From inside the Dycov session:
+
+```bash
+mv ~/my_results /mnt/c/Users/MyUser/Documents/
+```
+
+**To update**, simply run `import_wsl.bat` again with the new release files. The installer will detect the existing distribution and ask for confirmation before replacing it.
 
 ### Installation
 
@@ -162,24 +207,37 @@ The DyCoV application is now ready to use.
 > The Windows installation described here will install not only the DyCoV tool, but
 > also all of the other requirements for you.
 
-1. Download the **distribution artifacts** (typically from the Release page):
+1. Download the **distribution artifacts** from the Release page and place them all in the same folder:
 
-   - [dycov_rawimage.tar.gz](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
-   - [import_image.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_image.sh): Helper script for Linux Docker.
-   - [run_dycov_docker.sh](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_docker.sh): Helper script for Linux Docker.
+   - for **WSL installation**:
+     - [`dycov_rawimage.tar.gz`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
+     - [`import_wsl.bat`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.bat): Double-click installer.
+     - [`import_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.ps1): Installation logic, called automatically by `import_wsl.bat`.
+     - [`run_dycov_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_wsl.ps1): Launcher, called automatically by the desktop shortcut.
+
+   - for **Docker installation**:
+     - [`dycov_rawimage.tar.gz`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz): The heavy application package; do not unzip this manually.
 
 2. Install:
 
-   - for **WSL installation**:  
-     Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
-      ```powershell
-      # Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
-      # This creates a folder C:\DycovApp containing the system files.
-      wsl --import DycovApp C:\DycovApp .\dycov_rawimage.tar.gz
-      ```
+   - for **WSL installation**:
+
+     **Standard procedure (recommended):**
+     Place all four files in the same folder and **double-click `import_wsl.bat`**. The installer
+     will import the distribution and create a `Dycov` shortcut on your Desktop and in the
+     Start Menu.
+
+     **Manual procedure (for corporate environments with script execution restrictions):**
+     If your organization restricts the execution of `.bat` or `.ps1` scripts, you can perform
+     the installation manually using native Windows commands, which are not subject to those
+     restrictions. Open PowerShell or CMD in the folder containing `dycov_rawimage.tar.gz` and run:
+     ```powershell
+     wsl --import DycovApp C:\DycovApp .\dycov_rawimage.tar.gz
+     ```
 
    - for **Docker installation**:  
-     Open PowerShell in the folder containing `dycov_rawimage.tar.gz`. You need to import the image while manually restoring the configuration.
+     Open PowerShell in the folder containing `dycov_rawimage.tar.gz`. You need to import the
+     image while manually restoring the configuration.
      *Tip: Be careful when copy-pasting. Ensure the backslashes before the quotes (`\"`) are preserved.*
 
       ```powershell
@@ -193,12 +251,18 @@ The DyCoV application is now ready to use.
 
 3. Run:
 
-   - for **WSL installation**:  
-     To start the tool, you simply launch this specific distribution:
-      ```powershell
-      wsl -d DycovApp
-      ```
-     *Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
+   - for **WSL installation**:
+
+     **Standard procedure (recommended):**
+     Double-click the `Dycov` shortcut on your Desktop (or find it in the Start Menu).
+
+     **Manual procedure (for corporate environments with script execution restrictions):**
+     Open PowerShell or CMD and run:
+     ```powershell
+     wsl -d DycovApp -- bash /start_dycov.sh
+     ```
+
+     In both cases, your Windows drives are accessible from inside the session via `/mnt/c/`, `/mnt/d/`, etc.
 
    - for **Docker installation**:  
      Launch the container mapping your current directory (`${PWD}`) so the tool can see your files.
