@@ -2,6 +2,11 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Bess">
+    <!-- 
+    Zone 1 behaviour is emulated using a Zone 3 model.
+    The Power Plant Control (PPC) is bypassed to reproduce Zone 1 behaviour.
+    -->
+
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
