@@ -3,10 +3,11 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
     <!-- 
-    Zone 1 behaviour is emulated using a Zone 3 model.
-    The Power Plant Control (PPC) is bypassed to reproduce Zone 1 behaviour.
+    Zone 1 behaviour is emulated using a Zone 3 model. The parameter tuning of this model
+    is preserved the same as in Zone-3 tests, with two exceptions: 
+       * The Power Plant Control (PPC) is bypassed
+       * The value of Snom is that of the individual generating unit
     -->
-
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4B_PQFlag" value="false"/>
     <par type="BOOL" name="WTG4B_PfFlag" value="false"/>
