@@ -4,14 +4,14 @@ Welcome to Dycov (Dynamic Coverage Tool). This document serves as a complete, st
 
 ## Installation Overview
 
-There are **four ways** to install Dycov depending on your Operating System and preferences. Please verify which file you have (`linux_install.sh` OR `dycov_rawimage.tar.gz`) before starting.
+There are **four ways** to install Dycov depending on your Operating System and preferences. Please verify which files you have before starting.
 
-| Method | OS | Required File | Description |
+| Method | OS | Required Files | Description |
 | :--- | :--- | :--- | :--- |
-| **1. Windows WSL** | Windows | `dycov_rawimage.tar.gz` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
+| **1. Windows WSL** | Windows | `dycov_rawimage.tar.gz`, `import_wsl.bat`, `import_wsl.ps1`, `run_dycov_wsl.ps1` | **No Docker.** Runs as a standalone App inside the Windows Subsystem for Linux (WSL). |
 | **2. Windows Docker** | Windows | `dycov_rawimage.tar.gz` | Runs inside Docker Desktop. Requires familiarity with PowerShell. |
-| **3. Linux Native** | Linux | `linux_install.sh` | **No Docker.** It automatically downloads Dynawo and installs Dycov directly into your system. Requires internet. |
-| **4. Linux Docker** | Linux | `dycov_rawimage.tar.gz` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
+| **3. Linux Native** | Linux | `linux_install.sh` | **No Docker.** Automatically downloads Dynawo and installs Dycov directly into your system. Requires internet. |
+| **4. Linux Docker** | Linux | `dycov_rawimage.tar.gz`, `import_image.sh`, `run_dycov_docker.sh` | Runs inside a secure container using the provided helper scripts. Recommended for servers. |
 
 ---
 
@@ -19,15 +19,24 @@ There are **four ways** to install Dycov depending on your Operating System and 
 
 Before starting, create a clean folder on your computer (e.g., `Dycov_Install/`) and place the required files there.
 
-**If using Methods 1, 2, or 4 (Docker / WSL):**
-You need the **distribution artifacts** (typically from the Release page). Ensure you have these three files in the same directory:
+**If using Method 1 (Windows WSL):**
+Download the following files from the Release page and place them in the same folder:
 * `dycov_rawimage.tar.gz` (The heavy application package; do not unzip this manually).
-* `import_image.sh` (Helper script for Linux Docker).
-* `run_dycov_docker.sh` (Helper script for Linux Docker).
+* `import_wsl.bat` (Double-click installer — starts the installation process).
+* `import_wsl.ps1` (Installation logic, called automatically by `import_wsl.bat`).
+* `run_dycov_wsl.ps1` (Launcher, called automatically by the desktop shortcut).
+
+**If using Method 2 (Windows Docker):**
+* `dycov_rawimage.tar.gz`
 
 **If using Method 3 (Linux Native):**
-You only need the script `linux_install.sh`.
+* `linux_install.sh`
 * *Requirement:* You must have an active internet connection so the script can download Dynawo and Python dependencies.
+
+**If using Method 4 (Linux Docker):**
+* `dycov_rawimage.tar.gz`
+* `import_image.sh`
+* `run_dycov_docker.sh`
 
 ---
 
@@ -39,19 +48,18 @@ Choose **ONE** of the following methods that best fits your environment.
 *Best for: Windows users without Docker Desktop. This installs Dycov as a separate "App" in your Windows Subsystem for Linux.*
 
 **Step 1: Install**
-Open PowerShell. We will "import" the file as a new Linux distribution named "DycovApp".
-```powershell
-# Syntax: wsl --import <App_Name> <Install_Location> <Tar_File>
-# This creates a folder C:\DycovApp containing the system files.
-wsl --import DycovApp C:\DycovApp .\dycov_rawimage.tar.gz
-```
+Place all four required files in the same folder. Then **double-click `import_wsl.bat`**.
+
+The installer will:
+* Import `dycov_rawimage.tar.gz` as a WSL distribution named `DycovApp`.
+* Create a **Desktop shortcut** and a **Start Menu entry** named `Dycov`.
+
+*Note: If Windows asks whether to allow the script to run, click Yes.*
 
 **Step 2: Run**
-To start the tool, you simply launch this specific distribution:
-```powershell
-wsl -d DycovApp
-```
-*Note: In this mode, you are directly inside the Linux environment. You can access your Windows C: drive via `/mnt/c/` if needed.*
+Double-click the `Dycov` shortcut on your Desktop (or find it in the Start Menu).
+
+The tool will start an interactive Linux session. Your Windows drives are accessible from inside the session via `/mnt/c/`, `/mnt/d/`, etc.
 
 ---
 
@@ -143,7 +151,7 @@ When you prepare a study in your working directory (e.g., inside `examples/`), y
 
 ### Advanced Configuration (Source Code)
 * **Simulation Time:** The duration of the simulation is currently hardcoded in the source file `src/dycov/gfm/constants.py`.
-* *Warning:* If you are using Docker or WSL (Methods 2, 3, 4), this file is inside the image. You cannot easily edit it. If you need longer simulations, please request a parameter update. If using Method 1 (Linux Native), you can edit this file directly in your installation folder.
+* *Warning:* If you are using Docker or WSL (Methods 1, 2, 4), this file is inside the image. You cannot easily edit it. If you need longer simulations, please request a parameter update. If using Method 3 (Linux Native), you can edit this file directly in your installation folder.
 
 ### A Note on Units ⚠️
 Please be extremely careful with unit definitions in the `PCS Description.ini` files.
@@ -174,15 +182,15 @@ If you see "Permission Denied" when trying to open the result files after the si
     ```bash
     sudo chown -R $USER:$USER my_project_folder/
     ```
-2.  Next time, remember to use `-u $(id -u)` when launching the container (see Method 2).
+2.  Next time, remember to use `-u $(id -u)` when launching the container (see Method 4).
 
-
+---
 
 ## 5. Native Windows installation for developers (not recommended)
 
-> [!WARNING]  
+> [!WARNING]
 > Native Windows execution is not recommended because Dynawo, LaTeX tools, and several
-> system‑level dependencies are Linux‑oriented.
+> system-level dependencies are Linux-oriented.
 > Use this option only if you cannot use WSL or Docker.
 
 If you still prefer to set up DyCoV natively in Windows:
@@ -225,4 +233,3 @@ If you still prefer to set up DyCoV natively in Windows:
     ```
 
 The DyCoV application is now ready for development.
-
