@@ -49,7 +49,7 @@ def _get_sm_curves_template(xfmrs: list, gen_sms: list) -> str:
         curves_dictionary += (
             f"{gen_sm.get('id')}_GEN_RotorSpeedPu = \n"
             f"{gen_sm.get('id')}_GEN_InternalAngle = \n"
-            f"{gen_sm.get('id')}_GEN_AVRSetpointPu = \n"
+            f"{gen_sm.get('id')}_GEN_VoltageSetpointPu = \n"
             f"{gen_sm.get('id')}_GEN_MagnitudeControlledByAVRP = \n"
             f"{gen_sm.get('id')}_GEN_NetworkFrequencyPu = \n"
         )
@@ -111,7 +111,7 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
     for gen_ppm in gen_ppms:
         curves_dictionary += (
             f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-            f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"
+            f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
             f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
             f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
         )
@@ -257,7 +257,7 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
                 f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-                f"{gen_ppm.get('id')}_GEN_AVRSetpointPu = \n"
+                f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
             )
 
     return curves_dictionary

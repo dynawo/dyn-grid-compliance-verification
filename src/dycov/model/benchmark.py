@@ -533,7 +533,7 @@ class Benchmark:
                 name="fig_Ustator",
                 variables=[
                     {"type": "generator", "variable": "MagnitudeControlledByAVRPu"},
-                    {"type": "generator", "variable": "AVRSetpointPu"},
+                    {"type": "generator", "variable": "VoltageSetpointPu"},
                 ],
                 ylabel="V (pu base Unom)",
                 dynamic_band=dynamic_band,

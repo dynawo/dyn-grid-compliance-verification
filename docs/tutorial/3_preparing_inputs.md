@@ -258,7 +258,7 @@ NetworkFrequencyPu =
 [WT_ID]_GEN_IpInjTerminal =
 [WT_ID]_GEN_IqInjTerminal =
 [WT_ID]_GEN_UPuInjTerminal =
-[WT_ID]_GEN_AVRSetpointPu =
+[WT_ID]_GEN_VoltageSetpointPu =
 [WT_ID]_GEN_MagnitudeControlledByAVRPu =
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:
@@ -707,7 +707,7 @@ BusPDR_BUS_ReactivePower =
 StepUp_Xfmr_XFMR_Tap = 
 Synch_Gen_GEN_RotorSpeedPu = 
 Synch_Gen_GEN_InternalAngle = 
-Synch_Gen_GEN_AVRSetpointPu = 
+Synch_Gen_GEN_VoltageSetpointPu = 
 Synch_Gen_GEN_MagnitudeControlledByAVRP = 
 Synch_Gen_GEN_NetworkFrequencyPu = 
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled 

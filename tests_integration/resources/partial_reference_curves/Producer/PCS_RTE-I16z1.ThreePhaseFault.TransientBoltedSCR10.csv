@@ -1,4 +1,4 @@
-time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;StepUp_Xfmr_XFMR_Tap;Wind_Turbine_GEN_ActivePowerSetpointPu;Wind_Turbine_GEN_ReactivePowerSetpointPu;Wind_Turbine_GEN_AVRSetpointPu
+time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;StepUp_Xfmr_XFMR_Tap;Wind_Turbine_GEN_ActivePowerSetpointPu;Wind_Turbine_GEN_ReactivePowerSetpointPu;Wind_Turbine_GEN_VoltageSetpointPu
 0.000000000;1.044e+00;8.333e-01;3.456e-09;7.979e-01;2.769e-09;1.044e+00;7.500e-01;-8.546e-10;1.000e+01;8.335e-01;1.556e-02;1.556e-02
 29.999994000;1.044e+00;8.333e-01;-2.290e-09;7.979e-01;6.592e-09;1.044e+00;7.500e-01;8.804e-10;1.000e+01;8.335e-01;1.556e-02;1.556e-02
 29.999994000;7.800e-05;-4.443e-06;-6.744e-04;-9.360e-09;6.272e-09;7.800e-05;-4.004e-06;-6.070e-04;1.000e+01;8.335e-01;1.556e-02;1.556e-02

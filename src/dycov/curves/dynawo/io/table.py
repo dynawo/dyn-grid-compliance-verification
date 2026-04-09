@@ -73,7 +73,7 @@ class TableFile(FileVariables):
         variables_dict["bus_u0pu"] = rte_gen.u0
 
         # Adjust bus voltage or frequency based on the event's connection type
-        if event_params["connect_to"] == "AVRSetpointPu":
+        if event_params["connect_to"] == "VoltageSetpointPu":
             variables_dict["bus_upu"] = rte_gen.u0 + float(event_params["step_value"])
         elif event_params["connect_to"] == "NetworkFrequencyPu":
             variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
