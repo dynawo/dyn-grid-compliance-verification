@@ -1,4 +1,4 @@
-time;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_Voltage;NetworkFrequencyPu;Synch_Gen_GEN_RotorSpeedPu;Synch_Gen_GEN_RotorAngle;Synch_Gen_GEN_InternalAngle;Synch_Gen_GEN_AVRSetpointPu;Synch_Gen_GEN_MagnitudeControlledByAVRPu;Synch_Gen_GEN_NetworkFrequencyPu
+time;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_Voltage;NetworkFrequencyPu;Synch_Gen_GEN_RotorSpeedPu;Synch_Gen_GEN_RotorAngle;Synch_Gen_GEN_InternalAngle;Synch_Gen_GEN_VoltageSetpointPu;Synch_Gen_GEN_MagnitudeControlledByAVRPu;Synch_Gen_GEN_NetworkFrequencyPu
 0.0;5.70875;-0.003805;1.0444449731149077;1.0;1.0;1.316523;0.880969;1.066472;1.053892;1.0
 0.0;5.70875;-0.003805;1.0444449731149077;1.0;1.0;1.316523;0.880969;1.066472;1.053892;1.0
 0.0;5.70875;-0.003805;1.0444449731149077;1.0;1.0;1.316523;0.880969;1.066472;1.053892;1.0

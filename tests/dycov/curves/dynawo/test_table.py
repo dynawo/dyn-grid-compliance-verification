@@ -74,7 +74,7 @@ def event_params_base():
     return {
         "start_time": 10.0,
         "duration_time": 5.0,
-        "connect_to": "AVRSetpointPu",
+        "connect_to": "VoltageSetpointPu",
         "step_value": "0.02",
     }
 
@@ -91,7 +91,7 @@ def test_complete_file_replaces_placeholders_successfully(working_dir, rte_gen, 
 
 def test_complete_file_sets_bus_upu_for_avr_setpoint(working_dir, rte_gen, event_params_base):
     params = event_params_base.copy()
-    params["connect_to"] = "AVRSetpointPu"
+    params["connect_to"] = "VoltageSetpointPu"
     table = TableFile(DummyProducerCurves(), "BM", "OC")
     table.complete_file(working_dir, rte_gen, params)
     output = (working_dir / "TableInfiniteBus.txt").read_text()

@@ -279,7 +279,7 @@ class PerformanceValidator(Validator):
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
+                avr_setpoint = generator_id + "_GEN_" + "VoltageSetpointPu"
                 gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
                     self.__curve_list("time"),
                     self.__curve_list(magnitude_controlled_by_avr),
@@ -339,7 +339,7 @@ class PerformanceValidator(Validator):
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
+                avr_setpoint = generator_id + "_GEN_" + "VoltageSetpointPu"
 
                 static_diff = common.get_static_diff(
                     self.__curve_list(magnitude_controlled_by_avr),
@@ -733,9 +733,10 @@ class PerformanceValidator(Validator):
                 'stabilized': bool,  # Stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
                 'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
-                'AVR_5_check': bool,  # AVR 5% check status (if applicable)
-                'AVR_5': float,  # AVR 5% value (if applicable)
-                'AVR_5_crvs': list,  # AVR 5% curves (if applicable)
+                'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
+                    (if applicable)
+                'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
+                'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
             }

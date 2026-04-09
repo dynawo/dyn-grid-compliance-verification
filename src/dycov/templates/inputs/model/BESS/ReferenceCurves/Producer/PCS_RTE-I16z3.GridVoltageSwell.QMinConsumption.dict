@@ -19,7 +19,7 @@ BusPDR_BUS_Voltage =
 NetworkFrequencyPu =
 # Replace "[WT_ID]" with the Wind Turbine id or PV Array id
 [WT_ID]_GEN_MagnitudeControlledByAVRPu =
-[WT_ID]_GEN_AVRSetpointPu =
+[WT_ID]_GEN_VoltageSetpointPu =
 [WT_ID]_GEN_IpInjTerminal =
 [WT_ID]_GEN_IqInjTerminal =
 [WT_ID]_GEN_UPuInjTerminal =

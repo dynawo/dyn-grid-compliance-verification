@@ -303,7 +303,7 @@ Steps to expand the configuration of an existing PCS with new operating conditio
      # TSO Model configuration
      [PCS_RTE-I16z1.GridVoltageStep.Rise.Event]
      # Event connected to setpoint magnitude
-     connect_event_to = AVRSetpointPu
+     connect_event_to = VoltageSetpointPu
      # Instant of time at which the event or fault starts
      # Variable sim_t_event_start is called simply sim_t_event in the DTR
      sim_t_event_start = 30

@@ -27,6 +27,6 @@ Measurements_BUS_ReactivePower = Measurements_BUS_ReactivePower
 StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_XFMR_Tap
 Bess_GEN_IpInjTerminal = Bess_GEN_IpInjTerminal 
 Bess_GEN_IqInjTerminal = Bess_GEN_IqInjTerminal 
-Bess_GEN_AVRSetpointPu = Bess_GEN_AVRSetpointPu
+Bess_GEN_VoltageSetpointPu = Bess_GEN_VoltageSetpointPu
 Bess_GEN_NetworkFrequencyPu = Bess_GEN_NetworkFrequencyPu
 NetworkFrequencyPu = NetworkFrequencyPu
