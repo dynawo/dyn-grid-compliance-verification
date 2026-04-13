@@ -113,6 +113,7 @@ class ProducerCurves:
             "Pmax": producer.p_max_pu,
             "Qmax": producer.q_max_pu,
             "Udim": self.get_generator_u_dim() / producer.u_nom,
+            "Unom": producer.u_nom,
             "line_XPu": self._line_Xpu,
         }
 
