@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import GenParams
 
 
@@ -72,15 +73,14 @@ def _build_map(parsers: list[configparser.ConfigParser]) -> dict:
     dict
         Dictionary for classifying dynamic models by family and level.
     """
-    family_level_map = {}
+    family_map = {}
     for parser in parsers:
         for section in parser.sections():
             family = parser.get(section, "family", fallback="")
-            level = parser.get(section, "level", fallback="")
 
-            if family and level:
-                family_level_map[section] = {"family": family, "level": level}
-    return family_level_map
+            if family:
+                family_map[section] = {"family": family}
+    return family_map
 
 
 @dataclass(frozen=True)
@@ -101,11 +101,11 @@ class Translator:
     _load: configparser.ConfigParser
     _transformer: configparser.ConfigParser
     _control_modes: configparser.ConfigParser
-    _family_level_map: dict
+    _family_map: dict
 
-    def get_generator_family_level(self, generator: GenParams) -> tuple[str, str]:
+    def get_generator_family_level(self, generator: GenParams) -> str:
         """
-        Determines the family and level of a generator based on its library.
+        Determines the family of a generator based on its library.
 
         Parameters
         ----------
@@ -114,18 +114,17 @@ class Translator:
 
         Returns
         -------
-        tuple[str, str]
-            A tuple containing the generator family and level. Returns empty strings
+        str
+            The generator family. Returns an empty string
             if the family or type is not found in the `FAMILY_LEVEL_MAP`.
         """
-        if generator.lib in self._family_level_map:
-            family = self._family_level_map[generator.lib]["family"]
-            level = self._family_level_map[generator.lib]["level"]
-            return family, level
-        return "", ""
+        if generator.lib in self._family_map:
+            family = self._family_map[generator.lib]["family"]
+            return family
+        return ""  # Return empty if family is not found
 
     def _get_control_modes_by_generator(
-        self, generator: GenParams, generator_control_mode: str
+        self, generator: GenParams, generator_control_mode: str, zone: int
     ) -> list[str]:
         """
         Retrieves a list of valid control modes for a given generator and control mode name.
@@ -136,6 +135,8 @@ class Translator:
             The generator parameters.
         generator_control_mode: str
             The name of the generator's control mode (e.g., "VoltageControl").
+        zone: int
+            The zone number.
 
         Returns
         -------
@@ -143,10 +144,16 @@ class Translator:
             A list of valid control mode names (sections) that apply to the generator.
             Returns an empty list if no matching control modes are found.
         """
-        family, level = self.get_generator_family_level(generator)
-        option = f"{generator_control_mode}_{family}_{level}"
+        family = self.get_generator_family_level(generator)
+        option = f"{generator_control_mode}_{family}_Zone{zone}"
+        dycov_logging.get_logger("Translator").debug(
+            f"Looking for control modes with option '{option}' in 'ControlModes' section."
+        )
         control_modes = self._control_modes.get("ControlModes", option, fallback="")
         if not control_modes:
+            dycov_logging.get_logger("Translator").debug(
+                f"No control modes found for option '{option}'."
+            )
             return []
         return control_modes.split(",")
 
@@ -349,7 +356,11 @@ class Translator:
         return self._get_control_mode_parameters(control_mode)
 
     def is_valid_control_mode(
-        self, generator: GenParams, generator_control_mode: str, control_mode_parameters: dict
+        self,
+        generator: GenParams,
+        generator_control_mode: str,
+        control_mode_parameters: dict,
+        zone: int,
     ) -> tuple[bool, str]:
         """Check if the control mode is valid for the generator.
 
@@ -361,6 +372,8 @@ class Translator:
             The name of the generator's control mode to validate.
         generator_parameters: dict
             A dictionary of parameters associated with the generator's control mode.
+        zone: int
+            The zone number.
 
         Returns
         -------
@@ -370,7 +383,11 @@ class Translator:
             Valid control mode name or empty string if not valid
         """
         valid_control_modes = self._get_control_modes_by_generator(
-            generator, generator_control_mode
+            generator, generator_control_mode, zone
+        )
+        dycov_logging.get_logger("Translator").debug(
+            f"Valid control modes for generator {generator.lib} "
+            f"with control mode {generator_control_mode} in zone {zone}: {valid_control_modes}"
         )
 
         if not valid_control_modes:
@@ -383,7 +400,9 @@ class Translator:
 
         return False, ""
 
-    def is_reactive_control_mode(self, generator: GenParams, control_mode_name: str) -> bool:
+    def is_reactive_control_mode(
+        self, generator: GenParams, control_mode_name: str, zone: int
+    ) -> bool:
         """Check if the control mode is a reactive control mode.
 
         Parameters
@@ -392,14 +411,16 @@ class Translator:
             Generator parameters
         control_mode_name: str
             Control mode name
+        zone: int
+            Zone number
 
         Returns
         -------
         bool
             True if the control mode is a reactive control mode, False otherwise
         """
-        valid_control_modes = self._get_control_modes_by_generator(generator, "QSetpoint")
-        return control_mode_name in valid_control_modes
+        valid_control_modes = self._get_control_modes_by_generator(generator, "QSetpoint", zone)
+        return True if control_mode_name in valid_control_modes else False
 
 
 def _get_instance() -> Translator:
@@ -439,7 +460,7 @@ def _get_instance() -> Translator:
     _load_dictionary("Load.ini", load)
     _load_dictionary("Transformer.ini", transformer)
     _load_dictionary("Control_Modes.ini", control_modes)
-    family_level_map = _build_map(
+    family_map = _build_map(
         [bus, synchronous_machine, power_park, storage, line, load, transformer]
     )
 
@@ -452,7 +473,7 @@ def _get_instance() -> Translator:
         load,
         transformer,
         control_modes,
-        family_level_map,
+        family_map,
     )
 
 
