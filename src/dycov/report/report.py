@@ -504,6 +504,7 @@ def _create_full_tex(
             "Pmax": producer.p_max_pu,
             "Qmax": producer.q_max_pu,
             "Udim": oc_results["udim"] / producer.u_nom,
+            "Unom": producer.u_nom,
         }
 
         xmin, xmax = figure.get_common_time_range(

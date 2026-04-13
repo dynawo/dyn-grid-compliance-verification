@@ -30,6 +30,19 @@ _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
 
 
+def compute_rx_from_scr(scr, x_over_r=10.0):
+    """
+    Compute R and X from SCR assuming:
+      R^2 + X^2 = 1 / SCR^2
+      X / R = x_over_r
+    Returns (R, X)
+    """
+    factor = math.sqrt(1 + x_over_r**2)
+    R = 1.0 / (factor * scr)
+    X = x_over_r * R
+    return R, X
+
+
 class ModelSetup:
     """
     Calculates initial conditions and completes all Dynawo input files
@@ -159,9 +172,9 @@ class ModelSetup:
             self._log(bm_name, oc_name, f"\tSCR={scr}")
             scr_r_factor = config.get_float("GridCode", "SCR_r_factor", 0.0)
             if scr != 0:
-                pmax = abs(producer.p_max_pu * self._s_nref / producer.s_nom)
-                line_xpu = 1.0 / (scr * pmax)
-                line_rpu = line_xpu / scr_r_factor if scr_r_factor != 0.0 else 0.0
+                line_rpu, line_xpu = compute_rx_from_scr(scr, x_over_r=scr_r_factor)
+                line_rpu *= self._s_nref / producer.s_nom
+                line_xpu *= self._s_nref / producer.s_nom
 
         elif config.has_option(config_section, "Zcc"):
             self.has_line = True
@@ -244,8 +257,15 @@ class ModelSetup:
                 pdr_q_cfg, p_max_parameter, producer.p_max_pu, -1
             )
 
+        if "Udim" in pdr_u_cfg:
+            base_value = u_dim
+            parameter_name = "Udim"
+        else:
+            base_value = producer.u_nom
+            parameter_name = "Unom"
         ini_pdr_u = (
-            model_parameters.extract_defined_value(pdr_u_cfg, "Udim", u_dim) / producer.u_nom
+            model_parameters.extract_defined_value(pdr_u_cfg, parameter_name, base_value)
+            / producer.u_nom
         )
         return PdrParams(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
