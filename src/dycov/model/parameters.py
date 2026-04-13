@@ -146,6 +146,7 @@ class LoadInit:
 
 @dataclass(frozen=True)
 class SimulationResult:
+    appicable: bool
     success: bool
     time_exceeds: bool
     has_simulated_curves: bool
