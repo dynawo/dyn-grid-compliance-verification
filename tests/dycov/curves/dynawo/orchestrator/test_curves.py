@@ -390,12 +390,15 @@ class TestObtainSimulatedCurve:
 
             ms_instance = MagicMock()
             ms_instance.curves_dict = {"v": "x"}
-            ms_instance.complete_model.return_value = {
-                "start_time": 1.0,
-                "duration_time": 0.15,
-                "step_value": 0.1,
-                "connect_to": "None",
-            }
+            ms_instance.complete_model.return_value = [
+                True,
+                {
+                    "start_time": 1.0,
+                    "duration_time": 0.15,
+                    "step_value": 0.1,
+                    "connect_to": "None",
+                },
+            ]
             ms_cls.return_value = ms_instance
 
             be_instance = MagicMock()
