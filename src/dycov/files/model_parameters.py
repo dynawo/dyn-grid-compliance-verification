@@ -638,7 +638,7 @@ def _append_generator(
         parset, nsmap, lib, gen_id, producer_ini
     )
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
-    pcc_local = _get_generator_pcc_local(parset, nsmap, lib)
+    ppc_local = _get_generator_ppc_local(parset, nsmap, lib)
 
     generators.append(
         GenParams(
@@ -656,7 +656,7 @@ def _append_generator(
             q_min=q_min,
             voltage_droop=droop_value,
             use_voltage_droop=False,
-            PccLocal=pcc_local,
+            ppc_local=ppc_local,
         )
     )
 
@@ -756,9 +756,9 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
     return droop_value, s_nom
 
 
-def _get_generator_pcc_local(parset, nsmap, lib):
-    _, pcc_local = _get_parameter(parset, nsmap, lib, "PccLocal")
-    return pcc_local.lower() == "true" if pcc_local is not None else False
+def _get_generator_ppc_local(parset, nsmap, lib):
+    _, ppc_local = _get_parameter(parset, nsmap, lib, "PPCLocal")
+    return ppc_local.lower() == "true" if ppc_local is not None else False
 
 
 def _get_line_values(

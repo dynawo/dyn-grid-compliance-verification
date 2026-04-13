@@ -375,6 +375,15 @@ class DynawoCurves(ProducerCurves):
         }
         return value_map.get(value_definition, 0.0)
 
+    def __resolve_pre_value(self, gen: GenParams, pdr: PdrParams) -> float:
+        base_u = gen.terminals[0].u0 if gen.ppc_local else pdr.u
+        base_q = gen.terminals[0].q0 if gen.ppc_local else pdr.q
+
+        if not gen.use_voltage_droop:
+            return base_u
+
+        return base_u + gen.voltage_droop * base_q
+
     def __adjust_event_value(self, event_params: dict, pdr: PdrParams) -> None:
         """
         Adjusts the event 'pre_value' for VoltageSetpointPu if voltage drop is enabled.
@@ -387,15 +396,13 @@ class DynawoCurves(ProducerCurves):
         """
         if event_params["connect_to"] != "VoltageSetpointPu":
             return
-        for i, generator in enumerate(self.get_producer().generators):
-            if generator.use_voltage_droop:
-                if not generator.PccLocal:
-                    event_params["pre_value"][i] = pdr.u + generator.voltage_droop * pdr.q
-                else:
-                    event_params["pre_value"][i] = (
-                        generator.terminals[0].u0
-                        + generator.voltage_droop * generator.terminals[0].q0
-                    )
+
+        pre_value = [self.__resolve_pre_value(gen, pdr) for gen in self.get_producer().generators]
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"Adjusted pre_value for VoltageSetpointPu: {pre_value}"
+        )
+
+        event_params["pre_value"] = pre_value
 
     def __get_lines_for_initial_calcs(self, rte_lines: list) -> PimodelParams:
         """
@@ -696,7 +703,7 @@ class DynawoCurves(ProducerCurves):
                 pre_value = [
                     (
                         -pdr.p * setpoint_factor
-                        if not gen.pcc_local
+                        if not gen.ppc_local
                         else -gen.terminals[0].p0 * setpoint_factor
                     )
                     for gen in self.get_producer().generators
@@ -705,16 +712,19 @@ class DynawoCurves(ProducerCurves):
                 pre_value = [
                     (
                         -pdr.q * setpoint_factor
-                        if not gen.pcc_local
+                        if not gen.ppc_local
                         else -gen.terminals[0].q0 * setpoint_factor
                     )
                     for gen in self.get_producer().generators
                 ]
-            elif "AVRSetpointPu" == connect_event_to:
+            elif "VoltageSetpointPu" == connect_event_to:
                 pre_value = [
-                    (pdr.u if not gen.pcc_local else gen.terminals[0].u0)
+                    (pdr.u if not gen.ppc_local else gen.terminals[0].u0)
                     for gen in self.get_producer().generators
                 ]
+                dycov_logging.get_logger("ProducerCurves").debug(
+                    f"Initial pre_value for VoltageSetpointPu: {pre_value}"
+                )
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self.__log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
         fault_duration = 0.0
