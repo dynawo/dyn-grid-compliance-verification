@@ -15,13 +15,12 @@ from dycov.gfm.parameters import GFMParameters
 
 
 class GFMCalculator:
-    """
-    Abstract base class for all Grid Forming (GFM) calculators.
+    """Abstract base class for all Grid Forming (GFM) calculators.
 
-    This class establishes the foundational attributes and abstract methods required
-    for calculating response envelopes across various GFM events. It defines critical
-    constants for parameter array indexing and establishes the mathematical threshold
-    used for damping profile classification.
+    This class establishes the foundational attributes and abstract methods required for
+    calculating response envelopes across various GFM events. It defines critical constants for
+    parameter array indexing and establishes the mathematical threshold used for damping profile
+    classification.
     """
 
     # Constants representing the indices for parameter variation arrays
@@ -34,8 +33,7 @@ class GFMCalculator:
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """
-        Initializes the foundational GFMCalculator state using provided system parameters.
+        """Initializes the foundational GFMCalculator state using provided system parameters.
 
         Parameters
         ----------
@@ -64,8 +62,7 @@ class GFMCalculator:
         self._epsilon_vals = None
 
     def get_plot_parameter_names(self) -> list[str]:
-        """
-        Abstract method to retrieve the list of parameter names relevant for UI plotting.
+        """Abstract method to retrieve the list of parameter names relevant for UI plotting.
 
         This method establishes a contract and must be explicitly implemented by each
         concrete calculator subclass (e.g., PhaseJump, RoCoF).
@@ -81,8 +78,7 @@ class GFMCalculator:
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Abstract method defining the core execution pipeline for calculating response envelopes.
+        """Abstract method defining the core execution pipeline for calculating response envelopes.
 
         Must be implemented by subclasses to handle specific event mathematics.
 
@@ -118,8 +114,8 @@ class GFMCalculator:
         signal: np.ndarray,
         start_time: float = 0.0,
     ) -> np.ndarray:
-        """
-        Applies a temporal right-shift delay to a specified signal starting at a given coordinate.
+        """Applies a temporal right-shift delay to a specified signal starting at a given
+        coordinate.
 
         This mechanism holds the signal in its original state for t < start_time. Upon
         reaching t = start_time, it forcibly inserts the `delayed_value` for the exact duration
@@ -168,9 +164,8 @@ class GFMCalculator:
         return combined_signal[: len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
-        """
-        Enforces absolute boundary constraints by clipping signal values that exceed
-        specified operational limits.
+        """Enforces absolute boundary constraints by clipping signal values that exceed specified
+        operational limits.
 
         Parameters
         ----------
@@ -193,9 +188,8 @@ class GFMCalculator:
     def _calculate_epsilon_initial_check(
         self, D: np.ndarray, H: np.ndarray, x_total_initial: float
     ) -> np.ndarray:
-        """
-        Computes the dimensionless damping ratio (epsilon) to mathematically classify
-        the system's dynamic response archetype (overdamped vs. underdamped).
+        """Computes the dimensionless damping ratio (epsilon) to mathematically classify the
+        system's dynamic response archetype (overdamped vs. underdamped).
 
         Parameters
         ----------
@@ -230,8 +224,7 @@ class GFMCalculator:
     def _get_time_tunnel(
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """
-        Generates a dynamic, time-dependent tolerance band ("tunnel") mapped to the response.
+        """Generates a dynamic, time-dependent tolerance band ("tunnel") mapped to the response.
 
         This mathematical structure dictates a variable operational tolerance margin that
         remains strictly zero prior to the event, and then expands exponentially towards
@@ -264,9 +257,8 @@ class GFMCalculator:
     def _calculate_unlimited_power_envelopes(
         self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Synthesizes the theoretical absolute bounding envelopes before hardware constraints
-        are applied.
+        """Synthesizes the theoretical absolute bounding envelopes before hardware constraints are
+        applied.
 
         The process aggregates the minimum and maximum boundaries across all generated
         delta_p deviation arrays and superimposes the expanding time-dependent tunnel.
@@ -301,8 +293,7 @@ class GFMCalculator:
         sign: int,
         use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Executes the final operational constraint logic, strictly mapping the theoretical
+        """Executes the final operational constraint logic, strictly mapping the theoretical
         envelopes to definitive hardware and software saturation boundaries.
 
         This method shifts the normalized arrays using the initial steady-state power (P0)

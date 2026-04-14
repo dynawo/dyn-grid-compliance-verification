@@ -17,21 +17,18 @@ from dycov.logging.logging import dycov_logging
 
 
 class PhaseJump(GFMCalculator):
-    """
-    Calculator class dedicated to handling the GFM response to a phase jump event.
+    """Calculator class dedicated to handling the GFM response to a phase jump event.
 
-    This class performs all core calculations for active power deviations (delta_p)
-    and synthesizes the operational boundary envelopes. It employs distinct
-    mathematical strategies to differentiate between overdamped and underdamped
-    system responses.
+    This class performs all core calculations for active power deviations (delta_p) and synthesizes
+    the operational boundary envelopes. It employs distinct mathematical strategies to
+    differentiate between overdamped and underdamped system responses.
     """
 
     def __init__(
         self,
         gfm_params: GFMParameters,
     ) -> None:
-        """
-        Initializes the PhaseJump calculator with the specified Grid Forming parameters.
+        """Initializes the PhaseJump calculator with the specified Grid Forming parameters.
 
         Parameters
         ----------
@@ -48,8 +45,7 @@ class PhaseJump(GFMCalculator):
         self._max_active_power = gfm_params.get_max_active_power()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """
-        Retrieves the list of parameter names relevant for rendering PhaseJump plots.
+        """Retrieves the list of parameter names relevant for rendering PhaseJump plots.
 
         Returns
         -------
@@ -62,9 +58,8 @@ class PhaseJump(GFMCalculator):
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Calculates the active power deviation (delta_p) and its bounding envelopes
-        (PCC, upper, and lower) evaluated across a phase jump event timeframe.
+        """Calculates the active power deviation (delta_p) and its bounding envelopes (PCC, upper,
+        and lower) evaluated across a phase jump event timeframe.
 
         Parameters
         ----------
@@ -146,9 +141,8 @@ class PhaseJump(GFMCalculator):
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]:
-        """
-        Computes the delta_p sequences across nominal, minimum, and maximum
-        parameter variations, taking the damping profile into consideration.
+        """Computes the delta_p sequences across nominal, minimum, and maximum parameter
+        variations, taking the damping profile into consideration.
 
         Parameters
         ----------
@@ -229,8 +223,7 @@ class PhaseJump(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Consolidates raw traces to calculate and limit the final active power envelopes
+        """Consolidates raw traces to calculate and limit the final active power envelopes
         (inclusive of the primary PCC signal and its upper/lower thresholds).
 
         Parameters
@@ -290,9 +283,8 @@ class PhaseJump(GFMCalculator):
     def _calculate_common_params(
         self, D: float, H: float, Xeff: float
     ) -> tuple[float, float, float, float]:
-        """
-        Derives fundamental mechanical and electrical parameters universally
-        required for constructing the delta_p response waveforms.
+        """Derives fundamental mechanical and electrical parameters universally required for
+        constructing the delta_p response waveforms.
 
         Parameters
         ----------
@@ -339,9 +331,8 @@ class PhaseJump(GFMCalculator):
         event_time: float,
         epsilon_initial_check: float,
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Acts as the primary execution dispatcher, routing the delta_p logic mathematically
-        based on the system's verified damping state classification.
+        """Acts as the primary execution dispatcher, routing the delta_p logic mathematically based
+        on the system's verified damping state classification.
 
         Parameters
         ----------
@@ -372,9 +363,8 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Mathematically resolves the fundamental delta_p waveform defining an overdamped
-        system, representing raw dynamic behavior devoid of event constraints.
+        """Mathematically resolves the fundamental delta_p waveform defining an overdamped system,
+        representing raw dynamic behavior devoid of event constraints.
 
         Parameters
         ----------
@@ -417,9 +407,8 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Truncates the calculated overdamped system delta_p to enforce strict
-        zero-value stability before the specified event initiation.
+        """Truncates the calculated overdamped system delta_p to enforce strict zero-value
+        stability before the specified event initiation.
 
         Parameters
         ----------
@@ -449,9 +438,8 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_min(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """
-        Derives the minimum acceptable operational delta_p for an overdamped system
-        by mathematically scaling down the base response utilizing the lower margin.
+        """Derives the minimum acceptable operational delta_p for an overdamped system by
+        mathematically scaling down the base response utilizing the lower margin.
 
         Parameters
         ----------
@@ -479,9 +467,8 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_max(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """
-        Derives the maximum acceptable operational delta_p for an overdamped system
-        by scaling the response and injecting an engineered delay parameter.
+        """Derives the maximum acceptable operational delta_p for an overdamped system by scaling
+        the response and injecting an engineered delay parameter.
 
         Parameters
         ----------
@@ -515,9 +502,8 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Mathematically resolves the fundamental delta_p waveform capturing the
-        oscillatory traits inherent to an underdamped dynamic response.
+        """Mathematically resolves the fundamental delta_p waveform capturing the oscillatory
+        traits inherent to an underdamped dynamic response.
 
         Parameters
         ----------
@@ -553,9 +539,8 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Truncates the calculated underdamped system delta_p, enforcing zero-state
-        stability before the event trigger to align with physical constraints.
+        """Truncates the calculated underdamped system delta_p, enforcing zero-state stability
+        before the event trigger to align with physical constraints.
 
         Parameters
         ----------
@@ -583,9 +568,8 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_min(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """
-        Synthesizes the minimum bounding delta_p for an underdamped system utilizing
-        a combination of lower margin scaling and mathematically defined exponential decay.
+        """Synthesizes the minimum bounding delta_p for an underdamped system utilizing a
+        combination of lower margin scaling and mathematically defined exponential decay.
 
         Parameters
         ----------
@@ -620,9 +604,8 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_max(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """
-        Synthesizes the maximum bounding delta_p for an underdamped system applying
-        an upward operational margin and integrating a specific delay tracking mechanism.
+        """Synthesizes the maximum bounding delta_p for an underdamped system applying an upward
+        operational margin and integrating a specific delay tracking mechanism.
 
         Parameters
         ----------
@@ -655,9 +638,8 @@ class PhaseJump(GFMCalculator):
         return delta_p
 
     def _get_tunnel(self, p_peak_array: list[float]) -> float:
-        """
-        Derives the static tolerance margin "tunnel" outlining the acceptable operational
-        power boundary relative to generated peak tracking.
+        """Derives the static tolerance margin "tunnel" outlining the acceptable operational power
+        boundary relative to generated peak tracking.
 
         Parameters
         ----------
