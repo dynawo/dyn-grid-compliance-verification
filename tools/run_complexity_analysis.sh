@@ -1,4 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#
+# Runs the cyclomatic complexity audit (tools/analyze_complexity.py) against the project.
+# Ensures a virtual environment exists (creating or rebuilding it via build_and_install.sh
+# if needed), installs radon/xenon/plotly/kaleido, then executes the analysis and reports
+# results as CSV and PNG/HTML charts under complexity_report/.
+#
+#
+# (c) Rte 2024
+#     Developed by Grupo AIA
+#
 
 # Safer scripting options
 set -o nounset -o noclobber
