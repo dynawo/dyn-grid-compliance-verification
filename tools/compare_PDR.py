@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Diagnostic tool to assess the impact of the PPCLocal flag on simulation output.
+# Runs dycov performance twice (PPCLocal=false vs PPCLocal=true) on the same case,
+# then compares curves_calculated.csv across scenarios: computes RMSE/MAE/max-error
+# per signal and generates interactive Plotly HTML plots + a global CSV summary.
+#
+# (c) 2025/26 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+
 import argparse
 import math
 import os

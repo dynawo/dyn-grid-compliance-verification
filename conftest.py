@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# pytest configuration providing isolated working directories for each test.
+# Creates a shared .pytest_temp/ folder at session start (wiped clean on start and finish)
+# and an autouse fixture that gives every test its own temporary subdirectory as cwd,
+# restoring the original cwd and deleting the tempdir after the test completes.
+#
+# (c) 2025/26 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+
 import shutil
 import tempfile
 from pathlib import Path
