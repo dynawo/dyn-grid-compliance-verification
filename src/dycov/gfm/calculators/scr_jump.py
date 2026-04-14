@@ -22,18 +22,15 @@ logger = dycov_logging.get_logger(__name__)
 
 
 class SCRJump(GFMCalculator):
-    """
-    Calculator class dedicated to handling the GFM response to a Short-Circuit
-    Ratio (SCR) jump.
+    """Calculator class dedicated to handling the GFM response to a Short-Circuit Ratio (SCR) jump.
 
-    This class performs all core calculations for active power envelopes,
-    mathematically differentiating between overdamped and underdamped
-    system responses following an abrupt SCR variation event.
+    This class performs all core calculations for active power envelopes, mathematically
+    differentiating between overdamped and underdamped system responses following an abrupt SCR
+    variation event.
     """
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """
-        Initializes the SCRJump calculator with the specified Grid Forming parameters.
+        """Initializes the SCRJump calculator with the specified Grid Forming parameters.
 
         Parameters
         ----------
@@ -65,8 +62,7 @@ class SCRJump(GFMCalculator):
         self._disclaimer_message: Optional[str] = None
 
     def get_plot_parameter_names(self) -> list[str]:
-        """
-        Retrieves the list of parameter names relevant for rendering SCRJump plots.
+        """Retrieves the list of parameter names relevant for rendering SCRJump plots.
 
         Returns
         -------
@@ -84,9 +80,8 @@ class SCRJump(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Calculates the active power deviation (delta_p) and its bounding envelopes
-        (PCC, upper, and lower) evaluated across an SCR jump event timeframe.
+        """Calculates the active power deviation (delta_p) and its bounding envelopes (PCC, upper,
+        and lower) evaluated across an SCR jump event timeframe.
 
         Parameters
         ----------
@@ -143,9 +138,8 @@ class SCRJump(GFMCalculator):
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Computes the delta_p sequences across nominal, minimum, and maximum
-        parameter variations. This acts as the core dispatcher defining system damping behavior.
+        """Computes the delta_p sequences across nominal, minimum, and maximum parameter
+        variations. This acts as the core dispatcher defining system damping behavior.
 
         Parameters
         ----------
@@ -237,9 +231,8 @@ class SCRJump(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> np.ndarray:
-        """
-        Dynamically modifies an envelope by anchoring it to 50% of the expected
-        power change during the initial 30 ms transient window following the event.
+        """Dynamically modifies an envelope by anchoring it to 50% of the expected power change
+        during the initial 30 ms transient window following the event.
 
         Parameters
         ----------
@@ -287,8 +280,7 @@ class SCRJump(GFMCalculator):
         delta_p_at_event: float,
         delta_p_base: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Synthesizes the upper and lower boundary traces derived from a delta_p waveform.
+        """Synthesizes the upper and lower boundary traces derived from a delta_p waveform.
 
         Note: This specific method intentionally replicates legacy analytical logic
         to ensure stringent numerical consistency with prior validation benchmarks.
@@ -378,9 +370,8 @@ class SCRJump(GFMCalculator):
         event_time: float,
         tunnel_value: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Enforces a strict limitation protocol over the initial 100 ms transient period
-        to mitigate mathematically unrealistic reverse power excursions.
+        """Enforces a strict limitation protocol over the initial 100 ms transient period to
+        mitigate mathematically unrealistic reverse power excursions.
 
         Parameters
         ----------
@@ -433,8 +424,8 @@ class SCRJump(GFMCalculator):
         return upper_envelope, lower_envelope
 
     def _limit_signal(self, signal: np.ndarray) -> np.ndarray:
-        """
-        Utility function enforcing absolute min/max active power hardware limits (saturation clipping).
+        """Utility function enforcing absolute min/max active power hardware limits (saturation
+        clipping).
 
         Parameters
         ----------
@@ -457,8 +448,7 @@ class SCRJump(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Processes and constructs the absolute final active power envelopes by evaluating,
+        """Processes and constructs the absolute final active power envelopes by evaluating,
         limiting, and merging all generated candidate traces.
 
         Parameters
@@ -652,8 +642,7 @@ class SCRJump(GFMCalculator):
     def _calculate_common_params(
         self, D: float, H: float, Xeff: float
     ) -> tuple[float, float, float, float]:
-        """
-        Derives foundational system parameters central to power response evaluations.
+        """Derives foundational system parameters central to power response evaluations.
 
         Parameters
         ----------
@@ -715,9 +704,8 @@ class SCRJump(GFMCalculator):
     def _calculate_delta_p_for_damping(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], float, float]:
-        """
-        Dynamically branches the delta_p execution logic relative to the derived
-        damping ratio profile (overdamped vs. underdamped).
+        """Dynamically branches the delta_p execution logic relative to the derived damping ratio
+        profile (overdamped vs. underdamped).
 
         Parameters
         ----------
@@ -756,9 +744,8 @@ class SCRJump(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Mathematically resolves the second-order differential equation constructing
-        the foundational delta_p waveform defining an overdamped response.
+        """Mathematically resolves the second-order differential equation constructing the
+        foundational delta_p waveform defining an overdamped response.
 
         Parameters
         ----------
@@ -812,9 +799,8 @@ class SCRJump(GFMCalculator):
     def _get_overdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Truncates and aligns the foundational overdamped delta_p mapping by zeroing
-        response vectors occurring prior to the event threshold.
+        """Truncates and aligns the foundational overdamped delta_p mapping by zeroing response
+        vectors occurring prior to the event threshold.
 
         Parameters
         ----------
@@ -849,9 +835,8 @@ class SCRJump(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
-        """
-        Mathematically synthesizes the oscillating delta_p base response, projecting
-        bound limits exclusively required for underdamped evaluations.
+        """Mathematically synthesizes the oscillating delta_p base response, projecting bound
+        limits exclusively required for underdamped evaluations.
 
         Parameters
         ----------
@@ -898,9 +883,8 @@ class SCRJump(GFMCalculator):
     def _get_underdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
-        """
-        Truncates and aligns the oscillating underdamped elements, zeroing all vector
-        arrays executing prior to the established threshold constraint.
+        """Truncates and aligns the oscillating underdamped elements, zeroing all vector arrays
+        executing prior to the established threshold constraint.
 
         Parameters
         ----------
@@ -936,9 +920,8 @@ class SCRJump(GFMCalculator):
         return delta_p, delta_p_min_env, delta_p_max_env, p_peak, epsilon
 
     def _get_tunnel(self, peak_power: float) -> float:
-        """
-        Calculates and maps the mathematical static tolerance margin ("tunnel"),
-        outlining the required operational boundaries scaling relative to peak demand.
+        """Calculates and maps the mathematical static tolerance margin ("tunnel"), outlining the
+        required operational boundaries scaling relative to peak demand.
 
         Parameters
         ----------

@@ -24,10 +24,8 @@ LOGGER = dycov_logging.get_logger(__name__)
 
 
 class GridForming:
-    """
-    Core orchestrator class designed to handle the generation and analysis of
-    Grid Forming (GFM) model results for single simulation scenarios.
-    """
+    """Core orchestrator class designed to handle the generation and analysis of Grid Forming (GFM)
+    model results for single simulation scenarios."""
 
     def generate(
         self,
@@ -37,9 +35,8 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """
-        Executes the primary pipeline for GFM simulation results generation,
-        including data calculations, CSV data exports, and plotting.
+        """Executes the primary pipeline for GFM simulation results generation, including data
+        calculations, CSV data exports, and plotting.
 
         It automatically detects if "Hybrid" parameters (Overdamped/Underdamped conditions)
         are defined within the configuration. If detected, it calculates envelopes for both
@@ -210,8 +207,7 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """
-        Generates the simulation time array and determines the precise event time.
+        """Generates the simulation time array and determines the precise event time.
 
         Note: Specific calculators like SCRJump and RoCoF require an extended pre-event
         simulation window to establish a clear steady-state baseline.
@@ -248,8 +244,7 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Computes the analytical response envelopes using the active calculation strategy.
+        """Computes the analytical response envelopes using the active calculation strategy.
 
         Parameters
         ----------
@@ -298,8 +293,7 @@ class GridForming:
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
     ) -> None:
-        """
-        Marshals the generated mathematical signals and exports them to a structured CSV format.
+        """Marshals the generated mathematical signals and exports them to a structured CSV format.
 
         Parameters
         ----------
@@ -333,8 +327,8 @@ class GridForming:
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
-        """
-        Extracts and formats key simulation variables into human-readable strings for UI rendering.
+        """Extracts and formats key simulation variables into human-readable strings for UI
+        rendering.
 
         Parameters
         ----------
@@ -438,8 +432,7 @@ class GridForming:
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
     ) -> None:
-        """
-        Dispatches the internal variables to render and export the final visual plots.
+        """Dispatches the internal variables to render and export the final visual plots.
 
         Parameters
         ----------

@@ -20,13 +20,12 @@ from dycov.gfm.producer import GFMProducer
 
 
 class GFMParameters(Parameters):
-    """
-    Configuration entity used to define and manage the validation parameters
-    of a Grid Forming (GFM) model.
+    """Configuration entity used to define and manage the validation parameters of a Grid Forming
+    (GFM) model.
 
-    This class inherits from the foundational Parameters class, extending it
-    to retrieve, compute, and serve specific electrical, mechanical, and
-    simulation parameters required for GFM calculations.
+    This class inherits from the foundational Parameters class, extending it to retrieve, compute,
+    and serve specific electrical, mechanical, and simulation parameters required for GFM
+    calculations.
     """
 
     def __init__(
@@ -38,8 +37,7 @@ class GFMParameters(Parameters):
         only_dtr: bool,
         emt: bool,
     ) -> None:
-        """
-        Initializes the GFMParameters configuration instance.
+        """Initializes the GFMParameters configuration instance.
 
         Parameters
         ----------
@@ -61,8 +59,7 @@ class GFMParameters(Parameters):
         self._producer = GFMProducer(producer_ini)
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
-        """
-        Updates the internal hierarchical section identifiers utilized for parameter retrieval.
+        """Updates the internal hierarchical section identifiers utilized for parameter retrieval.
 
         Parameters
         ----------
@@ -78,8 +75,7 @@ class GFMParameters(Parameters):
         self._oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
 
     def is_valid(self) -> bool:
-        """
-        Validates whether the initialized producer configuration supports GFM calculations.
+        """Validates whether the initialized producer configuration supports GFM calculations.
 
         Returns
         -------
@@ -89,8 +85,7 @@ class GFMParameters(Parameters):
         return self._producer.is_gfm()
 
     def is_emt(self) -> bool:
-        """
-        Checks if the configuration mandates an Electro-Magnetic Transients (EMT) simulation.
+        """Checks if the configuration mandates an Electro-Magnetic Transients (EMT) simulation.
 
         Returns
         -------
@@ -100,8 +95,7 @@ class GFMParameters(Parameters):
         return self._emt
 
     def get_calculator_name(self) -> str:
-        """
-        Retrieves the designated calculator strategy name for the current PCS and benchmark.
+        """Retrieves the designated calculator strategy name for the current PCS and benchmark.
 
         Returns
         -------
@@ -111,8 +105,7 @@ class GFMParameters(Parameters):
         return self.__get_value("calculator")
 
     def get_effective_reactance(self) -> float:
-        """
-        Retrieves the effective reactance of the system.
+        """Retrieves the effective reactance of the system.
 
         Returns
         -------
@@ -122,8 +115,7 @@ class GFMParameters(Parameters):
         return float(self._producer._config.get("GFM Parameters", "Xeff"))
 
     def get_damping_constant(self) -> float:
-        """
-        Retrieves the system damping constant value derived from the producer configuration.
+        """Retrieves the system damping constant value derived from the producer configuration.
 
         Returns
         -------
@@ -133,8 +125,7 @@ class GFMParameters(Parameters):
         return float(self._producer._config.get("GFM Parameters", "D"))
 
     def get_inertia_constant(self) -> float:
-        """
-        Retrieves the system inertia constant value derived from the producer configuration.
+        """Retrieves the system inertia constant value derived from the producer configuration.
 
         Returns
         -------
@@ -144,8 +135,7 @@ class GFMParameters(Parameters):
         return float(self._producer._config.get("GFM Parameters", "H"))
 
     def get_nominal_apparent_power(self) -> float:
-        """
-        Retrieves the nominal apparent power capacity of the system.
+        """Retrieves the nominal apparent power capacity of the system.
 
         Returns
         -------
@@ -155,8 +145,7 @@ class GFMParameters(Parameters):
         return float(self._producer._config.get("GFM Parameters", "Snom"))
 
     def get_nominal_voltage(self) -> float:
-        """
-        Retrieves the nominal operational voltage of the system.
+        """Retrieves the nominal operational voltage of the system.
 
         Returns
         -------
@@ -166,8 +155,7 @@ class GFMParameters(Parameters):
         return float(self._producer._config.get("DEFAULT", "Unom"))
 
     def get_initial_active_power(self) -> float:
-        """
-        Retrieves the initial steady-state active power (P0).
+        """Retrieves the initial steady-state active power (P0).
 
         Returns
         -------
@@ -179,8 +167,7 @@ class GFMParameters(Parameters):
         return model_parameters.extract_defined_value(p0_definition, "Pmax", p_max, 1)
 
     def get_min_active_power(self) -> float:
-        """
-        Retrieves the absolute minimum active power capability limit (PMin).
+        """Retrieves the absolute minimum active power capability limit (PMin).
 
         Returns
         -------
@@ -193,8 +180,7 @@ class GFMParameters(Parameters):
         )
 
     def get_max_active_power(self) -> float:
-        """
-        Retrieves the absolute maximum active power capability limit (PMax).
+        """Retrieves the absolute maximum active power capability limit (PMax).
 
         Returns
         -------
@@ -207,8 +193,7 @@ class GFMParameters(Parameters):
         )
 
     def get_initial_reactive_power(self) -> float:
-        """
-        Retrieves the initial steady-state reactive power (Q0).
+        """Retrieves the initial steady-state reactive power (Q0).
 
         Returns
         -------
@@ -223,8 +208,7 @@ class GFMParameters(Parameters):
         return model_parameters.extract_defined_value(q0_definition, "Qmax", q_max, 1)
 
     def get_min_reactive_power(self) -> float:
-        """
-        Retrieves the absolute minimum reactive power capability limit (QMin).
+        """Retrieves the absolute minimum reactive power capability limit (QMin).
 
         Returns
         -------
@@ -237,8 +221,7 @@ class GFMParameters(Parameters):
         )
 
     def get_max_reactive_power(self) -> float:
-        """
-        Retrieves the absolute maximum reactive power capability limit (QMax).
+        """Retrieves the absolute maximum reactive power capability limit (QMax).
 
         Returns
         -------
@@ -251,8 +234,7 @@ class GFMParameters(Parameters):
         )
 
     def get_initial_voltage(self) -> float:
-        """
-        Retrieves the initial baseline voltage (U0).
+        """Retrieves the initial baseline voltage (U0).
 
         Returns
         -------
@@ -262,8 +244,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("U0", 1)
 
     def get_grid_voltage(self) -> float:
-        """
-        Retrieves the operational grid voltage (Ugr).
+        """Retrieves the operational grid voltage (Ugr).
 
         Returns
         -------
@@ -273,8 +254,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("Ugr", 1)
 
     def get_time_to_90(self) -> float:
-        """
-        Retrieves the 'TimeTo90' transient response parameter.
+        """Retrieves the 'TimeTo90' transient response parameter.
 
         Returns
         -------
@@ -284,8 +264,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("TimeTo90", 0.0)
 
     def get_time_for_tunnel(self) -> float:
-        """
-        Retrieves the 'TimeForTunnel' parameter defining dynamic tolerance progression.
+        """Retrieves the 'TimeForTunnel' parameter defining dynamic tolerance progression.
 
         Returns
         -------
@@ -295,8 +274,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("TimeforTunnel", 0.0)
 
     def get_final_allowed_tunnel_pn(self) -> float:
-        """
-        Retrieves the 'FinalAllowedTunnelPn' parameter.
+        """Retrieves the 'FinalAllowedTunnelPn' parameter.
 
         Returns
         -------
@@ -306,8 +284,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("FinalAllowedTunnelPn", 0.0)
 
     def get_final_allowed_tunnel_variation(self) -> float:
-        """
-        Retrieves the 'FinalAllowedTunnelVariation' parameter.
+        """Retrieves the 'FinalAllowedTunnelVariation' parameter.
 
         Returns
         -------
@@ -317,8 +294,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("FinalAllowedTunnelVariation", 0.0)
 
     def get_margin_low(self) -> float:
-        """
-        Retrieves the scaling factor defining the lower margin for envelope generation.
+        """Retrieves the scaling factor defining the lower margin for envelope generation.
 
         Returns
         -------
@@ -328,8 +304,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("MarginLow", 0.0)
 
     def get_margin_high(self) -> float:
-        """
-        Retrieves the scaling factor defining the upper margin for envelope generation.
+        """Retrieves the scaling factor defining the upper margin for envelope generation.
 
         Returns
         -------
@@ -339,8 +314,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("MarginHigh", 0.0)
 
     def get_pmax_mois_tunnel(self) -> float:
-        """
-        Retrieves the 'PmaxMOISTunnel' parameter, anchoring absolute upper clipping limits.
+        """Retrieves the 'PmaxMOISTunnel' parameter, anchoring absolute upper clipping limits.
 
         Returns
         -------
@@ -350,8 +324,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("PmaxMOISTunnel", 0.95)
 
     def get_pmin_mois_tunnel(self) -> float:
-        """
-        Retrieves the 'PminMOISTunnel' parameter, anchoring absolute lower clipping limits.
+        """Retrieves the 'PminMOISTunnel' parameter, anchoring absolute lower clipping limits.
 
         Returns
         -------
@@ -361,8 +334,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("PminMOISTunnel", 0.95)
 
     def get_min_ratio(self) -> float:
-        """
-        Retrieves the designated minimum proportional multiplier mapping parameter variations.
+        """Retrieves the designated minimum proportional multiplier mapping parameter variations.
 
         Returns
         -------
@@ -372,8 +344,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("RatioMin", 1.0)
 
     def get_max_ratio(self) -> float:
-        """
-        Retrieves the designated maximum proportional multiplier mapping parameter variations.
+        """Retrieves the designated maximum proportional multiplier mapping parameter variations.
 
         Returns
         -------
@@ -383,8 +354,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("RatioMax", 1.0)
 
     def get_base_angular_frequency(self) -> float:
-        """
-        Retrieves the base angular frequency benchmark ('Wb') of the operational system.
+        """Retrieves the base angular frequency benchmark ('Wb') of the operational system.
 
         Returns
         -------
@@ -394,8 +364,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("Wb", 0.0)
 
     def get_delta_phase(self) -> float:
-        """
-        Calculates and retrieves the phase angle jump magnitude explicitly.
+        """Calculates and retrieves the phase angle jump magnitude explicitly.
 
         Supports dynamic evaluation if the configuration value is formulated
         as a mathematical expression mapping reactances.
@@ -417,8 +386,7 @@ class GFMParameters(Parameters):
         return delta_rad * 180 / np.pi
 
     def get_voltage_step_at_grid(self) -> float:
-        """
-        Calculates and retrieves the defined voltage step magnitude explicitly at the grid.
+        """Calculates and retrieves the defined voltage step magnitude explicitly at the grid.
 
         Returns
         -------
@@ -439,9 +407,8 @@ class GFMParameters(Parameters):
         return voltage_step
 
     def get_voltage_step_at_pdr(self) -> float:
-        """
-        Calculates the voltage step magnitude specifically projected at the
-        Point of Delivery (PDR).
+        """Calculates the voltage step magnitude specifically projected at the Point of Delivery
+        (PDR).
 
         Returns
         -------
@@ -455,9 +422,8 @@ class GFMParameters(Parameters):
         )
 
     def get_delta_step(self) -> float:
-        """
-        Calculates the operational magnitude of the angle step mapping onto the
-        Point of Common Coupling (PCC).
+        """Calculates the operational magnitude of the angle step mapping onto the Point of Common
+        Coupling (PCC).
 
         Returns
         -------
@@ -473,8 +439,7 @@ class GFMParameters(Parameters):
         return delta_step
 
     def get_change_frequency(self) -> float:
-        """
-        Retrieves the Rate of Change of Frequency (RoCoF) parameter.
+        """Retrieves the Rate of Change of Frequency (RoCoF) parameter.
 
         Returns
         -------
@@ -484,8 +449,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("RoCoF", 0.0) / self._producer._f_nom
 
     def get_change_frequency_duration(self) -> float:
-        """
-        Retrieves the defined operational duration of the RoCoF event.
+        """Retrieves the defined operational duration of the RoCoF event.
 
         Returns
         -------
@@ -495,8 +459,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("RoCoFDuration", 0.0)
 
     def get_initial_frequency(self) -> float:
-        """
-        Retrieves the normalized initial steady-state frequency benchmark.
+        """Retrieves the normalized initial steady-state frequency benchmark.
 
         Returns
         -------
@@ -506,8 +469,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("Frequency0", 0.0) / self._producer._f_nom
 
     def get_t_expo_decrease(self) -> float:
-        """
-        Retrieves the designated exponential decay time constant governing transient profiles.
+        """Retrieves the designated exponential decay time constant governing transient profiles.
 
         Returns
         -------
@@ -517,8 +479,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("TimeExponentialDecrease", 0.0)
 
     def get_pll_time_constant(self) -> float:
-        """
-        Retrieves the operational Phase-Locked Loop (PLL) time constant.
+        """Retrieves the operational Phase-Locked Loop (PLL) time constant.
 
         Returns
         -------
@@ -528,8 +489,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("Tpll", 0.0)
 
     def get_grid_reactance(self) -> float:
-        """
-        Derives the absolute grid reactance directly from the defined Short Circuit Ratio (SCR).
+        """Derives the absolute grid reactance directly from the defined Short Circuit Ratio (SCR).
 
         Returns
         -------
@@ -539,8 +499,7 @@ class GFMParameters(Parameters):
         return 1 / self.get_scr()
 
     def get_scr(self) -> float:
-        """
-        Retrieves the Short Circuit Ratio (SCR) parameter defined for the simulation.
+        """Retrieves the Short Circuit Ratio (SCR) parameter defined for the simulation.
 
         Returns
         -------
@@ -556,8 +515,7 @@ class GFMParameters(Parameters):
         return config.get_float("GFM", "SCRmax", 0.0)
 
     def get_initial_scr(self) -> float:
-        """
-        Retrieves the starting Short Circuit Ratio configured prior to an SCR jump event.
+        """Retrieves the starting Short Circuit Ratio configured prior to an SCR jump event.
 
         Returns
         -------
@@ -567,8 +525,7 @@ class GFMParameters(Parameters):
         return self.__get_float_value("SCRinitial", 0.0)
 
     def get_final_scr(self) -> float:
-        """
-        Retrieves the terminal Short Circuit Ratio achieved following an SCR jump event.
+        """Retrieves the terminal Short Circuit Ratio achieved following an SCR jump event.
 
         Returns
         -------
@@ -578,8 +535,8 @@ class GFMParameters(Parameters):
         return self.__get_float_value("SCRfinal", 0.0)
 
     def __get_value(self, option: str) -> str:
-        """
-        Private helper traversing the hierarchical configuration framework to retrieve a string value.
+        """Private helper traversing the hierarchical configuration framework to retrieve a string
+        value.
 
         Parameters
         ----------
@@ -600,8 +557,8 @@ class GFMParameters(Parameters):
         return config.get_value("DEFAULT", option)
 
     def __get_float_value(self, option: str, default_value: float) -> float:
-        """
-        Private helper traversing the hierarchical configuration framework to retrieve a float value.
+        """Private helper traversing the hierarchical configuration framework to retrieve a float
+        value.
 
         Parameters
         ----------
@@ -628,9 +585,8 @@ class GFMParameters(Parameters):
     # -------------------------------------------------------------------------
 
     def get_hybrid_parameters(self) -> Optional[Tuple[float, float, float, float]]:
-        """
-        Evaluates the configuration to retrieve a set of hybrid operational parameters
-        mapping both Overdamped and Underdamped structural constants.
+        """Evaluates the configuration to retrieve a set of hybrid operational parameters mapping
+        both Overdamped and Underdamped structural constants.
 
         Returns
         -------
@@ -648,8 +604,7 @@ class GFMParameters(Parameters):
         return None
 
     def get_standard_parameters(self) -> Optional[Tuple[float, float]]:
-        """
-        Evaluates the configuration to retrieve standard, non-hybrid parameters D and H.
+        """Evaluates the configuration to retrieve standard, non-hybrid parameters D and H.
 
         Returns
         -------
@@ -665,8 +620,8 @@ class GFMParameters(Parameters):
         return None
 
     def _get_optional_float(self, option: str) -> Optional[float]:
-        """
-        Protected helper deploying dual-level hierarchy validation to extract float configurations.
+        """Protected helper deploying dual-level hierarchy validation to extract float
+        configurations.
 
         It interrogates the primary simulation parameter hierarchy first, before establishing
         fallback verification against the base physical producer definitions.
@@ -701,9 +656,8 @@ class GFMParameters(Parameters):
         return None
 
     def should_save_all_envelopes(self) -> bool:
-        """
-        Interrogates the base Producer INI framework to determine if extended
-        data serialization for all intermediate operational envelopes is enabled.
+        """Interrogates the base Producer INI framework to determine if extended data serialization
+        for all intermediate operational envelopes is enabled.
 
         Returns
         -------
@@ -718,8 +672,7 @@ class GFMParameters(Parameters):
         return False
 
     def get_emt_initial_delay(self) -> float:
-        """
-        Retrieves the requisite initial delay specifically mapped for EMT simulation frameworks.
+        """Retrieves the requisite initial delay specifically mapped for EMT simulation frameworks.
 
         In the absence of an explicit INI definition, it automatically reverts to utilizing
         the systemic baseline constant.

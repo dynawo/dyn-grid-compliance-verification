@@ -27,8 +27,7 @@ def save_results_to_csv(
     upper_envelope: np.ndarray,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """
-    Exports the generated mathematical envelopes and signals into a CSV format.
+    """Exports the generated mathematical envelopes and signals into a CSV format.
 
     If the system operates in hybrid mode and generates extra envelopes,
     they are dynamically appended as subsequent columns in the dataset.
@@ -76,8 +75,7 @@ def find_start_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """
-    Identifies the ideal index to trim leading stable, non-informative data.
+    """Identifies the ideal index to trim leading stable, non-informative data.
 
     This function iterates forward from the start of the signals and stops when
     it detects a significant variation exceeding the predefined tolerance threshold.
@@ -121,8 +119,7 @@ def find_end_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """
-    Identifies the ideal index to trim trailing stable, non-informative data.
+    """Identifies the ideal index to trim trailing stable, non-informative data.
 
     This function iterates backward from the end of the signals and stops when
     it detects the last point where there is a significant variation.
@@ -175,8 +172,7 @@ def plot_results(
     disclaimer_message: str = None,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """
-    Renders and exports the simulation results graphically, automatically trimming stable data.
+    """Renders and exports the simulation results graphically, automatically trimming stable data.
 
     Generates both an interactive HTML file and a static PNG image depending on the requested format.
 
@@ -447,8 +443,8 @@ def save_ini_dump(
     producer_config: configparser.ConfigParser,
     calculator: Any,
 ) -> None:
-    """
-    Serializes and exports all internal attributes from the simulation entities into a text file.
+    """Serializes and exports all internal attributes from the simulation entities into a text
+    file.
 
     Parameters
     ----------
@@ -463,8 +459,7 @@ def save_ini_dump(
     """
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
-        """
-        Helper method to format and write a dictionary's contents to an open file.
+        """Helper method to format and write a dictionary's contents to an open file.
 
         Parameters
         ----------
