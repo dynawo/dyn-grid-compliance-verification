@@ -27,9 +27,10 @@ class RetrySettings:
     enable_solver_flip: bool = True
     allowed_retries: int = 4
     attempt_count: int = 0
+    disable_retry_logs: bool = False
 
     @staticmethod
-    def from_config() -> "RetrySettings":
+    def from_config(disable_retry_logs: bool) -> "RetrySettings":
         return RetrySettings(
             step_divisor=config.get_float("Dynawo", "retry_step_divisor", 10.0),
             accuracy_multiplier=config.get_float("Dynawo", "retry_accuracy_multiplier", 10.0),
@@ -38,12 +39,21 @@ class RetrySettings:
             ),
             enable_solver_flip=config.get_boolean("Dynawo", "retry_solver_flip", True),
             allowed_retries=config.get_int("Debug", "max_simulation_retries", 4),
+            disable_retry_logs=disable_retry_logs,
         )
 
 
 class SolverRetryStrategy:
     def __init__(self, settings: RetrySettings | None = None):
-        self.settings = settings or RetrySettings.from_config()
+        self.settings = settings or RetrySettings.from_config(disable_retry_logs=False)
+
+    def _log(self, message: str, level: str = "debug") -> None:
+        if self.settings.disable_retry_logs:
+            return
+        getattr(dycov_logging.get_logger("SolverRetryStrategy"), level)(message)
+
+    def _warning(self, message: str) -> None:
+        self._log(message, "warning")
 
     def run(
         self,
@@ -56,8 +66,6 @@ class SolverRetryStrategy:
         oc_name: str,
         max_sim_time: float | None,
     ) -> DynawoResult:
-        logger = dycov_logging.get_logger("ProducerCurves")
-
         result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
@@ -65,7 +73,7 @@ class SolverRetryStrategy:
             return result
 
         # 2) Reduce min step
-        logger.warning("Retry: reducing minimum time step")
+        self._warning("Retry: reducing minimum time step")
         self._reduce_min_step(solver, working_oc_dir)
         result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -74,7 +82,7 @@ class SolverRetryStrategy:
             return result
 
         # 3) Increase required accuracy
-        logger.warning("Retry: increasing required accuracy")
+        self._warning("Retry: increasing required accuracy")
         self._increase_accuracy(solver, working_oc_dir)
         result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -83,7 +91,7 @@ class SolverRetryStrategy:
             return result
 
         if self.settings.add_parameters_small_network:
-            logger.warning("Retry: adding parameters for small networks")
+            self._warning("Retry: adding parameters for small networks")
             self._add_parameters_small_networks(solver, working_oc_dir)
             result = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -92,7 +100,7 @@ class SolverRetryStrategy:
                 return result
 
         if self.settings.enable_solver_flip:
-            logger.warning("Retry: flipping solver type SIM <-> IDA")
+            self._warning("Retry: flipping solver type SIM <-> IDA")
             self._flip_solver(solver)
             replace_placeholders.modify_jobs_file(
                 working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
@@ -102,7 +110,7 @@ class SolverRetryStrategy:
             )
 
         if result.sim_time > (max_sim_time or float("inf")):
-            logger.warning(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
+            self._warning(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
         return result
 
     # --- attempt helper ---

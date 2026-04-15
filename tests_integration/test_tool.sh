@@ -251,6 +251,7 @@ POSSIBLE_RESULTS = [
     "Fault simulation fails",
     "Fault dip unachievable",
     "Simulation time out",
+    "Not applicable test",
 ]
 
 def parse_counts(log_path: str):

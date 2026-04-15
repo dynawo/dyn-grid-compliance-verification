@@ -2,6 +2,14 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
+    <!-- PCS-->
+    <par type="BOOL" name="WPP_PPCLocal" value="false"/>
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WPP_ConverterLVControl" value="true"/>
+    <par type="DOUBLE" name="WPP_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WPP_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WPP_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WPP_XLvTrPu" value="0.01"/>
     <!-- Electrical -->
     <par type="DOUBLE" name="WPP_BesPu" value="0"/>
     <par type="DOUBLE" name="WPP_GesPu" value="0"/>
