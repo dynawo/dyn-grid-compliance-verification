@@ -2,6 +2,15 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
+    <!-- PCS-->
+    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
+
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WT4A_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="WT4A_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4A_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0.01"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WT4A_PfFlag" value="false"/>
@@ -54,7 +63,7 @@
     <par type="DOUBLE" name="WT4A_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="WT4A_tHoldIq" value="0"/>
     <par type="DOUBLE" name="WT4A_IqFrzPu" value="0"/>
-    <par type="BOOL" name="WT4A_PFlag" value="true"/>
+    <par type="BOOL" name="WT4A_PFlag" value="false"/>
     <par type="DOUBLE" name="WT4A_VRef1Pu" value="0"/>
 
     <!-- Generator Converter REGC -->

@@ -12,6 +12,10 @@ def test_model_validation_ppm_dynawo_model(dynawo_latest):
         None,
         MODEL / "Wind" / "WECC4A1" / "ReferenceCurves",
     )
+
+    if isinstance(compliance, str) and "Validation skipped" in compliance:
+        pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
+
     assert [
         Compliance.Compliant,  # 0
         Compliance.Compliant,  # 1
@@ -46,6 +50,10 @@ def test_model_validation_ppm_dynawo_model_partial_reference(dynawo_latest):
         None,
         RESOURCES / "partial_reference_curves",
     )
+
+    if isinstance(compliance, str) and "Validation skipped" in compliance:
+        pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
+
     assert [
         Compliance.NonCompliant,  # 0
         Compliance.NonCompliant,  # 1

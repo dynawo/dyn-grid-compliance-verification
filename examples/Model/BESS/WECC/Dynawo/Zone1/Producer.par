@@ -2,6 +2,15 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Bess">
+    <!-- PCS-->
+    <par type="BOOL" name="BESS_PPCLocal" value="true"/>
+
+    <!-- LV Transformer -->
+    <par type="BOOL" name="BESS_ConverterLVControl" value="true"/>
+    <par type="DOUBLE" name="BESS_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="BESS_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="BESS_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="BESS_XLvTrPu" value="0.01"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
