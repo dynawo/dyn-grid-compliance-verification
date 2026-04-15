@@ -1,34 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <set id="Main_Load">
-    <par type="DOUBLE" name="load_alpha" value="2"/>
-    <par type="DOUBLE" name="load_beta" value="2"/>
-    <par type="DOUBLE" name="load_P0Pu" value="{{main_P0Pu}}"/>
-    <par type="DOUBLE" name="load_Q0Pu" value="{{main_Q0Pu}}"/>
-    <par type="DOUBLE" name="load_U0Pu" value="{{main_U0Pu}}"/>
-    <par type="DOUBLE" name="load_UPhase0" value="{{main_UPhase0}}"/>
-  </set>
-  <set id="Secondary_Load">
-    <par type="DOUBLE" name="load_alpha" value="2"/>
-    <par type="DOUBLE" name="load_beta" value="2"/>
-    <par type="DOUBLE" name="load_P0Pu" value="{{secondary_P0Pu}}"/>
-    <par type="DOUBLE" name="load_Q0Pu" value="{{secondary_Q0Pu}}"/>
-    <par type="DOUBLE" name="load_U0Pu" value="{{secondary_U0Pu}}"/>
-    <par type="DOUBLE" name="load_UPhase0" value="{{secondary_UPhase0}}"/>
+    <par type="DOUBLE" name="load_alpha" value="0"/>
+    <par type="DOUBLE" name="load_beta" value="0"/>
+    <par type="DOUBLE" name="load_P0Pu" value="{{pdr_P}}"/>
+    <par type="DOUBLE" name="load_Q0Pu" value="{{pdr_Q}}"/>
+    <par type="DOUBLE" name="load_U0Pu" value="{{pdr_U}}"/>
+    <par type="DOUBLE" name="load_UPhase0" value="0.0"/>
   </set>
   <set id="SyncCompensator">
-    <par type="DOUBLE" name="generator_Alpha" value="1"/>
-    <par type="DOUBLE" name="generator_Beta" value="1"/>
-    <par type="DOUBLE" name="generator_P0Pu" value="0"/>
-    <par type="DOUBLE" name="generator_Q0Pu" value="0"/>
-    <par type="DOUBLE" name="generator_U0Pu" value="{{main_U0Pu}}"/>
-    <par type="DOUBLE" name="generator_UPhase0" value="0.0"/>
+    <par type="DOUBLE" name="inertialGrid_DPu" value="0"/>
+    <par type="DOUBLE" name="inertialGrid_Fh" value="0"/>
+    <par type="DOUBLE" name="inertialGrid_H" value="1"/>
+    <par type="DOUBLE" name="inertialGrid_Km" value="1e-4"/>
+    <par type="DOUBLE" name="inertialGrid_R" value="1"/>
+    <par type="DOUBLE" name="inertialGrid_SNom" value="90"/>
+    <par type="DOUBLE" name="inertialGrid_Tr" value="1"/>
+    <par type="DOUBLE" name="inertialGrid_P0Pu" value="0"/>
+    <par type="DOUBLE" name="inertialGrid_Q0Pu" value="0"/>
+    <par type="DOUBLE" name="inertialGrid_U0Pu" value="{{pdr_U}}"/>
+    <par type="DOUBLE" name="inertialGrid_UPhase0" value="0"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="0.0"/>
+    <par type="DOUBLE" name="line_XPu" value="0.3"/>
+    <par type="DOUBLE" name="line_GPu" value="0"/>
+    <par type="DOUBLE" name="line_BPu" value="0"/>
   </set>
   <set id="PDR">
     <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
   </set>
-  <set id="DisconnectLoad">
-    <par type="DOUBLE" name="event_tEvent" value="{{event_start}}"/>
-    <par type="BOOL" name="event_stateEvent1" value="true"/>
+  <set id="PRef">
+    <par type="DOUBLE" name="step_Height" value="{{step_event_PPu}}"/>
+    <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
+    <par type="DOUBLE" name="step_Value0" value="{{pdr_P}}"/>
+  </set>
+  <set id="QRef">
+    <par type="DOUBLE" name="step_Height" value="{{step_event_QPu}}"/>
+    <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
+    <par type="DOUBLE" name="step_Value0" value="{{pdr_Q}}"/>
   </set>
 </parametersSet>
