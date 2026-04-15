@@ -668,7 +668,7 @@ class ModelSetup:
             )
             return False, event_params
 
-        self._adjust_event_value(event_params)
+        self._adjust_event_value(event_params, pdr)
         self._calculate_xv_values(
             event_params,
             line_xpu,
