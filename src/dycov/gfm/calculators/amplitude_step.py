@@ -117,7 +117,8 @@ class AmplitudeStep(GFMCalculator):
             event_time=event_time,
         )
 
-        # Step 2: Synthesize the definitive operational envelopes referencing plant saturation capabilities
+        # Step 2: Synthesize the definitive operational envelopes referencing plant saturation
+        # capabilities
         q_pcc, q_up, q_down = self._get_envelopes(
             delta_iq_base=delta_iq_base,
             delta_iq_min=delta_iq_min,
@@ -125,9 +126,11 @@ class AmplitudeStep(GFMCalculator):
             Xeff=Xeff,
         )
 
-        # Step 3: Enforce temporal delays applicable strictly to Electro-Magnetic Transient (EMT) simulations
+        # Step 3: Enforce temporal delays applicable strictly to Electro-Magnetic Transient (EMT)
+        # simulations
         if self._is_emt_flag:
-            # Robust extraction of initial steady-state values handling both vector arrays and scalar formats safely
+            # Robust extraction of initial steady-state values handling both vector arrays and
+            # scalar formats safely
             initial_upper_val = q_up[0] if not np.isscalar(q_up) else q_up
             initial_lower_val = q_down[0] if not np.isscalar(q_down) else q_down
             initial_pcc_val = q_pcc[0] if not np.isscalar(q_pcc) else q_pcc
@@ -253,7 +256,8 @@ class AmplitudeStep(GFMCalculator):
         )
 
         # Step 4: Synthesize the primary expected trace mapping the core response trajectory
-        # This raw curve must inherently respect the absolute physical capabilities (Qmax and -Qmax).
+        # This raw curve must inherently respect the absolute physical capabilities
+        # (Qmax and -Qmax).
 
         # Derive the unconstrained nominal trajectory based on vector direction
         q_expected_unclamped = self._initial_reactive_power - sign_K * delta_iq_base
@@ -264,7 +268,8 @@ class AmplitudeStep(GFMCalculator):
             -self._max_reactive_power,
         )
 
-        # Step 5: Export the securely bounded operational arrays (conversion handling deferred to caller)
+        # Step 5: Export the securely bounded operational arrays (conversion handling deferred to
+        # caller)
         return q_expected, q_up, q_down
 
     def _get_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
@@ -338,7 +343,8 @@ class AmplitudeStep(GFMCalculator):
             The computed minimum limit delta_p boundary tailored for the lower envelope.
         """
 
-        # Step 1: Retrieve the fundamental exponential trajectory and apply a slight baseline reduction
+        # Step 1: Retrieve the fundamental exponential trajectory and apply a slight baseline
+        # reduction
         base_curve = 0.9 * self._get_delta_iq_base(Xeff, time_array)
 
         # Step 2: Establish the steady-state asymptote acting as the absolute ceiling
@@ -351,10 +357,12 @@ class AmplitudeStep(GFMCalculator):
         # Define the structural ceiling specific to this lower boundary trace
         lower_envelope_limit = max_delta_iq - tunnel
 
-        # Step 3: Enforce clipping to guarantee the baseline curve remains strictly beneath the limit
+        # Step 3: Enforce clipping to guarantee the baseline curve remains strictly beneath the
+        # limit
         delta_iq_lower = np.minimum(base_curve, lower_envelope_limit)
 
-        # Step 4: Constrain execution logic rendering the output completely inert prior to the 90% rise mark
+        # Step 4: Constrain execution logic rendering the output completely inert prior to the 90%
+        # rise mark
         delta_iq_lower = np.where(time_array < self._time_to_90, 0.0, delta_iq_lower)
 
         return delta_iq_lower
@@ -363,7 +371,8 @@ class AmplitudeStep(GFMCalculator):
         """Synthesizes the specific delta_iq bounding array designated for the upper envelope.
 
         This algorithm establishes a static steady-state plateau and introduces a decaying
-        transient "boost" mapped to the initial reaction phase, simulating brief reactive power spikes.
+        transient "boost" mapped to the initial reaction phase, simulating brief reactive power
+        spikes.
 
         Parameters
         ----------
@@ -388,10 +397,12 @@ class AmplitudeStep(GFMCalculator):
         # Step 2: Define the foundational static ceiling supporting the transient components
         steady_state_upper_limit = tunnel + max_delta_iq
 
-        # Step 3: Compute the decaying transient boost representing initial capacitive/inductive inertia
+        # Step 3: Compute the decaying transient boost representing initial capacitive/inductive
+        # inertia
         # This exponential modifier is strictly constrained to the early operational window.
 
-        # Generate a boolean evaluation mask activating the transient strictly within the tunnel timeframe
+        # Generate a boolean evaluation mask activating the transient strictly within the tunnel
+        # timeframe
         transient_condition = time_array < self._time_for_tunnel
 
         # Establish the specific exponential decay constant structuring the transient drop-off
@@ -404,10 +415,12 @@ class AmplitudeStep(GFMCalculator):
         if time_constant_transient > 1e-9:
             exponential_decay = np.exp(-time_array / time_constant_transient)
 
-            # Evaluate the transient boost magnitude combining the upper margin and exponential decay
+            # Evaluate the transient boost magnitude combining the upper margin and exponential
+            # decay
             transient_boost_value = self._margin_high * max_delta_iq * exponential_decay
 
-        # Step 4: Superimpose the conditional transient spike onto the stable maximum ceiling plateau
+        # Step 4: Superimpose the conditional transient spike onto the stable maximum ceiling
+        # plateau
         delta_iq_upper = steady_state_upper_limit + np.where(
             transient_condition, transient_boost_value, 0.0
         )

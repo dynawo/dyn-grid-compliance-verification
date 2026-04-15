@@ -174,7 +174,8 @@ def plot_results(
 ) -> None:
     """Renders and exports the simulation results graphically, automatically trimming stable data.
 
-    Generates both an interactive HTML file and a static PNG image depending on the requested format.
+    Generates both an interactive HTML file and a static PNG image depending on the requested
+    format.
 
     Parameters
     ----------

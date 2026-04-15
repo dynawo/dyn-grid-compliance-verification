@@ -44,7 +44,8 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
         # Execute the core envelope generation
         pcs.generate()
     except (FileNotFoundError, IOError, ValueError) as e:
-        # Catch explicit exceptions related to input/output or faulty values and log them appropriately
+        # Catch explicit exceptions related to input/output or faulty values and log them
+        # appropriately
         if dycov_logging.get_logger("GFMGeneration").getEffectiveLevel() == logging.DEBUG:
             dycov_logging.get_logger("GFMGeneration").exception(
                 f"Aborted execution for {pcs.get_name()}. {e}"
@@ -109,7 +110,8 @@ class GFMGeneration:
         Returns
         -------
         list[str]
-            A sorted list containing the string identifiers of the PCS models designated for generation.
+            A sorted list containing the string identifiers of the PCS models designated for
+            generation.
         """
         dycov_logging.get_logger("GFMGeneration").info("DyCoV Envelopes Generation")
         validation_pcs: set[str] = set()
@@ -133,9 +135,11 @@ class GFMGeneration:
         validation_pcs : set[str]
             The referenced set of PCS names to be populated. This collection is modified in-place.
         validation_key : str
-            The specific configuration key used to extract target PCS names from the global config file.
+            The specific configuration key used to extract target PCS names from the global config
+            file.
         validation_path : str
-            The relative subdirectory path within the templates folder where PCS definitions reside.
+            The relative subdirectory path within the templates folder where PCS definitions
+            reside.
         """
         tool_path = Path(__file__).resolve().parent.parent
 
@@ -144,7 +148,8 @@ class GFMGeneration:
             validation_pcs.update(config.get_list("Global", validation_key))
 
         if not validation_pcs:
-            # If not restricted to "only DTR" mode, scan the custom configuration's template directory
+            # If not restricted to "only DTR" mode, scan the custom configuration's template
+            # directory
             if not self._parameters.get_only_dtr():
                 validation_pcs.update(
                     manage_files.list_directories(
@@ -156,7 +161,8 @@ class GFMGeneration:
                 manage_files.list_directories(tool_path / self._templates_path / validation_path)
             )
 
-        # Sanitize the final set by purging any abstract 'aliases' entries that are not actual PCS names
+        # Sanitize the final set by purging any abstract 'aliases' entries that are not actual PCS
+        #  names
         for item in list(validation_pcs):
             if "aliases" in item:
                 validation_pcs.remove(item)
@@ -171,8 +177,8 @@ class GFMGeneration:
         Returns
         -------
         list[tuple[GFMParameters, str, str]]
-            A fully structured list of tuples, each formatted as (parameters, pcs_name, producer_name),
-            ready for sequential or parallel iteration.
+            A fully structured list of tuples, each formatted as (parameters, pcs_name,
+            producer_name), ready for sequential or parallel iteration.
         """
         pcs_list: list[tuple[GFMParameters, str, str]] = []
         all_producer_files = self._parameters.get_producer().get_filenames()
@@ -195,10 +201,11 @@ class GFMGeneration:
         Parameters
         ----------
         use_parallel : bool, optional
-            If True, activates the multiprocessing pool for concurrent generation. Defaults to False.
+            If True, activates the multiprocessing pool for concurrent generation.
+            Defaults to False.
         num_processes : int, optional
-            The maximum number of concurrent worker processes to utilize when `use_parallel` is True.
-            Defaults to 4.
+            The maximum number of concurrent worker processes to utilize when `use_parallel`
+            is True. Defaults to 4.
         """
         if use_parallel:
             dycov_logging.get_logger("GFMGeneration").info(
@@ -213,7 +220,8 @@ class GFMGeneration:
             for pcs_tuple in self._pcs_list:
                 _generate_pcs(pcs_tuple)
 
-        # Migrate all finalized generation artifacts from the temporary workspace to the user output directory
+        # Migrate all finalized generation artifacts from the temporary workspace to the user
+        # output directory
         for _, pcs_name, producer_name in self._pcs_list:
             manage_files.copy_directory(
                 self._parameters.get_working_dir() / producer_name,
