@@ -29,7 +29,8 @@ class GFMCalculator:
     _MAXIMUM_PARAMS_IDX = 2
 
     # Threshold defining the boundary between underdamped (< 1.0) and overdamped (>= 1.0) systems.
-    # Note: Critically damped systems (exactly 1.0) are mathematically grouped with the overdamped logic.
+    # Note: Critically damped systems (exactly 1.0) are mathematically grouped with the overdamped
+    # logic.
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
@@ -145,7 +146,8 @@ class GFMCalculator:
         # Step 2: Translate the continuous delay time into a discrete sample count
         delay_samples = int(delay_time / dt) + 1
 
-        # Safety Check: If the requested start time exceeds the simulation horizon, abort modification
+        # Safety Check: If the requested start time exceeds the simulation horizon, abort
+        # modification
         if start_time > time_array[-1]:
             return signal
 
@@ -157,7 +159,8 @@ class GFMCalculator:
         delay_block = np.full(delay_samples, delayed_value)
         post_delay_signal = signal[start_idx:]
 
-        # Step 5: Synthesize the full array by concatenating the unshifted, delayed, and shifted blocks
+        # Step 5: Synthesize the full array by concatenating the unshifted, delayed, and shifted
+        # blocks
         combined_signal = np.concatenate((pre_delay_signal, delay_block, post_delay_signal))
 
         # Step 6: Enforce array dimensional consistency by truncating overflow data
@@ -233,7 +236,8 @@ class GFMCalculator:
         Parameters
         ----------
         p_peak : float
-            The theoretical absolute peak power deviation used to scale the tunnel's final amplitude.
+            The theoretical absolute peak power deviation used to scale the tunnel's final
+            amplitude.
         time_array : np.ndarray
             The continuous time array mapped for the simulation.
         event_time : float
@@ -302,9 +306,11 @@ class GFMCalculator:
         Parameters
         ----------
         lower_envelope_unlimited : np.ndarray
-            The unconstrained lower boundary, strictly representing relative deviation (not yet shifted by P0).
+            The unconstrained lower boundary, strictly representing relative deviation
+            (not yet shifted by P0).
         upper_envelope_unlimited : np.ndarray
-            The unconstrained upper boundary, strictly representing relative deviation (not yet shifted by P0).
+            The unconstrained upper boundary, strictly representing relative deviation
+            (not yet shifted by P0).
         tunnel_value : float
             The static margin value incorporated into the final boundary limitation.
         initial_power : float
@@ -314,21 +320,25 @@ class GFMCalculator:
         min_power : float
             The absolute minimum physical capability limit of the system.
         sign : int
-            The directional indicator defining the nature of the disturbance (e.g., phase variation direction).
+            The directional indicator defining the nature of the disturbance (e.g., phase
+            variation direction).
         use_opposite_signs : bool
-            A flag determining if specialized asymmetrical clipping logic must be applied based on trajectory.
+            A flag determining if specialized asymmetrical clipping logic must be applied based
+            on trajectory.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
-            A tuple returning the securely limited, real-world lower and upper operational envelopes.
+            A tuple returning the securely limited, real-world lower and upper operational
+            envelopes.
         """
 
         limit_max = self._pmax_mois_tunnel
         limit_min = self._pmin_mois_tunnel
 
         if use_opposite_signs:
-            # Execution branch applying divergent clipping dependent on trajectory vs steady-state opposition
+            # Execution branch applying divergent clipping dependent on trajectory vs steady-state
+            # opposition
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.minimum(
                     np.maximum(

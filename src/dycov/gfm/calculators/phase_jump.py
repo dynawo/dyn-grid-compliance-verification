@@ -123,7 +123,8 @@ class PhaseJump(GFMCalculator):
             event_time=event_time,
         )
 
-        # Apply a uniform delay translation if utilizing the Electro-Magnetic Transients (EMT) engine
+        # Apply a uniform delay translation if utilizing the Electro-Magnetic Transients (EMT)
+        # engine
         if self._is_emt_flag:
             upper_envelope = self._apply_delay(self._emt_initial_delay, p_up[0], time_array, p_up)
             lower_envelope = self._apply_delay(
@@ -193,7 +194,8 @@ class PhaseJump(GFMCalculator):
             p_peak_array.append(p_peak)
             epsilon_array.append(epsilon)
 
-        # Dispatch bounding envelope generation based strictly on the nominal damping classification
+        # Dispatch bounding envelope generation based strictly on the nominal damping
+        # classification
         if epsilon_initial_check[self._ORIGINAL_PARAMS_IDX] > self._EPSILON_THRESHOLD:
             delta_p_min = self._get_overdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_overdamped_delta_p_max(D, H, Xeff, time_array, event_time)
@@ -386,7 +388,8 @@ class PhaseJump(GFMCalculator):
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(epsilon**2 - 1)
 
-        # Alpha and Beta mathematically represent the real roots defining the overdamped characteristic equation
+        # Alpha and Beta mathematically represent the real roots defining the overdamped
+        # characteristic equation
         alpha = epsilon * wn + wd
         beta = epsilon * wn - wd
 

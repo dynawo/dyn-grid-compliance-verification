@@ -299,7 +299,8 @@ class RoCoF(GFMCalculator):
 
         p_peak = abs(-self._rocof_value * (2 * H + D * self._t_pll))
 
-        # The theoretical response time is approximated as 4x the slowest time constant of the system
+        # The theoretical response time is approximated as 4x the slowest time constant of the
+        # system
         t_response = 4 * max(1 / alpha1, 1 / alpha2, self._t_pll)
 
         return -delta_p, p_peak, t_response
@@ -371,7 +372,8 @@ class RoCoF(GFMCalculator):
         R_coeff = np.sqrt(C_coeff**2 + ((D_coeff - C_coeff * epsilon * wn) / wd) ** 2)
         p_peak = abs(A_coeff + B_coeff / self._t_pll + R_coeff)
 
-        # The theoretical response time is approximated as 4x the decay time constant of the oscillation
+        # The theoretical response time is approximated as 4x the decay time constant of the
+        # oscillation
         t_response = 4 / (epsilon * wn)
 
         return -delta_p, p_peak, t_response
@@ -410,7 +412,8 @@ class RoCoF(GFMCalculator):
         tunnel_val = self._get_tunnel(p_peak_array)
         sign = np.sign(self._rocof_value)
 
-        # Rule 1: Determine the initial, unconstrained envelopes utilizing the minimum and maximum response traces.
+        # Rule 1: Determine the initial, unconstrained envelopes utilizing the minimum and maximum
+        # response traces.
         dp_min_trace = np.minimum.reduce(delta_p_array)
         dp_max_trace = np.maximum.reduce(delta_p_array)
 
@@ -429,7 +432,8 @@ class RoCoF(GFMCalculator):
                 self._initial_active_power + dp_min_trace * (1 - self._margin_low) - tunnel_val
             )
 
-        # Rule 2: Constrain envelopes to steady-state values following the completion of the transient response time.
+        # Rule 2: Constrain envelopes to steady-state values following the completion of the
+        # transient response time.
         t_response = t_response_array[self._ORIGINAL_PARAMS_IDX]
         clamp_start_time = event_time + t_response
         rocof_stop_time = event_time + self._rocof_duration

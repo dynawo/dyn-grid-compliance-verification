@@ -122,7 +122,8 @@ class SCRJump(GFMCalculator):
             event_time=event_time,
         )
 
-        # Step 2: Synthesize the final definitive envelopes from all calculated DeltaP candidate traces.
+        # Step 2: Synthesize the final definitive envelopes from all calculated DeltaP candidate
+        # traces.
         power_at_pcc, upper_envelope, lower_envelope = self._get_envelopes(
             delta_p_array=delta_p_results,
             delta_p_min_env_array=min_envelope_results,
@@ -195,10 +196,12 @@ class SCRJump(GFMCalculator):
         self._h_vals = inertia_variations
         self._epsilon_vals = epsilon_results
 
-        # Evaluate internal consistency: Ensure all evaluated scenarios share the same damping archetype.
+        # Evaluate internal consistency: Ensure all evaluated scenarios share the same damping
+        # archetype.
         is_overdamped = epsilon_results >= 1
         if not np.all(is_overdamped == is_overdamped[0]):
-            # If behavior diverges (e.g., nominal is overdamped but max variation drops to underdamped), flag it.
+            # If behavior diverges (e.g., nominal is overdamped but max variation drops to
+            # underdamped), flag it.
             eps_str = np.array2string(epsilon_results, precision=2)
             d_str = np.array2string(damping_variations, precision=2)
             h_str = np.array2string(inertia_variations, precision=2)
@@ -399,13 +402,15 @@ class SCRJump(GFMCalculator):
             delta_p_nominal[event_index] if event_index < len(delta_p_nominal) else 0
         )
 
-        # Construct a boolean mask isolating the initial limitation threshold window (first 100 ms).
+        # Construct a boolean mask isolating the initial limitation threshold window
+        # (first 100 ms).
         limit_mask = (time_array >= event_time) & (
             time_array <= event_time + constants.SCRJUMP_INITIAL_LIMITING_S
         )
 
         if delta_p_at_event > 0:
-            # Under surging power scenarios, prevent the lower boundary from sinking below baseline.
+            # Under surging power scenarios, prevent the lower boundary from sinking below
+            # baseline.
             limit_condition = limit_mask & (
                 lower_envelope < (self._initial_active_power - tunnel_value)
             )
@@ -413,7 +418,8 @@ class SCRJump(GFMCalculator):
                 limit_condition, self._initial_active_power - tunnel_value, lower_envelope
             )
         else:
-            # Under dropping power scenarios, prevent the upper boundary from spiking above baseline.
+            # Under dropping power scenarios, prevent the upper boundary from spiking above
+            # baseline.
             limit_condition = limit_mask & (
                 upper_envelope > (self._initial_active_power + tunnel_value)
             )
@@ -456,9 +462,11 @@ class SCRJump(GFMCalculator):
         delta_p_array : np.ndarray
             A 2D array matrix containing delta_p waveforms derived from D,H variations.
         delta_p_min_env_array : np.ndarray
-            A 2D array representing minimum exponential envelopes (populated with NaNs if overdamped).
+            A 2D array representing minimum exponential envelopes (populated with NaNs if
+            overdamped).
         delta_p_max_env_array : np.ndarray
-            A 2D array representing maximum exponential envelopes (populated with NaNs if overdamped).
+            A 2D array representing maximum exponential envelopes (populated with NaNs if
+            overdamped).
         p_peak_array : np.ndarray
             A 1D array reflecting the peak power deviations linked to each delta_p execution.
         time_array : np.ndarray
@@ -504,7 +512,8 @@ class SCRJump(GFMCalculator):
             upper_trace_candidates.append(upper_trace)
             lower_trace_candidates.append(lower_trace)
 
-            # If underdamped, execute and extract traces strictly derived from the upper exponential bounds.
+            # If underdamped, execute and extract traces strictly derived from the upper
+            # exponential bounds.
             if not np.isnan(delta_p_max_env_array[i, 0]):
                 upper_from_max, lower_from_max = self._get_envelope_traces(
                     delta_p=delta_p_max_env_array[i, :],
@@ -518,7 +527,8 @@ class SCRJump(GFMCalculator):
                 upper_traces_from_max_env.append(upper_from_max)
                 lower_traces_from_max_env.append(lower_from_max)
 
-            # If underdamped, execute and extract traces strictly derived from the lower exponential bounds.
+            # If underdamped, execute and extract traces strictly derived from the lower
+            # exponential bounds.
             if not np.isnan(delta_p_min_env_array[i, 0]):
                 upper_from_min, lower_from_min = self._get_envelope_traces(
                     delta_p=delta_p_min_env_array[i, :],
@@ -563,7 +573,8 @@ class SCRJump(GFMCalculator):
         upper_envelope = combined_upper_envelope
         lower_envelope = combined_lower_envelope
 
-        # Enforce temporal delays applicable strictly to Electro-Magnetic Transient (EMT) simulations.
+        # Enforce temporal delays applicable strictly to Electro-Magnetic Transient (EMT)
+        # simulations.
         if (self._initial_active_power > 0 and delta_p_at_event > 0) or (
             self._initial_active_power < 0 and delta_p_at_event > 0
         ):
@@ -773,7 +784,8 @@ class SCRJump(GFMCalculator):
         sqrt_term_val = alpha_coeff**2 - 4 * beta_coeff
         if sqrt_term_val < 0:
             logger.warning(
-                "Negative sqrt term detected in overdamped execution; forced to 0 to prevent complex numbers."
+                "Negative sqrt term detected in overdamped execution; forced to 0 to prevent "
+                "complex numbers."
             )
             sqrt_term_val = 0
 

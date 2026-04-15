@@ -46,13 +46,16 @@ class GFMParameters(Parameters):
         producer_ini : Path
             The directory path containing the Producer Model INI configuration files.
         selected_pcs : str
-            The string identifier of the specific Power Conversion System (PCS) designated for validation.
+            The string identifier of the specific Power Conversion System (PCS) designated for
+            validation.
         output_dir : Path
             The user-specified target directory path where simulation results will be exported.
         only_dtr : bool
-            A flag indicating whether to validate the model exclusively using the PCS defined in the DTR.
+            A flag indicating whether to validate the model exclusively using the PCS defined in
+            the DTR.
         emt : bool
-            A flag defining whether the Electro-Magnetic Transients (EMT) simulation engine is enabled.
+            A flag defining whether the Electro-Magnetic Transients (EMT) simulation engine is
+            enabled.
         """
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
         self._emt = emt
@@ -570,7 +573,8 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The parsed floating-point configuration value resolving through the highest precedence level.
+            The parsed floating-point configuration value resolving through the highest precedence
+            level.
         """
         if config.has_option(self._oc_section, option):
             return config.get_float(self._oc_section, option, default_value)
