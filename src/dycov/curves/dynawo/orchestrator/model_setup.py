@@ -24,7 +24,7 @@ from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
 from dycov.files import model_parameters, omega_file, tso_file
 from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import LoadInit, LoadParams, PdrParams, PimodelParams
+from dycov.model.parameters import GenParams, LoadInit, LoadParams, PdrParams, PimodelParams
 
 _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
@@ -267,7 +267,7 @@ class ModelSetup:
             model_parameters.extract_defined_value(pdr_u_cfg, parameter_name, base_value)
             / producer.u_nom
         )
-        return PdrParams(ini_pdr_u, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
+        return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def _get_grid_load(
         self,
@@ -426,6 +426,7 @@ class ModelSetup:
         pcs_name: str,
         bm_name: str,
         oc_name: str,
+        pdr: PdrParams,
     ) -> dict:
         """
         Retrieves event parameters (start time, duration, setpoint step, etc.)
@@ -439,6 +440,8 @@ class ModelSetup:
             Benchmark name.
         oc_name : str
             Operating Condition name.
+        pdr : PdrParams
+            PDR parameters.
 
         Returns
         -------
@@ -454,11 +457,28 @@ class ModelSetup:
         setpoint_factor = self._s_nref / producer.s_nom
         if connect_event_to:
             if connect_event_to == "ActivePowerSetpointPu":
-                pre_value = [-gen.terminals[0].p0 * setpoint_factor for gen in producer.generators]
+                pre_value = [
+                    (
+                        -pdr.p * setpoint_factor
+                        if not gen.ppc_local
+                        else -gen.terminals[0].p0 * setpoint_factor
+                    )
+                    for gen in producer.generators
+                ]
             elif connect_event_to == "ReactivePowerSetpointPu":
-                pre_value = [-gen.terminals[0].q0 * setpoint_factor for gen in producer.generators]
+                pre_value = [
+                    (
+                        -pdr.q * setpoint_factor
+                        if not gen.ppc_local
+                        else -gen.terminals[0].q0 * setpoint_factor
+                    )
+                    for gen in producer.generators
+                ]
             elif connect_event_to == "VoltageSetpointPu":
-                pre_value = [gen.terminals[0].u0 for gen in producer.generators]
+                pre_value = [
+                    (pdr.u if not gen.ppc_local else gen.terminals[0].u0)
+                    for gen in producer.generators
+                ]
 
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         self._log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
@@ -489,7 +509,16 @@ class ModelSetup:
             "connect_to": connect_event_to,
         }
 
-    def _adjust_event_value(self, event_params: dict) -> None:
+    def _resolve_pre_value(self, gen: GenParams, pdr: PdrParams) -> float:
+        base_u = gen.terminals[0].u0 if gen.ppc_local else pdr.u
+        base_q = gen.terminals[0].q0 if gen.ppc_local else pdr.q
+
+        if not gen.use_voltage_droop:
+            return base_u
+
+        return base_u + gen.voltage_droop * base_q
+
+    def _adjust_event_value(self, event_params: dict, pdr: PdrParams) -> None:
         """
         Adjusts event pre_value for VoltageSetpointPu when voltage droop is active.
 
@@ -497,14 +526,18 @@ class ModelSetup:
         ----------
         event_params : dict
             Event parameters dict to update in-place.
+        pdr : PdrParams
+            PDR parameters.
         """
         if event_params["connect_to"] != "VoltageSetpointPu":
             return
-        for i, generator in enumerate(self._owner.get_producer().generators):
-            if generator.use_voltage_droop:
-                event_params["pre_value"][i] = (
-                    generator.terminals[0].u0 + generator.voltage_droop * generator.terminals[0].q0
-                )
+
+        producer = self._owner.get_producer()
+        pre_value = [self._resolve_pre_value(gen, pdr) for gen in producer.generators]
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"Adjusted pre_value for VoltageSetpointPu: {pre_value}"
+        )
+        event_params["pre_value"] = pre_value
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -604,7 +637,7 @@ class ModelSetup:
             oc_name,
             f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
-        event_params = self._get_event_parameters(pcs_name, bm_name, oc_name)
+        event_params = self._get_event_parameters(pcs_name, bm_name, oc_name, pdr)
 
         if (
             reference_event_start_time is not None
@@ -626,11 +659,12 @@ class ModelSetup:
             producer.generators,
             sorted_stepup_xfmrs,
             producer.aux_load,
+            pdr,
             control_mode,
             force_voltage_droop,
             producer.get_zone(),
         )
-        self._adjust_event_value(event_params)
+        self._adjust_event_value(event_params, pdr)
         self._calculate_xv_values(
             event_params,
             line_xpu,
@@ -678,6 +712,16 @@ class ModelSetup:
             producer.generators,
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
+        )
+        model_parameters.write_pdr_comment(
+            working_oc_dir,
+            producer.get_producer_par().name,
+            pdr,
+        )
+        model_parameters.write_pdr_comment(
+            working_oc_dir,
+            _TSO_PAR,
+            pdr,
         )
 
         xmfrs = producer.stepup_xfmrs[:]

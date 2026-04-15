@@ -318,7 +318,7 @@ models to use instead of the placeholders that the tool has set are indicated:
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
-  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
+  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8', 'InertialGrid']-->
   <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
 ```
@@ -337,7 +337,7 @@ In this step we are going to modify the file to leave it like the following exam
   <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
   <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
-  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8']-->
+  <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8', 'InertialGrid']-->
   <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
 </dyn:dynamicModelsArchitecture>
 ```

@@ -3,6 +3,16 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
 
+    <!-- PCS-->
+    <par type="BOOL" name="WTG3_PPCLocal" value="true"/>
+
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WTG3_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="WTG3_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.01"/>
+
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG3_PQFlag" value="false"/>
     <par type="BOOL" name="WTG3_PfFlag" value="false"/>
@@ -35,7 +45,7 @@
     <par type="DOUBLE" name="WTG3_tRv" value="0.01"/>
 
     <!-- Electrical Control REECa -->
-    <par type="BOOL" name="WTG3_PFlag" value="true"/>
+    <par type="BOOL" name="WTG3_PFlag" value="false"/>
     <par type="DOUBLE" name="WTG3_IqFrzPu" value="0"/>
     <par type="DOUBLE" name="WTG3_VDLIp11" value="1.1"/>
     <par type="DOUBLE" name="WTG3_VDLIp12" value="1.1"/>
@@ -74,13 +84,13 @@
     <par type="BOOL" name="WTG3_FreqFlag" value="true"/>
     <par type="BOOL" name="WTG3_RefFlag" value="false"/>
     <par type="BOOL" name="WTG3_VCompFlag" value="false"/>
-    <par type="DOUBLE" name="WTG3_DDn" value="0"/>
-    <par type="DOUBLE" name="WTG3_DUp" value="0"/>
+    <par type="DOUBLE" name="WTG3_DDn" value="100"/>
+    <par type="DOUBLE" name="WTG3_DUp" value="100"/>
     <par type="DOUBLE" name="WTG3_DbdPu" value="0"/>
     <par type="DOUBLE" name="WTG3_EMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG3_EMinPu" value="-999"/>
-    <par type="DOUBLE" name="WTG3_FDbd1Pu" value="0"/>
-    <par type="DOUBLE" name="WTG3_FDbd2Pu" value="0"/>
+    <par type="DOUBLE" name="WTG3_FDbd1Pu" value="0.001"/>
+    <par type="DOUBLE" name="WTG3_FDbd2Pu" value="0.001"/>
     <par type="DOUBLE" name="WTG3_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG3_FEMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG3_Kc" value="0"/>

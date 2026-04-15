@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Cyclomatic complexity audit tool for the src/ tree.
+# Uses Radon to measure per-function complexity, flags critical functions (rank E/F),
+# counts call frequency via regex, and outputs a CSV report + histogram/bar charts
+# (PNG if kaleido is available, HTML fallback) under complexity_report/.
+#
+# (c) 2025/26 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+
 import csv
 import json
 import re

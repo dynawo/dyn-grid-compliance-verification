@@ -18,11 +18,12 @@ from dycov.model.parameters import GenParams
 
 def _connect_generator_to_setpoint(
     dyd_root: etree.Element, ns: str, generator: GenParams, connect_to: str
-) -> None:
+) -> int:
     setpoint_id = f"SetPoint_{generator.id}"
     _create_model(dyd_root, ns, setpoint_id, "Step", "TSOModel.par", setpoint_id)
-    _, connect_event_to = dynawo_translator.get_dynawo_variable(generator.lib, connect_to)
+    sign, connect_event_to = dynawo_translator.get_dynawo_variable(generator.lib, connect_to)
     _connect_generator(dyd_root, ns, generator.id, connect_event_to, setpoint_id, "step_step")
+    return sign
 
 
 def _create_model(
@@ -54,7 +55,12 @@ def _connect_generator(
 
 
 def _add_setpoint_parameters(
-    par_root: etree.Element, ns: str, generator: GenParams, event_params: dict, pre_value: float
+    par_root: etree.Element,
+    ns: str,
+    generator: GenParams,
+    event_params: dict,
+    pre_value: float,
+    step_value: float,
 ) -> None:
     parset = etree.SubElement(
         par_root,
@@ -82,7 +88,7 @@ def _add_setpoint_parameters(
             f"{{{ns}}}par",
             type="DOUBLE",
             name="step_Height",
-            value=f"{event_params['step_value']}",
+            value=f"{step_value}",
         )
     )
 
@@ -123,10 +129,14 @@ def complete_setpoint(
     par_root = par_tree.getroot()
     par_ns = etree.QName(dyd_root).namespace
 
-    for i, generator in enumerate(generators):
+    for i in range(len(generators)):
+        generator = generators[i]
+        sign = _connect_generator_to_setpoint(
+            dyd_root, dyd_ns, generator, event_params["connect_to"]
+        )
         pre_value = event_params["pre_value"][i]
-        _connect_generator_to_setpoint(dyd_root, dyd_ns, generator, event_params["connect_to"])
-        _add_setpoint_parameters(par_root, par_ns, generator, event_params, pre_value)
+        step_value = event_params["step_value"] * sign
+        _add_setpoint_parameters(par_root, par_ns, generator, event_params, pre_value, step_value)
 
     par_tree.write(path / par_file, pretty_print=True)
     dyd_tree.write(path / dyd_file, pretty_print=True)
