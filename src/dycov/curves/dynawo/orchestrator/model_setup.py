@@ -95,13 +95,17 @@ class ModelSetup:
         base = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         return base + suffix if suffix else base
 
-    def _log(self, bm_name: str, oc_name: str, message: str) -> None:
-        logger = dycov_logging.get_logger("ProducerCurves")
-        logger.info(message)
-        logger.debug(message)
+    def __log(self, message: str, level: str = "debug") -> None:
+        getattr(dycov_logging.get_logger("ModelSetup"), level)(message)
+
+    def _debug(self, message: str) -> None:
+        self.__log(message, "debug")
 
     def _warning(self, message: str) -> None:
-        dycov_logging.get_logger("ProducerCurves").warning(message)
+        self.__log(message, "warning")
+
+    def _error(self, message: str) -> None:
+        self.__log(message, "error")
 
     # ------------------------------------------------------------------
     # Grid impedance
@@ -143,7 +147,7 @@ class ModelSetup:
         if config.has_option(config_section, "line_XPu"):
             self.has_line = True
             line_xpu_definition = config.get_value(config_section, "line_XPu")
-            self._log(bm_name, oc_name, f"\tline_XPu={line_xpu_definition}")
+            self._debug(f"\tline_XPu={line_xpu_definition}")
             xpu_multiplier = 1.0
             line_xtype = line_xpu_definition
             if "*" in line_xpu_definition:
@@ -169,7 +173,7 @@ class ModelSetup:
         elif config.has_option(config_section, "SCR"):
             self.has_line = True
             scr = config.get_float(config_section, "SCR", 0.0)
-            self._log(bm_name, oc_name, f"\tSCR={scr}")
+            self._debug(f"\tSCR={scr}")
             scr_r_factor = config.get_float("GridCode", "SCR_r_factor", 0.0)
             if scr != 0:
                 line_rpu, line_xpu = compute_rx_from_scr(scr, x_over_r=scr_r_factor)
@@ -187,7 +191,7 @@ class ModelSetup:
                 ztanphi = 1.0
             if scc != 0:
                 zcc = uc_pu**2 / scc_pu
-                self._log(bm_name, oc_name, f"\tZcc={zcc}")
+                self._debug(f"\tZcc={zcc}")
                 line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
                 line_rpu = line_xpu / ztanphi
 
@@ -228,11 +232,11 @@ class ModelSetup:
         producer = self._owner.get_producer()
 
         pdr_p_cfg = config.get_value(config_section, "pdr_P")
-        self._log(bm_name, oc_name, f"\tpdr_P={pdr_p_cfg}")
+        self._debug(f"\tpdr_P={pdr_p_cfg}")
         pdr_q_cfg = config.get_value(config_section, "pdr_Q")
-        self._log(bm_name, oc_name, f"\tpdr_Q={pdr_q_cfg}")
+        self._debug(f"\tpdr_Q={pdr_q_cfg}")
         pdr_u_cfg = config.get_value(config_section, "pdr_U")
-        self._log(bm_name, oc_name, f"\tpdr_U={pdr_u_cfg}")
+        self._debug(f"\tpdr_U={pdr_u_cfg}")
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
         p_max_parameter = (
@@ -331,7 +335,7 @@ class ModelSetup:
                 return float(param_name)
             except ValueError:
                 cfg_value = config.get_value(config_section, param_name)
-                self._log(bm_name, oc_name, f"\t{param_name}={cfg_value}")
+                self._debug(f"\t{param_name}={cfg_value}")
                 return model_parameters.extract_defined_value(
                     cfg_value, default_key, default_value
                 )
@@ -359,17 +363,13 @@ class ModelSetup:
             If uinf equals udip (division by zero).
         """
         if uinf == udip:
-            dycov_logging.get_logger("ProducerCurves").error(
-                "Uinf cannot be equal to Udip to avoid division by zero."
-            )
+            self._error("Uinf cannot be equal to Udip to avoid division by zero.")
             raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
         zv = (udip * zcc) / (uinf - udip)
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
         xv = (zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
         if xv == 0.0:
-            dycov_logging.get_logger("ProducerCurves").warning(
-                "Xv is zero, which may indicate an issue with the calculation."
-            )
+            self._warning("Xv is zero, which may indicate an issue with the calculation.")
             xv = 1e-3
         return xv
 
@@ -451,7 +451,7 @@ class ModelSetup:
         config_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Event")
         producer = self._owner.get_producer()
         connect_event_to = config.get_value(config_section, "connect_event_to")
-        self._log(bm_name, oc_name, f"\t{connect_event_to=}")
+        self._debug(f"\t{connect_event_to=}")
 
         pre_value = 1.0
         setpoint_factor = self._s_nref / producer.s_nom
@@ -481,7 +481,7 @@ class ModelSetup:
                 ]
 
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
-        self._log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
+        self._debug(f"\tsim_t_event_start={start_time}")
 
         if config.has_option(config_section, "fault_duration"):
             fault_duration = config.get_float(config_section, "fault_duration", 0.0)
@@ -490,7 +490,7 @@ class ModelSetup:
             fault_duration = config.get_float(
                 config_section, f"fault_duration_{generator_type}", 0.0
             )
-        self._log(bm_name, oc_name, f"\tfault_duration={fault_duration}")
+        self._debug(f"\tfault_duration={fault_duration}")
 
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
@@ -499,7 +499,7 @@ class ModelSetup:
             )
             if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
                 step_value *= setpoint_factor
-        self._log(bm_name, oc_name, f"\tsetpoint_step_value={step_value}")
+        self._debug(f"\tsetpoint_step_value={step_value}")
 
         return {
             "start_time": start_time,
@@ -550,7 +550,7 @@ class ModelSetup:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> dict:
+    ) -> tuple[bool, dict]:
         """
         Performs the full model setup pipeline for one operating condition:
         reads loads, computes PDR/line/grid-load initial conditions, resolves
@@ -574,20 +574,18 @@ class ModelSetup:
 
         Returns
         -------
+        bool
+            True if the model setup is completed successfully, False if the test is not applicable.
         dict
             Completed event parameters.
         """
         producer = self._owner.get_producer()
 
-        self._log(
-            bm_name,
-            oc_name,
+        self._debug(
             f"Unom: {producer.u_nom}, "
             f"Generator type: {generator_variables.get_generator_type(producer.u_nom)}",
         )
-        self._log(
-            bm_name,
-            oc_name,
+        self._debug(
             f"Model definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
 
@@ -632,9 +630,7 @@ class ModelSetup:
             self._get_grid_load(pcs_name, bm_name, oc_name, u_dim),
         )
 
-        self._log(
-            bm_name,
-            oc_name,
+        self._debug(
             f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
         event_params = self._get_event_parameters(pcs_name, bm_name, oc_name, pdr)
@@ -653,7 +649,7 @@ class ModelSetup:
         section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
         force_voltage_droop = config.get_boolean(self._pcs_name, "force_voltage_droop", False)
-        model_parameters.adjust_producer_init(
+        is_test_applicable = model_parameters.adjust_producer_init(
             working_oc_dir,
             producer.get_producer_par(),
             producer.generators,
@@ -664,6 +660,14 @@ class ModelSetup:
             force_voltage_droop,
             producer.get_zone(),
         )
+        if not is_test_applicable:
+            self._debug(
+                f"The selected control mode '{control_mode}' is not valid for all generators. "
+                f"Please check the configuration for '{section}' and ensure that the control mode "
+                f"is compatible with the generator types."
+            )
+            return False, event_params
+
         self._adjust_event_value(event_params, pdr)
         self._calculate_xv_values(
             event_params,
@@ -698,7 +702,7 @@ class ModelSetup:
             working_oc_dir / _TSO_PAR,
         )
 
-        dycov_logging.get_logger("ProducerCurves").debug("Complete omega file")
+        self._debug("Complete omega file")
         omega_file.complete_omega(
             working_oc_dir,
             "Omega.dyd",
@@ -740,4 +744,4 @@ class ModelSetup:
             producer.get_zone(),
             control_mode,
         )
-        return event_params
+        return True, event_params
