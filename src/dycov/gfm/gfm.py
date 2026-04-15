@@ -19,15 +19,13 @@ from dycov.gfm.outputs import plot_results, save_ini_dump, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 
-# Initialize logger
+# Initialize logger for the Grid Forming module
 LOGGER = dycov_logging.get_logger(__name__)
 
 
 class GridForming:
-    """
-    A class to handle the generation and analysis of Grid Forming (GFM)
-    model results for a single simulation case.
-    """
+    """Core orchestrator class designed to handle the generation and analysis of Grid Forming (GFM)
+    model results for single simulation scenarios."""
 
     def generate(
         self,
@@ -37,41 +35,40 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """
-        Generates the GFM simulation results, including calculations,
-        CSV export, and plotting.
+        """Executes the primary pipeline for GFM simulation results generation, including data
+        calculations, CSV data exports, and plotting.
 
-        It automatically detects if "Hybrid" parameters (Overdamped/Underdamped)
-        are defined in the configuration. If so, it generates envelopes for both
-        sets and merges them (Max/Min). Otherwise, it proceeds with standard
-        D and H parameters.
+        It automatically detects if "Hybrid" parameters (Overdamped/Underdamped conditions)
+        are defined within the configuration. If detected, it calculates envelopes for both
+        damping conditions and merges them (applying Min/Max boundary logic). Otherwise,
+        it proceeds with the standard predefined D and H parameters.
 
         Parameters
         ----------
         working_path : Path
-            The base path for saving results.
+            The base directory path designated for saving the generated output files.
         parameters : GFMParameters
-            An object containing the GFM simulation parameters.
+            The loaded parameter configuration object guiding the simulation.
         pcs_name : str
-            The name of the PCS (Power Conversion System).
+            The identifier name of the specific Power Conversion System (PCS).
         bm_name : str
-            The name of the benchmark.
+            The identifier name of the Benchmark applied.
         oc_name : str
-            The name of the operating condition.
+            The identifier name of the specific Operating Condition.
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
 
-        # Retrieve common parameters and calculator
+        # Retrieve common effective parameters and instantiate the correct calculator strategy
         x_eff = parameters.get_effective_reactance()
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
 
         time_array, event_time = self._get_time(calculator_name)
 
-        # Get initial plot parameters list from calculator
+        # Retrieve the initial list of parameters targeted for the plotting UI
         params_list = calculator.get_plot_parameter_names() if calculator else None
 
-        # Decision Logic: Hybrid (Merged) Mode vs Standard Mode
+        # Determine the execution path: Hybrid (Merged) Mode vs Standard Mode
         hybrid_params = parameters.get_hybrid_parameters()
         standard_params = parameters.get_standard_parameters()
 
@@ -80,7 +77,7 @@ class GridForming:
         upper_envelope = np.array([])
         lower_envelope = np.array([])
 
-        # Dictionary to hold extra curves if 'save_all_envelopes' is True
+        # Dictionary to hold supplementary curves if 'save_all_envelopes' is enabled
         extra_envelopes = None
         title = f"{pcs_name}.{bm_name}.{oc_name}"
 
@@ -90,7 +87,7 @@ class GridForming:
             )
             d_over, h_over, d_under, h_under = hybrid_params
 
-            # Execution 1: Overdamped Parameters
+            # Execution Phase 1: Overdamped Parameters
             mag_name, pcc_over, up_over, low_over = self._calculate_envelopes(
                 calculator, time_array, event_time, d_over, h_over, x_eff
             )
@@ -105,7 +102,7 @@ class GridForming:
                 calculator=calculator,
             )
 
-            # Execution 2: Underdamped Parameters
+            # Execution Phase 2: Underdamped Parameters
             _, pcc_under, up_under, low_under = self._calculate_envelopes(
                 calculator, time_array, event_time, d_under, h_under, x_eff
             )
@@ -120,7 +117,8 @@ class GridForming:
                 calculator=calculator,
             )
 
-            # Merging: Maximum of upper envelopes, Minimum of lower envelopes
+            # Envelope Merging Logic: Calculate the absolute outermost bounds
+            # Maximum of both upper envelopes, Minimum of both lower envelopes
             upper_envelope1 = np.maximum(up_over, up_under)
             lower_envelope1 = np.minimum(low_over, low_under)
             upper_envelope2 = np.maximum(low_over, low_under)
@@ -128,11 +126,11 @@ class GridForming:
             upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
             lower_envelope = np.minimum(lower_envelope1, lower_envelop2)
 
-            # For the visual PCC signal, we use the Overdamped trace as the primary reference
+            # For the visual PCC signal, the Overdamped trace acts as the primary reference
             pcc_signal = pcc_over
             magnitude_name = mag_name
 
-            # Check if user wants to save/plot all individual envelopes
+            # Store individual boundary curves if the detailed output configuration is enabled
             if parameters.should_save_all_envelopes():
                 extra_envelopes = {
                     "upper_overdamped": up_over,
@@ -141,9 +139,9 @@ class GridForming:
                     "lower_underdamped": low_under,
                 }
 
-            # Update params_list to reflect hybrid mode in the plot
+            # Update the plot parameters legend to accurately reflect the hybrid status
             if params_list:
-                # Remove generic D and H if they exist
+                # Remove generic D and H labels, as hybrid uses dual configurations
                 params_list = [p for p in params_list if p not in ["D", "H"]]
 
         elif standard_params:
@@ -154,7 +152,7 @@ class GridForming:
             )
 
         else:
-            # Neither standard nor hybrid parameters found
+            # Trigger exception if no valid calculation bounds are defined
             error_msg = (
                 f"Configuration Error in {pcs_name}: "
                 "Neither standard parameters (D, H) nor hybrid parameters "
@@ -164,11 +162,11 @@ class GridForming:
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Check calculator flags (e.g., inconsistent damping warning)
+        # Retrieve calculator operational flags (e.g., inconsistent damping triggers)
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
-        # Export and Plot (passing extra_envelopes)
+        # Execute data export and rendering routines
         self._export_csv(
             working_path,
             title,
@@ -209,20 +207,21 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """
-        Generates the time array and defines the event time for the simulation.
+        """Generates the simulation time array and determines the precise event time.
 
-        Note: SCRJump and RoCoF start earlier to establish a clear steady-state.
+        Note: Specific calculators like SCRJump and RoCoF require an extended pre-event
+        simulation window to establish a clear steady-state baseline.
 
         Parameters
         ----------
         calculator_name : str
-            The name of the calculator being used.
+            The specific identifier string of the active calculator strategy.
 
         Returns
         -------
         tuple[np.ndarray, float]
-            A tuple containing the time array and the event time (float).
+            A tuple containing the complete time array (np.ndarray) and the
+            calculated event time (float).
         """
         if calculator_name in ["SCRJump", "RoCoF"]:
             start_time = constants.SIMULATION_START_TIME_EXTENDED
@@ -245,32 +244,31 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Calculates the response envelopes using the provided calculator.
+        """Computes the analytical response envelopes using the active calculation strategy.
 
         Parameters
         ----------
         calculator : GFMCalculator
-            The envelopes calculator object.
+            The instantiated envelope calculator object.
         time_array : np.ndarray
-            The time array for the simulation.
+            The X-axis time array mapped for the simulation.
         event_time : float
-            The time of the event.
+            The absolute point in time where the grid event is triggered.
         damping_constant : float
-            The damping constant (D).
+            The system damping constant value (D).
         inertia_constant : float
-            The inertia constant (H).
+            The system inertia constant value (H).
         x_eff : float
-            The effective reactance (Xeff).
+            The effective reactance of the system (Xeff).
 
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing:
-            - str: The name of the plot magnitude (e.g., "P", "Iq").
-            - np.ndarray: The PCC signal data.
-            - np.ndarray: The upper envelope data.
-            - np.ndarray: The lower envelope data.
+            - str: The symbolic name of the magnitude plotted (e.g., 'P', 'Iq').
+            - np.ndarray: The resulting PCC signal data array.
+            - np.ndarray: The upper bound envelope data array.
+            - np.ndarray: The lower bound envelope data array.
         """
         magnitude_name, pcc_signal, upper_envelope, lower_envelope = (
             calculator.calculate_envelopes(
@@ -295,8 +293,26 @@ class GridForming:
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
     ) -> None:
-        """
-        Exports the simulation results to a CSV file.
+        """Marshals the generated mathematical signals and exports them to a structured CSV format.
+
+        Parameters
+        ----------
+        csv_path : Path
+            The directory path intended for the output CSV file.
+        title : str
+            The base filename for the output file.
+        magnitude_name : str
+            The physical magnitude being analyzed (e.g., 'P', 'Iq').
+        time_array : np.ndarray
+            Array containing all time steps evaluated.
+        pcc_signal : np.ndarray
+            The recorded system signal at the Point of Common Coupling.
+        lower_envelope : np.ndarray
+            The array bounding the lower limit of the response.
+        upper_envelope : np.ndarray
+            The array bounding the upper limit of the response.
+        extra_envelopes : dict, optional
+            A dictionary appending supplementary data series as additional columns.
         """
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
@@ -311,20 +327,22 @@ class GridForming:
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
-        """
-        Generates a list of formatted strings with parameter information for plots.
+        """Extracts and formats key simulation variables into human-readable strings for UI
+        rendering.
 
         Parameters
         ----------
         parameters : GFMParameters
-            The GFM parameters object to query for values.
+            The central configuration object queried for parameter values.
         params_list : list
-            A list of strings specifying which parameters to extract.
+            A filter list of string identifiers specifying which parameters should be extracted.
+        calculator : GFMCalculator
+            The calculator providing internal runtime variables (e.g., Epsilon).
 
         Returns
         -------
         list[str]
-            A list of formatted strings, each representing a parameter and its value.
+            A comprehensive list of cleanly formatted strings representing parameters and values.
         """
         if params_list is None:
             return []
@@ -414,8 +432,38 @@ class GridForming:
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
     ) -> None:
-        """
-        Generates and saves a plot of the simulation results.
+        """Dispatches the internal variables to render and export the final visual plots.
+
+        Parameters
+        ----------
+        png_path : Path
+            Destination directory intended for the graphical output files.
+        title : str
+            The base title rendered onto the graph and used as the filename.
+        magnitude_name : str
+            The specific physical unit or magnitude being graphed (e.g., 'P', 'Iq').
+        time_array : np.ndarray
+            The complete X-axis time representation array.
+        event_time : float
+            The specific point marking the event initialization for rendering overlays.
+        pcc_signal : np.ndarray
+            The evaluated signal line derived from the simulation.
+        lower_envelope : np.ndarray
+            The continuous lower constraint threshold series.
+        upper_envelope : np.ndarray
+            The continuous upper constraint threshold series.
+        parameters : GFMParameters
+            The simulation parameter handler used to populate legend labels.
+        params_list : list
+            Target variables designated for inclusion within the visual legend.
+        calculator : GFMCalculator
+            The active calculator instance providing necessary derivation boundaries.
+        is_inconsistent : bool, optional
+            Flag to highlight data anomalies via graphical overlays. Defaults to False.
+        disclaimer_msg : str, optional
+            Specific warning message overlay injected into the plot.
+        extra_envelopes : dict, optional
+            Supplementary graphs triggered during hybrid evaluation structures.
         """
         plot_results(
             path=png_path / f"{title}.png",
@@ -423,7 +471,7 @@ class GridForming:
             magnitude=magnitude_name,
             time_array=time_array,
             event_time=event_time,
-            shift_time=0,  # This parameter might represent a y-axis offset or reference.
+            shift_time=0,  # Temporal shift reference indicating y-axis marker offset.
             pcc_signal=pcc_signal,
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
