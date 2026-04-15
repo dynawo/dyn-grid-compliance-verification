@@ -1,4 +1,16 @@
 #!/bin/bash
+#
+# Collects all curves_calculated.csv files produced by dycov under a results directory
+# and copies them into a flat output directory, renaming each file after its three
+# parent folders (parent3.parent2.parent1.csv) to preserve scenario context.
+#
+# Usage: extract_curves.sh <results_directory_input> <rename_directory_output>
+#
+#
+#
+# (c) Rte 2024
+#     Developed by Grupo AIA
+#
 
 # Check if the necessary arguments were provided
 if [ "$#" -ne 2 ]; then
