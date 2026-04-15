@@ -237,6 +237,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
+        disable_retry_logs: bool = False,
     ):
         """
         Runs Dynawo via SolverRetryStrategy and returns a DynawoResult.
@@ -258,7 +259,9 @@ class DynawoCurves(ProducerCurves):
         """
         if max_sim_time is None:
             max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
-        strategy = SolverRetryStrategy(RetrySettings.from_config())
+        strategy = SolverRetryStrategy(
+            RetrySettings.from_config(disable_retry_logs=disable_retry_logs)
+        )
         result = strategy.run(
             run=self.__build_run_inputs(),
             solver=self.__build_solver_params(),
@@ -280,6 +283,7 @@ class DynawoCurves(ProducerCurves):
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
+        disable_retry_logs: bool = False,
     ) -> SimulateOutcome:
         """
         Runs the simulation and packages the result as a SimulateOutcome.
@@ -298,7 +302,12 @@ class DynawoCurves(ProducerCurves):
             Operating Condition name.
         """
         result = self.__execute_simulation(
-            output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+            bm_name,
+            oc_name,
+            disable_retry_logs=disable_retry_logs,
         )
         if not result.succeeded:
             self.__warning(result.log)
