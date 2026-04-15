@@ -257,7 +257,12 @@ class BisectionEngine:
                     fault_rpu,
                 )
                 fault_outcome = simulate_fn(
-                    output_dir, working_oc_dir_fault, jobs_output_dir, bm_name, oc_name
+                    output_dir,
+                    working_oc_dir_fault,
+                    jobs_output_dir,
+                    bm_name,
+                    oc_name,
+                    disable_retry_logs=True,
                 )
                 reset_solver_fn()
                 if fault_outcome.succeeded:

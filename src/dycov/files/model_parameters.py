@@ -513,7 +513,7 @@ def adjust_producer_init(
     generator_control_mode: str,
     force_voltage_droop: bool,
     zone: int,
-) -> None:
+) -> bool:
     """Modify the Producer PAR file to add the init values.
 
     Parameters
@@ -536,11 +536,17 @@ def adjust_producer_init(
         Force the voltage droop to be applied even if the control mode is not VoltageDroop
     zone: int
         Zone number, used to determine the control mode and voltage droop parameters
+
+    Returns
+    -------
+    bool
+        True if the control mode is valid for all generators, False otherwise
     """
 
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
 
+    is_test_applicable = True
     for generator, xfmr in zip(generators, xfmrs):
         _adjust_transformer(
             producer_par_root,
@@ -551,7 +557,7 @@ def adjust_producer_init(
             xfmr.terminals[0].u_phase0,
             xfmr.terminals[1].u0,
         )
-        _adjust_generator(
+        is_control_mode_valid = _adjust_generator(
             producer_par_root,
             generator,
             generator.terminals[0].p0,
@@ -563,6 +569,7 @@ def adjust_producer_init(
             force_voltage_droop,
             zone,
         )
+        is_test_applicable = is_test_applicable and is_control_mode_valid
 
     if aux_load:
         _adjust_load(
@@ -576,6 +583,7 @@ def adjust_producer_init(
         )
 
     producer_par_tree.write(path / producer_par.name, pretty_print=True)
+    return is_test_applicable
 
 
 def _get_allowed_models(dyd_root: etree.Element, model_list: list) -> list[etree.Element]:
@@ -1038,18 +1046,20 @@ def _adjust_generator(
     generator_control_mode: str,
     force_voltage_droop: bool,
     zone: int,
-) -> None:
+) -> int:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, generator.par_id, nsmap)
     if parset is None:
-        return
+        return False
 
     _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
     _set_initial_pcc_power(parset, nsmap, generator.lib, pdr)
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
-    control_mode_name = _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone)
+    is_valid, control_mode_name = _apply_control_mode(
+        generator, parset, nsmap, generator_control_mode, zone
+    )
     if not config.get_boolean("General", "skip_voltage_droop_adjustment", default=False):
         _apply_voltage_droop(
             generator,
@@ -1060,6 +1070,8 @@ def _adjust_generator(
             force_voltage_droop,
             zone,
         )
+
+    return is_valid
 
 
 def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
@@ -1097,18 +1109,19 @@ def _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone):
     _log_control_mode(generator, control_mode_parameters)
 
     if not control_mode_parameters:
-        return None
+        return False, None
 
     is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
         generator, generator_control_mode, control_mode_parameters, zone
     )
 
-    if generator_control_mode != "Others" and not is_valid:
+    if generator_control_mode != "Others" and not is_valid and zone != 1:
         control_mode_name = _handle_invalid_control_mode(
             generator, parset, nsmap, generator_control_mode, zone
         )
+        return True, control_mode_name
 
-    return control_mode_name
+    return is_valid, control_mode_name
 
 
 def _log_control_mode(generator, control_mode_parameters):
@@ -1182,7 +1195,7 @@ def _validate_or_apply_default_voltage_droop(
     is_valid, _ = dynawo_translator.is_valid_control_mode(
         generator, "VoltageDroop", voltage_droop_parameters, zone
     )
-    if not is_valid:
+    if not is_valid and zone != 1:
         dycov_logging.get_logger("Model Parameters").warning(
             f"{generator.lib} voltage droop mode will be changed"
         )

@@ -289,6 +289,7 @@ class ImportedCurves(ProducerCurves):
         )
 
         simulation_result = SimulationResult(
+            appicable=True,
             success=success,
             time_exceeds=False,
             has_simulated_curves=has_imported_curves,
