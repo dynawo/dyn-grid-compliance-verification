@@ -4,12 +4,16 @@
   <set id="Wind_Turbine">
     <!-- PCS-->
     <par type="BOOL" name="WPP_PPCLocal" value="false"/>
+    <par type="DOUBLE" name="WPP_BMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WPP_GMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WPP_RMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WPP_XMvHvPu" value="0"/>
     <!-- LV Transformer -->
-    <par type="BOOL" name="WPP_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="WPP_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WPP_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WPP_GLvTrPu" value="0"/>
     <par type="DOUBLE" name="WPP_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WPP_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="WPP_XLvTrPu" value="0.02"/>
     <!-- Electrical -->
     <par type="DOUBLE" name="WPP_BesPu" value="0"/>
     <par type="DOUBLE" name="WPP_GesPu" value="0"/>

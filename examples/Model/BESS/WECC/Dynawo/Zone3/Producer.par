@@ -4,13 +4,17 @@
   <set id="Bess">
     <!-- PCS-->
     <par type="BOOL" name="BESS_PPCLocal" value="false"/>
+    <par type="DOUBLE" name="BESS_BMvHvPu" value="0"/>
+    <par type="DOUBLE" name="BESS_GMvHvPu" value="0"/>
+    <par type="DOUBLE" name="BESS_RMvHvPu" value="0"/>
+    <par type="DOUBLE" name="BESS_XMvHvPu" value="0"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="BESS_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="BESS_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="BESS_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="BESS_GLvTrPu" value="0"/>
     <par type="DOUBLE" name="BESS_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="BESS_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="BESS_XLvTrPu" value="0.02"/>
     <!-- Electrical Control -->
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
@@ -81,12 +85,12 @@
     <par type="BOOL" name="BESS_RefFlag" value="true"/>
     <par type="BOOL" name="BESS_VCompFlag" value="false"/>
     <par type="DOUBLE" name="BESS_DbdPu" value="0.0001"/>
-    <par type="DOUBLE" name="BESS_DDn" value="20"/>
-    <par type="DOUBLE" name="BESS_DUp" value="0.001"/>
+    <par type="DOUBLE" name="BESS_DDn" value="100"/>
+    <par type="DOUBLE" name="BESS_DUp" value="100"/>
     <par type="DOUBLE" name="BESS_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="BESS_EMinPu" value="-0.5"/>
-    <par type="DOUBLE" name="BESS_FDbd1Pu" value="0.004"/>
-    <par type="DOUBLE" name="BESS_FDbd2Pu" value="1"/>
+    <par type="DOUBLE" name="BESS_FDbd1Pu" value="0.001"/>
+    <par type="DOUBLE" name="BESS_FDbd2Pu" value="0.001"/>
     <par type="DOUBLE" name="BESS_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="BESS_FEMinPu" value="-999"/>
     <par type="DOUBLE" name="BESS_Kc" value="0.3"/>
