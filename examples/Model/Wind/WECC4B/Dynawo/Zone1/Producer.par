@@ -2,6 +2,8 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
+    <!-- PCS-->
+    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
     <par type="BOOL" name="WT4B_ConverterLVControl" value="false"/>
@@ -42,7 +44,7 @@
     <par type="DOUBLE" name="WT4B_PMinPu" value="0"/>
 
     <!-- Electrical Control REECa -->
-    <par type="BOOL" name="WT4B_PFlag" value="true"/>
+    <par type="BOOL" name="WT4B_PFlag" value="false"/>
     <par type="DOUBLE" name="WT4B_IqFrzPu" value="0"/>
     <par type="DOUBLE" name="WT4B_VDLIp11" value="1.1"/>
     <par type="DOUBLE" name="WT4B_VDLIp12" value="1.1"/>

@@ -2,6 +2,8 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
+    <!-- PCS-->
+    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
     <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>

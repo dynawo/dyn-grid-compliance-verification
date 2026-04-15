@@ -5,13 +5,17 @@
 
     <!-- PCS-->
     <par type="BOOL" name="WTG3_PPCLocal" value="false"/>
+    <par type="DOUBLE" name="WTG3_BMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_GMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_RMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_XMvHvPu" value="0"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="WTG3_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="WTG3_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG3_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG3_GLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG3_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.02"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG3_PQFlag" value="false"/>
@@ -45,7 +49,7 @@
     <par type="DOUBLE" name="WTG3_tRv" value="0.01"/>
 
     <!-- Electrical Control REECa -->
-    <par type="BOOL" name="WTG3_PFlag" value="true"/>
+    <par type="BOOL" name="WTG3_PFlag" value="false"/>
     <par type="DOUBLE" name="WTG3_IqFrzPu" value="0"/>
     <par type="DOUBLE" name="WTG3_VDLIp11" value="1.1"/>
     <par type="DOUBLE" name="WTG3_VDLIp12" value="1.1"/>
@@ -84,13 +88,13 @@
     <par type="BOOL" name="WTG3_FreqFlag" value="true"/>
     <par type="BOOL" name="WTG3_RefFlag" value="true"/>
     <par type="BOOL" name="WTG3_VCompFlag" value="false"/>
-    <par type="DOUBLE" name="WTG3_DDn" value="20"/>
-    <par type="DOUBLE" name="WTG3_DUp" value="0.001"/>
+    <par type="DOUBLE" name="WTG3_DDn" value="100"/>
+    <par type="DOUBLE" name="WTG3_DUp" value="100"/>
     <par type="DOUBLE" name="WTG3_DbdPu" value="0.0001"/>
     <par type="DOUBLE" name="WTG3_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="WTG3_EMinPu" value="-0.5"/>
-    <par type="DOUBLE" name="WTG3_FDbd1Pu" value="0.004"/>
-    <par type="DOUBLE" name="WTG3_FDbd2Pu" value="1"/>
+    <par type="DOUBLE" name="WTG3_FDbd1Pu" value="0.001"/>
+    <par type="DOUBLE" name="WTG3_FDbd2Pu" value="0.001"/>
     <par type="DOUBLE" name="WTG3_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG3_FEMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG3_Kc" value="0.3"/>
