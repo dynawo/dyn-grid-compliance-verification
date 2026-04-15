@@ -661,6 +661,9 @@ class Benchmark:
                     case _:
                         pass
                 results = {**_FAILED_RESULTS}
+            elif not sim.appicable:
+                compliance = Compliance.NotApplicableTest
+                results = {**_FAILED_RESULTS}
             elif sim.time_exceeds:
                 compliance = Compliance.SimulationTimeOut
                 results = {**_FAILED_RESULTS}

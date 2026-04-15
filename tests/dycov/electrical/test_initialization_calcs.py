@@ -7,13 +7,46 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import cmath
 
-from dycov.electrical.initialization_calcs import init_calcs
+from dycov.electrical.initialization_calcs import _calc_pimodel, init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
 from dycov.model.parameters import GenParams, LineParams, PdrParams, Terminal, XfmrParams
 
 REL_ERR = 1.0e-9  # max allowed relative error
 ABS_ERR = 1.0e-6  # max allowed absolute error (for magnitudes near zero)
+
+
+def test_pimodel():
+    ln = LineParams(
+        id=None,
+        lib=None,
+        r=0.04444444444444444,
+        x=0.4444444444444444,
+        g=0.0,
+        b=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    pdr = PdrParams(u=1.0444444444444445, u_phase=0.0, s=complex(-0.75, 0.0), p=-0.75, q=0.0)
+    v_pdr = cmath.rect(abs(pdr.u), 0)
+    line = line_pimodel(ln)
+    v2, i2, s2 = _calc_pimodel(
+        ytr=line.y_tr, ysh1=line.y_sh1, ysh2=line.y_sh2, v1=v_pdr, i1=None, s1=-pdr.s
+    )
+    expected_v = 1.0616365360882047
+    expected_phase = -0.3053424207483087
+    expected_i2 = complex(0.7180851063829787, 1.3877787807814457e-17)
+    expected_s2 = complex(0.7270823902218199, -0.22917609778180173)
+    assert _is_equal(abs(v2), expected_v)
+    assert _is_equal(cmath.phase(v2), expected_phase)
+    assert _is_equal(i2.real, expected_i2.real)
+    assert _is_equal(i2.imag, expected_i2.imag)
+    assert _is_equal(s2.real, expected_s2.real)
+    assert _is_equal(s2.imag, expected_s2.imag)
 
 
 def test_initialization():
@@ -50,7 +83,7 @@ def _initialize_topo_s():
             Terminal(connected_equipment=None),
         ),
     )
-    pdr = PdrParams(u=1.04444444444444444444, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
     line = LineParams(
         id=None,
         lib=None,
@@ -140,7 +173,7 @@ def _initialize_topo_s_i():
             Terminal(connected_equipment=None),
         ),
     )
-    pdr = PdrParams(u=1.04444444444444444444, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
     line = LineParams(
         id=None,
         lib=None,

@@ -77,8 +77,8 @@ def init_calcs(
             grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, -pdr.s
         )
         # Re-set phase angle globally. The grid sets the reference now:
-        angle = cmath.phase(v_grid)
-        v_pdr = cmath.rect(abs(pdr.u), -angle)
+        pdr.u_phase = -cmath.phase(v_grid)
+        v_pdr = cmath.rect(abs(pdr.u), pdr.u_phase)
         v_grid = cmath.rect(abs(v_grid), 0)
     # If the grid bus is not Inf (as in Pcs I8), calc also the PQ init params of the equiv gen
     if grid_load is not None:

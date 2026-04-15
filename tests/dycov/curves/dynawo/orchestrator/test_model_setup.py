@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
-from dycov.model.parameters import PimodelParams
+from dycov.model.parameters import PdrParams, PimodelParams
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -202,7 +202,8 @@ class TestAdjustEventValue:
     def test_noop_when_not_voltage_setpoint(self):
         setup = _make_setup()
         params = {"connect_to": "ActivePowerSetpointPu", "pre_value": [1.0]}
-        setup._adjust_event_value(params)
+        pdr = PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        setup._adjust_event_value(params, pdr)
         assert params["pre_value"] == [1.0]  # unchanged
 
     def test_noop_when_droop_disabled(self):
@@ -210,7 +211,8 @@ class TestAdjustEventValue:
         owner = _make_owner(_make_producer(generators=[gen]))
         setup = _make_setup(owner)
         params = {"connect_to": "VoltageSetpointPu", "pre_value": [1.0]}
-        setup._adjust_event_value(params)
+        pdr = PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        setup._adjust_event_value(params, pdr)
         assert params["pre_value"] == [1.0]
 
     def test_updates_pre_value_when_droop_enabled(self):
@@ -219,7 +221,8 @@ class TestAdjustEventValue:
         owner = _make_owner(_make_producer(generators=[gen]))
         setup = _make_setup(owner)
         params = {"connect_to": "VoltageSetpointPu", "pre_value": [0.0]}
-        setup._adjust_event_value(params)
+        pdr = PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        setup._adjust_event_value(params, pdr)
         expected = 1.02 + 0.05 * (-0.1)
         assert params["pre_value"][0] == pytest.approx(expected)
 
@@ -229,9 +232,10 @@ class TestAdjustEventValue:
         gen2.terminals[0].q0 = -0.2
         owner = _make_owner(_make_producer(generators=[gen1, gen2]))
         setup = _make_setup(owner)
-        params = {"connect_to": "VoltageSetpointPu", "pre_value": [0.0, 0.0]}
-        setup._adjust_event_value(params)
-        assert params["pre_value"][0] == pytest.approx(0.0)  # gen1 unchanged
+        params = {"connect_to": "VoltageSetpointPu", "pre_value": [1.0, 1.05]}
+        pdr = PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        setup._adjust_event_value(params, pdr)
+        assert params["pre_value"][0] == pytest.approx(1.0)  # gen1 unchanged
         assert params["pre_value"][1] == pytest.approx(1.05 + 0.1 * (-0.2))
 
 
@@ -241,9 +245,16 @@ class TestAdjustEventValue:
 
 
 class TestGetEventParameters:
-    def _setup_config(self, mock_config, connect_to="ActivePowerSetpointPu",
-                      start_time=1.0, fault_duration=0.15, step_value=None,
-                      has_fault_duration=True, has_step_value=False):
+    def _setup_config(
+        self,
+        mock_config,
+        connect_to="ActivePowerSetpointPu",
+        start_time=1.0,
+        fault_duration=0.15,
+        step_value=None,
+        has_fault_duration=True,
+        has_step_value=False,
+    ):
         def get_value(section, key, default=None):
             if key == "connect_event_to":
                 return connect_to
@@ -279,7 +290,9 @@ class TestGetEventParameters:
         setup = _make_setup(owner, s_nref=100.0)
         self._setup_config(mock_config, connect_to="ActivePowerSetpointPu")
 
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
 
         # pre_value = -(-0.8) * (100/100) = 0.8
         assert result["pre_value"] == [pytest.approx(0.8)]
@@ -295,7 +308,9 @@ class TestGetEventParameters:
         setup = _make_setup(owner, s_nref=100.0)
         self._setup_config(mock_config, connect_to="ReactivePowerSetpointPu")
 
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
 
         assert result["pre_value"] == [pytest.approx(0.3)]
 
@@ -309,7 +324,9 @@ class TestGetEventParameters:
         setup = _make_setup(owner)
         self._setup_config(mock_config, connect_to="VoltageSetpointPu")
 
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
 
         assert result["pre_value"] == [pytest.approx(1.02)]
 
@@ -318,7 +335,9 @@ class TestGetEventParameters:
     def test_unknown_connect_to_leaves_pre_value_as_float(self, mock_config, mock_gv):
         setup = _make_setup()
         self._setup_config(mock_config, connect_to="SomethingElse")
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
         assert isinstance(result["pre_value"], float)
 
     @patch("dycov.curves.dynawo.orchestrator.model_setup.generator_variables")
@@ -326,7 +345,9 @@ class TestGetEventParameters:
     def test_start_time_and_duration_in_result(self, mock_config, mock_gv):
         setup = _make_setup()
         self._setup_config(mock_config, start_time=2.5, fault_duration=0.3)
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
         assert result["start_time"] == pytest.approx(2.5)
         assert result["duration_time"] == pytest.approx(0.3)
 
@@ -343,7 +364,9 @@ class TestGetEventParameters:
             has_step_value=True,
             step_value=0.1,
         )
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
         # setpoint_factor = 100/50 = 2.0
         assert result["step_value"] == pytest.approx(0.2)
 
@@ -368,7 +391,9 @@ class TestGetEventParameters:
         mock_config.get_float.side_effect = get_float
         mock_config.has_option.side_effect = has_option
 
-        result = setup._get_event_parameters("PCS1", "BM1", "OC1")
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
         assert result["duration_time"] == pytest.approx(0.25)
 
 
@@ -501,6 +526,7 @@ class TestGetPdr:
         result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
         from dycov.model.parameters import PdrParams
+
         assert isinstance(result, PdrParams)
 
     @patch("dycov.curves.dynawo.orchestrator.model_setup.model_parameters")

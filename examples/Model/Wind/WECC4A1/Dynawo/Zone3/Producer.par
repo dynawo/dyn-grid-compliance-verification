@@ -3,6 +3,20 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
 
+    <!-- PCS-->
+    <par type="BOOL" name="WTG4A_PPCLocal" value="false"/>
+    <par type="DOUBLE" name="WTG4A_BMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_GMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_RMvHvPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_XMvHvPu" value="0"/>
+
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WTG4A_ConverterLVControl" value="true"/>
+    <par type="DOUBLE" name="WTG4A_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.02"/>
+
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4A_PfFlag" value="false"/>
     <par type="BOOL" name="WTG4A_PQFlag" value="false"/>
@@ -49,7 +63,7 @@
     <par type="DOUBLE" name="WTG4A_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="WTG4A_tHoldIq" value="0"/>
     <par type="DOUBLE" name="WTG4A_IqFrzPu" value="0"/>
-    <par type="BOOL" name="WTG4A_PFlag" value="true"/>
+    <par type="BOOL" name="WTG4A_PFlag" value="false"/>
     <par type="DOUBLE" name="WTG4A_VRef1Pu" value="0"/>
 
     <!-- Generator Converter REGC -->
@@ -70,12 +84,12 @@
     <par type="BOOL" name="WTG4A_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4A_VCompFlag" value="false"/>
     <par type="DOUBLE" name="WTG4A_DbdPu" value="0.0001"/>
-    <par type="DOUBLE" name="WTG4A_DDn" value="20"/>
-    <par type="DOUBLE" name="WTG4A_DUp" value="0.001"/>
+    <par type="DOUBLE" name="WTG4A_DDn" value="100"/>
+    <par type="DOUBLE" name="WTG4A_DUp" value="100"/>
     <par type="DOUBLE" name="WTG4A_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="WTG4A_EMinPu" value="-0.5"/>
-    <par type="DOUBLE" name="WTG4A_FDbd1Pu" value="0.004"/>
-    <par type="DOUBLE" name="WTG4A_FDbd2Pu" value="1"/>
+    <par type="DOUBLE" name="WTG4A_FDbd1Pu" value="0.001"/>
+    <par type="DOUBLE" name="WTG4A_FDbd2Pu" value="0.001"/>
     <par type="DOUBLE" name="WTG4A_FEMaxPu" value="999"/>
     <par type="DOUBLE" name="WTG4A_FEMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG4A_Kc" value="0.3"/>

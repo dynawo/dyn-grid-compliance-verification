@@ -93,6 +93,7 @@ class GenParams(Equipment):
     q: float
     voltage_droop: float
     use_voltage_droop: bool
+    ppc_local: bool = True
     p_min: Optional[float] = None
     p_max: Optional[float] = None
     q_min: Optional[float] = None
@@ -110,9 +111,10 @@ class PdrEquipments:
     var: str
 
 
-@dataclass(frozen=True)
+@dataclass
 class PdrParams:
     u: float
+    u_phase: float
     s: float
     p: float
     q: float
@@ -146,6 +148,7 @@ class LoadInit:
 
 @dataclass(frozen=True)
 class SimulationResult:
+    appicable: bool
     success: bool
     time_exceeds: bool
     has_simulated_curves: bool

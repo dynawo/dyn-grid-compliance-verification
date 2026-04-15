@@ -147,12 +147,12 @@ class ImportedCurves(ProducerCurves):
                         id=gen_id,
                         lib="",
                         terminals=(Terminal(connected_equipment=""),),
-                        s_nom="",
-                        i_max="",
+                        s_nom=0.0,
+                        i_max=0.0,
                         par_id="",
-                        p="",
-                        q="",
-                        voltage_droop="",
+                        p=0.0,
+                        q=0.0,
+                        voltage_droop=0.0,
                         use_voltage_droop=False,
                     )
                 )
@@ -289,6 +289,7 @@ class ImportedCurves(ProducerCurves):
         )
 
         simulation_result = SimulationResult(
+            appicable=True,
             success=success,
             time_exceeds=False,
             has_simulated_curves=has_imported_curves,

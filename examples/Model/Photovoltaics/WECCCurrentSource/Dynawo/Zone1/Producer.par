@@ -2,6 +2,15 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
+    <!-- PCS-->
+    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
+
+    <!-- LV Transformer -->
+    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>
+    <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.01"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>

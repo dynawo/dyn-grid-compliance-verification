@@ -110,7 +110,7 @@ class DynawoCurves(ProducerCurves):
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
         logging.setLoggerClass(SimulationLogger)
-        self._logger = logging.getLogger("ProducerCurves")
+        self.__logger = logging.getLogger("ProducerCurves")
 
         # Solver parameters — initialised by __reset_solver
         self._solver_id = ""
@@ -131,14 +131,14 @@ class DynawoCurves(ProducerCurves):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _log(self, message: str, level: str = "debug") -> None:
+    def __log(self, message: str, level: str = "debug") -> None:
         getattr(dycov_logging.get_logger("ProducerCurves"), level)(message)
 
     def __debug(self, message: str) -> None:
-        self._log(message, "debug")
+        self.__log(message, "debug")
 
     def __warning(self, message: str) -> None:
-        self._log(message, "warning")
+        self.__log(message, "warning")
 
     def __reset_solver(self) -> None:
         """Resets all solver parameters to their configured defaults."""
@@ -237,6 +237,7 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
+        disable_retry_logs: bool = False,
     ):
         """
         Runs Dynawo via SolverRetryStrategy and returns a DynawoResult.
@@ -258,7 +259,9 @@ class DynawoCurves(ProducerCurves):
         """
         if max_sim_time is None:
             max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
-        strategy = SolverRetryStrategy(RetrySettings.from_config())
+        strategy = SolverRetryStrategy(
+            RetrySettings.from_config(disable_retry_logs=disable_retry_logs)
+        )
         result = strategy.run(
             run=self.__build_run_inputs(),
             solver=self.__build_solver_params(),
@@ -280,6 +283,7 @@ class DynawoCurves(ProducerCurves):
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
+        disable_retry_logs: bool = False,
     ) -> SimulateOutcome:
         """
         Runs the simulation and packages the result as a SimulateOutcome.
@@ -298,7 +302,12 @@ class DynawoCurves(ProducerCurves):
             Operating Condition name.
         """
         result = self.__execute_simulation(
-            output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+            bm_name,
+            oc_name,
+            disable_retry_logs=disable_retry_logs,
         )
         if not result.succeeded:
             self.__warning(result.log)
@@ -357,10 +366,25 @@ class DynawoCurves(ProducerCurves):
             succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
         )
         error_message = None
+        is_test_applicable = False
         try:
-            event_params = self._setup.complete_model(
+            is_test_applicable, event_params = self._setup.complete_model(
                 working_oc_dir, pcs_name, bm_name, oc_name, reference_event_start_time
             )
+            if not is_test_applicable:
+                self.__warning("Test not applicable.")
+                return (
+                    jobs_output_dir,
+                    event_params,
+                    SimulationResult(
+                        appicable=is_test_applicable,
+                        success=outcome.succeeded,
+                        time_exceeds=outcome.time_exceeds,
+                        has_simulated_curves=outcome.has_curves,
+                        error=error_message,
+                    ),
+                    pd.DataFrame(),
+                )
             # Sync curves_dict into bisection engine after model setup
             self._bisection.curves_dict = self._setup.curves_dict
             self._bisection.sim_time = self._sim_time
@@ -405,7 +429,11 @@ class DynawoCurves(ProducerCurves):
             error_message = _to_simulation_error(str(e))
 
         simulation_result = SimulationResult(
-            outcome.succeeded, outcome.time_exceeds, outcome.has_curves, error_message
+            is_test_applicable,
+            outcome.succeeded,
+            outcome.time_exceeds,
+            outcome.has_curves,
+            error_message,
         )
         return jobs_output_dir, event_params, simulation_result, outcome.curves
 

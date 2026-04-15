@@ -20,9 +20,9 @@
   <dyn:connect id1="Line2" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
   <dyn:connect id1="Line3" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
   <dyn:connect id1="Line4" var1="line_terminal2" id2="InfiniteBus" var2="infiniteBus_terminal"/>
-  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Line1" var2="line_terminal1"/>
-  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Line2" var2="line_terminal1"/>
-  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Line3" var2="line_terminal1"/>
-  <dyn:connect id1="Measurements" var1="measurements_terminal2" id2="Line4" var2="line_terminal1"/>
-  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Measurements" var2="measurements_terminal1"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="Line1" var2="line_terminal1"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="Line2" var2="line_terminal1"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="Line3" var2="line_terminal1"/>
+  <dyn:connect id1="Measurements" var1="measurements_terminal1" id2="Line4" var2="line_terminal1"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal" id2="Measurements" var2="measurements_terminal2"/>
 </dyn:dynamicModelsArchitecture>
