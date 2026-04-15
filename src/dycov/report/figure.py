@@ -14,12 +14,15 @@ from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
 
 from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_decorations import (
+    _COLOR_REFERENCE,
     draw_additional_curves,
     draw_exclusion_windows,
     draw_mxe,
@@ -180,6 +183,8 @@ def _get_yrange_for_curve(curve: list) -> tuple[float, float]:
 
 
 def _save_plot(
+    fig: Figure,
+    ax: Axes,
     time: list,
     curves: list,
     time_reference: list,
@@ -190,35 +195,33 @@ def _save_plot(
     ymin: float,
     ymax: float,
 ) -> None:
-    from dycov.report.figure_decorations import _COLOR_REFERENCE
 
     if time_reference is not None and curves_reference is not None:
         for curve_reference in curves_reference:
-            plt.plot(
+            ax.plot(
                 time_reference, curve_reference["curve"], color=_COLOR_REFERENCE, linestyle="-"
             )
 
-    # Plot finally the calculated curves
     for curve in curves:
-        plt.plot(time, curve["curve"], color=curve["color"], linestyle=curve["style"])
+        ax.plot(time, curve["curve"], color=curve["color"], linestyle=curve["style"])
 
-    plt.gca().yaxis.set_major_formatter(FormatStrFormatter("%.5g"))
-    plt.subplots_adjust(left=0.2)
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%.5g"))
+    fig.subplots_adjust(left=0.2)
     if time_range["min"] is not None:
         try:
-            plt.xlim(time_range["min"], time_range["max"])
+            ax.set_xlim(time_range["min"], time_range["max"])
         except UserWarning as uw:
             dycov_logging.get_logger("Figures").warning(f"X-axis warning {uw}")
     if ymin is not None:
         try:
-            plt.ylim(ymin, ymax)
+            ax.set_ylim(ymin, ymax)
         except UserWarning as uw:
             dycov_logging.get_logger("Figures").warning(f"Y-axis warning {uw}")
 
-    plt.xlabel("t(s)", fontsize=16)
-    plt.ylabel(unit, fontsize=16)
-    plt.savefig(output_file)
-    plt.close()
+    ax.set_xlabel("t(s)", fontsize=16)
+    ax.set_ylabel(unit, fontsize=16)
+    fig.savefig(output_file)
+    plt.close(fig)
 
 
 def _get_time_range(
@@ -341,17 +344,8 @@ def create_plot(
     results: dict
         Results of the validations applied in the pcs
     """
-    plt.clf()
-    plt.figure()
-
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
-
     last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
-
-    renderer = MatplotlibRenderer()
-    ymin, ymax = draw_additional_curves(
-        renderer, figure_description, time, last_val, results, ymin, ymax
-    )
 
     variable_names = figure_description.variables
     unit = figure_description.ylabel
@@ -369,6 +363,8 @@ def create_plot(
             unit,
             ymin,
             ymax,
+            figure_description=figure_description,
+            last_val=last_val,
         )
     elif variable_names[0]["type"] == "bus":
         curve_name = "BusPDR_BUS_" + variable_names[0]["variable"]
@@ -384,6 +380,8 @@ def create_plot(
             unit,
             ymin,
             ymax,
+            figure_description,
+            last_val,
         )
     else:
         variable_type = variable_names[0]["type"]
@@ -407,6 +405,8 @@ def create_plot(
                 unit,
                 ymin,
                 ymax,
+                figure_description,
+                last_val,
             )
 
 
@@ -422,12 +422,23 @@ def _plot_curve(
     unit: str,
     ymin: float,
     ymax: float,
+    figure_description,
+    last_val: float,
 ) -> None:
+    fig, ax = plt.subplots()
+    plt.sca(ax)
+
     renderer = MatplotlibRenderer()
+    ymin, ymax = draw_additional_curves(
+        renderer, figure_description, time, last_val, results, ymin, ymax
+    )
     draw_response_characteristics(renderer, curve_name, results)
     draw_exclusion_windows(renderer, results)
     draw_mxe(renderer, curve_name, results)
+
     _save_plot(
+        fig,
+        ax,
         time,
         curves,
         time_reference,
