@@ -103,7 +103,7 @@ class Translator:
     _control_modes: configparser.ConfigParser
     _family_map: dict
 
-    def get_generator_family_level(self, generator: GenParams) -> str:
+    def get_generator_family(self, generator: GenParams) -> str:
         """
         Determines the family of a generator based on its library.
 
@@ -122,6 +122,29 @@ class Translator:
             family = self._family_map[generator.lib]["family"]
             return family
         return ""  # Return empty if family is not found
+
+    def get_generator_parameters(
+        self, generator: GenParams, control_mode: str, zone: int
+    ) -> list[str]:
+        """
+        Retrieves the parameters for a given generator and control mode.
+
+        Parameters
+        ----------
+        generator: GenParams
+            The generator parameters, including its library (lib).
+        control_mode: str
+            The name of the control mode for which to retrieve parameters.
+
+        Returns
+        -------
+        list[str]
+            A list of parameter names for the specified control mode.
+        """
+        family = self.get_generator_family(generator)
+        option = f"{control_mode}_{family}_Zone{zone}"
+        parameters = self._control_modes.get("Parameters", option, fallback="")
+        return parameters.split(",") if parameters else {}
 
     def _get_control_modes_by_generator(
         self, generator: GenParams, generator_control_mode: str, zone: int
@@ -144,7 +167,7 @@ class Translator:
             A list of valid control mode names (sections) that apply to the generator.
             Returns an empty list if no matching control modes are found.
         """
-        family = self.get_generator_family_level(generator)
+        family = self.get_generator_family(generator)
         option = f"{generator_control_mode}_{family}_Zone{zone}"
         dycov_logging.get_logger("Translator").debug(
             f"Looking for control modes with option '{option}' in 'ControlModes' section."

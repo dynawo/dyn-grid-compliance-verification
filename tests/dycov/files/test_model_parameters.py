@@ -170,6 +170,9 @@ def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch)
             return None
 
     class DummyDynawoTranslator:
+        def get_generator_parameters(self, generator, control_mode, zone):
+            return ["MwpqMode", "MqG"]
+
         def get_control_mode(self, section, control_option):
             return {"MwpqMode": "3"}
 
