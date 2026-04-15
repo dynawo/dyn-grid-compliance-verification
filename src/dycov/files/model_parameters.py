@@ -1105,7 +1105,7 @@ def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
 
 
 def _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone):
-    control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap)
+    control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap, zone)
     _log_control_mode(generator, control_mode_parameters)
 
     if not control_mode_parameters:
@@ -1158,7 +1158,7 @@ def _handle_invalid_control_mode(generator, parset, nsmap, generator_control_mod
 def _apply_voltage_droop(
     generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop, zone
 ):
-    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, nsmap)
+    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, nsmap, zone)
     _log_voltage_droop(generator, voltage_droop_parameters)
 
     force_voltage_droop = _determine_voltage_droop(
@@ -1231,95 +1231,30 @@ def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
         generator.use_voltage_droop = True
 
 
-def _get_voltage_droop_parameters(generator, parset, nsmap) -> dict:
-    if "IEC" in generator.lib:
-        return _get_voltage_droop_parameters_iec(generator, parset, nsmap)
-    elif "Wecc" in generator.lib:
-        return _get_voltage_droop_parameters_wecc(generator, parset, nsmap)
-    else:
-        return {}
-
-
-def _get_voltage_droop_parameters_iec(generator, parset, nsmap) -> dict:
+def _get_voltage_droop_parameters(generator, parset, nsmap, zone) -> dict:
     parameters = {}
-    _, MwpqMode = _get_parameter(parset, nsmap, generator.lib, "MwpqMode")
-    if MwpqMode is not None:
-        parameters["MwpqMode"] = MwpqMode
-
-    _, MqG = _get_parameter(parset, nsmap, generator.lib, "MqG")
-    if MqG is not None:
-        parameters["MqG"] = MqG
+    parameter_names = dynawo_translator.get_generator_parameters(generator, "VoltageDroop", zone)
+    for name in parameter_names:
+        sign, value = _get_parameter(parset, nsmap, generator.lib, name)
+        if value is not None:
+            parameters[name] = value
 
     return parameters
 
 
-def _get_voltage_droop_parameters_wecc(generator, parset, nsmap) -> dict:
+def _get_control_mode_parameters(generator, parset, nsmap, zone) -> dict:
     parameters = {}
-    _, RefFlag = _get_parameter(parset, nsmap, generator.lib, "RefFlag")
-    if RefFlag is not None:
-        parameters["RefFlag"] = RefFlag
-
-    _, VCompFlag = _get_parameter(parset, nsmap, generator.lib, "VCompFlag")
-    if VCompFlag is not None:
-        parameters["VCompFlag"] = VCompFlag
-
-    return parameters
-
-
-def _get_control_mode_parameters(generator, parset, nsmap) -> dict:
-    if "IEC" in generator.lib:
-        return _get_control_mode_parameters_iec(generator, parset, nsmap)
-    elif "Wecc" in generator.lib:
-        return _get_control_mode_parameters_wecc(generator, parset, nsmap)
-    else:
-        return {}
-
-
-def _get_control_mode_parameters_iec(generator, parset, nsmap) -> dict:
-    parameters = {}
-    _, MwpqMode = _get_parameter(parset, nsmap, generator.lib, "MwpqMode")
-    if MwpqMode is not None:
-        parameters["MwpqMode"] = MwpqMode
-
-    _, MqG = _get_parameter(parset, nsmap, generator.lib, "MqG")
-    if MqG is not None:
-        parameters["MqG"] = MqG
-
-    return parameters
-
-
-def _get_control_mode_parameters_wecc(generator, parset, nsmap) -> dict:
-    parameters = {}
-    # Use _get_parameter where it helps to centralize lookup
-    _, PfFlag = _get_parameter(parset, nsmap, generator.lib, "PfFlag")
-    if PfFlag is not None:
-        parameters["PfFlag"] = PfFlag
-
-    _, VFlag = _get_parameter(parset, nsmap, generator.lib, "VFlag")
-    if VFlag is not None:
-        parameters["VFlag"] = VFlag
-
-    _, PFlag = _get_parameter(parset, nsmap, generator.lib, "PFlag")
-    if PFlag is not None:
-        parameters["PFlag"] = PFlag
-
-    _, QFlag = _get_parameter(parset, nsmap, generator.lib, "QFlag")
-    if QFlag is not None:
-        parameters["QFlag"] = QFlag
-
-    _, RefFlag = _get_parameter(parset, nsmap, generator.lib, "RefFlag")
-    if RefFlag is not None:
-        parameters["RefFlag"] = RefFlag
-
-    _, FreqFlag = _get_parameter(parset, nsmap, generator.lib, "FreqFlag")
-    if FreqFlag is not None:
-        parameters["FreqFlag"] = FreqFlag
+    parameter_names = dynawo_translator.get_generator_parameters(generator, "ControlMode", zone)
+    for name in parameter_names:
+        sign, value = _get_parameter(parset, nsmap, generator.lib, name)
+        if value is not None:
+            parameters[name] = value
 
     return parameters
 
 
 def _get_default_voltage_droop_parameters(generator, generator_voltage_droop, zone) -> dict:
-    family = dynawo_translator.get_generator_family_level(generator)
+    family = dynawo_translator.get_generator_family(generator)
     parameters = {}
     section = f"{generator_voltage_droop}_{family}_Zone{zone}"
     if config.has_option(section, "control_option"):
@@ -1333,7 +1268,7 @@ def _get_default_voltage_droop_parameters(generator, generator_voltage_droop, zo
 
 
 def _get_default_control_mode_parameters(generator, generator_control_mode, zone) -> dict:
-    family = dynawo_translator.get_generator_family_level(generator)
+    family = dynawo_translator.get_generator_family(generator)
     parameters = {}
     section = f"{generator_control_mode}_{family}_Zone{zone}"
     if config.has_option(section, "control_option"):
