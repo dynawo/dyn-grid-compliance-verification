@@ -6,14 +6,13 @@
     <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/> <!-- not used for zone 1 when ConverterLVControl=true -->
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/> <!-- not used for zone 1 when ConverterLVControl=true -->
 
     <!-- Electrical Control REEC -->
-    <par type="DOUBLE" name="photovoltaics_omegaRefWTGQPu0" value="1.0"/>
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_PQFlag" value="false"/>
     <par type="BOOL" name="photovoltaics_QFlag" value="true"/>
@@ -77,30 +76,6 @@
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
     <par type="DOUBLE" name="photovoltaics_tG" value="0.02"/>
 
-    <!-- Plant Control -->
-    <par type="BOOL" name="photovoltaics_FreqFlag" value="true"/>
-    <par type="BOOL" name="photovoltaics_RefFlag" value="true"/>
-    <par type="BOOL" name="photovoltaics_VCompFlag" value="false"/>
-    <par type="DOUBLE" name="photovoltaics_DbdPu" value="0.01"/>
-    <par type="DOUBLE" name="photovoltaics_DDn" value="100"/>
-    <par type="DOUBLE" name="photovoltaics_DUp" value="100"/>
-    <par type="DOUBLE" name="photovoltaics_EMaxPu" value="0.5"/>
-    <par type="DOUBLE" name="photovoltaics_EMinPu" value="-0.5"/>
-    <par type="DOUBLE" name="photovoltaics_FDbd1Pu" value="0.001"/>
-    <par type="DOUBLE" name="photovoltaics_FDbd2Pu" value="0.001"/>
-    <par type="DOUBLE" name="photovoltaics_FEMaxPu" value="999"/>
-    <par type="DOUBLE" name="photovoltaics_FEMinPu" value="-999"/>
-    <par type="DOUBLE" name="photovoltaics_Kc" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_Ki" value="1.5"/>
-    <par type="DOUBLE" name="photovoltaics_Kig" value="2.36"/>
-    <par type="DOUBLE" name="photovoltaics_Kp" value="0.1"/>
-    <par type="DOUBLE" name="photovoltaics_Kpg" value="0.05"/>
-    <par type="DOUBLE" name="photovoltaics_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="photovoltaics_tFt" value="1e-5"/>
-    <par type="DOUBLE" name="photovoltaics_tFv" value="0.1"/>
-    <par type="DOUBLE" name="photovoltaics_tLag" value="0.1"/>
-    <par type="DOUBLE" name="photovoltaics_VFrz" value="0"/>
-
     <!-- PLL Control -->
     <par type="DOUBLE" name="photovoltaics_KiPLL" value="20"/>
     <par type="DOUBLE" name="photovoltaics_KpPLL" value="3"/>
@@ -110,16 +85,15 @@
     <!-- General -->
     <par type="DOUBLE" name="photovoltaics_tE" value="0.005"/>
     <par type="DOUBLE" name="photovoltaics_RSourcePu" value="0.0"/>
-    <par type="DOUBLE" name="photovoltaics_XSourcePu" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_XSourcePu" value="0.05"/>
     <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
-    <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
+
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="0.25"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.015"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.06"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>

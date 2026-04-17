@@ -5,17 +5,12 @@
 
     <!-- PCS-->
     <par type="BOOL" name="WTG3_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="WTG3_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_XMvHvPu" value="0"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WTG3_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG3_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG3_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.02"/>
+    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0.15"/>
+    <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG3_PQFlag" value="false"/>
@@ -156,17 +151,13 @@
     <par type="DOUBLE" name="WTG3_Kshaft" value="200"/>
 
     <!-- General -->
-    <par type="DOUBLE" name="WTG3_Pm0Pu" value="0.7"/>
-    <par type="DOUBLE" name="WTG3_RPu" value="0"/>
     <par type="DOUBLE" name="WTG3_SNom" value="90"/>
-    <par type="DOUBLE" name="WTG3_Theta0" value="0"/>
-    <par type="DOUBLE" name="WTG3_XPu" value="0.15"/>
-  </set>
+    </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.01"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.1"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
