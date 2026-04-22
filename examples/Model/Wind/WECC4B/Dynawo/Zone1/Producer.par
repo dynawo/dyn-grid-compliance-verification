@@ -2,15 +2,15 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- PCS-->
-    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
+
+   <par type="BOOL" name="WT4B_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="WT4B_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="WT4B_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT4B_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WT4B_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.06"/>
     
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WT4B_PQFlag" value="false"/>
@@ -87,14 +87,12 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WT4B_SNom" value="4"/>
-    <par type="DOUBLE" name="WT4B_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="WT4B_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="4"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.01"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.1"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>

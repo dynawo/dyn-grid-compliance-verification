@@ -5,17 +5,12 @@
 
     <!-- PCS-->
     <par type="BOOL" name="WTG4A_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="WTG4A_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_XMvHvPu" value="0"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WTG4A_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4A_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4A_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.02"/>
+    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4A_PfFlag" value="false"/>
@@ -122,24 +117,17 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WTG4A_SNom" value="90"/>
-    <par type="DOUBLE" name="WTG4A_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="WTG4A_XPu" value="1e-6"/>
-  </set>
+</set>
   <set id="Wind_Turbine2">
 
     <!-- PCS-->
     <par type="BOOL" name="WTG4B_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="WTG4B_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_XMvHvPu" value="0"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WTG4B_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4B_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.02"/>
+    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4B_PQFlag" value="false"/>
@@ -240,8 +228,6 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WTG4B_SNom" value="90"/>
-    <par type="DOUBLE" name="WTG4B_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="WTG4B_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr1">
