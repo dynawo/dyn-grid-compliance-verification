@@ -28,7 +28,7 @@
     <par type="DOUBLE" name="BESS_Kvi" value="0.7"/>
     <par type="DOUBLE" name="BESS_Kvp" value="1"/>
     <par type="DOUBLE" name="BESS_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="BESS_PMaxPu" value="-1"/>
+    <par type="DOUBLE" name="BESS_PMinPu" value="-1"/>
     <par type="DOUBLE" name="BESS_QMaxPu" value="0.8"/>
     <par type="DOUBLE" name="BESS_QMinPu" value="-0.8"/>
     <par type="DOUBLE" name="BESS_tIq" value="0.01"/>
