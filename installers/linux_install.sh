@@ -313,6 +313,9 @@ elif [ -n "$DIRECT_URL" ]; then
 else
     color_msg "Step 2: Shallow-cloning the DyCoV repository (branch/tag: $TARGET_BRANCH)..."
     git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
+    cd "$TMP_LOCAL_REPO"
+    # Fetch tags for version info (if needed by setuptools_scm)
+    git fetch --tags
 fi
 
 ################################################################################
