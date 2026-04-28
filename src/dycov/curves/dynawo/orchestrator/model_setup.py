@@ -239,13 +239,8 @@ class ModelSetup:
         self._debug(f"\tpdr_U={pdr_u_cfg}")
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
-        p_max_parameter = (
-            "PmaxConsumption"
-            if "PmaxConsumption" in pdr_p_cfg
-            else "PmaxInjection" if "PmaxInjection" in pdr_p_cfg else "Pmax"
-        )
         ini_pdr_p = model_parameters.extract_defined_value(
-            pdr_p_cfg, p_max_parameter, producer.p_max_pu, -1
+            pdr_p_cfg, "Pmax", producer.p_max_pu, -1
         )
 
         if "Qmin" in pdr_q_cfg:
@@ -258,7 +253,7 @@ class ModelSetup:
             )
         else:
             ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, p_max_parameter, producer.p_max_pu, -1
+                pdr_q_cfg, "Pmax", producer.p_max_pu, -1
             )
 
         if "Udim" in pdr_u_cfg:

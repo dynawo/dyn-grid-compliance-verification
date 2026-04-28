@@ -143,6 +143,7 @@ class ModelProducer(Producer):
                 p_max_pu=self.p_max_injection_pu,
                 q_max_pu=self.q_max_pu,
                 q_min_pu=self.q_min_pu,
+                s_nref=self._s_nref,
             )
             sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
@@ -255,6 +256,7 @@ class ModelProducer(Producer):
                 p_max_pu=self.p_max_injection_pu,
                 q_max_pu=self.q_max_pu,
                 q_min_pu=self.q_min_pu,
+                s_nref=self._s_nref,
             )
             generators_z1 += generators
         self._zone = 3
@@ -280,6 +282,7 @@ class ModelProducer(Producer):
             p_max_pu=self.p_max_injection_pu,
             q_max_pu=self.q_max_pu,
             q_min_pu=self.q_min_pu,
+            s_nref=self._s_nref,
         )
         sm_models, ppm_models, bess_models = parameter_checks.check_generators(
             generators_z1, generators_z3

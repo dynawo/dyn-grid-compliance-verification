@@ -10,8 +10,8 @@
     <par type="BOOL" name="WTG4B_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4B_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4B_PQFlag" value="false"/>
@@ -111,9 +111,7 @@
     <par type="DOUBLE" name="WTG4B_OmegaMinPu" value="0.5"/>
 
     <!-- General -->
-    <par type="DOUBLE" name="WTG4B_RPu" value="1e-7"/>
     <par type="DOUBLE" name="WTG4B_SNom" value="90"/>
-    <par type="DOUBLE" name="WTG4B_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
