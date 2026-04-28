@@ -111,8 +111,8 @@
     <par type="DOUBLE" name="WTG4B_OmegaMinPu" value="0.5"/>
 
     <!-- General -->
-<par type="DOUBLE" name="WTG4B_SNom" value="90"/>
-</set>
+    <par type="DOUBLE" name="WTG4B_SNom" value="90"/>
+  </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="90"/>

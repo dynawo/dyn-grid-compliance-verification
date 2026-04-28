@@ -228,7 +228,7 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WTG4B_SNom" value="90"/>
-</set>
+  </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr1">
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
