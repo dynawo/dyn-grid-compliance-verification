@@ -6,11 +6,11 @@
     <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/> <!-- not used for zone 1 when ConverterLVControl=true --> 
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/> <!-- not used for zone 1 when ConverterLVControl=true -->
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
@@ -67,8 +67,6 @@
 
     <!-- General -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
-    <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">

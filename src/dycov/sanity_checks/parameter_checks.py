@@ -117,6 +117,7 @@ def check_producer_params_consistency(
     q_min_pu: float = 0.0,
     rel_tol: float = 1e-6,
     abs_tol: float = 1e-9,
+    s_nref: float = 100.0,
 ) -> None:
     """
     Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
@@ -144,9 +145,9 @@ def check_producer_params_consistency(
     """
 
     # Aggregate PAR values
-    gen_p_max = sum(g.p_max for g in generators if g.p_max is not None)
-    gen_q_max = sum(g.q_max for g in generators if g.q_max is not None)
-    gen_q_min = sum(g.q_min for g in generators if g.q_min is not None)
+    gen_p_max = sum(g.p_max * g.s_nom / s_nref for g in generators if g.p_max is not None)
+    gen_q_max = sum(g.q_max * g.s_nom / s_nref for g in generators if g.q_max is not None)
+    gen_q_min = sum(g.q_min * g.s_nom / s_nref for g in generators if g.q_min is not None)
 
     log = dycov_logging.get_logger("Sanity Checks")
     has_error = False
