@@ -10,9 +10,9 @@
 
 import configparser
 import sys
-from importlib.metadata import version
 from pathlib import Path
 
+from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.files import manage_files
@@ -48,7 +48,9 @@ class DycovInitializer:
         self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
         dycov_logging.get_logger("Initialization").info(
-            f"Starting DyCoV - version {version('dycov')}"
+            "Starting DyCoV - version %s (commit %s)",
+            version,
+            commit_id,
         )
 
         """

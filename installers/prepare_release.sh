@@ -70,6 +70,35 @@ VERSION_PLAIN="${VERSION#v}"
 REPO_ROOT="$PWD"
 
 ###############################################################################
+# Strict Git safety checks
+###############################################################################
+
+step "Checking Git state for release $VERSION"
+
+# Ensure repository
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || error "Not inside a Git repository."
+
+# Ensure tag exists
+git rev-parse "$VERSION" >/dev/null 2>&1 \
+    || error "Tag '$VERSION' does not exist."
+
+# Ensure HEAD is exactly on the tag
+CURRENT_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+if [[ "$CURRENT_TAG" != "$VERSION" ]]; then
+    error "HEAD is not exactly on tag $VERSION (current: ${CURRENT_TAG:-<none>})"
+fi
+
+# Ensure clean working tree
+if [[ -n "$(git status --porcelain)" ]]; then
+    error "Working tree is not clean. Commit or stash changes before releasing."
+fi
+
+info "Git state OK:"
+info " - Tag: $CURRENT_TAG"
+info " - Commit: $(git rev-parse --short HEAD)"
+
+###############################################################################
 # Validate expected repo files
 ###############################################################################
 LINUX_INSTALL="$REPO_ROOT/installers/linux_install.sh"
