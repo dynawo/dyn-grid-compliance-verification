@@ -108,5 +108,5 @@ uv pip install --upgrade "$install_target$install_extras"
 colormsg "OK."
 echo
 colormsg "Development environment is ready."
-colormsg "To activate it, run: . $MY_VENV/bin/activate"
+colormsg "To activate it, run: source $MY_VENV/bin/activate"
 echo
