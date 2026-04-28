@@ -15,13 +15,19 @@
 #
 
 
+
 [build-system]
-requires = ["setuptools>=65", "wheel"]
+requires = [
+    "setuptools>=65",
+    "wheel",
+    "setuptools_scm[toml]>=8"
+]
 build-backend = "setuptools.build_meta"
+
 
 [project]
 name = "dycov"
-version = "0.8.1"
+dynamic = ["version"]
 description = "A tool for automating the verification of dynamic grid compliance requirements for solar, wind, and storage farms, including RMS model validation."
 authors = [
     { name = "Guiu Oms", email = "omsg@aia.es" },
@@ -137,3 +143,8 @@ quote-style = "double"
 [project.urls]
 "Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
 "Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+
+[tool.setuptools_scm]
+write_to = "src/dycov/_build_info.py"
+version_scheme = "release-branch-semver"
+local_scheme = "node-and-date"

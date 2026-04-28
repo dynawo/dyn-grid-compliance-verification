@@ -3,14 +3,14 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
     <!-- PCS-->
-    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
+    <par type="BOOL" name="WT4A_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="WT4A_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="WT4A_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT4A_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WT4A_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0.015"/> <!-- not used for zone 1 when ConverterLVControl=true -->
+    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0.06"/> <!-- not used for zone 1 when ConverterLVControl=true -->
     
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WT4A_PfFlag" value="false"/>
@@ -93,9 +93,7 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WT4A_SNom" value="4"/>
-    <par type="DOUBLE" name="WT4A_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="WT4A_XPu" value="1e-6"/>
-  </set>
+</set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="4"/>
