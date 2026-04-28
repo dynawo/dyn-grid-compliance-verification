@@ -4,17 +4,12 @@
   <set id="Wind_Turbine">
     <!-- PCS-->
     <par type="BOOL" name="photovoltaics_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="photovoltaics_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XMvHvPu" value="0"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.02"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
@@ -33,7 +28,7 @@
     <par type="DOUBLE" name="photovoltaics_Kqv" value="2"/>
     <par type="DOUBLE" name="photovoltaics_Kvi" value="0.7"/>
     <par type="DOUBLE" name="photovoltaics_Kvp" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="0.75"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="1"/>
     <par type="DOUBLE" name="photovoltaics_PMinPu" value="0.0"/>
     <par type="DOUBLE" name="photovoltaics_QMaxPu" value="0.8"/>
     <par type="DOUBLE" name="photovoltaics_QMinPu" value="-0.8"/>
@@ -115,8 +110,6 @@
     <par type="DOUBLE" name="photovoltaics_RSourcePu" value="0.0"/>
     <par type="DOUBLE" name="photovoltaics_XSourcePu" value="0.01"/>
     <par type="DOUBLE" name="photovoltaics_SNom" value="90"/>
-    <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">

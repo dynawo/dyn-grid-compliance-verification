@@ -7,8 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-
 import argparse
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -226,7 +226,10 @@ def handle_generate_command(
         )
         dycov_logging.get_logger("CommandHandlers").info("Input files generated successfully.")
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").error(f"Error generating input files: {e}")
+        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
+            dycov_logging.get_logger("CommandHandlers").exception("Error generating input files")
+        else:
+            dycov_logging.get_logger("CommandHandlers").error(f"Error generating input files: {e}")
         parser.error(f"Failed to generate input files: {e}")
         result_code = 1
     return result_code
@@ -260,7 +263,10 @@ def handle_compile_command(
             dycov_logging.get_logger("CommandHandlers").info("Model(s) compiled successfully.")
             result_code = 0
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").error(f"Error compiling models: {e}")
+        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
+            dycov_logging.get_logger("CommandHandlers").exception("Error compiling models")
+        else:
+            dycov_logging.get_logger("CommandHandlers").error(f"Error compiling models: {e}")
         parser.error(f"Failed to compile models: {e}")
         result_code = 1
     return result_code
@@ -292,7 +298,10 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
         dycov_logging.get_logger("CommandHandlers").info("Anonymization completed successfully.")
         result_code = 0
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").error(f"Error during anonymization: {e}")
+        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
+            dycov_logging.get_logger("CommandHandlers").exception("Error during anonymization")
+        else:
+            dycov_logging.get_logger("CommandHandlers").error(f"Error during anonymization: {e}")
         parser.error(f"Failed to anonymize curves: {e}")
         result_code = 1
     return result_code
@@ -404,8 +413,10 @@ def _run_verification(
         return 130
 
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
-        # Keep artifacts if we are in DEBUG mode (rename to output_dir); if not, delete.
+        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
+            dycov_logging.get_logger("CommandHandlers").exception("Error during verification")
+        else:
+            dycov_logging.get_logger("CommandHandlers").error(f"Error during verification: {e}")
         try:
             params.cleanup_working_dir()
         finally:
@@ -455,7 +466,10 @@ def _generate_envelopes(
         return 0
 
     except Exception as e:
-        dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
+        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
+            dycov_logging.get_logger("CommandHandlers").exception("Error during generation")
+        else:
+            dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
         # Keep artifacts in DEBUG for diagnostics; otherwise, delete
         try:
             params.cleanup_working_dir(preserve_on_debug=True)

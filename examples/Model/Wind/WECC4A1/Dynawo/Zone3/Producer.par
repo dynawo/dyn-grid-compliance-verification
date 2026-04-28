@@ -5,17 +5,12 @@
 
     <!-- PCS-->
     <par type="BOOL" name="WTG4A_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="WTG4A_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_XMvHvPu" value="0"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WTG4A_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4A_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4A_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.02"/>
+    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4A_PfFlag" value="false"/>
@@ -122,9 +117,7 @@
 
     <!-- General -->
     <par type="DOUBLE" name="WTG4A_SNom" value="90"/>
-    <par type="DOUBLE" name="WTG4A_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="WTG4A_XPu" value="1e-6"/>
-  </set>
+</set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="90"/>

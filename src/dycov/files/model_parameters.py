@@ -487,7 +487,7 @@ def extract_defined_value(
         param_name = m.group("name")
 
         # Validate parameter name, case-insensitive.
-        if param_name.lower() != parameter.lower():
+        if parameter.lower() not in param_name.lower():
             raise ValueError(
                 f"Parameter name mismatch: expected '{parameter}', got '{param_name}'"
             )

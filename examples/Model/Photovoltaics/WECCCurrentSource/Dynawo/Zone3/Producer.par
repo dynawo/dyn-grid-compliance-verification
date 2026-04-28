@@ -4,17 +4,12 @@
   <set id="Wind_Turbine">
     <!-- PCS-->
     <par type="BOOL" name="photovoltaics_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="photovoltaics_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XMvHvPu" value="0"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.02"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
@@ -95,8 +90,6 @@
 
     <!-- General -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="90"/>
-    <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
   <!-- tfo -->
   <set id="StepUp_Xfmr">
