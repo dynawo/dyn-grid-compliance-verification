@@ -73,6 +73,8 @@ dev = [
     "ruff",
     "sphinx",
     "jupyter",
+    "mypy",
+    "pydocstyle",
 ]
 
 

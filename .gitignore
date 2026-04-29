@@ -17,6 +17,7 @@ __pycache__/
 
 # Tool logs
 *.log
+public_api_audit.txt
 
 # VS Code
 .vscode
