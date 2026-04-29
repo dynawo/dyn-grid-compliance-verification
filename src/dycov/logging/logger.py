@@ -93,6 +93,29 @@ class DycovLogger(logging.getLoggerClass()):
         disable_console: bool = False,
         disable_file: bool = False,
     ) -> None:
+        """Initialize console and file handlers with the given configurations.
+        The effective log level of the logger is set to the lowest of the console and file log
+        levels to ensure all messages are captured by the appropriate handlers.
+
+        Parameters
+        ----------
+        file_log_level: int
+            Log level for the file handler (e.g., logging.DEBUG, logging.INFO).
+        file_formatter: str
+            Log message format for the file handler.
+        file_max_bytes: int
+            Maximum size in bytes for the log file before rotation occurs.
+        console_log_level: int
+            Log level for the console handler (e.g., logging.DEBUG, logging.INFO).
+        console_formatter: str
+            Log message format for the console handler.
+        log_dir: Path
+            Directory where log files should be stored.
+        disable_console: bool, optional
+            If True, the console handler will not be added. Default is False.
+        disable_file: bool, optional
+            If True, the file handler will not be added. Default is False.
+        """
         # Set the effective level to the lowest of console/file levels
         self.setLevel(console_log_level)
         if file_log_level < console_log_level:
@@ -110,9 +133,19 @@ class DycovLogger(logging.getLoggerClass()):
         This uses Python's built-in logging.captureWarnings(True), which sends
         warnings to the 'py.warnings' logger. We attach our handlers to that
         logger so the output looks identical to the rest of DyCoV logs.
+
+        Parameters
+        ----------
+        force_runtimewarning_visible: bool, optional
+            If True, forces RuntimeWarnings to be visible in the logs by setting their filter to
+            "always". Default is True, which is recommended since many libraries use RuntimeWarning
+            for important messages (e.g., NaN in results, convergence issues). Set to False if you
+            want to respect the default warning filters and potentially hide some warnings.
         """
 
-        def _formatwarning(message, category, filename, lineno, line=None):
+        def _formatwarning(
+            message: str, category: type[Warning], filename: str, lineno: int, line: str = None
+        ) -> str:
             return f"{category.__name__}: {message}"
 
         warnings.formatwarning = _formatwarning
@@ -138,6 +171,15 @@ class DycovLogger(logging.getLoggerClass()):
         Set the active test context for the current thread.
         All subsequent log calls from this thread will include [PCS.Benchmark.OC].
         Safe to use with parallel threads — each thread has its own context.
+
+        Parameters
+        ----------
+        pcs: str, optional
+            Power conversion system identifier (e.g., "GEN", "PDR", "STOR").
+        benchmark: str, optional
+            Benchmark name (e.g., "Benchmark1").
+        oc: str, optional
+            Operating condition name (e.g., "OC1").
         """
         set_test_context(pcs, benchmark, oc)
 
@@ -150,6 +192,16 @@ class DycovLogger(logging.getLoggerClass()):
         Return a context-aware child logger for the given name.
         The returned adapter automatically prepends [PCS.Benchmark.OC]
         to every message based on the calling thread's active context.
+
+        Parameters
+        ----------
+        name: str
+            Name of the child logger (e.g., "curves", "report", "simulation").
+
+        Returns
+        -------
+        _ContextAdapter
+            A LoggerAdapter that injects the test context into log messages.
         """
         child = self.getChild(name)
         child.setLevel(self.getEffectiveLevel())

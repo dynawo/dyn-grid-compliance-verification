@@ -25,6 +25,20 @@ def _get_template(path: Path, template_file: str) -> Template:
 
 
 def get_all_variables(path: Path, template_file: str) -> dict:
+    """Get all variables in a template file.
+
+    Parameters
+    ----------
+    path: Path
+        Path where the template file is stored
+    template_file: str
+        Template filename
+
+    Returns
+    -------
+    dict
+        Dictionary with all variables in the file, initialized to 0
+    """
     if not (path / template_file).exists():
         return {}
 

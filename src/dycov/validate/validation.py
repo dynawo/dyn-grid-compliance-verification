@@ -430,7 +430,7 @@ class Validation:
         compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
         return compliance_list
 
-    def set_testing(self, testing: bool):
+    def set_testing(self, testing: bool) -> None:
         """Sets the testing flag to avoid opening the report.
 
         Parameters

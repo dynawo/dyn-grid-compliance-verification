@@ -314,7 +314,7 @@ def get_common_time_range(
 
 def create_plot(
     time: list,
-    figure_description,
+    figure_description: FigureDescription,
     curves: list,
     time_reference: list,
     curves_reference: list,
@@ -422,7 +422,7 @@ def _plot_curve(
     unit: str,
     ymin: float,
     ymax: float,
-    figure_description,
+    figure_description: FigureDescription,
     last_val: float,
 ) -> None:
     fig, ax = plt.subplots()

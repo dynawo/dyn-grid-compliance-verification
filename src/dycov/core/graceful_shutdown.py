@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import signal
 import threading
+import types
 from typing import Callable, Iterable, List, Optional
 
 # ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ def install_signal_handlers(
     if threading.current_thread() is not threading.main_thread():
         return
 
-    def _handler(signum, frame):  # type: ignore[no-redef]
+    def _handler(signum: int, frame: types.FrameType | None) -> None:
         try:
             if signum == getattr(signal, "SIGINT", None):
                 code = 130

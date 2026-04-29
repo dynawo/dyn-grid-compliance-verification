@@ -724,7 +724,9 @@ class Benchmark:
 
         return success
 
-    def generate(self):
+    def generate(self) -> None:
+        """Execute the GFM module for the current benchmark."""
+
         for op_cond in self._oc_list:
             set_test_context(
                 pcs=self._pcs_name,

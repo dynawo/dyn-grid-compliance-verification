@@ -376,6 +376,23 @@ def calculate_errors(
     curves: tuple[pd.DataFrame, pd.DataFrame],
     step_magnitude: float,
 ) -> dict:
+    """Calculates the error metrics (ME, MAE, MXE) for the relevant measurements by comparing the
+    calculated curves with the reference curves, and returns a dictionary containing the error
+    values.
+
+    Parameters
+    ----------
+    curves : tuple[pd.DataFrame, pd.DataFrame]
+        A tuple containing the calculated curves and the reference curves as pandas DataFrames.
+    step_magnitude : float
+        The magnitude of the step change applied to the setpoint, used for normalizing the error
+        values.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the error values for each measurement.
+    """
     measurement_names = [
         "BusPDR_BUS_ActivePower",
         "BusPDR_BUS_ReactivePower",
@@ -437,6 +454,24 @@ def complete_setpoint_tracking(
     measurement: str,
     results: dict,
 ) -> None:
+    """Completes the setpoint tracking results for a specific measurement and error type by
+    checking the compliance values and updating the results dictionary accordingly.
+
+    Parameters
+    ----------
+    compliance_values : dict
+        A dictionary containing the calculated error values and their compliance status for the
+        specified measurement and error type.
+    modified_setpoint : str
+        The name of the modified setpoint being analyzed (e.g., "ActivePowerSetpointPu",
+        "VoltageSetpointPu", etc.).
+    measurement : str
+        The name of the measurement being checked (e.g., "active_power", "voltage", etc.).
+    results : dict
+        A dictionary to store the completed setpoint tracking results for the measurement. The
+        function will update this dictionary with the compliance status and error values for each
+        error type (MAE, ME, MXE) and for each time window (before, during, after).
+    """
     # MAE
     _complete_setpoint_tracking_by_error(
         compliance_values,
@@ -470,6 +505,21 @@ def save_measurement_errors(
     measurement: str,
     results: dict,
 ) -> None:
+    """Saves the calculated error values for a specific measurement and error type into the results
+     dictionary.
+
+    Parameters
+    ----------
+    compliance_values : dict
+        A dictionary containing the calculated error values for the specified measurement and error
+        type.
+    measurement : str
+        The name of the measurement for which the error values are being saved (e.g., "voltage",
+        "active_power", etc.).
+    results : dict
+        A dictionary to store the error values for the measurement. The function will update this
+        dictionary with the error values for each error type (MAE, ME, MXE).
+    """
     _save_measurement_errors_by_error(compliance_values, measurement, "mae", results)
     _save_measurement_errors_by_error(compliance_values, measurement, "me", results)
     _save_measurement_errors_by_error(compliance_values, measurement, "mxe", results)
@@ -480,6 +530,21 @@ def check_measurement(
     measurement: str,
     results: dict,
 ) -> None:
+    """Checks the compliance of a specific measurement against the defined thresholds for MAE, ME,
+    and MXE errors, and updates the results dictionary with the compliance status.
+
+    Parameters
+    ----------
+    compliance_values : dict
+        A dictionary containing the calculated error values and their compliance status for the
+        specified measurement.
+    measurement : str
+        The name of the measurement being checked (e.g., "voltage", "active_power", etc.).
+    results : dict
+        A dictionary to store the compliance check results for the measurement. The function will
+        update this dictionary with the compliance status for each error type (MAE, ME, MXE)
+
+    """
     results["voltage_dips_" + measurement + "_check"] = True
     _check_measurement_by_error(compliance_values, measurement, "mae", results)
     _check_measurement_by_error(compliance_values, measurement, "me", results)
@@ -491,6 +556,19 @@ def calculate_curves_errors(
     is_field_measurements: bool,
     results: dict,
 ) -> None:
+    """Calculates and checks the errors for the relevant curves based on the specified zone and
+    measurement type.
+
+    Parameters
+    ----------
+    zone : int
+        The zone for which to calculate the errors (e.g., 1, or 3).
+    is_field_measurements : bool
+        Indicates whether the measurements are field measurements or not.
+    results : dict
+        A dictionary to store the calculated error values and compliance checks.
+    """
+
     _calculate_curve_errors(
         "BusPDR_BUS_ActivePower", "active_power", is_field_measurements, results
     )

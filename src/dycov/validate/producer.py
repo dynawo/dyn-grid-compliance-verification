@@ -649,7 +649,7 @@ class ModelProducer(Producer):
             pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
         return self.__get_file_by_pattern(pattern_dyd)
 
-    def get_producer_par(self):
+    def get_producer_par(self) -> Path:
         """Gets the Producer PAR file.
 
         Returns

@@ -100,6 +100,21 @@ def format_value(
 
 
 def format_compound_check(value: str) -> str:
+    """Formats a compound check variable based on its value.
+    * If value is "N/A" return the value in curly braces
+    * Else apply the boolean check formatter to the value
+
+    Parameters
+    ----------
+    value: str
+        Value to format.
+
+    Returns
+    -------
+    str
+        The value in curly braces if it is "N/A", else the boolean value formatted with
+        format_latex_check
+    """
     if value == "N/A":
         return f"{{ {value} }}"
     else:

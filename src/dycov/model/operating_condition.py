@@ -133,10 +133,14 @@ class OperatingCondition:
         results["udim"] = validator.get_generator_u_dim()
         return success, results
 
-    def generate(
-        self,
-        working_path: Path,
-    ):
+    def generate(self, working_path: Path) -> None:
+        """Execute the GFM module for the current operating condition.
+
+        Parameters
+        ----------
+        working_path: Path
+            Working path.
+        """
         gfm = GridForming()
         gfm.generate(
             working_path,
