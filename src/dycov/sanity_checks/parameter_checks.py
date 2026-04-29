@@ -309,7 +309,7 @@ def check_simulation_duration(time: float) -> None:
         )
 
 
-def check_solver(id: str, lib: str):
+def check_solver(id: str, lib: str) -> None:
     """Check if a solver allowed by the tool has been configured.
 
     Parameters

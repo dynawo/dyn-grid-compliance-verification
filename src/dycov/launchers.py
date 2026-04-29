@@ -123,10 +123,15 @@ class DycovCLI:
         return ret
 
 
-def dycov():
+def dycov() -> int:
     """Entry point for the DYCOV command-line interface.
 
     Instantiates and runs the DycovCLI.
+
+    Returns
+    -------
+    int
+        Exit code indicating success (0) or failure (non-zero).
     """
     cli = DycovCLI()
     return cli.dycov()

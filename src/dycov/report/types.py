@@ -64,6 +64,23 @@ class FigureDescription:
 
 
 def band_limits(ref_val: float, upper_pct: float | None, lower_pct: float | None) -> tuple:
+    """Calculate the upper and lower limits of a tolerance band based on a reference value and
+    percentage values.
+
+    Parameters
+    ----------
+    ref_val: float
+        The reference value.
+    upper_pct: float | None
+        The upper percentage value.
+    lower_pct: float | None
+        The lower percentage value.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the upper and lower limits.
+    """
     upper = None
     lower = None
     if upper_pct is not None:

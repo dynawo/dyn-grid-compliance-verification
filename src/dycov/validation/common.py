@@ -62,7 +62,9 @@ def check_time(
         return "-", time_check
 
 
-def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_event: float):
+def is_invalid_test(
+    time: list, voltage: list, active: list, reactive: list, t_event: float
+) -> bool:
     """Check if the results of a step-response test are completely flat (no response).
     This is used for checking for a common error, i.e., the event not producing any effect.
 

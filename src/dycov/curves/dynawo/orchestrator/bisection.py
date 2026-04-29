@@ -197,8 +197,8 @@ class BisectionEngine:
         dip: float,
         bm_name: str,
         oc_name: str,
-        simulate_fn,
-        reset_solver_fn,
+        simulate_fn: callable,
+        reset_solver_fn: callable,
     ) -> None:
         """
         Determines and applies the fault impedance that achieves the required voltage dip

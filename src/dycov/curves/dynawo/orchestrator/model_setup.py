@@ -30,12 +30,24 @@ _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
 
 
-def compute_rx_from_scr(scr, x_over_r=10.0):
+def compute_rx_from_scr(scr: float, x_over_r: float = 10.0) -> tuple[float, float]:
     """
     Compute R and X from SCR assuming:
       R^2 + X^2 = 1 / SCR^2
       X / R = x_over_r
     Returns (R, X)
+
+    Parameters
+    ----------
+    scr : float
+        Short-circuit ratio.
+    x_over_r : float, optional
+        Ratio of X to R, by default 10.0.
+
+    Returns
+    -------
+    tuple[float, float]
+        (R, X) values corresponding to the given SCR and X/R ratio.
     """
     factor = math.sqrt(1 + x_over_r**2)
     R = 1.0 / (factor * scr)

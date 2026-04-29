@@ -599,7 +599,18 @@ def _clean(working_path: Path):
 
 def prepare_pcs_report(
     pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
-):
+) -> None:
+    """Prepares the report for the PCS validation.
+
+    Parameters
+    ----------
+    pcs_results: dict
+        Results of the PCS validation
+    parameters: ValidationParameters
+        Validation parameters
+    path_latex_files: Path
+        Path to the LaTex templates
+    """
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 

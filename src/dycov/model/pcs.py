@@ -159,7 +159,9 @@ class Pcs:
 
         return self._report_name, success, pcs_results
 
-    def generate(self):
+    def generate(self) -> None:
+        """Execute the GFM module for the current pcs."""
+
         for bm in self._bm_list:
             bm.generate()
 

@@ -30,7 +30,9 @@ class FigureRenderer(ABC):
     def add_vrect(self, x0: float, x1: float, color: str) -> None: ...
 
     @abstractmethod
-    def add_curve(self, x, y, color: str, style: str = "-", name: str = "") -> None: ...
+    def add_curve(
+        self, x: list[float], y: list[float], color: str, style: str = "-", name: str = ""
+    ) -> None: ...
 
     @abstractmethod
     def add_scatter(self, x: float, y: float, color: str, name: str = "") -> None: ...
@@ -83,7 +85,9 @@ class MatplotlibRenderer(FigureRenderer):
 
         plt.axvspan(xmin=x0, xmax=x1, color=color, linestyle="-", linewidth=0.2)
 
-    def add_curve(self, x, y, color: str, style: str = "-", name: str = "") -> None:
+    def add_curve(
+        self, x: list[float], y: list[float], color: str, style: str = "-", name: str = ""
+    ) -> None:
         import matplotlib.pyplot as plt
 
         plt.plot(x, y, color=color, linestyle=self._STYLE_MAP.get(style, style))
@@ -163,7 +167,9 @@ class PlotlyRenderer(FigureRenderer):
     def add_vrect(self, x0: float, x1: float, color: str) -> None:
         self._fig.add_vrect(x0=x0, x1=x1, line_width=0, fillcolor=color, opacity=0.5)
 
-    def add_curve(self, x, y, color: str, style: str = "-", name: str = "") -> None:
+    def add_curve(
+        self, x: list[float], y: list[float], color: str, style: str = "-", name: str = ""
+    ) -> None:
         import plotly.graph_objects as go
 
         self._fig.add_traces(
