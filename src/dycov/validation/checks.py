@@ -376,9 +376,8 @@ def calculate_errors(
     curves: tuple[pd.DataFrame, pd.DataFrame],
     step_magnitude: float,
 ) -> dict:
-    """Calculates the error metrics (ME, MAE, MXE) for the relevant measurements by comparing the
-    calculated curves with the reference curves, and returns a dictionary containing the error
-    values.
+    """Calculates the error metrics (ME, MAE, MXE) and their associated positions by comparing
+    the calculated curves with the reference curves.
 
     Parameters
     ----------

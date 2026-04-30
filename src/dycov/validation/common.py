@@ -39,7 +39,7 @@ def check_time(
     rtol: float
         Relative tolerance
     atol: float
-        Aboslute tolerance
+        Absolute tolerance
 
     Returns
     -------
@@ -182,8 +182,9 @@ def is_stable(time: list, curve: list, stable_time: float = 1e-20) -> tuple[bool
 
 
 def theta_pi(time: list, curve: list) -> bool:
-    """Check if the stabilization is reached.
-    The curve is considered to have stabilized if the curve does not exceed PI.
+    """Check whether the angle remains within the ±pi bounds.
+
+    This check ensures that the angle does not exceed ±π during the simulation.
 
     Parameters
     ----------
@@ -627,7 +628,7 @@ def maximum_error_position(
     Parameters
     ----------
     time: list
-        Input signal
+        Time values corresponding to the signals
     signal: list
         Input signal
     reference: list
