@@ -7,10 +7,12 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 from dycov.configuration.cfg import config
+from dycov.configuration.dump import dump_effective_pcs_description
 from dycov.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION
 from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
@@ -632,6 +634,13 @@ class Benchmark:
         success = False
 
         for op_cond in self._oc_list:
+            if dycov_logging.get_logger("PCS").isEnabledFor(logging.DEBUG):
+                dump_effective_pcs_description(
+                    config,
+                    pcs=self._pcs_name,
+                    benchmark=self._name,
+                    oc=op_cond.get_name(),
+                )
             set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
