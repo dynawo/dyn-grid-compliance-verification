@@ -47,7 +47,7 @@ def _get_sm_curves_template(xfmrs: list, gen_sms: list) -> str:
 
     for gen_sm in gen_sms:
         curves_dictionary += (
-            f"{gen_sm.get('id')}_GEN_RotorSpeedPu = \n"
+            f"{gen_sm.get('id')}_GEN_OmegaPu = \n"
             f"{gen_sm.get('id')}_GEN_InternalAngle = \n"
             f"{gen_sm.get('id')}_GEN_VoltageSetpointPu = \n"
             f"{gen_sm.get('id')}_GEN_MagnitudeControlledByAVRP = \n"

@@ -19,7 +19,7 @@ _VARIABLE_LABELS = {
     "VoltageSetpointPu": "Plant-level voltage regulation Setpoint",
     "MagnitudeControlledByAVRPu": "Plant-level voltage regulation Magnitude",
     "UPuInjTerminal": "Voltage",
-    "RotorSpeedPu": "Rotor Speed",
+    "OmegaPu": "Frequency",
     "NetworkFrequencyPu": "Frequency",
     "InternalAngle": "Internal Angle",
     "Tap": "Tap",

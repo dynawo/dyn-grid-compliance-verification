@@ -21,7 +21,7 @@ VOLTAGE_DIP_THRESHOLD = 0.002
 
 _FREQUENCY_PATTERNS = [
     r".*NetworkFrequencyPu$",
-    r".*RotorSpeedPu$",
+    r".*OmegaPu$",
     r".*NetworkFrequencyReference$",
 ]
 

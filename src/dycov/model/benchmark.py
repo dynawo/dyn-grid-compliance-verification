@@ -449,7 +449,7 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_W",
-                variables=[{"type": "generator", "variable": "RotorSpeedPu"}],
+                variables=[{"type": "generator", "variable": "OmegaPu"}],
                 ylabel=r"$\omega$ (Hz)",
             )
         )
