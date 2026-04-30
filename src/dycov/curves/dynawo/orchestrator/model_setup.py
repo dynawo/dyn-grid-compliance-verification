@@ -682,7 +682,13 @@ class ModelSetup:
         solver_lib = self._owner._solver_lib
         self._jobs_file.complete_file(working_oc_dir, solver_id, solver_lib, event_params)
         self._par_file.complete_file(
-            working_oc_dir, line_rpu, line_xpu, rte_gen, event_params, producer.u_nom
+            working_oc_dir,
+            line_rpu,
+            line_xpu,
+            rte_gen,
+            event_params,
+            producer.u_nom,
+            producer.p_max_pu * self._s_nref,
         )
         self._dyd_file.complete_file(working_oc_dir, event_params)
         self._table_file.complete_file(working_oc_dir, rte_gen, event_params)

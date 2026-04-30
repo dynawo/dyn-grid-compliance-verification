@@ -50,6 +50,7 @@ class ParFile(FileVariables):
             "event_end",
             "event_pre_value",
             "event_step_value",
+            "inertialGrid_SNom",
         ]
         super().__init__(
             tool_variables,
@@ -66,6 +67,7 @@ class ParFile(FileVariables):
         rte_gen: GenInit,
         event_params: dict,
         unom: float,
+        pmax: float,
     ) -> None:
         """
         Replaces the file placeholders in the 'TSOModel.par' file with the corresponding values.
@@ -85,6 +87,8 @@ class ParFile(FileVariables):
             duration, pre-event value, and step value.
         unom: float
             The nominal voltage value for the generator.
+        pmax: float
+            The maximum power value for the plant.
         """
         # Retrieve all existing variables from the TSOModel.par file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.par")
@@ -108,6 +112,9 @@ class ParFile(FileVariables):
         variables_dict["event_end"] = event_params["start_time"] + event_params["duration_time"]
         variables_dict["event_pre_value"] = event_params["pre_value"]
         variables_dict["event_step_value"] = event_params["step_value"]
+
+        # Update inertial grid nominal power
+        variables_dict["inertialGrid_SNom"] = pmax
 
         # Complete other parameters using the inherited method from FileVariables
         self.complete_parameters(variables_dict, event_params)
