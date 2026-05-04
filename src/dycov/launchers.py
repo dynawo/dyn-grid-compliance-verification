@@ -82,12 +82,30 @@ class DycovCLI:
             dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
 
+        # Apply diagnostic mode BEFORE initialization
+        self._apply_diagnostic_mode(args)
+
         # Initialize core DYCOV components
         self.initializer.init(dynawo_launcher_path, args.debug)
         self.logger.debug("DycovInitializer completed initialization.")
 
         # Dispatch the command to the appropriate handler function.
         return self._dispatch_command(parser, args, dynawo_launcher_path)
+
+    def _apply_diagnostic_mode(self, args):
+        if not getattr(args, "diagnostic", False):
+            return
+
+        self.logger.info("DIAGNOSTIC mode enabled")
+
+        # 1) Diagnostic implies debug
+        args.debug = True
+
+        # 2) Force serial execution via in‑memory config override
+        from dycov.configuration.cfg import config
+
+        config.set_value("Global", "parallel_pcs_validation", "false")
+        config.set_value("Global", "parallel_num_processes", "1")
 
     def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> int:
         """Dispatches the parsed command to its respective handler function.
