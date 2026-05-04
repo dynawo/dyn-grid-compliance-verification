@@ -43,6 +43,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
         help="Show program's version number and exit.",
     )
     _add_debug_argument(main_parser)
+    _add_diagnostic_argument(main_parser)
 
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
@@ -114,6 +115,24 @@ def _add_argument(
     parser.add_argument(*args, **kwargs)
     dycov_logging.get_logger("CliParsers").debug(
         f"Added argument {args} to parser with help: {help_msg}"
+    )
+
+
+def _add_diagnostic_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--diagnostic' argument to the parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    parser.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help=(
+            "Run in diagnostic mode: enables debug logging, "
+            "forces serial execution and dumps full configuration and PCS."
+        ),
     )
 
 
@@ -558,7 +577,6 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
         "generateEnvelopes",
         help="create all the envelopes based on the description of the different test cases",
     )
-    _add_debug_argument(envelops)
     _add_ini_argument(envelops, is_required=True)
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
@@ -580,7 +598,6 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
         help="Validate a Dynawo model against a set of curves.",
     )
     model_or_curves = validate.add_mutually_exclusive_group(required=False)
-    _add_debug_argument(validate)
     _add_launcher_argument(validate)
     _add_model_argument(model_or_curves)
     _add_curves_argument(model_or_curves, explain="(when using curves instead of an RMS model)")
@@ -604,7 +621,6 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
         "performance",
         help="Analyze the performance of a Dynawo model (or its results).",
     )
-    _add_debug_argument(performance)
     _add_launcher_argument(performance)
     _add_model_argument(performance)
     _add_curves_argument(
@@ -630,7 +646,6 @@ def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
         "generate",
         help="Create all the necessary input files through a guided process.",
     )
-    _add_debug_argument(generate)
     _add_launcher_argument(generate)
     _add_output_argument(generate, is_required=True)
     _add_topology_argument(generate, is_required=True)
@@ -650,7 +665,6 @@ def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
         "compile",
         help="Compile custom Modelica models.",
     )
-    _add_debug_argument(compile_model)
     _add_launcher_argument(compile_model)
     _add_dynamic_model_argument(compile_model)
     _add_force_argument(compile_model)
@@ -670,7 +684,6 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
         help="Generate a new set of curves from a given one, using generic "
         "variable names and with (optional) noise added.",
     )
-    _add_debug_argument(anonymize)
     _add_curves_argument(anonymize, is_required=False)
     _add_output_argument(anonymize)
     _add_noisestd_argument(anonymize)

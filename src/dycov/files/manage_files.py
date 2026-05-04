@@ -11,6 +11,7 @@
 import configparser
 import re
 import shutil
+import subprocess
 from collections import namedtuple
 from pathlib import Path
 from typing import Iterable, Set
@@ -29,6 +30,101 @@ _LATEX_ASSETS = [
     _PKG_ROOT / "templates/reports/TSO_logo.pdf",
     _PKG_ROOT / "templates/reports/fig_placeholder.pdf",
 ]
+
+
+def get_dynawo_version(launcher_dwo: Path) -> str:
+    """
+    Return the version of the Dynawo launcher.
+
+    Parameters
+    ----------
+    launcher_dwo : Path
+        Path to the Dynawo launcher executable.
+
+    Returns
+    -------
+    str
+        The version string of the Dynawo launcher, or "not found" if it cannot be determined.
+    """
+    try:
+        result = subprocess.run(
+            [launcher_dwo, "version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0 or not result.stdout:
+            return "not found"
+
+        # Usually the first line contains the version info
+        first_line = result.stdout.splitlines()[0]
+        return first_line.strip()
+
+    except FileNotFoundError:
+        return "not found"
+    except Exception:
+        return "unknown"
+
+
+def get_latex_version() -> str:
+    """
+    Return the LaTeX version available in the system.
+
+    This function queries the pdflatex executable, which is expected
+    to be present if LaTeX is installed.
+
+    Returns
+    -------
+    str
+        The LaTeX version string, or "not found" if pdflatex is not available.
+    """
+    try:
+        result = subprocess.run(
+            ["pdflatex", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0 or not result.stdout:
+            return "not found"
+
+        # Usually the first line contains the version info
+        first_line = result.stdout.splitlines()[0]
+        return first_line.strip()
+
+    except FileNotFoundError:
+        return "not found"
+    except Exception:
+        return "unknown"
+
+
+def get_uv_version() -> str:
+    """
+    Return the uv version available in the system.
+
+    Returns
+    -------
+    str
+        The uv version string, or "not found" if uv is not available.
+    """
+    try:
+        result = subprocess.run(
+            ["uv", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return "not found"
+
+        return result.stdout.strip()
+
+    except FileNotFoundError:
+        return "not found"
+    except Exception:
+        return "unknown"
 
 
 def should_copy(file: Path, extra_excludes: Iterable[re.Pattern] = ()) -> bool:
