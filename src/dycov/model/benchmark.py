@@ -584,12 +584,11 @@ class Benchmark:
         has_simulated_curves: bool,
         has_reference: bool = True,
     ):
-        op_cond_success, results = op_cond.validate(
+        results = op_cond.validate(
             self._validator,
             working_path,
             jobs_output_dir,
             event_params,
-            success,
             has_simulated_curves,
             has_reference=has_reference,
         )
@@ -598,7 +597,7 @@ class Benchmark:
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
             self.__warning("Undefined Validations")
-        elif not op_cond_success:
+        elif not success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
@@ -608,7 +607,7 @@ class Benchmark:
         else:
             compliance = Compliance.Compliant
 
-        return op_cond_success, results, compliance
+        return success, results, compliance
 
     def validate(
         self,
@@ -627,7 +626,7 @@ class Benchmark:
         Returns
         -------
         bool
-            True if Benchmark can be validated, False otherwise
+            True if at least one operating condition succeeds, False otherwise
         """
         success = False
 
@@ -725,7 +724,7 @@ class Benchmark:
         return success
 
     def generate(self) -> None:
-        """Execute the GFM module for the current benchmark."""
+        """Execute the generation step for all operating conditions of the benchmark."""
 
         for op_cond in self._oc_list:
             set_test_context(

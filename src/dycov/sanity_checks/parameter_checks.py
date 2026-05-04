@@ -55,9 +55,11 @@ def check_pre_stable(time: list[float], curve: list[float]) -> None:
 
 
 def check_sampling_interval(sampling_interval: float, cutoff: float) -> None:
-    """Check that the sampling interval and cut-off values do not exceed the maximum allowed value.
-    The maximum value for the sampling interval is determined by 2 times the filter Cut-off
-    frequency.
+    """Check that the sampling interval is compatible with the filter cut-off frequency.
+
+    The sampling interval must satisfy the Nyquist criterion, i.e. it must be
+    smaller than or equal to 1 / (2 * cutoff).
+
 
     Parameters
     ----------

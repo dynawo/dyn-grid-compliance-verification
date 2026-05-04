@@ -157,7 +157,7 @@ def _create_pcs_reports(
     pcs_results: dict,
     output_path: Path,
     working_path: Path,
-) -> list:
+) -> bool:
     pcs = pcs_results["pcs"]
     producer = pcs.get_producer()
     producer.set_zone(pcs.get_zone(), pcs_results["producer"])
@@ -602,6 +602,10 @@ def prepare_pcs_report(
 ) -> None:
     """Prepares the report for the PCS validation.
 
+    This includes copying LaTeX templates, generating figures, and creating
+    intermediate PCS reports
+
+
     Parameters
     ----------
     pcs_results: dict
@@ -652,6 +656,8 @@ def create_pdf(
         Temporal working path
     path_latex_files: Path
         Path to the LaTex templates
+    dry_run: bool
+        If True, skip the actual PDF generation (useful for testing/report design)
     """
 
     output_path = parameters.get_working_dir() / "Reports"

@@ -344,6 +344,8 @@ def create_plot(
         File where the graph will be saved
     results: dict
         Results of the validations applied in the pcs
+    band_ref_val: float | None
+        Reference value for the tolerance band, if applicable
     """
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
     last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]

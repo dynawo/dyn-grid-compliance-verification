@@ -19,6 +19,8 @@ class BandUnit(Enum):
 
 @dataclass
 class ToleranceBand:
+    """Base class defining an upper and lower tolerance band."""
+
     upper: float | None
     lower: float | None
 
@@ -54,6 +56,8 @@ class EventMarker:
 
 @dataclass
 class FigureDescription:
+    """Description of a figure to be rendered in reports."""
+
     name: str
     variables: str | list[dict]
     ylabel: str
@@ -63,7 +67,9 @@ class FigureDescription:
     event_markers: list[EventMarker] = field(default_factory=list)
 
 
-def band_limits(ref_val: float, upper_pct: float | None, lower_pct: float | None) -> tuple:
+def band_limits(
+    ref_val: float, upper_pct: float | None, lower_pct: float | None
+) -> tuple[float | None, float | None]:
     """Calculate the upper and lower limits of a tolerance band based on a reference value and
     percentage values.
 
@@ -78,7 +84,7 @@ def band_limits(ref_val: float, upper_pct: float | None, lower_pct: float | None
 
     Returns
     -------
-    tuple
+    tuple[float | None, float | None]
         A tuple containing the upper and lower limits.
     """
     upper = None
