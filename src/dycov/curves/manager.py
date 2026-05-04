@@ -345,6 +345,13 @@ class CurvesManager:
         calculated_curves = sigpro.resample_to_fixed_step(csv_calculated_curves)
         reference_curves = sigpro.resample_to_fixed_step(reference_curves)
 
+        # Apply alignment of event times
+        calculated_curves = sigpro.apply_time_shift(
+            calculated_curves,
+            t_event_curves=self._simulated_event_start_time,
+            t_event_reference=self._reference_event_start_time,
+        )
+
         calc_time_values = list(calculated_curves["time"])
         calculated_windows = signal_windows.calculate(
             calc_time_values,
@@ -372,13 +379,6 @@ class CurvesManager:
         # low-pass filter has already been applied (therefore, no aliasing is produced).
         calculated_curves, reference_curves = sigpro.resample_to_common_tgrid(
             calculated_curves, reference_curves
-        )
-
-        # Apply alignment of event times
-        calculated_curves = sigpro.apply_time_shift(
-            calculated_curves,
-            t_event_curves=self._simulated_event_start_time,
-            t_event_reference=self._reference_event_start_time,
         )
 
         # In the second resampling the curves are trimmed to ensure that both sets start and end
