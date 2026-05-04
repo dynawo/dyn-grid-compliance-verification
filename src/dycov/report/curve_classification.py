@@ -33,6 +33,8 @@ _VARIABLE_LABELS = {
 
 @dataclass(frozen=True)
 class CurveStyle:
+    """Visual style definition for a curve (color and line style)."""
+
     color: str
     style: str
 

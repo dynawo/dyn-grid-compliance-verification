@@ -142,7 +142,7 @@ class Pcs:
         str
             Name of the LaTex file template
         bool
-            True if all pcs are success, False otherwise
+            True if at least one benchmark succeeds, False otherwise
         dict
             Results of the validations applied in the pcs
         """
@@ -160,7 +160,7 @@ class Pcs:
         return self._report_name, success, pcs_results
 
     def generate(self) -> None:
-        """Execute the GFM module for the current pcs."""
+        """Execute the generation step for all benchmarks of the current PCS."""
 
         for bm in self._bm_list:
             bm.generate()

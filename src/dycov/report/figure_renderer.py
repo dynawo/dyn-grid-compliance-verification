@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 
 
 class FigureRenderer(ABC):
+    """Abstract interface for rendering figures independent of the backend."""
 
     @abstractmethod
     def add_hline(
@@ -50,6 +51,7 @@ class FigureRenderer(ABC):
 
 
 class MatplotlibRenderer(FigureRenderer):
+    """Matplotlib-based implementation of the FigureRenderer interface."""
 
     _STYLE_MAP = {
         "--": "--",
@@ -130,6 +132,7 @@ class MatplotlibRenderer(FigureRenderer):
 
 
 class PlotlyRenderer(FigureRenderer):
+    """Plotly-based implementation of the FigureRenderer interface."""
 
     _STYLE_MAP = {
         "--": "dash",
