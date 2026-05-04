@@ -44,8 +44,8 @@ def append(
 
 
 def contains_key(keys: list, elements: list) -> bool:
-   """Check whether any of the given keys is present in a list of elements.
-   
+    """Check whether any of the given keys is present in a list of elements.
+
     Parameters
     ----------
     keys: list
@@ -56,7 +56,7 @@ def contains_key(keys: list, elements: list) -> bool:
     Returns
     -------
     bool
-        True if any key is contained in the list of elements, False otherwise
+       True if any key is contained in the list of elements, False otherwise
     """
     for key in keys:
         if key in elements:
