@@ -77,7 +77,7 @@ def modify_jobs_file(
     solver_id: str,
     solver_lib: str,
 ) -> None:
-    """Modify the value of a parameter in the PAR file.
+    """Modify the solver configuration in a JOBS XML file.
 
     Parameters
     ----------
