@@ -29,6 +29,7 @@ from dycov.report.figure_decorations import (
     draw_response_characteristics,
 )
 from dycov.report.figure_renderer import MatplotlibRenderer
+from dycov.report.types import FigureDescription
 
 
 def _add_curve2plot(
