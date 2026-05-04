@@ -410,9 +410,10 @@ def _get_instance() -> Config:
     Config
         A Config object initialized with default, user, and PCS config parsers.
     """
-    dycov_logging.get_logger("Cfg").info("Initializing Config instance.")
+    logger = dycov_logging.get_logger("Cfg")
+    logger.info("Initializing Config instance.")
     config_dir = Path.home() / ("AppData/Local/dycov" if os.name == "nt" else ".config/dycov")
-    dycov_logging.get_logger("Cfg").debug(f"Config directory set to: {config_dir}")
+    logger.debug(f"Config directory set to: {config_dir}")
 
     # Initialize ConfigParser objects for different configuration sources
     default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -424,40 +425,32 @@ def _get_instance() -> Config:
 
     # Load default configuration from the package
     default_config_path = Path(__file__).resolve().parent / "defaultConfig.ini"
-    dycov_logging.get_logger("Cfg").info(
-        f"Loading default configuration from: {default_config_path}"
-    )
+    logger.info(f"Loading default configuration from: {default_config_path}")
     try:
         if not default_config_path.exists():
-            dycov_logging.get_logger("Cfg").warning(
-                f"Default configuration file not found at: {default_config_path}"
-            )
+            logger.warning(f"Default configuration file not found at: {default_config_path}")
         default_config.read(default_config_path)
-        dycov_logging.get_logger("Cfg").info("Successfully loaded default configuration.")
+        logger.info("Successfully loaded default configuration.")
     except Exception as e:
-        dycov_logging.get_logger("Cfg").error(
-            f"Error loading default configuration from {default_config_path}: {e}"
-        )
+        logger.error(f"Error loading default configuration from {default_config_path}: {e}")
         raise
 
     # Load user configuration
     user_config_file = config_dir / (
         "config.ini" if os.name != "nt" else ""
     )  # Adjusted for Windows not needing /config.ini suffix
-    dycov_logging.get_logger("Cfg").info(f"Loading user configuration from: {user_config_file}")
+    logger.info(f"Loading user configuration from: {user_config_file}")
     try:
         if not user_config_file.exists():
-            dycov_logging.get_logger("Cfg").debug(
+            logger.debug(
                 f"User configuration file not found at: {user_config_file} "
                 "(This is often expected)",
                 user_config_file,
             )
         user_config.read(user_config_file)
-        dycov_logging.get_logger("Cfg").info("Successfully loaded user configuration.")
+        logger.info("Successfully loaded user configuration.")
     except Exception as e:
-        dycov_logging.get_logger("Cfg").warning(
-            f"Could not load user configuration from {user_config_file}: {e}"
-        )
+        logger.warning(f"Could not load user configuration from {user_config_file}: {e}")
 
     return Config(config_dir, default_config, user_config, pcs_config)
 

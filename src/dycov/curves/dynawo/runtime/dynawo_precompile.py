@@ -20,29 +20,6 @@ from lxml import etree
 from dycov.logging.logging import dycov_logging
 
 
-def get_dynawo_version(launcher_dwo: Path) -> str:
-    """
-    Retrieves the version of the Dynawo launcher.
-
-    Parameters
-    ----------
-    launcher_dwo : Path
-        Path to the Dynawo launcher executable.
-
-    Returns
-    -------
-    str
-        The Dynawo launcher version string.
-    """
-    result = subprocess.run(
-        [launcher_dwo, "version"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.stdout.strip()
-
-
 def _compile_model_name(models_path: Path, model_name: str) -> Optional[str]:
     """
     Extracts the compiled model name (Modelica model ID) from a Dynawo model XML file.
@@ -188,7 +165,6 @@ def precompile_models(
 
     models_to_compile: list[tuple[Path, str]] = []
     if model_name is None:
-        # Compila todos los XML de ambos directorios
         models_to_compile += [(models_path, p.name) for p in models_path.glob("*.[xX][mM][lL]")]
         models_to_compile += [(user_dir, p.name) for p in user_dir.glob("*.[xX][mM][lL]")]
     else:
@@ -201,7 +177,6 @@ def precompile_models(
 
     for current_models_path, current_model_name in models_to_compile:
         compiled_model = _compile_model_name(current_models_path, current_model_name)
-        # Si se pide explícitamente un modelo concreto, forzamos recompilación
         if compiled_model and (output_path / (compiled_model + extension)).is_file():
             if model_name:
                 logger.debug(
