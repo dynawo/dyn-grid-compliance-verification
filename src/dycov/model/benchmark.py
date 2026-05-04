@@ -729,7 +729,7 @@ class Benchmark:
 
     def generate(self):
         for op_cond in self._oc_list:
-            set_test_context(
+            dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
