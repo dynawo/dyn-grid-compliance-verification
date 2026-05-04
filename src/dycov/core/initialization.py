@@ -9,6 +9,8 @@
 #
 
 import configparser
+import logging
+import platform
 import sys
 from pathlib import Path
 
@@ -17,6 +19,21 @@ from dycov.configuration.cfg import config
 from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging, enable_warning_capture
+
+
+def _get_linux_info() -> str:
+    try:
+        distro = platform.freedesktop_os_release()
+        name = distro.get("NAME", "Linux")
+        version_id = distro.get("VERSION_ID", "")
+    except Exception:
+        name = "Linux"
+        version_id = ""
+
+    kernel = platform.release()
+    arch = platform.machine()
+
+    return f"{name} {version_id}, kernel {kernel}, {arch}"
 
 
 class DycovInitializer:
@@ -47,11 +64,12 @@ class DycovInitializer:
         self._setup_user_config(tool_path)
         self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
-        dycov_logging.get_logger("Initialization").info(
-            "Starting DyCoV - version %s (commit %s)",
-            version,
-            commit_id,
-        )
+        self._log_execution_environment(launcher_dwo)
+
+        if dycov_logging.get_logger("Initialization").isEnabledFor(logging.DEBUG):
+            from dycov.configuration.dump import dump_effective_config
+
+            dump_effective_config(config)
 
         """
         IMPORTANT:
@@ -63,6 +81,33 @@ class DycovInitializer:
         if launcher_dwo:
             self._prepare_dynawo_models(launcher_dwo)
         """
+
+    def _log_execution_environment(self, launcher_dwo: Path | None) -> None:
+        logger = dycov_logging.get_logger("Initialization")
+
+        dynawo_version = manage_files.get_dynawo_version(launcher_dwo) if launcher_dwo else "N/A"
+        latex_version = manage_files.get_latex_version()
+        uv_version = manage_files.get_uv_version()
+
+        logger.info("Starting DyCoV")
+
+        logger.info("  DyCoV:")
+        logger.info("    version   : %s", version)
+        logger.info("    commit    : %s", commit_id)
+
+        logger.info("  System:")
+        if sys.platform.startswith("linux"):
+            logger.info("    OS        : %s", _get_linux_info())
+        else:
+            logger.info("    OS        : %s", platform.platform())
+
+        logger.info("  Runtime:")
+        logger.info("    Python    : %s", platform.python_version())
+
+        logger.info("  External tools:")
+        logger.info("    Dynawo    : %s", dynawo_version)
+        logger.info("    LaTeX     : %s", latex_version)
+        logger.info("    uv        : %s", uv_version)
 
     def _setup_user_config(self, tool_path: Path):
         """
