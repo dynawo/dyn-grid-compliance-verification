@@ -27,7 +27,8 @@ class SimulationLogger(logging.getLoggerClass()):
     ) -> None:
         """Initializes the file handler for the logger. This should be called at the start of a
         simulation to set up logging to a file. The file will be created in the specified log
-        directory with a rotating handler that limits the file size and keeps backups.
+        directory with a rotating handler that limits the file size and keeps backups. The log file
+        is named "dycov.log"
 
         Parameters
         ----------
