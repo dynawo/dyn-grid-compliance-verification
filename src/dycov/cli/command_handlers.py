@@ -28,9 +28,9 @@ from dycov.validate.validation import Validation
 def handle_generate_envelopes_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
 ) -> int:
-    """Handles the 'validate' command.
+    """Handles the 'generateEnvelopes' command.
 
-    Initializes and runs a model validation based on the provided arguments.
+    Initializes and runs a envelope generation based on the provided arguments.
 
     Parameters
     ----------
