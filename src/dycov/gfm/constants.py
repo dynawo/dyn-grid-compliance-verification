@@ -7,8 +7,6 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""Central repository for simulation constants and magic numbers.
-
 """
 Central repository for simulation constants and magic numbers.
 
