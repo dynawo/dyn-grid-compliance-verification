@@ -95,14 +95,6 @@ class ModelSetup:
         base = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         return base + suffix if suffix else base
 
-    def _log(self, bm_name: str, oc_name: str, message: str) -> None:
-        logger = dycov_logging.get_logger("ProducerCurves")
-        logger.info(message)
-        logger.debug(message)
-
-    def _warning(self, message: str) -> None:
-        dycov_logging.get_logger("ProducerCurves").warning(message)
-
     # ------------------------------------------------------------------
     # Grid impedance
     # ------------------------------------------------------------------
@@ -143,7 +135,7 @@ class ModelSetup:
         if config.has_option(config_section, "line_XPu"):
             self.has_line = True
             line_xpu_definition = config.get_value(config_section, "line_XPu")
-            self._log(bm_name, oc_name, f"\tline_XPu={line_xpu_definition}")
+            dycov_logging.get_logger("ModelSetup").debug(f"\tline_XPu={line_xpu_definition}")
             xpu_multiplier = 1.0
             line_xtype = line_xpu_definition
             if "*" in line_xpu_definition:
@@ -169,7 +161,7 @@ class ModelSetup:
         elif config.has_option(config_section, "SCR"):
             self.has_line = True
             scr = config.get_float(config_section, "SCR", 0.0)
-            self._log(bm_name, oc_name, f"\tSCR={scr}")
+            dycov_logging.get_logger("ModelSetup").debug(f"\tSCR={scr}")
             scr_r_factor = config.get_float("GridCode", "SCR_r_factor", 0.0)
             if scr != 0:
                 line_rpu, line_xpu = compute_rx_from_scr(scr, x_over_r=scr_r_factor)
@@ -187,7 +179,7 @@ class ModelSetup:
                 ztanphi = 1.0
             if scc != 0:
                 zcc = uc_pu**2 / scc_pu
-                self._log(bm_name, oc_name, f"\tZcc={zcc}")
+                dycov_logging.get_logger("ModelSetup").debug(f"\tZcc={zcc}")
                 line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
                 line_rpu = line_xpu / ztanphi
 
@@ -228,11 +220,11 @@ class ModelSetup:
         producer = self._owner.get_producer()
 
         pdr_p_cfg = config.get_value(config_section, "pdr_P")
-        self._log(bm_name, oc_name, f"\tpdr_P={pdr_p_cfg}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tpdr_P={pdr_p_cfg}")
         pdr_q_cfg = config.get_value(config_section, "pdr_Q")
-        self._log(bm_name, oc_name, f"\tpdr_Q={pdr_q_cfg}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tpdr_Q={pdr_q_cfg}")
         pdr_u_cfg = config.get_value(config_section, "pdr_U")
-        self._log(bm_name, oc_name, f"\tpdr_U={pdr_u_cfg}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tpdr_U={pdr_u_cfg}")
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
         ini_pdr_p = model_parameters.extract_defined_value(
@@ -326,7 +318,7 @@ class ModelSetup:
                 return float(param_name)
             except ValueError:
                 cfg_value = config.get_value(config_section, param_name)
-                self._log(bm_name, oc_name, f"\t{param_name}={cfg_value}")
+                dycov_logging.get_logger("ModelSetup").debug(f"\t{param_name}={cfg_value}")
                 return model_parameters.extract_defined_value(
                     cfg_value, default_key, default_value
                 )
@@ -354,7 +346,7 @@ class ModelSetup:
             If uinf equals udip (division by zero).
         """
         if uinf == udip:
-            dycov_logging.get_logger("ProducerCurves").error(
+            dycov_logging.get_logger("ModelSetup").error(
                 "Uinf cannot be equal to Udip to avoid division by zero."
             )
             raise ValueError("Uinf cannot be equal to Udip to avoid division by zero.")
@@ -362,7 +354,7 @@ class ModelSetup:
         ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
         xv = (zv * ztanphi) / math.sqrt(1 + ztanphi * ztanphi)
         if xv == 0.0:
-            dycov_logging.get_logger("ProducerCurves").warning(
+            dycov_logging.get_logger("ModelSetup").warning(
                 "Xv is zero, which may indicate an issue with the calculation."
             )
             xv = 1e-3
@@ -446,7 +438,7 @@ class ModelSetup:
         config_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Event")
         producer = self._owner.get_producer()
         connect_event_to = config.get_value(config_section, "connect_event_to")
-        self._log(bm_name, oc_name, f"\t{connect_event_to=}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\t{connect_event_to=}")
 
         pre_value = 1.0
         setpoint_factor = self._s_nref / producer.s_nom
@@ -476,7 +468,7 @@ class ModelSetup:
                 ]
 
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
-        self._log(bm_name, oc_name, f"\tsim_t_event_start={start_time}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tsim_t_event_start={start_time}")
 
         if config.has_option(config_section, "fault_duration"):
             fault_duration = config.get_float(config_section, "fault_duration", 0.0)
@@ -485,7 +477,7 @@ class ModelSetup:
             fault_duration = config.get_float(
                 config_section, f"fault_duration_{generator_type}", 0.0
             )
-        self._log(bm_name, oc_name, f"\tfault_duration={fault_duration}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tfault_duration={fault_duration}")
 
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
@@ -494,7 +486,7 @@ class ModelSetup:
             )
             if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
                 step_value *= setpoint_factor
-        self._log(bm_name, oc_name, f"\tsetpoint_step_value={step_value}")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tsetpoint_step_value={step_value}")
 
         return {
             "start_time": start_time,
@@ -529,7 +521,7 @@ class ModelSetup:
 
         producer = self._owner.get_producer()
         pre_value = [self._resolve_pre_value(gen, pdr) for gen in producer.generators]
-        dycov_logging.get_logger("ProducerCurves").debug(
+        dycov_logging.get_logger("ModelSetup").debug(
             f"Adjusted pre_value for VoltageSetpointPu: {pre_value}"
         )
         event_params["pre_value"] = pre_value
@@ -574,13 +566,13 @@ class ModelSetup:
         """
         producer = self._owner.get_producer()
 
-        self._log(
+        dycov_logging.get_logger("ModelSetup").debug(
             bm_name,
             oc_name,
             f"Unom: {producer.u_nom}, "
             f"Generator type: {generator_variables.get_generator_type(producer.u_nom)}",
         )
-        self._log(
+        dycov_logging.get_logger("ModelSetup").debug(
             bm_name,
             oc_name,
             f"Model definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
@@ -627,7 +619,7 @@ class ModelSetup:
             self._get_grid_load(pcs_name, bm_name, oc_name, u_dim),
         )
 
-        self._log(
+        dycov_logging.get_logger("ModelSetup").debug(
             bm_name,
             oc_name,
             f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
@@ -638,7 +630,7 @@ class ModelSetup:
             reference_event_start_time is not None
             and event_params["start_time"] != reference_event_start_time
         ):
-            self._warning(
+            dycov_logging.get_logger("ModelSetup").warning(
                 f"The simulation will use the 'sim_t_event_start' value present in the Reference "
                 f"Curves ({reference_event_start_time}), instead of the value configured "
                 f"({event_params['start_time']}).",
@@ -693,7 +685,7 @@ class ModelSetup:
             working_oc_dir / _TSO_PAR,
         )
 
-        dycov_logging.get_logger("ProducerCurves").debug("Complete omega file")
+        dycov_logging.get_logger("ModelSetup").debug("Complete omega file")
         omega_file.complete_omega(
             working_oc_dir,
             "Omega.dyd",
