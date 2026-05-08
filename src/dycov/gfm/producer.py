@@ -16,10 +16,12 @@ from dycov.model.producer import Producer
 
 
 class GFMProducer(Producer):
-    """A class used to represent a producer parsed from an INI configuration file.
+    """
+    A class used to represent a producer parsed from an INI configuration file.
 
-    This class extends the base Producer class, providing specific methods to locate, read, and
-    access producer-related data required for Grid Forming (GFM) calculations.
+    This class extends the base Producer class, providing specific methods to
+    locate, read, and access producer-related data required for Grid Forming (GFM)
+    calculations.
     """
 
     def __init__(self, producer_ini: Path) -> None:
@@ -34,7 +36,8 @@ class GFMProducer(Producer):
         self._config = self.__read_producer_ini()
 
     def get_producer_path(self) -> Path:
-        """Retrieves the base path to the producer INI file.
+        """
+        Retrieves the base path to the producer INI file.
 
         Returns
         -------
@@ -44,7 +47,8 @@ class GFMProducer(Producer):
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
-        """Retrieves the filenames associated with the producer model.
+        """
+        Retrieves the filenames associated with the producer model.
 
         This method scans the producer path for INI files and returns a sorted
         list of their stem names (filenames without extensions).
@@ -70,7 +74,8 @@ class GFMProducer(Producer):
         )
 
     def get_sim_type_str(self) -> str:
-        """Retrieves a string identifier representing the type of validation being executed.
+        """
+        Retrieves a string identifier representing the type of validation being executed.
 
         Returns
         -------
@@ -80,7 +85,8 @@ class GFMProducer(Producer):
         return "gfm"
 
     def set_zone(self, zone: int, filename: str) -> None:
-        """Dummy method to satisfy interface requirements.
+        """
+        Dummy method to satisfy interface requirements.
 
         Parameters
         ----------
@@ -92,7 +98,8 @@ class GFMProducer(Producer):
         pass
 
     def get_config(self) -> configparser.ConfigParser:
-        """Retrieves the loaded producer settings required for GFM calculations.
+        """
+        Retrieves the loaded producer settings required for GFM calculations.
 
         Returns
         -------
@@ -102,7 +109,8 @@ class GFMProducer(Producer):
         return self._config
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
-        """Reads and parses the producer INI file.
+        """
+        Reads and parses the producer INI file.
 
         This private method handles the internal logic of locating the INI file
         matching the specific pattern and loading it into a ConfigParser object.
@@ -119,7 +127,8 @@ class GFMProducer(Producer):
         """
 
         def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
-            """Helper function to locate the producer INI file path.
+            """
+            Helper function to locate the producer INI file path.
 
             Parameters
             ----------
