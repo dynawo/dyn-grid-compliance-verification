@@ -9,6 +9,7 @@
 #
 
 import configparser
+import importlib.metadata
 from pathlib import Path
 from typing import Any
 
@@ -239,6 +240,13 @@ def plot_results(
         html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
         disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
 
+    # Fetch the exact software version for the watermark ---
+    try:
+        software_version = importlib.metadata.version("dycov")
+        watermark_text = f"dycov v{software_version}"
+    except importlib.metadata.PackageNotFoundError:
+        watermark_text = "dycov v(unknown)"
+
     # --- Static Plot Generation via Matplotlib (PNG) ---
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
@@ -311,6 +319,19 @@ def plot_results(
                 horizontalalignment="left",
                 bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
             )
+
+        # Add watermark text to Matplotlib plot ---
+        plt.text(
+            0.98,
+            0.02,
+            watermark_text,
+            transform=plt.gca().transAxes,
+            fontsize=12,
+            color="gray",
+            alpha=0.3,  # Semi-transparent
+            verticalalignment="bottom",
+            horizontalalignment="right",
+        )
 
         # Apply layout adjustments and export
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
@@ -429,6 +450,20 @@ def plot_results(
                 borderwidth=1,
                 borderpad=10,
             )
+
+        # Add watermark annotation to Plotly plot ---
+        fig.add_annotation(
+            xref="paper",
+            yref="paper",
+            x=0.98,
+            y=0.02,
+            text=watermark_text,
+            showarrow=False,
+            font=dict(color="gray", size=14),
+            opacity=0.3,  # Semi-transparent
+            xanchor="right",
+            yanchor="bottom",
+        )
 
         fig.update_layout(
             title_text=title,
