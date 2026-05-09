@@ -567,14 +567,10 @@ class ModelSetup:
         producer = self._owner.get_producer()
 
         dycov_logging.get_logger("ModelSetup").debug(
-            bm_name,
-            oc_name,
             f"Unom: {producer.u_nom}, "
             f"Generator type: {generator_variables.get_generator_type(producer.u_nom)}",
         )
         dycov_logging.get_logger("ModelSetup").debug(
-            bm_name,
-            oc_name,
             f"Model definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
 
@@ -620,8 +616,6 @@ class ModelSetup:
         )
 
         dycov_logging.get_logger("ModelSetup").debug(
-            bm_name,
-            oc_name,
             f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
         event_params = self._get_event_parameters(pcs_name, bm_name, oc_name, pdr)
