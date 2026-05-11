@@ -109,9 +109,6 @@ class DynawoCurves(ProducerCurves):
 
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
-        logging.setLoggerClass(SimulationLogger)
-        self._logger = logging.getLogger("ProducerCurves")
-
         # Solver parameters — initialised by __reset_solver
         self._solver_id = ""
         self._solver_lib = ""
@@ -130,15 +127,6 @@ class DynawoCurves(ProducerCurves):
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    def _log(self, message: str, level: str = "debug") -> None:
-        getattr(dycov_logging.get_logger("ProducerCurves"), level)(message)
-
-    def __debug(self, message: str) -> None:
-        self._log(message, "debug")
-
-    def __warning(self, message: str) -> None:
-        self._log(message, "warning")
 
     def __reset_solver(self) -> None:
         """Resets all solver parameters to their configured defaults."""
@@ -301,9 +289,9 @@ class DynawoCurves(ProducerCurves):
             output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name
         )
         if not result.succeeded:
-            self.__warning(result.log)
+            dycov_logging.get_logger("ProducerCurves").warning(result.log)
         else:
-            self.__debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
         has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
         return SimulateOutcome(
             succeeded=result.succeeded,
@@ -396,7 +384,7 @@ class DynawoCurves(ProducerCurves):
                 event_params["start_time"],
                 event_params["duration_time"],
             )
-            self.__debug(
+            dycov_logging.get_logger("ProducerCurves").debug(
                 f"Simulation finished in {self._sim_time}s: "
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",
