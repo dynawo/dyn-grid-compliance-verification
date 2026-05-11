@@ -9,7 +9,7 @@
     <par type="BOOL" name="WTG3_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG3_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG3_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0.15"/>
+    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0.015"/>
     <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
@@ -156,8 +156,8 @@
   <!-- tfo -->
   <set id="StepUp_Xfmr">
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.01"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.1"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
