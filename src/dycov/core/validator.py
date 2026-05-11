@@ -13,7 +13,6 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.curves.manager import CurvesManager
-from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import DisconnectionModel, ExclusionWindows
 from dycov.model.producer import Producer
 from dycov.validation import compliance_list
@@ -45,18 +44,6 @@ class Validator(ABC):
         self._disconnection_model: DisconnectionModel | None = None
         self._setpoint_variation: float = 0.0
         self._oc_name: str | None = None
-
-    def _log_message(self, level: str, message: str) -> None:
-        logger = dycov_logging.get_logger("Validator")
-        match level:
-            case "info":
-                logger.info(message)
-            case "debug":
-                logger.debug(message)
-            case "warning":
-                logger.warning(message)
-            case _:
-                logger.debug(message)
 
     def _get_calculated_curves(self) -> pd.DataFrame:
         return self._curves_manager.get_curves("calculated")

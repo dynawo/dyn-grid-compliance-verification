@@ -401,7 +401,7 @@ def calculate_errors(
             dycov_logging.error(f"Curve {key} not found in simulation results.")
             continue
 
-        tmxe, ymxe = common.maximum_error_position(
+        tmxe, ymxe, yref = common.maximum_error_position(
             calculated_curves["time"],
             calculated_curves[key],
             reference_curves[key],
@@ -426,6 +426,7 @@ def calculate_errors(
             ),
             "tmxe": tmxe,
             "ymxe": ymxe,
+            "yref": yref,
         }
 
     return results
