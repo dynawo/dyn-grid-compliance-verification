@@ -97,7 +97,6 @@ echo "Found unique wheel: $PKG_BASENAME"
 # 3. Version Consistency Check
 ########################################
 
-# Extract version from pyproject.toml
 VERSION=$(grep '^version' "$ROOT_DIR/pyproject.toml" | cut -d'"' -f2)
 
 if [[ -z "$VERSION" ]]; then
@@ -105,25 +104,17 @@ if [[ -z "$VERSION" ]]; then
     exit 1
 fi
 
-# Ensure wheel name contains version
 if [[ "$PKG_BASENAME" != *"$VERSION"* ]]; then
     echo "ERROR: Wheel version mismatch!"
-    echo "  pyproject.toml version: $VERSION"
-    echo "  wheel filename:         $PKG_BASENAME"
+    ...
     exit 1
 fi
 
-
-# Extract numeric part of TAG ("v0.9.2" → "0.9.2")
 TAG_VERSION="${TAG#v}"
 
-# Ensure TAG matches project version
 if [[ "$TAG_VERSION" != "$VERSION" ]]; then
     echo "ERROR: TAG mismatch!"
-    echo "  TAG argument:           $TAG  (numeric part: $TAG_VERSION)"
-    echo "  pyproject.toml version: $VERSION"
-    echo ""
-    echo "TAG must be 'v$VERSION' for reproducible builds."
+    ...
     exit 1
 fi
 
