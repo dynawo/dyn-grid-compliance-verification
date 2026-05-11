@@ -619,7 +619,7 @@ def maximum_error(signal: list, reference: list, step_magnitude: float) -> float
 
 def maximum_error_position(
     time: list, signal: list, reference: list, name: str
-) -> tuple[float, float]:
+) -> tuple[float, float, float]:
     """Gets the position of the maximum error between two signals.
 
     Parameters
@@ -639,6 +639,8 @@ def maximum_error_position(
         Time in the maximum error
     float
         Signal value in the maximum error
+    float
+        Reference value in the maximum error
     """
     if np.isnan(reference).all():
         dycov_logging.get_logger("Common Validation").warning(f"No reference values in {name}")
@@ -656,7 +658,7 @@ def maximum_error_position(
 
     errors = abs(signal - reference)
     pos = errors.idxmax()
-    return time.iloc[pos], signal.iloc[pos]
+    return time.iloc[pos], signal.iloc[pos], reference.iloc[pos]
 
 
 def get_response_time(percent: float, time: list, curve: list, sim_t_event_start: float) -> float:
