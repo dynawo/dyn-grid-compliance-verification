@@ -63,7 +63,7 @@ class ParFile(FileVariables):
         working_oc_dir: Path,
         line_rpu: float,
         line_xpu: float,
-        rte_gen: GenInit,
+        tso_gen: GenInit,
         event_params: dict,
         unom: float,
     ) -> None:
@@ -78,7 +78,7 @@ class ParFile(FileVariables):
             The per unit resistance value for the line.
         line_xpu: float
             The per unit reactance value for the line.
-        rte_gen: GenInit
+        tso_gen: GenInit
             Parameters for the initialization of the TSO's bus side (P, Q, U, angle).
         event_params: dict
             A dictionary containing event-specific parameters, including start time,
@@ -94,12 +94,12 @@ class ParFile(FileVariables):
         variables_dict["line_RPu"] = line_rpu
 
         # Update generator initialization parameters. Note: 'infiniteBus_U0Pu' and 'gen_U0Pu'
-        # intentionally use 'rte_gen.U0' as per original script's logic.
-        variables_dict["infiniteBus_U0Pu"] = rte_gen.u0
-        variables_dict["gen_P0Pu"] = rte_gen.p0
-        variables_dict["gen_Q0Pu"] = rte_gen.q0
-        variables_dict["gen_U0Pu"] = rte_gen.u0
-        variables_dict["gen_UPhase0"] = rte_gen.u_phase0
+        # intentionally use 'tso_gen.U0' as per original script's logic.
+        variables_dict["infiniteBus_U0Pu"] = tso_gen.u0
+        variables_dict["gen_P0Pu"] = tso_gen.p0
+        variables_dict["gen_Q0Pu"] = tso_gen.q0
+        variables_dict["gen_U0Pu"] = tso_gen.u0
+        variables_dict["gen_UPhase0"] = tso_gen.u_phase0
         variables_dict["gen_UNom"] = unom
         variables_dict["bus_UNom"] = unom
 
