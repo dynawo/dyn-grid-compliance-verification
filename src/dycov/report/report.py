@@ -302,9 +302,9 @@ def _pcs_replace(
                 oc_subst_dict2 |= {"missedColumns": ""}
                 oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{}"}
             else:
+                missed_columns = [col.replace("_", r"\_") for col in oc_results["missed_columns"]]
                 missed_list = "\n".join(
-                    f"    \\item \\textcolor{{red}}{{{col.replace("_", "\_")}}}"
-                    for col in oc_results["missed_columns"]
+                    f"    \\item \\textcolor{{red}}{{{col}}}" for col in missed_columns
                 )
                 oc_subst_dict2 |= {
                     "missedColumns": (
