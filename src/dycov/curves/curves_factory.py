@@ -54,12 +54,12 @@ def get_producer(
     """
     if producer.is_dynawo_model():
         job_name = config.get_value(pcs_benchmark_name, "job_name")
-        rte_model = config.get_value(pcs_benchmark_name, "TSO_model")
+        tso_model = config.get_value(pcs_benchmark_name, "TSO_model")
         omega_model = config.get_value(pcs_benchmark_name, "Omega_model")
 
         file_path = Path(__file__).resolve().parent.parent
         sim_type_path = producer.get_sim_type_str()
-        model_path = file_path / lib_path / "TSO_model" / rte_model
+        model_path = file_path / lib_path / "TSO_model" / tso_model
         omega_path = file_path / lib_path / "Omega" / omega_model
         pcs_path = file_path / templates_path / sim_type_path / pcs_name
         if not pcs_path.exists():
