@@ -12,6 +12,7 @@ This module provides functions for validating Dynawo model topologies based on
 expected and actual components and their connections.
 """
 
+from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import GenParams, LineParams, LoadParams, XfmrParams
 
 _GENERATOR_ERROR_MESSAGE = (
@@ -28,6 +29,51 @@ _MULTIPLE_GENERATOR_ERROR_MESSAGE = (
     "      * 'PV_Array' if a solar panel or a park of solar panels is modeled\n"
     "      * 'Bess' if a storage or a park of storages is modeled\n"
 )
+
+
+def _find_stepup_xfmr(gen: GenParams, transformers: list[XfmrParams]) -> XfmrParams | None:
+    """Return the StepUp_Xfmr whose terminals reference the given generator, or None."""
+    return next(
+        (
+            xfmr
+            for xfmr in transformers
+            if xfmr.id.startswith("StepUp_Xfmr")
+            and any(terminal.connected_equipment == gen.id for terminal in xfmr.terminals)
+        ),
+        None,
+    )
+
+
+def _check_converter_lv_control(
+    generators: list[GenParams],
+    transformers: list[XfmrParams],
+) -> None:
+    """Warn when a generator has converter_lv_control=False and is connected to a StepUp_Xfmr.
+
+    In that configuration the converter's internal transformer and the StepUp_Xfmr are in
+    series, which is likely unintentional.
+    """
+    problematic = []
+    for gen in generators:
+        if gen.converter_lv_control:
+            continue
+        xfmr = _find_stepup_xfmr(gen, transformers)
+        if xfmr:
+            problematic.append((gen.id, xfmr.id))
+
+    if problematic:
+        dycov_logging.get_logger("Sanity Checks").warning(
+            "The following generators have ConverterLVControl=False and are connected to StepUp "
+            "transformers:"
+        )
+        for gid, tid in problematic:
+            dycov_logging.get_logger("Sanity Checks").warning(f"  - {gid} → {tid}")
+
+        dycov_logging.get_logger("Sanity Checks").warning(
+            "This results in two transformers in series (the converter's internal transformer "
+            "and the StepUp_Xfmr), which is usually unintended. Consider enabling "
+            "ConverterLVControl or removing the external StepUp_Xfmr if not required."
+        )
 
 
 def _check_topology_components(
@@ -64,54 +110,32 @@ def _check_topology_components(
     def add_error(msg: str):
         error_messages.append(f"  - {msg}")
 
-    # Declarative expectations
-    expectations = [
-        {
-            "name": "Generators",
-            "count": expected_gen_count,
-            "items": generators,
-            "validators": {
-                "single": lambda: _is_valid_generator(
-                    generators[0].id, add_sm=topology_name.startswith("S")
-                ),
-                "multiple": lambda: _is_valid_generators(generators),
-            },
-            "messages": {
-                "single": "A single generator is expected.",
-                "multiple": "Multiple generators are expected.",
-                "invalid_single": "Invalid generator configuration.",
-                "invalid_multiple": "Invalid generators configuration.",
-            },
-        },
-        {
-            "name": "Step-up Transformers",
-            "count": expected_xfmr_count,
-            "items": transformers,
-            "validators": {
-                "single": lambda: _is_valid_stepup_xfmr(transformers, generators),
-                "multiple": lambda: _is_valid_stepup_xfmr(transformers, generators),
-            },
-            "messages": {
-                "single": "A transformer with id 'StepUp_Xfmr' is expected.",
-                "multiple": "Multiple step-up transformers are expected.",
-                "invalid_single": "Invalid step-up transformer configuration.",
-                "invalid_multiple": "Invalid step-up transformers configuration.",
-            },
-        },
-    ]
+    # Normalize for the startswith check regardless of how the caller spelled it.
+    is_single_topology = topology_name.upper().startswith("S")
 
-    # Validate generators and transformers
-    for exp in expectations:
-        if exp["count"] == "single":
-            if len(exp["items"]) != 1:
-                add_error(exp["messages"]["single"])
-            elif not exp["validators"]["single"]:
-                add_error(exp["messages"]["invalid_single"])
-        elif exp["count"] == "multiple":
-            if len(exp["items"]) <= 1:
-                add_error(exp["messages"]["multiple"])
-            elif not exp["validators"]["multiple"]:
-                add_error(exp["messages"]["invalid_multiple"])
+    # Validate generators
+    if expected_gen_count == "single":
+        if len(generators) != 1:
+            add_error("A single generator is expected.")
+        elif not _is_valid_generator(generators[0].id, add_sm=is_single_topology):
+            add_error("Invalid generator configuration.")
+    elif expected_gen_count == "multiple":
+        if len(generators) <= 1:
+            add_error("Multiple generators are expected.")
+        elif not _is_valid_generators(generators):
+            add_error("Invalid generators configuration.")
+
+    # Validate step-up transformers
+    if expected_xfmr_count == "single":
+        if len(transformers) != 1:
+            add_error("A transformer with id 'StepUp_Xfmr' is expected.")
+        elif not _is_valid_stepup_xfmr(transformers, generators):
+            add_error("Invalid step-up transformer configuration.")
+    elif expected_xfmr_count == "multiple":
+        if len(transformers) <= 1:
+            add_error("Multiple step-up transformers are expected.")
+        elif not _is_valid_stepup_xfmr(transformers, generators):
+            add_error("Invalid step-up transformers configuration.")
 
     # Validate optional components
     def validate_optional(expect: bool, component, name: str, validator, expected_msg: str):
@@ -152,35 +176,40 @@ def _check_topology_components(
         "An internal line with id 'IntNetwork_Line' is expected.",
     )
 
-    # Build final message if invalid
-    if error_messages:
-        full_message = (
-            f"The '{topology_name}' topology expects the following models:\n"
-            + "\n".join(error_messages)
+    # Warn about potentially unintended double-transformer configurations.
+    # Runs regardless of structural errors above so the user sees all issues at once.
+    _check_converter_lv_control(generators, transformers)
+
+    if not error_messages:
+        return
+
+    full_message = f"The '{topology_name}' topology expects the following models:\n" + "\n".join(
+        error_messages
+    )
+
+    # Add connection hints only when the relevant component is present and valid,
+    # so the hint is meaningful in context.
+    if expected_gen_count == "single" and len(generators) == 1:
+        full_message += (
+            f"\n  - 'StepUp_Xfmr' connected between the generator and the "
+            f"{generator_bus_connection}"
         )
 
-        # Add connection details
-        if expected_gen_count == "single" and len(generators) == 1:
-            full_message += (
-                f"\n  - 'StepUp_Xfmr' connected between the generator and the "
-                f"{generator_bus_connection}"
-            )
+    if expect_aux_load and auxiliary_load:
+        full_message += (
+            f"\n  - 'AuxLoad_Xfmr' connected between the auxiliary load and the "
+            f"{aux_load_bus_connection}"
+        )
 
-        if expect_aux_load and auxiliary_load:
-            full_message += (
-                f"\n  - 'AuxLoad_Xfmr' connected between the auxiliary load and the "
-                f"{aux_load_bus_connection}"
-            )
+    if expect_main_xfmr and main_transformer:
+        full_message += f"\n  - 'Main_Xfmr' connected between the {main_xfmr_bus_connection}"
 
-        if expect_main_xfmr and main_transformer:
-            full_message += f"\n  - 'Main_Xfmr' connected between the {main_xfmr_bus_connection}"
+    if expect_internal_line and internal_line:
+        full_message += (
+            f"\n  - 'IntNetwork_Line' connected between the {internal_line_bus_connection}"
+        )
 
-        if expect_internal_line and internal_line:
-            full_message += (
-                f"\n  - 'IntNetwork_Line' connected between the {internal_line_bus_connection}"
-            )
-
-        raise ValueError(full_message)
+    raise ValueError(full_message)
 
 
 def _is_valid_generators(generators: list[GenParams]) -> bool:
