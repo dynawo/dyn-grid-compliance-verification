@@ -652,6 +652,9 @@ def _append_generator(
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
     ppc_local = _get_generator_ppc_local(parset, nsmap, lib)
 
+    converter_lv_control = _get_generator_converter_lv_control(parset, nsmap, lib)
+    print(f"Generator {gen_id} converter LV control: {converter_lv_control}")
+
     generators.append(
         GenParams(
             id=gen_id,
@@ -669,6 +672,7 @@ def _append_generator(
             voltage_droop=droop_value,
             use_voltage_droop=False,
             ppc_local=ppc_local,
+            converter_lv_control=converter_lv_control,
         )
     )
 
@@ -771,6 +775,15 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
 def _get_generator_ppc_local(parset, nsmap, lib):
     _, ppc_local = _get_parameter(parset, nsmap, lib, "PPCLocal")
     return ppc_local.lower() == "true" if ppc_local is not None else False
+
+
+def _get_generator_converter_lv_control(parset, nsmap, lib):
+    _, converter_lv_control_str = _get_parameter(parset, nsmap, lib, "ConverterLVControl")
+    return (
+        converter_lv_control_str.lower() == "true"
+        if converter_lv_control_str is not None
+        else True
+    )
 
 
 def _get_line_values(
