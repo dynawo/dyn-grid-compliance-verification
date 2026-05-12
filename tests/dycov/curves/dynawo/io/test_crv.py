@@ -38,6 +38,7 @@ def test_create_curves_file_electric_performance_sm():
         xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
         generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
         tso_loads = []
+        tso_generators = []
         sim_type = ELECTRIC_PERFORMANCE_SM
         zone = 1
         control_mode = "USetpoint"
@@ -47,6 +48,7 @@ def test_create_curves_file_electric_performance_sm():
             xfmrs,
             generators,
             tso_loads,
+            tso_generators,
             sim_type,
             zone,
             control_mode,
@@ -73,6 +75,7 @@ def test_create_curves_file_with_all_equipment_types():
         xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
         generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
         tso_loads = [DummyEquipment("Load", lib="LoadAlphaBeta")]
+        tso_generators = []
         sim_type = ELECTRIC_PERFORMANCE_SM
         zone = 1
         control_mode = "USetpoint"
@@ -82,6 +85,7 @@ def test_create_curves_file_with_all_equipment_types():
             xfmrs,
             generators,
             tso_loads,
+            tso_generators,
             sim_type,
             zone,
             control_mode,
@@ -107,6 +111,7 @@ def test_create_curves_file_invalid_sim_type_and_zone():
         xfmrs = []
         generators = []
         tso_loads = []
+        tso_generators = []
         sim_type = 999  # Invalid sim_type
         zone = 999  # Invalid zone
         control_mode = "USetpoint"
@@ -116,6 +121,7 @@ def test_create_curves_file_invalid_sim_type_and_zone():
             xfmrs,
             generators,
             tso_loads,
+            tso_generators,
             sim_type,
             zone,
             control_mode,
