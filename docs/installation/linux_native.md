@@ -225,4 +225,3 @@ Native Linux installation may be appropriate if you:
 *   or are performing advanced debugging or development tasks.
 
 Otherwise, prefer the installation using the **prebuilt distribution image**.
-
