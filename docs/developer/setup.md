@@ -240,3 +240,18 @@ Use this development setup if you:
 If your goal is only to run validations or generate reports,
 use the installation methods described in `docs/installation/` instead.
 
+---
+
+## 10. DyCoV architecture overview
+
+The diagram below provides a high-level view of the DyCoV execution flow.
+It is intended to help developers understand the main components and their
+relationships, not to document every internal detail.
+
+> **Note**
+> This diagram reflects the architecture at a given point in time.
+> As DyCoV evolves, some details may become outdated.
+> If you notice a significant discrepancy, updating the diagram is a welcome
+> contribution.
+
+![DyCoV Flowchart](../../docs/manual_dev/source/figs_structure/flowchart.svg)

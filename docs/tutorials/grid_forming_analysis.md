@@ -48,12 +48,21 @@ that may be:
 ## 3. Supported GFM cases in DyCoV
 
 DyCoV currently supports GFM envelope generation for
-**specific predefined disturbance cases**.
+**four predefined disturbance families**.
 
-Each case corresponds to:
-- a well‑defined analytical formulation,
-- a specific class of grid disturbance,
-- a set of required GFM parameters.
+Each case corresponds to a well-defined analytical formulation
+and a specific class of grid disturbance:
+
+- **Amplitude Step** — reactive current ($I_q$) and reactive power envelopes
+  in response to a grid voltage amplitude step.
+- **Phase Jump** — active power ($P$) response to a sudden change
+  in the grid voltage phase angle.
+- **RoCoF** (Rate of Change of Frequency) — active power response to a
+  frequency ramp; finite-duration events are modeled by superimposing
+  step responses.
+- **SCR Jump** — stability and power response following a sudden change
+  in the Short Circuit Ratio (grid impedance), differentiated between
+  overdamped and underdamped responses.
 
 The supported cases are implemented directly in DyCoV
 and exposed through the GFM workflow.
@@ -63,7 +72,7 @@ and exposed through the GFM workflow.
 ## 4. Inputs required
 
 GFM analysis requires **only analytical input parameters**.
-No network model and no time‑domain simulation is involved.
+No network model and no time-domain simulation is involved.
 
 Inputs describe:
 - nominal electrical quantities,
@@ -72,18 +81,83 @@ Inputs describe:
 
 ### 4.1 Input files
 
-GFM inputs are typically provided using:
-- `Producer.ini` files containing nominal and control parameters, or
-- CSV files allowing multiple parameter sets to be evaluated.
+GFM inputs are provided through a `Producer.ini` file containing
+a dedicated `[GFM Parameters]` section.
 
-The exact format and accepted parameters depend on the supported GFM case.
+Multiple parameter sets can also be evaluated by supplying a CSV file;
+the exact format depends on the supported GFM case.
 
 The structure of the inputs is illustrated in the project examples
 under `examples/GFM/`.
 
-GFM‑specific parameters are provided through a dedicated
-`[GFM Parameters]` section inside the `Producer.ini` file,
-as illustrated by the examples under `examples/GFM/`.
+---
+
+### 4.2 GFM parameters reference
+
+The following parameters are defined inside the `[GFM Parameters]` section
+of `Producer.ini`:
+
+**Nominal quantities:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `Snom` | Nominal apparent power (MVA) |
+| `Unom` | Nominal voltage (kV) |
+
+**Standard control parameters** (used when operating in Standard mode):
+
+| Parameter | Description |
+|-----------|-------------|
+| `D` | Damping coefficient |
+| `H` | Inertia constant (s) |
+| `Xeff` | Effective reactance |
+
+**Hybrid control parameters** (used when operating in Hybrid mode):
+
+| Parameter | Description |
+|-----------|-------------|
+| `D_Overdamped` | Damping coefficient for the overdamped case |
+| `H_Overdamped` | Inertia constant for the overdamped case (s) |
+| `D_Underdamped` | Damping coefficient for the underdamped case |
+| `H_Underdamped` | Inertia constant for the underdamped case (s) |
+
+**Operating limits:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `p_max_injection` | Maximum active power injection |
+| `p_min_injection` | Minimum active power injection (negative for absorption) |
+| `q_max` | Maximum reactive power |
+| `q_min` | Minimum reactive power |
+
+**Output and sensitivity settings:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `save_all_envelopes` | If `true`, the CSV output includes all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope |
+| `RatioMin` | Lower bound for sensitivity analysis on parameter variations |
+| `RatioMax` | Upper bound for sensitivity analysis on parameter variations |
+
+---
+
+### 4.3 Standard mode vs. Hybrid mode
+
+DyCoV automatically detects the operating mode based on which parameters
+are present in `[GFM Parameters]`:
+
+**Standard mode** — uses `D` and `H`.
+DyCoV calculates a single set of upper and lower envelopes.
+
+**Hybrid mode** — activated when both overdamped and underdamped parameter
+sets are defined (`D_Overdamped`, `H_Overdamped`, `D_Underdamped`,
+`H_Underdamped`).
+DyCoV then:
+1. Computes independent envelopes for the overdamped and underdamped cases.
+2. Constructs a **merged envelope** by taking the maximum of the upper limits
+   and the minimum of the lower limits across both cases.
+
+The merged envelope provides a robust validation range that covers
+both dynamic regimes simultaneously.
 
 ---
 
@@ -158,37 +232,38 @@ Results/
             ├── *.png
             ├── *.html
             └── *_ini_dump.txt   (only for hybrid cases)
-````
+```
 
 Where:
 
-*   `PCS_RTE-IGFMx` identifies the GFM PCS family.
-*   `S_<Scenario>` identifies the disturbance scenario
-    (e.g. voltage angle step, voltage amplitude step, SCR variation, RoCoF).
-*   `OC<k>` identifies a specific operating condition for that scenario.
+- `PCS_RTE-IGFMx` identifies the GFM PCS family.
+- `S_<Scenario>` identifies the disturbance scenario
+  (e.g. voltage angle step, voltage amplitude step, SCR variation, RoCoF).
+- `OC<k>` identifies a specific operating condition for that scenario.
 
-***
+---
 
 ### 7.2 Generated artifacts
 
 For each combination of PCS, scenario and operating condition, DyCoV generates:
 
-*   📄 **CSV file**  
-    containing the numerical values of the admissible envelopes.
-*   📈 **PNG figure**  
-    providing a static visualization of the envelopes.
-*   🌐 **HTML file**  
-    providing an interactive visualization of the envelopes.
+- 📄 **CSV file** containing the numerical time series of the admissible
+  envelopes (upper and lower bounds for the relevant signal: $P$, $Q$, or $I_q$).
+  When `save_all_envelopes = true`, the file also includes the intermediate
+  overdamped and underdamped traces.
+- 📈 **PNG figure** providing a static visualization of the envelopes alongside
+  the PCC signal. In Hybrid mode, individual over/underdamped traces can also
+  be shown.
+- 🌐 **HTML file** providing an interactive visualization of the same content.
 
 For **hybrid GFM cases only**, DyCoV also generates:
 
-*   🧾 **INI dump file (`*_ini_dump.txt`)**  
-    containing the exact set of input parameters used for that calculation.
+- 🧾 **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
+  parameters used for that calculation, including internally derived values
+  such as the damping ratio $\varepsilon$. Intended for full traceability
+  when hybrid configurations are used.
 
-The INI dump is intended to ensure full traceability
-when hybrid input configurations are used.
-
-***
+---
 
 ### 7.3 Interpretation
 
@@ -242,4 +317,3 @@ After GFM analysis, you may:
 *   RTE — Technical Reference Documentation (DTR)
 *   Analytical Grid‑Forming control theory
 *   Dynawo documentation
-

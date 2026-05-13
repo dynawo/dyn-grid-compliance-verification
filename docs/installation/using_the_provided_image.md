@@ -139,7 +139,35 @@ Inside the DyCoV session, Windows drives are accessible via:
 
 ***
 
-### 4.3 Manual procedure (restricted environments)
+### 4.3 Updating to a new version (WSL)
+
+Each DyCoV release is a **complete standalone distribution**.
+Updating replaces the existing installation entirely.
+
+> **WARNING**
+> The update process permanently deletes the existing `DycovApp` distribution,
+> including any files stored inside it.
+> Files stored on Windows drives (`C:\`, `D:\`, etc.) are **not** affected.
+
+Before updating, move any important data to a Windows drive.
+From inside the DyCoV session:
+
+```bash
+mv ~/my_results /mnt/c/Users/MyUser/Documents/
+```
+
+To update, place the new release files in a folder and run:
+
+```
+import_wsl.bat
+```
+
+The installer will detect the existing distribution and ask for confirmation
+before replacing it.
+
+---
+
+### 4.4 Manual procedure (restricted environments)
 
 If your organization restricts execution of `.bat` or `.ps1` scripts,
 you can import the distribution manually.
@@ -155,31 +183,6 @@ To start DyCoV manually:
 ```powershell
 wsl -d DycovApp -- bash /start_dycov.sh
 ```
-
-***
-
-### 4.4 Updating to a new version (WSL)
-
-Each DyCoV release is a **complete standalone distribution**.
-
-Updating replaces the existing installation entirely.
-
-> **WARNING**  
-> Updating permanently deletes the existing `DycovApp` distribution,
-> including any files stored inside it.
-> Files stored on Windows drives are not affected.
-
-Before updating, move any important data to a Windows drive, for example:
-
-```bash
-mv ~/my_results /mnt/c/Users/MyUser/Documents/
-```
-
-To update, place the new release files in a folder and run:
-
-    import_wsl.bat
-
-The installer will detect the existing distribution and ask for confirmation.
 
 ***
 
@@ -268,4 +271,3 @@ Once DyCoV is running:
     *   RMS model validation
     *   Electrical performance verification
     *   Grid‑Forming analysis
-
