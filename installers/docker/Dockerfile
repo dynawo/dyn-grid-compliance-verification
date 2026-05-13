@@ -61,6 +61,12 @@ RUN \
 
 RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dycov.sh
 
+# Fourth layer:
+#   - Build the Sphinx manual (HTML + PDF) and install it under /opt/dycov/manual/
+ARG MANUAL_SRC=manual_src
+COPY ./$MANUAL_SRC /tmp/manual_src
+RUN uv pip install --system sphinx sphinx-rtd-theme   && cd /tmp/manual_src   && make latexpdf   && make html   && mkdir -p /opt/dycov/manual   && mv build/html /opt/dycov/manual/   && mv build/latex/dycov.pdf /opt/dycov/manual/   && rm -rf /tmp/manual_src
+
 # Copy the entrypoint shell script
 COPY start_dycov.sh /
 

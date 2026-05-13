@@ -158,7 +158,17 @@ fi
 
 
 ########################################
-# 7. Copy Dockerfile + start script
+# 7. Copy manual sources
+########################################
+
+echo "Copying manual sources..."
+MANUAL_DIR="$TEMP_DIR/manual_src"
+mkdir -p "$MANUAL_DIR"
+cp -a "$ROOT_DIR/docs/manual/." "$MANUAL_DIR/"
+
+
+########################################
+# 8. Copy Dockerfile + start script
 ########################################
 
 cp Dockerfile "$TEMP_DIR/"
@@ -166,7 +176,7 @@ cp start_dycov.sh "$TEMP_DIR/"
 
 
 ########################################
-# 8. Docker build (context = TEMP_DIR)
+# 9. Docker build (context = TEMP_DIR)
 ########################################
 
 echo "Starting Docker build using context $TEMP_DIR..."
@@ -177,6 +187,7 @@ docker build \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \
+    --build-arg MANUAL_SRC="manual_src" \
     "$TEMP_DIR"
 
 echo "Build complete:"
