@@ -33,11 +33,11 @@ This documentation assumes familiarity with:
 
 You will need the documentation in this directory if you want to:
 
-- develop or debug DyCoV itself,
-- add or modify Performance Checking Sheets (PCS),
-- extend supported models or workflows,
-- contribute code changes upstream,
-- understand internal data flows and architecture.
+- develop or debug DyCoV itself → start with `setup.md`, `project_structure.md`, and `extending_dycov.md`
+- add or modify Performance Checking Sheets (PCS) → see `add_new_pcs.md`
+- extend supported models or workflows → see `extending_dycov.md`
+- contribute code changes upstream → follow standard Git workflows and ensure tests pass
+- understand internal data flows and architecture → see `project_structure.md` and design documents
 
 If you do **not** intend to modify DyCoV, you can safely ignore this directory.
 
@@ -67,3 +67,14 @@ instructions provided in this directory.
 
 End‑user installation methods (distribution image, WSL, Docker) are **not**
 suitable for development workflows.
+
+---
+
+## Key developer guides
+
+The following documents are recommended starting points depending on your task:
+
+- `setup.md` — set up a local development environment
+- `project_structure.md` — understand the repository organization
+- `extending_dycov.md` — understand extension principles and architecture
+- `add_new_pcs.md` — step-by-step guide to implement a new PCS

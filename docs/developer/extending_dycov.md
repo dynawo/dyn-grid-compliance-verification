@@ -68,7 +68,13 @@ Not all internal components are intended to be extended directly.
 
 ## 4. Adding or modifying a PCS (code‑level)
 
-This section describes how to add or modify PCS logic **in the DyCoV codebase**.
+This section describes the **conceptual responsibilities and structure** of a PCS
+implementation in DyCoV.
+
+It explains what a PCS is expected to define and where its logic belongs,
+but does not provide a step‑by‑step implementation guide.
+
+For a complete procedural walkthrough, see section 4.3 and the linked guide.
 
 It does **not** cover:
 - overriding operating conditions,
@@ -97,7 +103,7 @@ PCS logic is **domain‑specific** and should not include:
 
 ### 4.2 Recommended development approach
 
-When adding or modifying a PCS:
+When adding or modifying a PCS, the typical development process is:
 
 1. Identify an existing PCS with similar behavior.
 2. Reuse common utilities and abstractions.
@@ -108,6 +114,29 @@ When adding or modifying a PCS:
 Avoid embedding PCS‑specific behavior:
 - in CLI code,
 - in generic workflow controllers.
+
+(Note: a complete step-by-step implementation guide is provided in section 4.3.)
+
+---
+
+### 4.3 Step-by-step guide
+
+If you want to implement a new PCS in practice, follow the dedicated guide linked below.
+
+The previous sections describe *where* PCS logic is implemented and how it
+fits into the DyCoV architecture.
+
+For a complete, step-by-step guide on how to implement a new PCS — including:
+- modifying the validation pipeline,
+- updating configuration,
+- adding templates,
+- creating examples,
+- and writing tests,
+
+→ Start here: [add_new_pcs.md](add_new_pcs.md)
+
+This guide is recommended for new contributors who want to implement
+their first PCS in DyCoV.
 
 ---
 
@@ -169,6 +198,33 @@ Integration tests are:
 - not part of the regular development loop.
 
 They should not be the only validation mechanism.
+
+For practical examples of how DyCoV workflows are executed in tests, see:
+- `tests/dycov/utils.py`
+
+In particular, new contributors are encouraged to study how the
+`execute_tool` helper is used in existing tests before creating new ones.
+
+---
+
+### Running tests
+
+To execute the test suite, run:
+
+```bash
+uv run pytest
+```
+
+Alternatively, if your virtual environment is already activated:
+
+```bash
+pytest
+```
+
+**Note:**
+
+*   Some tests rely on Dynawo being correctly configured (via PATH or `DYNAWOPATH`).
+*   If Dynawo is not available, certain tests may fail or be skipped depending on configuration.
 
 ---
 

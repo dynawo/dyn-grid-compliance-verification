@@ -32,6 +32,21 @@ Fiches "I"), but can be configured and extended to run other tests.
 
 ---
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [Linux](#linux)
+  - [Windows](#windows)
+- [Quick start](#quick-start)
+- [Documentation](#documentation)
+- [Reference manuals](#reference-manuals)
+- [Workshop](#workshop)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [Contact](#contact)
+
+---
+
 ## Installation
 
 > **For developers** who want to build from source, see
@@ -124,6 +139,7 @@ The developer docs are independent and can be consulted at any time.
 | Developer setup | [docs/developer/setup.md](docs/developer/setup.md) |
 | Project structure | [docs/developer/project_structure.md](docs/developer/project_structure.md) |
 | Extending DyCoV | [docs/developer/extending_dycov.md](docs/developer/extending_dycov.md) |
+| Adding a new PCS | [docs/developer/add_new_pcs.md](docs/developer/add_new_pcs.md) |
 
 ---
 
@@ -162,6 +178,14 @@ https://github.com/user-attachments/assets/d8c0bcd8-339f-47e4-9f26-e452b2e87980
 Part 2:
 
 https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
+
+---
+
+## Contributing
+
+Contributions are welcome. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) for branching conventions, code style,
+CI requirements, and the PR workflow.
 
 ---
 
