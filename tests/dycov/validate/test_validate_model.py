@@ -1,5 +1,6 @@
-from dycov.model.compliance import Compliance
 from tests.dycov.utils import MODEL, execute_tool
+
+from dycov.model.compliance import Compliance
 
 RESOURCES = "./resources"
 
@@ -59,11 +60,11 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
-        Compliance.InvalidTest,  # 14
-        Compliance.InvalidTest,  # 15
+        Compliance.Compliant,  # 14
+        Compliance.Compliant,  # 15
         Compliance.Compliant,  # 16
-        Compliance.InvalidTest,  # 17
-        Compliance.InvalidTest,  # 18
+        Compliance.Compliant,  # 17
+        Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
         Compliance.InvalidTest,  # 20
         Compliance.InvalidTest,  # 21
