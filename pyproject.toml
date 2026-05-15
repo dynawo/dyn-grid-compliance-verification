@@ -72,7 +72,6 @@ test = [
 dev = [
     "ruff",
     "sphinx",
-    "jupyter",
 ]
 
 
