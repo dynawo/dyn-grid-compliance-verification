@@ -135,15 +135,6 @@ class Benchmark:
             )
             manage_files.create_dir(working_oc_dir)
 
-    def __info(self, message):
-        dycov_logging.get_logger("Benchmark").info(f"{message}")
-
-    def __debug(self, message):
-        dycov_logging.get_logger("Benchmark").debug(f"{message}")
-
-    def __warning(self, message):
-        dycov_logging.get_logger("Benchmark").warning(f"{message}")
-
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
     ) -> tuple[list, CurvesManager | None, Validator | None]:
@@ -596,12 +587,12 @@ class Benchmark:
         # Statuses for the Summary Report
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
-            self.__warning("Undefined Validations")
+            dycov_logging.get_logger("Benchmark").warning("Undefined Validations")
         elif not op_cond_success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
-            self.__warning("Invalid Test")
+            dycov_logging.get_logger("Benchmark").warning("Invalid Test")
         elif not results["compliance"]:
             compliance = Compliance.NonCompliant
         else:
@@ -650,7 +641,7 @@ class Benchmark:
                 op_cond.get_name(),
             )
             sim = curves_result.simulation_result
-            self.__debug(
+            dycov_logging.get_logger("Benchmark").debug(
                 f"Success: {sim.success} "
                 f"Has curves: {curves_result.availability} "
                 f"Time exceeds: {sim.time_exceeds} "

@@ -7,7 +7,6 @@
 # omsg@aia.es
 # demiguelm@aia.es
 #
-import logging
 from collections import namedtuple
 from pathlib import Path
 
@@ -24,7 +23,6 @@ from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, model_parameters
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging.logging import dycov_logging
-from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import DisconnectionModel, SimulationError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
@@ -360,7 +358,7 @@ class DynawoCurves(ProducerCurves):
                 working_oc_dir, pcs_name, bm_name, oc_name, reference_event_start_time
             )
             if not is_test_applicable:
-                self.__warning("Test not applicable.")
+                dycov_logging.get_logger("ProducerCurves").warning("Test not applicable.")
                 return (
                     jobs_output_dir,
                     event_params,
