@@ -98,6 +98,20 @@ uv run pytest -q
 > there is no coverage gate yet. It is available for informational purposes
 > and may be enforced in a future release.
 
+The `[dev,test]` extras include all tools needed for development:
+
+| Extra | Package | Purpose |
+|-------|---------|---------|
+| `dev` | `ruff` | Linting and formatting |
+| `dev` | `sphinx` | Building the reference manual locally (see `docs/manual/README.md`) |
+| `test` | `pytest` | Test runner |
+| `test` | `pytest-cov` | Coverage reporting |
+| `test` | `pytest-mock` | Mocking utilities |
+
+> **Note:** The signal processing workbench under `attic/sigproc_workbench/`
+> has its own isolated environment. Use the `create_venv.sh` script provided
+> there.
+
 ---
 
 ## 5. Code style
