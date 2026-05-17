@@ -1,47 +1,268 @@
-==================
+================
 Adding a new PCS
-==================
+================
 
-.. _option1:
+This section explains how to add a new Performance Checking Sheet (PCS) to
+the DyCoV codebase. There are two scenarios depending on whether the new PCS
+can be built on existing validation tests or requires implementing a new one.
 
-Option 1
-^^^^^^^^
+Before starting, it helps to understand where the relevant files live.
 
-All the tests that you want to carry out are already created and you simply have to check a new
-pcs
 
-#. Create a new directory in src/dycov/templates/PCS/ called with the name of the pcs. It must contain the necessary files to simulate the part of the external network (not the producer's part). At a minimum, it should contain .dyd, .par, .jobs and .crv with the corresponding curves to perform the tests.
-#. Create a directory with a Latex template in src/dycov/templates/reports/ to fill in the report of the different tests (observe how it is created in the other pcs to replicate the name of the variables to replace and their format). It must have its corresponding makefile.
-#. Add to the list of executions and to the list of tests to be executed in the file src/dycov/config/defaultConfig.ini the new case with the name of the folders created in the previous steps. A new section must also be added in this same file with the name of the pcs and its initialization values. Finally, the new pcs name should also be added to the lists of graphs of curves that you want to show in the report.
+Where PCS definitions live
+---------------------------
 
-Option 2
-^^^^^^^^
+DyCoV maintains two separate template trees:
 
-The new pcs has to perform a new test that is not implemented yet
+* ``src/dycov/templates/`` — the built-in PCS definitions shipped with the
+  code. This is where all changes described in this section go.
+* ``~/.config/dycov/templates/`` — user-side overrides and additions, not
+  under source control. These are described in the User Manual.
 
-#. Follow :ref:`Option 1 steps <option1>`.
-#. Next, in src/dycov/config/defaultConfig.ini, add the new test with its corresponding name and the pcs that will execute it in the [PCS-Validations] section.
-#. In the model_validation.py file, the new test must be inserted in the initialize_validation function, reading the list of pcs that are going to execute it and adding it to validation_lists (look at some example of the same function).
-#. In the src/dycov/validation/validations.py script a new condition must be added to execute the test, as it is done in the other tests that are already defined, and in the same script a new function must be defined to execute the python test. Once this is done, the result should be added to the results dictionary as desired.
-#. Finally, in the pcs_replace function of the src/dycov/report/create_report.py file, a new line must be added with the name of the placeholder that you have chosen to show in the final report.
+The tree under ``src/dycov/templates/`` is organized as follows:
 
-Software explanation
---------------------
+.. code-block:: text
 
-When a new pcs is added, first of all the template and the report must be created, since they
-will be used throughout the execution pipeline. In addition, in the default configuration file
-there is a section where the possible tests to be executed and which pcs use them are defined.
-In addition, for the pcs to be executed correctly, a section must be added to give the
-initialization values. Also, depending on what has been defined in the report template, the curves
-that you want to show must be added in the corresponding section.
+   src/dycov/templates/
+   ├── PCS/
+   │   ├── model/
+   │   │   ├── BESS/
+   │   │   └── PPM/
+   │   └── performance/
+   │       ├── BESS/
+   │       ├── PPM/
+   │       └── SM/
+   ├── inputs/
+   │   ├── model/
+   │   └── performance/
+   └── reports/
+       ├── model/
+       └── performance/
 
-If we look at the execution pipeline, the first thing that is done is parse the defaultConfig.ini
-and, as a result, we obtain the initialization values, the tests that are going to be executed in
-each pcs and the curves that their reports require, among others. To do this, we must define the
-action we perform in 2.3 in order to detect the new test.
 
-This information is transferred to validations.py, and there, we must define a condition to check
-if the test we want to execute is within the tests of the pcs, and make the call to the function
-that executes it if it is inside. The result is saved in a dictionary called results that will be
-used when creating the report to replace the placeholder that we have defined in the latex template
-of the pcs and put the desired result.
+.. _scenario_a:
+
+Scenario A — New PCS using existing tests
+------------------------------------------
+
+If all the tests you need are already implemented in DyCoV, adding a new PCS
+is purely a matter of configuration and templates — no Python code changes
+are required.
+
+Step 1: Create the PCS configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Create a directory for the new PCS under the appropriate category in
+``src/dycov/templates/PCS/``. For example, for a new model validation PCS
+for PPM:
+
+.. code-block:: text
+
+   src/dycov/templates/PCS/model/PPM/PCS_RTE-I16zX/
+
+Inside it, create ``PCSDescription.ini`` following the structure of an
+existing PCS (e.g. ``PCS_RTE-I16z1/PCSDescription.ini``). This file defines:
+
+* the benchmarks belonging to the PCS,
+* the operating conditions (OC) for each benchmark,
+* the validation tests to execute (referencing existing test names),
+* the curves required for each OC report.
+
+If a benchmark requires a network impedance table, place the files in a
+subdirectory named after the benchmark:
+
+.. code-block:: text
+
+   src/dycov/templates/PCS/model/PPM/PCS_RTE-I16zX/
+   ├── PCSDescription.ini
+   └── GridVoltageDip/
+       ├── TableInfiniteBus.txt
+       └── TableVariableImpedance.txt
+
+Step 2: Add reference curve DICT files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For each OC of the new PCS, add a ``.dict`` file under the appropriate
+``inputs/`` path:
+
+.. code-block:: text
+
+   src/dycov/templates/inputs/model/PPM/ReferenceCurves/Producer/
+       PCS_RTE-I16zX.<Benchmark>.<OC>.dict
+
+DICT files map DyCoV-expected signal names to curve columns and provide event
+metadata. Use an existing ``.dict`` from the same benchmark family as a
+reference.
+
+Step 3: Create the report templates
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Create a directory for the PCS under ``src/dycov/templates/reports/``:
+
+.. code-block:: text
+
+   src/dycov/templates/reports/model/PPM/PCS_RTE-I16zX/
+
+Inside it, add:
+
+* One LaTeX template per OC: ``report.<Benchmark>.<OC>.tex``
+* A top-level summary template: ``report.RTE-I16zX.tex``
+* A ``Makefile`` (copy from an existing PCS and update the report name)
+
+Templates use Jinja2 syntax adapted for LaTeX. The substitution variables
+available in templates are generated by ``_pcs_replace`` in
+``src/dycov/report/report.py`` and include per-OC maps for results,
+compliance checks, thresholds, signal errors, and time characteristics.
+See :ref:`Scenario B — exposing results in the report <report_maps>` for
+details on the available prefixes.
+
+
+.. _scenario_b:
+
+Scenario B — New PCS with a new validation test
+-------------------------------------------------
+
+If the new PCS requires a test that is not yet implemented, complete all steps
+in :ref:`Scenario A <scenario_a>` first, then follow the steps below.
+
+Step 4: Register the test in ``benchmark.py``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Open ``src/dycov/model/benchmark.py`` and locate
+``__initialize_validation_by_benchmark``.
+
+Register the new test by adding a call to ``compliance_list.append``:
+
+.. code-block:: python
+
+   # For a performance test:
+   compliance_list.append(
+       validations, pcs_benchmark_name, "Performance-Validations", "my_new_test"
+   )
+
+   # For a model validation test:
+   compliance_list.append(
+       validations, pcs_benchmark_name, "Model-Validations", "my_new_test"
+   )
+
+The string ``"my_new_test"`` must match the key used in ``PCSDescription.ini``
+to associate the test with the PCS.
+
+Step 5: Implement the test logic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Depending on the test type, add the implementation to the appropriate
+validator class:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Test type
+     - File
+     - Class
+   * - Performance
+     - ``src/dycov/validation/performance.py``
+     - ``PerformanceValidator``
+   * - Model validation
+     - ``src/dycov/validation/model.py``
+     - ``ModelValidator``
+   * - Shared utilities
+     - ``src/dycov/validation/common.py``
+     - (module-level functions)
+
+Add a private method to the appropriate class following existing patterns
+(``__check_*`` for checks, ``__calculate_*`` for computations). Call it from
+``__check`` or ``__calculate``, guarded by ``compliance_list.contains_key``:
+
+.. code-block:: python
+
+   if compliance_list.contains_key(["my_new_test"], self._validations):
+       self.__check_my_new_test(results)
+
+Store all outputs in the ``results`` dict:
+
+.. code-block:: python
+
+   results["my_new_test_value"] = computed_value
+   results["my_new_test_check"] = computed_value < threshold
+   results["compliance"] &= results["my_new_test_check"]
+
+.. _report_maps:
+
+Step 6: Expose the result in the report
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``_pcs_replace`` function in ``src/dycov/report/report.py`` assembles
+the substitution maps that populate the LaTeX templates. The existing map
+modules and their Jinja prefixes are:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 15 50
+
+   * - Module
+     - Prefix
+     - Content
+   * - ``results.py``
+     - ``rm<OC>``
+     - Overall pass/fail and computed values
+   * - ``compliance.py``
+     - ``cm<OC>``
+     - Per-criterion compliance checks
+   * - ``thresholds.py``
+     - ``thm<OC>``
+     - Threshold values
+   * - ``signal_error.py``
+     - ``em<OC>``
+     - MAE / ME / MXE per signal
+   * - ``steady_state_error.py``
+     - ``ssem<OC>``
+     - Steady-state error
+   * - ``characteristics_response.py``
+     - ``tem<OC>``
+     - Reaction / rise / settling times
+   * - ``active_power_recovery.py``
+     - ``apr<OC>``
+     - Active power recovery indicators
+
+Where ``<OC>`` is derived from the operating condition name by removing the
+case separator and ``_RTE-`` (e.g. ``PCS_RTE-I16z1.Benchmark.Rise`` →
+``I16z1BenchmarkRise``).
+
+If the new result fits an existing module, add it there. If it introduces a
+genuinely new category, create a new map module and register it in
+``_pcs_replace``:
+
+.. code-block:: python
+
+   my_new_map = my_new_module.create_map(oc_results)
+   subst_dict = subst_dict | {"mynew" + operating_condition_: my_new_map}
+
+Then reference the new Jinja variable in the LaTeX template.
+
+
+Validation
+----------
+
+After adding the new PCS, verify the full pipeline end to end:
+
+1. Run the test suite to check for regressions:
+
+   .. code-block:: console
+
+      pytest tests/
+
+2. Add an example case under ``examples/`` that exercises the new PCS.
+
+3. Run DyCoV against it:
+
+   .. code-block:: console
+
+      dycov validate examples/<your_new_case>/ReferenceCurves/ \
+                     -m examples/<your_new_case>/Dynawo/ \
+                     -p PCS_RTE-I16zX
+
+4. Inspect the generated PDF report and HTML plots for correctness.
+
+5. Add unit tests under ``tests/`` covering the new test logic.

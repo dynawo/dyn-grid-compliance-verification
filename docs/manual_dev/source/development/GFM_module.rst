@@ -6,122 +6,217 @@ GFM Envelope Generation Module
    :local:
 
 Overview
-========
+--------
 
-This section provides a technical overview of the **Grid-Forming (GFM) Envelope Generation Module**. The primary purpose of this module is to programmatically calculate and visualize the theoretical dynamic response envelopes of a GFM asset under various simulated grid events.
+The Grid-Forming (GFM) Envelope Generation Module computes and visualizes the
+theoretical dynamic response envelopes of a GFM asset under various simulated
+grid events. It works analytically — no time-domain simulation is involved.
 
-The module solves the second-order differential equations that describe the physical behavior of a GFM system, generating a nominal response signal along with upper and lower tolerance envelopes. These envelopes account for variations in key GFM parameters like **Damping (D)** and **Inertia (H)**.
+Given a set of GFM unit parameters (damping, inertia, effective reactance),
+the module solves the second-order differential equations that govern the
+unit's dynamic behavior and generates a nominal response signal together with
+upper and lower tolerance envelopes. These envelopes account for the
+parametric variations in **Damping (D)** and **Inertia (H)** that characterize
+the uncertainty band of the GFM response.
 
-The core functionalities are:
+The module handles four disturbance families:
 
-* **Analytical Calculation:** It computes the expected response for events like **Phase Jump**, **Amplitude Step**, **Rate of Change of Frequency (RoCoF)**, and **Short-Circuit Ratio (SCR) Jump**.
-* **Data Export:** It saves the calculated time-series data into semicolon-separated **CSV files**.
-* **Visualization:** It generates both static **PNG** plots (via Matplotlib) and interactive **HTML** plots (via Plotly) for easy analysis.
+* **Phase Jump** — active power response to a sudden grid voltage angle change.
+* **Amplitude Step** — reactive current response to a grid voltage amplitude step.
+* **RoCoF** (Rate of Change of Frequency) — active power response to a
+  frequency ramp.
+* **SCR Jump** (Short-Circuit Ratio Jump) — active power response to a sudden
+  change in grid impedance.
 
----
+For each disturbance, the module exports semicolon-separated **CSV files**
+with the time-series data, and generates both static **PNG** figures (via
+Matplotlib) and interactive **HTML** figures (via Plotly).
 
-Code Architecture
-=================
 
-The module is designed with a clear separation of concerns, dividing responsibilities across several Python scripts.
+Code architecture
+------------------
 
-Orchestration Layer
--------------------
+The module is organized around a clear separation of concerns. The following
+diagram shows the overall structure:
 
-* ``generator.py``: This is the main entry point and orchestrator. The **`GFMGeneration`** class manages the entire execution process. It identifies which simulation cases (PCS) to run, prepares the task list, and can execute them in parallel using Python's `multiprocessing` library for efficiency.
-* ``gfm.py``: This script contains the **`GridForming`** class, which acts as the engine for a *single* simulation case. It coordinates the process for one specific event by fetching parameters, invoking the appropriate calculator, and calling the output functions to save the results.
+.. image:: ../figs_structure/flowchart.*
+   :width: 80%
+   :align: center
+   :alt: GFM module execution flowchart
 
-Parameter and Data Management
------------------------------
+Orchestration layer
+^^^^^^^^^^^^^^^^^^^^
 
-* ``parameters.py``: The **`GFMParameters`** class is a centralized data handler. It reads all configuration settings for a given simulation run, including grid conditions and producer-specific values.
-* ``producer.py``: The **`GFMProducer`** class represents the GFM unit being simulated. It is responsible for parsing the producer's ``INI`` file to extract its specific characteristics.
+``generator.py`` is the main entry point. The ``GFMGeneration`` class manages
+the entire execution: it identifies which Producer/PCS combinations need to be
+run, prepares the task list, and dispatches them — either sequentially or in
+parallel using Python's ``multiprocessing`` library.
 
-Core Logic: The Calculator Module
----------------------------------
+``gfm.py`` contains the ``GridForming`` class, which handles a *single*
+simulation case. It coordinates the process for one specific event by loading
+parameters, invoking the appropriate calculator, and calling the output
+functions to save the results.
 
-This is the heart of the module, where the mathematical modeling is implemented.
+Parameter and data management
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``calculator_factory.py``: A simple factory function `get_calculator` that returns an instance of the corresponding calculator class.
-* ``gfm_calculator.py``: Defines the abstract base class **`GFMCalculator`**. It establishes a common interface and provides powerful helper methods.
-* **Concrete Calculators**:
-    * ``phase_jump.py`` (`PhaseJump`): Implements the solution for the active power response to a sudden grid angle change.
-    * ``amplitude_step.py`` (`AmplitudeStep`): Implements the solution for the reactive current response to a grid voltage step.
-    * ``rocof.py`` (`RoCoF`): Models the active power response to a frequency ramp.
-    * ``scr_jump.py`` (`SCRJump`): Models the active power response to a sudden change in grid impedance.
+``parameters.py`` defines the ``GFMParameters`` class, which reads all
+configuration settings for a given run — grid conditions, producer
+characteristics, and event definitions.
 
-Output and Visualization
-------------------------
+``producer.py`` defines the ``GFMProducer`` class, which parses the
+producer's INI file to extract the GFM unit's specific parameters.
 
-* ``outputs.py``: This script is dedicated to file I/O. It contains functions to save data to CSV and generate plots. A key feature is intelligent signal trimming, which removes unnecessary steady-state portions from the plots.
+Core logic: the calculator module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
----
+This is where the mathematical modeling lives. The structure follows the
+**factory + abstract base class** pattern:
 
-Execution Flow
-==============
+* ``calculator_factory.py`` — a simple factory function ``get_calculator``
+  that returns the right calculator instance for the requested event type.
 
-The process from start to finish for a single simulation case follows these steps:
+* ``gfm_calculator.py`` — defines the abstract base class ``GFMCalculator``,
+  which establishes a common interface and provides shared helper methods
+  (see :ref:`gfm_abc` below).
 
-1.  **Initialization**: An instance of `GFMGeneration` is created, which sets up the working directories.
-2.  **Task Identification**: The generator determines which Producer/PCS combinations need to be run.
-3.  **Execution**: The `GFMGeneration.generate()` method starts the process, either sequentially or in parallel.
-4.  **Single Case Processing**: For each task, the `GridForming.generate()` method is invoked.
-5.  **Parameter Loading**: The `GFMParameters` object is configured for the specific case.
-6.  **Calculator Selection**: The `calculator_factory` is called to get the correct calculator instance.
-7.  **Core Calculation**: The `calculate_envelopes()` method of the calculator is called to perform the mathematical computation.
-8.  **Output Generation**: The results are passed to functions in `outputs.py` to save `.csv`, `.png`, and `.html` files.
-9.  **Cleanup**: Temporary working directories are removed.
+* Concrete calculators, one per disturbance family:
 
----
+  * ``phase_jump.py`` (``PhaseJump``) — active power response to a phase jump.
 
-In-Depth: The Calculator Module
-===============================
+    .. image:: ../../../../GFM_Flowchart/phase_jump.*
+       :width: 70%
+       :align: center
+       :alt: Phase Jump calculation flowchart
 
-GFMCalculator (Abstract Base Class)
------------------------------------
+  * ``amplitude_step.py`` (``AmplitudeStep``) — reactive current response to
+    a voltage amplitude step.
 
-The `GFMCalculator` provides the foundation for all event calculations.
+    .. image:: ../../../../GFM_Flowchart/amplitude_step.*
+       :width: 70%
+       :align: center
+       :alt: Amplitude Step calculation flowchart
 
-* **Abstract Methods**:
-    * `get_plot_parameter_names()`: Each subclass must define this to specify which parameters should be displayed on its plots.
-    * `calculate_envelopes()`: This is the main entry point for calculations in each subclass.
-* **Key Helper Methods**:
-    * `_calculate_epsilon_initial_check()`: Calculates the **damping ratio (epsilon)** to determine if the system's response is **overdamped** (:math:`\epsilon \ge 1`) or **underdamped** (:math:`\epsilon < 1`).
-    * `_get_time_tunnel()`: Calculates a time-dependent tolerance band that grows exponentially after an event.
-    * `_limit_power_envelopes()`: Applies final operational limits (e.g., Pmin, Pmax) to the calculated envelopes.
+  * ``rocof.py`` (``RoCoF``) — active power response to a frequency ramp.
 
-Calculator Implementations
---------------------------
+    .. image:: ../../../../GFM_Flowchart/RoCoF.*
+       :width: 70%
+       :align: center
+       :alt: RoCoF calculation flowchart
 
-Each concrete calculator inherits from `GFMCalculator`. The general pattern is:
+  * ``scr_jump.py`` (``SCRJump``) — active power response to an SCR jump.
 
-1.  **Initialization**: Stores event-specific parameters.
-2.  **Main Calculation (`calculate_envelopes`)**: Orchestrates the calculation for nominal parameters and their variations.
-3.  **Damping-Dependent Logic**: Uses `epsilon` to call either an `_get_overdamped_delta_p` or `_get_underdamped_delta_p` method.
-4.  **Analytical Solutions**: The `_get_*damped_delta_p_base` methods contain the direct implementation of the analytical solutions to the second-order differential equations.
+    .. image:: ../../../../GFM_Flowchart/SCRJump.*
+       :width: 70%
+       :align: center
+       :alt: SCR Jump calculation flowchart
 
-**Example: ``rocof.py``**
+Output and visualization
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The `RoCoF` calculator models a finite-duration frequency ramp by applying the **superposition principle**: it calculates the response to a step-on ramp and subtracts the response to a delayed step-off ramp.
+``outputs.py`` handles all file I/O. It saves data to CSV and generates both
+PNG and HTML figures. A notable feature is intelligent signal trimming, which
+removes unnecessary steady-state portions from the plots to keep them focused
+on the transient of interest.
+
+
+Execution flow
+--------------
+
+The following steps describe the full process for a single simulation case,
+from invocation to output:
+
+.. image:: ../../../../GFM_Flowchart/main_flow.*
+   :width: 70%
+   :align: center
+   :alt: Main execution flow
+
+1. An instance of ``GFMGeneration`` is created, which sets up the working
+   directories.
+2. The generator determines which Producer/PCS combinations need to be run.
+3. ``GFMGeneration.generate()`` starts the process, sequentially or in
+   parallel.
+4. For each task, ``GridForming.generate()`` is invoked.
+5. A ``GFMParameters`` object is configured for the specific case.
+6. ``calculator_factory`` returns the correct calculator instance.
+7. The calculator's ``calculate_envelopes()`` method performs the computation.
+8. Results are passed to ``outputs.py`` to generate CSV, PNG, and HTML files.
+9. Temporary working directories are removed.
+
+
+.. _gfm_abc:
+
+In depth: the GFMCalculator base class
+---------------------------------------
+
+``GFMCalculator`` provides the shared foundation for all event calculations.
+
+Abstract interface
+^^^^^^^^^^^^^^^^^^^
+
+Every concrete calculator must implement two methods:
+
+* ``get_plot_parameter_names()`` — returns the list of parameters to display
+  on the figures for this event type.
+* ``calculate_envelopes()`` — the main entry point for the calculation.
+
+Key helper methods
+^^^^^^^^^^^^^^^^^^^
+
+``_calculate_epsilon_initial_check()``
+    Computes the **damping ratio** :math:`\varepsilon` to determine whether
+    the system response is overdamped (:math:`\varepsilon \ge 1`) or
+    underdamped (:math:`\varepsilon < 1`). This drives the branching between
+    the two analytical solution paths.
+
+``_get_time_tunnel()``
+    Calculates a time-dependent tolerance band that grows exponentially after
+    the event, representing the uncertainty corridor around the nominal
+    response.
+
+``_limit_power_envelopes()``
+    Applies final operational limits (``p_min_injection``, ``p_max_injection``)
+    to the computed envelopes, ensuring the result stays within the unit's
+    physical constraints.
+
+Concrete calculator pattern
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each concrete calculator follows the same internal structure:
+
+1. **Initialization** — stores event-specific parameters.
+2. **Main calculation** (``calculate_envelopes``) — orchestrates the
+   computation for nominal parameters and their variations.
+3. **Damping-dependent branching** — calls either ``_get_overdamped_delta_p``
+   or ``_get_underdamped_delta_p`` depending on :math:`\varepsilon`.
+4. **Analytical solution** — the ``_get_*damped_delta_p_base`` methods
+   implement the closed-form solutions to the second-order ODEs.
+
+As an example, the ``RoCoF`` calculator models a finite-duration frequency
+ramp using the **superposition principle**: it computes the response to a
+step-on ramp and subtracts the delayed response to a step-off ramp.
 
 .. code-block:: python
 
-   # In rocof.py -> _calculate_delta_p_for_damping
+   # rocof.py -> _calculate_delta_p_for_damping
 
-   # 1. Calculate the step-on response starting at event_time.
+   # 1. Response to the step-on ramp starting at event_time.
    p1, p_peak, t_response = calc_func(D, H, x_total, time_event_start)
    p1 = np.where(time_array < event_time, 0, p1)
 
-   # 2. Calculate the step-off response (negated) starting at rocof_stop_time.
+   # 2. Response to the step-off ramp (negated) starting at rocof_stop_time.
    p2, _, _ = calc_func(D, H, x_total, time_event_stop)
    p2 = np.where(time_array < rocof_stop_time, 0, p2)
 
-   # 3. The final response is the difference between the two.
+   # 3. The final response is the superposition of both.
    delta_p = p1 - p2
 
----
 
 Utilities
-=========
+---------
 
-* ``constants.py``: This file centralizes "magic numbers" used throughout the simulation, such as default simulation times, time constants, and delays. When adding or modifying a time-based parameter, it should be defined here to maintain consistency.
+``constants.py`` centralizes all "magic numbers" used throughout the module:
+default simulation times, time constants, delays, and so on. When adding or
+modifying a time-based parameter, always define it here rather than
+hardcoding it in the calculator — this keeps the module consistent and makes
+future tuning straightforward.
