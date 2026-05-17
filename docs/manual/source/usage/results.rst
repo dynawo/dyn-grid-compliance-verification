@@ -2,143 +2,146 @@
 Results
 =======
 
-The directory structure is designed to support simulations and electrical analyses results keeping
-the data consistent and organized. Each directory and file plays a crucial role in organizing and
-documenting the results of these simulations.
+After each run, DyCoV writes all its outputs to a ``Results/`` directory
+created in the working directory. Everything is organized to make it easy to
+find what you need: a quick summary at the top, detailed per-PCS reports, and
+the raw data and simulation files for each individual test case.
 
-Organization of Results Folder
-------------------------------
 
-The *Results* directory has been organized based on the set of tests that make up the different
-types of verifications that the tool allows:
+Organization of the Results folder
+------------------------------------
 
 .. figure:: figs_results/results.png
     :scale: 70
 
     Results structure
 
-* ``Reports``
-    The Reports folder contains essential documentation and analysis reports generated from the
-    simulations. Each report is critical for understanding the implications of the simulation
-    results, making it easier to communicate findings, validate models, and make informed decisions
-    based on the data. These reports are used to document the simulation processes and outcomes
-    comprehensively, ensuring clarity and transparency in the analysis.
+The top level contains two types of entries:
 
-* ``PCS*``
-    The PCS* folders likely refer to different PCS where simulations are executed. Within each of
-    these folders, there are subfolders indicating the type of Benchmark and Operating Condition
-    being performed.
+* ``Reports/`` — the PDF and HTML outputs, described in detail below.
+* ``PCS_*/`` — one folder per PCS that was executed, each organized
+  hierarchically by Benchmark and Operating Condition.
+
 
 Reports
 ^^^^^^^
-
-The Reports folder contains essential documentation and analysis reports generated from the
-simulations:
 
 .. figure:: figs_results/reports.png
     :scale: 70
 
     Reports structure
 
-* ``summary_report.pdf``
-    Summarizes the results of the PCS tests.
-* ``report_*.pdf``
-    Provides a more in-depth analysis, including detailed data interpretations,
-    comparisons, and specific insights derived from the simulation results.
-* ``full_report.pdf``
-    All the detailed reports concatenated.
-* ``HTML``
-    The tool generates and stores in this directory an HTML file for each test that has been
-    performed. Each HTML file has a dynamic version of the same figures that are displayed in
-    the reports.
+The ``Reports/`` folder contains:
+
+* ``summary_report.pdf`` — a concise summary of all PCS results: which tests
+  passed, which failed, and the key compliance metrics.
+* ``report_*.pdf`` — one detailed report per PCS, with full data tables,
+  graphs, and compliance analysis for each Operating Condition.
+* ``full_report.pdf`` — all the detailed reports concatenated into a single
+  document, useful for submission or archiving.
+* ``HTML/`` — one HTML file per test case, containing interactive versions of
+  the same figures shown in the PDF reports. These are particularly useful for
+  exploring the curves in detail, zooming in on specific time windows, or
+  comparing simulated and reference responses side by side.
+
 
 PCS Results
 ^^^^^^^^^^^
 
-Each PCS Results folder has been organized in a hierarchical structure along three conceptual
-levels, defined as follows:
+Each ``PCS_*/`` folder follows the same three-level hierarchy used throughout
+the tool:
 
-#. **PCS**
-    Is a top-level object for reporting results. Inside a PCS, the different test cases are
-    organised in groups called Benchmarks.
+1. **PCS** — the top-level grouping, corresponding to one DTR fiche (e.g.
+   PCS I16, PCS I6). Each PCS contains one or more Benchmarks.
 
-#. **Benchmark**
-    Is usually designed for a specific type of event (e.g., a fault, or a setpoint step change),
-    to validate specific functionalities. A given benchmark becomes a concrete test case once one
-    specifies the Operating Conditions.
+2. **Benchmark** — a specific type of test event (e.g. a three-phase fault,
+   a setpoint step). A benchmark becomes a concrete test once the Operating
+   Conditions are specified.
 
-#. **Operating Conditions (OC)** of a given benchmark
-    Define everything that is needed to instantiate an actual test.
+3. **Operating Condition (OC)** — the full specification of a single test
+   instance: initial operating point, event parameters, and grid parameters.
 
 OC Results
 ~~~~~~~~~~
 
-Finally, each OC Results folder contains the following files:
+Each OC folder contains the data generated for that specific test:
 
 .. figure:: figs_results/operatingcondition.png
     :scale: 70
 
-    PCS Results Contents
+    OC Results contents
 
-* CSV Files
-    Contain calculated and reference curves for comparison.
-* Dynawo Files (``*.dyd``, ``*.par``, ``*.jobs``, ``*.crv``)
-    Defines the Transmission System Operator (TSO) model and Producer model.
-* ``results.json``
-    Stores the simulation results in a structured format.
-* ``outputs``
-    Folder with the Dynawo's simulation outputs (see `Dynawo documentation`__ for more info about
-    Dynawo).
+* **CSV files** — the calculated curves and, when applicable, the reference
+  curves, ready for post-processing or comparison in external tools.
+* **Dynawo files** (``*.dyd``, ``*.par``, ``*.jobs``, ``*.crv``) — the
+  complete model used for the simulation, including both the TSO's grid-side
+  model and the producer's model. These files are useful for debugging or for
+  re-running a specific test in Dynawo directly.
+* **``results.json``** — the computed compliance metrics and intermediate
+  values in a structured format, useful for programmatic post-processing.
+* **``outputs/``** — Dynawo's raw simulation outputs. See the
+  `Dynawo documentation <https://dynawo.github.io/>`_ for details on the
+  content of this folder.
 
-__ https://dynawo.github.io/
 
-PDF Report
-----------
+GFM Envelope Generation Results
+---------------------------------
 
-All the PDF reports will follow this structure:
+GFM analysis produces a different set of outputs, since no simulation is
+involved. Results are written directly under ``Results/PCS_RTE-IGFMx/``,
+organized by disturbance scenario and operating condition:
 
-#. **Model**
+.. code-block:: text
 
-   * Description of the Test Setup
-        Each report begins by explaining the test setup used for the specific simulation or
-        scenario. This includes details about the grid model, the operational points, and any
-        important configurations or schematics that are relevant to the test being conducted.
+   Results/
+   └── PCS_RTE-IGFMx/
+       └── S_<Scenario>/
+           └── OC<k>/
+               ├── *.csv      (envelope time series)
+               ├── *.png      (static figure)
+               ├── *.html     (interactive figure)
+               └── *_ini_dump.txt  (Hybrid mode only)
 
-#. **Initialization**
+* **CSV files** — the numerical time series of the upper and lower admissible
+  envelopes. When ``save_all_envelopes = true``, the file also includes the
+  individual overdamped and underdamped traces.
+* **PNG figures** — static visualizations of the envelopes alongside the PCC
+  signal.
+* **HTML files** — interactive versions of the same figures.
+* **INI dump** (Hybrid mode only) — the exact set of input parameters used for
+  the calculation, including internally derived values. Intended for full
+  traceability.
 
-   * Simulation Parameters
-        This section outlines the initial conditions and parameters for the simulation. It often
-        includes a detailed description of how the system is set up before the simulation begins,
-        such as the voltage levels, power settings, and the specific characteristics of the
-        components involved (e.g., transformers, lines).
 
-#. **Simulation**
+PDF Report structure
+---------------------
 
-   * Execution of the Test
-        This part of the report documents the actual simulation process. It explains the visual
-        representations (like graphs or charts) of the key metrics measured during the test, such
-        as voltage, reactive power, active power, and current at various points in the system.
-   * Timeline of Events
-        For tests involving dynamic events (e.g., faults, setpoint changes), the timeline and
-        sequence of these events are shown, often with detailed graphs showing how the system
-        responds over time.
+All PDF reports (for RMS validation and Electric Performance) follow the same
+internal structure:
 
-#. **Results**
+1. **Model** — describes the test setup: the network configuration, operational
+   points, and circuit schematics relevant to the test being reported.
 
-   * Graphical Representation of Results
-        The results are presented in graphical form, showing the behavior of the system during and
-        after the test. These graphs include comparisons between the simulated results and
-        reference curves, highlighting any deviations.
-   * Analysis of Results
-        This subsection provides an analysis of the simulation results, focusing on key performance
-        indicators such as rise time, settling time, overshoot, and steady-state errors. It often
-        includes statistical metrics like Maximum Error (MXE), Mean Error (ME), and Mean Absolute
-        Error (MAE).
+2. **Initialization** — documents the initial conditions used for the
+   simulation: voltage levels, power settings, and equipment parameters. This
+   section helps verify that the simulation started from the correct state.
 
-#. **Compliance**
+3. **Simulation** — presents the dynamic evolution of the system during the
+   test. Key electrical quantities (voltage, active power, reactive power,
+   current) are shown as time-series graphs, and the timeline of events is
+   annotated on the figures.
 
-   * Compliance Checks
-        Each report concludes with a compliance check section. This part compares the simulation
-        results against predefined thresholds to determine if the system meets the required
-        standards. It confirms whether the system behavior is compliant with the specified
-        technical requirements.
+4. **Results** — compares the simulated response against the reference curves
+   (for RMS validation) or against the PCS compliance thresholds (for
+   performance tests). Graphs show deviations clearly, and the key performance
+   indicators are tabulated:
+
+   * Maximum Error (MXE)
+   * Mean Error (ME)
+   * Mean Absolute Error (MAE)
+   * Rise time, reaction time, settling time, overshoot
+
+5. **Compliance** — the bottom line: for each criterion defined in the
+   applicable PCS, a pass/fail check is shown against the predefined threshold.
+   This is the section to read first if you just want to know whether the
+   installation meets the requirements.
