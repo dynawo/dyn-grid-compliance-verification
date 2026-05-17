@@ -1,69 +1,141 @@
-=========================
+=======================
 GFM Envelope Generation
-=========================
-
-.. contents::
-   :local:
-   :depth: 2
+=======================
 
 Overview
 --------
 
-The **GFM Envelope Generation** is a specialized utility within the DyCoV toolset, accessible via the ``dycov generateEnvelopes`` command. Its purpose is to calculate and visualize the *theoretical* dynamic response of a Grid-Forming (GFM) asset under various simulated grid events.
+Grid-Forming (GFM) analysis is a purely analytical workflow — no dynamic
+simulation is involved. Given the key parameters of a GFM unit, DyCoV solves
+the second-order differential equations that govern its dynamic behavior and
+computes a set of *admissible response envelopes*: upper and lower bounds on
+the dynamic response for specific grid disturbances.
 
-Unlike the ``dycov validate`` or ``dycov performance`` commands, this utility **does not run a full dynamic simulation**. Instead, it analytically solves the second-order differential equations that model the physical behavior of a GFM system.
+The result is not a pass/fail verdict but a quantitative envelope that can be:
 
-The primary output is a set of response envelopes (a nominal signal with upper and lower tolerance bands) that account for variations in key GFM parameters like **Damping (D)** and **Inertia (H)**.
+* examined visually to assess control robustness,
+* compared against external requirements or certification criteria,
+* reused across multiple engineering studies.
 
-Core Features:
+Because the computation is analytical, it runs much faster than a time-domain
+simulation and requires no Dynawo model.
 
-* **Analytical Calculation:** Computes the expected response for events like Phase Jump, Amplitude Step, Rate of Change of Frequency (RoCoF), and SCR Jump.
-* **Fast Execution:** Since it's a direct calculation, it runs much faster than a time-domain simulation.
-* **Clear Outputs:** Generates CSV files for data analysis and plots in both static PNG and interactive HTML formats.
 
-Basic Usage
+Supported disturbance cases
+----------------------------
+
+DyCoV currently supports four predefined disturbance families:
+
+* **Amplitude Step** — computes reactive current (:math:`I_q`) and reactive
+  power envelopes in response to a step change in the grid voltage amplitude.
+
+* **Phase Jump** — computes active power (:math:`P`) envelopes in response to
+  a sudden change in the grid voltage phase angle. This is typically the most
+  critical disturbance for GFM units.
+
+* **RoCoF** (Rate of Change of Frequency) — computes active power envelopes
+  in response to a frequency ramp. Finite-duration events are modeled by
+  superimposing step responses.
+
+* **SCR Jump** — computes stability and power response envelopes following a
+  sudden change in the Short-Circuit Ratio (grid impedance), differentiated
+  between overdamped and underdamped responses.
+
+
+Standard mode vs. Hybrid mode
+-------------------------------
+
+DyCoV automatically detects the operating mode from the parameters defined in
+the ``[GFM Parameters]`` section of the input file.
+
+**Standard mode** uses a single set of damping and inertia constants (``D``
+and ``H``) to compute one pair of upper and lower envelopes.
+
+**Hybrid mode** is activated when both overdamped and underdamped parameter
+sets are provided (``D_Overdamped``, ``H_Overdamped``, ``D_Underdamped``,
+``H_Underdamped``). In this case DyCoV:
+
+1. Computes independent envelopes for each damping regime.
+2. Constructs a **merged envelope** by taking the maximum of the upper limits
+   and the minimum of the lower limits across both cases.
+
+The merged envelope provides a robust validation range that covers both dynamic
+regimes simultaneously. For Hybrid mode, an INI dump file is also generated
+for full traceability (see :ref:`GFM outputs <gfm_outputs>` below).
+
+For the input file format, see :ref:`GFM Producer Input <gfm_producer_input>`.
+
+
+Basic usage
 -----------
 
-The command is straightforward. The main requirements are an input file defining the GFM producer's parameters and an output directory.
+.. code-block:: console
 
-The command syntax is:
+   dycov generateEnvelopes -i <path_to_input.ini>
+
+By default, results are written to a ``Results/`` directory in the current
+working directory. To specify a different output directory:
 
 .. code-block:: console
 
-   dycov generateEnvelopes -i <path_to_input.ini> -o <path_to_output_directory>
+   dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini
 
-**Example:**
+The tool reads the parameters from the INI file, computes the envelopes for
+all supported disturbance cases, and writes the results under ``Results/``.
 
-.. code-block:: console
 
-   dycov generateEnvelopes -i examples/gfm/my_gfm_producer.ini -o results/gfm_envelopes
+.. _gfm_outputs:
 
-This command will read the parameters from `my_gfm_producer.ini`, calculate the envelopes for all predefined GFM events, and save the results in the `results/gfm_envelopes` directory.
+Understanding the outputs
+--------------------------
 
-.. seealso::
-   The specific format required for the input `.ini` file is detailed in the :ref:`GFM Producer Input <gfm_producer_input>` section of the Inputs guide.
-
-Understanding the Output
-------------------------
-
-For each GFM producer file provided as input, the tool will create a sub-directory in your specified output folder. Inside this sub-directory, you will find the results for each simulated event.
-
-**Example Output Structure:**
+Results are organized hierarchically under ``Results/``:
 
 .. code-block:: text
 
-   results/gfm_envelopes/
-   └── my_gfm_producer/
-       ├── GFM.PhaseJump.P0_50_Q0.csv
-       ├── GFM.PhaseJump.P0_50_Q0.html
-       ├── GFM.PhaseJump.P0_50_Q0.png
-       ├── GFM.RoCoF.P0_100_Q0.csv
-       ├── GFM.RoCoF.P0_100_Q0.html
-       └── GFM.RoCoF.P0_100_Q0.png
-       ... (and so on for all other events)
+   Results/
+   └── PCS_RTE-IGFMx/
+       └── S_<Scenario>/
+           └── OC<k>/
+               ├── *.csv
+               ├── *.png
+               ├── *.html
+               └── *_ini_dump.txt   (Hybrid mode only)
 
-Each set of results consists of three files:
+Where:
 
-* **.csv**: A semicolon-separated file containing the time-series data for the time array, the nominal calculated signal, and the upper and lower envelopes.
-* **.png**: A static image of the plot, suitable for inclusion in reports.
-* **.html**: A fully interactive plot (powered by Plotly) that allows you to zoom, pan, and inspect data points. This is ideal for detailed analysis.
+* ``PCS_RTE-IGFMx`` identifies the GFM PCS family.
+* ``S_<Scenario>`` identifies the disturbance scenario (e.g. Phase Jump,
+  Amplitude Step, RoCoF, SCR Jump).
+* ``OC<k>`` identifies a specific operating condition for that scenario.
+
+For each combination of PCS, scenario, and operating condition:
+
+* **CSV file** — the numerical time series of the admissible envelopes (upper
+  and lower bounds for the relevant signal: :math:`P`, :math:`Q`, or
+  :math:`I_q`). When ``save_all_envelopes = true`` in the INI file, the CSV
+  also includes the individual overdamped and underdamped traces.
+
+* **PNG figure** — a static visualization of the envelopes alongside the PCC
+  signal. In Hybrid mode, the individual over/underdamped traces can also be
+  shown.
+
+* **HTML file** — an interactive version of the same figure (powered by
+  Plotly), allowing zooming, panning, and detailed data inspection.
+
+* **INI dump file** (Hybrid mode only) — the exact set of input parameters
+  used for the calculation, including internally derived values such as the
+  damping ratio :math:`\varepsilon`. Intended for full traceability when hybrid
+  configurations are used.
+
+
+Interpretation
+--------------
+
+The envelopes define the *admissible dynamic response bounds* for a given
+disturbance and operating condition. A GFM unit whose response remains within
+the envelope is considered compliant with the analytical criteria.
+
+DyCoV does not issue a pass/fail verdict for GFM analysis. Interpretation of
+the envelopes is the responsibility of the user and depends on the applicable
+regulatory or engineering framework.

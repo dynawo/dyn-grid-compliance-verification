@@ -40,6 +40,16 @@ def generate_help_files():
         )
         write_output(file, output.stdout)
 
+    with open(output_path / "generateEnvelopes.rst", "w") as file:
+        file.write(".. code-block:: console\n\n")
+        output = subprocess.run(
+            ["dycov", "generateEnvelopes", "--help"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        write_output(file, output.stdout)
+
     with open(output_path / "performance.rst", "w") as file:
         file.write(".. code-block:: console\n\n")
         output = subprocess.run(
