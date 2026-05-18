@@ -45,7 +45,7 @@ dycov generateEnvelopes
 Analytically computes GFM admissible response envelopes. No Dynawo model
 required — only a ``Producer.ini`` file.
 
-.. include:: helps/generate.rst
+.. include:: helps/generateEnvelopes.rst
 
 ----
 

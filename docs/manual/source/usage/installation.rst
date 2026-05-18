@@ -132,17 +132,10 @@ Or follow the `official Microsoft instructions <https://learn.microsoft.com/en-u
 Once WSL is available, download the following four files from the latest
 release page and put them all in the same folder:
 
-+-------------------------+--------------------------------------------------------------+
-| File                    | Purpose                                                      |
-+=========================+==============================================================+
-| ``dycov_rawimage.tar.gz`` | The DyCoV distribution image. Do not unzip it manually.   |
-+-------------------------+--------------------------------------------------------------+
-| ``import_wsl.bat``      | The installer — double-click this to get started.            |
-+-------------------------+--------------------------------------------------------------+
-| ``import_wsl.ps1``      | The installation logic, called automatically by the .bat.    |
-+-------------------------+--------------------------------------------------------------+
-| ``run_dycov_wsl.ps1``   | The launcher, called automatically by the desktop shortcut.  |
-+-------------------------+--------------------------------------------------------------+
+* ``dycov_rawimage.tar.gz`` — the DyCoV distribution image. Do not unzip it manually.
+* ``import_wsl.bat`` — the installer. Double-click this to get started.
+* ``import_wsl.ps1`` — the installation logic, called automatically by the .bat file.
+* ``run_dycov_wsl.ps1`` — the launcher, called automatically by the desktop shortcut.
 
 Double-click ``import_wsl.bat``. The installer imports the DyCoV distribution
 as a standalone WSL instance and creates a Desktop shortcut and a Start Menu

@@ -77,9 +77,9 @@ Each OC folder contains the data generated for that specific test:
   complete model used for the simulation, including both the TSO's grid-side
   model and the producer's model. These files are useful for debugging or for
   re-running a specific test in Dynawo directly.
-* **``results.json``** — the computed compliance metrics and intermediate
+* **results.json** — the computed compliance metrics and intermediate
   values in a structured format, useful for programmatic post-processing.
-* **``outputs/``** — Dynawo's raw simulation outputs. See the
+* **outputs/** — Dynawo's raw simulation outputs. See the
   `Dynawo documentation <https://dynawo.github.io/>`_ for details on the
   content of this folder.
 
