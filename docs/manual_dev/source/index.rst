@@ -39,22 +39,25 @@ At the highest level, the **Dynamic grid Compliance Verification** tool is divid
 * ``docs``
     The tool documentation. Contains the manuals (user, developer), written in
     reStructuredText, using the `Sphinx <https://www.sphinx-doc.org>`_ system. To obtain
-    the PDF and HTML renderings of these manuals, activate the developer venv (see
-    `build_and_install.sh -d`) and run ``make`` under each subdirectory. The ``doc``
-    directory also contains several other stand-alone documents that were written during
-    the development of the tool, which are useful mostly for developers.
+    the PDF and HTML renderings of these manuals, activate the developer virtual environment
+    (see :ref:`development/installation <dev-setup>`) and run ``make latexpdf`` or
+    ``make html`` under each subdirectory (``docs/manual/`` or ``docs/manual_dev/``).
+    The ``docs`` directory also contains several other stand-alone documents written
+    during the development of the tool, which are useful mostly for developers.
 
-* ``docker``
-    This directory contains the Dockerfile and auxiliary scripts to build a docker container for
-    running the application.
+* ``installers``
+    Contains the scripts and tooling used to build distribution artifacts, generate
+    container images, and prepare end-user installation packages for both Linux
+    (native and Docker) and Windows (WSL and Docker). This directory is not used
+    during normal DyCoV execution.
 
 * ``examples``
-    Contains examples of the inputs that the tool requires. The examples are
-    organized by test type:
+    Contains ready-to-run examples for all supported workflows, organized by
+    workflow type:
 
-        * **SM** directory for *Electric Performance tests* **(Synchronous Machines)** examples.
-        * **PPM** directory for *Electric Performance tests* **(Power Parks)** examples.
-        * **Model** directory for *RMS Model Validation tests* **(Power Parks)** examples.
+        * ``Model/`` — RMS Model Validation examples (Dynawo models and ProducerCurves).
+        * ``Performance/`` — Electric Performance Verification examples (Dynawo models and ProducerCurves).
+        * ``GFM/`` — Grid-Forming envelope generation examples.
 
 * ``src``
     Contains the sources of the tool, which are "built" as a Python package using
@@ -96,8 +99,8 @@ that the application should perform:
 * ``electrical``
     Code for calculating some electrical values needed at runtime (such as the
     generator's Udim, Pmax, etc.) and, most importantly, the **initialization** values
-    for Dynawo simulations (see ``initialization_calcs.py`` and its documentation at
-    ``doc/initialization``).
+    for Dynawo simulations (see ``initialization_calcs.py`` and the technical note at
+    ``docs/initialization/initialization.pdf``).
 
 * ``files``
     Code related to file management, creating new files and/or directories, moving files from one
@@ -190,10 +193,10 @@ and assume more knowledge of Dynamic grid Compliance Verification.
    :caption: Task-oriented Developer Guides
 
    development/installation
-   development/configuration
    development/addpcs
    development/addmodel
    development/GFM_module
+   development/configuration
 
 
 
