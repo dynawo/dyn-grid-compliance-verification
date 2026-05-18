@@ -58,46 +58,55 @@ Fiches "I"), but can be configured and extended to run other tests.
 
 ### Linux
 
-The following commands download and install the latest DyCoV release, activate the environment, and verify that the CLI is available:
+**Prerequisites:** required system dependencies (e.g. Python ≥ 3.13, build tools, LaTeX) must be installed.  
+See [docs/installation/linux_native.md](docs/installation/linux_native.md) for details.
+
+Run the following commands to install DyCoV, activate the environment, and verify that the CLI is available:
 
 ```bash
+# Download and run the installer
 curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
-source dycov/activate_dycov
-dycov -h
-```
 
-For system requirements, Docker installation, and environment activation details,
-see [docs/installation/linux_native.md](docs/installation/linux_native.md).
+# Activate the DyCoV environment
+source dycov/activate_dycov
+
+# Check that the CLI is available
+dycov -h
+````
+
+For a detailed description of the installation process, see  
+[docs/installation/linux_native.md](docs/installation/linux_native.md).
+
+***
 
 ### Windows
 
 This installation deploys DyCoV inside a pre-configured WSL environment.
 
-> **Prerequisite:** WSL (Windows Subsystem for Linux) must be enabled.
-> If it is not, follow the
-> [official Microsoft instructions](https://learn.microsoft.com/en-us/windows/wsl/install)
-> before proceeding.
+**Prerequisite:** WSL (Windows Subsystem for Linux) must be enabled.  
+If not, follow the official Microsoft instructions: [official Microsoft instructions](https://learn.microsoft.com/en-us/windows/wsl/install)
 
-Download the following files from the
-[latest release](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest)
-and place them all in the same folder:
+Download the following files from the latest release and place them in the same folder:
 
-| File | Description |
-|------|-------------|
+| File                    | Description                               |
+| ----------------------- | ----------------------------------------- |
 | [`dycov_rawimage.tar.gz`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz) | Application image — do not unzip manually |
-| [`import_wsl.bat`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.bat) | Double-click installer |
-| [`import_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.ps1) | Installation logic, called automatically by `import_wsl.bat` |
-| [`run_dycov_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_wsl.ps1) | Launcher, called automatically by the desktop shortcut |
+| [`import_wsl.bat`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.bat)        | Double-click installer                    |
+| [`import_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.ps1)        | Installation logic (called by the `.bat`) |
+| [`run_dycov_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_wsl.ps1)     | Launcher (used by the shortcut)           |
 
-Then double-click `import_wsl.bat`. A desktop shortcut and a Start Menu entry
-are created automatically.
+Then double-click `import_wsl.bat`. A desktop shortcut and a Start Menu entry are created automatically.
 
-For Docker installation, manual procedures (restricted environments), and update
-instructions, see [docs/installation/using_the_provided_image.md](docs/installation/using_the_provided_image.md).
+For Docker installation, manual procedures (restricted environments), and updates, see  
+[docs/installation/using_the_provided_image.md](docs/installation/using_the_provided_image.md).
 
 ---
 
 ## Quick start
+
+> **Note:** On Linux native installations, make sure the DyCoV environment is activated
+> (e.g. `source dycov/activate_dycov`) before running the commands below.
+> In Docker and WSL installations, the environment is already activated by default.
 
 The commands below run one example from each workflow using the bundled
 `examples/` directory and generate results in a `Results/` folder
