@@ -2,9 +2,6 @@
 GFM Envelope Generation Module
 ================================
 
-.. contents::
-   :local:
-
 Overview
 --------
 
@@ -84,7 +81,7 @@ This is where the mathematical modeling lives. The structure follows the
 
   * ``phase_jump.py`` (``PhaseJump``) — active power response to a phase jump.
 
-    .. image:: ../../../../GFM_Flowchart/phase_jump.*
+    .. image:: ../../GFM_Flowchart/phase_jump.*
        :width: 70%
        :align: center
        :alt: Phase Jump calculation flowchart
@@ -92,21 +89,21 @@ This is where the mathematical modeling lives. The structure follows the
   * ``amplitude_step.py`` (``AmplitudeStep``) — reactive current response to
     a voltage amplitude step.
 
-    .. image:: ../../../../GFM_Flowchart/amplitude_step.*
+    .. image:: ../../GFM_Flowchart/amplitude_step.*
        :width: 70%
        :align: center
        :alt: Amplitude Step calculation flowchart
 
   * ``rocof.py`` (``RoCoF``) — active power response to a frequency ramp.
 
-    .. image:: ../../../../GFM_Flowchart/RoCoF.*
+    .. image:: ../../GFM_Flowchart/RoCoF.*
        :width: 70%
        :align: center
        :alt: RoCoF calculation flowchart
 
   * ``scr_jump.py`` (``SCRJump``) — active power response to an SCR jump.
 
-    .. image:: ../../../../GFM_Flowchart/SCRJump.*
+    .. image:: ../../GFM_Flowchart/SCRJump.*
        :width: 70%
        :align: center
        :alt: SCR Jump calculation flowchart
@@ -126,7 +123,7 @@ Execution flow
 The following steps describe the full process for a single simulation case,
 from invocation to output:
 
-.. image:: ../../../../GFM_Flowchart/main_flow.*
+.. image:: ../../GFM_Flowchart/main_flow.*
    :width: 70%
    :align: center
    :alt: Main execution flow

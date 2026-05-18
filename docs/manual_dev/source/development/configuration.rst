@@ -367,13 +367,13 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
        - b
      * - HTB1
        - 0.05
-       - Pmax < 50 MW: 0.2 / Pmax ≥ 50 MW: 0.3
+       - Pmax < 50 MW: 0.2 / Pmax >= 50 MW: 0.3
      * - HTB2
        - 0.05
-       - Pmax < 250 MW: 0.3 / Pmax ≥ 250 MW: 0.54
+       - Pmax < 250 MW: 0.3 / Pmax >= 250 MW: 0.54
      * - HTB3
        - 0.05
-       - Pmax < 800 MW: 0.54 / Pmax ≥ 800 MW: 0.6
+       - Pmax < 800 MW: 0.54 / Pmax >= 800 MW: 0.6
 
 * ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max`` — active power limit for
   reactance calculation.
