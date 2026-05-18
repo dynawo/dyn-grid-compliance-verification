@@ -4,19 +4,23 @@
 [![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dycov.github.io/index.html)
 
 A tool for automating the verification of dynamic grid compliance requirements
-for solar, wind, and storage farms (Power Park Modules — PPM), battery energy
-storage systems (BESS), and synchronous machines (SM).
+for solar and wind farms (Power Park Modules — PPM), battery energy
+storage systems (BESS), and synchronous machines (SM), from model validation
+to grid-code compliance assessment.
 
 DyCoV supports three main workflows:
 
 - **[RMS model validation](docs/tutorials/rms_model_validation.md)** — verifies
   that a dynamic model matches a reference behavior within the tolerances defined
-  by RTE (PCS-I16, Zones 1 and 3).
+  by RTE (PCS-I16, Zones 1 and 3), ensuring the model accurately reproduces expected dynamics.
+
 - **[Electrical performance verification](docs/tutorials/electrical_performance_verification.md)** —
   verifies compliance with grid-code dynamic performance requirements
-  (PCS-I2, I3, I4, I5, I6, I7, I8, I10).
+  (PCS-I2, I3, I4, I5, I6, I7, I8, I10), by running standard disturbance test scenarios.
+
 - **[Grid-Forming (GFM) analysis](docs/tutorials/grid_forming_analysis.md)** —
-  computes admissible dynamic envelopes for Grid-Forming units analytically.
+  computes admissible dynamic envelopes for Grid-Forming units analytically,
+  providing theoretical bounds on their expected dynamic response.
 
 Each workflow produces results in a structured `Results/` directory:
 - RMS model validation and electrical performance verification produce **PDF
@@ -54,6 +58,8 @@ Fiches "I"), but can be configured and extended to run other tests.
 
 ### Linux
 
+The following commands download and install the latest DyCoV release, activate the environment, and verify that the CLI is available:
+
 ```bash
 curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
 source dycov/activate_dycov
@@ -64,6 +70,8 @@ For system requirements, Docker installation, and environment activation details
 see [docs/installation/linux_native.md](docs/installation/linux_native.md).
 
 ### Windows
+
+This installation deploys DyCoV inside a pre-configured WSL environment.
 
 > **Prerequisite:** WSL (Windows Subsystem for Linux) must be enabled.
 > If it is not, follow the
@@ -91,9 +99,9 @@ instructions, see [docs/installation/using_the_provided_image.md](docs/installat
 
 ## Quick start
 
-The three commands below run one example from each workflow using the bundled
-`examples/` directory. For a guided walkthrough of each, see
-[docs/tutorials/quick_start.md](docs/tutorials/quick_start.md).
+The commands below run one example from each workflow using the bundled
+`examples/` directory and generate results in a `Results/` folder
+(reports, plots, or CSV files depending on the workflow).
 
 ```bash
 # RMS model validation
@@ -107,10 +115,14 @@ dycov performance -m examples/Performance/Single/WECC4B/Dynawo/
 dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini
 ```
 
-To prepare your own inputs, see
-[docs/tutorials/preparing_inputs.md](docs/tutorials/preparing_inputs.md).
+Each workflow requires different inputs (reference curves, models, or configuration files).  
+See [docs/tutorials/preparing_inputs.md](docs/tutorials/preparing_inputs.md) for details.
+
+For a guided walkthrough, see  
+[docs/tutorials/quick_start.md](docs/tutorials/quick_start.md).
+
 To restrict execution scope or adjust compliance thresholds without touching
-source code, see
+source code, see  
 [docs/tutorials/advanced_configuration.md](docs/tutorials/advanced_configuration.md).
 
 ---
@@ -145,12 +157,13 @@ The developer docs are independent and can be consulted at any time.
 
 ## Reference manuals
 
-DyCoV includes two reference manuals built automatically during installation:
+DyCoV includes two reference manuals built automatically during installation
+for detailed usage and API-level information beyond the tutorials.
 
 **User manual** — covers input file formats, CLI reference, configuration
-options, and workflow details beyond what the tutorials describe.
+options, and workflow details.
 
-**Developer manual** — covers the internal architecture, extension points,
+**Developer manual** — covers internal architecture, extension points,
 and contribution guidelines.
 
 Both manuals are available in HTML and PDF formats. Their location depends
@@ -183,7 +196,7 @@ https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
 
 ## Contributing
 
-Contributions are welcome. Please read
+Contributions are welcome. Please read  
 [CONTRIBUTING.md](CONTRIBUTING.md) for branching conventions, code style,
 CI requirements, and the PR workflow.
 
@@ -196,29 +209,29 @@ Contents and priorities may evolve as the project progresses.
 
 ### Axis 1 — Stabilization and model support
 
-- Ongoing bug fixes and robustness improvements
-- Complete support for WECC and IEC models (PV, wind, BESS)
-- Support for multi-generator topologies
-- On-site measurement support for RMS model validation
+* Ongoing bug fixes and robustness improvements
+* Complete support for WECC and IEC models (PV, wind, BESS)
+* Support for multi-generator topologies
+* On-site measurement support for RMS model validation
 
 ### Axis 2 — Ease of use and long-term maintenance
 
-- Windows and Docker installation improvements
-- Migration of initialization layer to pypowsybl
-- Dynamic generation of topology schematics in reports
-- Expanded test coverage and typing enforcement
-- Documentation and tutorials
+* Windows and Docker installation improvements
+* Migration of initialization layer to pypowsybl
+* Dynamic generation of topology schematics in reports
+* Expanded test coverage and typing enforcement
+* Documentation and tutorials
 
 ### Axis 3 — Consistency with DTR updates
 
-- Support for multiple DTR versions
-- Update of fiches according to DTR 2025 revisions (I5)
-- Implementation of fiche F16
-- New GFM-related fiches (I18) with PPM/BESS differentiation
+* Support for multiple DTR versions
+* Update of fiches according to DTR 2025 revisions (I5)
+* Implementation of fiche F16
+* New GFM-related fiches (I18) with PPM/BESS differentiation
 
 ---
 
 ## Contact
 
-- Electrical modeling inquiries (RTE): rte-r-d-raccordement@rte-france.com
-- Software issues and questions (AIA): dycov@aia.es
+* Electrical modeling inquiries (RTE): <rte-r-d-raccordement@rte-france.com>
+* Software issues and questions (AIA): <dycov@aia.es>
