@@ -332,6 +332,11 @@ class Benchmark:
         self.__init_figures_ustator(validations, pcs_benchmark_name)
         self.__init_figures_theta(validations, pcs_benchmark_name)
         self.__init_figures_tap(validations, pcs_benchmark_name)
+        self.__init_figures_sync_cond_p(validations, pcs_benchmark_name)
+        self.__init_figures_sync_cond_q(validations, pcs_benchmark_name)
+        self.__init_figures_sync_cond_freq(validations, pcs_benchmark_name)
+        self.__init_figures_load_p(validations, pcs_benchmark_name)
+        self.__init_figures_load_q(validations, pcs_benchmark_name)
 
     def __init_figures_v(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_V = config.get_list("ReportCurves", "fig_V")
@@ -557,6 +562,92 @@ class Benchmark:
                 name="fig_Tap",
                 variables=[{"type": "transformer", "variable": "Tap"}],
                 ylabel="Pos",
+            )
+        )
+
+    def __init_figures_sync_cond_p(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_SyncCondP = config.get_list("ReportCurves", "fig_SyncCondP")
+        if pcs_benchmark_name not in fig_SyncCondP:
+            return
+
+        if self._producer.is_dynawo_model():
+            p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            p_label = "P (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_SyncCondP",
+                variables=[{"type": "sync_condenser", "variable": "ActivePower"}],
+                ylabel=p_label,
+            )
+        )
+
+    def __init_figures_sync_cond_q(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_SyncCondQ = config.get_list("ReportCurves", "fig_SyncCondQ")
+        if pcs_benchmark_name not in fig_SyncCondQ:
+            return
+
+        if self._producer.is_dynawo_model():
+            q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            q_label = "Q (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_SyncCondQ",
+                variables=[{"type": "sync_condenser", "variable": "ReactivePower"}],
+                ylabel=q_label,
+            )
+        )
+
+    def __init_figures_sync_cond_freq(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_SyncCondFreq = config.get_list("ReportCurves", "fig_SyncCondFreq")
+        if pcs_benchmark_name not in fig_SyncCondFreq:
+            return
+
+        freq_label = "Frequency (Hz)"
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_SyncCondFreq",
+                variables=[{"type": "sync_condenser", "variable": "FrequencyHz"}],
+                ylabel=freq_label,
+            )
+        )
+
+    def __init_figures_load_p(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_LoadP = config.get_list("ReportCurves", "fig_LoadP")
+        if pcs_benchmark_name not in fig_LoadP:
+            return
+
+        if self._producer.is_dynawo_model():
+            p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            p_label = "P (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_LoadP",
+                variables=[{"type": "load", "variable": "ActivePower"}],
+                ylabel=p_label,
+            )
+        )
+
+    def __init_figures_load_q(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_LoadQ = config.get_list("ReportCurves", "fig_LoadQ")
+        if pcs_benchmark_name not in fig_LoadQ:
+            return
+
+        if self._producer.is_dynawo_model():
+            q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            q_label = "Q (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_LoadQ",
+                variables=[{"type": "load", "variable": "ReactivePower"}],
+                ylabel=q_label,
             )
         )
 

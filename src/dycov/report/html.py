@@ -49,6 +49,14 @@ def _get_curve_names(
                         and "modIInjTerminal" not in col
                     ]
                 )
+            elif name["type"] == "sync_condenser":
+                curve_names.extend(
+                    [col for col in curves if col.endswith("_GEN_TSO_" + name["variable"])]
+                )
+            elif name["type"] == "load":
+                curve_names.extend(
+                    [col for col in curves if col.endswith("_LOAD_TSO_" + name["variable"])]
+                )
             elif name["type"] == "transformer":
                 curve_names.extend(
                     [col for col in curves if col.endswith("_XFMR_" + name["variable"])]

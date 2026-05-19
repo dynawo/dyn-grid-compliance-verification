@@ -458,7 +458,7 @@ def _generate_figures(
                 f"{figure_description.name}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
-            dycov_logging.get_logger("Report").error(
+            dycov_logging.get_logger("Report").exception(
                 f"{figure_description.name}.{operating_condition}: {e}"
             )
 
@@ -490,7 +490,6 @@ def _create_full_tex(
     producer: Producer
         Producer model
     """
-
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
@@ -583,17 +582,19 @@ def _clean(working_path: Path):
     extensions_to_clean = [
         "*.toc",
         "*.aux",
-        "*.log",
         "*.out",
         "*.bbl",
         "*.blg",
         "*.run.xml",
         "*.bcf",
     ]
-    working_dir = Path(working_path)
+    # If the PDF report exists delete all log files
+    pdf_file = working_path / (REPORT_NAME.split(CASE_SEPARATOR)[0] + ".pdf")
+    if pdf_file.exists():
+        extensions_to_clean.append("*.log")
+
     for ext in extensions_to_clean:
-        # Busca los archivos con la extensión en el working_path
-        for file_to_delete in working_dir.glob(ext):
+        for file_to_delete in working_path.glob(ext):
             try:
                 file_to_delete.unlink()
             except OSError as e:

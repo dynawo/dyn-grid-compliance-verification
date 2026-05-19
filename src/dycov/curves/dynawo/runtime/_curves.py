@@ -253,7 +253,7 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict, f_nom: float) ->
             curves_dict[col] = df_curves[col].tolist()
 
 
-def get_injector_terminal_curves(
+def _get_injector_terminal_curves(
     snref: float,
     snom: float,
     generators: list,
@@ -318,7 +318,72 @@ def get_injector_terminal_curves(
     _drop_columns(df_curves, columns_to_remove)
 
 
-def get_magnitude_controlled_by_avr(
+def _extract_and_scale_power_columns(
+    df_curves: pd.DataFrame,
+    curves_dict: dict,
+    columns: dict[str, str],
+    scale: float,
+) -> None:
+    for raw_col, canonical_col in columns.items():
+        curves_dict[canonical_col] = np.multiply(
+            df_curves[raw_col].to_numpy(dtype=float), scale
+        ).tolist()
+    _drop_columns(df_curves, list(columns.keys()))
+
+
+def _get_tso_synchronous_condenser_curves(
+    snref: float,
+    snom: float,
+    df_curves: pd.DataFrame,
+    curves_dict: dict,
+) -> None:
+    frequency_col_raw = "SyncCompensator_GEN_FrequencyHz"
+    active_power_col_raw = "SyncCompensator_GEN_ActivePower"
+    reactive_power_col_raw = "SyncCompensator_GEN_ReactivePower"
+
+    required = [frequency_col_raw, active_power_col_raw, reactive_power_col_raw]
+    if not all(col in df_curves.columns for col in required):
+        return
+
+    curves_dict["SyncCompensator_GEN_TSO_FrequencyHz"] = (
+        df_curves[frequency_col_raw].to_numpy(dtype=float).tolist()
+    )
+    _extract_and_scale_power_columns(
+        df_curves,
+        curves_dict,
+        {
+            active_power_col_raw: "SyncCompensator_GEN_TSO_ActivePower",
+            reactive_power_col_raw: "SyncCompensator_GEN_TSO_ReactivePower",
+        },
+        snref / snom,
+    )
+
+
+def _get_tso_load_curves(
+    snref: float,
+    snom: float,
+    df_curves: pd.DataFrame,
+    curves_dict: dict,
+) -> None:
+    active_power_col_raw = "Main_load_LOAD_ActivePower"
+    reactive_power_col_raw = "Main_load_LOAD_ReactivePower"
+
+    required = [active_power_col_raw, reactive_power_col_raw]
+    if not all(col in df_curves.columns for col in required):
+        return
+
+    _extract_and_scale_power_columns(
+        df_curves,
+        curves_dict,
+        {
+            active_power_col_raw: "Main_load_LOAD_TSO_ActivePower",
+            reactive_power_col_raw: "Main_load_LOAD_TSO_ReactivePower",
+        },
+        snref / snom,
+    )
+
+
+def _get_magnitude_controlled_by_avr(
     generators: list, df_curves: pd.DataFrame, curves_dict: dict
 ) -> None:
     """Calculate the magnitude controlled by AVR curves for generators based on the available
@@ -438,8 +503,10 @@ def build_output_curves(
         where=np.abs(voltage_pu) > abs_tol,
     ).tolist()
 
-    get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
-    get_injector_terminal_curves(s_nref, s_nom, generators, df_curves, curves_dict)
+    _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
+    _get_injector_terminal_curves(s_nref, s_nom, generators, df_curves, curves_dict)
+    _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)
+    _get_tso_load_curves(s_nref, s_nom, df_curves, curves_dict)
     convert_columns(df_curves, curves_dict, f_nom)
 
     return pd.DataFrame(curves_dict)
