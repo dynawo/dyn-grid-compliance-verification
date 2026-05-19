@@ -430,8 +430,7 @@ def create_producer_curves(
 
 
 def check_curves(curves: Path) -> bool:
-    """Checks if all parameters in the INI file have a value defined. Additionally,
-    checks if the defined curves files exist.
+    """Checks whether all curve references are valid and the corresponding curve files exist.
 
     Parameters
     ----------

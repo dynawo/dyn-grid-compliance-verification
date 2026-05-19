@@ -510,7 +510,7 @@ def create_producer_dyd_file(
 
 
 def check_dynamic_models(target: Path, template: str) -> bool:
-    """Find placeholders in the DYD file .
+    """Check whether all dynamic models used in the DYD file are supported by the tool.
 
     Parameters
     ----------
@@ -527,7 +527,7 @@ def check_dynamic_models(target: Path, template: str) -> bool:
     Returns
     -------
     bool
-        True if there are placeholders in the DYD file
+        True if all dynamic models in the DYD file are supported, False otherwise
     """
 
     if template.startswith("model"):

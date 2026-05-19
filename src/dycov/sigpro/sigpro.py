@@ -10,6 +10,7 @@
 import warnings
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from scipy import signal
 from scipy.interpolate import PchipInterpolator
@@ -45,7 +46,22 @@ def _abc_to_psrms(abc, fs):
     return (1 / np.sqrt(2)) * np.abs(ps)
 
 
-def ensure_rms_signals(curves):
+def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
+    """Ensures that the curves DataFrame contains RMS signals, converting from ABC if necessary.
+
+    The function checks if the curves are in ABC format (identified by column names ending with
+    "_a", "_b", "_c") and converts them to positive-sequence RMS values if needed.
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        DataFrame containing the curves, with a "time" column and either ABC or RMS columns
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the curves in RMS format
+    """
     time_step = np.mean(np.diff(curves["time"].to_numpy()))
     fs = 1 / time_step
 
@@ -80,7 +96,7 @@ def _find_abc_signal(curves):
     return abc_items, rms_items
 
 
-def resample_to_fixed_step(curves: pd.DataFrame, fs_max=1000):
+def resample_to_fixed_step(curves: pd.DataFrame, fs_max: float = 1000) -> pd.DataFrame:
     """
     Resamples a set of curves to ensure they have a fixed time step.
 
@@ -88,6 +104,20 @@ def resample_to_fixed_step(curves: pd.DataFrame, fs_max=1000):
     a fixed time step via mathematical interpolation (of the monotone kind, to avoid overshooting
     artifacts).  The actual step is not prescribed, but calculated from the time grid of the
     original signal, to preserve as much as possible the signal's bandwidth.
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        DataFrame containing the curves, with a "time" column and signal columns.
+    fs_max : float
+        Maximum allowed sampling frequency (in Hz) for the resampled curves. The actual sampling
+        frequency will be determined based on the original time grid, but it will not exceed
+        fs_max.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the resampled curves with a fixed time step.
     """
     # Simulations may have repeated time points. Get rid of them using unique().
     orig_tgrid = curves["time"].to_numpy()
@@ -123,7 +153,9 @@ def resample_to_fixed_step(curves: pd.DataFrame, fs_max=1000):
 # same instability can propagate into subsequent weighted sums inside the derivative smoothing
 # step,surfacing as "overflow encountered in add". In short: near-zero slopes from quasi-constant
 # curves (or tiny time steps) make the internal reciprocal-weight calculations blow up.
-def resample_to_common_tgrid(sim_curves, ref_curves):
+def resample_to_common_tgrid(
+    sim_curves: pd.DataFrame, ref_curves: pd.DataFrame
+) -> (pd.DataFrame, pd.DataFrame):
     """
     Resamples TWO sets of curves to a common fixed time step, t_com.
 
@@ -132,6 +164,20 @@ def resample_to_common_tgrid(sim_curves, ref_curves):
     resampled so that they share the same time grid. The new sampling rate (fs = 1 / t_com) is a
     configurable value, but obviously it must be *higher* than twice the cutoff frequency used in
     the low-pass filtering stage (which must have happened before we reach this function).
+
+    Parameters
+    ----------
+    sim_curves : pd.DataFrame
+        DataFrame containing the simulated curves, with a "time" column and signal columns.
+    ref_curves : pd.DataFrame
+        DataFrame containing the reference curves, with a "time" column and signal columns.
+        The time range of the reference curves must overlap with that of the simulated curves.
+
+    Returns
+    -------
+    (pd.DataFrame, pd.DataFrame)
+        Tuple of DataFrames containing the resampled simulated and reference curves, both sharing a
+        common time grid.
     """
     t_com = config.get_float("GridCode", "t_com", 0.002)
 
@@ -178,11 +224,18 @@ def resample_to_common_tgrid(sim_curves, ref_curves):
     return pd.DataFrame(rs_sim_curves), pd.DataFrame(rs_ref_curves)
 
 
-def lowpass_filter(signal, fc=15, fs=1000, filter="critdamped", padding_method="gust"):
+def lowpass_filter(
+    signal: npt.ArrayLike,
+    fc: float = 15,
+    fs: float = 1000,
+    filter: str = "critdamped",
+    padding_method: str = "gust",
+) -> npt.ArrayLike:
     """
     Applies a low-pass second-order filter to a 1-d signal.
 
-    Parameters:
+    Parameters
+    ----------
     signal: npt.ArrayLike
         Input signal, a 1-d array is expected.
     fc: float
@@ -195,8 +248,9 @@ def lowpass_filter(signal, fc=15, fs=1000, filter="critdamped", padding_method="
         Method used to treat the signal boundaries in filtfilt. One of: {"gust", "odd_padding",
         "even_padding", "constant_padding", "no_padding"}.
 
-    Returns:
-    output_signal: npt.ArrayLike
+    Returns
+    -------
+    npt.ArrayLike
         The filtered signal.
     """
 
@@ -232,13 +286,33 @@ def _get_time_positions(time_values, t_from, t_to):
     return w_init_pos, w_end_pos
 
 
-def filter_curves(curves, windows, f_cutoff=15, filter_name="critdamped"):
+def filter_curves(
+    curves: pd.DataFrame, windows: dict, f_cutoff: float = 15, filter_name: str = "critdamped"
+) -> pd.DataFrame:
     """
     This function applies a low-pass filter to a set of curves, with these options:
        * filters each window separately (default) or the whole signal
        * filtering can be disabled altogether via user config
        * cutoff frequency f_c (default: IEC's 15 Hz)
        * choice of filter (default: IEC's 2nd-order critically damped)
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        DataFrame containing the curves, with a "time" column and signal columns.
+    windows : dict
+        Dictionary defining the time windows for filtering, with keys "before", "during", and
+        "after", each mapping to a tuple (t_from, t_to).
+    f_cutoff : float
+        Cutoff frequency for the low-pass filter in Hz (default: 15 Hz).
+    filter_name : str
+        Name of the low-pass filter to use (default: "critdamped"). Valid options are:
+        "critdamped", "bessel", "butter", "cheby1".
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the filtered curves, with the same structure as the input.
     """
     # Obtain the actual sampling rate of these curves, which is needed to invoke the filter
     time_step = np.mean(np.diff(curves["time"].to_numpy()))
@@ -292,7 +366,9 @@ def filter_curves(curves, windows, f_cutoff=15, filter_name="critdamped"):
     return pd.DataFrame.from_dict(lowpass_curve_dict, orient="columns")
 
 
-def apply_time_shift(curves: pd.DataFrame, t_event_curves: float, t_event_reference: float):
+def apply_time_shift(
+    curves: pd.DataFrame, t_event_curves: float, t_event_reference: float
+) -> pd.DataFrame:
     """
     Applies a time shift to align the event time of these curves with the reference event time.
 
@@ -300,6 +376,22 @@ def apply_time_shift(curves: pd.DataFrame, t_event_curves: float, t_event_refere
 
     Validates that the event time falls within the curve's time range, since otherwise the
     shift would be semantically incorrect.
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        DataFrame containing the curves, with a "time" column and signal columns.
+    t_event_curves : float
+        The event time associated with these curves (e.g., the time of the fault in a step-response
+        test).
+    t_event_reference : float
+        The event time associated with the reference curves, which we want to align to (e.g., the
+        time of the fault in the reference step-response test).
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the time-shifted curves, with the same structure as the input.
     """
 
     if "time" not in curves.columns:

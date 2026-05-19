@@ -9,6 +9,18 @@ def _translate_compliance(value: Compliance) -> str:
 
 
 def create_map(summary_list: list) -> list:
+    """Creates a map for the summary table.
+
+    Parameters
+    ----------
+    summary_list : list
+        A list of Summary objects.
+
+    Returns
+    -------
+    list
+        A list of lists, where each inner list represents a row in the summary table.
+    """
     summary_map = []
     for i in summary_list:
         summary_map.append(
