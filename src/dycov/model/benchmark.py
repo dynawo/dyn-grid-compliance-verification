@@ -591,7 +591,7 @@ class Benchmark:
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
             dycov_logging.get_logger("Benchmark").warning("Undefined Validations")
-        elif not op_cond_success:
+        elif not success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
