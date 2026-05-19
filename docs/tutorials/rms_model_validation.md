@@ -300,6 +300,12 @@ dycov validate ReferenceCurves/ -c ProducerCurves/
 
 ## 9. Outputs
 
+> Note  
+> DyCoV applies a standardized signal processing pipeline (time alignment,
+> resampling, filtering, and exclusion windows) before computing validation KPIs.
+>  
+> For details, see the *2.3.4 Curve Comparison Methodology* section in the User Manual.
+
 A successful RMS model validation produces:
 
 *   a consolidated **PDF report** summarizing compliance results,

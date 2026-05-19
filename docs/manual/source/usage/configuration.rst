@@ -209,9 +209,9 @@ than the value defined in the PAR file.
 
 This means:
 
-* :math:`P_{max}` in Producer.ini must be ≤ PAR value
-* :math:`Q_{max}` in Producer.ini must be ≤ PAR value
-* :math:`Q_{min}` in Producer.ini must be ≥ PAR value
+* :math:`P_{max}` in Producer.ini must be <= PAR value
+* :math:`Q_{max}` in Producer.ini must be <= PAR value
+* :math:`Q_{min}` in Producer.ini must be >= PAR value
 
 If this condition is not satisfied, DyCoV stops execution with an error.
 

@@ -145,3 +145,67 @@ internal structure:
    applicable PCS, a pass/fail check is shown against the predefined threshold.
    This is the section to read first if you just want to know whether the
    installation meets the requirements.
+
+Curve Comparison Methodology
+----------------------------
+
+DyCoV evaluates compliance by comparing time-domain signals from the
+producer response against reference curves.
+
+This comparison is not performed directly on raw signals. Instead, a
+standardized signal processing procedure is applied before computing
+error metrics (MXE, ME, MAE).
+
+Processing steps
+^^^^^^^^^^^^^^^^
+
+Before comparison, DyCoV applies the following steps:
+
+1. **Time alignment**  
+   The reference and simulated signals are aligned so that the event
+   (fault, setpoint change, etc.) occurs at the same time.
+
+2. **Resampling**  
+   Signals are interpolated onto a common time grid to allow
+   point-by-point comparison.
+
+3. **Filtering**  
+   A low-pass filter is applied to remove high-frequency oscillations
+   and numerical artifacts.
+
+4. **Exclusion windows**  
+   Portions of the signal around disturbances are excluded from
+   the evaluation.
+
+Exclusion windows
+^^^^^^^^^^^^^^^^^
+
+Certain time intervals around events are not considered in the
+calculation of error metrics.
+
+For example, in fault-related tests:
+
+* a short interval after fault application, and
+* a short interval after fault clearing
+
+are excluded from the evaluation.
+
+These exclusion windows prevent short transient effects from
+artificially inflating the computed errors.
+
+Impact on results
+^^^^^^^^^^^^^^^^^
+
+As a consequence of this processing:
+
+* short-duration peaks may not contribute to the error metrics,
+* high-frequency differences are attenuated,
+* the comparison is performed only over selected portions of the signal,
+
+Interpretation
+^^^^^^^^^^^^^^
+
+The reported metrics (MXE, ME, MAE) should therefore be understood as:
+
+> **processed indicators of compliance**, not raw point-to-point differences
+> between the original signals.
