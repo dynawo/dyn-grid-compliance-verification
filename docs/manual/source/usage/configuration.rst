@@ -178,6 +178,54 @@ named ``PCS.Benchmark.OperatingCondition.Model`` and set the desired values:
     pdr_U = Udim
 
 
+Parameter Precedence and Restriction Rules
+------------------------------------------
+
+Some parameters are defined both in the Dynawo model (**PAR file**) and in
+the **Producer.ini** file.
+
+This overlap exists only for the following parameters:
+
+* :math:`P_{max}`
+* :math:`Q_{max}`
+* :math:`Q_{min}`
+
+These parameters represent the active and reactive power limits of the
+installation at the PDR.
+
+Precedence rule
+^^^^^^^^^^^^^^^
+
+When one of these parameters is defined in both files:
+
+* **The value defined in Producer.ini takes precedence over the value defined in the PAR file.**
+
+
+Restriction rule
+^^^^^^^^^^^^^^^^
+
+The value defined in Producer.ini must be **equal to or more restrictive**
+than the value defined in the PAR file.
+
+This means:
+
+* :math:`P_{max}` in Producer.ini must be ≤ PAR value
+* :math:`Q_{max}` in Producer.ini must be ≤ PAR value
+* :math:`Q_{min}` in Producer.ini must be ≥ PAR value
+
+If this condition is not satisfied, DyCoV stops execution with an error.
+
+
+Interpretation
+^^^^^^^^^^^^^^
+
+* The **PAR file defines the physical limits** of the model
+* **Producer.ini defines the limits used during validation**
+
+Producer.ini may therefore **restrict** the model capabilities, but never
+extend them.
+
+
 Task-oriented configuration examples
 --------------------------------------
 
