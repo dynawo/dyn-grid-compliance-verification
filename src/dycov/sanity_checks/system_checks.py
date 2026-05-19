@@ -27,6 +27,12 @@ def check_launchers(launcher_dwo: Path) -> None:
     ----------
     launcher_dwo: Path
         Path to the Dynawo launcher.
+
+    Raises
+    ------
+    OSError
+        If one or more required executables are not found in the system PATH.
+
     """
     error_txt = ""
     # Check if Dynawo launcher is found in system's PATH

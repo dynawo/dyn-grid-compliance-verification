@@ -453,15 +453,16 @@ class ModelProducer(Producer):
         dycov_logging.get_logger("Producer").error("No producer model has been defined")
         return list()
 
-    def set_consumption(self, consumption: float) -> None:
+    def set_consumption(self, consumption: bool) -> None:
         """The value of p_max_pu is defined depending on the
         operating mode: injection or consumption.
 
         Parameters
         ----------
-        consumption: float
-            If it is True use the Pmax Consumption
-            If it is False use the Pmax Injection
+        consumption: bool
+            If True use the maximum active power consumption.
+            If False use the maximum active power injection.
+
         """
         if consumption:
             # The maximum active power consumption value must be
@@ -470,7 +471,7 @@ class ModelProducer(Producer):
         else:
             self.p_max_pu = self.p_max_injection_pu
 
-    def get_element(self, id: str) -> tuple[str, str]:
+    def get_element(self, id: str) -> tuple[str | None, str | None]:
         """Get element information by id
 
         Parameters
@@ -480,9 +481,9 @@ class ModelProducer(Producer):
 
         Returns
         -------
-        str
+        str | None
             Element id
-        str
+        str | None
             Dynamic model library
         """
         for gen in self._generators:
@@ -583,7 +584,7 @@ class ModelProducer(Producer):
         return self._is_user_curves
 
     def has_reference_curves_path(self) -> bool:
-        """Check if there are reference curves directory.
+        """Check if a reference curves directory is defined.
 
         Returns
         -------
@@ -649,7 +650,7 @@ class ModelProducer(Producer):
             pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
         return self.__get_file_by_pattern(pattern_dyd)
 
-    def get_producer_par(self):
+    def get_producer_par(self) -> Path:
         """Gets the Producer PAR file.
 
         Returns
@@ -684,12 +685,12 @@ class ModelProducer(Producer):
         return self._reference_curves_path.resolve()
 
     def set_generators(self, generators: list) -> None:
-        """Gets the Producer model generators.
+        """Sets the Producer model generators.
 
         Parameters
         ----------
         generators: list
-            Generators obtained from producer curves
+            Generators obtained from producer curves or model parsing.
         """
         self._generators = generators
 

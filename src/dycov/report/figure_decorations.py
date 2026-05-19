@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import pandas as pd
 
 from dycov.configuration.cfg import config
 from dycov.report.curve_classification import get_measurement_type, is_controlled_magnitude
@@ -39,6 +40,20 @@ def draw_tolerance_band(
     last_val: float,
     results: dict,
 ) -> None:
+    """Draw tolerance bands on the figure based on the type of band and results.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    band: ToleranceBand
+        The tolerance band to draw (FinalValueBand, FrequencyBand, or DynamicBand).
+    last_val: float
+        The last value of the curve, used for FinalValueBand calculations.
+    results: dict
+        The results dictionary containing any necessary values for band calculations
+        (e.g., targets).
+    """
     if isinstance(band, FinalValueBand):
         upper, lower = band_limits(last_val, band.upper, band.lower)
         if upper is not None:
@@ -61,6 +76,24 @@ def draw_frequency_band(
     ymin: float,
     ymax: float,
 ) -> tuple[float, float]:
+    """Draw frequency deviation bands on the figure.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    band: FrequencyBand
+        The frequency band to draw, with upper and lower deviation values in Hz.
+    ymin: float
+        The current minimum y-axis limit, used to adjust the limit if the band extends beyond it.
+    ymax: float
+        The current maximum y-axis limit, used to adjust the limit if the band extends beyond it.
+
+    Returns
+    -------
+    tuple
+        Updated ymin and ymax values after considering the frequency band limits.
+    """
     f_nom = config.get_float("Global", "f_nom", 50.0)
     margin = band.upper * 0.5 if band.upper is not None else 0.0
     color = "#c44e52" if band.upper and band.upper >= 1.0 else "#55a868"
@@ -86,6 +119,21 @@ def draw_dynamic_band(
     time: list,
     results: dict,
 ) -> None:
+    """Draw dynamic tolerance bands on the figure based on an external reference curve.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    band: DynamicBand
+        The dynamic band to draw, with upper and lower percentage values relative to the reference
+        curve.
+    time: list
+        The time values corresponding to the reference curve points.
+    results: dict
+        The results dictionary containing the reference curve data under the key specified by
+        band.source_key.
+    """
     percent = band.upper / 100.0 if band.upper is not None else 0.0
     for crv in results.get(band.source_key, []):
         line_max = []
@@ -103,6 +151,19 @@ def draw_event_markers(
     markers: list[EventMarker],
     results: dict,
 ) -> None:
+    """Draw vertical lines on the figure at specific event times based on the provided markers and
+    results.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    markers: list[EventMarker]
+        A list of event markers, each containing a source_key to look up the event time in results.
+    results: dict
+        The results dictionary containing event times under the keys specified by the markers'
+        source_key.
+    """
     for marker in markers:
         val = results.get(marker.source_key)
         if val is not None:
@@ -121,6 +182,33 @@ def draw_additional_curves(
     ymin: float,
     ymax: float,
 ) -> tuple[float, float]:
+    """Draw additional curves and bands on the figure based on the figure description and results.
+
+    This includes tolerance bands, frequency deviation bands, dynamic bands, and event markers.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    figure_description: FigureDescription
+        The description of the figure, including any bands and markers to draw.
+    time: list
+        The time values corresponding to the curves.
+    last_val: float
+        The last value of the main curve, used for FinalValueBand calculations.
+    results: dict
+        The results dictionary containing any necessary values for band calculations and event
+        times.
+    ymin: float
+        The current minimum y-axis limit, used to adjust the limit if bands extend beyond it.
+    ymax: float
+        The current maximum y-axis limit, used to adjust the limit if bands extend beyond it.
+
+    Returns
+    -------
+    tuple
+        Updated ymin and ymax values after considering the drawn bands.
+    """
     if figure_description.tolerance_band is not None:
         draw_tolerance_band(renderer, figure_description.tolerance_band, last_val, results)
     if figure_description.frequency_band is not None:
@@ -133,6 +221,17 @@ def draw_additional_curves(
 
 
 def draw_exclusion_windows(renderer: FigureRenderer, results: dict) -> None:
+    """Draw exclusion windows on the figure based on the results.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    results: dict
+        The results dictionary containing the start and end times of exclusion windows under the
+        keys "event_exclusion_window_start", "event_exclusion_window_end",
+        "clear_exclusion_window_start", and "clear_exclusion_window_end".
+    """
     if "event_exclusion_window_start" in results:
         renderer.add_vrect(
             x0=results["event_exclusion_window_start"],
@@ -152,6 +251,20 @@ def draw_response_characteristics(
     curve_name: str,
     results: dict,
 ) -> None:
+    """Draw response characteristics (reaction time, rise time, settling time) on the figure based
+    on the results.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    curve_name: str
+        The name of the curve for which to draw the response characteristics.
+    results: dict
+        The results dictionary containing the calculated response characteristics under the keys
+        "calc_reaction_time", "calc_reaction_target", "calc_rise_time", "calc_rise_target",
+        "calc_settling_time", "calc_ss_value", and "calc_settling_tube".
+    """
     if "calc_reaction_target" in results and curve_name in results["calc_reaction_target"]:
         treaction = results["calc_reaction_time"] + results["sim_t_event_start"]
         target = results["calc_reaction_target"][curve_name]
@@ -248,6 +361,21 @@ def draw_mxe(
     curve_name: str,
     results: dict,
 ) -> None:
+    """Draw MXE (Maximum Excursion) annotations on the figure based on the results.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    curve_name: str
+        The name of the curve for which to draw the MXE annotations.
+    results: dict
+        The results dictionary containing the calculated MXE values and their positions under the
+        keys "before_mxe_{measurement_type}_value", "before_mxe_{measurement_type}_position",
+        "during_mxe_{measurement_type}_value", "during_mxe_{measurement_type}_position",
+        "after_mxe_{measurement_type}_value", and "after_mxe_{measurement_type}_position", where
+        {measurement_type} is determined based on the curve_name.
+    """
     measurement_type = get_measurement_type(curve_name)
     if "setpoint_tracking_controlled_magnitude_name" in results:
         measurement_type = "tc_controlled_magnitude"
@@ -270,9 +398,22 @@ def draw_mxe(
 def draw_reference_curve(
     renderer: FigureRenderer,
     curve_name: str,
-    reference_curves,
+    reference_curves: pd.DataFrame,
     label: str = "reference",
 ) -> None:
+    """Draw a reference curve on the figure if it exists in the reference_curves DataFrame.
+
+    Parameters
+    ----------
+    renderer: FigureRenderer
+        The figure renderer to use for drawing.
+    curve_name: str
+        The name of the curve for which to draw the reference curve.
+    reference_curves: pd.DataFrame
+        The DataFrame containing reference curves, with a "time" column and columns for each curve.
+    label: str
+        The label to use for the reference curve in the legend.
+    """
     if reference_curves is None:
         return
     if curve_name not in reference_curves:

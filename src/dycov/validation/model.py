@@ -663,7 +663,7 @@ class ModelValidator(Validator):
         working_path: Path
             Working path.
         sim_output_path: str
-            Simulator output path (Not used in this validator).
+            Simulator output path.
         event_params: dict
             Event parameters
         has_reference: bool

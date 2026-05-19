@@ -21,7 +21,11 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    SimulationError,
+)
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -574,12 +578,11 @@ class Benchmark:
         has_simulated_curves: bool,
         has_reference: bool = True,
     ):
-        op_cond_success, results = op_cond.validate(
+        results = op_cond.validate(
             self._validator,
             working_path,
             jobs_output_dir,
             event_params,
-            success,
             has_simulated_curves,
             has_reference=has_reference,
         )
@@ -598,7 +601,7 @@ class Benchmark:
         else:
             compliance = Compliance.Compliant
 
-        return op_cond_success, results, compliance
+        return success, results, compliance
 
     def validate(
         self,
@@ -617,7 +620,7 @@ class Benchmark:
         Returns
         -------
         bool
-            True if Benchmark can be validated, False otherwise
+            True if at least one operating condition succeeds, False otherwise
         """
         success = False
 
@@ -721,7 +724,9 @@ class Benchmark:
 
         return success
 
-    def generate(self):
+    def generate(self) -> None:
+        """Execute the generation step for all operating conditions of the benchmark."""
+
         for op_cond in self._oc_list:
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
