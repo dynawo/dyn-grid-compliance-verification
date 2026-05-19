@@ -513,7 +513,7 @@ def adjust_producer_init(
     generator_control_mode: str,
     force_voltage_droop: bool,
     zone: int,
-) -> None:
+) -> bool:
     """Modify the Producer PAR file to add the init values.
 
     Parameters
@@ -536,11 +536,17 @@ def adjust_producer_init(
         Force the voltage droop to be applied even if the control mode is not VoltageDroop
     zone: int
         Zone number, used to determine the control mode and voltage droop parameters
+
+    Returns
+    -------
+    bool
+        True if the control mode is valid for all generators, False otherwise
     """
 
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
 
+    is_test_applicable = True
     for generator, xfmr in zip(generators, xfmrs):
         _adjust_transformer(
             producer_par_root,
@@ -551,7 +557,7 @@ def adjust_producer_init(
             xfmr.terminals[0].u_phase0,
             xfmr.terminals[1].u0,
         )
-        _adjust_generator(
+        is_control_mode_valid = _adjust_generator(
             producer_par_root,
             generator,
             generator.terminals[0].p0,
@@ -563,6 +569,7 @@ def adjust_producer_init(
             force_voltage_droop,
             zone,
         )
+        is_test_applicable = is_test_applicable and is_control_mode_valid
 
     if aux_load:
         _adjust_load(
@@ -576,6 +583,7 @@ def adjust_producer_init(
         )
 
     producer_par_tree.write(path / producer_par.name, pretty_print=True)
+    return is_test_applicable
 
 
 def _get_allowed_models(dyd_root: etree.Element, model_list: list) -> list[etree.Element]:
@@ -644,6 +652,9 @@ def _append_generator(
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
     ppc_local = _get_generator_ppc_local(parset, nsmap, lib)
 
+    converter_lv_control = _get_generator_converter_lv_control(parset, nsmap, lib)
+    print(f"Generator {gen_id} converter LV control: {converter_lv_control}")
+
     generators.append(
         GenParams(
             id=gen_id,
@@ -661,6 +672,7 @@ def _append_generator(
             voltage_droop=droop_value,
             use_voltage_droop=False,
             ppc_local=ppc_local,
+            converter_lv_control=converter_lv_control,
         )
     )
 
@@ -763,6 +775,15 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
 def _get_generator_ppc_local(parset, nsmap, lib):
     _, ppc_local = _get_parameter(parset, nsmap, lib, "PPCLocal")
     return ppc_local.lower() == "true" if ppc_local is not None else False
+
+
+def _get_generator_converter_lv_control(parset, nsmap, lib):
+    _, converter_lv_control_str = _get_parameter(parset, nsmap, lib, "ConverterLVControl")
+    return (
+        converter_lv_control_str.lower() == "true"
+        if converter_lv_control_str is not None
+        else True
+    )
 
 
 def _get_line_values(
@@ -1038,18 +1059,20 @@ def _adjust_generator(
     generator_control_mode: str,
     force_voltage_droop: bool,
     zone: int,
-) -> None:
+) -> int:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, generator.par_id, nsmap)
     if parset is None:
-        return
+        return False
 
     _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
     _set_initial_pcc_power(parset, nsmap, generator.lib, pdr)
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
-    control_mode_name = _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone)
+    is_valid, control_mode_name = _apply_control_mode(
+        generator, parset, nsmap, generator_control_mode, zone
+    )
     if not config.get_boolean("General", "skip_voltage_droop_adjustment", default=False):
         _apply_voltage_droop(
             generator,
@@ -1060,6 +1083,8 @@ def _adjust_generator(
             force_voltage_droop,
             zone,
         )
+
+    return is_valid
 
 
 def _set_initial_power(parset, nsmap, lib, p0pu, q0pu):
@@ -1093,22 +1118,23 @@ def _set_initial_pcc_voltage_phase(parset, nsmap, lib, pdr):
 
 
 def _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone):
-    control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap)
+    control_mode_parameters = _get_control_mode_parameters(generator, parset, nsmap, zone)
     _log_control_mode(generator, control_mode_parameters)
 
     if not control_mode_parameters:
-        return None
+        return False, None
 
     is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
         generator, generator_control_mode, control_mode_parameters, zone
     )
 
-    if generator_control_mode != "Others" and not is_valid:
+    if generator_control_mode != "Others" and not is_valid and zone != 1:
         control_mode_name = _handle_invalid_control_mode(
             generator, parset, nsmap, generator_control_mode, zone
         )
+        return True, control_mode_name
 
-    return control_mode_name
+    return is_valid, control_mode_name
 
 
 def _log_control_mode(generator, control_mode_parameters):
@@ -1145,7 +1171,7 @@ def _handle_invalid_control_mode(generator, parset, nsmap, generator_control_mod
 def _apply_voltage_droop(
     generator, parset, nsmap, generator_control_mode, control_mode_name, force_voltage_droop, zone
 ):
-    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, nsmap)
+    voltage_droop_parameters = _get_voltage_droop_parameters(generator, parset, nsmap, zone)
     _log_voltage_droop(generator, voltage_droop_parameters)
 
     force_voltage_droop = _determine_voltage_droop(
@@ -1182,7 +1208,7 @@ def _validate_or_apply_default_voltage_droop(
     is_valid, _ = dynawo_translator.is_valid_control_mode(
         generator, "VoltageDroop", voltage_droop_parameters, zone
     )
-    if not is_valid:
+    if not is_valid and zone != 1:
         dycov_logging.get_logger("Model Parameters").warning(
             f"{generator.lib} voltage droop mode will be changed"
         )
@@ -1218,95 +1244,30 @@ def _recalculate_voltage_ref(generator, voltage_droop_parameters) -> None:
         generator.use_voltage_droop = True
 
 
-def _get_voltage_droop_parameters(generator, parset, nsmap) -> dict:
-    if "IEC" in generator.lib:
-        return _get_voltage_droop_parameters_iec(generator, parset, nsmap)
-    elif "Wecc" in generator.lib:
-        return _get_voltage_droop_parameters_wecc(generator, parset, nsmap)
-    else:
-        return {}
-
-
-def _get_voltage_droop_parameters_iec(generator, parset, nsmap) -> dict:
+def _get_voltage_droop_parameters(generator, parset, nsmap, zone) -> dict:
     parameters = {}
-    _, MwpqMode = _get_parameter(parset, nsmap, generator.lib, "MwpqMode")
-    if MwpqMode is not None:
-        parameters["MwpqMode"] = MwpqMode
-
-    _, MqG = _get_parameter(parset, nsmap, generator.lib, "MqG")
-    if MqG is not None:
-        parameters["MqG"] = MqG
+    parameter_names = dynawo_translator.get_generator_parameters(generator, "VoltageDroop", zone)
+    for name in parameter_names:
+        sign, value = _get_parameter(parset, nsmap, generator.lib, name)
+        if value is not None:
+            parameters[name] = value
 
     return parameters
 
 
-def _get_voltage_droop_parameters_wecc(generator, parset, nsmap) -> dict:
+def _get_control_mode_parameters(generator, parset, nsmap, zone) -> dict:
     parameters = {}
-    _, RefFlag = _get_parameter(parset, nsmap, generator.lib, "RefFlag")
-    if RefFlag is not None:
-        parameters["RefFlag"] = RefFlag
-
-    _, VCompFlag = _get_parameter(parset, nsmap, generator.lib, "VCompFlag")
-    if VCompFlag is not None:
-        parameters["VCompFlag"] = VCompFlag
-
-    return parameters
-
-
-def _get_control_mode_parameters(generator, parset, nsmap) -> dict:
-    if "IEC" in generator.lib:
-        return _get_control_mode_parameters_iec(generator, parset, nsmap)
-    elif "Wecc" in generator.lib:
-        return _get_control_mode_parameters_wecc(generator, parset, nsmap)
-    else:
-        return {}
-
-
-def _get_control_mode_parameters_iec(generator, parset, nsmap) -> dict:
-    parameters = {}
-    _, MwpqMode = _get_parameter(parset, nsmap, generator.lib, "MwpqMode")
-    if MwpqMode is not None:
-        parameters["MwpqMode"] = MwpqMode
-
-    _, MqG = _get_parameter(parset, nsmap, generator.lib, "MqG")
-    if MqG is not None:
-        parameters["MqG"] = MqG
-
-    return parameters
-
-
-def _get_control_mode_parameters_wecc(generator, parset, nsmap) -> dict:
-    parameters = {}
-    # Use _get_parameter where it helps to centralize lookup
-    _, PfFlag = _get_parameter(parset, nsmap, generator.lib, "PfFlag")
-    if PfFlag is not None:
-        parameters["PfFlag"] = PfFlag
-
-    _, VFlag = _get_parameter(parset, nsmap, generator.lib, "VFlag")
-    if VFlag is not None:
-        parameters["VFlag"] = VFlag
-
-    _, PFlag = _get_parameter(parset, nsmap, generator.lib, "PFlag")
-    if PFlag is not None:
-        parameters["PFlag"] = PFlag
-
-    _, QFlag = _get_parameter(parset, nsmap, generator.lib, "QFlag")
-    if QFlag is not None:
-        parameters["QFlag"] = QFlag
-
-    _, RefFlag = _get_parameter(parset, nsmap, generator.lib, "RefFlag")
-    if RefFlag is not None:
-        parameters["RefFlag"] = RefFlag
-
-    _, FreqFlag = _get_parameter(parset, nsmap, generator.lib, "FreqFlag")
-    if FreqFlag is not None:
-        parameters["FreqFlag"] = FreqFlag
+    parameter_names = dynawo_translator.get_generator_parameters(generator, "ControlMode", zone)
+    for name in parameter_names:
+        sign, value = _get_parameter(parset, nsmap, generator.lib, name)
+        if value is not None:
+            parameters[name] = value
 
     return parameters
 
 
 def _get_default_voltage_droop_parameters(generator, generator_voltage_droop, zone) -> dict:
-    family = dynawo_translator.get_generator_family_level(generator)
+    family = dynawo_translator.get_generator_family(generator)
     parameters = {}
     section = f"{generator_voltage_droop}_{family}_Zone{zone}"
     if config.has_option(section, "control_option"):
@@ -1320,7 +1281,7 @@ def _get_default_voltage_droop_parameters(generator, generator_voltage_droop, zo
 
 
 def _get_default_control_mode_parameters(generator, generator_control_mode, zone) -> dict:
-    family = dynawo_translator.get_generator_family_level(generator)
+    family = dynawo_translator.get_generator_family(generator)
     parameters = {}
     section = f"{generator_control_mode}_{family}_Zone{zone}"
     if config.has_option(section, "control_option"):
