@@ -108,6 +108,7 @@ class GenParams(Equipment):
     voltage_droop: float
     use_voltage_droop: bool
     ppc_local: bool = True
+    converter_lv_control: bool = True
     p_min: Optional[float] = None
     p_max: Optional[float] = None
     q_min: Optional[float] = None
