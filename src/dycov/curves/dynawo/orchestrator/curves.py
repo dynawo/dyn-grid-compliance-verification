@@ -358,7 +358,7 @@ class DynawoCurves(ProducerCurves):
                 working_oc_dir, pcs_name, bm_name, oc_name, reference_event_start_time
             )
             if not is_test_applicable:
-                self.__warning("Test not applicable.")
+                dycov_logging.get_logger("ProducerCurves").warning("Test not applicable.")
                 return (
                     jobs_output_dir,
                     event_params,

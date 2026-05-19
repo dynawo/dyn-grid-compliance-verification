@@ -660,7 +660,7 @@ class ModelSetup:
             producer.get_zone(),
         )
         if not is_test_applicable:
-            self._debug(
+            dycov_logging.get_logger("ModelSetup").debug(
                 f"The selected control mode '{control_mode}' is not valid for all generators. "
                 f"Please check the configuration for '{section}' and ensure that the control mode "
                 f"is compatible with the generator types."

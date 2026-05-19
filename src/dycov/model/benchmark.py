@@ -21,7 +21,11 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    SimulationError,
+)
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -134,15 +138,6 @@ class Benchmark:
                 self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
             )
             manage_files.create_dir(working_oc_dir)
-
-    def __info(self, message):
-        dycov_logging.get_logger("Benchmark").info(f"{message}")
-
-    def __debug(self, message):
-        dycov_logging.get_logger("Benchmark").debug(f"{message}")
-
-    def __warning(self, message):
-        dycov_logging.get_logger("Benchmark").warning(f"{message}")
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
@@ -595,12 +590,12 @@ class Benchmark:
         # Statuses for the Summary Report
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
-            self.__warning("Undefined Validations")
+            dycov_logging.get_logger("Benchmark").warning("Undefined Validations")
         elif not success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
-            self.__warning("Invalid Test")
+            dycov_logging.get_logger("Benchmark").warning("Invalid Test")
         elif not results["compliance"]:
             compliance = Compliance.NonCompliant
         else:
@@ -649,7 +644,7 @@ class Benchmark:
                 op_cond.get_name(),
             )
             sim = curves_result.simulation_result
-            self.__debug(
+            dycov_logging.get_logger("Benchmark").debug(
                 f"Success: {sim.success} "
                 f"Has curves: {curves_result.availability} "
                 f"Time exceeds: {sim.time_exceeds} "
