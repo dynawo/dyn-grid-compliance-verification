@@ -21,7 +21,8 @@ from dycov.model.pcs import Pcs
 
 
 def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
-    """Worker function that generates envelopes for a specific Power Conversion System (PCS).
+    """
+    Worker function that generates envelopes for a specific Power Conversion System (PCS).
 
     Designed to be executed concurrently within a multiprocessing Pool. It initializes
     a Pcs object and triggers the internal envelope generation routine.
@@ -58,16 +59,19 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
 
 
 class GFMGeneration:
-    """Core orchestrator class designed to manage the generation of Grid Forming (GFM) envelopes
-    across multiple PCS units and producers.
+    """
+    Core orchestrator class designed to manage the generation of Grid Forming (GFM)
+    envelopes across multiple PCS units and producers.
 
-    This class handles the initialization of the secure working environment, identifies the
-    specific PCS models requiring validation, and manages the execution flow of the generation
-    process, supporting both sequential and parallel multiprocessing workflows.
+    This class handles the initialization of the secure working environment,
+    identifies the specific PCS models requiring validation, and manages the
+    execution flow of the generation process, supporting both sequential and
+    parallel multiprocessing workflows.
     """
 
     def __init__(self, parameters: GFMParameters) -> None:
-        """Initializes the GFMGeneration orchestrator with the required simulation parameters.
+        """
+        Initializes the GFMGeneration orchestrator with the required simulation parameters.
 
         Parameters
         ----------
@@ -82,10 +86,11 @@ class GFMGeneration:
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
-        """Initializes the operational environment by creating required directory structures.
+        """
+        Initializes the operational environment by creating required directory structures.
 
-        It ensures the working directory is available and implements safety checks on the target
-        output directory to prevent the accidental overwriting of pre-existing results.
+        It ensures the working directory is available and implements safety checks on
+        the target output directory to prevent the accidental overwriting of pre-existing results.
         """
         manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
 
@@ -101,8 +106,8 @@ class GFMGeneration:
         manage_files.create_dir(self._parameters.get_output_dir())
 
     def __get_validation_pcs(self) -> list[str]:
-        """Determines and compiles the definitive list of PCS units targeted for envelope
-        generation.
+        """
+        Determines and compiles the definitive list of PCS units targeted for envelope generation.
 
         This method aggregates the required PCS models by evaluating command-line arguments,
         global configuration settings, and the availability of underlying templates.
@@ -127,8 +132,9 @@ class GFMGeneration:
     def __populate_validation_pcs(
         self, validation_pcs: set[str], validation_key: str, validation_path: str
     ) -> None:
-        """Dynamically populates the target set of PCS models by scanning global configurations and
-        local template directories.
+        """
+        Dynamically populates the target set of PCS models by scanning global configurations
+        and local template directories.
 
         Parameters
         ----------
@@ -168,8 +174,8 @@ class GFMGeneration:
                 validation_pcs.remove(item)
 
     def __prepare_pcs_list(self) -> list[tuple[GFMParameters, str, str]]:
-        """Constructs the comprehensive list of execution arguments required by the worker
-        functions.
+        """
+        Constructs the comprehensive list of execution arguments required by the worker functions.
 
         It maps every designated validation PCS against every available producer file to
         create a flat list of discrete generation tasks.
@@ -191,8 +197,9 @@ class GFMGeneration:
         return pcs_list
 
     def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
-        """Executes the generation of GFM envelopes, supporting both sequential execution and
-        multiprocessing parallelism.
+        """
+        Executes the generation of GFM envelopes, supporting both sequential execution
+        and multiprocessing parallelism.
 
         Following the successful generation of all required envelopes, this method automatically
         handles the transfer of output artifacts to the final directory and wipes the temporary

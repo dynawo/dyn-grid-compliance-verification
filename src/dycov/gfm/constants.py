@@ -7,11 +7,12 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""Central repository for simulation constants and magic numbers.
+"""
+Central repository for simulation constants and magic numbers.
 
-This module stores global constants used across the Grid Forming (GFM) calculations. It defines
-simulation timelines, specific delay constants for damped responses, and time tunnel calculation
-variables.
+This module stores global constants used across the Grid Forming (GFM)
+calculations. It defines simulation timelines, specific delay constants for
+damped responses, and time tunnel calculation variables.
 """
 
 # General Simulation Parameters

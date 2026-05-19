@@ -138,18 +138,9 @@ zip -qr "$DYNAWO_ZIP" "$DYNAWO_BASENAME"
 info "$DYNAWO_ZIP_NAME generated."
 
 ###############################################################################
-# Step 2 — Update pyproject.toml in the repo
+# Step 2 — Generate updated linux_install.sh in output dir
 ###############################################################################
-step "Step 2: Updating pyproject.toml (version -> $VERSION_PLAIN)..."
-
-sed -i -E "s|^version = \"[^\"]+\"|version = \"${VERSION_PLAIN}\"|" "$PYPROJECT"
-
-info "pyproject.toml updated: $(grep '^version = ' "$PYPROJECT" | head -1)"
-
-###############################################################################
-# Step 3 — Generate updated linux_install.sh in output dir
-###############################################################################
-step "Step 3: Generating updated linux_install.sh..."
+step "Step 2: Generating updated linux_install.sh..."
 
 DYNAWO_SHA256=$(sha256sum "$DYNAWO_ZIP" | cut -d' ' -f1)
 info "SHA256: $DYNAWO_SHA256"
@@ -169,18 +160,18 @@ grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM)=" "$LINUX_INSTALL_OUT"
 echo "----------------------"
 
 ###############################################################################
-# Step 4 — Build Docker image
+# Step 3 — Build Docker image
 ###############################################################################
-step "Step 4: Building Docker image..."
+step "Step 3: Building Docker image..."
 
 cd "$REPO_ROOT/installers/docker"
 bash build.sh "$VERSION" "$DYNAWO_DIR"
 info "Docker image built."
 
 ###############################################################################
-# Step 5 — Export Docker image
+# Step 4 — Export Docker image
 ###############################################################################
-step "Step 5: Exporting Docker image..."
+step "Step 4: Exporting Docker image..."
 
 cd "$REPO_ROOT/installers/docker"
 bash export_image.sh
@@ -191,9 +182,9 @@ RAW_IMAGE=$(find "$REPO_ROOT/installers/docker" -maxdepth 1 -name "dycov_rawimag
 [[ -z "$RAW_IMAGE" ]] && error "dycov_rawimage.tar.gz not found after export. Check export_image.sh output."
 
 ###############################################################################
-# Step 6 — Collect all artifacts in output dir
+# Step 5 — Collect all artifacts in output dir
 ###############################################################################
-step "Step 6: Collecting release artifacts..."
+step "Step 5: Collecting release artifacts..."
 
 mv "$RAW_IMAGE"       "$OUTPUT_DIR/dycov_rawimage.tar.gz"
 cp "$IMPORT_SH"       "$OUTPUT_DIR/import_image.sh"
@@ -205,9 +196,9 @@ cp "$RUN_WSL_PS1"     "$OUTPUT_DIR/run_dycov_wsl.ps1"
 info "All artifacts ready."
 
 ###############################################################################
-# Step 7 — Remove Docker images
+# Step 6 — Remove Docker images
 ###############################################################################
-step "Step 7: Removing Docker images..."
+step "Step 6: Removing Docker images..."
 
 for tag in "dycov:latest" "dycov:${VERSION}"; do
     if docker image inspect "$tag" > /dev/null 2>&1; then
