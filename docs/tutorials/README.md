@@ -26,7 +26,7 @@ This tutorial explains
 - the available workflows,
 - the meaning of Zone 1 and Zone 3 validations.
 
-➡️ `first_steps.md`
+See: [First steps](first_steps.md)
 
 ---
 
@@ -37,7 +37,7 @@ This tutorial explains
 - supported curve formats (COMTRADE, EUROSTAG, CSV),
 - required metadata and DICT files.
 
-➡️ `preparing_inputs.md`
+See: [Preparing inputs](preparing_inputs.md)
 
 ---
 
@@ -49,7 +49,7 @@ This tutorial explains:
 - Zone 1 / Zone 3 validation logic,
 - interpretation of results.
 
-➡️ `rms_model_validation.md`
+See: [RMS validation](rms_model_validation.md)
 
 ---
 
@@ -60,7 +60,7 @@ This tutorial explains:
 - PCS execution without reference curves,
 - simulation‑based and curve‑based workflows.
 
-➡️ `electrical_performance_verification.md`
+See: [Performance verification](electrical_performance_verification.md)
 
 ---
 
@@ -72,7 +72,7 @@ This tutorial explains:
 - interpretation of admissible envelopes,
 - standard and hybrid configurations.
 
-➡️ `grid_forming_analysis.md`
+See: [Grid‑Forming (GFM) analysis](grid_forming_analysis.md)
 
 ---
 
@@ -90,7 +90,7 @@ Learn how to:
 
 **without modifying DyCoV source code**.
 
-➡️ `advanced_pcs_customization.md`
+See: [Advanced pcs customization](advanced_pcs_customization.md)
 
 ### Advanced configuration
 
@@ -101,4 +101,4 @@ Learn how to:
 
 **without modifying DyCoV source code**.
 
-➡️ `advanced_configuration.md`
+See: [Advanced configuration](advanced_configuration.md)

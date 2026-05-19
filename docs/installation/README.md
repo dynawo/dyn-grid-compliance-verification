@@ -31,7 +31,7 @@ This method:
 - ensures a controlled and reproducible environment,
 - supports both Linux natively and Windows environments via WSL or Docker Desktop
 
-➡️ See: `using_the_provided_image.md`
+See: [Using the provided image](using_the_provided_image.md)
 
 ---
 
@@ -49,7 +49,7 @@ In this mode:
 This method is intended for **advanced users** who require full control over
 their system environment.
 
-➡️ See: `linux_native.md`
+See: [Linux native](linux_native.md)
 
 ---
 
@@ -58,4 +58,4 @@ their system environment.
 After completing one of the installation procedures above, continue with the
 user-facing tutorials to start using DyCoV:
 
-➡️ `../tutorials/README.md`
+See: [Reading guide](../tutorials/README.md)

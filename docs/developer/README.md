@@ -74,7 +74,7 @@ suitable for development workflows.
 
 The following documents are recommended starting points depending on your task:
 
-- `setup.md` — set up a local development environment
-- `project_structure.md` — understand the repository organization
-- `extending_dycov.md` — understand extension principles and architecture
-- `add_new_pcs.md` — step-by-step guide to implement a new PCS
+- [Setup](setup.md) — set up a local development environment
+- [Project structure](project_structure.md) — understand the repository organization
+- [Extending DyCoV](extending_dycov.md) — understand extension principles and architecture
+- [Add new PCS](add_new_pcs.md) — step-by-step guide to implement a new PCS
