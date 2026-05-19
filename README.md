@@ -1,4 +1,4 @@
-# DyCoV &mdash; Dynamic grid Compliance Verification
+# DyCoV — Dynamic grid Compliance Verification
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dycov.github.io/index.html)
@@ -6,192 +6,232 @@
 A tool for automating the verification of dynamic grid compliance requirements
 for solar and wind farms (Power Park Modules — PPM), battery energy
 storage systems (BESS), and synchronous machines (SM), from model validation
-to grid-code compliance assessment.
-
-DyCoV supports three main workflows:
-
-- **[RMS model validation](docs/tutorials/rms_model_validation.md)** — verifies
-  that a dynamic model matches a reference behavior within the tolerances defined
-  by RTE (PCS-I16, Zones 1 and 3), ensuring the model accurately reproduces expected dynamics.
-
-- **[Electrical performance verification](docs/tutorials/electrical_performance_verification.md)** —
-  verifies compliance with grid-code dynamic performance requirements
-  (PCS-I2, I3, I4, I5, I6, I7, I8, I10), by running standard disturbance test scenarios.
-
-- **[Grid-Forming (GFM) analysis](docs/tutorials/grid_forming_analysis.md)** —
-  computes admissible dynamic envelopes for Grid-Forming units analytically,
-  providing theoretical bounds on their expected dynamic response.
-
-Each workflow produces results in a structured `Results/` directory:
-- RMS model validation and electrical performance verification produce **PDF
-  compliance reports** and **interactive HTML plots**.
-- GFM analysis produces **CSV files** with the envelope data, **PNG plots**,
-  and **interactive HTML plots**.
-
-The tool is pre-configured for the French connection network code
-([RTE DTR](https://www.services-rte.com/files/live//sites/services-rte/files/documentsLibrary/20240729_DTR_5867_fr)
-Fiches "I"), but can be configured and extended to run other tests.
-
-(c) 2023&ndash;2024 RTE — Developed by Grupo AIA
+to grid-code compliance assessment. As an end-to-end framework, DyCoV supports
+both model validation and compliance assessment workflows used during grid
+connection studies.
 
 ---
 
-## Table of Contents
+## About DyCoV
 
-- [Installation](#installation)
-  - [Linux](#linux)
-  - [Windows](#windows)
-- [Quick start](#quick-start)
-- [Documentation](#documentation)
-- [Reference manuals](#reference-manuals)
-- [Workshop](#workshop)
-- [Contributing](#contributing)
-- [Roadmap](#roadmap)
-- [Contact](#contact)
+This section provides a high-level overview of the core studies supported by DyCoV
+and how they contribute to grid connection validation workflows.
+
+DyCoV automates two independent and mandatory studies required
+for grid connection validation:
+
+- **RMS model validation** — verifies that a dynamic model reproduces a reference
+  behaviour within defined tolerances (PCS‑I16, Zones 1 and 3)
+
+- **Electrical performance verification** — evaluates the installation response
+  under grid disturbances and checks compliance with grid‑code requirements
+  (PCS‑I2, I3, I4, I5, I6, I7, I8, I10)
+
+Both studies must be successfully completed to formally validate an installation 
+for grid connection.
+
+Additionally:
+
+- **Grid‑Forming (GFM) envelope calculation** — computes analytical bounds
+  for GFM unit responses (optional workflow)
+
+---
+
+## Getting started
+
+This section helps you choose how to begin with DyCoV depending on your objective.
+It acts as a navigation guide to the most relevant workflows and documentation depending 
+on your use case (exploration, validation, or study design).
+
+- To run DyCoV quickly and see results → go to **Quick start**
+- To validate a real installation → run both validation and performance workflows in sequence
+- To build your own study → see input preparation tutorials
+
+Example cases are available in the `examples/` directory and can be copied
+and adapted to your own projects.
+
+---
+
+## Inputs and outputs
+
+This section summarizes the typical data exchanged with DyCoV across its workflows.
+DyCoV works with time-domain dynamic responses from simulations or measurements.
+
+Typical inputs:
+
+- **Dynawo models** — RMS simulation models of the installation
+- **Reference curves** — expected behaviour (used for validation)
+- **Producer curves** — simulated responses (used when simulations are provided externally instead of being run through Dynawo)
+
+Typical outputs:
+
+- PDF compliance reports
+- Interactive HTML plots
+- A structured `Results/` directory (organized per study and scenario)
+
+For full details, see:  
+[Preparing inputs](docs/tutorials/preparing_inputs.md)
 
 ---
 
 ## Installation
 
-> **For developers** who want to build from source, see
-> [docs/developer/setup.md](docs/developer/setup.md).
+This section summarizes the supported installation modes. Choose the one that 
+best fits your environment and usage (native, WSL, or development setup).
+Once installed, DyCoV is accessed through the `dycov` command-line interface.
+
+For detailed procedures and advanced setups, see:  
+[Linux native](docs/installation/linux_native.md)
+
+> **For developers** building from source, see:  
+> [Setup](docs/developer/setup.md)
 
 ### Linux
 
-**Prerequisites:** required system dependencies (e.g. Python ≥ 3.13, build tools, LaTeX) must be installed.  
-See [docs/installation/linux_native.md](docs/installation/linux_native.md) for details.
-
-Run the following commands to install DyCoV, activate the environment, and verify that the CLI is available:
+DyCoV requires a Linux environment with system dependencies
+(e.g. Python ≥ 3.13, build tools, LaTeX).
 
 ```bash
-# Download and run the installer
+# Download and install DyCoV
 curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
 
-# Activate the DyCoV environment
+# Activate environment
 source dycov/activate_dycov
 
-# Check that the CLI is available
+# Check CLI
 dycov -h
-````
+```
 
-For a detailed description of the installation process, see  
-[docs/installation/linux_native.md](docs/installation/linux_native.md).
+---
 
-***
+### Windows (WSL)
 
-### Windows
+DyCoV runs inside a preconfigured WSL (Windows Subsystem for Linux) environment.
 
-This installation deploys DyCoV inside a pre-configured WSL environment.
+**Prerequisite:** WSL must be enabled:  
+https://learn.microsoft.com/en-us/windows/wsl/install
 
-**Prerequisite:** WSL (Windows Subsystem for Linux) must be enabled.  
-If not, follow the official Microsoft instructions: [official Microsoft instructions](https://learn.microsoft.com/en-us/windows/wsl/install)
+Download the following files:
 
-Download the following files from the latest release and place them in the same folder:
+- [dycov_rawimage.tar.gz](https://github.com/dynawo/dynation/releases/latest/download/dycov_rawimage.tar.gz)
+- [import_wsl.bat](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.bat)
+- [import_wsl.ps1](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.ps1)
+- [run_dycov_wsl.ps1](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_wsl.ps1)
 
-| File                    | Description                               |
-| ----------------------- | ----------------------------------------- |
-| [`dycov_rawimage.tar.gz`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz) | Application image — do not unzip manually |
-| [`import_wsl.bat`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.bat)        | Double-click installer                    |
-| [`import_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.ps1)        | Installation logic (called by the `.bat`) |
-| [`run_dycov_wsl.ps1`](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_wsl.ps1)     | Launcher (used by the shortcut)           |
+Run:
 
-Then double-click `import_wsl.bat`. A desktop shortcut and a Start Menu entry are created automatically.
+```bash
+import_wsl.bat
+```
 
-For Docker installation, manual procedures (restricted environments), and updates, see  
-[docs/installation/using_the_provided_image.md](docs/installation/using_the_provided_image.md).
+This will import and configure the DyCoV environment automatically.
+
+For details, see:  
+[Using the provided image](docs/installation/using_the_provided_image.md)
 
 ---
 
 ## Quick start
 
-> **Note:** On Linux native installations, make sure the DyCoV environment is activated
-> (e.g. `source dycov/activate_dycov`) before running the commands below.
-> In Docker and WSL installations, the environment is already activated by default.
+This section demonstrates how to run the main DyCoV workflows on bundled example 
+cases, allowing you to quickly verify the installation and explore outputs.
 
-The commands below run one example from each workflow using the bundled
-`examples/` directory and generate results in a `Results/` folder
-(reports, plots, or CSV files depending on the workflow).
+> **Note:** On native installations, ensure the DyCoV environment is activated
+> (e.g. `source dycov/activate_dycov`). In WSL and Docker environments,
+> it may already be active.
+
+### RMS model validation
+
+This workflow focuses on validating that a dynamic model reproduces expected reference behaviour.
+
+Run:
 
 ```bash
-# RMS model validation
-dycov validate examples/Model/Wind/WECC4B/ReferenceCurves/ \
-               -m examples/Model/Wind/WECC4B/Dynawo/
+dycov validate examples/Model/Wind/WECC4B/ReferenceCurves/ -m examples/Model/Wind/WECC4B/Dynawo/
+```
 
-# Electrical performance verification
+This will:
+- run RMS simulations
+- compare results against reference curves
+- generate validation reports
+
+---
+
+### Electrical performance verification
+
+Here, the system response is evaluated under predefined grid disturbance scenarios.
+
+Run:
+
+```bash
 dycov performance -m examples/Performance/Single/WECC4B/Dynawo/
+```
 
-# Grid-Forming envelope calculation
+This will:
+- execute PCS test scenarios
+- evaluate compliance with grid‑code requirements
+
+---
+
+### Grid‑Forming analysis (optional)
+
+This optional workflow targets GFM units and computes admissible response envelopes.
+
+Run:
+
+```bash
 dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini
 ```
 
-Each workflow requires different inputs (reference curves, models, or configuration files).  
-See [docs/tutorials/preparing_inputs.md](docs/tutorials/preparing_inputs.md) for details.
+This will:
+- compute admissible envelopes
+- generate CSV data and plots
 
-For a guided walkthrough, see  
-[docs/tutorials/quick_start.md](docs/tutorials/quick_start.md).
-
-To restrict execution scope or adjust compliance thresholds without touching
-source code, see  
-[docs/tutorials/advanced_configuration.md](docs/tutorials/advanced_configuration.md).
+For a guided walkthrough, see:  
+[Quick start](docs/tutorials/quick_start.md)
 
 ---
 
 ## Documentation
 
-The tutorials below are listed in the recommended reading order.
-The developer docs are independent and can be consulted at any time.
+The documentation is organized to guide users from conceptual understanding to 
+detailed workflow execution.
 
-**User tutorials** (recommended reading order):
+- [Conceptual overview](docs/tutorials/first_steps.md)
 
-| Topic | Document |
-|-------|----------|
-| First steps and workflow overview | [docs/tutorials/first_steps.md](docs/tutorials/first_steps.md) |
-| Preparing inputs | [docs/tutorials/preparing_inputs.md](docs/tutorials/preparing_inputs.md) |
-| RMS model validation | [docs/tutorials/rms_model_validation.md](docs/tutorials/rms_model_validation.md) |
-| Electrical performance verification | [docs/tutorials/electrical_performance_verification.md](docs/tutorials/electrical_performance_verification.md) |
-| Grid-Forming analysis | [docs/tutorials/grid_forming_analysis.md](docs/tutorials/grid_forming_analysis.md) |
-| Advanced configuration | [docs/tutorials/advanced_configuration.md](docs/tutorials/advanced_configuration.md) |
-| Advanced PCS customization | [docs/tutorials/advanced_pcs_customization.md](docs/tutorials/advanced_pcs_customization.md) |
+- [Preparing inputs](docs/tutorials/preparing_inputs.md)
 
-**Developer documentation**:
+- Workflow details:
+  - [RMS validation](docs/tutorials/rms_model_validation.md)
+  - [Performance verification](docs/tutorials/electrical_performance_verification.md)
+  - [GFM analysis](docs/tutorials/grid_forming_analysis.md)
 
-| Topic | Document |
-|-------|----------|
-| Developer setup | [docs/developer/setup.md](docs/developer/setup.md) |
-| Project structure | [docs/developer/project_structure.md](docs/developer/project_structure.md) |
-| Extending DyCoV | [docs/developer/extending_dycov.md](docs/developer/extending_dycov.md) |
-| Adding a new PCS | [docs/developer/add_new_pcs.md](docs/developer/add_new_pcs.md) |
+These documents provide detailed explanations of each workflow and complement the use of the CLI in real studies.
+
+Developer documentation is available separately.
 
 ---
 
 ## Reference manuals
 
-DyCoV includes two reference manuals built automatically during installation
-for detailed usage and API-level information beyond the tutorials.
+In addition to this repository documentation, detailed reference manuals are generated 
+and installed locally with DyCoV.
 
-**User manual** — covers input file formats, CLI reference, configuration
-options, and workflow details.
-
-**Developer manual** — covers internal architecture, extension points,
-and contribution guidelines.
-
-Both manuals are available in HTML and PDF formats. Their location depends
-on the installation method:
-
-| Installation method | Location |
-|---------------------|----------|
+| Installation | Location |
+|--------------|----------|
 | Linux native | `~/dycov/manual/` |
-| Docker (Linux or Windows) | `~/manual/` inside the container session |
-| WSL (Windows) | `~/manual/` inside the DyCoV session |
+| Docker / WSL | `~/manual/` |
 
 ---
 
 ## Workshop
 
+This section provides recorded sessions illustrating DyCoV workflows and usage in practice.
+
 > **Note:** These videos were recorded with version **0.8.1**. They remain valid,
 > although some interface elements may have changed in more recent versions.
 
-Workshop held on 11/03/2025 (English subtitles available on download):
+Workshop held on 2025-03-11 (English subtitles available on download):
 
 Part 1:
 
@@ -213,8 +253,7 @@ CI requirements, and the PR workflow.
 
 ## Roadmap
 
-The items below represent the main development axes identified for DyCoV.
-Contents and priorities may evolve as the project progresses.
+The items below outline the main development axes currently guiding DyCoV evolution.
 
 ### Axis 1 — Stabilization and model support
 
@@ -241,6 +280,8 @@ Contents and priorities may evolve as the project progresses.
 ---
 
 ## Contact
+
+For questions, support, or contributions, please refer to the project repository or contact the maintainers.
 
 * Electrical modeling inquiries (RTE): <rte-r-d-raccordement@rte-france.com>
 * Software issues and questions (AIA): <dycov@aia.es>
