@@ -10,4 +10,6 @@
 
 
 class LatexReportException(Exception):
+    """Exception raised when an error occurs during LaTeX report generation."""
+
     pass

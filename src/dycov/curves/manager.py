@@ -295,7 +295,7 @@ class CurvesManager:
         working_path: Path,
         event_params: dict,
         setpoint_tracking_controlled_magnitude: bool,
-    ):
+    ) -> None:
         """Apply signal processing.
 
         Parameters
