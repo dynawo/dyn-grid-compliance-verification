@@ -25,7 +25,8 @@ In this mode:
 - A compatible version of **Dynawo is automatically downloaded and installed**
   by the DyCoV installer.
 - The user is responsible for installing all **system‑level prerequisites**
-  required by the installation process.
+  required by the installation process.  
+  Missing or incompatible dependencies will result in installation failures.
 
 This approach offers greater flexibility but requires manual system preparation
 and maintenance by the user.
@@ -63,9 +64,9 @@ the DyCoV installer.
 
 ```bash
 sudo apt install curl unzip gcc g++ cmake
-````
+```
 
-***
+---
 
 ### 3.2 LaTeX packages
 
@@ -83,7 +84,7 @@ sudo apt install \
   latexmk
 ```
 
-***
+---
 
 ### 3.3 Python (≥ 3.13) and uv
 
@@ -114,7 +115,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 > `pip` and `venv` are not required directly.
 > All Python package management is handled by `uv`.
 
-***
+---
 
 ## 4. Installation procedure
 
@@ -127,7 +128,7 @@ mkdir dycov_install
 cd dycov_install
 ```
 
-***
+---
 
 ### 4.2 Run the native installer
 
@@ -150,14 +151,14 @@ The installation is performed under:
 $PWD/dycov
 ```
 
-***
+---
 
 ## 5. Environment activation
 
 After installation, the generated environment **must be activated** before
 using DyCoV.
 
-Activate the environment using the wrapper script:
+Activate the environment using the wrapper script (from the installation directory):
 
 ```bash
 source dycov/activate_dycov
@@ -168,7 +169,7 @@ This step ensures that:
 *   the Python 3.13 virtual environment is active,
 *   Dynawo binaries installed by the installer are available in the system `PATH`.
 
-***
+---
 
 ## 6. Sanity check
 
@@ -180,7 +181,7 @@ dycov -h
 
 If the help message is displayed, the installation is complete.
 
-***
+---
 
 ## 7. Using DyCoV
 
@@ -199,7 +200,7 @@ You can now follow:
     *   Electrical performance verification
     *   Grid‑Forming analysis
 
-***
+---
 
 ## 8. Maintenance and updates
 
@@ -212,7 +213,7 @@ In native installation mode:
 For easier upgrades and a fully controlled runtime environment, the
 **prebuilt distribution image** remains the recommended approach.
 
-***
+---
 
 ## 9. When to use this method
 

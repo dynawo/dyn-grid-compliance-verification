@@ -20,7 +20,8 @@ includes:
 - all required system dependencies
 
 Using this image avoids any manual dependency installation and ensures
-a controlled and reproducible environment.
+a controlled and reproducible environment. All DyCoV commands are executed 
+inside this environment.
 
 The image is distributed as a single file:
 
@@ -50,9 +51,11 @@ Both rely on the same distribution image and provide identical functionality.
 ## 3. Linux — Docker installation
 
 This method is recommended for Linux users who want to keep their system clean
-and isolated.
+and isolated. 
 
 ### 3.1 Required files
+
+This method runs DyCoV inside a container while mounting a local working directory.
 
 Place the following files in the same directory:
 
@@ -64,9 +67,9 @@ Place the following files in the same directory:
 
 ```bash
 chmod +x import_image.sh run_dycov_docker.sh
-````
+```
 
-***
+---
 
 ### 3.3 Import the image
 
@@ -76,7 +79,7 @@ chmod +x import_image.sh run_dycov_docker.sh
 
 This step restores the required container metadata.
 
-***
+---
 
 ### 3.4 Run DyCoV
 
@@ -88,7 +91,7 @@ mkdir my_project
 ./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_project/
 ```
 
-***
+---
 
 ### 3.5 Sanity check
 
@@ -100,7 +103,7 @@ dycov -h
 
 If the help is displayed, DyCoV is ready to use.
 
-***
+---
 
 ## 4. Windows — WSL installation (recommended)
 
@@ -116,7 +119,7 @@ Place all the following files in the same folder:
 *   `import_wsl.ps1`
 *   `run_dycov_wsl.ps1`
 
-***
+---
 
 ### 4.2 Standard procedure (recommended)
 
@@ -137,7 +140,7 @@ Inside the DyCoV session, Windows drives are accessible via:
 *   `/mnt/d/`
 *   …
 
-***
+---
 
 ### 4.3 Updating to a new version (WSL)
 
@@ -184,7 +187,7 @@ To start DyCoV manually:
 wsl -d DycovApp -- bash /start_dycov.sh
 ```
 
-***
+---
 
 ## 5. Windows — Docker Desktop installation
 
@@ -207,7 +210,7 @@ Import the image:
 docker import --change $DycovPath --change $DycovEntry .\dycov_rawimage.tar.gz dycov:latest
 ```
 
-***
+---
 
 ### 5.2 Run DyCoV
 
@@ -217,7 +220,7 @@ Launch the container and map your working directory:
 docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:latest
 ```
 
-***
+---
 
 ### 5.3 Sanity check
 
@@ -227,7 +230,7 @@ Inside the container:
 dycov -h
 ```
 
-***
+---
 
 ## 6. Data location and persistence
 
@@ -239,7 +242,7 @@ To ensure your work persists across updates:
 Avoid storing important data only inside the WSL distribution filesystem,
 as WSL updates replace the entire distribution.
 
-***
+---
 
 ## 7. Alternative installation method
 
@@ -255,7 +258,7 @@ This method requires manual installation of:
 
 It is documented separately and is **not the recommended approach** for most users.
 
-***
+---
 
 ## 8. Next steps
 
@@ -265,9 +268,9 @@ Once DyCoV is running:
     ```bash
     dycov -h
     ```
-2.  Follow the **Quick start** tutorial.
+2.  Follow the [**Quick start**](../tutorials/quick_start.md) tutorial.
 3.  Continue with the workflow‑specific tutorials:
-    *   Preparing inputs
-    *   RMS model validation
-    *   Electrical performance verification
-    *   Grid‑Forming analysis
+    *   [Preparing inputs](../tutorials/preparing_inputs.md)
+    *   [RMS model validation](../tutorials/rms_model_validation.md)
+    *   [Electrical performance verification](../tutorials/electrical_performance_verification.md)
+    *   [Grid‑Forming analysis](../tutorials/grid_forming_analysis.md)
