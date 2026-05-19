@@ -100,10 +100,17 @@ For detailed procedures and advanced setups, see: [Linux native](docs/installati
 DyCoV requires a Linux environment with system dependencies
 (e.g. Python ≥ 3.13, build tools, LaTeX).
 
+### Install DyCoV
+
 ```bash
 # Download and install DyCoV
 curl -L https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/linux_install.sh | bash
+```
 
+### Activate and check the environment
+
+After installation, activate the environment and verify that the CLI is available:
+```bash
 # Activate environment
 source dycov/activate_dycov
 
