@@ -94,43 +94,30 @@ echo "Found unique wheel: $PKG_BASENAME"
 
 
 ########################################
-# 3. Version Consistency Check
+## 3. Version Consistency Check (tag vs wheel)
 ########################################
 
-# Extract version from pyproject.toml
-VERSION=$(grep '^version' "$ROOT_DIR/pyproject.toml" | cut -d'"' -f2)
+# Extract version from wheel filename
+WHEEL_VERSION=$(echo "$PKG_BASENAME" | sed -E 's/^[^-]+-([0-9]+\.[0-9]+\.[0-9]+)-.*$/\1/')
 
-if [[ -z "$VERSION" ]]; then
-    echo "ERROR: Could not extract version from pyproject.toml"
+if [[ -z "$WHEEL_VERSION" ]]; then
+    echo "ERROR: Could not extract version from wheel filename"
     exit 1
 fi
 
-# Ensure wheel name contains version
-if [[ "$PKG_BASENAME" != *"$VERSION"* ]]; then
-    echo "ERROR: Wheel version mismatch!"
-    echo "  pyproject.toml version: $VERSION"
-    echo "  wheel filename:         $PKG_BASENAME"
-    exit 1
-fi
-
-
-# Extract numeric part of TAG ("v0.9.2" → "0.9.2")
+# Extract numeric part of tag ("v1.0.0" -> "1.0.0")
 TAG_VERSION="${TAG#v}"
 
-# Ensure TAG matches project version
-if [[ "$TAG_VERSION" != "$VERSION" ]]; then
-    echo "ERROR: TAG mismatch!"
-    echo "  TAG argument:           $TAG  (numeric part: $TAG_VERSION)"
-    echo "  pyproject.toml version: $VERSION"
-    echo ""
-    echo "TAG must be 'v$VERSION' for reproducible builds."
+if [[ "$WHEEL_VERSION" != "$TAG_VERSION" ]]; then
+    echo "ERROR: Wheel version mismatch vs tag!"
+    echo "  tag version:   $TAG_VERSION"
+    echo "  wheel version: $WHEEL_VERSION"
     exit 1
 fi
 
 echo "Version check OK:"
-echo " - project version = $VERSION"
-echo " - wheel filename  = $PKG_BASENAME"
-echo " - TAG             = $TAG"
+echo " - wheel version = $WHEEL_VERSION"
+echo " - tag           = $TAG"
 
 
 ########################################

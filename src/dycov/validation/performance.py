@@ -20,6 +20,7 @@ from dycov.core.global_variables import (
 )
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
+from dycov.logging.logging import dycov_logging
 from dycov.model.parameters import Stability
 from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
@@ -128,11 +129,11 @@ class PerformanceValidator(Validator):
             )
 
         if not steady_p:
-            self._log_message("warning", "P has not reached steady state")
+            dycov_logging.get_logger("Performance").warning("P has not reached steady state")
         if not steady_q:
-            self._log_message("warning", "Q has not reached steady state")
+            dycov_logging.get_logger("Performance").warning("Q has not reached steady state")
         if not steady_v:
-            self._log_message("warning", "V has not reached steady state")
+            dycov_logging.get_logger("Performance").warning("V has not reached steady state")
 
         return (
             steady_p,
@@ -171,9 +172,11 @@ class PerformanceValidator(Validator):
             pass_pi &= gen_pass_pi
 
         if not stable_theta:
-            self._log_message("warning", "Theta has not reached stabilization")
+            dycov_logging.get_logger("Performance").warning("Theta has not reached stabilization")
         if not pass_pi:
-            self._log_message("warning", "Theta has not met the success criterion")
+            dycov_logging.get_logger("Performance").warning(
+                "Theta has not met the success criterion"
+            )
 
         return stable_theta, first_stable_pos_theta, pass_pi
 
@@ -575,7 +578,9 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "gen"
             )
             for disconnection in disconnection_list:
-                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
+                dycov_logging.get_logger("Performance").debug(
+                    f"Timeline disconnection. Model: {disconnection}"
+                )
 
             if not results["no_disconnection_gen"]:
                 if self._disconnection_model.gen_intline is None:
@@ -598,7 +603,9 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "load"
             )
             for disconnection in disconnection_list:
-                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
+                dycov_logging.get_logger("Performance").debug(
+                    f"Timeline disconnection. Model: {disconnection}"
+                )
 
             if not results["no_disconnection_load"]:
                 if self._disconnection_model.auxload_xfmr is None:

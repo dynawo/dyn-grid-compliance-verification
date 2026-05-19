@@ -7,16 +7,18 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 from dycov.configuration.cfg import config
+from dycov.configuration.dump import dump_effective_pcs_description
 from dycov.core.global_variables import CASE_SEPARATOR, MODEL_VALIDATION
 from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging, set_test_context
+from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
 from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
@@ -132,9 +134,6 @@ class Benchmark:
                 self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
             )
             manage_files.create_dir(working_oc_dir)
-
-    def __get_log_title(self):
-        return f"{self._pcs_name}.{self._name}:"
 
     def __info(self, message):
         dycov_logging.get_logger("Benchmark").info(f"{message}")
@@ -631,12 +630,19 @@ class Benchmark:
         success = False
 
         for op_cond in self._oc_list:
-            set_test_context(
+            dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
             )
             dycov_logging.get_logger("Benchmark").info("Validate")
+            if dycov_logging.get_logger("PCS").isEnabledFor(logging.DEBUG):
+                dump_effective_pcs_description(
+                    config,
+                    pcs=self._pcs_name,
+                    benchmark=self._name,
+                    oc=op_cond.get_name(),
+                )
             curves_result = self.__get_curves_check_result(
                 self._validator.get_measurement_names(),
                 self._name,
@@ -727,7 +733,7 @@ class Benchmark:
         """Execute the generation step for all operating conditions of the benchmark."""
 
         for op_cond in self._oc_list:
-            set_test_context(
+            dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),

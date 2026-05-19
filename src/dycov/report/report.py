@@ -31,8 +31,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.curves.dynawo.runtime.dynawo_precompile import get_dynawo_version
-from dycov.files.manage_files import copy_latex_files, move_report
+from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
@@ -216,9 +215,13 @@ def _copy_pcs_latex_files(
     )
 
     if latex_user_path.exists():
-        copy_latex_files(latex_user_path, working_path, pcs_results["producer"].replace("_", ""))
+        manage_files.copy_latex_files(
+            latex_user_path, working_path, pcs_results["producer"].replace("_", "")
+        )
     if latex_tool_path.exists():
-        copy_latex_files(latex_tool_path, working_path, pcs_results["producer"].replace("_", ""))
+        manage_files.copy_latex_files(
+            latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
+        )
 
     if not (latex_tool_path.exists() or latex_user_path.exists()):
         dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
@@ -681,9 +684,9 @@ def create_pdf(
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
-        dynawo_version = str(get_dynawo_version(parameters.get_launcher_dwo())).replace(
-            "\\", "\\textbackslash"
-        )
+        dynawo_version = str(
+            manage_files.get_dynawo_version(parameters.get_launcher_dwo())
+        ).replace("\\", "\\textbackslash")
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
     model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
@@ -733,7 +736,7 @@ def create_pdf(
         _clean(working_path)
 
     dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
-    if move_report(working_path, output_path, REPORT_NAME):
+    if manage_files.move_report(working_path, output_path, REPORT_NAME):
         dycov_logging.get_logger("Report").info("PDF done.")
     else:
         dycov_logging.get_logger("Report").error("PDFLatex Error.")
