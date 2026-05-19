@@ -385,7 +385,12 @@ def create_plot(
         )
     else:
         variable_type = variable_names[0]["type"]
-        suffix_map = {"generator": "_GEN_", "transformer": "_XFMR_"}
+        suffix_map = {
+            "generator": "_GEN_",
+            "transformer": "_XFMR_",
+            "sync_condenser": "_GEN_TSO_",
+            "load": "_LOAD_TSO_",
+        }
         suffix = suffix_map.get(variable_type, "")
         curves_names = [
             curve["name"]
@@ -481,6 +486,22 @@ def get_curves2plot(
         for name in variable_names:
             if name["type"] == "generator":
                 filter_col = [col for col in curves if col.endswith("_GEN_" + name["variable"])]
+                for curve_name in filter_col:
+                    _add_curve2plot(
+                        name["variable"], curve_name, curves, plot_curves, is_reference
+                    )
+            elif name["type"] == "sync_condenser":
+                filter_col = [
+                    col for col in curves if col.endswith("_GEN_TSO_" + name["variable"])
+                ]
+                for curve_name in filter_col:
+                    _add_curve2plot(
+                        name["variable"], curve_name, curves, plot_curves, is_reference
+                    )
+            elif name["type"] == "load":
+                filter_col = [
+                    col for col in curves if col.endswith("_LOAD_TSO_" + name["variable"])
+                ]
                 for curve_name in filter_col:
                     _add_curve2plot(
                         name["variable"], curve_name, curves, plot_curves, is_reference
