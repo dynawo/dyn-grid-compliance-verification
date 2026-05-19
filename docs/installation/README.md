@@ -1,7 +1,7 @@
 # DyCoV installation
 
-This directory contains the documentation describing **how to install DyCoV**
-and make it available on your system.
+This directory contains the installation documentation for DyCoV.
+It describes how to make DyCoV available on a system before executing any workflows.
 
 Installation is a prerequisite for using DyCoV, but it is **not a tutorial
 workflow itself**. Once DyCoV is installed, usage is covered by the tutorials
@@ -9,7 +9,7 @@ in `../tutorials/`.
 
 ---
 
-## Installation methods
+## Supported installation methods
 
 DyCoV supports two installation paths for end‑users.
 
@@ -29,7 +29,7 @@ environment that includes:
 This method:
 - avoids manual dependency installation,
 - ensures a controlled and reproducible environment,
-- supports both Linux and Windows (via WSL or Docker Desktop).
+- supports both Linux natively and Windows environments via WSL or Docker Desktop
 
 ➡️ See: `using_the_provided_image.md`
 
@@ -42,7 +42,7 @@ prebuilt image.
 
 In this mode:
 - DyCoV is installed inside a user‑level Python virtual environment,
-- Dynawo is automatically downloaded and installed by the DyCoV installer,
+- Dynawo is automatically downloaded and installed as part of the DyCoV installation process,
 - system‑level prerequisites (Python ≥ 3.13, uv, LaTeX, build tools) must be
   installed manually by the user.
 
@@ -56,6 +56,6 @@ their system environment.
 ## Next steps
 
 After completing one of the installation procedures above, continue with the
-user‑facing tutorials:
+user-facing tutorials to start using DyCoV:
 
 ➡️ `../tutorials/README.md`
