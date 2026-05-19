@@ -27,11 +27,13 @@ dyn-grid-compliance-verification/
 ├── tests_integration/
 ├── pyproject.toml
 └── ...
-````
+```
 
 Each top‑level directory serves a distinct purpose.
+Understanding these roles is essential when introducing changes, 
+as modifications in one area may implicitly affect others.
 
-***
+---
 
 ## `src/` — DyCoV source code
 
@@ -50,14 +52,18 @@ Typical contents include:
 *   PCS execution logic,
 *   report generation.
 
-Developers modifying DyCoV behavior will spend most of their time here.
+Developers modifying DyCoV behavior will spend most of their time here, 
+as all core logic and workflows are implemented in this package.
 
 The package is installed in editable mode during development, so changes under
 `src/dycov/` are reflected immediately when running DyCoV commands.
 
-***
+---
 
 ## `examples/` — Reference input cases
+
+Examples are considered part of the functional specification of DyCoV and 
+should remain consistent with expected behavior.
 
 ```text
 examples/
@@ -82,7 +88,7 @@ When modifying or extending DyCoV logic, developers are encouraged to:
 
 Examples are treated as part of the project’s functional reference.
 
-***
+---
 
 ## `docs/` — Documentation
 
@@ -105,7 +111,7 @@ It is organized by audience and purpose:
 Other subdirectories may exist for figures, reference material, or documentation
 tooling and are not part of the main reading flow.
 
-***
+---
 
 ## `installers/` — Distribution and packaging tools
 
@@ -130,7 +136,7 @@ Developers typically touch this directory when:
 
 It is **not** used during normal DyCoV execution.
 
-***
+---
 
 ## `tests/` — Tests and validation utilities
 
@@ -153,7 +159,7 @@ These tests are intended to be:
 Developers modifying logic are expected to update or extend these tests where
 appropriate.
 
-***
+---
 
 ## `tests_integration/` — Integration and end‑to‑end tests (optional)
 
@@ -181,7 +187,7 @@ Typical use cases include:
 New contributors can safely ignore this directory until advanced validation is
 required.
 
-***
+---
 
 ## Project configuration files
 
@@ -196,7 +202,7 @@ This file defines:
 
 Any change to dependencies or packaging must be reflected here.
 
-***
+---
 
 ## Typical developer entry points
 
@@ -214,7 +220,7 @@ Depending on your task, you will primarily work in:
 Understanding this structure helps avoid unintended side effects when making
 changes.
 
-***
+---
 
 ## Next steps
 
