@@ -3,7 +3,7 @@
 This directory contains the user‑facing tutorials for DyCoV.
 
 These tutorials explain how to use DyCoV once it is installed and are
-designed to be read in the following order.
+intended to be read in the following order.
 
 ---
 
@@ -15,11 +15,13 @@ installed using one of the supported installation methods:
 - Using the prebuilt distribution image (recommended)
 - Native Linux installation (advanced users only)
 
+Refer to the installation guides in `docs/installation/` for detailed instructions
+
 ---
 
 ## 1. First steps
 
-Start here to understand:
+This tutorial explains
 - what DyCoV does,
 - the available workflows,
 - the meaning of Zone 1 and Zone 3 validations.
@@ -30,7 +32,7 @@ Start here to understand:
 
 ## 2. Preparing inputs
 
-Read this tutorial to learn:
+This tutorial explains
 - how to organize input directories,
 - supported curve formats (COMTRADE, EUROSTAG, CSV),
 - required metadata and DICT files.
@@ -53,7 +55,7 @@ This tutorial explains:
 
 ## 4. Electrical performance verification
 
-This tutorial focuses on:
+This tutorial explains:
 - grid‑code performance validation,
 - PCS execution without reference curves,
 - simulation‑based and curve‑based workflows.
@@ -76,8 +78,7 @@ This tutorial explains:
 
 ## 6. Advanced topics
 
-The following tutorial covers advanced usage scenarios and is intended for
-experienced users.
+The following tutorials cover advanced usage scenarios and are intended for experienced users.
 
 ### Advanced PCS customization
 

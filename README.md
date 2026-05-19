@@ -3,12 +3,15 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dycov.github.io/index.html)
 
-A tool for automating the verification of dynamic grid compliance requirements
-for solar and wind farms (Power Park Modules — PPM), battery energy
-storage systems (BESS), and synchronous machines (SM), from model validation
-to grid-code compliance assessment. As an end-to-end framework, DyCoV supports
-both model validation and compliance assessment workflows used during grid
+DyCoV is an engineering-oriented framework designed to support grid connection
+studies through automated dynamic simulations and compliance checks.  
+It automates the verification of dynamic grid compliance requirements for solar 
+and wind farms (Power Park Modules — PPM), battery energy storage systems (BESS), 
+and synchronous machines (SM), covering workflows from model validation to 
+grid-code compliance assessment. As an end-to-end framework, DyCoV supports 
+both model validation and compliance assessment workflows used during grid 
 connection studies.
+
 
 ---
 
@@ -29,6 +32,8 @@ for grid connection validation:
 
 Both studies must be successfully completed to formally validate an installation 
 for grid connection.
+These studies are independent but complementary, and together form the basis for 
+validating a generation unit prior to grid connection.
 
 Additionally:
 
@@ -39,29 +44,34 @@ Additionally:
 
 ## Getting started
 
-This section helps you choose how to begin with DyCoV depending on your objective.
-It acts as a navigation guide to the most relevant workflows and documentation depending 
-on your use case (exploration, validation, or study design).
+This section helps you identify the most relevant entry point based on your
+objective and familiarity with DyCoV.
+It acts as a navigation guide to the main workflows and documentation for 
+exploration, validation, or study design.
 
-- To run DyCoV quickly and see results → go to **Quick start**
+- To run DyCoV quickly and see results → go to **[Quick start](#quick-start)**
 - To validate a real installation → run both validation and performance workflows in sequence
-- To build your own study → see input preparation tutorials
+- To build your own study → see [input preparation tutorials](docs/tutorials/preparing_inputs.md)
 
 Example cases are available in the `examples/` directory and can be copied
 and adapted to your own projects.
+
+For a hands-on introduction, proceed to the [Quick start](#quick-start) section.  
+For detailed workflow explanations, refer to the [Documentation](#documentation) section.
 
 ---
 
 ## Inputs and outputs
 
-This section summarizes the typical data exchanged with DyCoV across its workflows.
-DyCoV works with time-domain dynamic responses from simulations or measurements.
+This section describes the data exchanged with DyCoV and how it is used across different workflows.
+DyCoV works with time-domain dynamic responses obtained from simulations or field measurements.
 
 Typical inputs:
 
 - **Dynawo models** — RMS simulation models of the installation
 - **Reference curves** — expected behaviour (used for validation)
-- **Producer curves** — simulated responses (used when simulations are provided externally instead of being run through Dynawo)
+- **Producer curves** — simulated responses (used when simulations are provided externally instead of being run through Dynawo)  
+  These are typically used when simulations are generated outside DyCoV and need to be assessed without rerunning Dynawo.
 
 Typical outputs:
 
@@ -76,17 +86,19 @@ For full details, see:
 
 ## Installation
 
-This section summarizes the supported installation modes. Choose the one that 
-best fits your environment and usage (native, WSL, or development setup).
+This section describes the supported installation options and points to detailed setup guides. 
+Choose the one that best fits your environment and usage (native, WSL, or development setup).
 Once installed, DyCoV is accessed through the `dycov` command-line interface.
-
-For detailed procedures and advanced setups, see:  
-[Linux native](docs/installation/linux_native.md)
 
 > **For developers** building from source, see:  
 > [Setup](docs/developer/setup.md)
 
 ### Linux
+
+The following steps install DyCoV in a native Linux environment.
+
+For detailed procedures and advanced setups, see:  
+[Linux native](docs/installation/linux_native.md)
 
 DyCoV requires a Linux environment with system dependencies
 (e.g. Python ≥ 3.13, build tools, LaTeX).
@@ -106,7 +118,13 @@ dycov -h
 
 ### Windows (WSL)
 
+The following steps install DyCoV in a Windows Subsystem for Linux environment.
+
 DyCoV runs inside a preconfigured WSL (Windows Subsystem for Linux) environment.
+The following steps assume this environment is used as provided.
+
+For detailed procedures and advanced setups, see:  
+[Using the provided image](docs/installation/using_the_provided_image.md)
 
 **Prerequisite:** WSL must be enabled:  
 https://learn.microsoft.com/en-us/windows/wsl/install
@@ -126,23 +144,27 @@ import_wsl.bat
 
 This will import and configure the DyCoV environment automatically.
 
-For details, see:  
-[Using the provided image](docs/installation/using_the_provided_image.md)
-
 ---
 
 ## Quick start
 
-This section demonstrates how to run the main DyCoV workflows on bundled example 
-cases, allowing you to quickly verify the installation and explore outputs.
+This section provides minimal working examples to quickly execute each main workflow 
+using bundled cases, allowing you to quickly verify the installation and explore the 
+generated outputs.
 
 > **Note:** On native installations, ensure the DyCoV environment is activated
 > (e.g. `source dycov/activate_dycov`). In WSL and Docker environments,
 > it may already be active.
 
+For a more detailed walkthrough of these steps and expected outputs, see: 
+[Quick start](docs/tutorials/quick_start.md)
+
 ### RMS model validation
 
 This workflow focuses on validating that a dynamic model reproduces expected reference behaviour.
+
+For a detailed description of this workflow and its expected outputs, see: 
+[RMS validation](docs/tutorials/rms_model_validation.md)
 
 Run:
 
@@ -161,6 +183,9 @@ This will:
 
 Here, the system response is evaluated under predefined grid disturbance scenarios.
 
+For detailed explanations and result interpretation, see: 
+[Performance verification](docs/tutorials/electrical_performance_verification.md)
+
 Run:
 
 ```bash
@@ -177,6 +202,9 @@ This will:
 
 This optional workflow targets GFM units and computes admissible response envelopes.
 
+For a complete description of this analysis workflow, see: 
+[Grid‑Forming (GFM) analysis](docs/tutorials/grid_forming_analysis.md)
+
 Run:
 
 ```bash
@@ -187,35 +215,41 @@ This will:
 - compute admissible envelopes
 - generate CSV data and plots
 
-For a guided walkthrough, see:  
-[Quick start](docs/tutorials/quick_start.md)
-
 ---
 
 ## Documentation
 
-The documentation is organized to guide users from conceptual understanding to 
-detailed workflow execution.
+The documentation is structured to progressively guide users from high-level concepts to detailed workflow configuration.
 
-- [Conceptual overview](docs/tutorials/first_steps.md)
+- Installation guides:
+  - [Installation overview](docs/installation/README.md)
 
-- [Preparing inputs](docs/tutorials/preparing_inputs.md)
+- Tutorials (guided learning path):
+  - [Reading guide](docs/tutorials/README.md)
+  - [Conceptual overview](docs/tutorials/first_steps.md)
+  - [Preparing inputs](docs/tutorials/preparing_inputs.md)
+  - Workflow-specific tutorials:
+    - [RMS validation](docs/tutorials/rms_model_validation.md)
+    - [Performance verification](docs/tutorials/electrical_performance_verification.md)
+    - [Grid‑Forming (GFM) analysis](docs/tutorials/grid_forming_analysis.md)
 
-- Workflow details:
-  - [RMS validation](docs/tutorials/rms_model_validation.md)
-  - [Performance verification](docs/tutorials/electrical_performance_verification.md)
-  - [GFM analysis](docs/tutorials/grid_forming_analysis.md)
+These documents are intended to be used once you are familiar with the basic execution flow provided in the [Quick start](#quick-start) section.
 
-These documents provide detailed explanations of each workflow and complement the use of the CLI in real studies.
+Developer documentation is available separately and provides guidance on building, extending, and contributing to DyCoV:
 
-Developer documentation is available separately.
+- Key developer resources:
+  - [Overview](docs/developer/README.md)
+  - [Setup](docs/developer/setup.md)
+  - [Project structure](docs/developer/project_structure.md)
+  - [Extending DyCoV](docs/developer/extending_dycov.md)
+  - [Add new PCS](docs/developer/add_new_pcs.md)
 
 ---
 
 ## Reference manuals
 
-In addition to this repository documentation, detailed reference manuals are generated 
-and installed locally with DyCoV.
+In addition to the online documentation, DyCoV provides local reference manuals installed 
+with the software.
 
 | Installation | Location |
 |--------------|----------|
@@ -226,12 +260,13 @@ and installed locally with DyCoV.
 
 ## Workshop
 
-This section provides recorded sessions illustrating DyCoV workflows and usage in practice.
+This section provides recorded sessions illustrating real usage of DyCoV workflows in 
+practical studies.
 
 > **Note:** These videos were recorded with version **0.8.1**. They remain valid,
 > although some interface elements may have changed in more recent versions.
 
-Workshop held on 2025-03-11 (English subtitles available on download):
+Workshop held on 2025-03-11 (English subtitles available in the download):
 
 Part 1:
 
@@ -240,6 +275,9 @@ https://github.com/user-attachments/assets/d8c0bcd8-339f-47e4-9f26-e452b2e87980
 Part 2:
 
 https://github.com/user-attachments/assets/ff219478-f3d2-4790-bc45-39a11e227b5b
+
+
+These sessions are particularly useful after completing the Quick start section.
 
 ---
 
@@ -253,7 +291,7 @@ CI requirements, and the PR workflow.
 
 ## Roadmap
 
-The items below outline the main development axes currently guiding DyCoV evolution.
+The following roadmap outlines the main development directions currently guiding DyCoV evolution.
 
 ### Axis 1 — Stabilization and model support
 
