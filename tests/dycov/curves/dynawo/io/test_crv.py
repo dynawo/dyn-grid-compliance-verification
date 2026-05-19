@@ -37,7 +37,8 @@ def test_create_curves_file_electric_performance_sm():
         curves_filename = "curves_sm.xml"
         xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
         generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
-        rte_loads = []
+        tso_loads = []
+        tso_generators = []
         sim_type = ELECTRIC_PERFORMANCE_SM
         zone = 1
         control_mode = "USetpoint"
@@ -46,7 +47,8 @@ def test_create_curves_file_electric_performance_sm():
             curves_filename,
             xfmrs,
             generators,
-            rte_loads,
+            tso_loads,
+            tso_generators,
             sim_type,
             zone,
             control_mode,
@@ -72,7 +74,8 @@ def test_create_curves_file_with_all_equipment_types():
         curves_filename = "curves_all.xml"
         xfmrs = [DummyEquipment("Xfmr", lib="TransformerFixedRatio")]
         generators = [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")]
-        rte_loads = [DummyEquipment("Load", lib="LoadAlphaBeta")]
+        tso_loads = [DummyEquipment("Load", lib="LoadAlphaBeta")]
+        tso_generators = []
         sim_type = ELECTRIC_PERFORMANCE_SM
         zone = 1
         control_mode = "USetpoint"
@@ -81,7 +84,8 @@ def test_create_curves_file_with_all_equipment_types():
             curves_filename,
             xfmrs,
             generators,
-            rte_loads,
+            tso_loads,
+            tso_generators,
             sim_type,
             zone,
             control_mode,
@@ -106,7 +110,8 @@ def test_create_curves_file_invalid_sim_type_and_zone():
         curves_filename = "curves_invalid.xml"
         xfmrs = []
         generators = []
-        rte_loads = []
+        tso_loads = []
+        tso_generators = []
         sim_type = 999  # Invalid sim_type
         zone = 999  # Invalid zone
         control_mode = "USetpoint"
@@ -115,7 +120,8 @@ def test_create_curves_file_invalid_sim_type_and_zone():
             curves_filename,
             xfmrs,
             generators,
-            rte_loads,
+            tso_loads,
+            tso_generators,
             sim_type,
             zone,
             control_mode,

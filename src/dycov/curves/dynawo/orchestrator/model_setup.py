@@ -88,7 +88,7 @@ class ModelSetup:
 
         # State populated during complete_model; exposed as attributes so that
         # DynawoCurves can read them after the call.
-        self.rte_loads: list = []
+        self.tso_loads: list = []
         self.has_line: bool = False
         self.curves_dict: dict = {}
 
@@ -111,13 +111,13 @@ class ModelSetup:
     # Grid impedance
     # ------------------------------------------------------------------
 
-    def _get_lines_for_initial_calcs(self, rte_lines: list) -> PimodelParams:
+    def _get_lines_for_initial_calcs(self, tso_lines: list) -> PimodelParams:
         """Aggregates pi-model parameters from all TSO lines."""
-        if not rte_lines:
+        if not tso_lines:
             return PimodelParams(math.inf, 0, 0)
 
         y_tr_sum, y_sh1_sum, y_sh2_sum = 0, 0, 0
-        for line in rte_lines:
+        for line in tso_lines:
             pimodel_line = line_pimodel(line)
             y_tr_sum += pimodel_line.y_tr
             y_sh1_sum += pimodel_line.y_sh1
@@ -336,7 +336,7 @@ class ModelSetup:
                 )
 
         loads = []
-        for load in self.rte_loads:
+        for load in self.tso_loads:
             p = _get_load_value(load.p, "pmax", producer.p_max_pu)
             q = _get_load_value(load.q, "pmax", producer.p_max_pu)
             u = _get_load_value(load.u, "udim", u_dim) / producer.u_nom
@@ -377,7 +377,7 @@ class ModelSetup:
         event_params: dict,
         line_xpu: float,
         line_rpu: float,
-        rte_gen_u0: float,
+        tso_gen_u0: float,
         pcs_name: str,
         bm_name: str,
         oc_name: str,
@@ -393,7 +393,7 @@ class ModelSetup:
             Line reactance (pu).
         line_rpu : float
             Line resistance (pu).
-        rte_gen_u0 : float
+        tso_gen_u0 : float
             RTE generator terminal voltage (pu), used as Uinf.
         pcs_name : str
             PCS.Benchmark name.
@@ -403,7 +403,7 @@ class ModelSetup:
             Operating Condition name.
         """
         zcc = math.sqrt(line_xpu * line_xpu + line_rpu * line_rpu)
-        uinf = rte_gen_u0
+        uinf = tso_gen_u0
         model_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Model")
         generator_type = generator_variables.get_generator_type(self._owner.get_producer().u_nom)
         u_list_options = [
@@ -589,7 +589,7 @@ class ModelSetup:
         )
 
         # Read TSO network loads
-        self.rte_loads = model_parameters.get_pcs_load_params(
+        self.tso_loads = model_parameters.get_pcs_load_params(
             working_oc_dir / _TSO_DYD,
             working_oc_dir / _TSO_PAR,
         )
@@ -598,16 +598,16 @@ class ModelSetup:
         pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
         line_rpu, line_xpu = self._get_line(pcs_name, bm_name, oc_name)
 
-        rte_lines = []
+        tso_lines = []
         if self.has_line:
-            rte_lines = model_parameters.get_pcs_lines_params(
+            tso_lines = model_parameters.get_pcs_lines_params(
                 working_oc_dir / _TSO_DYD,
                 working_oc_dir / _TSO_PAR,
                 line_rpu,
                 line_xpu,
             )
 
-        conn_line = self._get_lines_for_initial_calcs(rte_lines)
+        conn_line = self._get_lines_for_initial_calcs(tso_lines)
 
         # Sort step-up transformers to match generator order
         xfmr_map = {xfmr.id: xfmr for xfmr in producer.stepup_xfmrs}
@@ -617,7 +617,7 @@ class ModelSetup:
             if gen.terminals[0].connected_equipment in xfmr_map
         ]
 
-        rte_gen = init_calcs(
+        tso_gen = init_calcs(
             tuple(producer.generators),
             tuple(sorted_stepup_xfmrs),
             producer.aux_load,
@@ -672,7 +672,7 @@ class ModelSetup:
             event_params,
             line_xpu,
             line_rpu,
-            rte_gen.u0,
+            tso_gen.u0,
             pcs_name,
             bm_name,
             oc_name,
@@ -690,13 +690,13 @@ class ModelSetup:
         solver_lib = self._owner._solver_lib
         self._jobs_file.complete_file(working_oc_dir, solver_id, solver_lib, event_params)
         self._par_file.complete_file(
-            working_oc_dir, line_rpu, line_xpu, rte_gen, event_params, producer.u_nom
+            working_oc_dir, line_rpu, line_xpu, tso_gen, event_params, producer.u_nom
         )
         self._dyd_file.complete_file(working_oc_dir, event_params)
-        self._table_file.complete_file(working_oc_dir, rte_gen, event_params)
+        self._table_file.complete_file(working_oc_dir, tso_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
 
-        rte_generators = model_parameters.get_pcs_generators_params(
+        tso_generators = model_parameters.get_pcs_generators_params(
             working_oc_dir / _TSO_DYD,
             working_oc_dir / _TSO_PAR,
         )
@@ -706,7 +706,7 @@ class ModelSetup:
             working_oc_dir,
             "Omega.dyd",
             "Omega.par",
-            producer.generators + rte_generators,
+            producer.generators + tso_generators,
         )
         tso_file.complete_setpoint(
             working_oc_dir,
@@ -738,7 +738,8 @@ class ModelSetup:
             "TSOModel.crv",
             xmfrs,
             producer.generators,
-            self.rte_loads,
+            self.tso_loads,
+            tso_generators,
             producer.get_sim_type(),
             producer.get_zone(),
             control_mode,

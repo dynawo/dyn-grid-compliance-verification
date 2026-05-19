@@ -65,7 +65,7 @@ def working_dir(tmp_path):
 
 
 @pytest.fixture
-def rte_gen():
+def tso_gen():
     return GenInit(id="G1", p0=0.1, q0=0.2, u0=1.05, u_phase0=0.0)
 
 
@@ -79,50 +79,50 @@ def event_params_base():
     }
 
 
-def test_complete_file_replaces_placeholders_successfully(working_dir, rte_gen, event_params_base):
+def test_complete_file_replaces_placeholders_successfully(working_dir, tso_gen, event_params_base):
     table = TableFile(DummyProducerCurves(), "BM", "OC")
-    table.complete_file(working_dir, rte_gen, event_params_base)
+    table.complete_file(working_dir, tso_gen, event_params_base)
     output = (working_dir / "TableInfiniteBus.txt").read_text()
     assert "start_event=10.0" in output
     assert "end_event=15.0" in output
-    assert f"bus_u0pu={rte_gen.u0}" in output
-    assert f"bus_upu={rte_gen.u0 + float(event_params_base['step_value'])}" in output
+    assert f"bus_u0pu={tso_gen.u0}" in output
+    assert f"bus_upu={tso_gen.u0 + float(event_params_base['step_value'])}" in output
 
 
-def test_complete_file_sets_bus_upu_for_avr_setpoint(working_dir, rte_gen, event_params_base):
+def test_complete_file_sets_bus_upu_for_avr_setpoint(working_dir, tso_gen, event_params_base):
     params = event_params_base.copy()
     params["connect_to"] = "VoltageSetpointPu"
     table = TableFile(DummyProducerCurves(), "BM", "OC")
-    table.complete_file(working_dir, rte_gen, params)
+    table.complete_file(working_dir, tso_gen, params)
     output = (working_dir / "TableInfiniteBus.txt").read_text()
-    expected_value = rte_gen.u0 + float(params["step_value"])
+    expected_value = tso_gen.u0 + float(params["step_value"])
     assert f"bus_upu={expected_value}" in output
 
 
 def test_complete_file_sets_end_freq_for_network_frequency(
-    working_dir, rte_gen, event_params_base
+    working_dir, tso_gen, event_params_base
 ):
     params = event_params_base.copy()
     params["connect_to"] = "NetworkFrequencyPu"
     table = TableFile(DummyProducerCurves(), "BM", "OC")
-    table.complete_file(working_dir, rte_gen, params)
+    table.complete_file(working_dir, tso_gen, params)
     output = (working_dir / "TableInfiniteBus.txt").read_text()
     expected_value = 1.0 + float(params["step_value"])
     assert f"end_freq={expected_value}" in output
 
 
-def test_complete_file_noop_when_file_missing(tmp_path, rte_gen, event_params_base):
+def test_complete_file_noop_when_file_missing(tmp_path, tso_gen, event_params_base):
     # Do not create TableInfiniteBus.txt
     table = TableFile(DummyProducerCurves(), "BM", "OC")
     # Should not raise or attempt to write
-    table.complete_file(tmp_path, rte_gen, event_params_base)
+    table.complete_file(tmp_path, tso_gen, event_params_base)
     assert not (tmp_path / "TableInfiniteBus.txt").exists()
 
 
-def test_complete_file_handles_invalid_step_value_type(working_dir, rte_gen, event_params_base):
+def test_complete_file_handles_invalid_step_value_type(working_dir, tso_gen, event_params_base):
     params = event_params_base.copy()
     params["step_value"] = "not_a_float"
     table = TableFile(DummyProducerCurves(), "BM", "OC")
     # Should raise ValueError when trying to convert step_value to float
     with pytest.raises(ValueError):
-        table.complete_file(working_dir, rte_gen, params)
+        table.complete_file(working_dir, tso_gen, params)

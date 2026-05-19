@@ -60,7 +60,7 @@ class TableFile(FileVariables):
             variables_dict[Xv] = event_params[Xv]
 
     def __complete_file(
-        self, working_oc_dir: Path, rte_gen: GenInit, event_params: dict, filename: str
+        self, working_oc_dir: Path, tso_gen: GenInit, event_params: dict, filename: str
     ) -> None:
         # Retrieve all existing variables from the TXT file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
@@ -70,11 +70,11 @@ class TableFile(FileVariables):
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
 
         # Set the initial per-unit voltage for the bus
-        variables_dict["bus_u0pu"] = rte_gen.u0
+        variables_dict["bus_u0pu"] = tso_gen.u0
 
         # Adjust bus voltage or frequency based on the event's connection type
         if event_params["connect_to"] == "VoltageSetpointPu":
-            variables_dict["bus_upu"] = rte_gen.u0 + float(event_params["step_value"])
+            variables_dict["bus_upu"] = tso_gen.u0 + float(event_params["step_value"])
         elif event_params["connect_to"] == "NetworkFrequencyPu":
             variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
 
@@ -256,7 +256,7 @@ class TableFile(FileVariables):
         # Save final result
         file_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
 
-    def complete_file(self, working_oc_dir: Path, rte_gen: GenInit, event_params: dict) -> None:
+    def complete_file(self, working_oc_dir: Path, tso_gen: GenInit, event_params: dict) -> None:
         """
         Replaces the file placeholders in the 'TableInfiniteBus.txt' file with the corresponding
         values.
@@ -265,15 +265,15 @@ class TableFile(FileVariables):
         ----------
         working_oc_dir: Path
             The working directory where the 'TableInfiniteBus.txt' file is located.
-        rte_gen: GenInit
+        tso_gen: GenInit
             Parameters for the initialization of the TSO's bus side (P, Q, U, angle).
         event_params: dict
             A dictionary containing event-specific parameters, including start time,
             duration, step value, and connection type.
         """
         if (working_oc_dir / "TableInfiniteBus.txt").exists():
-            self.__complete_file(working_oc_dir, rte_gen, event_params, "TableInfiniteBus.txt")
+            self.__complete_file(working_oc_dir, tso_gen, event_params, "TableInfiniteBus.txt")
         if (working_oc_dir / "TableVariableImpedance.txt").exists():
             self.__complete_file(
-                working_oc_dir, rte_gen, event_params, "TableVariableImpedance.txt"
+                working_oc_dir, tso_gen, event_params, "TableVariableImpedance.txt"
             )

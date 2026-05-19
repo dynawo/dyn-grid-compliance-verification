@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 _BUS_PREFIX = "BusPDR_BUS_"
 _GEN_SUFFIX = "_GEN_"
+_SYNCCOND_SUFFIX = "_GEN_TSO_"
+_LOAD_SUFFIX = "_LOAD_TSO_"
 _XFMR_SUFFIX = "_XFMR_"
 
 _VARIABLE_LABELS = {
@@ -174,6 +176,10 @@ def get_equipment_label(curve_name: str) -> str:
     str
         A human-readable label for the equipment (e.g., "PDR Bus", "GEN", "XFMR")
     """
+    if _SYNCCOND_SUFFIX in curve_name:
+        return curve_name.split(_SYNCCOND_SUFFIX)[0]
+    if _LOAD_SUFFIX in curve_name:
+        return curve_name.split(_LOAD_SUFFIX)[0]
     if _GEN_SUFFIX in curve_name:
         return curve_name.split(_GEN_SUFFIX)[0]
     if _XFMR_SUFFIX in curve_name:
@@ -236,6 +242,11 @@ def build_figure_title(variables: str | list[dict]) -> str:
     magnitude = " / ".join(variable_labels)
 
     equipment_type = variables[0]["type"]
-    equipment = "PDR Bus" if equipment_type == "bus" else equipment_type.capitalize()
+    if equipment_type == "bus":
+        equipment = "PDR Bus"
+    elif equipment_type == "sync_condenser":
+        equipment = "Synchronous Condenser"
+    else:
+        equipment = equipment_type.capitalize()
 
     return f"{magnitude} — {equipment}"
