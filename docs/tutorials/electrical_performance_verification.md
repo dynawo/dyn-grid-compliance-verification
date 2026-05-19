@@ -9,8 +9,9 @@ and result interpretation using Dynawo simulations or producer curves.
 
 ## 1. Overview
 
-Electrical performance verification in DyCoV evaluates the compliance of an
-electrical installation with **grid‑code dynamic performance requirements**
+At a high level, this workflow focuses on system-level compliance with grid-code dynamic 
+performance requirements. Electrical performance verification in DyCoV evaluates the 
+compliance of an electrical installation with **grid‑code dynamic performance requirements** 
 defined in the applicable RTE PCSs (e.g. I2, I5, I6, I7, I10).
 
 Unlike RMS model validation:
@@ -20,7 +21,7 @@ Unlike RMS model validation:
 Validation is always performed at the **installation level**, typically at the
 Point of Delivery (PDR).
 
-This tutorial explains:
+This document explains:
 - which PCSs apply depending on the installation technology,
 - the required inputs for electrical performance verification,
 - the supported execution modes (Dynawo or producer curves),
@@ -34,7 +35,7 @@ described in the **“Preparing inputs”** tutorial.
 
 ## 2. Supported PCSs by technology
 
-Electrical performance verification in DyCoV is based on the
+Electrical performance verification in DyCoV is based on the 
 **RTE dynamic performance PCSs**.
 The set of applicable PCSs depends on the **technology of the installation**,
 as defined in the RTE Technical Reference Documentation (DTR).
@@ -81,7 +82,7 @@ For Battery Energy Storage Systems, the following PCSs are defined:
 
 ## 3. Conceptual model
 
-Electrical performance verification answers questions such as:
+This workflow can be understood through the following high-level questions:
 - *Does the installation remain connected and stable during grid disturbances?*
 - *Does it provide the expected active and reactive power response?*
 - *Does it comply with voltage, frequency and ride‑through requirements?*
@@ -110,7 +111,7 @@ in the following sections.
 
 ## 5. Using Dynawo
 
-When Dynawo is used, electrical performance verification relies on
+When Dynawo is used, electrical performance verification relies on 
 **RMS simulations generated from a single Dynawo model**.
 
 There is no separation by zone.
@@ -129,7 +130,7 @@ examples/
                 ├── Producer.dyd
                 ├── Producer.par
                 └── Producer.ini
-````
+```
 
 In this context, **“Single” refers to the electrical topology**
 used on the producer side (single generator / WT / PV),
@@ -145,7 +146,7 @@ Notes:
     required by DyCoV performance tests.
 *   The Dynawo model is executed independently for each PCS scenario.
 
-***
+---
 
 ## 6. Using producer curves
 
@@ -178,7 +179,7 @@ Important points:
 *   The supported curve formats are identical to those used in RMS validation
     (COMTRADE, EUROSTAG EXP, CSV).
 
-***
+---
 
 ## 7. PCS execution
 
@@ -198,7 +199,7 @@ Depending on the PCS, evaluated quantities may include:
 DyCoV applies PCS definitions **as specified by RTE**,
 without reinterpretation or simplification.
 
-***
+---
 
 ## 8. Running electrical performance verification
 
@@ -208,7 +209,7 @@ without reinterpretation or simplification.
 dycov performance
 ```
 
-***
+---
 
 ### 8.2 Example using Dynawo
 
@@ -216,7 +217,7 @@ dycov performance
 dycov performance -m Dynawo/
 ```
 
-***
+---
 
 ### 8.3 Example using producer curves
 
@@ -224,31 +225,31 @@ dycov performance -m Dynawo/
 dycov performance -c ProducerCurves/
 ```
 
-***
+---
 
 ## 9. Outputs
 
 A successful electrical performance verification produces:
 
-*   📄 **PDF reports**
+*   **PDF reports**
     summarizing compliance per PCS and per test case,
-*   📈 **HTML plots**
+*   **HTML plots**
     illustrating key electrical quantities and responses,
-*   📁 a structured **Results** directory
+*   a structured **`Results/`** directory
     ensuring full traceability of execution and calculations.
 
 Each PCS is evaluated and reported independently.
 
-***
+---
 
 ## 10. Common clarifications
 
-*   ❌ Reference curves must **not** be provided.
-*   ❌ Zone 1 / Zone 3 separation does **not** apply.
-*   ✅ A single `Producer.ini` is always used.
-*   ✅ Dynawo and producer curves are mutually exclusive within a case.
+*   Reference curves must **not** be provided.
+*   Zone 1 / Zone 3 separation does **not** apply.
+*   A single `Producer.ini` is always used.
+*   Dynawo and producer curves are mutually exclusive within a case.
 
-***
+---
 
 ## 11. Next steps
 
@@ -258,7 +259,7 @@ After electrical performance verification, you may:
 *   generate compliance reports for submission,
 *   proceed with advanced analysis workflows, such as Grid‑Forming analysis.
 
-***
+---
 
 ## References
 

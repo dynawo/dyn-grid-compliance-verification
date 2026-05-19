@@ -43,11 +43,11 @@ to a single PCS.
 
 ```bash
 dycov validate ... -p PCS_RTE-I16z1
-````
+```
 
 This reduces execution time and simplifies result analysis.
 
-***
+---
 
 ### 4. Where PCS customizations are defined
 
@@ -89,7 +89,7 @@ Conceptually:
 *   `templates/PCS/` contains user‑defined PCS operating conditions.
 *   `templates/reports/` contains LaTeX report templates rendered using Jinja.
 
-***
+---
 
 ### 5. Operating Conditions (OC)
 
@@ -105,7 +105,7 @@ User‑side customization can:
 *   override parameters of an existing OC,
 *   or introduce a new OC derived from an existing one.
 
-***
+---
 
 ### 6. Overriding an existing operating condition
 
@@ -126,7 +126,7 @@ Only the parameters defined in the section are overridden.
 > the textual description in the final PDF report unless the report template is
 > also adapted.
 
-***
+---
 
 ### 7. Adding a new operating condition
 
@@ -169,7 +169,7 @@ Example:
 PCS_RTE-I16z1.GridVoltageStep = Rise,Drop,RiseQ0
 ```
 
-***
+---
 
 #### 7.2 Adding the report template
 
@@ -191,7 +191,7 @@ Then update:
 *   titles and descriptions,
 *   internal links and Jinja variables referencing OC‑specific tables.
 
-***
+---
 
 ### 8. Best practices
 
@@ -200,7 +200,7 @@ Then update:
 *   Use descriptive OC names.
 *   Ensure consistent renaming of all OC‑specific report placeholders.
 
-***
+---
 
 ### 9. When not to use this mechanism
 

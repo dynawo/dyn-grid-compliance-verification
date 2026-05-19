@@ -41,6 +41,9 @@ In addition to `config.ini`, alternative files such as
 `config.ini_BASIC` and `config.ini_ADVANCED` may be provided to distinguish
 between common and advanced usage profiles.
 
+Regardless of the configuration file used, user-defined values override the 
+defaults provided in the distributed configuration files.
+
 > Note on Dynawo‑related parameters:
 >  
 > Some configuration options (for example system constants such as nominal
@@ -67,7 +70,7 @@ Examples of global selection parameters:
 # model_ppm_validation_pcs =
 # model_bess_validation_pcs =
 # electric_performance_verification_pcs =
-````
+```
 
 To validate only a specific PCS:
 
@@ -84,7 +87,7 @@ This mechanism applies independently to:
 *   electrical performance verification,
 *   different technology families (PPM, BESS, SM).
 
-***
+---
 
 ### 4. Selecting benchmarks and operating conditions
 
@@ -126,7 +129,7 @@ PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10
 Only the configured PCS, benchmarks and operating conditions will appear
 in the execution and reports.
 
-***
+---
 
 ### 5. Modifying compliance thresholds (GridCode)
 
@@ -160,7 +163,7 @@ Changing these thresholds directly impacts:
 
 No code modification is required.
 
-***
+---
 
 ### 6. Adjusting log verbosity
 
@@ -188,7 +191,7 @@ This is particularly useful for:
 *   diagnosing failed simulations,
 *   inspecting parameter instantiation during execution.
 
-***
+---
 
 ### 7. Best practices
 
@@ -198,7 +201,7 @@ This is particularly useful for:
 *   Combine configuration‑level filtering with CLI options (e.g. `-p`)
     for faster iteration.
 
-***
+---
 
 ### 8. When configuration is not enough
 

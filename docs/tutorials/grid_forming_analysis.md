@@ -8,7 +8,8 @@ using analytical methods, as supported by DyCoV.
 
 ## 1. Overview
 
-Grid‑Forming (GFM) analysis in DyCoV is a **purely analytical workflow**
+At a high level, this workflow provides an analytical characterization of Grid‑Forming 
+dynamic capabilities. Grid‑Forming (GFM) analysis in DyCoV is a **purely analytical workflow** 
 used to compute **admissible dynamic envelopes** for Grid‑Forming units.
 
 Unlike other DyCoV workflows:
@@ -29,7 +30,7 @@ The GFM workflow is independent from:
 ## 2. Conceptual objective
 
 GFM analysis aims to determine whether a Grid‑Forming unit can operate
-safely and stably under specific dynamic disturbances by computing
+safely and stably under specific dynamic disturbances by computing 
 **upper and lower admissible response bounds**.
 
 Typical questions addressed by GFM analysis include:
@@ -53,9 +54,9 @@ DyCoV currently supports GFM envelope generation for
 Each case corresponds to a well-defined analytical formulation
 and a specific class of grid disturbance:
 
-- **Amplitude Step** — reactive current ($I_q$) and reactive power envelopes
+- **Amplitude Step** — reactive current and reactive power envelopes
   in response to a grid voltage amplitude step.
-- **Phase Jump** — active power ($P$) response to a sudden change
+- **Phase Jump** — active power response to a sudden change
   in the grid voltage phase angle.
 - **RoCoF** (Rate of Change of Frequency) — active power response to a
   frequency ramp; finite-duration events are modeled by superimposing
@@ -174,14 +175,14 @@ examples/
     │   └── Producer.ini
     └── Fusion/
         └── Producer.ini
-````
+```
 
 Each subdirectory represents:
 
 *   a specific GFM configuration,
 *   a particular damping regime or envelope processing method.
 
-***
+---
 
 ## 6. Generating GFM envelopes
 
@@ -193,7 +194,7 @@ GFM analysis is executed using the dedicated command:
 dycov generateEnvelopes
 ```
 
-***
+---
 
 ### 6.2 Example execution
 
@@ -208,7 +209,7 @@ DyCoV computes:
 *   the admissible upper and lower envelopes,
 *   derived quantities required by the selected GFM case.
 
-***
+---
 
 ## 7. Results and outputs
 
@@ -247,18 +248,18 @@ Where:
 
 For each combination of PCS, scenario and operating condition, DyCoV generates:
 
-- 📄 **CSV file** containing the numerical time series of the admissible
+- **CSV file** containing the numerical time series of the admissible
   envelopes (upper and lower bounds for the relevant signal: $P$, $Q$, or $I_q$).
   When `save_all_envelopes = true`, the file also includes the intermediate
   overdamped and underdamped traces.
-- 📈 **PNG figure** providing a static visualization of the envelopes alongside
+- **PNG figure** providing a static visualization of the envelopes alongside
   the PCC signal. In Hybrid mode, individual over/underdamped traces can also
   be shown.
-- 🌐 **HTML file** providing an interactive visualization of the same content.
+- **HTML file** providing an interactive visualization of the same content.
 
 For **hybrid GFM cases only**, DyCoV also generates:
 
-- 🧾 **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
+- **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
   parameters used for that calculation, including internally derived values
   such as the damping ratio $\varepsilon$. Intended for full traceability
   when hybrid configurations are used.
@@ -274,13 +275,11 @@ GFM analysis does not provide a pass/fail verdict.
 Interpretation of envelopes depends on the applicable
 engineering or regulatory framework.
 
-***
+---
 
 ## 8. Interpreting results
 
-The generated envelopes represent **admissible dynamic response bounds**.
-
-They can be used to:
+These envelopes can be used in engineering analyses to:
 
 *   assess control robustness,
 *   compare design alternatives,
@@ -289,28 +288,31 @@ They can be used to:
 Interpretation of envelopes is the responsibility of the user
 and depends on the applicable regulatory or engineering framework.
 
-***
+---
 
 ## 9. Common clarifications
 
-*   ❌ GFM analysis does **not** execute Dynawo.
-*   ❌ Reference curves are **not** used.
-*   ❌ Zone 1 / Zone 3 logic does **not** apply.
-*   ✅ Results are analytical and deterministic.
-*   ✅ Multiple configurations may be evaluated independently.
+*   GFM analysis does **not** execute Dynawo.
+*   Reference curves are **not** used.
+*   Zone 1 / Zone 3 logic does **not** apply.
+*   Results are analytical and deterministic.
+*   Multiple configurations may be evaluated independently.
 
-***
+---
 
 ## 10. Next steps
 
 After GFM analysis, you may:
 
-*   refine GFM control parameters,
-*   compare envelopes across scenarios,
-*   proceed with RMS or performance studies
-    using validated control assumptions.
+* refine GFM control parameters,
+* compare envelopes across scenarios,
+* proceed with RMS or performance studies using validated control assumptions,
+  such as:
+  - [RMS model validation](docs/tutorials/rms_model_validation.md)
+  - [electrical performance verification](docs/tutorials/electrical_performance_verification.md)
 
-***
+
+---
 
 ## References
 

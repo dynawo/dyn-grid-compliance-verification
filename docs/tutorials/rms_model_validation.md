@@ -2,21 +2,23 @@
 
 **DyCoV version:** 1.1.0  
 **Scope:** RMS (phasor) model validation according to RTE PCS‑I16, including
-Zone 1 / Zone 3 validation, required inputs, execution workflow and result
+Zone 1 / Zone 3 validation, required inputs, execution workflow and result
 interpretation for both PPM and BESS installations.
+
 
 ---
 
 ## 1. Overview
 
 RMS model validation in DyCoV verifies that the **dynamic response of an
-installation**, represented by an open RMS (phasor) model, matches a
+installation**, represented by an open RMS (phasor) model, matches a 
 **reference behavior** within the tolerances defined by RTE.
 
 This workflow implements the validation process defined in **RTE PCS‑I16**
 (Fiche I16), used during **Phase 1 (ION)** of the RTE process.
 
-DyCoV always compares two sets of time‑domain responses:
+At its core, the validation process is based on comparing time-domain responses. DyCoV 
+always compares two sets of time‑domain responses:
 - **Reference curves**, representing the expected or “real” behavior.
 - **Producer response curves**, representing the model behavior.
 
@@ -24,7 +26,7 @@ The producer response can be obtained:
 - by running Dynawo RMS simulations, or
 - by providing producer curves directly.
 
-This tutorial explains:
+This document explains:
 - the validation zones defined by PCS‑I16,
 - the required inputs for RMS model validation,
 - the execution workflow,
@@ -128,7 +130,7 @@ ReferenceCurves/
         ├── PCS_RTE-I16z1*.dict
         ├── PCS_RTE-I16z3*.csv
         └── PCS_RTE-I16z3*.dict
-````
+```
 
 Notes:
 
@@ -142,11 +144,18 @@ supported formats (e.g. COMTRADE, EUROSTAG EXP ASCII or CSV).
 The supported formats and their detailed requirements are described
 in the “Preparing inputs” tutorial.
 
-***
+---
 
 ### 4.2 Dynawo‑based producer response
 
 When using Dynawo, **one RMS model must be provided per zone**.
+
+Dynawo is an open‑source time‑domain simulation tool used to compute the
+dynamic response of electrical systems. In this workflow, DyCoV uses Dynawo
+to generate the producer response curves from the provided model.
+
+For details on how to build Dynawo models (`.dyd`, `.par`), see the
+official documentation: https://dynawo.github.io
 
 Typical structure:
 
@@ -165,7 +174,7 @@ Dynawo/
 Each zone is simulated independently and compared against the same reference
 curves.
 
-***
+---
 
 ### 4.3 Producer‑curve‑based response
 
@@ -193,13 +202,13 @@ ProducerCurves/
         └── Producer.ini
 ```
 
-***
+---
 
 ## 5. Role of `Producer.ini`
 
 `Producer.ini` is a **fundamental input** for RMS model validation.
 
-DyCoV validation tests require a set of **electrical and nominal parameters**
+DyCoV validation tests require a set of **electrical and nominal parameters** 
 regardless of how the producer response is obtained.
 Therefore, these parameters must be available even when no Dynawo model is used.
 
@@ -217,7 +226,7 @@ Each zone therefore requires its **own `Producer.ini` file**.
 
 Providing a single `Producer.ini` for multiple zones is not supported.
 
-***
+---
 
 ## 6. PCS‑I16 test coverage
 
@@ -237,7 +246,7 @@ For **BESS**, the same structure applies, with operating points that explicitly
 include **positive and negative power injection** to reflect bidirectional
 operation.
 
-***
+---
 
 ### 6.2 Zone 3 tests
 
@@ -250,7 +259,7 @@ provided in previous submissions.
 Additional tests are required to validate plant‑level or supervisory control,
 including large active and reactive power setpoint variations.
 
-***
+---
 
 ## 7. Comparison methodology
 
@@ -261,11 +270,11 @@ For all PCS‑I16 tests:
     recommendations,
 *   discrepancies are evaluated using:
     *   dynamic indicators (activation, rise, settling times, overshoot),
-    *   error metrics: ME, MAE and MXE.
+    *   error metrics: ME, MAE and MXE (mean error, mean absolute error, maximum error).
 
 Compliance is assessed against the thresholds defined in PCS‑I16.
 
-***
+---
 
 ## 8. Running RMS model validation
 
@@ -287,7 +296,7 @@ dycov validate ReferenceCurves/ -m Dynawo/
 dycov validate ReferenceCurves/ -c ProducerCurves/
 ```
 
-***
+---
 
 ## 9. Outputs
 
@@ -297,17 +306,17 @@ A successful RMS model validation produces:
 *   **HTML plots** comparing producer response and reference curves,
 *   a structured **Results** directory ensuring full traceability.
 
-***
+---
 
 ## 10. Next steps
 
 After RMS model validation, you may proceed with:
 
 *   model tuning and re‑validation,
-*   **electrical performance verification**,
+*   [**electrical performance verification**](docs/tutorials/electrical_performance_verification.md),
 *   advanced analysis workflows.
 
-***
+---
 
 ## References
 

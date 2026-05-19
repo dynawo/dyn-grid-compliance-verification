@@ -9,7 +9,7 @@ supported curve formats, and workflow‑specific differences.
 
 ## 1. Overview
 
-This tutorial explains how to prepare the **input data required by DyCoV**.
+This document explains how to prepare the **input data required by DyCoV**.
 
 It focuses on:
 - how inputs are organized in practice,
@@ -41,16 +41,28 @@ Depending on the workflow, these responses can be:
   - from Dynawo RMS simulations, or
   - directly as producer curves.
 
+Dynawo is an open‑source time‑domain simulation tool used to generate
+dynamic responses from RMS network models. When using this approach,
+DyCoV relies on Dynawo outputs as the producer response.
+
+For details on building Dynawo models and input files (`.dyd`, `.par`, `.jobs`),
+see the official documentation: https://dynawo.github.io
+
 Regardless of their origin:
 - curves must follow a consistent organization,
 - mandatory metadata must be provided,
 - supported formats must be respected.
+
+These requirements apply consistently across all DyCoV workflows.
 
 ---
 
 ## 3. Inputs and project examples
 
 DyCoV inputs are always organized **within a concrete example case**.
+
+These examples should be understood as reference implementations of the 
+expected structure, not as strict templates that must be reproduced verbatim.
 
 Users are encouraged to rely on the **`examples/` directory**
 provided with the project, which contains **ready‑to‑run cases**
@@ -72,7 +84,7 @@ examples/
         └── WECC4B/
             ├── Dynawo/
             └── ReferenceCurves/
-````
+```
 
 Producer‑curve‑based RMS model validation examples:
 
@@ -107,7 +119,7 @@ examples/
             └── Producer.ini
 ```
 
-***
+---
 
 ## 4. Reference curves
 
@@ -120,7 +132,7 @@ They are required for:
 
 They are **not used** in electrical performance verification.
 
-***
+---
 
 ### 4.1 Directory organization
 
@@ -165,7 +177,7 @@ examples/
                     └── PCS_RTE-I16z3*.dict
 ```
 
-***
+---
 
 ### 4.2 Supported curve formats
 
@@ -181,7 +193,7 @@ before being used in validation workflows.
 The same formats are supported for **reference curves**
 and **producer curves**.
 
-***
+---
 
 #### 4.2.1 COMTRADE
 
@@ -196,7 +208,7 @@ COMTRADE is typically used when curves originate from:
 *   EMT simulations,
 *   factory or field measurements.
 
-***
+---
 
 #### 4.2.2 EUROSTAG EXP (ASCII)
 
@@ -206,7 +218,7 @@ COMTRADE is typically used when curves originate from:
 
 This format is commonly used for RMS simulations performed with EUROSTAG.
 
-***
+---
 
 #### 4.2.3 CSV
 
@@ -216,7 +228,7 @@ This format is commonly used for RMS simulations performed with EUROSTAG.
 
 All required metadata must be provided through the `.dict` file.
 
-***
+---
 
 ### 4.3 DICT files (mandatory)
 
@@ -236,8 +248,9 @@ It contains:
     (mapping between DyCoV‑expected quantities and curve columns)
 
 DyCoV cannot process curves without DICT files.
+DICT files are mandatory for all supported curve formats and workflows.
 
-***
+---
 
 ## 5. Producer curves
 
@@ -249,7 +262,7 @@ They may be used in:
 *   RMS model validation,
 *   electrical performance verification.
 
-***
+---
 
 ### 5.1 Directory organization
 
@@ -283,7 +296,7 @@ Important points:
 *   In RMS model validation, a distinct `Producer.ini` is required for each zone.
 *   In electrical performance verification, a **single** `Producer.ini` is used.
 
-***
+---
 
 ### 5.2 Supported formats
 
@@ -296,7 +309,7 @@ as reference curves:
 
 The same DICT and metadata requirements apply.
 
-***
+---
 
 ## 6. Workflow‑specific input differences
 
@@ -307,9 +320,11 @@ In particular, **RMS model validation** and
 **electrical performance verification** differ
 in how Dynawo models and producer curves are provided.
 
-***
+---
 
 ### 6.1 RMS model validation
+
+RMS model validation introduces additional constraints due to the Zone 1 / Zone 3 separation.
 
 RMS model validation is performed on **two independent zones**:
 **Zone 1** and **Zone 3**.
@@ -343,12 +358,12 @@ examples/
             │       ├── Producer.par
             │       └── Producer.ini
             └── ReferenceCurves/
-````
+```
 
 Each zone is simulated independently and validated
 against the same set of reference curves.
 
-***
+---
 
 #### Using producer curves
 
@@ -384,7 +399,7 @@ In this case:
     *   the PCS identifier (`…z1…`, `…z3…`),
     *   and the corresponding `Producer.ini` file.
 
-***
+---
 
 ### 6.2 Electrical performance verification
 
@@ -437,22 +452,24 @@ This reflects the fact that electrical performance verification
 evaluates grid‑code performance at the **installation level**,
 without unit‑level versus plant‑level separation.
 
-***
+---
 
 ## 7. Common issues and recommendations
 
-*   ❌ Missing `.dict` files always result in an error.
-*   ❌ Mixing curve formats within the same case is discouraged.
-*   ✅ Ensure consistent sampling and correct event alignment.
-*   ✅ Prefer COMTRADE or EUROSTAG formats when curves originate
+*   Missing `.dict` files always result in an error.
+*   Mixing curve formats within the same case is discouraged.
+*   Ensure consistent sampling and correct event alignment.
+*   Prefer COMTRADE or EUROSTAG formats when curves originate
     from EMT or RMS tools.
+*   Misalignment between PCS identifiers and curve content leads 
+    to incorrect validation results.
 
-***
+---
 
 ## 8. Next steps
 
 Once inputs are prepared:
 
-*   proceed to **RMS model validation**, or
-*   proceed to **electrical performance verification**.
+*   proceed to [**RMS model validation**](docs/tutorials/rms_model_validation.md), or
+*   proceed to [**electrical performance verification**](docs/tutorials/electrical_performance_verification.md).
 
