@@ -70,7 +70,7 @@ before using DyCoV. A quick way to check that everything is working:
 
 .. code-block:: console
 
-   dycov -h
+   dycov --version
 
 After installation the reference manuals are at ``~/dycov/manual/``:
 
@@ -218,4 +218,4 @@ Verify the installation inside the container:
 
 .. code-block:: console
 
-   dycov -h
+   dycov --version

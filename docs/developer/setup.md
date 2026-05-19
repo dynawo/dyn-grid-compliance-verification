@@ -203,7 +203,7 @@ This installs:
 With the virtual environment activated, verify that DyCoV is available:
 
 ```bash
-dycov -h
+dycov --version
 ```
 
 Commands executed in this environment:
