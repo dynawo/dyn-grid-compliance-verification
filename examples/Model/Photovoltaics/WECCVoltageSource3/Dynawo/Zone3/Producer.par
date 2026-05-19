@@ -74,7 +74,7 @@
 
     <!-- Generator Converter REGCc -->
     <par type="DOUBLE" name="photovoltaics_Kii" value="30"/>
-    <par type="DOUBLE" name="photovoltaics_Kip" value="5"/>
+    <par type="DOUBLE" name="photovoltaics_Kip" value="3"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
 
     <!-- Plant Control -->
