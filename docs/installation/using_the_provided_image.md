@@ -25,8 +25,7 @@ inside this environment.
 
 The image is distributed as a single file:
 
-- `dycov_rawimage.tar.gz`  
-  *(Do not unzip this file manually.)*
+- `dycov_rawimage.tar.gz` *(Do not unzip this file manually.)*
 
 Depending on your platform, the image can be used through different supported
 methods, all described in this tutorial.
