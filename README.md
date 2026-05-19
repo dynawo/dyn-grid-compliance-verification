@@ -115,7 +115,7 @@ After installation, activate the environment and verify that the CLI is availabl
 source dycov/activate_dycov
 
 # Check CLI
-dycov -h
+dycov --version
 ```
 
 ---

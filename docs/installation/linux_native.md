@@ -176,7 +176,7 @@ This step ensures that:
 Verify that DyCoV is correctly installed:
 
 ```bash
-dycov -h
+dycov --version
 ```
 
 If the help message is displayed, the installation is complete.

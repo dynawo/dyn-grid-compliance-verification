@@ -98,10 +98,10 @@ mkdir my_project
 Inside the DyCoV session:
 
 ```bash
-dycov -h
+dycov --version
 ```
 
-If the help is displayed, DyCoV is ready to use.
+If a version is displayed, DyCoV is correctly installed and ready to use.
 
 ---
 
@@ -227,7 +227,7 @@ docker run --rm -it -v "${PWD}:/home/dycov_user" -w /home/dycov_user dycov:lates
 Inside the container:
 
 ```bash
-dycov -h
+dycov --version
 ```
 
 ---
@@ -266,7 +266,7 @@ Once DyCoV is running:
 
 1.  Verify the installation:
     ```bash
-    dycov -h
+    dycov --version
     ```
 2.  Follow the [**Quick start**](../tutorials/quick_start.md) tutorial.
 3.  Continue with the workflow‑specific tutorials:

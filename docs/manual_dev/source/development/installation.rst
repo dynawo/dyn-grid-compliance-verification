@@ -145,7 +145,7 @@ Check that everything installed correctly:
 
 .. code-block:: console
 
-   dycov -h
+   dycov --version
 
 
 Running the tests
