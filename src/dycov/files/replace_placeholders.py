@@ -25,6 +25,20 @@ def _get_template(path: Path, template_file: str) -> Template:
 
 
 def get_all_variables(path: Path, template_file: str) -> dict:
+    """Get all variables in a template file.
+
+    Parameters
+    ----------
+    path: Path
+        Path where the template file is stored
+    template_file: str
+        Template filename
+
+    Returns
+    -------
+    dict
+        Dictionary with all variables in the file, initialized to 0
+    """
     if not (path / template_file).exists():
         return {}
 
@@ -63,7 +77,7 @@ def modify_jobs_file(
     solver_id: str,
     solver_lib: str,
 ) -> None:
-    """Modify the value of a parameter in the PAR file.
+    """Modify the solver configuration in a JOBS XML file.
 
     Parameters
     ----------

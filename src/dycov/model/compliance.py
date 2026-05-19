@@ -3,6 +3,8 @@ from enum import Enum, unique
 
 @unique
 class Compliance(Enum):
+    """Compliance status resulting from a PCS or benchmark validation."""
+
     Compliant = 1
     NonCompliant = 2
     InvalidTest = 3
@@ -17,6 +19,14 @@ class Compliance(Enum):
     NotApplicableTest = 12
 
     def to_str(self) -> str:
+        """Return a human-readable string representation of the compliance status.
+
+        Returns
+        -------
+        str
+            Human-readable string representation of the compliance status.
+
+        """
         if self == Compliance.Compliant:
             return "Compliant"
         elif self == Compliance.NonCompliant:
@@ -43,6 +53,13 @@ class Compliance(Enum):
             return "Not applicable test"
 
     def show_report(self) -> bool:
+        """Indicate whether this compliance status should generate a report.
+
+        Returns
+        -------
+        bool
+            True if this compliance status should generate a report, False otherwise.
+        """
         return self in [
             Compliance.Compliant,
             Compliance.NonCompliant,
