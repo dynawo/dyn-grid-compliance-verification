@@ -79,8 +79,7 @@ Typical outputs:
 - Interactive HTML plots
 - A structured `Results/` directory (organized per study and scenario)
 
-For full details, see:  
-[Preparing inputs](docs/tutorials/preparing_inputs.md)
+For full details, see: [Preparing inputs](docs/tutorials/preparing_inputs.md)
 
 ---
 
@@ -90,15 +89,13 @@ This section describes the supported installation options and points to detailed
 Choose the one that best fits your environment and usage (native, WSL, or development setup).
 Once installed, DyCoV is accessed through the `dycov` command-line interface.
 
-> **For developers** building from source, see:  
-> [Setup](docs/developer/setup.md)
+> **For developers** building from source, see: [Setup](docs/developer/setup.md)
 
 ### Linux
 
 The following steps install DyCoV in a native Linux environment.
 
-For detailed procedures and advanced setups, see:  
-[Linux native](docs/installation/linux_native.md)
+For detailed procedures and advanced setups, see: [Linux native](docs/installation/linux_native.md)
 
 DyCoV requires a Linux environment with system dependencies
 (e.g. Python ≥ 3.13, build tools, LaTeX).
@@ -123,8 +120,7 @@ The following steps install DyCoV in a Windows Subsystem for Linux environment.
 DyCoV runs inside a preconfigured WSL (Windows Subsystem for Linux) environment.
 The following steps assume this environment is used as provided.
 
-For detailed procedures and advanced setups, see:  
-[Using the provided image](docs/installation/using_the_provided_image.md)
+For detailed procedures and advanced setups, see: [Using the provided image](docs/installation/using_the_provided_image.md)
 
 **Prerequisite:** WSL must be enabled:  
 https://learn.microsoft.com/en-us/windows/wsl/install
@@ -156,15 +152,13 @@ generated outputs.
 > (e.g. `source dycov/activate_dycov`). In WSL and Docker environments,
 > it may already be active.
 
-For a more detailed walkthrough of these steps and expected outputs, see: 
-[Quick start](docs/tutorials/quick_start.md)
+For a more detailed walkthrough of these steps and expected outputs, see: [Quick start](docs/tutorials/quick_start.md)
 
 ### RMS model validation
 
 This workflow focuses on validating that a dynamic model reproduces expected reference behaviour.
 
-For a detailed description of this workflow and its expected outputs, see: 
-[RMS validation](docs/tutorials/rms_model_validation.md)
+For a detailed description of this workflow and its expected outputs, see: [RMS validation](docs/tutorials/rms_model_validation.md)
 
 Run:
 
@@ -183,8 +177,7 @@ This will:
 
 Here, the system response is evaluated under predefined grid disturbance scenarios.
 
-For detailed explanations and result interpretation, see: 
-[Performance verification](docs/tutorials/electrical_performance_verification.md)
+For detailed explanations and result interpretation, see: [Performance verification](docs/tutorials/electrical_performance_verification.md)
 
 Run:
 
@@ -202,8 +195,7 @@ This will:
 
 This optional workflow targets GFM units and computes admissible response envelopes.
 
-For a complete description of this analysis workflow, see: 
-[Grid‑Forming (GFM) analysis](docs/tutorials/grid_forming_analysis.md)
+For a complete description of this analysis workflow, see: [Grid‑Forming (GFM) analysis](docs/tutorials/grid_forming_analysis.md)
 
 Run:
 
@@ -283,9 +275,8 @@ These sessions are particularly useful after completing the Quick start section.
 
 ## Contributing
 
-Contributions are welcome. Please read  
-[CONTRIBUTING.md](CONTRIBUTING.md) for branching conventions, code style,
-CI requirements, and the PR workflow.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for branching 
+conventions, code style, CI requirements, and the PR workflow.
 
 ---
 
