@@ -188,8 +188,8 @@ class BisectionEngine:
         dip: float,
         bm_name: str,
         oc_name: str,
-        simulate_fn,
-        reset_solver_fn,
+        simulate_fn: callable,
+        reset_solver_fn: callable,
     ) -> None:
         """
         Determines and applies the fault impedance that achieves the required voltage dip
@@ -250,7 +250,12 @@ class BisectionEngine:
                     fault_rpu,
                 )
                 fault_outcome = simulate_fn(
-                    output_dir, working_oc_dir_fault, jobs_output_dir, bm_name, oc_name
+                    output_dir,
+                    working_oc_dir_fault,
+                    jobs_output_dir,
+                    bm_name,
+                    oc_name,
+                    disable_retry_logs=True,
                 )
                 reset_solver_fn()
                 if fault_outcome.succeeded:

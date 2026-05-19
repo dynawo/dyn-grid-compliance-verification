@@ -45,6 +45,13 @@ _proc_registry = _ProcRegistry()
 
 
 def kill_process(proc: subprocess.Popen) -> None:
+    """Kill a process and all its children.
+
+    Parameters
+    ----------
+    proc : subprocess.Popen
+        The process to kill.
+    """
     if os.name == "nt":
         subprocess.run(
             f"taskkill /F /T /PID {proc.pid}",
@@ -63,6 +70,27 @@ def run_dynawo_process(
     inputs_path: Path,
     simulation_limit: float | None,
 ) -> ProcessOutcome:
+    """Run a Dynawo process with a timeout.
+
+    Parameters
+    ----------
+    launcher_dwo : Path
+        Path to the Dynawo launcher executable.
+    jobs_filename : str
+        Name of the .jobs file to execute (without extension).
+    inputs_path : Path
+        Path to the directory containing the .jobs file.
+    simulation_limit : float | None
+        Maximum allowed simulation time in seconds. If None, no timeout is applied.
+
+    Returns
+    -------
+    ProcessOutcome
+        A named tuple containing:
+        - completed_successfully: True if the process completed successfully, False otherwise.
+        - stderr: The standard error output from the process.
+        - elapsed_seconds: The total time taken by the process in seconds.
+    """
     dycov_logging.get_logger("DynawoSimulator").debug(
         f"Simulation limit: {simulation_limit} seconds."
     )
@@ -102,6 +130,24 @@ def run_dynawo_process(
 
 
 def has_error_timeline(pcs_name: str, bm_name: str, oc_name: str, log_path: Path) -> bool:
+    """Check if the Dynawo log file contains any error messages.
+
+    Parameters
+    ----------
+    pcs_name : str
+        Name of the PCS.
+    bm_name : str
+        Name of the benchmark.
+    oc_name : str
+        Name of the operating condition.
+    log_path : Path
+        Path to the Dynawo log file.
+
+    Returns
+    -------
+    bool
+        True if an error message is found in the log file, False otherwise.
+    """
     if not log_path.is_file():
         dycov_logging.get_logger("DynawoSimulator").warning(f"Log file not found at {log_path}")
         return False
@@ -154,6 +200,12 @@ def _sigkill_survivors(procs: list[subprocess.Popen]) -> None:
 def terminate_all_children(timeout: float = 5.0) -> None:
     """Gracefully stop all child processes started by DynawoSimulator.
     Idempotent and best-effort: never raises.
+
+    Parameters
+    ----------
+    timeout : float, optional
+        Time in seconds to wait for processes to terminate after sending SIGTERM before sending
+        SIGKILL, by default 5.0
     """
     procs = _proc_registry.active()
     if not procs:
