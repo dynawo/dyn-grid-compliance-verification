@@ -52,14 +52,14 @@ sudo apt install \
   gcc \
   g++ \
   cmake
-````
+```
 
 These tools are required for:
 
 *   building and running Dynawo,
 *   developing and debugging DyCoV.
 
-***
+---
 
 ### 2.3 LaTeX
 
@@ -76,7 +76,7 @@ sudo apt install \
   latexmk
 ```
 
-***
+---
 
 ### 2.4 Python (≥ 3.13)
 
@@ -91,7 +91,7 @@ python3.13 --version
 If multiple Python versions are installed, explicitly use Python 3.13 when
 creating the development environment.
 
-***
+---
 
 ### 2.5 uv
 
@@ -108,7 +108,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 > `pip` and `venv` are not used directly.
 > All dependency management is handled by `uv`.
 
-***
+---
 
 ## 3. Dynawo requirement (developer responsibility)
 
@@ -116,7 +116,8 @@ DyCoV relies on **Dynawo** to run RMS simulations.
 
 In a **development context**:
 - Dynawo is **not installed or managed by DyCoV**.
-- Installing and maintaining Dynawo is the **responsibility of the developer**.
+- Installing and maintaining Dynawo is the **responsibility of the developer**.  
+  If Dynawo is missing or misconfigured, workflows relying on RMS simulations will fail at runtime.
 
 In practice, developers usually work with a **Dynawo nightly distribution**,
 as this is the reference used for ongoing developments and for alignment with
@@ -152,7 +153,7 @@ For example:
 dycov validate -l /path/to/dynawo/dynawo.sh ...
 ```
 
-***
+---
 
 ## 4. Cloning the repository
 
@@ -163,7 +164,7 @@ git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
 cd dycov_repo
 ```
 
-***
+---
 
 ## 5. Creating the development environment
 
@@ -173,13 +174,13 @@ Create a virtual environment using **Python 3.13**:
 uv venv dycov_venv --python 3.13
 ```
 
-Activate the environment:
+Activate the environment (from the project root):
 
 ```bash
 source dycov_venv/bin/activate
 ```
 
-***
+---
 
 ## 6. Installing DyCoV in development mode
 
@@ -195,7 +196,7 @@ This installs:
 *   all runtime dependencies,
 *   development and test dependencies.
 
-***
+---
 
 ## 7. Running DyCoV in development mode
 
@@ -210,7 +211,7 @@ Commands executed in this environment:
 *   use the local source tree,
 *   reflect code changes immediately.
 
-***
+---
 
 ## 8. Typical development workflow
 
@@ -226,7 +227,7 @@ A common development loop is:
 5.  Inspect logs, generated results, and reports.
 6.  Iterate.
 
-***
+---
 
 ## 9. When to use this setup
 

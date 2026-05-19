@@ -90,6 +90,9 @@ The file defines:
 - the validation tests to execute (referencing existing test names),
 - the curves required for each OC report.
 
+At minimum, the PCS configuration must define at least one benchmark,
+one operating condition, and reference existing validation tests.
+
 If a benchmark requires a network impedance table
 (`TableInfiniteBus.txt`, `TableVariableImpedance.txt`), place them
 in a subdirectory named after the benchmark:
@@ -115,6 +118,9 @@ src/dycov/templates/inputs/model/PPM/ReferenceCurves/Producer/
 DICT files map DyCoV-expected signal names to curve columns and provide
 event metadata. Use an existing `.dict` file from the same benchmark
 family as a reference.
+Incorrect or incomplete DICT definitions will prevent curves from being correctly 
+interpreted and may lead to invalid validation results.
+
 
 ### 3.3 Create the report templates
 
@@ -166,8 +172,9 @@ compliance_list.append(
 )
 ```
 
-The string `"my_new_test"` must match the key used in `PCSDescription.ini`
-to associate the test with the PCS.
+The string "my_new_test" must exactly match the key used in `PCSDescription.ini`. 
+Any mismatch will result in the test not being executed.
+
 
 ### 4.2 Implement the test logic
 
@@ -200,6 +207,9 @@ results["my_new_test_value"] = computed_value
 results["my_new_test_check"] = computed_value < threshold
 results["compliance"] &= results["my_new_test_check"]
 ```
+
+The global "compliance" flag must be updated consistently to ensure that the 
+final PCS status reflects all test results.
 
 ### 4.3 Expose the result in the report
 
@@ -235,6 +245,9 @@ subst_dict = subst_dict | {"mynew" + operating_condition_: my_new_map}
 
 Then reference the new Jinja variable in the LaTeX template using the
 corresponding prefix.
+
+If unsure, prefer extending an existing map module rather than creating a 
+new one, to maintain consistency in report structure.
 
 ---
 

@@ -39,6 +39,9 @@ Extensions should be implemented by:
 - extending well‑defined components,
 - keeping PCS‑specific logic isolated.
 
+These principles help ensure that new extensions remain maintainable 
+and consistent with existing workflows.
+
 > Important:
 > This document focuses exclusively on **code‑level extensions** of DyCoV.
 > Some aspects of DyCoV behavior can be altered through user configuration
@@ -115,6 +118,8 @@ Avoid embedding PCS‑specific behavior:
 - in CLI code,
 - in generic workflow controllers.
 
+Deviating from existing patterns may lead to unexpected behavior across workflows.
+
 (Note: a complete step-by-step implementation guide is provided in section 4.3.)
 
 ---
@@ -133,7 +138,7 @@ For a complete, step-by-step guide on how to implement a new PCS — including:
 - creating examples,
 - and writing tests,
 
-→ Start here: [add_new_pcs.md](add_new_pcs.md)
+→ Start here: [Add new pcs.md](add_new_pcs.md)
 
 This guide is recommended for new contributors who want to implement
 their first PCS in DyCoV.
@@ -243,6 +248,8 @@ short‑term feature additions.
 If your goal can be achieved by modifying operating conditions or report
 templates **without changing DyCoV logic**, you should **not** extend DyCoV
 in code and should instead use the appropriate usage tutorial.
+
+When in doubt, prefer refactoring existing components over introducing parallel logic.
 
 ---
 
