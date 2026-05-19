@@ -5,7 +5,7 @@ and make it available on your system.
 
 Installation is a prerequisite for using DyCoV, but it is **not a tutorial
 workflow itself**. Once DyCoV is installed, usage is covered by the tutorials
-in `docs/tutorials/`.
+in `../tutorials/`.
 
 ---
 
