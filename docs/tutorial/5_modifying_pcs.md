@@ -398,6 +398,9 @@ the new operating condition:
 
     \GridCircuitZone
 
+    \GridSimulationHeaderZone{
+        \GridCurvesDescriptionZone
+    }
     \GridCurvesZone
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z1GridVoltageStepRiseQ0 }}

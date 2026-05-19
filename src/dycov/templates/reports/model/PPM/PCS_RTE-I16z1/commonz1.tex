@@ -29,23 +29,43 @@
 }
 %End snippet for the circuits
 
-%Snippet for the figures
-\newcommand{\GridCurvesZone}{
-
+%Snippet for the simulation section header
+% #1 = description items (one or more \GridCurvesXxxDescription commands)
+\newcommand{\GridSimulationHeaderZone}[1]{
     \subsubsection{Simulation}
     As required by the DTR PCS \DTRPcs, the figures below show the
     following magnitudes:
     \begin{itemize}
-        \item Voltage at connection point.
-        \item Active power supplied at the connection point.
-        \item Reactive power supplied at the connection point.
-        \item Active current supplied at the connection point.
-        \item Reactive current supplied at the connection point.
+        #1
     \end{itemize}
 
     \subsubsection{Simulation results}
     The blue line shows the calculated curve and the orange line shows the reference curve.
+}
+%End snippet for the simulation section header
 
+%Snippet for the base figure descriptions (5 standard figures)
+\newcommand{\GridCurvesDescriptionZone}{
+    \item Voltage at connection point.
+    \item Active power supplied at the connection point.
+    \item Reactive power supplied at the connection point.
+    \item Active current supplied at the connection point.
+    \item Reactive current supplied at the connection point.
+}
+%End snippet for the base figure descriptions
+
+%Snippet for the It figure descriptions (injector terminal figures)
+\newcommand{\GridCurvesItDescriptionZone}{
+    \item Active, reactive, and magnitude currents at the injector's low voltage terminal,
+    with all BESS units displayed on a single plot.
+    \item Low voltage at the injector terminal.
+}
+%End snippet for the It figure descriptions
+
+%Snippet for the base figures (5 standard figures)
+% NOTE: ends with Iq as a left-side minipage with no \hfill, so that \GridCurvesItZone
+% can pair I alongside it in the same row by starting directly with \hfill.
+\newcommand{\GridCurvesZone}{
 % For now we won't use floats for figures, to get more precise placement
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
@@ -91,80 +111,22 @@
         \end{minipage}
     \end{minipage}
 }
+%End snippet for the base figures
 
-\newcommand{\GridCurvesZoneIt}{
-
-    \subsubsection{Simulation}
-    As required by the DTR PCS \DTRPcs, the figures below show the
-    following magnitudes:
-    \begin{itemize}
-        \item Voltage at connection point.
-        \item Active power supplied at the connection point.
-        \item Reactive power supplied at the connection point.
-        \item Active current supplied at the connection point.
-        \item Reactive current supplied at the connection point.
-        \item Active, reactive, and magnitude currents at the injector's low voltage terminal, 
-        with all BESS units displayed on a single plot.
-        \item Low voltage at the injector terminal.
-    \end{itemize}
-
-    \subsubsection{Simulation results}
-    The blue line shows the calculated curve and the orange line shows the reference curve.
-
-% For now we won't use floats for figures, to get more precise placement
-    \noindent
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_V_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Voltage magnitude measured at the PDR bus.
-%     The vertical dashed line marks the rise time $T_{85U}$.
-        \end{minipage}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Real power output P, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-%
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive power output Q, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Active current output Ip, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-%
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive current output Iq, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
+%Snippet for the It figures (injector terminal figures)
+% NOTE: starts with \hfill to pair figure I alongside Iq from \GridCurvesZone in the same row.
+% This command must always be used immediately after \GridCurvesZone, with no blank line between them.
+\newcommand{\GridCurvesItZone}{%
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small active (light blue), reactive (violet), and magnitude (yellow) currents at 
+            \small active (light blue), reactive (violet), and magnitude (yellow) currents at
             the injector's low voltage terminal. All PPM units shown on one plot.
         \end{minipage}
     \end{minipage}
-
+%
     \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
@@ -174,4 +136,4 @@
         \end{minipage}
     \end{minipage}
 }
-%End of snippet for the figures
+%End snippet for the It figures
