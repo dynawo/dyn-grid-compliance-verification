@@ -35,15 +35,15 @@ class DycovCLI:
     """
 
     def __init__(self):
-        """Initializes the DycovCLI, creating an instance of the DycovInitializer."""
+        """Initializes the DycovCLI, setting up the core initializer and the CLI logger."""
         self.initializer = DycovInitializer()
         self.logger = dycov_logging.get_logger("DycovCLI")
 
     def dycov(self) -> int:
         """Main entry point for the dycov command-line interface.
 
-        It parses command-line arguments, performs necessary initializations,
-        and dispatches to the relevant command handler functions.
+        It parses command-line arguments, performs basic validation,
+        and delegates execution to the appropriate command handler.
         """
         self.logger.info("Starting DYCOV CLI.")
         # Set up the main argument parser and its subparsers.
@@ -62,6 +62,9 @@ class DycovCLI:
 
     def _execute_command(self, parser, args) -> int:
         """Executes the given command after handling initialization steps.
+
+        This includes resolving the Dynawo launcher when required and
+        initializing the core DYCOV environment.
 
         Parameters
         ----------
@@ -141,10 +144,15 @@ class DycovCLI:
         return ret
 
 
-def dycov():
+def dycov() -> int:
     """Entry point for the DYCOV command-line interface.
 
     Instantiates and runs the DycovCLI.
+
+    Returns
+    -------
+    int
+        Exit code indicating success (0) or failure (non-zero).
     """
     cli = DycovCLI()
     return cli.dycov()
