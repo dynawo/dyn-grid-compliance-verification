@@ -69,10 +69,10 @@ This gives rise to the following conceptual hierarchy:
    launcher
    ├── <PCS a>
    │   ├── <Benchmark j>
-   │   │   └── <OperatingPoint x>
+   │   │   └── <OperatingCondition x>
    │   └── <Benchmark k>
-   │       ├── <OperatingPoint y>
-   │       └── <OperatingPoint z>
+   │       ├── <OperatingCondition y>
+   │       └── <OperatingCondition z>
    ├── <PCS b>
    │   └── ...
    └── <PCS c>
@@ -81,7 +81,7 @@ This gives rise to the following conceptual hierarchy:
 That is, the launcher runs one or more DTR PCSs (the user may configure which
 ones to run or skip). Each PCS runs the tests defined in the DTR. Each test
 may consist of one or more benchmark configurations, and for each benchmark
-the DTR may request tests at several operating points.
+the DTR may request tests at several operating conditions.
 
 .. caution::
    Do not confuse these *benchmarks* with the producer-side topologies described

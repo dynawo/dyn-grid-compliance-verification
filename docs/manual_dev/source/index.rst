@@ -114,13 +114,13 @@ that the application should perform:
     DTR document. When one translates the tests defined by the DTR PCSs into actual simulations,
     it is observed that the PCSs implicitly define a hierarchy of logical concepts. To reflect
     this hierarchy in unambiguous terms, the following terminology has beed adopted:
-    PCS ==> Benchmarks ==> OperatingPoint.
+    PCS ==> Benchmarks ==> OperatingCondition.
 
     * **PCS** (as defined by the DTR)
 
       * **Benchmarks** (e.g. single connexion line vs. multiple; or infinite bus vs. large equivalent gen)
 
-        * **Operating Points** (e.g. connection reactance values Xa vs. Xb; or Q=0 vs. Q=Qmax; etc.)
+        * **Operating Conditions** (e.g. connection reactance values Xa vs. Xb; or Q=0 vs. Q=Qmax; etc.)
 
     *PCS*: a PCS is understood to be the set of tests and compliance criteria
     necessary to validate either the producer's model, or the producer plant's electric
@@ -132,7 +132,7 @@ that the application should perform:
     "Benchmarks" contains the invariant description of the RTE's side model that will
     be used in the simulation.
 
-    *Operating Point*: each Benchmarks may define one or more operating points under
+    *Operating Condition*: each Benchmarks may define one or more operating conditions under
     which the simulations should be run: PDR voltage, PQ values, initialization
     conditions, event conditions, reactance of the connecting line, etc.
 
