@@ -36,6 +36,8 @@ class CurvesAvailability(IntEnum):
 
 @dataclass
 class Terminal:
+    """Electrical terminal initial conditions and connections."""
+
     connected_equipment: str
     u0: float = 1.0
     u_phase0: float = 0.0
@@ -45,6 +47,8 @@ class Terminal:
 
 @dataclass
 class Equipment:
+    """Base class for network equipment parameters."""
+
     id: str
     lib: str
     par_id: str
@@ -53,12 +57,16 @@ class Equipment:
 
 @dataclass
 class BusParams(Equipment):
+    """Parameters of an electrical bus."""
+
     v_min: float
     v_max: float
 
 
 @dataclass
 class LineParams(Equipment):
+    """Parameters of a transmission line."""
+
     r: float
     x: float
     b: float
@@ -67,6 +75,8 @@ class LineParams(Equipment):
 
 @dataclass
 class XfmrParams(Equipment):
+    """Parameters of a transformer."""
+
     r: float
     x: float
     b: float
@@ -77,6 +87,8 @@ class XfmrParams(Equipment):
 
 @dataclass
 class LoadParams(Equipment):
+    """Parameters of a load model."""
+
     p: float
     q: float
     u: float
@@ -87,6 +99,8 @@ class LoadParams(Equipment):
 
 @dataclass
 class GenParams(Equipment):
+    """Parameters of a generator model."""
+
     s_nom: float
     i_max: float
     p: float
@@ -108,12 +122,16 @@ class GenParams(Equipment):
 
 @dataclass(frozen=True)
 class PdrEquipments:
+    """PDR equipment identifier and associated variable."""
+
     id: str
     var: str
 
 
 @dataclass
 class PdrParams:
+    """Electrical quantities at the PDR connection point."""
+
     u: float
     u_phase: float
     s: float
@@ -123,6 +141,8 @@ class PdrParams:
 
 @dataclass(frozen=True)
 class PimodelParams:
+    """Equivalent PI model parameters."""
+
     y_tr: float
     y_sh1: float
     y_sh2: float
@@ -130,6 +150,8 @@ class PimodelParams:
 
 @dataclass(frozen=True)
 class GenInit:
+    """Initial conditions for a generator."""
+
     id: str
     p0: float
     q0: float
@@ -139,6 +161,8 @@ class GenInit:
 
 @dataclass(frozen=True)
 class LoadInit:
+    """Initial conditions for a load."""
+
     id: str
     lib: str
     p0: float
@@ -149,6 +173,8 @@ class LoadInit:
 
 @dataclass(frozen=True)
 class SimulationResult:
+    """Outcome of a simulation execution."""
+
     appicable: bool
     success: bool
     time_exceeds: bool
@@ -158,6 +184,8 @@ class SimulationResult:
 
 @dataclass(frozen=True)
 class Stability:
+    """Steady-state stability indicators."""
+
     p: float
     q: float
     v: float
@@ -167,6 +195,8 @@ class Stability:
 
 @dataclass(frozen=True)
 class DisconnectionModel:
+    """Elements subject to disconnection during simulation."""
+
     auxload: object
     auxload_xfmr: object
     stepup_xfmrs: object
@@ -175,6 +205,8 @@ class DisconnectionModel:
 
 @dataclass(frozen=True)
 class ExclusionWindows:
+    """Time windows excluded from analysis."""
+
     event_start: float
     event_end: float
     clear_start: float
@@ -183,6 +215,8 @@ class ExclusionWindows:
 
 @dataclass(frozen=True)
 class CurvesCheckResult:
+    """Result of curve availability and consistency checks."""
+
     working_oc_dir: Path
     jobs_output_dir: Path
     event_params: dict
