@@ -93,6 +93,10 @@ Conceptually:
 
 ### 5. Operating Conditions (OC)
 
+> **Note**  
+> To understand the distinction between an *Operating Condition* and an
+> *Operating Point*, refer to **Chapter 2.1 of the User Manual**.
+
 An Operating Condition defines:
 
 *   the initial operating point (typically V, P, Q),

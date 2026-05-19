@@ -43,53 +43,123 @@ Conceptual structuring of the tests
 -------------------------------------
 
 .. note::
-   Please do not skip this section: understanding these concepts will help
-   you learn the tool and navigate the results much faster!
+Please do not skip this section: understanding these concepts will help
+you learn the tool and navigate the results much faster!
 
 All tests share the same conceptual split between the producer's model and the
 grid-side model:
 
-* **Producer's model** — the DYD+PAR Dynawo files describing everything "to
-  the left" of the PDR bus. These files are provided by the producer and
-  remain the same across all tests.
+* **Producer's model** — the DYD+PAR Dynawo files describing the portion of
+  the system electrically located on the producer side of the PDR bus.
+  These files are provided by the producer and remain the same across all tests.
 
-* **TSO's model** — the grid-side model, everything "to the right" of the PDR.
-  These files are internal to the tool and change from test to test as defined
-  by each PCS in the DTR. Different tests define different *benchmarks*: some
-  specify three or four connecting lines, others just one.
+* **TSO's model** — the grid-side model, everything electrically located on
+  the grid side of the PDR. These files are internal to the tool and change
+  from test to test as defined by each PCS in the DTR. Different tests define
+  different *benchmarks*: some specify three or four transmission lines,
+  while others use a single-line configuration.
 
-In addition to benchmark variations, tests are also run at different *operating
-points* — for instance, at :math:`Q_\text{PDR} = 0` vs.
-:math:`Q_\text{PDR} = Q_\text{max}`.
+In addition to benchmark variations, tests are also run at different
+*operating conditions*, which define how each simulation is configured.
 
 This gives rise to the following conceptual hierarchy:
 
 .. code-block::
 
-   launcher
-   ├── <PCS a>
-   │   ├── <Benchmark j>
-   │   │   └── <OperatingCondition x>
-   │   └── <Benchmark k>
-   │       ├── <OperatingCondition y>
-   │       └── <OperatingCondition z>
-   ├── <PCS b>
-   │   └── ...
-   └── <PCS c>
-       └── ...
+launcher
+├── <PCS a>
+│   ├── <Benchmark j>
+│   │   └── <Operating Condition x>
+│   │       └── <Operating Point>
+│   └── <Benchmark k>
+│       ├── <Operating Condition y>
+│       │   └── <Operating Point>
+│       └── <Operating Condition z>
+│           └── <Operating Point>
+├── <PCS b>
+│   └── ...
+└── <PCS c>
+└── ...
 
 That is, the launcher runs one or more DTR PCSs (the user may configure which
 ones to run or skip). Each PCS runs the tests defined in the DTR. Each test
 may consist of one or more benchmark configurations, and for each benchmark
-the DTR may request tests at several operating conditions.
+the DTR defines one or more operating conditions, potentially evaluated under
+different operating points.
 
-.. caution::
-   Do not confuse these *benchmarks* with the producer-side topologies described
-   in the Inputs section (see :ref:`available topologies <topologies>`). Here,
-   benchmarks refer to the various network setups on RTE's side, all of which
-   are internal to the tool. The user supplies only one producer model (or two
-   in the case of Zone 1 / Zone 3 tests), structured according to one of the
-   allowed producer-side topologies.
+This hierarchy is fundamental to understanding how DyCoV organizes executions
+and aggregates results in the final reports.
+
+Operating Conditions (OC)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An **Operating Condition (OC)** is the main hierarchical container used to
+define a complete simulation scenario. It groups all the parameters required
+to execute a test consistently. An Operating Condition includes:
+
+* **Initial operating point**, typically defined by:
+  :math:`V`, :math:`P`, and :math:`Q` at the PDR.
+* **Event characteristics**, including:
+  type of event (e.g. fault, step change),
+  timing, duration, and magnitude.
+* **Grid-side parameters**, such as:
+  Short-Circuit Ratio (SCR), equivalent impedance, or other
+  TSO-defined parameters.
+
+Each PCS includes a predefined set of Operating Conditions derived from the
+DTR. On the user side, these conditions can be:
+
+* **Overridden**, by modifying specific parameters of an existing OC.
+* **Extended**, by defining a new OC derived from an existing one.
+
+Operating Points
+^^^^^^^^^^^^^^^^
+
+An **Operating Point** corresponds to the subset of parameters within an
+Operating Condition that defines the **initial steady-state of the system**,
+typically:
+
+* Voltage :math:`V`
+* Active power :math:`P`
+* Reactive power :math:`Q`
+
+In practice, Operating Points represent variations of the same simulation
+scenario with different initial conditions. Typical examples include:
+
+* :math:`Q = 0` vs. :math:`Q = Q_{max}`
+* Different reactance values (e.g. :math:`X_a` vs. :math:`X_b`)
+* Different loading levels (e.g. partial vs. full :math:`P_{max}`)
+
+An Operating Condition may therefore include **multiple Operating Points**.
+
+PCS and Benchmark definitions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For completeness, the following definitions apply:
+
+* **PCS**  
+  A PCS is the set of tests and compliance criteria required to validate either:
+
+  * the producer’s model (**RMS Model Validation**), or
+  * the installation’s electrical dynamic performance (**Electric Performance Verification**).
+
+* **Benchmark**  
+  A Benchmark defines a specific **TSO-side network configuration**, together
+  with the associated event to be simulated (e.g. fault, voltage step). It
+  represents the invariant description of the grid model used during the test.
+
+Within this framework:
+
+* A **PCS** contains one or more **Benchmarks**
+* Each **Benchmark** is evaluated under one or more **Operating Conditions**
+* Each **Operating Condition** may include one or more **Operating Points**
+
+Key interpretation
+^^^^^^^^^^^^^^^^^^
+
+* **Benchmark** → defines the *grid setup and event*
+* **Operating Condition** → defines the *complete simulation scenario*
+* **Operating Point** → defines the *initial state of the scenario*
 
 
 RMS Model Validation (Power Park Modules)
@@ -104,7 +174,7 @@ Dynawo simulations or from producer-provided curves.
 
 
 PCS I16
-^^^^^^^^
+^^^^^^^
 
 The test cases are grouped into two PCS corresponding to the two validation
 zones. The simulated events cover reference tracking and disturbance rejection,
@@ -112,6 +182,9 @@ including three-phase faults. For Zone 3, two extreme values of the grid
 connection impedance :math:`X_{sc}` are often considered — :math:`X^{min}_{sc}`
 and :math:`X^{max}_{sc}` — representing the minimal and maximal Short-Circuit
 Level at the connection point.
+
+Each row in the table below corresponds to a single Operating Condition (OC),
+defined by an operating point (OP), event parameters, and grid parameters.
 
 .. list-table:: Predefined benchmarks for Zone 1 (unit-level).
     :header-rows: 2
