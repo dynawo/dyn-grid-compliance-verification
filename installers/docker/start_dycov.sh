@@ -32,12 +32,18 @@ else
     echo "User UID $dycov_UID already exists, skipping creation."
 fi
 
-# Copy examples to user home so they are writable and ready to use
+# Copy examples and manual to user home so they are writable and ready to use
 USER_HOME="/home/$dycov_USER"
 if [ -d "/opt/dycov/examples" ] && [ ! -d "$USER_HOME/examples" ]; then
     echo "Copying examples to $USER_HOME/examples..."
     cp -r /opt/dycov/examples "$USER_HOME/"
     chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/examples"
+fi
+
+if [ -d "/opt/dycov/manual" ] && [ ! -d "$USER_HOME/manual" ]; then
+    echo "Copying manual to $USER_HOME/manual..."
+    cp -r /opt/dycov/manual "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/manual"
 fi
 
 # Leave the user in an interactive shell
@@ -46,6 +52,8 @@ echo -e " Dycov Container Environment"
 echo -e "-----------------------------------------------------------"
 echo -e " User:     $dycov_USER ($dycov_UID)"
 echo -e " Examples: ~/examples"
+echo -e " Manual:   ~/manual/html/index.html  (HTML)"
+echo -e "           ~/manual/dycov.pdf        (PDF)"
 echo -e " Type 'exit' to quit."
 echo -e "-----------------------------------------------------------\n"
 
