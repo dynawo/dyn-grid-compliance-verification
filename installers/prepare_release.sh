@@ -45,15 +45,20 @@ step()  { echo -e "\n${GREEN}==> $*${NC}"; }
 ###############################################################################
 # Arguments
 ###############################################################################
-if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 VERSION DYNAWO_DIR"
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    echo "Usage: $0 VERSION DYNAWO_DIR [--dry-run]"
     echo "  VERSION     e.g. v0.9.3"
     echo "  DYNAWO_DIR  path to the Dynawo installation directory"
+    echo "  --dry-run   skip Git checks"
     exit 1
 fi
 
 VERSION="$1"
 DYNAWO_DIR="$2"
+DRY_RUN=false
+if [[ "${3:-}" == "--dry-run" ]]; then
+    DRY_RUN=true
+fi
 
 # Validate version format
 [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] \
@@ -75,28 +80,28 @@ REPO_ROOT="$PWD"
 
 step "Checking Git state for release $VERSION"
 
-# Ensure repository
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
-    || error "Not inside a Git repository."
+if [[ "$DRY_RUN" == true ]]; then
+    warn "Skipping Git checks (dry-run)"
+else
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+      || error "Not inside a Git repository."
 
-# Ensure tag exists
-git rev-parse "$VERSION" >/dev/null 2>&1 \
-    || error "Tag '$VERSION' does not exist."
+    git rev-parse "$VERSION" >/dev/null 2>&1 \
+      || error "Tag '$VERSION' does not exist."
 
-# Ensure HEAD is exactly on the tag
-CURRENT_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
-if [[ "$CURRENT_TAG" != "$VERSION" ]]; then
-    error "HEAD is not exactly on tag $VERSION (current: ${CURRENT_TAG:-<none>})"
+    CURRENT_TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+    if [[ "$CURRENT_TAG" != "$VERSION" ]]; then
+        error "HEAD is not exactly on tag $VERSION (current: ${CURRENT_TAG:-})"
+    fi
+
+    if [[ -n "$(git status --porcelain)" ]]; then
+        error "Working tree is not clean. Commit or stash changes before releasing."
+    fi
+
+    info "Git state OK:"
+    info " - Tag: $CURRENT_TAG"
+    info " - Commit: $(git rev-parse --short HEAD)"
 fi
-
-# Ensure clean working tree
-if [[ -n "$(git status --porcelain)" ]]; then
-    error "Working tree is not clean. Commit or stash changes before releasing."
-fi
-
-info "Git state OK:"
-info " - Tag: $CURRENT_TAG"
-info " - Commit: $(git rev-parse --short HEAD)"
 
 ###############################################################################
 # Validate expected repo files
@@ -138,9 +143,18 @@ zip -qr "$DYNAWO_ZIP" "$DYNAWO_BASENAME"
 info "$DYNAWO_ZIP_NAME generated."
 
 ###############################################################################
-# Step 2 — Generate updated linux_install.sh in output dir
+# Step 2 — Update pyproject.toml in the repo
 ###############################################################################
-step "Step 2: Generating updated linux_install.sh..."
+step "Step 2: Updating pyproject.toml (version -> $VERSION_PLAIN)..."
+
+sed -i -E "s|^version = \"[^\"]+\"|version = \"${VERSION_PLAIN}\"|" "$PYPROJECT"
+
+info "pyproject.toml updated: $(grep '^version = ' "$PYPROJECT" | head -1)"
+
+###############################################################################
+# Step 3 — Generate updated linux_install.sh in output dir
+###############################################################################
+step "Step 3: Generating updated linux_install.sh..."
 
 DYNAWO_SHA256=$(sha256sum "$DYNAWO_ZIP" | cut -d' ' -f1)
 info "SHA256: $DYNAWO_SHA256"
@@ -160,18 +174,42 @@ grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM)=" "$LINUX_INSTALL_OUT"
 echo "----------------------"
 
 ###############################################################################
-# Step 3 — Build Docker image
+# Step 4 — Build the documentation manuals
 ###############################################################################
-step "Step 3: Building Docker image..."
+step "Step 4: Building documentation manuals..."
+
+MANUAL_BUILD_DIR="$REPO_ROOT/docs/manual/build"
+
+# Clean any previous build
+rm -rf "$MANUAL_BUILD_DIR"
+
+# Install sphinx in a temporary venv and build
+uv venv "$REPO_ROOT/.manual_venv" --python 3.13 --quiet
+source "$REPO_ROOT/.manual_venv/bin/activate"
+uv pip install -q sphinx
+cd "$REPO_ROOT/docs/manual"
+make latexpdf > /dev/null 2>&1
+make html > /dev/null 2>&1
+deactivate
+rm -rf "$REPO_ROOT/.manual_venv"
+
+info "Manuals built:"
+info " - HTML: $MANUAL_BUILD_DIR/html"
+info " - PDF:  $MANUAL_BUILD_DIR/latex/dycov.pdf"
+
+###############################################################################
+# Step 5 — Build Docker image
+###############################################################################
+step "Step 5: Building Docker image..."
 
 cd "$REPO_ROOT/installers/docker"
-bash build.sh "$VERSION" "$DYNAWO_DIR"
+bash build.sh "$VERSION" "$DYNAWO_DIR" ${DRY_RUN:+--dry-run}
 info "Docker image built."
 
 ###############################################################################
-# Step 4 — Export Docker image
+# Step 6 — Export Docker image
 ###############################################################################
-step "Step 4: Exporting Docker image..."
+step "Step 6: Exporting Docker image..."
 
 cd "$REPO_ROOT/installers/docker"
 bash export_image.sh
@@ -182,9 +220,9 @@ RAW_IMAGE=$(find "$REPO_ROOT/installers/docker" -maxdepth 1 -name "dycov_rawimag
 [[ -z "$RAW_IMAGE" ]] && error "dycov_rawimage.tar.gz not found after export. Check export_image.sh output."
 
 ###############################################################################
-# Step 5 — Collect all artifacts in output dir
+# Step 7 — Collect all artifacts in output dir
 ###############################################################################
-step "Step 5: Collecting release artifacts..."
+step "Step 7: Collecting release artifacts..."
 
 mv "$RAW_IMAGE"       "$OUTPUT_DIR/dycov_rawimage.tar.gz"
 cp "$IMPORT_SH"       "$OUTPUT_DIR/import_image.sh"
@@ -196,9 +234,9 @@ cp "$RUN_WSL_PS1"     "$OUTPUT_DIR/run_dycov_wsl.ps1"
 info "All artifacts ready."
 
 ###############################################################################
-# Step 6 — Remove Docker images
+# Step 8 — Remove Docker images
 ###############################################################################
-step "Step 6: Removing Docker images..."
+step "Step 8: Removing Docker images..."
 
 for tag in "dycov:latest" "dycov:${VERSION}"; do
     if docker image inspect "$tag" > /dev/null 2>&1; then
