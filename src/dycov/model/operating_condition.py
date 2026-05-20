@@ -91,10 +91,9 @@ class OperatingCondition:
         working_path: Path,
         jobs_output_dir: Path,
         event_params: dict,
-        success: bool,
         has_simulated_curves: bool,
         has_reference: bool = True,
-    ) -> tuple[bool, dict]:
+    ) -> dict:
         """Validate the Benchmark.
 
         Parameters
@@ -105,8 +104,6 @@ class OperatingCondition:
             Simulator output path.
         event_params: dict
             Event parameters
-        success: bool
-            True if simulation is success
         has_simulated_curves: bool
             True if simulation calculated curves
         has_reference: bool
@@ -114,8 +111,6 @@ class OperatingCondition:
 
         Returns
         -------
-        bool
-            True if OperatingCondition can be validated, False otherwise
         dict
             Validation results of the OperatingCondition
         """
@@ -131,12 +126,16 @@ class OperatingCondition:
             results = {"compliance": False, "curves": None}
 
         results["udim"] = validator.get_generator_u_dim()
-        return success, results
+        return results
 
-    def generate(
-        self,
-        working_path: Path,
-    ):
+    def generate(self, working_path: Path) -> None:
+        """Execute the GFM module for the current operating condition.
+
+        Parameters
+        ----------
+        working_path: Path
+            Working path.
+        """
         gfm = GridForming()
         gfm.generate(
             working_path,

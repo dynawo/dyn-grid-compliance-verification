@@ -72,21 +72,10 @@ class Pcs:
     def __str__(self):
         return self._name
 
-    def __get_log_title(self):
-        return f"{self._name}:"
-
-    def __debug(self, message):
-        """Debug function to print the PCS information."""
-        dycov_logging.get_logger("PCS").debug(f"{self.__get_log_title()} {message}")
-
-    def __warning(self, message):
-        """Debug function to print the PCS information."""
-        dycov_logging.get_logger("PCS").warning(f"{self.__get_log_title()} {message}")
-
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
         # It checks if the PCS configuration file exists in the tool and reads it.
         pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
-        self.__debug(f"PCS Path {pcs_path}")
+        dycov_logging.get_logger("PCS").debug(f"PCS Path {pcs_path}")
         if pcs_path and pcs_path.exists():
             config.load_pcs_config(pcs_path)
             self._has_pcs_config = True
@@ -95,7 +84,7 @@ class Pcs:
         # The order is important, since the user configuration must override the tool
         #  configuration if both files exists
         pcs_path = self.__get_pcs_path(producer, config.get_config_dir())
-        self.__debug(f"User PCS Path {pcs_path}")
+        dycov_logging.get_logger("PCS").debug(f"User PCS Path {pcs_path}")
         if pcs_path and pcs_path.exists():
             config.load_pcs_config(pcs_path)
             self._has_user_config = True
@@ -118,7 +107,7 @@ class Pcs:
             return files["pcsdescription"]
         elif len(files) > 0:
             file = files[list(files.keys())[0]]
-            self.__warning(
+            dycov_logging.get_logger("PCS").warning(
                 f"Loading '{file.name}'. To avoid confusion it is recommended to rename "
                 f"the configuration file to use the name: 'PCS_Description.ini'"
             )
@@ -142,7 +131,7 @@ class Pcs:
         str
             Name of the LaTex file template
         bool
-            True if all pcs are success, False otherwise
+            True if at least one benchmark succeeds, False otherwise
         dict
             Results of the validations applied in the pcs
         """
@@ -159,7 +148,9 @@ class Pcs:
 
         return self._report_name, success, pcs_results
 
-    def generate(self):
+    def generate(self) -> None:
+        """Execute the generation step for all benchmarks of the current PCS."""
+
         for bm in self._bm_list:
             bm.generate()
 

@@ -703,6 +703,8 @@ class PerformanceValidator(Validator):
             Simulator output path.
         event_params: dict
             Event parameters
+        has_reference: bool, optional
+            Indicates whether reference curves are available for the validation.
 
         Returns
         -------
