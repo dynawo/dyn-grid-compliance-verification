@@ -17,8 +17,7 @@ def format_time_error(
     add_seconds_unit: bool = False,
     default_value: str = "\\textemdash",
 ) -> str:
-    """Gets a value for its key and formats it, if it is the character '-', add a
-    footnote to the value.
+    """Get and format a time-related value, adding a Latex footnote when the value is '-'.
 
     Parameters
     ----------
@@ -61,6 +60,8 @@ def format_value(
 ) -> str:
     """Gets a value for its key and formats it.
 
+    If the key contains "_check", the value is formatted using format_latex_check.
+
     Parameters
     ----------
     results: dict
@@ -99,7 +100,22 @@ def format_value(
     return ret_val
 
 
-def format_compound_check(value: str) -> str:
+def format_compound_check(value: str | bool) -> str:
+    """Formats a compound check variable based on its value.
+    * If value is "N/A" return the value in curly braces
+    * Else apply the boolean check formatter to the value
+
+    Parameters
+    ----------
+    value: str | bool
+        Value to format.
+
+    Returns
+    -------
+    str
+        The value in curly braces if it is "N/A", else the boolean value formatted with
+        format_latex_check
+    """
     if value == "N/A":
         return f"{{ {value} }}"
     else:

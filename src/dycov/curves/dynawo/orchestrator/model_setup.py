@@ -30,12 +30,24 @@ _TSO_PAR = "TSOModel.par"
 _TSO_DYD = "TSOModel.dyd"
 
 
-def compute_rx_from_scr(scr, x_over_r=10.0):
+def compute_rx_from_scr(scr: float, x_over_r: float = 10.0) -> tuple[float, float]:
     """
     Compute R and X from SCR assuming:
       R^2 + X^2 = 1 / SCR^2
       X / R = x_over_r
     Returns (R, X)
+
+    Parameters
+    ----------
+    scr : float
+        Short-circuit ratio.
+    x_over_r : float, optional
+        Ratio of X to R, by default 10.0.
+
+    Returns
+    -------
+    tuple[float, float]
+        (R, X) values corresponding to the given SCR and X/R ratio.
     """
     factor = math.sqrt(1 + x_over_r**2)
     R = 1.0 / (factor * scr)
@@ -537,7 +549,7 @@ class ModelSetup:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> dict:
+    ) -> tuple[bool, dict]:
         """
         Performs the full model setup pipeline for one operating condition:
         reads loads, computes PDR/line/grid-load initial conditions, resolves
@@ -561,6 +573,8 @@ class ModelSetup:
 
         Returns
         -------
+        bool
+            True if the model setup is completed successfully, False if the test is not applicable.
         dict
             Completed event parameters.
         """
@@ -634,7 +648,7 @@ class ModelSetup:
         section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
         force_voltage_droop = config.get_boolean(self._pcs_name, "force_voltage_droop", False)
-        model_parameters.adjust_producer_init(
+        is_test_applicable = model_parameters.adjust_producer_init(
             working_oc_dir,
             producer.get_producer_par(),
             producer.generators,
@@ -645,6 +659,14 @@ class ModelSetup:
             force_voltage_droop,
             producer.get_zone(),
         )
+        if not is_test_applicable:
+            dycov_logging.get_logger("ModelSetup").debug(
+                f"The selected control mode '{control_mode}' is not valid for all generators. "
+                f"Please check the configuration for '{section}' and ensure that the control mode "
+                f"is compatible with the generator types."
+            )
+            return False, event_params
+
         self._adjust_event_value(event_params, pdr)
         self._calculate_xv_values(
             event_params,
@@ -722,4 +744,4 @@ class ModelSetup:
             producer.get_zone(),
             control_mode,
         )
-        return event_params
+        return True, event_params

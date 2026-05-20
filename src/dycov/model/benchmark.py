@@ -21,7 +21,11 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    SimulationError,
+)
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -134,15 +138,6 @@ class Benchmark:
                 self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
             )
             manage_files.create_dir(working_oc_dir)
-
-    def __info(self, message):
-        dycov_logging.get_logger("Benchmark").info(f"{message}")
-
-    def __debug(self, message):
-        dycov_logging.get_logger("Benchmark").debug(f"{message}")
-
-    def __warning(self, message):
-        dycov_logging.get_logger("Benchmark").warning(f"{message}")
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
@@ -674,12 +669,11 @@ class Benchmark:
         has_simulated_curves: bool,
         has_reference: bool = True,
     ):
-        op_cond_success, results = op_cond.validate(
+        results = op_cond.validate(
             self._validator,
             working_path,
             jobs_output_dir,
             event_params,
-            success,
             has_simulated_curves,
             has_reference=has_reference,
         )
@@ -687,18 +681,18 @@ class Benchmark:
         # Statuses for the Summary Report
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
-            self.__warning("Undefined Validations")
-        elif not op_cond_success:
+            dycov_logging.get_logger("Benchmark").warning("Undefined Validations")
+        elif not success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
-            self.__warning("Invalid Test")
+            dycov_logging.get_logger("Benchmark").warning("Invalid Test")
         elif not results["compliance"]:
             compliance = Compliance.NonCompliant
         else:
             compliance = Compliance.Compliant
 
-        return op_cond_success, results, compliance
+        return success, results, compliance
 
     def validate(
         self,
@@ -717,7 +711,7 @@ class Benchmark:
         Returns
         -------
         bool
-            True if Benchmark can be validated, False otherwise
+            True if at least one operating condition succeeds, False otherwise
         """
         success = False
 
@@ -741,7 +735,7 @@ class Benchmark:
                 op_cond.get_name(),
             )
             sim = curves_result.simulation_result
-            self.__debug(
+            dycov_logging.get_logger("Benchmark").debug(
                 f"Success: {sim.success} "
                 f"Has curves: {curves_result.availability} "
                 f"Time exceeds: {sim.time_exceeds} "
@@ -757,6 +751,9 @@ class Benchmark:
                         compliance = Compliance.FaultDipUnachievable
                     case _:
                         pass
+                results = {**_FAILED_RESULTS}
+            elif not sim.appicable:
+                compliance = Compliance.NotApplicableTest
                 results = {**_FAILED_RESULTS}
             elif sim.time_exceeds:
                 compliance = Compliance.SimulationTimeOut
@@ -818,7 +815,9 @@ class Benchmark:
 
         return success
 
-    def generate(self):
+    def generate(self) -> None:
+        """Execute the generation step for all operating conditions of the benchmark."""
+
         for op_cond in self._oc_list:
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
