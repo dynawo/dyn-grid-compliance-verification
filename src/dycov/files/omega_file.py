@@ -33,6 +33,16 @@ def _connect_generator_by_lib(
     elif "SetPoint" == omega_lib:
         dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to SetPoint")
         _connect_generator_to_setpoint(dyd_root, ns, generator)
+    elif "Ramp" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to Ramp")
+        _connect_generator_to_ramp(dyd_root, ns, generator, grp)
+
+
+def _connect_generator_to_ramp(
+    dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
+) -> None:
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
+    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
 
 
 def _connect_generator_to_dynmodelomegaref(
