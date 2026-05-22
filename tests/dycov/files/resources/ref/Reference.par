@@ -10,8 +10,9 @@
     <par type="BOOL" name="line_SwitchOffSignal10" value="false"/>
     <par type="BOOL" name="line_SwitchOffSignal20" value="false"/>
     <par type="BOOL" name="line_SwitchOffSignal30" value="false"/>
-  </set>
-  <set id="AuxLoad_Xfmr">
+  </set>  
+
+  <set id="AuxLoad_Xfmr"> <!-- Be careful: In this model, impedances are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_BPu" value=""/>
     <par type="DOUBLE" name="transformer_GPu" value=""/>
     <par type="DOUBLE" name="transformer_RPu" value=""/>
@@ -23,6 +24,7 @@
     <par type="BOOL" name="transformer_SwitchOffSignal20" value="false"/>
     <par type="BOOL" name="transformer_SwitchOffSignal30" value="false"/>
   </set>
+  
   <set id="Aux_Load">
     <par type="DOUBLE" name="load_P0Pu" value=""/>
     <par type="DOUBLE" name="load_Q0Pu" value=""/>
