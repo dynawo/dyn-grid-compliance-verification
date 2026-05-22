@@ -80,8 +80,9 @@
     <par type="DOUBLE" name="pss_Upss0Pu" value="0"/>
     <par type="DOUBLE" name="pss_PNomAlt" value="470"/>
   </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.0003"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0268"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
