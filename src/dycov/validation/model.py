@@ -443,7 +443,7 @@ class ModelValidator(Validator):
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["reaction_time"], self._validations):
-            if "reaction_time_check" in compliance_values:
+            if "calc_reaction_time" in compliance_values:
                 check_results["calc_reaction_target"] = compliance_values["calc_reaction_target"]
                 check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
                 check_results["ref_reaction_time"] = compliance_values["ref_reaction_time"]
@@ -465,7 +465,7 @@ class ModelValidator(Validator):
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["rise_time"], self._validations):
-            if "rise_time_check" in compliance_values:
+            if "calc_rise_time" in compliance_values:
                 check_results["calc_rise_target"] = compliance_values["calc_rise_target"]
                 check_results["calc_rise_time"] = compliance_values["calc_rise_time"]
                 check_results["ref_rise_time"] = compliance_values["ref_rise_time"]
@@ -487,7 +487,7 @@ class ModelValidator(Validator):
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["settling_time"], self._validations):
-            if "settling_time_check" in compliance_values:
+            if "calc_settling_tube" in compliance_values:
                 check_results["calc_settling_tube"] = compliance_values["calc_settling_tube"]
                 check_results["calc_ss_value"] = compliance_values["calc_ss_value"]
                 check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
@@ -510,7 +510,7 @@ class ModelValidator(Validator):
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["overshoot"], self._validations):
-            if "settling_time_check" in compliance_values:
+            if "calc_overshoot" in compliance_values:
                 check_results["calc_overshoot"] = compliance_values["calc_overshoot"]
                 check_results["ref_overshoot"] = compliance_values["ref_overshoot"]
 
@@ -576,7 +576,7 @@ class ModelValidator(Validator):
                 )
 
         if compliance_list.contains_key(["mean_absolute_error_power_1P"], self._validations):
-            if "mae_active_power_1P_check" in compliance_values:
+            if "mae_active_power_1P" in compliance_values:
                 check_results["mae_active_power_1P"] = compliance_values["mae_active_power_1P"]
                 check_results["ss_error_active_power_1P"] = compliance_values[
                     "ss_error_active_power_1P"
@@ -589,7 +589,7 @@ class ModelValidator(Validator):
                 check_results["mae_active_power_1P_check"] = "N/A"
                 check_results["compliance"] = False
 
-            if "mae_reactive_power_1P_check" in compliance_values:
+            if "mae_reactive_power_1P" in compliance_values:
                 check_results["mae_reactive_power_1P"] = compliance_values["mae_reactive_power_1P"]
                 check_results["ss_error_reactive_power_1P"] = compliance_values[
                     "ss_error_reactive_power_1P"
@@ -603,7 +603,7 @@ class ModelValidator(Validator):
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_injection_1P"], self._validations):
-            if "mae_active_current_1P_check" in compliance_values:
+            if "mae_active_current_1P" in compliance_values:
                 check_results["mae_active_current_1P"] = compliance_values["mae_active_current_1P"]
                 check_results["ss_error_active_current_1P"] = compliance_values[
                     "ss_error_active_current_1P"
@@ -616,7 +616,7 @@ class ModelValidator(Validator):
                 check_results["mae_active_current_1P_check"] = "N/A"
                 check_results["compliance"] = False
 
-            if "mae_reactive_current_1P_check" in compliance_values:
+            if "mae_reactive_current_1P" in compliance_values:
                 check_results["mae_reactive_current_1P"] = compliance_values[
                     "mae_reactive_current_1P"
                 ]
