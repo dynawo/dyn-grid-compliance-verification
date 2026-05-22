@@ -371,30 +371,31 @@ class ModelValidator(Validator):
         modified_setpoint: str,
         setpoint_variation: float,
     ) -> dict:
+        results = {}
         step_magnitude = setpoint_variation
         if setpoint_variation == 0.0:
             step_magnitude = 1.0
-        results = {
-            "before": calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
-            "during": calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
-            "after": calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
-            "is_invalid_test": common.is_invalid_test(
-                list(self._get_calculated_curve_by_name(("time"))),
-                list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
-                list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
-                list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
-                start_event,
-            ),
-        }
-
-        self.__active_power_recovery_error(
-            start_event,
-            duration_event,
-            results,
-        )
-
-        measurement_name = _get_measurement_name(modified_setpoint)
         try:
+            results = {
+                "before": calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
+                "during": calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
+                "after": calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
+                "is_invalid_test": common.is_invalid_test(
+                    list(self._get_calculated_curve_by_name(("time"))),
+                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
+                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
+                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
+                    start_event,
+                ),
+            }
+
+            self.__active_power_recovery_error(
+                start_event,
+                duration_event,
+                results,
+            )
+
+            measurement_name = _get_measurement_name(modified_setpoint)
             self.__compare_event_times(
                 measurement_name,
                 start_event,
@@ -420,6 +421,8 @@ class ModelValidator(Validator):
             dycov_logging.get_logger("Model Validator").warning(
                 "Error during validation calculations, some checks will be skipped"
             )
+            results["t_event_start"] = start_event
+            results["is_invalid_test"] = "N/A"
 
         return results
 
