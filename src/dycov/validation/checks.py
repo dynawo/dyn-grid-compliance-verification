@@ -365,7 +365,7 @@ def _check_measurement_by_error_window(
     window: str,
     results: dict,
 ) -> None:
-    if window + "_" + error + "_" + measurement + "_value" not in compliance_values:
+    if window + "_" + error + "_" + measurement + "_check" not in compliance_values:
         results[window + "_" + error + "_" + measurement + "_check"] = "N/A"
         results["voltage_dips_" + measurement + "_check"] = "N/A"
         results["compliance"] = False
