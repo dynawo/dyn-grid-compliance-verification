@@ -80,21 +80,24 @@
     <par type="DOUBLE" name="pss_Upss0Pu" value="0"/>
     <par type="DOUBLE" name="pss_PNomAlt" value="470"/>
   </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.0003"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0268"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
-  </set>
-  <set id="AuxLoad_Xfmr">
+  </set>  
+
+  <set id="AuxLoad_Xfmr"> <!-- Be careful: In this model, impedances are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
+  
   <set id="Aux_Load">
     <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
     <par type="DOUBLE" name="load_QRefPu" value="0.005"/>
