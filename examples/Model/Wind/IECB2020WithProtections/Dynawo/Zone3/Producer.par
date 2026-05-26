@@ -166,7 +166,6 @@
   </set>  
 
   <set id="AuxLoad_Xfmr"> <!-- Be careful: In this model, impedances are in pu base SnRef = 100MVA by default -->
-  <set id="AuxLoad_Xfmr"> <!-- Be careful: In this model, impedances are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>

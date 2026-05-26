@@ -139,7 +139,6 @@
   </set>
   
   <set id="Aux_Load">
-  <set id="Aux_Load">
     <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
     <par type="DOUBLE" name="load_QRefPu" value="0.005"/>
     <par type="DOUBLE" name="load_alpha" value="1.0"/>
