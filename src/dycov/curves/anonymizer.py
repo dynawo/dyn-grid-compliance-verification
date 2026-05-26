@@ -101,6 +101,41 @@ def anonymize(
     )
 
 
+def _ensure_min_points(df: pd.DataFrame, min_points: int = 10) -> pd.DataFrame:
+    """
+    Ensures that the curve has at least `min_points` samples.
+    If not, performs a linear resampling over the existing time range.
+    """
+    if len(df) >= min_points:
+        return df
+
+    if len(df) < 2:
+        # No se puede interpolar → devolver constante o NaNs
+        t_start = df["time"].iloc[0]
+        t_new = np.linspace(t_start, t_start + 1e-6, min_points)
+
+        new_df = {"time": t_new}
+        for col in df.columns:
+            if col == "time":
+                continue
+            val = df[col].iloc[0] if len(df) == 1 else np.nan
+            new_df[col] = val * np.ones(min_points)
+
+        return pd.DataFrame(new_df)
+
+    # Interpolación normal
+    t_old = df["time"].to_numpy()
+    t_new = np.linspace(t_old[0], t_old[-1], min_points)
+
+    new_df = {"time": t_new}
+    for col in df.columns:
+        if col == "time":
+            continue
+        new_df[col] = np.interp(t_new, t_old, df[col].to_numpy())
+
+    return pd.DataFrame(new_df)
+
+
 def _get_files(path: Path, extensions: List[str]) -> List[Path]:
     """Retrieves all files in a directory that match any of the specified extensions.
 
@@ -558,6 +593,7 @@ def _process_curves(
                     f"({100 * len(df_imported_curve) / original_len:.1f}%)"
                 )
 
+            df_imported_curve = _ensure_min_points(df_imported_curve, min_points=10)
             df_imported_curve = df_imported_curve.set_index("time")
             output_csv_path = output_folder / f"{curves_path.stem}.csv"
             _save_curve(df_imported_curve.reset_index(), output_csv_path)
