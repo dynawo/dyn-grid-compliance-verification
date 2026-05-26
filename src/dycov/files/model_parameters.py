@@ -653,7 +653,6 @@ def _append_generator(
     ppc_local = _get_generator_ppc_local(parset, nsmap, lib)
 
     converter_lv_control = _get_generator_converter_lv_control(parset, nsmap, lib)
-    print(f"Generator {gen_id} converter LV control: {converter_lv_control}")
 
     generators.append(
         GenParams(
