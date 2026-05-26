@@ -89,8 +89,9 @@
     <par type="DOUBLE" name="BESS_XPu" value="1e-6"/>
     <par type="DOUBLE" name="BESS_SOC0Pu" value="0.75"/>
   </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="0.5"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000455"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.040743"/>
