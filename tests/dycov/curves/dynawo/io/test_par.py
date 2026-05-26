@@ -87,7 +87,7 @@ def test_complete_file_replaces_placeholders_successfully(
     working_dir_with_template, tso_gen, event_params
 ):
     par = ParFile(DummyProducerCurves(), "BM", "OC")
-    par.complete_file(working_dir_with_template, 0.01, 0.02, tso_gen, event_params, 225.0)
+    par.complete_file(working_dir_with_template, 0.01, 0.02, tso_gen, event_params, 225.0, 100.0)
     output = read_generated_file(working_dir_with_template / "TSOModel.par")
     assert "line_XPu = 0.02" in output
     assert "line_RPu = 0.01" in output
@@ -106,20 +106,28 @@ def test_complete_file_populates_variables_dict_correctly(
     working_dir_with_template, tso_gen, event_params
 ):
     par = ParFile(DummyProducerCurves(), "BM", "OC")
-    # Patch replace_placeholders.dump_file to capture variables_dict
+    # Patch the dump_file implementation used by ParFile.complete_file to capture variables_dict
     captured = {}
+    import dycov.curves.dynawo.io.par as par_module
     import dycov.files.replace_placeholders as rp
 
-    orig_dump = rp.dump_file
+    orig_dump_par = getattr(par_module, "dump_file", None)
+    orig_dump_rp = rp.dump_file
 
     def fake_dump_file(path, filename, variables_dict):
         captured.update(variables_dict)
 
+    if orig_dump_par is not None:
+        par_module.dump_file = fake_dump_file
     rp.dump_file = fake_dump_file
     try:
-        par.complete_file(working_dir_with_template, 0.03, 0.04, tso_gen, event_params, 225.0)
+        par.complete_file(
+            working_dir_with_template, 0.03, 0.04, tso_gen, event_params, 225.0, 100.0
+        )
     finally:
-        rp.dump_file = orig_dump
+        if orig_dump_par is not None:
+            par_module.dump_file = orig_dump_par
+        rp.dump_file = orig_dump_rp
     assert captured["line_XPu"] == 0.04
     assert captured["line_RPu"] == 0.03
     assert captured["infiniteBus_U0Pu"] == tso_gen.u0
@@ -134,18 +142,17 @@ def test_complete_file_populates_variables_dict_correctly(
 
 
 def test_complete_file_calls_complete_parameters(working_dir_with_template, tso_gen, event_params):
-    class ParFileWithSpy(ParFile):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.called = False
+    par = ParFile(DummyProducerCurves(), "BM", "OC")
+    called = {"flag": False}
+    original_complete_parameters = par.complete_parameters
 
-        def complete_parameters(self, variables_dict, event_params_):
-            self.called = True
-            super().complete_parameters(variables_dict, event_params_)
+    def spy_complete_parameters(variables_dict, event_params_):
+        called["flag"] = True
+        return original_complete_parameters(variables_dict, event_params_)
 
-    par = ParFileWithSpy(DummyProducerCurves(), "BM", "OC")
-    par.complete_file(working_dir_with_template, 0.01, 0.02, tso_gen, event_params, 225.0)
-    assert par.called
+    par.complete_parameters = spy_complete_parameters
+    par.complete_file(working_dir_with_template, 0.01, 0.02, tso_gen, event_params, 225.0, 100.0)
+    assert called["flag"]
 
 
 def test_complete_file_tool_variables_not_overwritten(
@@ -153,22 +160,30 @@ def test_complete_file_tool_variables_not_overwritten(
 ):
     par = ParFile(DummyProducerCurves(), "BM", "OC")
     # Patch get_all_variables to return a dict with tool_variables pre-set to special values
+    import dycov.curves.dynawo.io.par as par_module
     import dycov.files.replace_placeholders as rp
 
-    orig_get_all_variables = rp.get_all_variables
+    orig_get_all_variables_par = getattr(par_module, "get_all_variables", None)
+    orig_get_all_variables_rp = rp.get_all_variables
 
     def fake_get_all_variables(path, template_file):
-        d = orig_get_all_variables(path, template_file)
+        d = orig_get_all_variables_rp(path, template_file)
         d["line_XPu"] = "should_not_overwrite"
         d["gen_P0Pu"] = "should_not_overwrite"
         d["event_start"] = "should_not_overwrite"
         return d
 
+    if orig_get_all_variables_par is not None:
+        par_module.get_all_variables = fake_get_all_variables
     rp.get_all_variables = fake_get_all_variables
     try:
-        par.complete_file(working_dir_with_template, 0.01, 0.02, tso_gen, event_params, 225.0)
+        par.complete_file(
+            working_dir_with_template, 0.01, 0.02, tso_gen, event_params, 225.0, 100.0
+        )
     finally:
-        rp.get_all_variables = orig_get_all_variables
+        if orig_get_all_variables_par is not None:
+            par_module.get_all_variables = orig_get_all_variables_par
+        rp.get_all_variables = orig_get_all_variables_rp
     output = read_generated_file(working_dir_with_template / "TSOModel.par")
     # The tool_variables should be set to the correct values, not the pre-set ones
     assert "line_XPu = 0.02" in output
