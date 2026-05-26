@@ -267,12 +267,12 @@
   </set>
   
   <set id="Aux_Load">
-  <set id="Aux_Load">
     <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
     <par type="DOUBLE" name="load_QRefPu" value="0.005"/>
     <par type="DOUBLE" name="load_alpha" value="1.0"/>
     <par type="DOUBLE" name="load_beta" value="1.0"/>
   </set>
+  
   <set id="Main_Xfmr">
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
