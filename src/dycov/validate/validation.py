@@ -378,7 +378,6 @@ class Validation:
             # Collect results only if we reached here (no interrupt)
             for producer_name, pcs_name, summary, pcs_results in results:
                 summary_list.extend(summary)
-                print(f"{producer_name}_{pcs_name} tamaño: {len(pcs_results)}")
                 report_results[f"{producer_name}_{pcs_name}"] = pcs_results
         else:
             dycov_logging.get_logger("Validation").info("Validating PCS sequentially.")
