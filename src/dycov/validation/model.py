@@ -240,6 +240,16 @@ class ModelValidator(Validator):
 
             results["ramp_error"] = ramp_error
 
+    def __is_stabilized(
+        self, time_curve: list, calculated_curve: list, stable_time: float
+    ) -> bool:
+        try:
+            is_stabilized, _ = common.is_stable(time_curve, calculated_curve, stable_time)
+        except ValueError:
+            return False
+
+        return is_stabilized
+
     def __calculate_mean_absolute_error(
         self,
         measurement_name: str,
@@ -264,6 +274,8 @@ class ModelValidator(Validator):
             calculated_curves["time"][0],
         )
 
+        stable_time = config.get_float("GridCode", "stable_time", 100.0)
+        time_curve = list(calculated_curves["time"])[res_settlin_t_pos:]
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
             calculated_curve = list(calculated_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
             reference_curve = list(reference_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
@@ -271,6 +283,11 @@ class ModelValidator(Validator):
                 calculated_curve,
                 reference_curve,
                 1.0,
+            )
+            results["mae_voltage_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
             )
 
             calculated_ss = np.average(
@@ -291,6 +308,11 @@ class ModelValidator(Validator):
                 reference_curve,
                 1.0,
             )
+            results["mae_active_power_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
+            )
 
             calculated_ss = np.average(
                 list(calculated_curves["BusPDR_BUS_ActivePower"])[res_settlin_t_pos:]
@@ -310,6 +332,11 @@ class ModelValidator(Validator):
                 calculated_curve,
                 reference_curve,
                 1.0,
+            )
+            results["mae_reactive_power_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
             )
 
             calculated_ss = np.average(
@@ -332,6 +359,11 @@ class ModelValidator(Validator):
                 reference_curve,
                 1.0,
             )
+            results["mae_active_current_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
+            )
 
             calculated_ss = np.average(
                 list(calculated_curves["BusPDR_BUS_ActiveCurrent"])[res_settlin_t_pos:]
@@ -351,6 +383,11 @@ class ModelValidator(Validator):
                 calculated_curve,
                 reference_curve,
                 1.0,
+            )
+            results["mae_reactive_current_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
             )
 
             calculated_ss = np.average(
@@ -574,6 +611,17 @@ class ModelValidator(Validator):
                 check_results["mae_voltage_1P_check"] = _check_value_by_threshold(
                     compliance_values["mae_voltage_1P"], thr_final_ss_mae
                 )
+                check_results["mae_voltage_1P_stabilized"] = compliance_values[
+                    "mae_voltage_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_voltage_1P_check"]
+                    & check_results["mae_voltage_1P_stabilized"]
+                )
+            else:
+                check_results["mae_voltage_1P_check"] = "N/A"
+                check_results["mae_voltage_1P_stabilized"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_power_1P"], self._validations):
             if "mae_active_power_1P" in compliance_values:
@@ -584,9 +632,16 @@ class ModelValidator(Validator):
                 check_results["mae_active_power_1P_check"] = _check_value_by_threshold(
                     compliance_values["mae_active_power_1P"], thr_final_ss_mae
                 )
-                check_results["compliance"] &= check_results["mae_active_power_1P_check"]
+                check_results["mae_active_power_1P_stabilized"] = compliance_values[
+                    "mae_active_power_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_active_power_1P_check"]
+                    & check_results["mae_active_power_1P_stabilized"]
+                )
             else:
                 check_results["mae_active_power_1P_check"] = "N/A"
+                check_results["mae_active_power_1P_stabilized"] = "N/A"
                 check_results["compliance"] = False
 
             if "mae_reactive_power_1P" in compliance_values:
@@ -597,9 +652,16 @@ class ModelValidator(Validator):
                 check_results["mae_reactive_power_1P_check"] = _check_value_by_threshold(
                     compliance_values["mae_reactive_power_1P"], thr_final_ss_mae
                 )
-                check_results["compliance"] &= check_results["mae_reactive_power_1P_check"]
+                check_results["mae_reactive_power_1P_stabilized"] = compliance_values[
+                    "mae_reactive_power_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_reactive_power_1P_check"]
+                    & check_results["mae_reactive_power_1P_stabilized"]
+                )
             else:
                 check_results["mae_reactive_power_1P_check"] = "N/A"
+                check_results["mae_reactive_power_1P_stabilized"] = "N/A"
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_injection_1P"], self._validations):
@@ -611,9 +673,16 @@ class ModelValidator(Validator):
                 check_results["mae_active_current_1P_check"] = _check_value_by_threshold(
                     compliance_values["mae_active_current_1P"], thr_final_ss_mae
                 )
-                check_results["compliance"] &= check_results["mae_active_current_1P_check"]
+                check_results["mae_active_current_1P_stabilized"] = compliance_values[
+                    "mae_active_current_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_active_current_1P_check"]
+                    & check_results["mae_active_current_1P_stabilized"]
+                )
             else:
                 check_results["mae_active_current_1P_check"] = "N/A"
+                check_results["mae_active_current_1P_stabilized"] = "N/A"
                 check_results["compliance"] = False
 
             if "mae_reactive_current_1P" in compliance_values:
@@ -626,9 +695,16 @@ class ModelValidator(Validator):
                 check_results["mae_reactive_current_1P_check"] = _check_value_by_threshold(
                     compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
                 )
-                check_results["compliance"] &= check_results["mae_reactive_current_1P_check"]
+                check_results["mae_reactive_current_1P_stabilized"] = compliance_values[
+                    "mae_reactive_current_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_reactive_current_1P_check"]
+                    & check_results["mae_reactive_current_1P_stabilized"]
+                )
             else:
                 check_results["mae_reactive_current_1P_check"] = "N/A"
+                check_results["mae_reactive_current_1P_stabilized"] = "N/A"
                 check_results["compliance"] = False
 
     def __check(
