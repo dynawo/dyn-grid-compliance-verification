@@ -99,7 +99,6 @@ class DynawoCurves(ProducerCurves):
         self._stable_time = stable_time
 
         self._f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-        self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
         self._simulation_stop = config.get_float("Dynawo", "simulation_stop", 100.0)
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
