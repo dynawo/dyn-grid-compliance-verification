@@ -512,6 +512,7 @@ def _apply_noise_to_curves(
             fc=frequency,
             fs=resampling_fs,
         )
+        noise_smoothed = noise_smoothed - np.mean(noise_smoothed)
 
         # Apply noise to the column
         df_imported_curve[column] = values + noise_smoothed
