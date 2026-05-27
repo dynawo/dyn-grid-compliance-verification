@@ -355,6 +355,7 @@ class ModelProducer(Producer):
         self.q_min_pu = float(producer_config.get(default_section, "q_min_at_PDR")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom_at_PDR"))
         self.topology = producer_config.get(default_section, "topology")
+        self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""

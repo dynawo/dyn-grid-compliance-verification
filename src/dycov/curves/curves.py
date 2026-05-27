@@ -118,6 +118,16 @@ class ProducerCurves:
             "line_XPu": self._line_Xpu,
         }
 
+    def get_snref(self) -> float:
+        """Get the reference power (S_nref).
+
+        Returns
+        -------
+        float
+            Reference power (S_nref).
+        """
+        return self._s_nref
+
     def get_producer(self) -> Producer:
         """Get the producer instance.
 

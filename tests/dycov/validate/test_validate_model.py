@@ -20,7 +20,7 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
         Compliance.Compliant,  # 7
-        Compliance.Compliant,  # 8
+        Compliance.NonCompliant,  # 8
         Compliance.Compliant,  # 9
         Compliance.InvalidTest,  # 10
         Compliance.Compliant,  # 11
@@ -29,12 +29,12 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 14
         Compliance.Compliant,  # 15
         Compliance.Compliant,  # 16
-        Compliance.Compliant,  # 17
+        Compliance.NonCompliant,  # 17
         Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
-        Compliance.Compliant,  # 20
+        Compliance.NonCompliant,  # 20
         Compliance.Compliant,  # 21
-        Compliance.Compliant,  # 22
+        Compliance.NonCompliant,  # 22
         Compliance.Compliant,  # 23
     ] == compliance
 
@@ -46,18 +46,18 @@ def test_model_validation_bess_producer_curves():
         MODEL / "BESS" / "WECC" / "ReferenceCurves",
     )
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
+        Compliance.NonCompliant,  # 0
+        Compliance.NonCompliant,  # 1
+        Compliance.NonCompliant,  # 2
+        Compliance.NonCompliant,  # 3
+        Compliance.NonCompliant,  # 4
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
-        Compliance.Compliant,  # 7
-        Compliance.Compliant,  # 8
-        Compliance.Compliant,  # 9
-        Compliance.Compliant,  # 10
-        Compliance.Compliant,  # 11
+        Compliance.NonCompliant,  # 7
+        Compliance.NonCompliant,  # 8
+        Compliance.NonCompliant,  # 9
+        Compliance.NonCompliant,  # 10
+        Compliance.NonCompliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
         Compliance.Compliant,  # 14
@@ -80,18 +80,18 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 31
         Compliance.Compliant,  # 32
         Compliance.Compliant,  # 33
-        Compliance.Compliant,  # 34
-        Compliance.Compliant,  # 35
-        Compliance.Compliant,  # 36
-        Compliance.Compliant,  # 37
-        Compliance.Compliant,  # 38
-        Compliance.Compliant,  # 39
-        Compliance.Compliant,  # 40
-        Compliance.Compliant,  # 41
-        Compliance.Compliant,  # 42
-        Compliance.Compliant,  # 43
-        Compliance.Compliant,  # 44
+        Compliance.NonCompliant,  # 34
+        Compliance.NonCompliant,  # 35
+        Compliance.NonCompliant,  # 36
+        Compliance.NonCompliant,  # 37
+        Compliance.NonCompliant,  # 38
+        Compliance.NonCompliant,  # 39
+        Compliance.NonCompliant,  # 40
+        Compliance.NonCompliant,  # 41
+        Compliance.NonCompliant,  # 42
+        Compliance.NonCompliant,  # 43
+        Compliance.NonCompliant,  # 44
         Compliance.Compliant,  # 45
-        Compliance.Compliant,  # 46
+        Compliance.NonCompliant,  # 46
         Compliance.InvalidTest,  # 47
     ] == compliance
