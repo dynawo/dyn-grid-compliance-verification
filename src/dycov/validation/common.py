@@ -628,7 +628,6 @@ def maximum_error(signal: list, reference: list, step_magnitude: float) -> float
     if total_values == 0:
         return 0
 
-    print(f"step_magnitude: {step_magnitude}")
     return max(abs(signal - reference)) / step_magnitude
 
 
@@ -782,7 +781,6 @@ def get_settling_time(
     else:
         ret_val = time[pos] - sim_t_event_start
 
-    print(f"percent: {percent}\n band: [{mean_val_min}, {mean_val_max}]")
     return ret_val, pos, mean_val_min, mean_val_max, curve[pos]
 
 
