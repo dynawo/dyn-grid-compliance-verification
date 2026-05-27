@@ -233,7 +233,10 @@ def get_static_diff(primary_voltages: list, voltage_setpoint: list) -> float:
 
     end_val = primary_voltages[-1]
     cons_val = voltage_setpoint[-1]
-    return math.fabs((end_val - cons_val) / cons_val)
+    if abs(cons_val) < ATOL:
+        return math.fabs(end_val - cons_val)
+    else:
+        return math.fabs((end_val - cons_val) / cons_val)
 
 
 def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
@@ -262,8 +265,12 @@ def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: f
 
     # Get the tube
     mean_val = curve[-1] - curve[0]
-    mean_val_max = curve[-1] + abs(percent * mean_val)
-    mean_val_min = curve[-1] - abs(percent * mean_val)
+    if abs(mean_val) < ATOL:
+        mean_val_min = curve[-1] - abs(percent)
+        mean_val_max = curve[-1] + abs(percent)
+    else:
+        mean_val_max = curve[-1] + abs(percent * mean_val)
+        mean_val_min = curve[-1] - abs(percent * mean_val)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -505,7 +512,11 @@ def get_AVR_x(
     pass_AVR_check = True
     error_time = -1
     for i in range(len(curve)):
-        if 0.05 < abs(curve[i] - target_values[i]) / target_values[i]:
+        if abs(target_values[i]) < ATOL:
+            error = abs(curve[i] - target_values[i])
+        else:
+            error = abs(curve[i] - target_values[i]) / target_values[i]
+        if 0.05 < error:
             pass_AVR_check = False
             error_time = time[i] - sim_t_event_end
             break
@@ -752,8 +763,12 @@ def get_settling_time(
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_max = mean_val + abs(percent * mean_val)
-    mean_val_min = mean_val - abs(percent * mean_val)
+    if abs(mean_val) < ATOL:
+        mean_val_min = -abs(percent)
+        mean_val_max = abs(percent)
+    else:
+        mean_val_max = mean_val + abs(percent * mean_val)
+        mean_val_min = mean_val - abs(percent * mean_val)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -765,6 +780,7 @@ def get_settling_time(
         ret_val = 0
     else:
         ret_val = time[pos] - sim_t_event_start
+
     return ret_val, pos, mean_val_min, mean_val_max, curve[pos]
 
 
@@ -802,7 +818,10 @@ def get_reached_time(
     stable_value = curve[pos_t_event - 1]
 
     difference_val = curve[-1] - stable_value
-    objective_value = stable_value + percentage * difference_val
+    if abs(difference_val) < ATOL:
+        objective_value = stable_value + percentage
+    else:
+        objective_value = stable_value + percentage * difference_val
 
     # Cut list values
     time = time[pos_t_event:]
