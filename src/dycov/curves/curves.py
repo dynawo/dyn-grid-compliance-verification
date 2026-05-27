@@ -63,6 +63,7 @@ class ProducerCurves:
     ):
         self._producer = producer
         self._line_Xpu = 0.0
+        self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
 
     def obtain_value(self, value_definition: str) -> Union[str, float]:
         """Calculate the final value from a definition.
@@ -166,7 +167,8 @@ class ProducerCurves:
             return 0.0
 
         # Calculate and return the final setpoint variation value
-        return float(self.obtain_value(str(setpoint_variation)))
+        producer = self.get_producer()
+        return float(self.obtain_value(str(setpoint_variation))) * self._s_nref / producer.s_nom
 
     @abstractmethod
     def get_solver(self) -> dict:
