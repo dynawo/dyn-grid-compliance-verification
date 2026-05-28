@@ -29,6 +29,7 @@ from dycov.report.figure_decorations import (
     draw_response_characteristics,
 )
 from dycov.report.figure_renderer import MatplotlibRenderer
+from dycov.report.types import FigureDescription
 
 
 def _add_curve2plot(
@@ -314,7 +315,7 @@ def get_common_time_range(
 
 def create_plot(
     time: list,
-    figure_description,
+    figure_description: FigureDescription,
     curves: list,
     time_reference: list,
     curves_reference: list,
@@ -343,6 +344,8 @@ def create_plot(
         File where the graph will be saved
     results: dict
         Results of the validations applied in the pcs
+    band_ref_val: float | None
+        Reference value for the tolerance band, if applicable
     """
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
     last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
@@ -385,7 +388,12 @@ def create_plot(
         )
     else:
         variable_type = variable_names[0]["type"]
-        suffix_map = {"generator": "_GEN_", "transformer": "_XFMR_"}
+        suffix_map = {
+            "generator": "_GEN_",
+            "transformer": "_XFMR_",
+            "sync_condenser": "_GEN_TSO_",
+            "load": "_LOAD_TSO_",
+        }
         suffix = suffix_map.get(variable_type, "")
         curves_names = [
             curve["name"]
@@ -422,7 +430,7 @@ def _plot_curve(
     unit: str,
     ymin: float,
     ymax: float,
-    figure_description,
+    figure_description: FigureDescription,
     last_val: float,
 ) -> None:
     fig, ax = plt.subplots()
@@ -481,6 +489,22 @@ def get_curves2plot(
         for name in variable_names:
             if name["type"] == "generator":
                 filter_col = [col for col in curves if col.endswith("_GEN_" + name["variable"])]
+                for curve_name in filter_col:
+                    _add_curve2plot(
+                        name["variable"], curve_name, curves, plot_curves, is_reference
+                    )
+            elif name["type"] == "sync_condenser":
+                filter_col = [
+                    col for col in curves if col.endswith("_GEN_TSO_" + name["variable"])
+                ]
+                for curve_name in filter_col:
+                    _add_curve2plot(
+                        name["variable"], curve_name, curves, plot_curves, is_reference
+                    )
+            elif name["type"] == "load":
+                filter_col = [
+                    col for col in curves if col.endswith("_LOAD_TSO_" + name["variable"])
+                ]
                 for curve_name in filter_col:
                     _add_curve2plot(
                         name["variable"], curve_name, curves, plot_curves, is_reference

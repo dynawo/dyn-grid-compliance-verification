@@ -19,7 +19,8 @@ from dycov.gfm.parameters import GFMParameters
 
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
-    """Factory method to instantiate and return a specific GFMCalculator subclass.
+    """
+    Factory method to instantiate and return a specific GFMCalculator subclass.
 
     This function maps string identifiers to their corresponding Grid Forming (GFM)
     calculator classes, ensuring they are initialized with the provided parameters.

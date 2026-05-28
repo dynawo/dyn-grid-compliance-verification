@@ -7,7 +7,6 @@
 # omsg@aia.es
 # demiguelm@aia.es
 #
-import logging
 from collections import namedtuple
 from pathlib import Path
 
@@ -24,7 +23,6 @@ from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, model_parameters
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging.logging import dycov_logging
-from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import DisconnectionModel, SimulationError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
@@ -101,16 +99,12 @@ class DynawoCurves(ProducerCurves):
         self._stable_time = stable_time
 
         self._f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-        self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
         self._simulation_stop = config.get_float("Dynawo", "simulation_stop", 100.0)
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
         parameter_checks.check_simulation_duration(self.get_simulation_duration())
 
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
-
-        logging.setLoggerClass(SimulationLogger)
-        self.__logger = logging.getLogger("ProducerCurves")
 
         # Solver parameters — initialised by __reset_solver
         self._solver_id = ""
@@ -124,21 +118,12 @@ class DynawoCurves(ProducerCurves):
         self._voltage_dip = None
 
         # Collaborators (created once; ModelSetup state is refreshed per OC)
-        self._setup = ModelSetup(self, pcs_name, self._s_nref, self._f_nom)
+        self._setup = ModelSetup(self, pcs_name, self.get_snref(), self._f_nom)
         self._bisection = self._build_bisection_engine()
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    def __log(self, message: str, level: str = "debug") -> None:
-        getattr(dycov_logging.get_logger("ProducerCurves"), level)(message)
-
-    def __debug(self, message: str) -> None:
-        self.__log(message, "debug")
-
-    def __warning(self, message: str) -> None:
-        self.__log(message, "warning")
 
     def __reset_solver(self) -> None:
         """Resets all solver parameters to their configured defaults."""
@@ -166,7 +151,7 @@ class DynawoCurves(ProducerCurves):
             pcs_name=self._pcs_name,
             launcher_dwo=self._launcher_dwo,
             producer=self.get_producer(),
-            s_nref=self._s_nref,
+            s_nref=self.get_snref(),
             f_nom=self._f_nom,
             sim_time=self._sim_time,
             stable_time=self._stable_time,
@@ -215,7 +200,7 @@ class DynawoCurves(ProducerCurves):
             curves_dict=self._setup.curves_dict,
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
-            s_nref=self._s_nref,
+            s_nref=self.get_snref(),
             f_nom=self._f_nom,
         )
 
@@ -310,9 +295,9 @@ class DynawoCurves(ProducerCurves):
             disable_retry_logs=disable_retry_logs,
         )
         if not result.succeeded:
-            self.__warning(result.log)
+            dycov_logging.get_logger("ProducerCurves").warning(result.log)
         else:
-            self.__debug("Simulation successful")
+            dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
         has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
         return SimulateOutcome(
             succeeded=result.succeeded,
@@ -372,7 +357,7 @@ class DynawoCurves(ProducerCurves):
                 working_oc_dir, pcs_name, bm_name, oc_name, reference_event_start_time
             )
             if not is_test_applicable:
-                self.__warning("Test not applicable.")
+                dycov_logging.get_logger("ProducerCurves").warning("Test not applicable.")
                 return (
                     jobs_output_dir,
                     event_params,
@@ -420,7 +405,7 @@ class DynawoCurves(ProducerCurves):
                 event_params["start_time"],
                 event_params["duration_time"],
             )
-            self.__debug(
+            dycov_logging.get_logger("ProducerCurves").debug(
                 f"Simulation finished in {self._sim_time}s: "
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",

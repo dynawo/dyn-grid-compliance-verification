@@ -361,59 +361,93 @@ def copy_base_case_files(
         copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
 
+def _copy_curve_files_by_name(source_path: Path, target_path: Path, base_name: str) -> list[str]:
+    """Copy curve files by base name and return list of copied target filenames."""
+    if not source_path.exists():
+        return []
+
+    supported_exts = {".csv", ".exp", ".cff", ".dat", ".cfg", ".dict"}
+    copied_files: list[str] = []
+
+    try:
+        for file in source_path.iterdir():
+            if (
+                file.is_file()
+                and file.stem.lower() == base_name.lower()
+                and file.suffix.lower() in supported_exts
+            ):
+
+                target_name = f"{base_name}{file.suffix.lower()}"
+                target_file = target_path / target_name
+
+                copy_file(file, target_file)
+                copied_files.append(target_name)
+
+        return copied_files
+    except OSError:
+        return []
+
+
 def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: str) -> bool:
-    """Copy curve files based on prefix name from source to target.
+    """Copy all files that compose a curve from source to target.
+
+    The function looks for the curve files and copies:
+        - CurvesFiles.ini
+        - The curve files (.csv, .cfg, .dat, etc.)
+        - The associated dictionary file (.dict) - Mandatory for all curve types
 
     Parameters
     ----------
     source_path : Path
-        Directory containing curve files.
+        Directory containing the curve files.
     target_path : Path
-        Destination directory.
+        Destination directory where the files will be copied.
     prefix_name : str
-        Prefix used to identify curve files.
+        Prefix used to identify the curve (e.g. 'BaseLoad', 'PVProfile', etc.).
 
     Returns
     -------
     bool
-        True if curves were successfully copied, False otherwise.
+        True if **all** files that compose the curve were successfully copied
+        (main curve file + associated .dict file).
+        Returns False if any essential file is missing or if an error occurs.
     """
     curves_dir = source_path
     if not curves_dir.exists():
         return False
+
     try:
-        if (curves_dir / "CurvesFiles.ini").exists():
-            copy_file(curves_dir / "CurvesFiles.ini", target_path)
-            curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
-            curves_cfg.read(curves_dir / "CurvesFiles.ini")
-            curves_filename = curves_cfg.get("Curves-Files", prefix_name, fallback=None)
-            file_copied = None
-            if curves_filename:
-                curves_file = curves_dir / curves_filename
-                if curves_file.exists():
-                    copy_file(
-                        curves_file, target_path / (prefix_name + curves_file.suffix.lower())
-                    )
-                    file_copied = curves_file.stem
-            if file_copied is None:
-                pattern = re.compile(rf".*{prefix_name}\.[cC][sS][vV]")
-                for file in curves_dir.iterdir():
-                    if pattern.match(file.name):
-                        copy_file(file, target_path / f"{prefix_name}.{file.suffix.lower()}")
-                        file_copied = file.stem
-            success = False
-            if file_copied:
-                dict_pattern = re.compile(rf".*{file_copied}\.[dD][iI][cC][tT]")
-                for file in curves_dir.iterdir():
-                    if dict_pattern.match(file.name):
-                        copy_file(file, target_path / (file_copied + file.suffix.lower()))
-                        success = True
-            return success
+        ini_file = curves_dir / "CurvesFiles.ini"
+        if not ini_file.exists():
+            return False
+
+        copy_file(ini_file, target_path)
+
+        curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        curves_cfg.read(ini_file)
+        curves_filename = curves_cfg.get("Curves-Files", prefix_name, fallback=None)
+
+        base_name = prefix_name
+        base_source_path = curves_dir
+
+        if curves_filename:
+            main_file = Path(curves_filename)
+            base_name = main_file.stem
+            if main_file.is_absolute():
+                base_source_path = main_file.parent
+
+        copied_files = _copy_curve_files_by_name(base_source_path, target_path, base_name)
+
+        # All curves must have the .dict file
+        success = len(copied_files) >= 2 and any(f.endswith(".dict") for f in copied_files)
+
+        return success
+
     except OSError:
         dycov_logging.get_logger("Manage files").warning(
             "The supplied curves set has not been updated"
         )
-    return False
+        return False
 
 
 def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:

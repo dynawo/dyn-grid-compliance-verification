@@ -14,7 +14,7 @@
     <par type="DOUBLE" name="inertialGrid_H" value="1"/>
     <par type="DOUBLE" name="inertialGrid_Km" value="1e-4"/>
     <par type="DOUBLE" name="inertialGrid_R" value="1"/>
-    <par type="DOUBLE" name="inertialGrid_SNom" value="90"/>
+    <par type="DOUBLE" name="inertialGrid_SNom" value="{{inertialGrid_SNom}}"/>
     <par type="DOUBLE" name="inertialGrid_Tr" value="1"/>
     <par type="DOUBLE" name="inertialGrid_P0Pu" value="0"/>
     <par type="DOUBLE" name="inertialGrid_Q0Pu" value="0"/>
@@ -22,8 +22,8 @@
     <par type="DOUBLE" name="inertialGrid_UPhase0" value="0"/>
   </set>
   <set id="Line">
-    <par type="DOUBLE" name="line_RPu" value="0.0"/>
-    <par type="DOUBLE" name="line_XPu" value="0.3"/>
+    <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
     <par type="DOUBLE" name="line_GPu" value="0"/>
     <par type="DOUBLE" name="line_BPu" value="0"/>
   </set>

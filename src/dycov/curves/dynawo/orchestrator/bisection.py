@@ -108,15 +108,6 @@ class BisectionEngine:
         """rpu = xpu / r_factor (with zero-division guard)."""
         return (xpu / r_factor) if r_factor != 0.0 else 0.0
 
-    def _debug(self, message: str) -> None:
-        dycov_logging.get_logger("ProducerCurves").debug(message)
-
-    def _warning(self, message: str) -> None:
-        dycov_logging.get_logger("ProducerCurves").warning(message)
-
-    def _error(self, message: str) -> None:
-        dycov_logging.get_logger("ProducerCurves").error(message)
-
     def _modify_fault(
         self,
         working_oc_dir: Path,
@@ -177,7 +168,7 @@ class BisectionEngine:
             Operating Condition name (for debug logging).
         """
         complete = math.isclose(max_val, min_val, rel_tol=rel_tol)
-        self._debug(
+        dycov_logging.get_logger("Bisection").debug(
             f"Bisection method is complete: "
             f"{max_val=}, {min_val=}, {rel_tol=}, is complete: {complete}"
         )
@@ -197,8 +188,8 @@ class BisectionEngine:
         dip: float,
         bm_name: str,
         oc_name: str,
-        simulate_fn,
-        reset_solver_fn,
+        simulate_fn: callable,
+        reset_solver_fn: callable,
     ) -> None:
         """
         Determines and applies the fault impedance that achieves the required voltage dip
@@ -236,7 +227,7 @@ class BisectionEngine:
             voltage dip cannot be achieved within the bisection tolerance.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        max_val = config.get_float("Global", "maximum_hiz_fault", 10.0)
+        max_val = config.get_float("Global", "maximum_hiz_fault", 100.0)
         min_val = config.get_float("Global", "minimum_hiz_fault", 1e-10)
         last_fault_xpu = min_val
         bisection_success = False
@@ -247,8 +238,10 @@ class BisectionEngine:
             fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
             with self._isolated_copy(working_oc_dir) as working_oc_dir_fault:
                 fault_rpu = self._fault_rpu_from_xpu(fault_xpu, fault_r_factor)
-                self._debug(f"Bisection between {max_val} and {min_val}")
-                self._debug(f"Fault XPU in {fault_xpu}")
+                dycov_logging.get_logger("Bisection").debug(
+                    f"Bisection between {max_val} and {min_val}"
+                )
+                dycov_logging.get_logger("Bisection").debug(f"Fault XPU in {fault_xpu}")
                 self._modify_fault(
                     working_oc_dir_fault,
                     fault_start,
@@ -277,7 +270,7 @@ class BisectionEngine:
                         fault_duration,
                         abs(dip),
                     )
-                if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
+                if dycov_logging.get_logger("Bisection").getEffectiveLevel() == logging.DEBUG:
                     target_dir_name = (
                         "bisection_last_success"
                         if fault_outcome.succeeded
@@ -294,7 +287,7 @@ class BisectionEngine:
                     else:
                         break
                 else:
-                    self._debug("Simulation fails")
+                    dycov_logging.get_logger("Bisection").debug("Simulation fails")
                     if voltage_dip_classification is not None:
                         if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                             max_val = fault_xpu
@@ -306,13 +299,17 @@ class BisectionEngine:
                     break
 
         if not bisection_success:
-            self._error("The simulation fails with any value for the fault")
+            dycov_logging.get_logger("Bisection").error(
+                "The simulation fails with any value for the fault"
+            )
             raise ValueError("Fault simulation fails")
         if voltage_dip_classification == VoltDipResult.COLUMN_MISSING:
-            self._error("The expected voltage curve is missing in the simulation output")
+            dycov_logging.get_logger("Bisection").error(
+                "The expected voltage curve is missing in the simulation output"
+            )
             raise ValueError("Voltage curve missing")
         elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
-            self._error("The required dip was not achieved")
+            dycov_logging.get_logger("Bisection").error("The required dip was not achieved")
             raise ValueError("Fault dip unachievable")
 
         last_fault_rpu = self._fault_rpu_from_xpu(last_fault_xpu, fault_r_factor)
@@ -454,7 +451,7 @@ class BisectionEngine:
         """
         min_val = fault_duration
         max_val = fault_duration * 2
-        self._debug(f"Max time CCT in {max_val}")
+        dycov_logging.get_logger("Bisection").debug(f"Max time CCT in {max_val}")
         while self._run_time_cct(
             working_oc_dir_attempt,
             jobs_output_dir,
@@ -464,7 +461,7 @@ class BisectionEngine:
         ):
             min_val = max_val
             max_val *= 1.5
-            self._debug(f"Max time CCT in {max_val}")
+            dycov_logging.get_logger("Bisection").debug(f"Max time CCT in {max_val}")
         return min_val, max_val
 
     def find_cct(
@@ -507,15 +504,21 @@ class BisectionEngine:
             oc_name,
         )
         manage_files.remove_dir(working_oc_dir_fault_max)
-        self._debug("Upper time to find clear time: " + str(max_val))
-        self._debug("Lower time to find clear time: " + str(min_val))
+        dycov_logging.get_logger("Bisection").debug(
+            "Upper time to find clear time: " + str(max_val)
+        )
+        dycov_logging.get_logger("Bisection").debug(
+            "Lower time to find clear time: " + str(min_val)
+        )
 
         time = round(((max_val + min_val) / 2), BISECTION_ROUND)
         counter = 0
         while True:
-            self._debug(f"Attempt {counter} to find clear time. Used fault time: {time}")
+            dycov_logging.get_logger("Bisection").debug(
+                f"Attempt {counter} to find clear time. Used fault time: {time}"
+            )
             with self._isolated_copy(working_oc_dir) as working_oc_dir_fault:
-                self._debug(f"Run time CCT in {time}")
+                dycov_logging.get_logger("Bisection").debug(f"Run time CCT in {time}")
                 steady_state = self._run_time_cct(
                     working_oc_dir_fault,
                     jobs_output_dir,
@@ -527,7 +530,7 @@ class BisectionEngine:
                     min_val = time
                 else:
                     max_val = time
-                if dycov_logging.get_logger("ProducerCurves").getEffectiveLevel() == logging.DEBUG:
+                if dycov_logging.get_logger("Bisection").getEffectiveLevel() == logging.DEBUG:
                     target_dir_name = (
                         "bisection_last_success" if steady_state else "bisection_last_failure"
                     )

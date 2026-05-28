@@ -75,7 +75,7 @@
 
     <!-- Generator Converter REGCc -->
     <par type="DOUBLE" name="photovoltaics_Kii" value="30"/>
-    <par type="DOUBLE" name="photovoltaics_Kip" value="5"/>
+    <par type="DOUBLE" name="photovoltaics_Kip" value="3"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
 
     <!-- PLL Control -->
@@ -90,8 +90,9 @@
     <par type="DOUBLE" name="photovoltaics_tE" value="0.005"/>
     <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
 </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="0.25"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>

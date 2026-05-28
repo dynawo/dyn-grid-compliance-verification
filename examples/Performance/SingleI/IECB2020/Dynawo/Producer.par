@@ -157,8 +157,9 @@
     <par type="DOUBLE" name="WPP_SNom" value="90"/>
     <par type="DOUBLE" name="WPP_tS" value="0.001"/>
   </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
