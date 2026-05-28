@@ -15,6 +15,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
+from dycov.logging.logging import dycov_logging
 from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
 from dycov.validation.checks import (
@@ -239,6 +240,16 @@ class ModelValidator(Validator):
 
             results["ramp_error"] = ramp_error
 
+    def __is_stabilized(
+        self, time_curve: list, calculated_curve: list, stable_time: float
+    ) -> bool:
+        try:
+            is_stabilized, _ = common.is_stable(time_curve, calculated_curve, stable_time)
+        except ValueError:
+            return False
+
+        return is_stabilized
+
     def __calculate_mean_absolute_error(
         self,
         measurement_name: str,
@@ -263,6 +274,8 @@ class ModelValidator(Validator):
             calculated_curves["time"][0],
         )
 
+        stable_time = config.get_float("GridCode", "stable_time", 100.0)
+        time_curve = list(calculated_curves["time"])[res_settlin_t_pos:]
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
             calculated_curve = list(calculated_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
             reference_curve = list(reference_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
@@ -270,6 +283,11 @@ class ModelValidator(Validator):
                 calculated_curve,
                 reference_curve,
                 1.0,
+            )
+            results["mae_voltage_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
             )
 
             calculated_ss = np.average(
@@ -290,6 +308,11 @@ class ModelValidator(Validator):
                 reference_curve,
                 1.0,
             )
+            results["mae_active_power_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
+            )
 
             calculated_ss = np.average(
                 list(calculated_curves["BusPDR_BUS_ActivePower"])[res_settlin_t_pos:]
@@ -309,6 +332,11 @@ class ModelValidator(Validator):
                 calculated_curve,
                 reference_curve,
                 1.0,
+            )
+            results["mae_reactive_power_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
             )
 
             calculated_ss = np.average(
@@ -331,6 +359,11 @@ class ModelValidator(Validator):
                 reference_curve,
                 1.0,
             )
+            results["mae_active_current_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
+            )
 
             calculated_ss = np.average(
                 list(calculated_curves["BusPDR_BUS_ActiveCurrent"])[res_settlin_t_pos:]
@@ -351,6 +384,11 @@ class ModelValidator(Validator):
                 reference_curve,
                 1.0,
             )
+            results["mae_reactive_current_1P_stabilized"] = self.__is_stabilized(
+                time_curve,
+                calculated_curve,
+                stable_time,
+            )
 
             calculated_ss = np.average(
                 list(calculated_curves["BusPDR_BUS_ReactiveCurrent"])[res_settlin_t_pos:]
@@ -370,50 +408,58 @@ class ModelValidator(Validator):
         modified_setpoint: str,
         setpoint_variation: float,
     ) -> dict:
+        results = {}
         step_magnitude = setpoint_variation
         if setpoint_variation == 0.0:
             step_magnitude = 1.0
-        results = {
-            "before": calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
-            "during": calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
-            "after": calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
-            "is_invalid_test": common.is_invalid_test(
-                list(self._get_calculated_curve_by_name(("time"))),
-                list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
-                list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
-                list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
+        try:
+            results = {
+                "before": calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
+                "during": calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
+                "after": calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
+                "is_invalid_test": common.is_invalid_test(
+                    list(self._get_calculated_curve_by_name(("time"))),
+                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
+                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
+                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
+                    start_event,
+                ),
+            }
+
+            self.__active_power_recovery_error(
                 start_event,
-            ),
-        }
+                duration_event,
+                results,
+            )
 
-        self.__active_power_recovery_error(
-            start_event,
-            duration_event,
-            results,
-        )
-
-        measurement_name = _get_measurement_name(modified_setpoint)
-        self.__compare_event_times(
-            measurement_name,
-            start_event,
-            setpoint_variation,
-            results,
-        )
-        self.__compare_ideal_ramp(
-            measurement_name,
-            start_event,
-            duration_event,
-            freq0,
-            freq_peak,
-            results,
-        )
-        calculate_curves_errors(zone, self._is_field_measurements, results)
-        self.__calculate_mean_absolute_error(
-            measurement_name,
-            self._get_curves_by_windows("after"),
-            setpoint_variation,
-            results,
-        )
+            measurement_name = _get_measurement_name(modified_setpoint)
+            self.__compare_event_times(
+                measurement_name,
+                start_event,
+                setpoint_variation,
+                results,
+            )
+            self.__compare_ideal_ramp(
+                measurement_name,
+                start_event,
+                duration_event,
+                freq0,
+                freq_peak,
+                results,
+            )
+            calculate_curves_errors(zone, self._is_field_measurements, results)
+            self.__calculate_mean_absolute_error(
+                measurement_name,
+                self._get_curves_by_windows("after"),
+                setpoint_variation,
+                results,
+            )
+        except ValueError:
+            dycov_logging.get_logger("Model Validator").warning(
+                "Error during validation calculations, some checks will be skipped"
+            )
+            results["t_event_start"] = start_event
+            results["is_invalid_test"] = "N/A"
 
         return results
 
@@ -434,72 +480,92 @@ class ModelValidator(Validator):
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["reaction_time"], self._validations):
-            check_results["calc_reaction_target"] = compliance_values["calc_reaction_target"]
-            check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
-            check_results["ref_reaction_time"] = compliance_values["ref_reaction_time"]
+            if "calc_reaction_time" in compliance_values:
+                check_results["calc_reaction_target"] = compliance_values["calc_reaction_target"]
+                check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
+                check_results["ref_reaction_time"] = compliance_values["ref_reaction_time"]
 
-            thr_reaction_time = config.get_float("GridCode", "thr_reaction_time", 0.10)
-            check_results["reaction_time_thr"] = thr_reaction_time * 100
+                thr_reaction_time = config.get_float("GridCode", "thr_reaction_time", 0.10)
+                check_results["reaction_time_thr"] = thr_reaction_time * 100
 
-            check_results["reaction_time_error"], check_results["reaction_time_check"] = (
-                common.check_time(
-                    compliance_values["calc_reaction_time"],
-                    compliance_values["ref_reaction_time"],
-                    thr_reaction_time,
+                check_results["reaction_time_error"], check_results["reaction_time_check"] = (
+                    common.check_time(
+                        compliance_values["calc_reaction_time"],
+                        compliance_values["ref_reaction_time"],
+                        thr_reaction_time,
+                    )
                 )
-            )
 
-            check_results["compliance"] &= check_results["reaction_time_check"]
+                check_results["compliance"] &= check_results["reaction_time_check"]
+            else:
+                check_results["reaction_time_check"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["rise_time"], self._validations):
-            check_results["calc_rise_target"] = compliance_values["calc_rise_target"]
-            check_results["calc_rise_time"] = compliance_values["calc_rise_time"]
-            check_results["ref_rise_time"] = compliance_values["ref_rise_time"]
+            if "calc_rise_time" in compliance_values:
+                check_results["calc_rise_target"] = compliance_values["calc_rise_target"]
+                check_results["calc_rise_time"] = compliance_values["calc_rise_time"]
+                check_results["ref_rise_time"] = compliance_values["ref_rise_time"]
 
-            thr_rise_time = config.get_float("GridCode", "thr_rise_time", 0.10)
-            check_results["rise_time_thr"] = thr_rise_time * 100
+                thr_rise_time = config.get_float("GridCode", "thr_rise_time", 0.10)
+                check_results["rise_time_thr"] = thr_rise_time * 100
 
-            check_results["rise_time_error"], check_results["rise_time_check"] = common.check_time(
-                compliance_values["calc_rise_time"],
-                compliance_values["ref_rise_time"],
-                thr_rise_time,
-            )
+                check_results["rise_time_error"], check_results["rise_time_check"] = (
+                    common.check_time(
+                        compliance_values["calc_rise_time"],
+                        compliance_values["ref_rise_time"],
+                        thr_rise_time,
+                    )
+                )
 
-            check_results["compliance"] &= check_results["rise_time_check"]
+                check_results["compliance"] &= check_results["rise_time_check"]
+            else:
+                check_results["rise_time_check"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["settling_time"], self._validations):
-            check_results["calc_settling_tube"] = compliance_values["calc_settling_tube"]
-            check_results["calc_ss_value"] = compliance_values["calc_ss_value"]
-            check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
-            check_results["ref_settling_time"] = compliance_values["ref_settling_time"]
+            if "calc_settling_tube" in compliance_values:
+                check_results["calc_settling_tube"] = compliance_values["calc_settling_tube"]
+                check_results["calc_ss_value"] = compliance_values["calc_ss_value"]
+                check_results["calc_settling_time"] = compliance_values["calc_settling_time"]
+                check_results["ref_settling_time"] = compliance_values["ref_settling_time"]
 
-            thr_settling_time = config.get_float("GridCode", "thr_settling_time", 0.10)
-            check_results["settling_time_thr"] = thr_settling_time * 100
+                thr_settling_time = config.get_float("GridCode", "thr_settling_time", 0.10)
+                check_results["settling_time_thr"] = thr_settling_time * 100
 
-            check_results["settling_time_error"], check_results["settling_time_check"] = (
-                common.check_time(
-                    compliance_values["calc_settling_time"],
-                    compliance_values["ref_settling_time"],
-                    thr_settling_time,
+                check_results["settling_time_error"], check_results["settling_time_check"] = (
+                    common.check_time(
+                        compliance_values["calc_settling_time"],
+                        compliance_values["ref_settling_time"],
+                        thr_settling_time,
+                    )
                 )
-            )
 
-            check_results["compliance"] &= check_results["settling_time_check"]
+                check_results["compliance"] &= check_results["settling_time_check"]
+            else:
+                check_results["settling_time_check"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["overshoot"], self._validations):
-            check_results["calc_overshoot"] = compliance_values["calc_overshoot"]
-            check_results["ref_overshoot"] = compliance_values["ref_overshoot"]
+            if "calc_overshoot" in compliance_values:
+                check_results["calc_overshoot"] = compliance_values["calc_overshoot"]
+                check_results["ref_overshoot"] = compliance_values["ref_overshoot"]
 
-            thr_overshoot = config.get_float("GridCode", "thr_overshoot", 0.15)
-            check_results["overshoot_thr"] = thr_overshoot * 100
+                thr_overshoot = config.get_float("GridCode", "thr_overshoot", 0.15)
+                check_results["overshoot_thr"] = thr_overshoot * 100
 
-            check_results["overshoot_error"], check_results["overshoot_check"] = common.check_time(
-                compliance_values["calc_overshoot"],
-                compliance_values["ref_overshoot"],
-                thr_overshoot,
-            )
+                check_results["overshoot_error"], check_results["overshoot_check"] = (
+                    common.check_time(
+                        compliance_values["calc_overshoot"],
+                        compliance_values["ref_overshoot"],
+                        thr_overshoot,
+                    )
+                )
 
-            check_results["compliance"] &= check_results["overshoot_check"]
+                check_results["compliance"] &= check_results["overshoot_check"]
+            else:
+                check_results["overshoot_check"] = "N/A"
+                check_results["compliance"] = False
 
     def __check_ramp(
         self,
@@ -507,20 +573,30 @@ class ModelValidator(Validator):
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["ramp_time_lag"], self._validations):
-            check_results["ramp_time_lag"] = compliance_values["ramp_time_lag"] * 100
-            thr_ramp_time_lag = config.get_float("GridCode", "thr_ramp_time_lag", 0.10)
-            check_results["ramp_time_thr"] = thr_ramp_time_lag * 100
-            check_results["ramp_time_check"] = (
-                compliance_values["ramp_time_lag"] <= thr_ramp_time_lag
-            )
-            check_results["compliance"] &= check_results["ramp_time_check"]
+            if "ramp_time_check" in compliance_values:
+                check_results["ramp_time_lag"] = compliance_values["ramp_time_lag"] * 100
+                thr_ramp_time_lag = config.get_float("GridCode", "thr_ramp_time_lag", 0.10)
+                check_results["ramp_time_thr"] = thr_ramp_time_lag * 100
+                check_results["ramp_time_check"] = (
+                    compliance_values["ramp_time_lag"] <= thr_ramp_time_lag
+                )
+                check_results["compliance"] &= check_results["ramp_time_check"]
+            else:
+                check_results["ramp_time_check"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["ramp_error"], self._validations):
-            check_results["ramp_error"] = compliance_values["ramp_error"] * 100
-            thr_ramp_error = config.get_float("GridCode", "thr_ramp_error", 0.10)
-            check_results["ramp_error_thr"] = thr_ramp_error * 100
-            check_results["ramp_error_check"] = compliance_values["ramp_error"] <= thr_ramp_error
-            check_results["compliance"] &= check_results["ramp_error_check"]
+            if "ramp_error_check" in compliance_values:
+                check_results["ramp_error"] = compliance_values["ramp_error"] * 100
+                thr_ramp_error = config.get_float("GridCode", "thr_ramp_error", 0.10)
+                check_results["ramp_error_thr"] = thr_ramp_error * 100
+                check_results["ramp_error_check"] = (
+                    compliance_values["ramp_error"] <= thr_ramp_error
+                )
+                check_results["compliance"] &= check_results["ramp_error_check"]
+            else:
+                check_results["ramp_error_check"] = "N/A"
+                check_results["compliance"] = False
 
     def __check_mae(
         self,
@@ -529,49 +605,107 @@ class ModelValidator(Validator):
     ):
         thr_final_ss_mae = config.get_float("GridCode", "thr_final_ss_mae", 0.01)
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
-            check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
-            check_results["ss_error_voltage_1P"] = compliance_values["ss_error_voltage_1P"]
-            check_results["mae_voltage_1P_check"] = _check_value_by_threshold(
-                compliance_values["mae_voltage_1P"], thr_final_ss_mae
-            )
+            if "mae_voltage_1P" in compliance_values:
+                check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
+                check_results["ss_error_voltage_1P"] = compliance_values["ss_error_voltage_1P"]
+                check_results["mae_voltage_1P_check"] = _check_value_by_threshold(
+                    compliance_values["mae_voltage_1P"], thr_final_ss_mae
+                )
+                check_results["mae_voltage_1P_stabilized"] = compliance_values[
+                    "mae_voltage_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_voltage_1P_check"]
+                    & check_results["mae_voltage_1P_stabilized"]
+                )
+            else:
+                check_results["mae_voltage_1P_check"] = "N/A"
+                check_results["mae_voltage_1P_stabilized"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_power_1P"], self._validations):
-            check_results["mae_active_power_1P"] = compliance_values["mae_active_power_1P"]
-            check_results["ss_error_active_power_1P"] = compliance_values[
-                "ss_error_active_power_1P"
-            ]
-            check_results["mae_active_power_1P_check"] = _check_value_by_threshold(
-                compliance_values["mae_active_power_1P"], thr_final_ss_mae
-            )
-            check_results["compliance"] &= check_results["mae_active_power_1P_check"]
+            if "mae_active_power_1P" in compliance_values:
+                check_results["mae_active_power_1P"] = compliance_values["mae_active_power_1P"]
+                check_results["ss_error_active_power_1P"] = compliance_values[
+                    "ss_error_active_power_1P"
+                ]
+                check_results["mae_active_power_1P_check"] = _check_value_by_threshold(
+                    compliance_values["mae_active_power_1P"], thr_final_ss_mae
+                )
+                check_results["mae_active_power_1P_stabilized"] = compliance_values[
+                    "mae_active_power_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_active_power_1P_check"]
+                    & check_results["mae_active_power_1P_stabilized"]
+                )
+            else:
+                check_results["mae_active_power_1P_check"] = "N/A"
+                check_results["mae_active_power_1P_stabilized"] = "N/A"
+                check_results["compliance"] = False
 
-            check_results["mae_reactive_power_1P"] = compliance_values["mae_reactive_power_1P"]
-            check_results["ss_error_reactive_power_1P"] = compliance_values[
-                "ss_error_reactive_power_1P"
-            ]
-            check_results["mae_reactive_power_1P_check"] = _check_value_by_threshold(
-                compliance_values["mae_reactive_power_1P"], thr_final_ss_mae
-            )
-            check_results["compliance"] &= check_results["mae_reactive_power_1P_check"]
+            if "mae_reactive_power_1P" in compliance_values:
+                check_results["mae_reactive_power_1P"] = compliance_values["mae_reactive_power_1P"]
+                check_results["ss_error_reactive_power_1P"] = compliance_values[
+                    "ss_error_reactive_power_1P"
+                ]
+                check_results["mae_reactive_power_1P_check"] = _check_value_by_threshold(
+                    compliance_values["mae_reactive_power_1P"], thr_final_ss_mae
+                )
+                check_results["mae_reactive_power_1P_stabilized"] = compliance_values[
+                    "mae_reactive_power_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_reactive_power_1P_check"]
+                    & check_results["mae_reactive_power_1P_stabilized"]
+                )
+            else:
+                check_results["mae_reactive_power_1P_check"] = "N/A"
+                check_results["mae_reactive_power_1P_stabilized"] = "N/A"
+                check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_injection_1P"], self._validations):
-            check_results["mae_active_current_1P"] = compliance_values["mae_active_current_1P"]
-            check_results["ss_error_active_current_1P"] = compliance_values[
-                "ss_error_active_current_1P"
-            ]
-            check_results["mae_active_current_1P_check"] = _check_value_by_threshold(
-                compliance_values["mae_active_current_1P"], thr_final_ss_mae
-            )
-            check_results["compliance"] &= check_results["mae_active_current_1P_check"]
+            if "mae_active_current_1P" in compliance_values:
+                check_results["mae_active_current_1P"] = compliance_values["mae_active_current_1P"]
+                check_results["ss_error_active_current_1P"] = compliance_values[
+                    "ss_error_active_current_1P"
+                ]
+                check_results["mae_active_current_1P_check"] = _check_value_by_threshold(
+                    compliance_values["mae_active_current_1P"], thr_final_ss_mae
+                )
+                check_results["mae_active_current_1P_stabilized"] = compliance_values[
+                    "mae_active_current_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_active_current_1P_check"]
+                    & check_results["mae_active_current_1P_stabilized"]
+                )
+            else:
+                check_results["mae_active_current_1P_check"] = "N/A"
+                check_results["mae_active_current_1P_stabilized"] = "N/A"
+                check_results["compliance"] = False
 
-            check_results["mae_reactive_current_1P"] = compliance_values["mae_reactive_current_1P"]
-            check_results["ss_error_reactive_current_1P"] = compliance_values[
-                "ss_error_reactive_current_1P"
-            ]
-            check_results["mae_reactive_current_1P_check"] = _check_value_by_threshold(
-                compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
-            )
-            check_results["compliance"] &= check_results["mae_reactive_current_1P_check"]
+            if "mae_reactive_current_1P" in compliance_values:
+                check_results["mae_reactive_current_1P"] = compliance_values[
+                    "mae_reactive_current_1P"
+                ]
+                check_results["ss_error_reactive_current_1P"] = compliance_values[
+                    "ss_error_reactive_current_1P"
+                ]
+                check_results["mae_reactive_current_1P_check"] = _check_value_by_threshold(
+                    compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
+                )
+                check_results["mae_reactive_current_1P_stabilized"] = compliance_values[
+                    "mae_reactive_current_1P_stabilized"
+                ]
+                check_results["compliance"] &= (
+                    check_results["mae_reactive_current_1P_check"]
+                    & check_results["mae_reactive_current_1P_stabilized"]
+                )
+            else:
+                check_results["mae_reactive_current_1P_check"] = "N/A"
+                check_results["mae_reactive_current_1P_stabilized"] = "N/A"
+                check_results["compliance"] = False
 
     def __check(
         self,
@@ -663,7 +797,7 @@ class ModelValidator(Validator):
         working_path: Path
             Working path.
         sim_output_path: str
-            Simulator output path (Not used in this validator).
+            Simulator output path.
         event_params: dict
             Event parameters
         has_reference: bool

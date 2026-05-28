@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="OmegaRef">
+    <par type="DOUBLE" name="ramp_duration" value="0.25"/>
+    <par type="DOUBLE" name="ramp_height" value="0.01"/>
+    <par type="DOUBLE" name="ramp_offset" value="1"/>
+    <par type="DOUBLE" name="ramp_startTime" value="20"/>
+  </set>
+</parametersSet>

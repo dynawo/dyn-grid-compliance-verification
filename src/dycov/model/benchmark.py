@@ -21,7 +21,11 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    SimulationError,
+)
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -134,15 +138,6 @@ class Benchmark:
                 self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
             )
             manage_files.create_dir(working_oc_dir)
-
-    def __info(self, message):
-        dycov_logging.get_logger("Benchmark").info(f"{message}")
-
-    def __debug(self, message):
-        dycov_logging.get_logger("Benchmark").debug(f"{message}")
-
-    def __warning(self, message):
-        dycov_logging.get_logger("Benchmark").warning(f"{message}")
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, stable_time: float
@@ -337,6 +332,11 @@ class Benchmark:
         self.__init_figures_ustator(validations, pcs_benchmark_name)
         self.__init_figures_theta(validations, pcs_benchmark_name)
         self.__init_figures_tap(validations, pcs_benchmark_name)
+        self.__init_figures_sync_cond_p(validations, pcs_benchmark_name)
+        self.__init_figures_sync_cond_q(validations, pcs_benchmark_name)
+        self.__init_figures_sync_cond_freq(validations, pcs_benchmark_name)
+        self.__init_figures_load_p(validations, pcs_benchmark_name)
+        self.__init_figures_load_q(validations, pcs_benchmark_name)
 
     def __init_figures_v(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_V = config.get_list("ReportCurves", "fig_V")
@@ -565,6 +565,92 @@ class Benchmark:
             )
         )
 
+    def __init_figures_sync_cond_p(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_SyncCondP = config.get_list("ReportCurves", "fig_SyncCondP")
+        if pcs_benchmark_name not in fig_SyncCondP:
+            return
+
+        if self._producer.is_dynawo_model():
+            p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            p_label = "P (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_SyncCondP",
+                variables=[{"type": "sync_condenser", "variable": "ActivePower"}],
+                ylabel=p_label,
+            )
+        )
+
+    def __init_figures_sync_cond_q(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_SyncCondQ = config.get_list("ReportCurves", "fig_SyncCondQ")
+        if pcs_benchmark_name not in fig_SyncCondQ:
+            return
+
+        if self._producer.is_dynawo_model():
+            q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            q_label = "Q (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_SyncCondQ",
+                variables=[{"type": "sync_condenser", "variable": "ReactivePower"}],
+                ylabel=q_label,
+            )
+        )
+
+    def __init_figures_sync_cond_freq(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_SyncCondFreq = config.get_list("ReportCurves", "fig_SyncCondFreq")
+        if pcs_benchmark_name not in fig_SyncCondFreq:
+            return
+
+        freq_label = "Frequency (Hz)"
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_SyncCondFreq",
+                variables=[{"type": "sync_condenser", "variable": "FrequencyHz"}],
+                ylabel=freq_label,
+            )
+        )
+
+    def __init_figures_load_p(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_LoadP = config.get_list("ReportCurves", "fig_LoadP")
+        if pcs_benchmark_name not in fig_LoadP:
+            return
+
+        if self._producer.is_dynawo_model():
+            p_label = f"P (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            p_label = "P (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_LoadP",
+                variables=[{"type": "load", "variable": "ActivePower"}],
+                ylabel=p_label,
+            )
+        )
+
+    def __init_figures_load_q(self, validations: list, pcs_benchmark_name: str) -> None:
+        fig_LoadQ = config.get_list("ReportCurves", "fig_LoadQ")
+        if pcs_benchmark_name not in fig_LoadQ:
+            return
+
+        if self._producer.is_dynawo_model():
+            q_label = f"Q (pu base Snom = {self._producer.s_nom}MVA)"
+        else:
+            q_label = "Q (pu base Snom)"
+
+        self._figures_description.append(
+            FigureDescription(
+                name="fig_LoadQ",
+                variables=[{"type": "load", "variable": "ReactivePower"}],
+                ylabel=q_label,
+            )
+        )
+
     def __get_curves_check_result(
         self,
         measurement_names: list,
@@ -583,12 +669,11 @@ class Benchmark:
         has_simulated_curves: bool,
         has_reference: bool = True,
     ):
-        op_cond_success, results = op_cond.validate(
+        results = op_cond.validate(
             self._validator,
             working_path,
             jobs_output_dir,
             event_params,
-            success,
             has_simulated_curves,
             has_reference=has_reference,
         )
@@ -596,18 +681,18 @@ class Benchmark:
         # Statuses for the Summary Report
         if results["compliance"] is None:
             compliance = Compliance.UndefinedValidations
-            self.__warning("Undefined Validations")
-        elif not op_cond_success:
+            dycov_logging.get_logger("Benchmark").warning("Undefined Validations")
+        elif not success:
             compliance = Compliance.FailedSimulation
         elif results["is_invalid_test"]:
             compliance = Compliance.InvalidTest
-            self.__warning("Invalid Test")
+            dycov_logging.get_logger("Benchmark").warning("Invalid Test")
         elif not results["compliance"]:
             compliance = Compliance.NonCompliant
         else:
             compliance = Compliance.Compliant
 
-        return op_cond_success, results, compliance
+        return success, results, compliance
 
     def validate(
         self,
@@ -626,7 +711,7 @@ class Benchmark:
         Returns
         -------
         bool
-            True if Benchmark can be validated, False otherwise
+            True if at least one operating condition succeeds, False otherwise
         """
         success = False
 
@@ -650,7 +735,7 @@ class Benchmark:
                 op_cond.get_name(),
             )
             sim = curves_result.simulation_result
-            self.__debug(
+            dycov_logging.get_logger("Benchmark").debug(
                 f"Success: {sim.success} "
                 f"Has curves: {curves_result.availability} "
                 f"Time exceeds: {sim.time_exceeds} "
@@ -730,7 +815,9 @@ class Benchmark:
 
         return success
 
-    def generate(self):
+    def generate(self) -> None:
+        """Execute the generation step for all operating conditions of the benchmark."""
+
         for op_cond in self._oc_list:
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,

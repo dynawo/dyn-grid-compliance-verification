@@ -9,7 +9,7 @@
     <par type="BOOL" name="WTG3_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG3_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG3_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0.15"/>
+    <par type="DOUBLE" name="WTG3_RLvTrPu" value="0.015"/>
     <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.06"/>
 
     <!-- Electrical Control REEC -->
@@ -111,53 +111,54 @@
 
     <!-- Pitch Control -->
     <par type="DOUBLE" name="WTG3_Kcc" value="0"/>
-    <par type="DOUBLE" name="WTG3_Kic" value="0.1"/>
-    <par type="DOUBLE" name="WTG3_Kiw" value="0.1"/>
-    <par type="DOUBLE" name="WTG3_Kpc" value="2"/>
-    <par type="DOUBLE" name="WTG3_Kpw" value="3"/>
+    <par type="DOUBLE" name="WTG3_Kic" value="0"/>
+    <par type="DOUBLE" name="WTG3_Kiw" value="0.6"/>
+    <par type="DOUBLE" name="WTG3_Kpc" value="0"/>
+    <par type="DOUBLE" name="WTG3_Kpw" value="70"/>
     <par type="DOUBLE" name="WTG3_ThetaCMax" value="30"/>
     <par type="DOUBLE" name="WTG3_ThetaCMin" value="-5"/>
-    <par type="DOUBLE" name="WTG3_ThetaMax" value="35"/>
-    <par type="DOUBLE" name="WTG3_ThetaMin" value="-5"/>
-    <par type="DOUBLE" name="WTG3_ThetaRMax" value="10"/>
-    <par type="DOUBLE" name="WTG3_ThetaRMin" value="-10"/>
+    <par type="DOUBLE" name="WTG3_ThetaMax" value="90"/>
+    <par type="DOUBLE" name="WTG3_ThetaMin" value="0"/>
+    <par type="DOUBLE" name="WTG3_ThetaRMax" value="8"/>
+    <par type="DOUBLE" name="WTG3_ThetaRMin" value="-8"/>
     <par type="DOUBLE" name="WTG3_ThetaWMax" value="30"/>
     <par type="DOUBLE" name="WTG3_ThetaWMin" value="-5"/>
-    <par type="DOUBLE" name="WTG3_tTheta" value="0.3"/>
+    <par type="DOUBLE" name="WTG3_tTheta" value="0.2"/>
 
     <!-- Torque Control -->
     <par type="BOOL" name="WTG3_TFlag" value="true"/>
-    <par type="DOUBLE" name="WTG3_Kip" value="1"/>
-    <par type="DOUBLE" name="WTG3_Kpp" value="1"/>
+    <par type="DOUBLE" name="WTG3_Kip" value="10"/>
+    <par type="DOUBLE" name="WTG3_Kpp" value="2"/>
     <par type="DOUBLE" name="WTG3_P1" value="0"/>
-    <par type="DOUBLE" name="WTG3_P2" value="10"/>
-    <par type="DOUBLE" name="WTG3_P3" value="20"/>
-    <par type="DOUBLE" name="WTG3_P4" value="30"/>
-    <par type="DOUBLE" name="WTG3_Spd1" value="0"/>
-    <par type="DOUBLE" name="WTG3_Spd2" value="10"/>
-    <par type="DOUBLE" name="WTG3_Spd3" value="20"/>
-    <par type="DOUBLE" name="WTG3_Spd4" value="30"/>
-    <par type="DOUBLE" name="WTG3_TeMaxPu" value="1"/>
-    <par type="DOUBLE" name="WTG3_TeMinPu" value="0.05"/>
-    <par type="DOUBLE" name="WTG3_tOmegaRef" value="60"/>
+    <par type="DOUBLE" name="WTG3_P2" value="0.3"/>
+    <par type="DOUBLE" name="WTG3_P3" value="0.6"/>
+    <par type="DOUBLE" name="WTG3_P4" value="1"/>
+    <par type="DOUBLE" name="WTG3_Spd1" value="0.6"/>
+    <par type="DOUBLE" name="WTG3_Spd2" value="0.6"/>
+    <par type="DOUBLE" name="WTG3_Spd3" value="0.97"/>
+    <par type="DOUBLE" name="WTG3_Spd4" value="1"/>
+    <par type="DOUBLE" name="WTG3_TeMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="WTG3_TeMinPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_tOmegaRef" value="15"/>
 
     <!-- Aerodynamic Model -->
-    <par type="DOUBLE" name="WTG3_Ka" value="0.007"/>
+    <par type="DOUBLE" name="WTG3_Ka" value="0.1"/>
 
     <!-- Drive Train Control -->
-    <par type="DOUBLE" name="WTG3_Dshaft" value="1.5"/>
-    <par type="DOUBLE" name="WTG3_Hg" value="1"/>
-    <par type="DOUBLE" name="WTG3_Ht" value="5"/>
-    <par type="DOUBLE" name="WTG3_Kshaft" value="200"/>
+    <par type="DOUBLE" name="WTG3_Dshaft" value="2.5"/>
+    <par type="DOUBLE" name="WTG3_Hg" value="0.5"/>
+    <par type="DOUBLE" name="WTG3_Ht" value="6"/>
+    <par type="DOUBLE" name="WTG3_Kshaft" value="2"/>
 
     <!-- General -->
     <par type="DOUBLE" name="WTG3_SNom" value="90"/>
     </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.01"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.1"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
@@ -166,14 +167,16 @@
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
     <par type="INT" name="transformer_NbTap" value="21"/>
     <par type="INT" name="transformer_Tap0" value="10"/>
-  </set>
-  <set id="AuxLoad_Xfmr">
+  </set>  
+
+  <set id="AuxLoad_Xfmr"> <!-- Be careful: In this model, impedances are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
+  
   <set id="Aux_Load">
     <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
     <par type="DOUBLE" name="load_QRefPu" value="0.005"/>

@@ -61,6 +61,11 @@ RUN \
 
 RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dycov.sh
 
+# Fourth layer:
+#   - Copy the pre-compiled manual (built by prepare_release.sh) into the image.
+ARG MANUAL_BUILD=manual_build
+COPY ./$MANUAL_BUILD /opt/dycov/manual
+
 # Copy the entrypoint shell script
 COPY start_dycov.sh /
 

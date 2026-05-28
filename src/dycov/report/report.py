@@ -156,7 +156,7 @@ def _create_pcs_reports(
     pcs_results: dict,
     output_path: Path,
     working_path: Path,
-) -> list:
+) -> bool:
     pcs = pcs_results["pcs"]
     producer = pcs.get_producer()
     producer.set_zone(pcs.get_zone(), pcs_results["producer"])
@@ -302,9 +302,9 @@ def _pcs_replace(
                 oc_subst_dict2 |= {"missedColumns": ""}
                 oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{}"}
             else:
+                missed_columns = [col.replace("_", r"\_") for col in oc_results["missed_columns"]]
                 missed_list = "\n".join(
-                    f"    \\item \\textcolor{{red}}{{{col.replace("_", "\_")}}}"
-                    for col in oc_results["missed_columns"]
+                    f"    \\item \\textcolor{{red}}{{{col}}}" for col in missed_columns
                 )
                 oc_subst_dict2 |= {
                     "missedColumns": (
@@ -458,7 +458,7 @@ def _generate_figures(
                 f"{figure_description.name}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
-            dycov_logging.get_logger("Report").error(
+            dycov_logging.get_logger("Report").exception(
                 f"{figure_description.name}.{operating_condition}: {e}"
             )
 
@@ -490,7 +490,6 @@ def _create_full_tex(
     producer: Producer
         Producer model
     """
-
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
@@ -583,17 +582,19 @@ def _clean(working_path: Path):
     extensions_to_clean = [
         "*.toc",
         "*.aux",
-        "*.log",
         "*.out",
         "*.bbl",
         "*.blg",
         "*.run.xml",
         "*.bcf",
     ]
-    working_dir = Path(working_path)
+    # If the PDF report exists delete all log files
+    pdf_file = working_path / (REPORT_NAME.split(CASE_SEPARATOR)[0] + ".pdf")
+    if pdf_file.exists():
+        extensions_to_clean.append("*.log")
+
     for ext in extensions_to_clean:
-        # Busca los archivos con la extensión en el working_path
-        for file_to_delete in working_dir.glob(ext):
+        for file_to_delete in working_path.glob(ext):
             try:
                 file_to_delete.unlink()
             except OSError as e:
@@ -602,7 +603,22 @@ def _clean(working_path: Path):
 
 def prepare_pcs_report(
     pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
-):
+) -> None:
+    """Prepares the report for the PCS validation.
+
+    This includes copying LaTeX templates, generating figures, and creating
+    intermediate PCS reports
+
+
+    Parameters
+    ----------
+    pcs_results: dict
+        Results of the PCS validation
+    parameters: ValidationParameters
+        Validation parameters
+    path_latex_files: Path
+        Path to the LaTex templates
+    """
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 
@@ -644,6 +660,8 @@ def create_pdf(
         Temporal working path
     path_latex_files: Path
         Path to the LaTex templates
+    dry_run: bool
+        If True, skip the actual PDF generation (useful for testing/report design)
     """
 
     output_path = parameters.get_working_dir() / "Reports"

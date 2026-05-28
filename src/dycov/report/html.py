@@ -49,6 +49,14 @@ def _get_curve_names(
                         and "modIInjTerminal" not in col
                     ]
                 )
+            elif name["type"] == "sync_condenser":
+                curve_names.extend(
+                    [col for col in curves if col.endswith("_GEN_TSO_" + name["variable"])]
+                )
+            elif name["type"] == "load":
+                curve_names.extend(
+                    [col for col in curves if col.endswith("_LOAD_TSO_" + name["variable"])]
+                )
             elif name["type"] == "transformer":
                 curve_names.extend(
                     [col for col in curves if col.endswith("_XFMR_" + name["variable"])]
@@ -148,7 +156,7 @@ def plotly_figures(
     reference_curves: pd.DataFrame,
     results: dict,
     band_ref_val: float | None = None,
-) -> str:
+) -> tuple[list, str, str]:
     """Create plotly figures for the curves.
 
     Parameters
@@ -164,8 +172,9 @@ def plotly_figures(
 
     Returns
     -------
-    str
-        HTML string of the plotly figures
+    tuple[list, str, str]
+        A tuple containing the list of curve names, the figure name, and the HTML string of the
+        plotly figures
     """
     curve_names = _get_curve_names(figure_description.variables, calculated_curves)
 
@@ -256,8 +265,8 @@ def create_html(
     ----------
     producer: str
         Producer name
-    figures: list
-        List of figure HTML strings
+    figures_to_plot: list
+        List of (div_id, html_string) tuples for the figures
     operating_condition: str
         Operating condition for the report
     output_path: Path
