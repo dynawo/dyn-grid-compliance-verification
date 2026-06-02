@@ -32,7 +32,7 @@ def anonymize(
     frequency: float,
     results: Optional[Path] = None,
     curves_folder: Optional[Path] = None,
-    epsilon_relative: Optional[float] = None,
+    compression: Optional[float] = None,
 ) -> None:
     """Creates a set of anonymized curves from the input set of curves.
 
@@ -53,13 +53,13 @@ def anonymize(
     curves_folder: Optional[Path]
         Path of a set of curves. If not provided, `output_folder` will be used
         as the source for curves. Defaults to None.
-    epsilon_relative: Optional[float]
+    compression: Optional[float]
         Relative epsilon for curve simplification, as a fraction of each signal's
         range. If None, no compression is applied. Defaults to None.
     """
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
-        f"and frequency {frequency} Hz and epsilon_relative {epsilon_relative}"
+        f"and frequency {frequency} Hz and compression {compression}"
     )
     if curves_folder is None:
         curves_folder = output_folder
@@ -94,7 +94,7 @@ def anonymize(
 
         metadata: Dict[str, Dict] = _extract_metadata_from_logs(curves_path)
         _create_dict_files_if_not_exist(curves_path, metadata)
-        _process_curves(curves_path, output_path, noisestd, frequency, epsilon_relative)
+        _process_curves(curves_path, output_path, noisestd, frequency, compression)
 
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymization completed. Anonymized curves saved to {output_folder}"
@@ -523,7 +523,7 @@ def _process_curves(
     output_folder: Path,
     noisestd: float,
     frequency: float,
-    epsilon_relative: Optional[float] = None,
+    compression: Optional[float] = None,
 ) -> None:
     """Processes all curve files in the specified folder, applies noise if
     `noisestd` is not None, and saves the anonymized curves and updated
@@ -542,7 +542,7 @@ def _process_curves(
     frequency: float
         Cut-off frequency for the low-pass filter (in Hz), used if noise is
         applied.
-    epsilon_relative: Optional[float] = 0.001
+    compression: Optional[float] = 0.001
         Relative epsilon for RDP compression. If None, no compression is applied.
     """
     curve_extensions = [
@@ -580,13 +580,13 @@ def _process_curves(
                     df_imported_curve, noisestd, frequency, event_time, fault_duration
                 )
 
-            if epsilon_relative is not None:
+            if compression is not None:
                 original_len = len(df_imported_curve)
                 df_imported_curve = _simplify_curves(  # renamed
                     df_imported_curve,
                     event_time=event_time,
                     event_duration=fault_duration,
-                    epsilon_relative=epsilon_relative,
+                    compression=compression,
                 )
                 dycov_logging.get_logger("Anonymizer").debug(
                     f"Simplified {curves_path.stem}: "  # updated log message
@@ -689,42 +689,116 @@ def _simplify_curves(
     df: pd.DataFrame,
     event_time: float,
     event_duration: float,
-    epsilon_relative: float = 0.001,
+    compression: float = 0.005,
     min_event_points: int = 20,
 ) -> pd.DataFrame:
-    """Compress curve points using adaptive RDP simplification per signal range.
-
-    Flat regions outside the event are reduced to ~2 points.
-    The event zone retains at least min_event_points regardless of epsilon.
-    Resulting timestamps are non-uniform — requires interpolation before comparison.
     """
-    time_vals = df["time"].to_numpy()
-    rows_to_keep = {0, len(df) - 1}
+    Explanation:
+        Simplifies a time series by collapsing flat regions and applying RDP
+        only during the event. Flat regions are reduced to two points using
+        a relative threshold based on `compression`. RDP uses epsilon =
+        compression * signal_range.
 
-    # Always protect event zone with a minimum point density
-    event_mask = (df["time"] > event_time) & (df["time"] <= event_time + event_duration)
-    event_indices = df.index[event_mask].tolist()
-    if len(event_indices) <= min_event_points:
-        rows_to_keep.update(event_indices)
-    else:
-        step = max(1, len(event_indices) // min_event_points)
-        rows_to_keep.update(event_indices[::step])
+    Parameters:
+        df : pd.DataFrame
+            Input time series with a 'time' column.
+        event_time : float
+            Start time of the event.
+        event_duration : float
+            Duration of the event.
+        compression : float
+            Relative epsilon for RDP and flat detection.
+        min_event_points : int
+            Minimum points to keep in the event zone.
 
-    for col in df.columns:
-        if col == "time":
-            continue
+    Return:
+        pd.DataFrame
+            Simplified time series.
+    """
 
-        values = df[col].to_numpy()
+    def collapse_flat(values, compression, flat_multipler):
+        """Return indices keeping only endpoints of flat subsegments."""
+        n = len(values)
+        if n <= 2:
+            return list(range(n))
+
         signal_range = np.ptp(values)
+        flat_tol = compression * signal_range * flat_multipler
 
-        # Flat signal: keep only boundaries
-        if signal_range < 1e-6:
-            continue
+        keep = []
+        start = 0
+        in_flat = False
 
-        # Epsilon relative to each signal's own range to handle mixed units (V, A, pu, Hz...)
-        epsilon = epsilon_relative * signal_range
-        points = np.column_stack([time_vals, values])
-        mask = _rdp_mask_numpy(points, epsilon)
-        rows_to_keep.update(np.where(mask)[0])
+        for i in range(1, n):
+            dy = abs(values[i] - values[i - 1])
 
-    return df.iloc[sorted(rows_to_keep)].reset_index(drop=True)
+            if dy <= flat_tol:
+                if not in_flat:
+                    in_flat = True
+                    start = i - 1
+            else:
+                if in_flat:
+                    keep.append(start)
+                    keep.append(i - 1)
+                    in_flat = False
+                keep.append(i)
+
+        if in_flat:
+            keep.append(start)
+            keep.append(n - 1)
+
+        return sorted(set(keep))
+
+    def apply_rdp(time_seg, values_seg, compression):
+        """Apply RDP with epsilon = compression * signal_range."""
+        signal_range = np.ptp(values_seg)
+        if signal_range < 1e-12:
+            return np.arange(len(values_seg))
+
+        epsilon = compression * signal_range
+        pts = np.column_stack([time_seg, values_seg])
+        mask = _rdp_mask_numpy(pts, epsilon)
+        return np.where(mask)[0]
+
+    time_vals = df["time"].to_numpy()
+
+    before_mask = time_vals <= event_time
+    during_mask = (time_vals > event_time) & (time_vals <= event_time + event_duration)
+    after_mask = time_vals > event_time + event_duration
+
+    df_before = df[before_mask].reset_index(drop=True)
+    df_during = df[during_mask].reset_index(drop=True)
+    df_after = df[after_mask].reset_index(drop=True)
+
+    def simplify_segment(df_seg, use_rdp, flat_multipler=0.01):
+        if len(df_seg) <= 2:
+            return df_seg
+
+        time_seg = df_seg["time"].to_numpy()
+        n = len(df_seg)
+
+        keep = set([0, n - 1])
+
+        for col in df_seg.columns:
+            if col == "time":
+                continue
+
+            values = df_seg[col].to_numpy()
+
+            if not use_rdp:
+                flat_idx = collapse_flat(values, compression, flat_multipler)
+                keep.update(flat_idx)
+
+            if use_rdp:
+                rdp_idx = apply_rdp(time_seg, values, compression)
+                keep.update(rdp_idx)
+
+        final_idx = sorted(keep)
+        return df_seg.iloc[final_idx].reset_index(drop=True)
+
+    df_before_s = simplify_segment(df_before, use_rdp=False)
+    df_during_s = simplify_segment(df_during, use_rdp=True)
+    df_after_s = simplify_segment(df_after, use_rdp=False)
+
+    df_final = pd.concat([df_before_s, df_during_s, df_after_s], ignore_index=True)
+    return df_final
