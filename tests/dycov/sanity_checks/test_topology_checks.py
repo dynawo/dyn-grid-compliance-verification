@@ -36,7 +36,7 @@ def make_generator(gen_type="S"):
         return [
             GenParams(
                 id="Wind_Turbine1",
-                lib="WTG4AWeccCurrentSource1",
+                lib="WTG4AWeccCurrentSource",
                 terminals=(Terminal(connected_equipment=""),),
                 s_nom=90,
                 i_max=100.0,
@@ -48,7 +48,7 @@ def make_generator(gen_type="S"):
             ),
             GenParams(
                 id="Wind_Turbine2",
-                lib="WTG4AWeccCurrentSource1",
+                lib="WTG4AWeccCurrentSource",
                 terminals=(Terminal(connected_equipment=""),),
                 s_nom=90,
                 i_max=120.0,
