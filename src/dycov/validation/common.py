@@ -17,12 +17,30 @@ from dycov.logging.logging import dycov_logging
 
 # when magnitudes are smaller than atol, switch to absolute error
 ATOL = 1.0e-6
+# Threshold below which relative tolerance becomes meaningless
+TUBE_TARGET_THRESHOLD = 0.01
+# Absolute tolerance used when target is small
+TUBE_ABSOLUTE_TOL = 0.02
 
 
+# Absolute tube for small targets avoids unrealistic relative tolerances near zero
 def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
     if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
         return True
     return False
+
+
+def _compute_tube(target: float, percent: float) -> tuple[float, float]:
+    """Compute tolerance tube around target value.
+
+    If target is near zero (<TUBE_TARGET_THRESHOLD), use absolute ±TUBE_ABSOLUTE_TOL.
+    Otherwise, use relative tolerance based on percent.
+    """
+    if abs(target) < TUBE_TARGET_THRESHOLD:
+        return target - TUBE_ABSOLUTE_TOL, target + TUBE_ABSOLUTE_TOL
+    else:
+        delta = abs(percent * target)
+        return target - delta, target + delta
 
 
 def check_time(
@@ -306,15 +324,8 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
         raise ValueError("curve values and time values have different length")
 
     # Get the tube
-    if abs(curve[-1]) <= 1:
-        mean_val_max = curve[-1] + percent
-        mean_val_min = curve[-1] - percent
-
-    # If the value is more than 1, we use relative value
-    else:
-        mean_val = curve[-1]
-        mean_val_max = mean_val + abs(percent * mean_val)
-        mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val = curve[-1]
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -354,13 +365,8 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
         raise ValueError("curve values and time values have different length")
 
     # Get the tube
-    if abs(curve[-1]) <= 1:
-        mean_val_min = curve[-1] - percent
-
-    # If the value is more than 1, we use relative value
-    else:
-        mean_val = curve[-1]
-        mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val = curve[-1]
+    mean_val_min, _ = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -706,8 +712,7 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_max = mean_val + abs(percent * mean_val)
-    mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
 
     for pos in range(len(curve)):
         if mean_val_min < curve[pos] < mean_val_max:
@@ -760,12 +765,7 @@ def get_settling_time(
 
     # Get the tube
     mean_val = curve[-1]
-    if abs(mean_val) < ATOL:
-        mean_val_min = -abs(percent)
-        mean_val_max = abs(percent)
-    else:
-        mean_val_max = mean_val + abs(percent * mean_val)
-        mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
