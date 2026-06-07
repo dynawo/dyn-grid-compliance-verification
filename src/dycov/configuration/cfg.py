@@ -95,6 +95,26 @@ class Config:
 
         return None
 
+    def load_user_config(self, user_config_path: Path) -> None:
+        """Load the user-specific configuration file.
+
+        Parameters
+        ----------
+        user_config_path: Path
+            Path to the user configuration file to read.
+        """
+        dycov_logging.get_logger("Cfg").info(
+            "Loading user configuration from: %s", user_config_path
+        )
+        try:
+            self._user_config.read(user_config_path, encoding="utf-8")
+            dycov_logging.get_logger("Cfg").info("Successfully loaded user configuration.")
+        except Exception as e:
+            dycov_logging.get_logger("Cfg").error(
+                "Error loading user configuration from %s: %s", user_config_path, e
+            )
+            raise
+
     def load_pcs_config(self, pcs_path: str) -> None:
         """Load the Performance Checking Sheet (PCS) configuration file. It
         also implements an inheritance mechanism using alias files.
