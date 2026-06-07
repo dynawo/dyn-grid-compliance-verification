@@ -293,7 +293,7 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
             frequency=args.frequency,
             results=Path(args.results) if args.results else None,
             curves_folder=Path(args.curves) if args.curves else None,
-            epsilon_relative=args.compression,
+            compression=args.compression,
         )
         dycov_logging.get_logger("CommandHandlers").info("Anonymization completed successfully.")
         result_code = 0
