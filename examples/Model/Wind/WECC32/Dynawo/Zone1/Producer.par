@@ -30,17 +30,23 @@
     <par type="DOUBLE" name="WTG3_Kqv" value="2"/>
     <par type="DOUBLE" name="WTG3_Kvi" value="0.7"/>
     <par type="DOUBLE" name="WTG3_Kvp" value="1"/>
-    <par type="DOUBLE" name="WTG3_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="WTG3_PMinPu" value="0"/>
-    <par type="DOUBLE" name="WTG3_QMaxPu" value="1.0"/>
-    <par type="DOUBLE" name="WTG3_QMinPu" value="-1.0"/>
+    <par type="DOUBLE" name="WTG3_PMaxREECPu" value="1"/>
+    <par type="DOUBLE" name="WTG3_PMinREECPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_QMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="WTG3_QMinREECPu" value="-1.0"/>
+    <par type="DOUBLE" name="WTG3_PMaxREPCPu" value="1"/>
+    <par type="DOUBLE" name="WTG3_PMinREPCPu" value="0"/>
+    <par type="DOUBLE" name="WTG3_QMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="WTG3_QMinREPCPu" value="-1.0"/>
     <par type="DOUBLE" name="WTG3_VDipPu" value="0.9"/>
     <par type="DOUBLE" name="WTG3_VMaxPu" value="1.1"/>
     <par type="DOUBLE" name="WTG3_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WTG3_VRef0Pu" value="0"/>
     <par type="DOUBLE" name="WTG3_VUpPu" value="1.1"/>
     <par type="DOUBLE" name="WTG3_tIq" value="0.01"/>
-    <par type="DOUBLE" name="WTG3_tP" value="0.05"/>
+    <par type="DOUBLE" name="WTG3_tpREEC" value="0.05"/>
+    <par type="DOUBLE" name="WTG3_tpREPC" value="0.05"/>
+    <par type="DOUBLE" name="WTG3_tpWTGQa" value="0.05"/>
     <par type="DOUBLE" name="WTG3_tPord" value="0.01"/>
     <par type="DOUBLE" name="WTG3_tRv" value="0.01"/>
 

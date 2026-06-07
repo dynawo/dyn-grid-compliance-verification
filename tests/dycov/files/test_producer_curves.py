@@ -19,7 +19,7 @@ from dycov.files.producer_curves import check_curves, create_producer_curves
 
 
 def _write_producer_dyd(
-    path: Path, transformer_ids=None, generator_ids=None, lib_type="WTG4AWeccCurrentSource1"
+    path: Path, transformer_ids=None, generator_ids=None, lib_type="WTG4AWeccCurrentSource"
 ):
     """
     Helper to write a minimal Producer.dyd file with given transformer and generator ids.

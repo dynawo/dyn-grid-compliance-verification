@@ -62,7 +62,9 @@ def _connect_generator_to_dynmodelomegaref(
 
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "Running")
     if variable:
-        _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}")
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}_value"
+        )
 
 
 def _connect_generator_to_setpoint(dyd_root: etree.Element, ns: str, generator: GenParams) -> None:
