@@ -13,6 +13,7 @@ import logging
 import platform
 import sys
 from pathlib import Path
+from typing import Optional
 
 from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
@@ -48,22 +49,24 @@ class DycovInitializer:
     _DYCOV_CONFIG_VERSION_KEY = "version"
     _DYCOV_TOOL_VERSION = "1.0.0.RC"
 
-    def init(self, launcher_dwo: Path, debug: bool) -> None:
+    def init(self, user_config_path: Optional[Path], launcher_dwo: Path, debug: bool) -> None:
         """
         Initializes the DYCOV tool by setting up the user configuration path,
         templates, models, and logging.
 
         Parameters
         ----------
+        user_config_path: Optional[Path]
+            Path to the user configuration file.
         launcher_dwo: Path
             Path to the Dynawo launcher.
         debug: bool
             Flag to enable debug mode for logging.
         """
         tool_path = Path(__file__).resolve().parent.parent
-        self._setup_user_config(tool_path)
-        self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
+        self._setup_user_config(tool_path, user_config_path)
+        self._setup_templates_and_models(tool_path)
         self._log_execution_environment(launcher_dwo)
 
         if dycov_logging.get_logger("Initialization").isEnabledFor(logging.DEBUG):
@@ -109,7 +112,7 @@ class DycovInitializer:
         logger.info("    LaTeX     : %s", latex_version)
         logger.info("    uv        : %s", uv_version)
 
-    def _setup_user_config(self, tool_path: Path):
+    def _setup_user_config(self, tool_path: Path, user_config_path: Optional[Path] = None):
         """
         Sets up the user configuration directory and files.
         This includes creating the config directory if it doesn't exist,
@@ -142,6 +145,9 @@ class DycovInitializer:
                     tool_path / "configuration" / "defaultConfig.ini",
                     config.get_config_dir() / "config.ini",
                 )
+
+        if user_config_path:
+            config.load_user_config(user_config_path)
 
     def _setup_templates_and_models(self, tool_path: Path):
         """

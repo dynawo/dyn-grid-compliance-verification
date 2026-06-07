@@ -86,7 +86,7 @@ class DycovCLI:
         self._apply_diagnostic_mode(args)
 
         # Initialize core DYCOV components
-        self.initializer.init(dynawo_launcher_path, args.debug)
+        self.initializer.init(args.user_config, dynawo_launcher_path, args.debug)
         self.logger.debug("DycovInitializer completed initialization.")
 
         # Dispatch the command to the appropriate handler function.
