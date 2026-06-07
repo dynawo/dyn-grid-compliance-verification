@@ -26,7 +26,7 @@ def create_simple_dyd_and_par(
         dyd_root,
         f"{{{ns}}}blackBoxModel",
         id=gen_id,
-        lib="WTG4AWeccCurrentSource1",
+        lib="WTG4AWeccCurrentSource",
         parId="parGen",
     )
     # Transformer

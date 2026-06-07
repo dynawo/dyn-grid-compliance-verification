@@ -93,16 +93,20 @@
     <par type="DOUBLE" name="WTG4B_Kig" value="2.36"/>
     <par type="DOUBLE" name="WTG4B_Kp" value="0.1"/>
     <par type="DOUBLE" name="WTG4B_Kpg" value="0.05"/>
-    <par type="DOUBLE" name="WTG4B_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="WTG4B_PMinPu" value="0.0"/>
-    <par type="DOUBLE" name="WTG4B_QMaxPu" value="0.8"/>
-    <par type="DOUBLE" name="WTG4B_QMinPu" value="-0.8"/>
+    <par type="DOUBLE" name="WTG4B_PMaxREECPu" value="1"/>
+    <par type="DOUBLE" name="WTG4B_PMinREECPu" value="0.0"/>
+    <par type="DOUBLE" name="WTG4B_QMaxREECPu" value="0.8"/>
+    <par type="DOUBLE" name="WTG4B_QMinREECPu" value="-0.8"/>
+    <par type="DOUBLE" name="WTG4B_PMaxREPCPu" value="1"/>
+    <par type="DOUBLE" name="WTG4B_PMinREPCPu" value="0.0"/>
+    <par type="DOUBLE" name="WTG4B_QMaxREPCPu" value="0.8"/>
+    <par type="DOUBLE" name="WTG4B_QMinREPCPu" value="-0.8"/>
     <par type="DOUBLE" name="WTG4B_VFrz" value="0"/>
     <par type="DOUBLE" name="WTG4B_tFilterPC" value="0.04"/>
     <par type="DOUBLE" name="WTG4B_tFt" value="1e-5"/>
     <par type="DOUBLE" name="WTG4B_tFv" value="0.1"/>
     <par type="DOUBLE" name="WTG4B_tLag" value="0.1"/>
-    <par type="DOUBLE" name="WTG4B_tP" value="0.05"/>
+    <par type="DOUBLE" name="WTG4B_tpREEC" value="0.05"/>
 
     <!-- PLL Control -->
     <par type="DOUBLE" name="WTG4B_KiPLL" value="20"/>

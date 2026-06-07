@@ -151,7 +151,7 @@ Currently supported models:
     * GeneratorSynchronousThreeWindingsDTRI8
         Ad-hoc machine model for the I8 PCS
 * WECC Wind models:
-    * WTG4AWeccCurrentSource1
+    * WTG4AWeccCurrentSource
         WECC Wind Turbine model with a simplified drive train model (dual-mass model) and with a
         current source as interface with the grid
     * WTG4BWeccCurrentSource
