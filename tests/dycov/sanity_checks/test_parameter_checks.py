@@ -107,7 +107,7 @@ def test_generators():
     )
     ppm = GenParams(
         id=None,
-        lib="WTG4AWeccCurrentSource1",
+        lib="WTG4AWeccCurrentSource",
         terminals=(Terminal(connected_equipment=""),),
         s_nom=90,
         i_max=100.0,
@@ -306,7 +306,7 @@ def test_check_generators_zone3_different_types():
     )
     ppm = GenParams(
         id=None,
-        lib="WTG4AWeccCurrentSource1",
+        lib="WTG4AWeccCurrentSource",
         terminals=(Terminal(connected_equipment=""),),
         s_nom=90,
         i_max=100.0,
