@@ -35,13 +35,17 @@
     <par type="DOUBLE" name="WT4B_VRef0Pu" value="1"/>
     <par type="DOUBLE" name="WT4B_VUpPu" value="1.35"/>
     <par type="DOUBLE" name="WT4B_tIq" value="0.01"/>
-    <par type="DOUBLE" name="WT4B_tP" value="0.05"/>
+    <par type="DOUBLE" name="WT4B_tpREEC" value="0.05"/>
     <par type="DOUBLE" name="WT4B_tPord" value="0.01"/>
     <par type="DOUBLE" name="WT4B_tRv" value="0.01"/>
-    <par type="DOUBLE" name="WT4B_QMaxPu" value="1.0"/>
-    <par type="DOUBLE" name="WT4B_QMinPu" value="-1.0"/>
-    <par type="DOUBLE" name="WT4B_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="WT4B_PMinPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_PMaxREECPu" value="1"/>
+    <par type="DOUBLE" name="WT4B_PMinREECPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_QMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="WT4B_QMinREECPu" value="-1.0"/>
+    <par type="DOUBLE" name="WT4B_PMaxREPCPu" value="1"/>
+    <par type="DOUBLE" name="WT4B_PMinREPCPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_QMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="WT4B_QMinREPCPu" value="-1.0"/>
 
     <!-- Electrical Control REECa -->
     <par type="BOOL" name="WT4B_PFlag" value="false"/>

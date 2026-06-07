@@ -8,9 +8,10 @@
 #     demiguelm@aia.es
 #
 
+from tests.dycov.utils import MODEL
+
 from dycov.core.global_variables import MODEL_VALIDATION
 from dycov.validate.producer import ModelProducer
-from tests.dycov.utils import MODEL
 
 
 def run_model_sanity_check(model_path, reference_path):
@@ -120,17 +121,10 @@ def test_wind_wecc32_model_sanity():
     )
 
 
-def test_wind_wecc4a1_model_sanity():
+def test_wind_wecc4a_model_sanity():
     run_model_sanity_check(
-        MODEL / "Wind" / "WECC4A1" / "Dynawo",
-        MODEL / "Wind" / "WECC4A1" / "ReferenceCurves",
-    )
-
-
-def test_wind_wecc4a2_model_sanity():
-    run_model_sanity_check(
-        MODEL / "Wind" / "WECC4A2" / "Dynawo",
-        MODEL / "Wind" / "WECC4A2" / "ReferenceCurves",
+        MODEL / "Wind" / "WECC4A" / "Dynawo",
+        MODEL / "Wind" / "WECC4A" / "ReferenceCurves",
     )
 
 
