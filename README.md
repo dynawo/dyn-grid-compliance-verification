@@ -10,8 +10,36 @@ and wind farms (Power Park Modules — PPM), battery energy storage systems (BES
 and synchronous machines (SM), covering workflows from model validation to 
 grid-code compliance assessment. As an end-to-end framework, DyCoV supports 
 both model validation and compliance assessment workflows used during grid 
-connection studies.
+connection studies.  
 
+DyCoV is not a simulation tool itself — it leverages Dynawo to perform simulations
+and focuses on automated validation and compliance assessment workflows.
+
+
+---
+
+## How DyCoV works
+
+DyCoV follows a structured validation pipeline where dynamic behaviour is
+evaluated against defined compliance criteria:
+
+```
+Inputs (Model / Curves)
+          ↓
+   Simulation (Dynawo)
+          ↓
+   Signal Processing
+          ↓
+   Validation (PCS)
+          ↓
+       Reports
+```
+
+Depending on the workflow, DyCoV either:
+- compares simulated results against reference curves (**model validation**), or
+- evaluates system behaviour under predefined disturbances (**performance verification**)
+
+This pipeline is fully automated and produces structured reports and plots.
 
 ---
 
@@ -40,14 +68,27 @@ Additionally:
 - **Grid‑Forming (GFM) envelope calculation** — computes analytical bounds
   for GFM unit responses (optional workflow)
 
+### Key concepts
+
+- **PCS (Performance Checking Sheet)** — set of validation tests defined in the RTE grid code (DTR)
+- **PPM (Power Park Module)** — wind, solar or aggregated generation installation
+- **RMS model validation** — verifies that a model reproduces a reference behaviour (PCS I16)
+- **Electrical performance verification** — evaluates compliance with grid‑code requirements (PCS I2–I10)
+- **GFM (Grid‑Forming)** — control mode for inverter-based resources (optional workflow)
+
 ---
 
 ## Getting started
 
-This section helps you identify the most relevant entry point based on your
-objective and familiarity with DyCoV.
-It acts as a navigation guide to the main workflows and documentation for 
-exploration, validation, or study design.
+This section serves both as an entry point and as a guide to the documentation structure:
+
+- **Quick start** → minimal working examples
+- **Tutorials** → step-by-step workflows (recommended entry point)
+- **Installation** → environment setup
+- **Reference manuals** → detailed technical documentation
+- **Developer docs** → extension and internal architecture
+
+Depending on your objective:
 
 - To run DyCoV quickly and see results → go to **[Quick start](#quick-start)**
 - To validate a real installation → run both validation and performance workflows in sequence
@@ -178,6 +219,14 @@ This will:
 - compare results against reference curves
 - generate validation reports
 
+**Expected result:**
+- A `Results/Model/` directory is created
+- A PDF report summarizing compliance is generated
+- HTML plots show simulated vs reference curves
+- Some tests may be marked as:
+  - Compliant
+  - Non-compliant (depending on the example and model behaviour)
+
 ---
 
 ### Electrical performance verification
@@ -196,6 +245,14 @@ This will:
 - execute PCS test scenarios
 - evaluate compliance with grid‑code requirements
 
+**Expected result:**
+- PCS test cases are executed
+- Compliance is evaluated for each test scenario
+- Tests are marked as:
+  - Compliant
+  - Non-compliant
+- A summary report highlights pass/fail status per PCS, benchmark and operating condition
+
 ---
 
 ### Grid‑Forming analysis (optional)
@@ -213,6 +270,11 @@ dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini
 This will:
 - compute admissible envelopes
 - generate CSV data and plots
+
+**Expected result:**
+- CSV files with envelope data
+- Static PNG plots
+- Interactive HTML plots for detailed inspection
 
 ---
 

@@ -17,8 +17,7 @@ installation**, represented by an open RMS (phasor) model, matches a
 This workflow implements the validation process defined in **RTE PCS‑I16**
 (Fiche I16), used during **Phase 1 (ION)** of the RTE process.
 
-At its core, the validation process is based on comparing time-domain responses. DyCoV 
-always compares two sets of time‑domain responses:
+At its core, the validation process is based on comparing two sets of time-domain responses:
 - **Reference curves**, representing the expected or “real” behavior.
 - **Producer response curves**, representing the model behavior.
 
@@ -35,6 +34,10 @@ This document explains:
 This document does **not** cover how input data is structured or prepared.
 It assumes that input data has been prepared following the conventions
 described in the **“Preparing inputs”** tutorial.
+
+At this stage, it is important to understand that RMS model validation is not
+about perfect curve matching: a model can be considered valid even if differences
+exist, as long as they remain within the thresholds defined in PCS‑I16.
 
 ---
 
@@ -134,9 +137,9 @@ ReferenceCurves/
 
 Notes:
 
-*   The validation zone is encoded in the PCS identifier (`z1`, `z3`).
-*   DICT files are mandatory and provide signal mapping and event metadata.
-*   Reference curves do not require electrical or nominal parameters.
+- The validation zone is encoded in the PCS identifier (`z1`, `z3`).
+- DICT files are mandatory and provide signal mapping and event metadata.
+- Reference curves do not require electrical or nominal parameters.
 
 Reference curves and producer curves can be provided using different
 supported formats (e.g. COMTRADE, EUROSTAG EXP ASCII or CSV).
@@ -148,10 +151,11 @@ in the “Preparing inputs” tutorial.
 
 ### 4.2 Dynawo‑based producer response
 
-When using Dynawo, **one RMS model must be provided per zone**.
+When using Dynawo, **one RMS model must be provided per zone**,
+as Zone 1 and Zone 3 represent different physical configurations.
 
 Dynawo is an open‑source time‑domain simulation tool used to compute the
-dynamic response of electrical systems. In this workflow, DyCoV uses Dynawo
+dynamic response of electrical systems. In this workflow, DyCoV uses it
 to generate the producer response curves from the provided model.
 
 For details on how to build Dynawo models (`.dyd`, `.par`), see the
@@ -182,8 +186,8 @@ When Dynawo is not used, the producer response is provided directly as curves.
 
 The curves are **not split by zone**. Zone separation is handled via:
 
-*   the PCS identifier, and
-*   a `Producer.ini` file per zone.
+- the PCS identifier, and
+- a `Producer.ini` file per zone.
 
 Exact structure:
 
@@ -215,9 +219,10 @@ Therefore, these parameters must be available even when no Dynawo model is used.
 Some parameters may also appear in Dynawo `Producer.par`.
 When this is the case:
 
-*   the parameter must be provided in both files,
-*   the value in `Producer.ini` must be **more restrictive**,
-*   DyCoV stops with an error if this condition is not satisfied.
+- the parameter must be provided in both files,
+- the value in `Producer.ini` must be **more restrictive**,
+- DyCoV stops with an error if this condition is not satisfied,
+to ensure consistency between model parameters and validation assumptions.
 
 ### Zone specificity
 
@@ -236,11 +241,11 @@ Zone 1 tests validate the intrinsic dynamic behavior of the unit.
 
 For **PPM**, this includes:
 
-*   transient and permanent three‑phase faults,
-*   voltage dips with defined depth and duration,
-*   active and reactive power steps,
-*   voltage steps and frequency ramps,
-*   tests under different SCR conditions.
+- transient and permanent three‑phase faults,
+- voltage dips with defined depth and duration,
+- active and reactive power steps,
+- voltage steps and frequency ramps,
+- tests under different SCR conditions.
 
 For **BESS**, the same structure applies, with operating points that explicitly
 include **positive and negative power injection** to reflect bidirectional
@@ -265,14 +270,17 @@ including large active and reactive power setpoint variations.
 
 For all PCS‑I16 tests:
 
-*   only the positive‑sequence component is considered,
-*   signals are filtered, resampled and windowed according to IEC
+- only the positive‑sequence component is considered,
+- signals are filtered, resampled and windowed according to IEC
     recommendations,
-*   discrepancies are evaluated using:
-    *   dynamic indicators (activation, rise, settling times, overshoot),
-    *   error metrics: ME, MAE and MXE (mean error, mean absolute error, maximum error).
+- discrepancies are evaluated using:
+    - dynamic indicators (activation, rise, settling times, overshoot),
+    - error metrics: ME, MAE and MXE (mean error, mean absolute error, maximum error).
 
 Compliance is assessed against the thresholds defined in PCS‑I16.
+
+These indicators are computed independently for each validation window
+(before, during and after the event), and combined to determine overall compliance.
 
 ---
 
@@ -306,29 +314,135 @@ dycov validate ReferenceCurves/ -c ProducerCurves/
 >  
 > For details, see the *2.3.4 Curve Comparison Methodology* section in the User Manual.
 
-A successful RMS model validation produces:
+A successful RMS model validation produces the following outputs:
+- a consolidated **PDF report** summarizing compliance results,
+- **HTML plots** comparing producer response and reference curves,
+- a structured **Results/** directory ensuring full traceability.
 
-*   a consolidated **PDF report** summarizing compliance results,
-*   **HTML plots** comparing producer response and reference curves,
-*   a structured **Results** directory ensuring full traceability.
+In the report:
+- each test is evaluated independently,
+- results are classified as:
+  - **Compliant**
+  - **Non-compliant**
+- compliance is determined based on PCS‑I16 thresholds.
 
 ---
 
-## 10. Next steps
+## 10. Understanding the validation report
+
+DyCoV generates detailed PDF reports summarizing RMS model validation results.
+This section explains how to read and interpret these reports.
+
+### 10.1 Summary section
+
+The report starts with a **summary table** listing all executed tests.
+
+For each test, the summary provides:
+
+- PCS identifier (e.g. PCS_RTE-I16z1, PCS_RTE-I16z3)
+- test scenario (benchmark)
+- operating condition
+- overall result:
+  - Compliant
+  - Non-compliant
+  - Invalid test
+
+This section allows you to quickly identify:
+- which tests passed,
+- which tests failed,
+- and which tests could not be evaluated.
+
+### 10.2 Report organization
+
+After the summary, results are organized by:
+
+```
+
+PCS → Test → Detailed analysis
+
+```
+
+For example:
+- PCS RTE‑I16 Zone 1 → unit-level tests
+- PCS RTE‑I16 Zone 3 → plant-level tests
+
+Each test is documented independently.
+
+### 10.3 Structure of a test
+
+Each test follows the same structure:
+
+#### 1. Test description
+
+- description of the scenario (fault, step, etc.)
+- initial operating conditions (P, Q, U, SCR, etc.)
+
+#### 2. Simulation results
+
+- comparison plots between:
+  - simulated response (model)
+  - reference response
+- key quantities:
+  - voltage
+  - active power (P)
+  - reactive power (Q)
+  - currents (Ip, Iq)
+
+#### 3. Analysis of results
+
+Quantitative comparison between model and reference using:
+
+- MXE (maximum error)
+- ME (mean error)
+- MAE (mean absolute error)
+
+These metrics are evaluated separately over:
+
+- pre-event window
+- event window
+- post-event window
+
+#### 4. Compliance checks
+
+This section determines the final result.
+
+It includes:
+
+- comparison of computed metrics against PCS thresholds
+- additional checks (e.g. active power recovery)
+- steady-state verification after the event
+
+Each check is evaluated individually, and the test is considered:
+
+- **Compliant** if all criteria are satisfied
+- **Non-compliant** if at least one criterion is not met
+
+### 10.4 Key interpretation points
+
+- Perfect curve matching is **not required** — only compliance with thresholds matters
+- Small deviations may still be compliant if thresholds are respected
+- Non-compliance indicates that at least one required criterion is violated
+- Results must be interpreted together with:
+  - the plots (qualitative behavior)
+  - the compliance checks (quantitative decision)
+
+---
+
+## 11. Next steps
 
 After RMS model validation, you may proceed with:
 
-*   model tuning and re‑validation,
-*   [**electrical performance verification**](docs/tutorials/electrical_performance_verification.md),
-*   advanced analysis workflows.
+- model tuning and re‑validation,
+- [**electrical performance verification**](docs/tutorials/electrical_performance_verification.md),
+- advanced analysis workflows.
 
 ---
 
 ## References
 
-*   RTE — Fiche I16 (PCS‑I16) for PPM installations
-*   RTE — Fiche I16 (PCS‑I16) for BESS installations
-*   IEC 61400‑21‑1:2019
-*   IEC 61400‑27‑2:2020
-*   Dynawo documentation
+- RTE — Fiche I16 (PCS‑I16) for PPM installations
+- RTE — Fiche I16 (PCS‑I16) for BESS installations
+- IEC 61400‑21‑1:2019
+- IEC 61400‑27‑2:2020
+- Dynawo documentation
 
