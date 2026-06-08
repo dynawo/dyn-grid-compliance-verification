@@ -1069,6 +1069,10 @@ def _adjust_generator(
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
+    # Control mode and voltage droop are configured based on the zone.
+    if zone != 1:
+        zone = 3
+
     is_valid, control_mode_name = _apply_control_mode(
         generator, parset, nsmap, generator_control_mode, zone
     )
