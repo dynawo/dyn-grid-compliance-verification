@@ -15,7 +15,11 @@ The goal is to:
 - execute the main workflows once,
 - inspect the generated outputs.
 
-No prior knowledge of PCSs, zones or internal concepts is required.
+No prior knowledge of PCSs, zones or internal concepts is required to run these examples.
+
+At this stage, you are not expected to analyze results in depth.
+The goal is to verify that DyCoV runs correctly and to become familiar
+with the type of outputs it generates.
 
 ---
 
@@ -64,8 +68,8 @@ cd examples/Model/Wind/WECC4B
 
 This directory contains:
 
-*   a `Dynawo/` model,
-*   a `ReferenceCurves/` folder.
+- a `Dynawo/` model,
+- a `ReferenceCurves/` folder.
 
 ---
 
@@ -77,9 +81,9 @@ dycov validate ReferenceCurves/ -m Dynawo/
 
 DyCoV will:
 
-*   run RMS simulations,
-*   compare results against reference curves,
-*   generate validation reports.
+- run RMS simulations,
+- compare results against reference curves,
+- generate validation reports.
 
 ---
 
@@ -87,11 +91,25 @@ DyCoV will:
 
 After completion:
 
-*   a `Results/` directory is created,
-*   PDF reports summarize the validation,
-*   HTML plots visualize the responses.
+- a `Results/` directory is created,
+- PDF reports summarize the validation results,
+- HTML plots visualize the responses.
 
 You have successfully completed your first RMS model validation.
+
+**Expected result:**
+
+- A `Results/` directory is created
+- PDF reports summarize the validation results (including compliance indicators)
+- HTML plots show simulated curves against reference curves
+- Each test is classified as:
+  - **Compliant**
+  - **Non-compliant**
+
+At this stage, focus on:
+- whether the workflow executed correctly,
+- how results are structured,
+- how compliance indicators are reported.
 
 ---
 
@@ -122,8 +140,8 @@ dycov performance -m Dynawo/
 
 DyCoV will:
 
-*   execute the applicable PCS test cases,
-*   evaluate electrical performance criteria.
+- execute the applicable PCS test cases,
+- evaluate electrical performance criteria.
 
 ---
 
@@ -131,11 +149,25 @@ DyCoV will:
 
 After completion:
 
-*   results are written under `Results/`,
-*   PDF reports summarize PCS compliance,
-*   HTML plots show relevant electrical quantities.
+- results are written under `Results/`,
+- PDF reports summarize PCS compliance,
+- HTML plots show relevant electrical quantities.
 
 You have successfully completed your first electrical performance verification.
+
+**Expected result:**
+
+- A `Results/` directory is created
+- Each PCS test scenario is evaluated
+- PDF reports summarize compliance results
+- Each test is marked as:
+  - **Compliant**
+  - **Non-compliant**
+
+At this stage, focus on:
+- understanding how PCS tests are organized,
+- where compliance results are reported,
+- how to identify pass/fail outcomes.
 
 ---
 
@@ -167,8 +199,8 @@ dycov generateEnvelopes -i Producer.ini
 
 DyCoV will compute:
 
-*   admissible upper and lower envelopes,
-*   analytical time‑domain results.
+- admissible upper and lower envelopes,
+- analytical time‑domain results.
 
 ---
 
@@ -176,10 +208,21 @@ DyCoV will compute:
 
 After completion:
 
-*   CSV files contain the envelope data,
-*   PNG figures visualize the admissible regions.
+- CSV files contain the envelope data,
+- PNG plots visualize the admissible regions
 
-This completes your first GFM analysis.
+You have successfully completed your first GFM analysis.
+
+**Expected result:**
+
+- CSV files contain the envelope data
+- PNG plots visualize the admissible regions
+- Interactive HTML plots (when available) allow detailed inspection
+
+At this stage, focus on:
+- understanding the envelope structure,
+- how results differ from time-domain simulations,
+- how output files are organized.
 
 ---
 
@@ -187,12 +230,12 @@ This completes your first GFM analysis.
 
 By following this tutorial, you have:
 
-*   run **all main DyCoV workflows**:
-    *   RMS model validation,
-    *   electrical performance verification,
-    *   Grid‑Forming analysis,
-*   verified that DyCoV is correctly installed,
-*   generated representative outputs for each workflow.
+- run **all main DyCoV workflows**:
+    - RMS model validation,
+    - electrical performance verification,
+    - Grid‑Forming analysis,
+- verified that DyCoV is correctly installed,
+- generated representative outputs for each workflow.
 
 ---
 
@@ -200,16 +243,16 @@ By following this tutorial, you have:
 
 Depending on your objective, continue with:
 
-*   [**Preparing inputs**](docs/tutorials/preparing_inputs.md) 
+- [**Preparing inputs**](docs/tutorials/preparing_inputs.md) 
     to understand how to build your own cases.
 
-*   [**RMS model validation**](docs/tutorials/rms_model_validation.md) 
+- [**RMS model validation**](docs/tutorials/rms_model_validation.md) 
     for detailed explanation of zones and PCS‑I16.
 
-*   [**Electrical performance verification**](docs/tutorials/electrical_performance_verification.md) 
+- [**Electrical performance verification**](docs/tutorials/electrical_performance_verification.md) 
     for PCS‑based grid‑code compliance.
 
-*   [**Grid‑Forming analysis**](docs/tutorials/grid_forming_analysis.md) 
+- [**Grid‑Forming analysis**](docs/tutorials/grid_forming_analysis.md) 
     for in‑depth understanding of GFM envelopes.
 
 Each workflow is documented in a dedicated tutorial.

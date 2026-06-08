@@ -9,10 +9,10 @@ and result interpretation using Dynawo simulations or producer curves.
 
 ## 1. Overview
 
-At a high level, this workflow focuses on system-level compliance with grid-code dynamic 
-performance requirements. Electrical performance verification in DyCoV evaluates the 
-compliance of an electrical installation with **grid‑code dynamic performance requirements** 
-defined in the applicable RTE PCSs (e.g. I2, I5, I6, I7, I10).
+At a high level, this workflow focuses on system-level compliance with grid-code dynamic
+performance requirements. Electrical performance verification in DyCoV evaluates the
+compliance of an electrical installation with **RTE-defined dynamic performance requirements**
+as specified in the applicable PCSs (e.g. I2, I5, I6, I7, I10).
 
 Unlike RMS model validation:
 - **reference curves are not used**,
@@ -30,6 +30,11 @@ This document explains:
 This document does **not** explain how input data is structured or prepared.
 It assumes that input data has been prepared following the conventions
 described in the **“Preparing inputs”** tutorial.
+
+At this stage, it is important to understand that electrical performance verification
+does not rely on curve-to-curve comparison. Each test evaluates whether the installation 
+response satisfies the corresponding grid-code requirements, and results are classified as
+compliant or non-compliant based on PCS-defined thresholds.
 
 ---
 
@@ -90,9 +95,9 @@ This workflow can be understood through the following high-level questions:
 DyCoV evaluates these criteria by:
 - executing PCS‑defined test scenarios,
 - computing the required performance indicators,
-- comparing the results against PCS‑defined compliance thresholds.
+- evaluating the results against PCS‑defined compliance thresholds.
 
-Depending on the workflow, the producer response is obtained from:
+The producer response is obtained from:
 - RMS simulations (Dynawo), or
 - producer‑provided curves.
 
@@ -141,10 +146,10 @@ depending on the use case and the applicable PCS.
 
 Notes:
 
-*   A **single Dynawo model** is used for the entire verification.
-*   `Producer.ini` provides the electrical and nominal parameters
+- A **single Dynawo model** is used for the entire verification.
+- `Producer.ini` provides the electrical and nominal parameters
     required by DyCoV performance tests.
-*   The Dynawo model is executed independently for each PCS scenario.
+- The Dynawo model is executed independently for each PCS test scenario.
 
 ---
 
@@ -174,9 +179,9 @@ examples/
 
 Important points:
 
-*   Curves are grouped by **PCS identifier**.
-*   A **single `Producer.ini`** is used for the entire installation.
-*   The supported curve formats are identical to those used in RMS validation
+- Curves are grouped by **PCS identifier**.
+- A **single `Producer.ini`** is used for the entire installation.
+- The supported curve formats are identical to those used in RMS validation
     (COMTRADE, EUROSTAG EXP, CSV).
 
 ---
@@ -185,19 +190,21 @@ Important points:
 
 For each applicable PCS:
 
-*   DyCoV executes the corresponding test scenario,
-*   computes the required performance indicators,
-*   evaluates compliance against PCS‑defined thresholds.
+- DyCoV executes the corresponding test scenario,
+- computes the required performance indicators,
+- evaluates compliance against PCS‑defined thresholds.
 
 Depending on the PCS, evaluated quantities may include:
 
-*   voltage and frequency response,
-*   active and reactive power behavior,
-*   fault ride‑through and recovery performance,
-*   islanded operation capabilities.
+- voltage and frequency response,
+- active and reactive power behavior,
+- fault ride‑through and recovery performance,
+- islanded operation capabilities.
 
 DyCoV applies PCS definitions **as specified by RTE**,
-without reinterpretation or simplification.
+without reinterpretation or simplification, ensuring that results are consistent
+with the official grid-code requirements.
+
 
 ---
 
@@ -231,39 +238,157 @@ dycov performance -c ProducerCurves/
 
 A successful electrical performance verification produces:
 
-*   **PDF reports**
-    summarizing compliance per PCS and per test case,
-*   **HTML plots**
+- **PDF reports**
+    summarizing compliance per PCS and test case,
+- **HTML plots**
     illustrating key electrical quantities and responses,
-*   a structured **`Results/`** directory
+- a structured **`Results/`** directory
     ensuring full traceability of execution and calculations.
 
-Each PCS is evaluated and reported independently.
+Each PCS and its associated tests are evaluated and reported independently.
+
+In the report:
+- each test is evaluated independently,
+- results are classified as:
+  - **Compliant**
+  - **Non-compliant**
+- compliance is determined based on PCS-defined thresholds.
 
 ---
 
-## 10. Common clarifications
+## 10. Understanding the verification report
 
-*   Reference curves must **not** be provided.
-*   Zone 1 / Zone 3 separation does **not** apply.
-*   A single `Producer.ini` is always used.
-*   Dynawo and producer curves are mutually exclusive within a case.
+DyCoV generates structured PDF reports summarizing electrical performance verification results.
+
+This section explains how to read and interpret these reports.
+
+### 10.1 Summary section
+
+The report starts with a **summary of all executed PCS tests**.
+
+For each test, the summary typically includes:
+
+- PCS identifier (e.g. PCS‑I2, PCS‑I5, PCS‑I6, etc.)
+- test scenario
+- overall result:
+  - Compliant
+  - Non-compliant
+
+This provides an immediate overview of whether the installation meets
+grid-code requirements across all tested scenarios.
 
 ---
 
-## 11. Next steps
+### 10.2 Report organization
+
+After the summary, results are structured as:
+
+```
+
+PCS → Test → Detailed analysis
+
+```
+
+Each PCS (e.g. I5, I6, I7, I10) contains multiple test scenarios,
+which are documented independently.
+
+---
+
+### 10.3 Structure of a test
+
+Each test follows a consistent structure:
+
+#### 1. Test description
+
+- description of the grid scenario (fault, voltage dip, islanding, etc.)
+- initial operating conditions (P, Q, U, SCR, etc.)
+- assumptions or modeling choices for the test
+
+#### 2. Simulation results
+
+- time-domain plots of key electrical quantities:
+  - voltage
+  - active power (P)
+  - reactive power (Q)
+  - currents (Ip, Iq)
+- additional quantities depending on the PCS:
+  - plant-level control signals
+  - frequency (for islanding tests)
+  - transformer tap positions, etc.
+
+Plots represent the simulated behaviour of the installation under the test scenario.
+
+#### 3. Analysis of results
+
+For each signal, DyCoV computes performance indicators such as:
+
+- MXE (maximum error)
+- ME (mean error)
+- MAE (mean absolute error)
+
+These indicators are evaluated over relevant time windows (e.g. event, recovery),
+depending on the PCS definition.
+
+#### 4. Compliance checks
+
+This section determines the final result of the test.
+
+It includes:
+
+- comparison of computed indicators against PCS-defined thresholds
+- evaluation of specific criteria:
+  - ride-through capability
+  - response times (reaction, rise, settling)
+  - overshoot limits
+  - steady-state accuracy after the event
+
+Each criterion is checked independently.
+
+The test is considered:
+
+- **Compliant** if all criteria are satisfied
+- **Non-compliant** if at least one criterion is not met
+
+---
+
+### 10.4 Key interpretation points
+
+- No reference curves are used in electrical performance verification
+- Compliance is based on **absolute performance criteria**, not curve matching
+- Each PCS defines its own set of:
+  - scenarios
+  - indicators
+  - thresholds
+- A test may appear visually acceptable but still be non-compliant
+  if one of the quantitative criteria is violated
+- Results should be interpreted using:
+  - plots (to understand behaviour)
+  - compliance checks (to determine pass/fail)
+  
+---
+
+## 11. Common clarifications
+
+- Reference curves must **not** be provided.
+- Zone 1 / Zone 3 separation does **not** apply.
+- A single `Producer.ini` is always used.
+- Dynawo and producer curves are mutually exclusive within a case.
+
+---
+
+## 12. Next steps
 
 After electrical performance verification, you may:
 
-*   adjust model parameters and re‑run verification,
-*   generate compliance reports for submission,
-*   proceed with advanced analysis workflows, such as Grid‑Forming analysis.
+- adjust model parameters and re‑run verification,
+- generate compliance reports for submission,
+- proceed with advanced analysis workflows, such as Grid‑Forming analysis.
 
 ---
 
 ## References
 
-*   RTE — Technical Reference Documentation (DTR)
-*   IEC standards referenced by the RTE PCSs
-*   Dynawo documentation
+- RTE — Technical Reference Documentation (DTR)
+- IEC standards referenced by the RTE PCSs
+- Dynawo documentation
 
