@@ -65,6 +65,7 @@ recommend reading :ref:`get-started` first.
 
    usage/validations
    usage/inputs
+   usage/understanding_reports
    usage/results
    usage/configuration
    usage/gfm_envelopes

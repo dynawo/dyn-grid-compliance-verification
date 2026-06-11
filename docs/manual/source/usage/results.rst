@@ -113,99 +113,15 @@ organized by disturbance scenario and operating condition:
   traceability.
 
 
-PDF Report structure
+Report interpretation
 ---------------------
 
-All PDF reports (for RMS validation and Electric Performance) follow the same
-internal structure:
+DyCoV also generates detailed PDF reports describing the behavior
+of the installation and the outcome of each test.
 
-1. **Model** — describes the test setup: the network configuration, operational
-   points, and circuit schematics relevant to the test being reported.
+These reports follow a standardized structure shared across all workflows.
 
-2. **Initialization** — documents the initial conditions used for the
-   simulation: voltage levels, power settings, and equipment parameters. This
-   section helps verify that the simulation started from the correct state.
+For a detailed description of report organization and interpretation,
+including PCS structure, plots, KPIs and compliance checks, see:
 
-3. **Simulation** — presents the dynamic evolution of the system during the
-   test. Key electrical quantities (voltage, active power, reactive power,
-   current) are shown as time-series graphs, and the timeline of events is
-   annotated on the figures.
-
-4. **Results** — compares the simulated response against the reference curves
-   (for RMS validation) or against the PCS compliance thresholds (for
-   performance tests). Graphs show deviations clearly, and the key performance
-   indicators are tabulated:
-
-   * Maximum Error (MXE)
-   * Mean Error (ME)
-   * Mean Absolute Error (MAE)
-   * Rise time, reaction time, settling time, overshoot
-
-5. **Compliance** — the bottom line: for each criterion defined in the
-   applicable PCS, a pass/fail check is shown against the predefined threshold.
-   This is the section to read first if you just want to know whether the
-   installation meets the requirements.
-
-Curve Comparison Methodology
-----------------------------
-
-DyCoV evaluates compliance by comparing time-domain signals from the
-producer response against reference curves.
-
-This comparison is not performed directly on raw signals. Instead, a
-standardized signal processing procedure is applied before computing
-error metrics (MXE, ME, MAE).
-
-Processing steps
-^^^^^^^^^^^^^^^^
-
-Before comparison, DyCoV applies the following steps:
-
-1. **Time alignment**  
-   The reference and simulated signals are aligned so that the event
-   (fault, setpoint change, etc.) occurs at the same time.
-
-2. **Resampling**  
-   Signals are interpolated onto a common time grid to allow
-   point-by-point comparison.
-
-3. **Filtering**  
-   A low-pass filter is applied to remove high-frequency oscillations
-   and numerical artifacts.
-
-4. **Exclusion windows**  
-   Portions of the signal around disturbances are excluded from
-   the evaluation.
-
-Exclusion windows
-^^^^^^^^^^^^^^^^^
-
-Certain time intervals around events are not considered in the
-calculation of error metrics.
-
-For example, in fault-related tests:
-
-* a short interval after fault application, and
-* a short interval after fault clearing
-
-are excluded from the evaluation.
-
-These exclusion windows prevent short transient effects from
-artificially inflating the computed errors.
-
-Impact on results
-^^^^^^^^^^^^^^^^^
-
-As a consequence of this processing:
-
-* short-duration peaks may not contribute to the error metrics,
-* high-frequency differences are attenuated,
-* the comparison is performed only over selected portions of the signal,
-
-Interpretation
-^^^^^^^^^^^^^^
-
-The reported metrics (MXE, ME, MAE) should therefore be understood as:
-
-> **processed indicators of compliance**, not raw point-to-point differences
-> between the original signals.
+:ref:`Understanding reports <understanding-reports>`

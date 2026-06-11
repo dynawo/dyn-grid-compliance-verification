@@ -330,111 +330,35 @@ In the report:
 
 ## 10. Understanding the validation report
 
-DyCoV generates detailed PDF reports summarizing RMS model validation results.
-This section explains how to read and interpret these reports.
+RMS model validation reports follow a standardized structure
+shared across all DyCoV workflows.
 
-### 10.1 Summary section
+For a detailed description of the report structure, see:
 
-The report starts with a **summary table** listing all executed tests.
+→ [Understanding DyCoV reports](understanding_reports.md)
 
-For each test, the summary provides:
+The key specificities of RMS model validation reports are:
 
-- PCS identifier (e.g. PCS_RTE-I16z1, PCS_RTE-I16z3)
-- test scenario (benchmark)
-- operating condition
-- overall result:
-  - Compliant
-  - Non-compliant
-  - Invalid test
+- Reference curves are mandatory  
+- Validation is based on comparison between model response and reference behavior  
+- Error metrics (MXE, ME, MAE) are evaluated over pre-event, event and post-event windows  
+- Results are structured by Zone 1 (unit-level) and Zone 3 (plant-level)  
 
-This section allows you to quickly identify:
-- which tests passed,
-- which tests failed,
-- and which tests could not be evaluated.
-
-### 10.2 Report organization
-
-After the summary, results are organized by:
-
-```
-
-PCS → Test → Detailed analysis
-
-```
-
-For example:
-- PCS RTE‑I16 Zone 1 → unit-level tests
-- PCS RTE‑I16 Zone 3 → plant-level tests
-
-Each test is documented independently.
-
-### 10.3 Structure of a test
-
-Each test follows the same structure:
-
-#### 1. Test description
-
-- description of the scenario (fault, step, etc.)
-- initial operating conditions (P, Q, U, SCR, etc.)
-
-#### 2. Simulation results
-
-- comparison plots between:
-  - simulated response (model)
-  - reference response
-- key quantities:
-  - voltage
-  - active power (P)
-  - reactive power (Q)
-  - currents (Ip, Iq)
-
-#### 3. Analysis of results
-
-Quantitative comparison between model and reference using:
-
-- MXE (maximum error)
-- ME (mean error)
-- MAE (mean absolute error)
-
-These metrics are evaluated separately over:
-
-- pre-event window
-- event window
-- post-event window
-
-#### 4. Compliance checks
-
-This section determines the final result.
-
-It includes:
-
-- comparison of computed metrics against PCS thresholds
-- additional checks (e.g. active power recovery)
-- steady-state verification after the event
-
-Each check is evaluated individually, and the test is considered:
-
-- **Compliant** if all criteria are satisfied
-- **Non-compliant** if at least one criterion is not met
-
-### 10.4 Key interpretation points
-
-- Perfect curve matching is **not required** — only compliance with thresholds matters
-- Small deviations may still be compliant if thresholds are respected
-- Non-compliance indicates that at least one required criterion is violated
-- Results must be interpreted together with:
-  - the plots (qualitative behavior)
-  - the compliance checks (quantitative decision)
+Compliance is determined by comparing computed error metrics
+against thresholds defined in PCS‑I16.
 
 ---
 
 ## 11. Next steps
 
-After RMS model validation, you may proceed with:
+After RMS model validation, you may:
 
-- model tuning and re‑validation,
-- [**electrical performance verification**](docs/tutorials/electrical_performance_verification.md),
-- advanced analysis workflows.
+* tune model parameters and re‑run validation
+* assess compliance robustness across operating points
+* proceed with system‑level compliance studies, such as:
+  - [Electrical performance verification](electrical_performance_verification.md)
+
+
 
 ---
 

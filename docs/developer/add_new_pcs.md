@@ -183,8 +183,8 @@ validator class:
 
 | Test type | File | Class |
 |-----------|------|-------|
-| Performance | `src/dycov/validation/performance.py` | `PerformanceValidator` |
-| Model validation | `src/dycov/validation/model.py` | `ModelValidator` |
+| Electrical Performance verification | `src/dycov/validation/performance.py` | `PerformanceValidator` |
+| RMS model validation | `src/dycov/validation/model.py` | `ModelValidator` |
 | Shared utilities | `src/dycov/validation/common.py` | (module-level functions) |
 
 Add a private method to the appropriate class following the existing

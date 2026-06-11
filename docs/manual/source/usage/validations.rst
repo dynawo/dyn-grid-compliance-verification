@@ -9,14 +9,14 @@ regulatory requirements:
     installation matches a reference behavior within the tolerances defined by
     RTE (PCS I16).
 
-(b) **Electric performance verification** — verifies that the installation
+(b) **Electrical performance verification** — verifies that the installation
     meets the dynamic performance requirements of RTE's grid code, as specified
     in the applicable DTR PCSs.
 
 In both types, the tool runs a series of independent tests organized according
 to the DTR's PCS structure. The following tests are currently implemented:
 
-* **RMS Model Validation (Power Parks)**: PCS I16, structured into:
+* **RMS model validation (Power Parks)**: PCS I16, structured into:
 
   - *Zone 1* (unit-level): Fault Ride-Through, Step Response to Control
     Setpoints, Ramp Response to Grid Frequency, and Step Response to Grid
@@ -26,17 +26,22 @@ to the DTR's PCS structure. The following tests are currently implemented:
     Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
     (like I7), and Islanding (like I10).
 
-* **Electric Performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
+* **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
-* **Electric Performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
+* **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
   I7, and I10.
 
-* **Electric Performance (Synchronous Machines)**: PCSs I2, I3, I4, I6, I7,
+* **Electrical performance (Synchronous Machines)**: PCSs I2, I3, I4, I6, I7,
   I8, and I10.
 
 The performance tests for PPM, BESS, and SM share the same launcher
 (``dycov performance``). A single PDF report is generated covering all the
 PCSs that were run.
+
+For details on how the results of these tests are reported and interpreted,
+see:
+
+:ref:`Understanding reports <understanding-reports>`
 
 
 Conceptual structuring of the tests
@@ -140,8 +145,8 @@ For completeness, the following definitions apply:
 * **PCS**  
   A PCS is the set of tests and compliance criteria required to validate either:
 
-  * the producer’s model (**RMS Model Validation**), or
-  * the installation’s electrical dynamic performance (**Electric Performance Verification**).
+  * the producer’s model (**RMS model validation**), or
+  * the installation’s electrical dynamic performance (**Electrical performance verification**).
 
 * **Benchmark**  
   A Benchmark defines a specific **TSO-side network configuration**, together
@@ -154,7 +159,7 @@ Within this framework:
 * Each **Benchmark** is evaluated under one or more **Operating Conditions**
 * Each **Operating Condition** may include one or more **Operating Points**
 
-Key interpretation
+Definition summary
 ^^^^^^^^^^^^^^^^^^
 
 * **Benchmark** → defines the *grid setup and event*
@@ -162,7 +167,7 @@ Key interpretation
 * **Operating Point** → defines the *initial state of the scenario*
 
 
-RMS Model Validation (Power Park Modules)
+RMS model validation (Power Park Modules)
 ------------------------------------------
 
 RMS model validation checks that the dynamic response of a PPM model matches
@@ -312,10 +317,10 @@ defined by an operating point (OP), event parameters, and grid parameters.
    :align: center
 
 
-Electric Performance tests (Power Park Modules)
--------------------------------------------------
+Electrical performance verification  (Power Park Modules)
+---------------------------------------------------------
 
-Electric performance verification for PPMs checks compliance with the dynamic
+Electrical performance verification for PPMs checks compliance with the dynamic
 performance requirements of the applicable DTR PCSs. No reference curves are
 required — the tool evaluates the producer response directly against the PCS
 criteria.
@@ -406,10 +411,10 @@ condenser unit provides inertia and frequency reference for the island.
    :align: center
 
 
-Electric Performance tests (Synchronous Machines)
---------------------------------------------------
+Electrical performance verification  (Synchronous Machines)
+-----------------------------------------------------------
 
-Electric performance verification for synchronous machines follows the same
+Electrical performance verification for synchronous machines follows the same
 structure as for PPMs. The producer response can come from Dynawo simulations
 or from producer-provided curves.
 
@@ -527,8 +532,8 @@ Step-response Characteristics
 -------------------------------
 
 Several compliance criteria are based on reaction time, rise time, settling
-time, and overshoot. For RMS Model Validation tests, these definitions follow
-exactly the IEC standard. For Electric Performance tests, the rise time is
+time, and overshoot. For RMS model validation tests, these definitions follow
+exactly the IEC standard. For Electrical performance verification, the rise time is
 defined as equivalent to the IEC reaction + rise time combined.
 
 The figure below, taken from IEC 61400-21-1 (Section 3, Terms and definitions),

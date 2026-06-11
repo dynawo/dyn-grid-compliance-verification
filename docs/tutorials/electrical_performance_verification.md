@@ -258,113 +258,25 @@ In the report:
 
 ## 10. Understanding the verification report
 
-DyCoV generates structured PDF reports summarizing electrical performance verification results.
+Electrical performance verification reports follow a standardized structure
+shared across all DyCoV workflows.
 
-This section explains how to read and interpret these reports.
+For a detailed description of the report structure, see:
 
-### 10.1 Summary section
+→ [Understanding DyCoV reports](understanding_reports.md)
 
-The report starts with a **summary of all executed PCS tests**.
+The key specificities of electrical performance verification reports are:
 
-For each test, the summary typically includes:
+- No reference curves are used  
+- Compliance is based on absolute performance criteria  
+- Indicators are physical (e.g. response times, settling times, stability)  
+- Each PCS defines its own criteria and thresholds  
 
-- PCS identifier (e.g. PCS‑I2, PCS‑I5, PCS‑I6, etc.)
-- test scenario
-- overall result:
-  - Compliant
-  - Non-compliant
+Results should always be interpreted using both:
 
-This provides an immediate overview of whether the installation meets
-grid-code requirements across all tested scenarios.
+- time-domain plots (for qualitative behavior),  
+- compliance checks (for quantitative validation)
 
----
-
-### 10.2 Report organization
-
-After the summary, results are structured as:
-
-```
-
-PCS → Test → Detailed analysis
-
-```
-
-Each PCS (e.g. I5, I6, I7, I10) contains multiple test scenarios,
-which are documented independently.
-
----
-
-### 10.3 Structure of a test
-
-Each test follows a consistent structure:
-
-#### 1. Test description
-
-- description of the grid scenario (fault, voltage dip, islanding, etc.)
-- initial operating conditions (P, Q, U, SCR, etc.)
-- assumptions or modeling choices for the test
-
-#### 2. Simulation results
-
-- time-domain plots of key electrical quantities:
-  - voltage
-  - active power (P)
-  - reactive power (Q)
-  - currents (Ip, Iq)
-- additional quantities depending on the PCS:
-  - plant-level control signals
-  - frequency (for islanding tests)
-  - transformer tap positions, etc.
-
-Plots represent the simulated behaviour of the installation under the test scenario.
-
-#### 3. Analysis of results
-
-For each signal, DyCoV computes performance indicators such as:
-
-- MXE (maximum error)
-- ME (mean error)
-- MAE (mean absolute error)
-
-These indicators are evaluated over relevant time windows (e.g. event, recovery),
-depending on the PCS definition.
-
-#### 4. Compliance checks
-
-This section determines the final result of the test.
-
-It includes:
-
-- comparison of computed indicators against PCS-defined thresholds
-- evaluation of specific criteria:
-  - ride-through capability
-  - response times (reaction, rise, settling)
-  - overshoot limits
-  - steady-state accuracy after the event
-
-Each criterion is checked independently.
-
-The test is considered:
-
-- **Compliant** if all criteria are satisfied
-- **Non-compliant** if at least one criterion is not met
-
----
-
-### 10.4 Key interpretation points
-
-- No reference curves are used in electrical performance verification
-- Compliance is based on **absolute performance criteria**, not curve matching
-- Each PCS defines its own set of:
-  - scenarios
-  - indicators
-  - thresholds
-- A test may appear visually acceptable but still be non-compliant
-  if one of the quantitative criteria is violated
-- Results should be interpreted using:
-  - plots (to understand behaviour)
-  - compliance checks (to determine pass/fail)
-  
 ---
 
 ## 11. Common clarifications
@@ -378,11 +290,14 @@ The test is considered:
 
 ## 12. Next steps
 
+## 12. Next steps
+
 After electrical performance verification, you may:
 
-- adjust model parameters and re‑run verification,
-- generate compliance reports for submission,
-- proceed with advanced analysis workflows, such as Grid‑Forming analysis.
+* refine model parameters and re‑run verification
+* generate compliance reports for submission
+* proceed with additional validation or analysis workflows, such as:
+  - [RMS model validation](rms_model_validation.md)
 
 ---
 
