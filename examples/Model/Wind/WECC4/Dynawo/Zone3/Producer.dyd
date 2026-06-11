@@ -5,7 +5,7 @@
   <dyn:blackBoxModel id="Aux_Load" lib="LoadAlphaBeta" parFile="Producer.par" parId="Aux_Load"/>
   <dyn:blackBoxModel id="Main_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="Main_Xfmr"/>
   <dyn:blackBoxModel id="StepUp_Xfmr1" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr1"/>
-  <dyn:blackBoxModel id="Wind_Turbine1" lib="WTG4AWeccCurrentSource1" parFile="Producer.par" parId="Wind_Turbine1"/>
+  <dyn:blackBoxModel id="Wind_Turbine1" lib="WTG4AWeccCurrentSource" parFile="Producer.par" parId="Wind_Turbine1"/>
   <dyn:blackBoxModel id="StepUp_Xfmr2" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="StepUp_Xfmr2"/>
   <dyn:blackBoxModel id="Wind_Turbine2" lib="WTG4BWeccCurrentSource" parFile="Producer.par" parId="Wind_Turbine2"/>
 

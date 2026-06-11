@@ -29,13 +29,18 @@
     <par type="DOUBLE" name="WT4A_Kqv" value="2"/>
     <par type="DOUBLE" name="WT4A_Kvi" value="0.7"/>
     <par type="DOUBLE" name="WT4A_Kvp" value="1"/>
-    <par type="DOUBLE" name="WT4A_PMaxPu" value="1"/>
-    <par type="DOUBLE" name="WT4A_PMinPu" value="0"/>
-    <par type="DOUBLE" name="WT4A_QMaxPu" value="1.0"/>
-    <par type="DOUBLE" name="WT4A_QMinPu" value="-1.0"/>
+    <par type="DOUBLE" name="WT4A_PMaxREECPu" value="1"/>
+    <par type="DOUBLE" name="WT4A_PMinREECPu" value="0"/>
+    <par type="DOUBLE" name="WT4A_QMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="WT4A_QMinREECPu" value="-1.0"/>
+    <par type="DOUBLE" name="WT4A_PMaxREPCPu" value="1"/>
+    <par type="DOUBLE" name="WT4A_PMinREPCPu" value="0"/>
+    <par type="DOUBLE" name="WT4A_QMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="WT4A_QMinREPCPu" value="-1.0"/>
     <par type="DOUBLE" name="WT4A_tIq" value="0.01"/>
     <par type="DOUBLE" name="WT4A_tRv" value="0.01"/>
-    <par type="DOUBLE" name="WT4A_tP" value="0.05"/>
+    <par type="DOUBLE" name="WT4A_tpREEC" value="0.05"/>
+    <par type="DOUBLE" name="WT4A_tpWTGTb" value="0.05"/>
     <par type="DOUBLE" name="WT4A_tPord" value="0.01"/>
     <par type="DOUBLE" name="WT4A_VDipPu" value="0.9"/>
     <par type="DOUBLE" name="WT4A_VMaxPu" value="1.1"/>

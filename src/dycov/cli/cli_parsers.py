@@ -44,6 +44,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     )
     _add_debug_argument(main_parser)
     _add_diagnostic_argument(main_parser)
+    _add_user_config_argument(main_parser)
 
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
@@ -115,6 +116,19 @@ def _add_argument(
     parser.add_argument(*args, **kwargs)
     dycov_logging.get_logger("CliParsers").debug(
         f"Added argument {args} to parser with help: {help_msg}"
+    )
+
+
+def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--user-config' argument to override the default user configuration file."""
+    _add_argument(
+        parser,
+        "--user-config",
+        help_msg=(
+            "Path to a custom user configuration file. Overrides the default user config location."
+        ),
+        arg_type=Path,
+        default=None,
     )
 
 
