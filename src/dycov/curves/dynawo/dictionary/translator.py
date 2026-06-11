@@ -378,6 +378,22 @@ class Translator:
         control_mode = control_modes[control_option - 1]
         return self._get_control_mode_parameters(control_mode)
 
+    def is_synchronous_machine_model(self, generator: GenParams) -> bool:
+        """
+        Determines if a given generator is classified as synchronous based on its library.
+
+        Parameters
+        ----------
+        generator: GenParams
+            The generator parameters, including its library (lib).
+
+        Returns
+        -------
+        bool
+            True if the generator is classified as synchronous, False otherwise.
+        """
+        return generator.lib in self._synchronous_machine.sections()
+
     def is_valid_control_mode(
         self,
         generator: GenParams,

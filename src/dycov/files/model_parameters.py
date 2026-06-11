@@ -1069,6 +1069,11 @@ def _adjust_generator(
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
+    # For synchronous machine models, control mode and voltage droop adjustments are not
+    # applicable.
+    if dynawo_translator.is_synchronous_machine_model(generator):
+        return True
+
     # Control mode and voltage droop are configured based on the zone.
     if zone != 1:
         zone = 3
