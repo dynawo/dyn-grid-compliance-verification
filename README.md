@@ -68,13 +68,25 @@ Additionally:
 - **Grid‑Forming (GFM) envelope calculation** — computes analytical bounds
   for GFM unit responses (optional workflow)
 
+The following terms are used throughout the documentation:
+
 ### Key concepts
 
-- **PCS (Performance Checking Sheet)** — set of validation tests defined in the RTE grid code (DTR)
-- **PPM (Power Park Module)** — wind, solar or aggregated generation installation
-- **RMS model validation** — verifies that a model reproduces a reference behaviour (PCS I16)
-- **Electrical performance verification** — evaluates compliance with grid‑code requirements (PCS I2–I10)
-- **GFM (Grid‑Forming)** — control mode for inverter-based resources (optional workflow)
+- **PCS**: Performance Checking Sheet — set of validation tests defined in the RTE grid code (DTR)
+- **PPM**: Power Park Module — wind, solar or aggregated generation installation
+- **RMS model validation** — model validation workflow (PCS I16)
+- **Electrical performance verification** — compliance assessment workflow (PCS I2–I10)
+- **GFM**: Grid‑Forming — control mode for inverter-based resources (optional workflow)
+
+### Acronyms
+
+- **EMT**: Electromagnetic Transients (Transitorios Electromagnéticos)
+- **OC**: Operating Condition
+- **OP**: Operating Point
+- **PDR**: Point of Delivery (Point de raccordement)
+- **SCR**: Short Circuit Ratio
+- **CCT**: Critical Clearing Time
+- **TSO**: Transmission System Operator
 
 ---
 
