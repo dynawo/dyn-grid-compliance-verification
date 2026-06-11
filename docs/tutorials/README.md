@@ -49,7 +49,7 @@ This tutorial explains:
 - Zone 1 / Zone 3 validation logic,
 - interpretation of results.
 
-See: [RMS validation](rms_model_validation.md)
+See: [RMS model validation](rms_model_validation.md)
 
 ---
 
@@ -60,7 +60,7 @@ This tutorial explains:
 - PCS execution without reference curves,
 - simulation‑based and curve‑based workflows.
 
-See: [Performance verification](electrical_performance_verification.md)
+See: [Electrical performance verification](electrical_performance_verification.md)
 
 ---
 
@@ -76,7 +76,24 @@ See: [Grid‑Forming (GFM) analysis](grid_forming_analysis.md)
 
 ---
 
-## 6. Advanced topics
+## 6. Supporting documentation
+
+The following document provides additional guidance applicable to multiple workflows.
+
+### Understanding reports
+
+This document explains:
+- the structure of DyCoV reports,
+- the organization by PCS,
+- how to interpret plots, KPIs and compliance checks.
+
+It applies to both RMS model validation and electrical performance verification.
+
+See: [Understanding DyCoV reports](understanding_reports.md)
+
+---
+
+## 7. Advanced topics
 
 The following tutorials cover advanced usage scenarios and are intended for experienced users.
 
@@ -90,7 +107,7 @@ Learn how to:
 
 **without modifying DyCoV source code**.
 
-See: [Advanced pcs customization](advanced_pcs_customization.md)
+See: [Advanced PCS customization](advanced_pcs_customization.md)
 
 ### Advanced configuration
 

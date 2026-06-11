@@ -289,6 +289,7 @@ The documentation is structured to progressively guide users from high-level con
   - [Reading guide](docs/tutorials/README.md)
   - [Conceptual overview](docs/tutorials/first_steps.md)
   - [Preparing inputs](docs/tutorials/preparing_inputs.md)
+  - [Understanding reports](docs/tutorials/understanding_reports.md)
   - Workflow-specific tutorials:
     - [RMS validation](docs/tutorials/rms_model_validation.md)
     - [Performance verification](docs/tutorials/electrical_performance_verification.md)

@@ -161,10 +161,10 @@ validator class:
    * - Test type
      - File
      - Class
-   * - Performance
+   * - Electrical Performance verification
      - ``src/dycov/validation/performance.py``
      - ``PerformanceValidator``
-   * - Model validation
+   * - RMS model validation
      - ``src/dycov/validation/model.py``
      - ``ModelValidator``
    * - Shared utilities
