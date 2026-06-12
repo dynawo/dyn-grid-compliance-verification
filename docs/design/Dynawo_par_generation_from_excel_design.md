@@ -36,14 +36,16 @@ Example:
 
 ```ini
 [model1]
-REEC = A
-REGC = A
-REPC = A
+PREFIX = WPP
+REEC = REEC_A
+REGC = REGC_A
+REPC = REPC_A
 
 [model2]
-REEC = B
-REGC = A
-REPC = A
+PREFIX = WT
+REEC = REEC_B
+REGC = REGC_A
+REPC = REPC_A
 ```
 
 Each section represents a complete target Dynawo model.
@@ -63,6 +65,7 @@ The Excel file is the single source of truth and must contain:
 - Parameter types
 - Parameter values
 - Optional comments
+- Optional Base units
 
 The Excel structure may contain:
 - One or more sheets
@@ -154,6 +157,23 @@ Parameter | Type | Value
   - The block structure in the output
   - The mapping between variants and configuration
 
+##### Parameter Naming
+
+The parameter name defined in the Excel file must correspond to the Dynawo parameter name without the model prefix.
+
+For simple parameters:
+    PQFlag → PREFIX_PQFlag
+
+For complex or hierarchical parameters:
+    wPPControl2015_pControl_omegaWPPu → PREFIX_wPPControl2015_pControl_omegaWPPu
+
+The tool does not construct or interpret hierarchical parameter names.  
+It directly applies the model prefix to the provided parameter name.
+
+Therefore:
+- The Excel file must provide the exact Dynawo parameter naming (excluding the prefix)
+- No transformation or reconstruction of parameter names is performed
+
 ##### Multiple tables in the same sheet
 
 A single sheet may contain multiple tables.
@@ -187,6 +207,8 @@ Parameter |  Type |  Value | Parameter |  Type |  Value | Parameter |  Type |  V
 Each variant is parsed independently.
 
 The configuration file (INI) determines which variant is used for output generation.
+
+If the required variant (e.g. REEC_A) is not found in the Excel table, the tool must raise an explicit error.
 
 ##### Optional columns
 
@@ -256,7 +278,7 @@ A table is identified by the presence of a header row:
 Parameter | Type | Value
 ```
 
-Context is derived from previous rows:
+Context is derived from previous rows according to the rules defined in section 3.2.1.:
 
 * Row -1 → Dynawo model name (e.g. REEC_A, WTGT_A)
 * Row -2 → Block name (e.g. Electrical Controller, Drive-Train)
