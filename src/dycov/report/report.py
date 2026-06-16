@@ -275,6 +275,8 @@ def _pcs_replace(
         steady_state_error_map = steady_state_error.create_map(oc_results)
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
+        if "stabilized" in oc_results:
+            stabilized = "stable" if oc_results["stabilized"] else "\\textcolor{{red}}unstable"
 
         subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
         subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
@@ -285,6 +287,7 @@ def _pcs_replace(
         subst_dict = subst_dict | {"ssem" + operating_condition_: steady_state_error_map}
         subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
         subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
+        subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
