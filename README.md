@@ -382,7 +382,7 @@ examples.
 ## Model Validation Example:
 
 ```bash
-dycov validate $PWD/dycov/examples/Model/Wind/IEC2015/ReferenceCurves -m $PWD/dycov/examples/Model/Wind/IEC2015/Dynawo
+dycov validate $PWD/dycov/examples/Model/Wind/IECA2015/ReferenceCurves -m $PWD/dycov/examples/Model/Wind/IECA2015/Dynawo
 ```
 
 Upon execution, the screen output should be similar to the
@@ -403,7 +403,7 @@ Opening in existing browser session.
 ## Electrical Performance Example:
 
 ```bash
-dycov performance -m $PWD/dycov/examples/SM/Dynawo/SingleAux
+dycov performance -m $PWD/dycov/examples/Performance/SingleAux/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo
 ```
 
 Upon execution, the screen output should be similar to the
