@@ -460,6 +460,7 @@ class ModelValidator(Validator):
     ) -> dict:
         return {
             "compliance": True,
+            "stabilized": True,
             "sim_t_event_start": compliance_values["t_event_start"],
             "is_invalid_test": compliance_values["is_invalid_test"],
             "curves_error": compliance_values,
@@ -605,6 +606,7 @@ class ModelValidator(Validator):
                 check_results["mae_voltage_1P_stabilized"] = compliance_values[
                     "mae_voltage_1P_stabilized"
                 ]
+                check_results["stabilized"] &= check_results["mae_voltage_1P_stabilized"]
                 check_results["compliance"] &= (
                     check_results["mae_voltage_1P_check"]
                     & check_results["mae_voltage_1P_stabilized"]
@@ -612,6 +614,7 @@ class ModelValidator(Validator):
             else:
                 check_results["mae_voltage_1P_check"] = "N/A"
                 check_results["mae_voltage_1P_stabilized"] = "N/A"
+                check_results["stabilized"] = False
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_power_1P"], self._validations):
@@ -626,6 +629,7 @@ class ModelValidator(Validator):
                 check_results["mae_active_power_1P_stabilized"] = compliance_values[
                     "mae_active_power_1P_stabilized"
                 ]
+                check_results["stabilized"] &= check_results["mae_active_power_1P_stabilized"]
                 check_results["compliance"] &= (
                     check_results["mae_active_power_1P_check"]
                     & check_results["mae_active_power_1P_stabilized"]
@@ -633,6 +637,7 @@ class ModelValidator(Validator):
             else:
                 check_results["mae_active_power_1P_check"] = "N/A"
                 check_results["mae_active_power_1P_stabilized"] = "N/A"
+                check_results["stabilized"] = False
                 check_results["compliance"] = False
 
             if "mae_reactive_power_1P" in compliance_values:
@@ -646,6 +651,7 @@ class ModelValidator(Validator):
                 check_results["mae_reactive_power_1P_stabilized"] = compliance_values[
                     "mae_reactive_power_1P_stabilized"
                 ]
+                check_results["stabilized"] &= check_results["mae_reactive_power_1P_stabilized"]
                 check_results["compliance"] &= (
                     check_results["mae_reactive_power_1P_check"]
                     & check_results["mae_reactive_power_1P_stabilized"]
@@ -653,6 +659,7 @@ class ModelValidator(Validator):
             else:
                 check_results["mae_reactive_power_1P_check"] = "N/A"
                 check_results["mae_reactive_power_1P_stabilized"] = "N/A"
+                check_results["stabilized"] = False
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["mean_absolute_error_injection_1P"], self._validations):
@@ -667,6 +674,7 @@ class ModelValidator(Validator):
                 check_results["mae_active_current_1P_stabilized"] = compliance_values[
                     "mae_active_current_1P_stabilized"
                 ]
+                check_results["stabilized"] &= check_results["mae_active_current_1P_stabilized"]
                 check_results["compliance"] &= (
                     check_results["mae_active_current_1P_check"]
                     & check_results["mae_active_current_1P_stabilized"]
@@ -674,6 +682,7 @@ class ModelValidator(Validator):
             else:
                 check_results["mae_active_current_1P_check"] = "N/A"
                 check_results["mae_active_current_1P_stabilized"] = "N/A"
+                check_results["stabilized"] = False
                 check_results["compliance"] = False
 
             if "mae_reactive_current_1P" in compliance_values:
@@ -689,6 +698,7 @@ class ModelValidator(Validator):
                 check_results["mae_reactive_current_1P_stabilized"] = compliance_values[
                     "mae_reactive_current_1P_stabilized"
                 ]
+                check_results["stabilized"] &= check_results["mae_reactive_current_1P_stabilized"]
                 check_results["compliance"] &= (
                     check_results["mae_reactive_current_1P_check"]
                     & check_results["mae_reactive_current_1P_stabilized"]
@@ -696,6 +706,7 @@ class ModelValidator(Validator):
             else:
                 check_results["mae_reactive_current_1P_check"] = "N/A"
                 check_results["mae_reactive_current_1P_stabilized"] = "N/A"
+                check_results["stabilized"] = False
                 check_results["compliance"] = False
 
     def __check(
