@@ -81,7 +81,7 @@ class PerformanceValidator(Validator):
         self,
         curves_manager: CurvesManager,
         producer: Producer,
-        stable_time: float,
+        thr_ss_tol: float,
         validations: list,
         is_field_measurements: bool,
         pcs_name: str,
@@ -90,14 +90,14 @@ class PerformanceValidator(Validator):
         super().__init__(
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
-        self._stable_time = stable_time
+        self._thr_ss_tol = thr_ss_tol
 
     def __curve_list(self, curve_name: str) -> list:
         return list(self._get_calculated_curve_by_name(curve_name))
 
     def __run_common_tests(
         self,
-        stable_time: float,
+        thr_ss_tol: float,
         is_ppm: bool,
     ) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
@@ -105,28 +105,26 @@ class PerformanceValidator(Validator):
         steady_v, first_steady_pos_v = common.is_stable(
             self.__curve_list("time"),
             self.__curve_list(bus_pdr_voltage),
-            stable_time,
+            thr_ss_tol,
         )
 
         steady_p, first_steady_pos_p = common.is_stable(
             self.__curve_list("time"),
             self.__curve_list("BusPDR_BUS_ActivePower"),
-            stable_time,
+            thr_ss_tol,
         )
 
         steady_q, first_steady_pos_q = common.is_stable(
             self.__curve_list("time"),
             self.__curve_list("BusPDR_BUS_ReactivePower"),
-            stable_time,
+            thr_ss_tol,
         )
 
         stable_theta = False
         first_stable_pos_theta = 0
         pass_pi = False
         if not is_ppm:
-            stable_theta, first_stable_pos_theta, pass_pi = self._check_theta_stability(
-                stable_time
-            )
+            stable_theta, first_stable_pos_theta, pass_pi = self._check_theta_stability(thr_ss_tol)
 
         if not steady_p:
             dycov_logging.get_logger("Performance").warning("P has not reached steady state")
@@ -147,7 +145,7 @@ class PerformanceValidator(Validator):
             pass_pi,
         )
 
-    def _check_theta_stability(self, stable_time: float) -> tuple[bool, int, bool]:
+    def _check_theta_stability(self, thr_ss_tol: float) -> tuple[bool, int, bool]:
         stable_theta = True
         first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
         pass_pi = True
@@ -158,7 +156,7 @@ class PerformanceValidator(Validator):
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
                 self.__curve_list("time"),
                 self.__curve_list(key),
-                stable_time,
+                thr_ss_tol,
             )
 
             # Check +- Pi
@@ -762,7 +760,7 @@ class PerformanceValidator(Validator):
             first_stable_pos_theta,
             pass_pi,
         ) = self.__run_common_tests(
-            self._stable_time,
+            self._thr_ss_tol,
             self.get_sim_type() == ELECTRIC_PERFORMANCE_PPM
             or self.get_sim_type() == MODEL_VALIDATION_PPM,
         )

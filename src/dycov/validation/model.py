@@ -27,13 +27,6 @@ from dycov.validation.checks import (
 )
 
 
-def _get_ss_tolerance(setpoint_variation: float) -> float:
-    tolerance = config.get_float("GridCode", "thr_ss_tol", 0.002)
-    if setpoint_variation > 0.0:
-        tolerance = setpoint_variation * tolerance
-    return tolerance
-
-
 def _check_value_by_threshold(mxre: float, threshold: float) -> bool:
     return mxre < threshold
 
@@ -158,13 +151,13 @@ class ModelValidator(Validator):
 
         if compliance_list.contains_key(["response_time"], self._validations):
             res_response_time = common.get_response_time(
-                _get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(setpoint_variation),
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
             ref_response_time = common.get_response_time(
-                _get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(setpoint_variation),
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
@@ -180,13 +173,13 @@ class ModelValidator(Validator):
                 res_settling_max,
                 calc_ss_value,
             ) = common.get_settling_time(
-                _get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(setpoint_variation),
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
             ref_settling_time, _, _, _, _ = common.get_settling_time(
-                _get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(setpoint_variation),
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
@@ -240,11 +233,9 @@ class ModelValidator(Validator):
 
             results["ramp_error"] = ramp_error
 
-    def __is_stabilized(
-        self, time_curve: list, calculated_curve: list, stable_time: float
-    ) -> bool:
+    def __is_stabilized(self, time_curve: list, calculated_curve: list, thr_ss_tol: float) -> bool:
         try:
-            is_stabilized, _ = common.is_stable(time_curve, calculated_curve, stable_time)
+            is_stabilized, _ = common.is_stable(time_curve, calculated_curve, thr_ss_tol)
         except ValueError:
             return False
 
@@ -261,20 +252,20 @@ class ModelValidator(Validator):
         reference_curves = curves[1]
 
         _, ref_settlin_t_pos, _, _, _ = common.get_settling_time(
-            _get_ss_tolerance(setpoint_variation),
+            common.get_ss_tolerance(setpoint_variation),
             list(reference_curves["time"]),
             list(reference_curves[measurement_name]),
             reference_curves["time"][0],
         )
 
         _, res_settlin_t_pos, _, _, _ = common.get_settling_time(
-            _get_ss_tolerance(setpoint_variation),
+            common.get_ss_tolerance(setpoint_variation),
             list(calculated_curves["time"]),
             list(calculated_curves[measurement_name]),
             calculated_curves["time"][0],
         )
 
-        stable_time = config.get_float("GridCode", "stable_time", 100.0)
+        thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
         time_curve = list(calculated_curves["time"])[res_settlin_t_pos:]
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
             calculated_curve = list(calculated_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
@@ -287,7 +278,7 @@ class ModelValidator(Validator):
             results["mae_voltage_1P_stabilized"] = self.__is_stabilized(
                 time_curve,
                 calculated_curve,
-                stable_time,
+                thr_ss_tol,
             )
 
             calculated_ss = np.average(
@@ -311,7 +302,7 @@ class ModelValidator(Validator):
             results["mae_active_power_1P_stabilized"] = self.__is_stabilized(
                 time_curve,
                 calculated_curve,
-                stable_time,
+                thr_ss_tol,
             )
 
             calculated_ss = np.average(
@@ -336,7 +327,7 @@ class ModelValidator(Validator):
             results["mae_reactive_power_1P_stabilized"] = self.__is_stabilized(
                 time_curve,
                 calculated_curve,
-                stable_time,
+                thr_ss_tol,
             )
 
             calculated_ss = np.average(
@@ -362,7 +353,7 @@ class ModelValidator(Validator):
             results["mae_active_current_1P_stabilized"] = self.__is_stabilized(
                 time_curve,
                 calculated_curve,
-                stable_time,
+                thr_ss_tol,
             )
 
             calculated_ss = np.average(
@@ -387,7 +378,7 @@ class ModelValidator(Validator):
             results["mae_reactive_current_1P_stabilized"] = self.__is_stabilized(
                 time_curve,
                 calculated_curve,
-                stable_time,
+                thr_ss_tol,
             )
 
             calculated_ss = np.average(
