@@ -23,10 +23,10 @@ def test_is_stable_raises_on_length_mismatch():
 
     time = [0.0, 0.1, 0.2]
     curve = [1.0, 1.1]
-    stable_time = 0.1
+    thr_ss_tol = 0.1
 
     with pytest.raises(ValueError) as excinfo:
-        is_stable(time, curve, stable_time)
+        is_stable(time, curve, thr_ss_tol)
 
     assert "different length" in str(excinfo.value)
 

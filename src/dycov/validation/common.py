@@ -23,6 +23,13 @@ TUBE_TARGET_THRESHOLD = 0.01
 TUBE_ABSOLUTE_TOL = 0.02
 
 
+def get_ss_tolerance(setpoint_variation: float) -> float:
+    tolerance = config.get_float("GridCode", "thr_ss_tol", 0.002)
+    if setpoint_variation > 0.0:
+        tolerance = setpoint_variation * tolerance
+    return tolerance
+
+
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
 def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
     if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
@@ -143,10 +150,13 @@ def is_invalid_test(
     return v_flat and p_flat and q_flat
 
 
-def is_stable(time: list, curve: list, stable_time: float = 1e-20) -> tuple[bool, int]:
-    """Check if the stabilization is reached.
-    The curve is considered to have stabilized if, for the given minimum duration (stable_time),
-    the curve does not have variations exceeding the given relative tolerance.
+def is_stable(time: list, curve: list, thr_ss_tol: float = 0.002) -> tuple[bool, int]:
+    """
+    Detects whether the signal reaches a steady-state and returns the
+    first index from which it remains within tolerance until the end.
+
+    Stability is defined as:
+    The signal enters the tolerance band and never leaves it afterwards.
 
     Parameters
     ----------
@@ -154,49 +164,36 @@ def is_stable(time: list, curve: list, stable_time: float = 1e-20) -> tuple[bool
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
-    stable_time: float
-        Minimum duration required to consider stability reached (measured from the tail)
+    thr_ss_tol: float
+        Tolerance defining the steady-state band around the final value.
 
     Returns
     -------
     bool
-        True if the stabilization is reached, False otherwise
+        True if steady-state is reached, False otherwise
     int
-        The position where the stabilization is reached in the given lists
-        -1 if the stabilization is not reached
+        Index where steady-state begins, or -1 if not reached
     """
-
-    thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
+    atol = 0.01 * thr_ss_tol
 
     if len(time) != len(curve):
         raise ValueError("the curve values and its time series have different length")
-    if stable_time <= 0:
-        raise ValueError("stable_time should be > 0")
 
-    # Get the index of the time series where the minimum SS duration "tail window" starts
-    tail_window_start = time[-1] - stable_time
-    if tail_window_start < time[0]:
-        raise ValueError("stable_time is longer than the whole simulation time")
-    idx_time = np.argmin(abs(np.array(time) - tail_window_start))
+    final_value = curve[-1]
+    n = len(curve)
 
-    # Stability == all values in the tail are close to the end value (within tolerances)
-    atol = 0.01 * thr_ss_tol
-    curve_tail = curve[idx_time:]
-    stable = True
-    for val in curve_tail:
-        if not math.isclose(val, curve_tail[-1], rel_tol=thr_ss_tol, abs_tol=atol):
-            stable = False
-            break
+    for i in range(n):
+        stable = True
 
-    # If stable, get the index of time at which it first becomes stable
-    idx_first_stable = -1
-    if stable:
-        for i in range(idx_time, 0, -1):
-            if not math.isclose(curve[i], curve[-1], rel_tol=thr_ss_tol, abs_tol=atol):
-                idx_first_stable = i
+        for j in range(i, n):
+            if not math.isclose(curve[j], final_value, rel_tol=thr_ss_tol, abs_tol=atol):
+                stable = False
                 break
 
-    return stable, idx_first_stable
+        if stable:
+            return True, i
+
+    return False, -1
 
 
 def theta_pi(time: list, curve: list) -> bool:

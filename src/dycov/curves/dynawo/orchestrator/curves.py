@@ -66,7 +66,7 @@ class DynawoCurves(ProducerCurves):
         omega_path: Path,
         pcs_path: Path,
         job_name: str,
-        stable_time: float,
+        thr_ss_tol: float,
     ):
         """
         Parameters
@@ -85,8 +85,8 @@ class DynawoCurves(ProducerCurves):
             Path to the PCS directory.
         job_name : str
             Name of the job file.
-        stable_time : float
-            Time horizon used to evaluate stability in CCT calculations.
+        thr_ss_tol : float
+            Tolerance defining the steady-state band around the final value.
         """
         super().__init__(producer)
         self._output_dir = parameters.get_output_dir()
@@ -96,7 +96,7 @@ class DynawoCurves(ProducerCurves):
         self._omega_path = omega_path
         self._pcs_path = pcs_path
         self._job_name = job_name
-        self._stable_time = stable_time
+        self._thr_ss_tol = thr_ss_tol
 
         self._f_nom = config.get_float("Dynawo", "f_nom", 50.0)
         self._simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
@@ -154,7 +154,7 @@ class DynawoCurves(ProducerCurves):
             s_nref=self.get_snref(),
             f_nom=self._f_nom,
             sim_time=self._sim_time,
-            stable_time=self._stable_time,
+            thr_ss_tol=self._thr_ss_tol,
             curves_dict=self._setup.curves_dict,
         )
 
