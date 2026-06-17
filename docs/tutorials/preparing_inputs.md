@@ -59,17 +59,27 @@ These requirements apply consistently across all DyCoV workflows.
 
 ## 3. Inputs and project examples
 
+All input formats described in this document are illustrated in the `examples/`
+directory of the DyCoV repository. Users are encouraged to inspect these
+files and use them as a starting point when preparing their own cases.
+
 DyCoV inputs are always organized **within a concrete example case**.
 
 These examples should be understood as reference implementations of the 
 expected structure, not as strict templates that must be reproduced verbatim.
 
-Users are encouraged to rely on the **`examples/` directory**
-provided with the project, which contains **ready‑to‑run cases**
-illustrating all supported workflows.
-
 The directory structures described in this tutorial represent
 **functional roles**, not mandatory flat layouts.
+
+### Practical recommendation
+
+The easiest way to prepare valid inputs is to start from an existing example:
+
+- copy a case from `examples/`,
+- modify curves, parameters and metadata as needed,
+- adapt the structure incrementally.
+
+This approach helps avoid common formatting and consistency issues.
 
 ---
 
@@ -151,6 +161,8 @@ ReferenceCurves/
         ├── PCS_RTE-I*.csv
         └── PCS_RTE-I*.dict
 ```
+**Example:**
+`examples/Model/Wind/WECC4B/ReferenceCurves/Producer/CurvesFiles.ini`
 
 Notes:
 
@@ -176,6 +188,14 @@ examples/
                     ├── PCS_RTE-I16z3*.csv
                     └── PCS_RTE-I16z3*.dict
 ```
+
+**Examples:**
+
+- CSV:
+  `examples/Model/Wind/WECC4B/ReferenceCurves/Producer/PCS_RTE-I16z1*.csv`
+
+- DICT:
+  `examples/Model/Wind/WECC4B/ReferenceCurves/Producer/PCS_RTE-I16z1*.dict`
 
 ---
 
@@ -250,6 +270,9 @@ It contains:
 DyCoV cannot process curves without DICT files.
 DICT files are mandatory for all supported curve formats and workflows.
 
+**Example:**
+`examples/Model/Wind/WECC4B/ReferenceCurves/Producer/PCS_RTE-I16z1*.dict`
+
 ---
 
 ## 5. Producer curves
@@ -295,6 +318,12 @@ Important points:
     *   the associated `Producer.ini` file.
 *   In RMS model validation, a distinct `Producer.ini` is required for each zone.
 *   In electrical performance verification, a **single** `Producer.ini` is used.
+
+**Examples:**
+
+- Per-zone (RMS):
+  `examples/Model/ProducerCurves/PPM/Zone1/Producer.ini`
+  `examples/Model/ProducerCurves/PPM/Zone3/Producer.ini`
 
 ---
 
@@ -363,6 +392,22 @@ examples/
 Each zone is simulated independently and validated
 against the same set of reference curves.
 
+**Examples**:
+
+- RMS (Dynawo, per zone):
+  `examples/Model/Wind/WECC4B/Dynawo/Zone1/Producer.ini`
+  `examples/Model/Wind/WECC4B/Dynawo/Zone3/Producer.ini`
+
+- RMS (producer curves):
+  `examples/Model/ProducerCurves/PPM/Zone1/Producer.ini`
+  `examples/Model/ProducerCurves/PPM/Zone3/Producer.ini`
+
+- Performance (Dynawo):
+  `examples/Performance/Single/WECC4B/Dynawo/Producer.ini`
+
+- Performance (producer curves):
+  `examples/Performance/ProducerCurves/PPM/Producer.ini`
+
 ---
 
 #### Using producer curves
@@ -414,7 +459,7 @@ When Dynawo is used:
 *   a **single Dynawo model** is provided,
 *   a single `Producer.ini` is required.
 
-Example:
+**Example:**
 
 ```text
 examples/
@@ -470,6 +515,6 @@ without unit‑level versus plant‑level separation.
 
 Once inputs are prepared:
 
-*   proceed to [**RMS model validation**](docs/tutorials/rms_model_validation.md), or
-*   proceed to [**electrical performance verification**](docs/tutorials/electrical_performance_verification.md).
+*   proceed to [**RMS model validation**](rms_model_validation.md), or
+*   proceed to [**electrical performance verification**](electrical_performance_verification.md).
 

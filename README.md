@@ -80,7 +80,7 @@ The following terms are used throughout the documentation:
 
 ### Acronyms
 
-- **EMT**: Electromagnetic Transients (Transitorios Electromagnéticos)
+- **EMT**: Electromagnetic Transients
 - **OC**: Operating Condition
 - **OP**: Operating Point
 - **PDR**: Point of Delivery (Point de raccordement)

@@ -308,8 +308,8 @@ After GFM analysis, you may:
 * compare envelopes across scenarios,
 * proceed with RMS or performance studies using validated control assumptions,
   such as:
-  - [RMS model validation](docs/tutorials/rms_model_validation.md)
-  - [electrical performance verification](docs/tutorials/electrical_performance_verification.md)
+  - [RMS model validation](rms_model_validation.md)
+  - [electrical performance verification](electrical_performance_verification.md)
 
 
 ---
