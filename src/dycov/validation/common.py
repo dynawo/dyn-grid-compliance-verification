@@ -468,10 +468,10 @@ def check_generator_imax(
     id_not_increase = True
 
     for i in range(len(time)):
-        I = current_at_converter[i]
+        Im = current_at_converter[i]
         Id = active_current_at_converter[i]
 
-        if I >= imax - TOL:
+        if Im >= imax - TOL:
             # Entering saturation
             if not in_saturation:
                 in_saturation = True
