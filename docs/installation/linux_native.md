@@ -226,3 +226,14 @@ Native Linux installation may be appropriate if you:
 *   or are performing advanced debugging or development tasks.
 
 Otherwise, prefer the installation using the **prebuilt distribution image**.
+
+## 10. Next steps
+
+Once DyCoV is running:
+
+1.  Follow the [**Quick start**](../tutorials/quick_start.md) tutorial.
+2.  Continue with the workflow‑specific tutorials:
+    *   [Preparing inputs](../tutorials/preparing_inputs.md)
+    *   [RMS model validation](../tutorials/rms_model_validation.md)
+    *   [Electrical performance verification](../tutorials/electrical_performance_verification.md)
+    *   [Grid‑Forming analysis](../tutorials/grid_forming_analysis.md)

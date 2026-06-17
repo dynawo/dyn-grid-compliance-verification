@@ -98,8 +98,9 @@ for GFM units.
 
 *   CSV files containing computed envelopes and numerical results.
 *   PNG plots showing envelopes and associated signals.
+*   HTML file providing an interactive visualization of the same content.
 
-This workflow does not generate PDF reports or HTML plots at this stage.
+This workflow does not generate PDF reports at this stage.
 
 ---
 
@@ -121,8 +122,8 @@ Depending on the workflow, DyCoV produces:
 ## 5. Next steps
 
 The following documents expand on each aspect of DyCoV usage:
-- [Quick start](docs/tutorials/quick_start.md)
-- [Preparing inputs](docs/tutorials/preparing_inputs.md)
-- [RMS model validation](docs/tutorials/rms_model_validation.md)
-- [Electrical performance verification](docs/tutorials/electrical_performance_verification.md)
-- [GFM analysis](docs/tutorials/grid_forming_analysis.md)
+- [Quick start](quick_start.md)
+- [Preparing inputs](preparing_inputs.md)
+- [RMS model validation](rms_model_validation.md)
+- [Electrical performance verification](electrical_performance_verification.md)
+- [GFM analysis](grid_forming_analysis.md)

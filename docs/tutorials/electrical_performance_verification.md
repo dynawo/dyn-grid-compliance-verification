@@ -290,8 +290,6 @@ Results should always be interpreted using both:
 
 ## 12. Next steps
 
-## 12. Next steps
-
 After electrical performance verification, you may:
 
 * refine model parameters and re‑run verification

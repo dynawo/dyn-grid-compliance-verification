@@ -243,16 +243,16 @@ By following this tutorial, you have:
 
 Depending on your objective, continue with:
 
-- [**Preparing inputs**](docs/tutorials/preparing_inputs.md) 
+- [**Preparing inputs**](preparing_inputs.md) 
     to understand how to build your own cases.
 
-- [**RMS model validation**](docs/tutorials/rms_model_validation.md) 
+- [**RMS model validation**](rms_model_validation.md) 
     for detailed explanation of zones and PCS‑I16.
 
-- [**Electrical performance verification**](docs/tutorials/electrical_performance_verification.md) 
+- [**Electrical performance verification**](electrical_performance_verification.md) 
     for PCS‑based grid‑code compliance.
 
-- [**Grid‑Forming analysis**](docs/tutorials/grid_forming_analysis.md) 
+- [**Grid‑Forming analysis**](grid_forming_analysis.md) 
     for in‑depth understanding of GFM envelopes.
 
 Each workflow is documented in a dedicated tutorial.
