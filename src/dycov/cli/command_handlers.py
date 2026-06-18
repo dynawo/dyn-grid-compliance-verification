@@ -26,7 +26,7 @@ from dycov.validate.validation import Validation
 
 
 def handle_generate_envelopes_command(
-    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+    parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> int:
     """Handles the 'generateEnvelopes' command.
 
@@ -38,8 +38,6 @@ def handle_generate_envelopes_command(
         The argument parser instance.
     args: argparse.Namespace
         Parsed command-line arguments.
-    dwo_launcher: Path
-        Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'generateEnvelopes' command.")
     producer_ini: Optional[Path] = None
@@ -58,7 +56,6 @@ def handle_generate_envelopes_command(
         return
 
     result_code = _generate_envelopes(
-        dwo_launcher=dwo_launcher,
         output_dir=output_dir,
         producer_ini=producer_ini,
         emt=emt,
@@ -427,7 +424,6 @@ def _run_verification(
 
 
 def _generate_envelopes(
-    dwo_launcher: Path,
     output_dir: Path,
     producer_ini: Path,
     emt: bool,
@@ -437,7 +433,6 @@ def _generate_envelopes(
     dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
     try:
         params = GFMParameters(
-            launcher_dwo=dwo_launcher,
             producer_ini=producer_ini,
             selected_pcs=user_pcs,
             output_dir=output_dir,
