@@ -6,20 +6,21 @@
 
     \renewcommand{\DTRPcs}{GridFreqRamp} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{Grid Frequency Ramp}
-    \renewcommand{\OCname}{W500mHz250msConsumption}
+    \renewcommand{\OCname}{W500mHz250ms}
 
 
-    \subsection{Ramp response to grid changes in consumption: frequency ramp}
+    \subsection{Ramp response to grid changes: frequency ramp}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a frequency ramp from +500mHz to 2Hz/s on the AC source.
+    is a frequency ramp on the grid side that increases +500 mHz (i.e., from 50 to 50.5 Hz)
+    at a rate of 2 Hz/s (i.e., the ramp lasts 250 ms).
 
-    \GridCircuitZoneSetPoint
+    \GridCircuitZthree
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
         \begin{itemize}
-            \item $P = P_\text{max\_consumption\_unite}$
+            \item $P = P_\text{max\_unite}$
             \item $Q = 0$
             \item $U = U_\text{dim}$
             \item $SCR = 3$
@@ -34,19 +35,21 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1GridFreqRampW500mHz250msConsumption}
+            \BLOCK{for row in solverPCSI16z3GridFreqRampW500mHz250ms}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{center}
 
-    \GridSimulationHeaderZone{
-        \GridCurvesDescriptionZone
+    \GridSimulationHeaderZthree{
+        \GridCurvesDescriptionZthree
+        \GridCurvesFrequencyZthreeDescriptionZthree
     }
-    \GridCurvesZone
+    \GridCurvesZthree
+    \GridCurvesFrequencyZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1GridFreqRampW500mHz250msConsumption }}
+    Go to  {{ linkPCSI16z3GridFreqRampW500mHz250ms }}
 
     \subsubsection{Analysis of results}
     \begin{center}
@@ -57,7 +60,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1GridFreqRampW500mHz250msConsumption}
+            \BLOCK{for row in rmPCSI16z3GridFreqRampW500mHz250ms}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -77,7 +80,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1GridFreqRampW500mHz250msConsumption}
+            \BLOCK{for row in thmPCSI16z3GridFreqRampW500mHz250ms}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -93,7 +96,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
-            \BLOCK{for row in emPCSI16z1GridFreqRampW500mHz250msConsumption}
+            \BLOCK{for row in emPCSI16z3GridFreqRampW500mHz250ms}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -108,7 +111,7 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z1GridFreqRampW500mHz250msConsumption}
+            \BLOCK{for row in temPCSI16z3GridFreqRampW500mHz250ms}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
         \end{tabular}
@@ -121,7 +124,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1GridFreqRampW500mHz250msConsumption}
+            \BLOCK{for row in ssemPCSI16z3GridFreqRampW500mHz250ms}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule

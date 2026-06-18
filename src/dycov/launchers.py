@@ -73,17 +73,18 @@ class DycovCLI:
         args : argparse.Namespace
             Parsed command-line arguments.
         """
-        dynawo_launcher_path: Optional[Path] = None
-
         # Determine Dynawo launcher availability and initialize components.
-        # The 'anonymize' command does not require a Dynawo launcher.
-        # The 'generateEnvelopes' command does not require a Dynawo launcher.
-        simple_commands = ["anonymize", "generateEnvelopes"]
-        if args.command not in simple_commands:
+        dynawo_launcher_path: Optional[Path] = None
+        needs_launcher = (
+            args.command in {"performance", "validate"} and args.model is not None
+        ) or args.command == "generate"
+        if needs_launcher:
             dynawo_launcher_name = get_dynawo_launcher_name(parser, args)
             check_dynawo_launcher_availability(dynawo_launcher_name)
             dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
+        else:
+            dynawo_launcher_path = None
 
         # Apply diagnostic mode BEFORE initialization
         self._apply_diagnostic_mode(args)
@@ -124,7 +125,7 @@ class DycovCLI:
         """
         self.logger.info(f"Dispatching command: {args.command}")
         if args.command == "generateEnvelopes":
-            ret = handle_generate_envelopes_command(parser, args, dynawo_launcher_path)
+            ret = handle_generate_envelopes_command(parser, args)
         elif args.command == "validate":
             ret = handle_validate_command(parser, args, dynawo_launcher_path)
         elif args.command == "generate":
