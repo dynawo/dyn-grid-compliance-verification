@@ -34,7 +34,7 @@ tools/
 │
 └── README.md
 
-````
+```
 
 ---
 
@@ -76,7 +76,7 @@ The main entry point is:
 
 ```bash
 uv run python tools/analysis/code_quality/audit_public_api.py
-````
+```
 
 This generates a single actionable report listing what needs to be fixed.
 See `tools/analysis/code_quality/README.md` for details.
