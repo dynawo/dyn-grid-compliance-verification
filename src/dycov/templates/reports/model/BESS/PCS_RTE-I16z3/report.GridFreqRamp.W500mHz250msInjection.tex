@@ -14,7 +14,7 @@
     Checks for compliant behavior of the generating unit under a grid scenario where there
     is a frequency ramp from +500mHz to 2Hz/s on the AC source.
 
-    \GridCircuitZoneSetPoint
+    \GridCircuitZthree
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
@@ -34,19 +34,21 @@
             \toprule
            \textbf{Parameter} & \textbf{Value (default)} \\
             \midrule
-            \BLOCK{for row in solverPCSI16z1GridFreqRampW500mHz250msInjection}
+            \BLOCK{for row in solverPCSI16z3GridFreqRampW500mHz250msInjection}
             {{row[0]}}         & {{row[1]}}                         \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
     \end{center}
 
-    \GridSimulationHeaderZone{
-        \GridCurvesDescriptionZone
+    \GridSimulationHeaderZthree{
+        \GridCurvesDescriptionZthree
+        \GridCurvesFrequencyZthreeDescriptionZthree
     }
-    \GridCurvesZone
+    \GridCurvesZthree
+    \GridCurvesFrequencyZthree
     \\[2\baselineskip]
-    Go to  {{ linkPCSI16z1GridFreqRampW500mHz250msInjection }}
+    Go to  {{ linkPCSI16z3GridFreqRampW500mHz250msInjection }}
 
     \subsubsection{Analysis of results}
     \begin{center}
@@ -57,7 +59,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in rmPCSI16z1GridFreqRampW500mHz250msInjection}
+            \BLOCK{for row in rmPCSI16z3GridFreqRampW500mHz250msInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -77,7 +79,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
-            \BLOCK{for row in thmPCSI16z1GridFreqRampW500mHz250msInjection}
+            \BLOCK{for row in thmPCSI16z3GridFreqRampW500mHz250msInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -93,7 +95,7 @@
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
-            \BLOCK{for row in emPCSI16z1GridFreqRampW500mHz250msInjection}
+            \BLOCK{for row in emPCSI16z3GridFreqRampW500mHz250msInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
             \BLOCK{endfor}
             \bottomrule
@@ -108,7 +110,7 @@
             \toprule
             Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
             \midrule
-            \BLOCK{for row in temPCSI16z1GridFreqRampW500mHz250msInjection}
+            \BLOCK{for row in temPCSI16z3GridFreqRampW500mHz250msInjection}
             {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
             \BLOCK{endfor}
         \end{tabular}
@@ -121,7 +123,7 @@
             \toprule
             Variable   & MAE        & Final Error & Compliance \\
             \midrule
-            \BLOCK{for row in ssemPCSI16z1GridFreqRampW500mHz250msInjection}
+            \BLOCK{for row in ssemPCSI16z3GridFreqRampW500mHz250msInjection}
             {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
             \BLOCK{endfor}
             \bottomrule
