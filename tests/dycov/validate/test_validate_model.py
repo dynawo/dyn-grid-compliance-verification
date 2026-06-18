@@ -22,7 +22,7 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 7
         Compliance.Compliant,  # 8
         Compliance.Compliant,  # 9
-        Compliance.InvalidTest,  # 10
+        Compliance.Compliant,  # 10
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
@@ -33,7 +33,7 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
         Compliance.Compliant,  # 20
-        Compliance.Compliant,  # 21
+        Compliance.NonCompliant,  # 21
         Compliance.NonCompliant,  # 22
         Compliance.Compliant,  # 23
     ] == compliance
@@ -66,8 +66,8 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 17
         Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
-        Compliance.InvalidTest,  # 20
-        Compliance.InvalidTest,  # 21
+        Compliance.Compliant,  # 20
+        Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
         Compliance.Compliant,  # 23
         Compliance.Compliant,  # 24
@@ -82,16 +82,16 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 33
         Compliance.Compliant,  # 34
         Compliance.Compliant,  # 35
-        Compliance.Compliant,  # 36
-        Compliance.Compliant,  # 37
-        Compliance.NonCompliant,  # 38
-        Compliance.NonCompliant,  # 39
-        Compliance.Compliant,  # 40
+        Compliance.NonCompliant,  # 36
+        Compliance.NonCompliant,  # 37
+        Compliance.Compliant,  # 38
+        Compliance.Compliant,  # 39
+        Compliance.NonCompliant,  # 40
         Compliance.Compliant,  # 41
-        Compliance.NonCompliant,  # 42
+        Compliance.Compliant,  # 42
         Compliance.Compliant,  # 43
-        Compliance.Compliant,  # 44
-        Compliance.Compliant,  # 45
+        Compliance.NonCompliant,  # 44
+        Compliance.NonCompliant,  # 45
         Compliance.NonCompliant,  # 46
         Compliance.InvalidTest,  # 47
     ] == compliance

@@ -270,7 +270,7 @@ def test_check_generator_imax_raises_value_error_on_length_mismatch():
     time = [0, 1, 2]
     current_at_converter = [1, 2]
     active_current_at_converter = [1, 2]
-    with pytest.raises(ValueError, match="different length"):
+    with pytest.raises(ValueError, match="All input lists must have the same length"):
         common.check_generator_imax(imax, time, current_at_converter, active_current_at_converter)
 
 
