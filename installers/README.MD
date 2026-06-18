@@ -222,9 +222,9 @@ If you still prefer to set up DyCoV natively in Windows:
       uv pip install -e .[dev,test]
       ```
 
-4.  Verify Installation. This should display the help message for the tool.
+4.  Verify Installation. This should display the installed DyCoV version:
     ```winbatch
-    dycov -h
+    dycov --version
     ```
 
 5.  Pre-Execution Compilation. Before running the tool for the first time, compile the tool's resources:
