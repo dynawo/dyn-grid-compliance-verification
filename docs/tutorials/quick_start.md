@@ -51,6 +51,59 @@ examples/
 
 Each subdirectory contains **ready‑to‑run cases**.
 
+## 3.1 Understanding input files (at a glance)
+
+DyCoV examples rely on different input components depending on the workflow.
+
+### RMS model validation
+
+RMS validation always requires **reference curves**, which include:
+
+- `.dict` files (test definition and signal mapping)
+- `CurvesFiles.ini` (association between tests and curve files)
+- curve data files (`*.csv`, COMTRADE, etc.)
+
+In addition, the producer response is generated either:
+
+- by **Dynawo models** (`-m`) (see below), or
+- by **producer curves** (`-c`)
+
+### Electrical performance verification
+
+When using **Dynawo models** (`-m`):
+
+- the Dynawo model is required:
+  - .dyd (model definition)
+  - .par (parameters)
+  - Producer.ini (installation data)
+
+When using **producer curves** (`-c`):
+
+- `.dict`, `CurvesFiles.ini`, and curve files are required
+
+### Core inputs (Dynawo-based workflows)
+
+When using Dynawo models (`-m`), the producer response is generated from:
+
+- **dynamic model definition** (`.dyd`)
+- **model parameters** (`.par`)
+- **installation parameters** (`Producer.ini`)
+
+In RMS model validation, these inputs are provided **per zone**:
+
+- one model for Zone 1
+- one model for Zone 3
+
+In electrical performance verification, a **single model** is used.
+
+### Curve-based inputs (optional)
+
+When using **producer curves** (`-c`), the response is provided directly using:
+
+- `.dict` files (test definition and signal mapping)
+- `CurvesFiles.ini` (test-to-curve mapping)
+- curve data (`*.csv`, COMTRADE, etc.)
+
 ---
 
 ## 4. Quick RMS model validation
