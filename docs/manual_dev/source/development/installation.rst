@@ -1,211 +1,237 @@
+.. _dev-setup:
+
 ===============================================
-Installing Dynamic grid Compliance Verification
+Setting up a development environment
 ===============================================
 
-Overview
---------
+Working on DyCoV requires a few more steps than simply installing it as an
+end user, but the process is straightforward. This section walks you through
+everything you need: system dependencies, the Python environment, Dynawo, and
+a first run of the test suite to confirm that everything is working.
 
-Dynamic grid Compliance Verification is written in `Python`__ and supports **Python
-3.9+**. It builds upon the shoulders of many third-party libraries such as `lxml`__ and
-`Jinja`__, which are installed when Dynamic grid Compliance Verification is installed
-
-__ https://docs.python-guide.org/
-__ https://lxml.de/
-__ https://jinja.palletsprojects.com/
+The workflow described here is **native Linux only**. The Docker and WSL
+installation methods are designed for end users and are not suitable for
+development — you would not be able to iterate on the code effectively from
+inside a container.
 
 
 System requirements
 -------------------
 
-The requirements at the OS-level are rather minimal: one just needs a recent Linux or Windows
-distribution in which you should install a few packages, **LaTeX**, and **Python**. If
-you do not have any strong preference, we would recommend Debian 12 or higher, as well
-as Ubuntu 22.04 LTS or higher. In the case of Windows, we recommend using Windows 10.
+A recent Linux distribution is required. Debian 12 or Ubuntu 22.04 LTS (or
+newer) are the recommended choices, though other distributions may work.
 
-Linux
-^^^^^
+Before anything else, make sure the following packages are installed. They are
+needed to build and run Dynawo, generate PDF reports, and manage the Python
+environment.
 
-To be more specific, we explicitly list here the packages to be installed, assuming a
-Debian/Ubuntu system:
+Build tools:
 
-* Install xdg-utils package, containing `xdg-open`, if the OS does not install it by default:
-    .. code-block:: console
+.. code-block:: console
 
-        apt install xdg-utils
+   sudo apt install git curl unzip gcc g++ cmake
 
-* Install Dynawo (v1.7.0 or later) and its required packages:
-    .. code-block:: console
+LaTeX — DyCoV generates PDF compliance reports, so LaTeX must be available
+even during development if you want to inspect the full output:
 
-        apt install curl unzip gcc g++ cmake
+.. code-block:: console
 
-* Install these LaTeX packages:
-    .. code-block:: console
+   sudo apt install \
+     texlive-base texlive-latex-base texlive-latex-extra \
+     texlive-latex-recommended texlive-science texlive-lang-french \
+     texlive-bibtex-extra biber latexmk
 
-       apt install texlive-base texlive-latex-base texlive-latex-extra \
-               texlive-latex-recommended texlive-science texlive-lang-french \
-               make latexmk
+Python 3.13 — DyCoV requires Python 3.13 or newer:
 
-* Install a basic Python installation (version 3.9 or higher), containing at least `pip` and the `venv` module:
-    .. code-block:: console
+.. code-block:: console
 
-       apt install python3.9-minimal python3-pip python3.9-venv
+   sudo apt install python3.13 python3.13-venv git
+   python3.13 --version
 
-Note that the tool itself is also a Python package. However, this package and
-all of its dependencies (NumPy, etc.) will get installed at the user-level, i.e.,
-inside the user's `$HOME` directory, under a *Python virtual environment*.
+And finally, ``uv``, which handles the virtual environment and all dependency
+management. DyCoV does not use ``pip`` or ``venv`` directly:
 
-Windows
-^^^^^^^
+.. code-block:: console
 
-Before installing the `dyn-grid-compliance-verification` package, you need to ensure that your system has the required dependencies. Follow the instructions below to install them.
+   curl -LsSf https://astral.sh/uv/install.sh | sh
 
-* Install Python 3
-   Python 3 is required to run the tool. To install Python on your Windows machine:
-   - Go to the `official Python website <https://www.python.org/downloads/>`_.
-   - Download the latest version of Python 3 (ensure that you select the option to add Python to the system PATH during installation).
-   - To verify the installation, open a terminal and run:
-    
+
+Dynawo
+------
+
+DyCoV relies on Dynawo to run RMS simulations, but in a development context
+the tool does not install or manage Dynawo for you — that is your
+responsibility as a developer. The most practical approach is to download a
+precompiled **Dynawo nightly distribution**, which is the reference version
+used for ongoing development and the one most likely to be compatible with the
+current codebase.
+
+If you prefer, you can also build Dynawo from source — refer to the
+`Dynawo documentation <https://dynawo.github.io/>`_ for instructions on
+either approach.
+
+You do not need to add Dynawo to your system ``PATH``. If the Dynawo launcher
+(``dynawo.sh``) is not on the path, simply tell DyCoV where to find it each
+time using the ``-l`` flag:
+
+.. code-block:: console
+
+   dycov validate -l /path/to/dynawo/dynawo.sh ...
+
+
+Getting the code
+-----------------
+
+Clone the repository into a local directory of your choice:
+
+.. code-block:: console
+
+   git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
+   cd dycov_repo
+
+
+Setting up the Python environment
+-----------------------------------
+
+Create a virtual environment using Python 3.13:
+
+.. code-block:: console
+
+   uv venv dycov_venv --python 3.13
+
+Activate it:
+
+.. code-block:: console
+
+   source dycov_venv/bin/activate
+
+Now install DyCoV in **editable mode** together with all development and test
+dependencies:
+
+.. code-block:: console
+
+   uv pip install -e ".[dev,test]"
+
+Editable mode means that any change you make to the source files under
+``src/dycov/`` is reflected immediately the next time you run ``dycov`` —
+no reinstallation needed.
+
+The ``[dev,test]`` extras pull in everything you need to work on the codebase:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 20 70
+
+   * - Extra
+     - Package
+     - Purpose
+   * - ``dev``
+     - ``ruff``
+     - Linting and code style enforcement
+   * - ``dev``
+     - ``sphinx``
+     - Building the reference manuals locally
+   * - ``test``
+     - ``pytest``
+     - Test runner
+   * - ``test``
+     - ``pytest-cov``
+     - Coverage reporting
+   * - ``test``
+     - ``pytest-mock``
+     - Mocking utilities
+
+Check that everything installed correctly:
+
+.. code-block:: console
+
+   dycov --version
+
+
+Running the tests
+-----------------
+
+DyCoV's test suite lives under ``tests/``. To run it:
+
+.. code-block:: console
+
+   uv run pytest -q
+
+Or, with the virtual environment already activated:
+
+.. code-block:: console
+
+   pytest
+
+Some tests require Dynawo to be correctly configured. If Dynawo is not
+available in ``PATH``, those tests will fail or be skipped depending on the
+test configuration. This is expected behavior and not an indication that
+something is wrong with your setup.
+
+CI also collects coverage data on every pull request:
+
+.. code-block:: console
+
+   uv run pytest --cov=src --cov-report=xml
+
+There is no coverage gate yet — the coverage report is informational and
+will not cause a build failure.
+
+
+Building the manuals
+--------------------
+
+Both the user and developer manuals are built with Sphinx. With the virtual
+environment active, get into the relevant directory and run ``make``:
+
+.. code-block:: console
+
+   # User manual
+   cd docs/manual
+   make latexpdf   # -> build/latex/dycov.pdf
+   make html       # -> build/html/index.html
+
+   # Developer manual
+   cd docs/manual_dev
+   make latexpdf   # -> build/latex/dycov-dev.pdf
+   make html       # -> build/html/index.html
+
+Both ``Makefile`` targets automatically run ``helps.py`` before invoking
+Sphinx, so the CLI reference pages are always regenerated from the current
+version of the tool before the manual is compiled.
+
+
+Day-to-day workflow
+--------------------
+
+Once the environment is set up, a typical development loop looks like this:
+
+1. Activate the environment if it is not already active:
+
    .. code-block:: console
 
-   	python.exe --version
+      source dycov_venv/bin/activate
 
-   This should return the version of Python that you installed.
+2. Make your changes under ``src/dycov/``.
+3. Make sure Dynawo is reachable (either in ``PATH`` or via ``-l``).
+4. Run DyCoV against one of the bundled examples to see the effect of your
+   changes:
 
-* Install Dynawo
-   Dynawo is a simulation platform required by this tool. Follow the steps outlined in the official Dynawo installation guide at `Dynawo Installation Guide <https://dynawo.github.io/install/>`_.
-   - **Nightly Version**: Download the **Nightly version** of Dynawo from the repository to ensure you have the latest features and updates.
-
-   .. note::
-       On Windows, you can either run Dynaωo with distribution models, in this case, 
-       nothing additional is required. But if you want to add new models, you will need:
-       - **CMake**: CMake is used to configure the build process for Dynawo. Download it from `cmake.org <https://cmake.org/download/>`_.
-       - **Visual Studio 2019**: Visual Studio is required to compile the code. You can download the free **Community Edition** from `here <https://visualstudio.microsoft.com/vs/older-downloads/>`. During the installation, select the "Desktop development with C++" workload.
-
-* Install GitHub Desktop
-   GitHub Desktop provides an easy way to clone repositories directly to your machine. To install it:
-   - Go to `GitHub Desktop <https://desktop.github.com/>`.
-   - Download and install it following the instructions on the website.
-   - After installation, sign in to GitHub and proceed to clone the repository.
-
-* Install LaTeX
-   LaTeX is used for document processing. You can choose between two LaTeX distributions:
-   - **MiKTeX**: Download it from `MiKTeX Download <https://miktex.org/download>`.
-   - **TeX Live**: Download it from `TeX Live Download <https://www.tug.org/texlive/>`.
-   
-   > **Note**: You may need only the minimum set of LaTeX packages for this tool. (TODO: Define requirements). Be sure to select "Minimal installation" to avoid unnecessary packages.
-
-	
-Installation for developers
----------------------------
-
-Linux
-^^^^^
-
-#. Clone the repository via:
-
-    .. code-block:: console
-
-       git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-       
-   (You may of course use any name for the top-level directory, here "dycov_repo")
-   
-#. Get into the repository and run the shell script named build_and_install.sh. This builds the Python package, creates a Python virtual environment under the subdirectory dycov_venv, and installs the package into it (together with all the necessary library dependencies, such as NumPy, etc.).
-
-#. Next, you must activate the virtual environment that has just been created:
-
-    .. code-block:: console
-    
-    	source dycov_venv/bin/activate
-
-#. The tool is used via a single command dycov having several subcommands. Quickly check that your installation is working by running the help option, which will show you all available subcommands:
-
-    .. code-block:: console
-
-       dycov -h
-
-.. note::
-    The tool has a sanity check implemented to verify that all system requirements
-    have been installed, notifying the user if any of them are missing.
-
-
-Windows
-^^^^^^^
-
-#. Clone the Repository
-   The first step is to clone the repository to your local machine. Using GitHub Desktop:
-   - Open GitHub Desktop and click **File** > **Clone repository**.
-   - Enter the following URL to clone the repository:
-         
    .. code-block:: console
 
-     git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
-     
-   (You may of course use any name for the top-level directory, here "dycov_repo")
+      dycov validate examples/Model/Wind/WECC4B/ReferenceCurves/ \
+                     -m examples/Model/Wind/WECC4B/Dynawo/
 
-   - Choose a local directory where you want to save the repository and click **Clone**.
+5. Run the test suite and check for regressions:
 
-#. Set Up Virtual Environment
-   A virtual environment is recommended to manage dependencies for the project. This ensures that the package uses the correct Python version and dependencies without affecting other projects on your system.
-   - Open a **CMD terminal** (Command Prompt) as administrator.
-   - Navigate to the root folder of the cloned repository using the `cd` command:
-         
    .. code-block:: console
 
-     cd dycov_repo
+      pytest -q
 
-   - Create a new virtual environment with:
-         
+6. Check linting before committing:
+
    .. code-block:: console
 
-     python.exe -m venv dycov_venv
-     
-   - This will create a directory `dycov_venv` in your repository folder.
-   
-#. Build the Package
-   The next step is to compile the package into a distributable format:
-       
-   .. code-block:: console
+      ruff check src
 
-   	python.exe -m build
-   
-   - This command will create the necessary build files in the `dist` folder of the repository. The build process might take a few minutes to complete.
-
-#. Activate the Virtual Environment
-   Now that the virtual environment is created, activate it to use the isolated environment:
-       
-   .. code-block:: console
-
-   	dycov_venv\Scripts\activate
-   
-   - Once activated, your terminal prompt should change to indicate that the virtual environment is active (e.g., `(dycov_venv)` at the beginning of the prompt).
-
-#. Install the Package
-   Once the package is built, you can install it using pip. Use the following command to install the `.whl` (Wheel) file generated during the build:
-       
-   .. code-block:: console
-
-   	python.exe -m pip install dist\dycov....whl
-   
-   - This will install the package into your active virtual environment.
-
-#. Verify Installation
-   After installation, verify that the tool was installed correctly by running the following command:
-       
-   .. code-block:: console
-
-   	dycov -h
-   
-   - This should display the help message for the `dyn-grid-compliance-verification` tool, confirming that the installation was successful.
-
-Ready to Use
-------------
-Your installation is now complete, and you can start using the `dyn-grid-compliance-verification` tool. To begin, you can run again the following command to check the available commands:
-    
-   .. code-block:: console
-
-	dycov -h
-
-
----
-
-For additional information, please refer to the project's `manual documentation <https://github.com/dynawo/dyn-grid-compliance-verification/tree/master/docs/manual>`.
+7. Iterate.
