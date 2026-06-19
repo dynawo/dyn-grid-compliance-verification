@@ -368,7 +368,11 @@ and the producer‑curve‑based workflow.
 
 When Dynawo is used for RMS model validation:
 - **two separate Dynawo models are required**, one per zone,
-- each model has its own `Producer.ini`.
+- each model has its own Dynawo input files:
+    - Producer.dyd
+    - Producer.par
+    - Producer.ini
+
 
 This is illustrated by the project examples, for instance:
 
