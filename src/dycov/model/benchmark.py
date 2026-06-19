@@ -789,9 +789,10 @@ class Benchmark:
             if self._validator.is_defined_imax_reac():
                 gen_imax = self._curves_manager.get_generators_imax()
                 voltage_dip = self._curves_manager.get_voltage_dip()
-                results["reactive_current_target"] = {
-                    key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
-                }
+                if voltage_dip is not None and gen_imax is not None:
+                    results["reactive_current_target"] = {
+                        key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
+                    }
 
             summary_list.append(
                 Summary(

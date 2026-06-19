@@ -200,15 +200,15 @@ class ModelProducer(Producer):
         # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.dict
         # ├── Producer_G1
         # │   ├── CurvesFiles.ini
-        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        # │   ├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
+        # │   ├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
         #  ...
         # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
         # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
         # └── Producer_G2
         #     ├── CurvesFiles.ini
-        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #     ├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
+        #     ├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
         #  ...
         #     ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
         #     └── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict

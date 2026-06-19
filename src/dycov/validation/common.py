@@ -428,53 +428,65 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
 
 
 def check_generator_imax(
-    imax: float, time: list, current_at_converter: list, active_current_at_converter: list
-) -> tuple[int, bool]:
-    """Check that, if Imax is reached, reactive support is priorized over active power supply.
+    imax: float,
+    time: list,
+    current_at_converter: list,
+    active_current_at_converter: list,
+) -> tuple[float, bool]:
+    """Check that, when the generator current reaches Imax, reactive current is
+    prioritized over active current (Id should not increase while saturated).
 
     Parameters
     ----------
-    imax: float
+    imax : float
         IMax value of the generator
-    time: list
-        List of time instants that make up the curve
-    current_at_converter: list
-        Curve of the injected current
-    active_current_at_converter: float
-        Curve of the injected active current
+    time : list
+        Time vector
+    current_at_converter : list
+        Total current magnitude |I|
+    active_current_at_converter : list
+        Active current Id
 
     Returns
     -------
-    int
-        The position where the injected active current increases despite having reached Imax
+    float
+        Time where Id increases while |I| >= Imax. -1 if no issue detected.
     bool
-        True if the injected active current does not increase, False otherwise
+        True if the condition is respected, False otherwise
     """
-    # Get curves file and steady time
-    if len(time) != len(current_at_converter):
-        raise ValueError("curve values and time values have different length")
+    if not (len(time) == len(current_at_converter) == len(active_current_at_converter)):
+        raise ValueError("All input lists must have the same length")
 
-    pos = 0
-    while pos < len(current_at_converter) and current_at_converter[pos] < imax:
-        pos += 1
+    TOL = 1e-3
 
-    if pos >= len(current_at_converter):
-        pos = len(current_at_converter) - 1
-
-    id_max = active_current_at_converter[pos]
-
-    # Cut list values
-    active_current_at_converter = active_current_at_converter[pos:]
-    time = time[pos:]
-
-    id_not_increase = True
+    in_saturation = False
+    id_ref = None
     first_id_value = -1
-    for i in range(len(active_current_at_converter)):
-        pos = len(active_current_at_converter) - (i + 1)
-        if active_current_at_converter[pos] > id_max:
-            first_id_value = time[pos]
-            id_not_increase = False
-            break
+    id_not_increase = True
+
+    for i in range(len(time)):
+        Im = current_at_converter[i]
+        Id = active_current_at_converter[i]
+
+        if Im >= imax - TOL:
+            # Entering saturation
+            if not in_saturation:
+                in_saturation = True
+                id_ref = Id
+            else:
+                # Check condition only while saturated
+                if Id > id_ref + TOL:
+                    first_id_value = time[i]
+                    id_not_increase = False
+                    break
+
+                # Update reference (Id should not increase, allow decrease)
+                id_ref = min(id_ref, Id)
+
+        else:
+            # Leave saturation → reset logic
+            in_saturation = False
+            id_ref = None
 
     return first_id_value, id_not_increase
 

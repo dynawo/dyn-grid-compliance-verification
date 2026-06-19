@@ -2,442 +2,447 @@
 Adding a new dynamic model
 ==========================
 
-Dynamic grid Compliance Verification is a tool  designed to carry out several tests related to
-RTE's grid code requirements on new generating plants that want to connect to the grid. It
-implements the tests defined in RTE's DTR document, the so called "PCSs" of type "I" (I2, I3,
-etc.).  These PCSs include compliance tests for both electric performance requirements as well as
-RMS model fidelity requirements.
+DyCoV is built on top of Dynawo, which has a large library of dynamic models
+covering most power generation and storage technologies. However, DyCoV does
+not automatically support every model in Dynawo's library — when a new model
+is added to Dynawo, or when an existing one changes its parameter or variable
+names, DyCoV needs to be updated to recognize it.
 
-This tool is based on Dynawo, RTE's dynamic network simulator. Dynawo has a large library of models
-covering most of the modeling needs of new power generation projects. However, the tool does not
-automatically support all of Dynawo's models: if a new model is added to Dynawo's library, or if an
-existing one modifies its parameters or variable names, some additions or modifications will be
-needed in this Tool in order to support those changes.
-
-The two subsections below describe these additions, and how they should be prepared:
-   * Dynawo Models "Master Dictionary": describes the internal dictionary that maps
-     variable/parameter names used by each specific model to the tool's generic names.
-   * Dynawo Model Description: describes the ``ini`` file that should be
-     prepared for each new Dynawo model that the tool may need to support.
+This section explains what that update involves and how to do it.
 
 
+How DyCoV maps model variables
+--------------------------------
+
+Whenever DyCoV needs to read or write a variable or parameter in a Dynawo
+PAR or CRV file, it needs to know the precise name of that variable *for
+the specific Dynawo model in use*. For example, the voltage regulation
+setpoint of a generating unit is called ``voltageRegulator_UsRefPu`` for
+synchronous generators, ``WTG4B_wecc_repc_URefPu`` for WECC wind models,
+and ``WPP_xWPRefPu`` for IEC models — but DyCoV refers to all of them
+generically as ``VoltageSetpointPu``.
+
+This mapping is maintained in a set of INI files located under
+``src/dycov/dynawo/dictionary/``:
+
+* ``Bus.ini``
+* ``Control_Modes.ini``
+* ``Line.ini``
+* ``Load.ini``
+* ``Power_Park.ini``
+* ``Storage.ini``
+* ``Synch_Gen.ini``
+* ``Transformer.ini``
+
+To add support for a new Dynawo model, find the INI file corresponding to
+the equipment type and add the mapping from the model's Dynawo variable names
+to the DyCoV generic keywords described below.
 
 
-Dynawo Models "Master Dictionary"
----------------------------------
+Generic keywords by equipment type
+------------------------------------
 
-Anytime the DyCoV tool needs to read/modify a variable or a parameter in the PAR or CRV Dynawo files,
-it needs to know the precise name of that variable/parameter *for the particular Dynawo model in
-question*.  Therefore, the tool needs to maintain an internal dictionary that maps the
-variable/parameter names used by each specific model to the tool's generic names. This dictionary
-is located in the ``src/dycov/dynawo/dictionary`` of the tool.
-
-To add support for a new Dynawo model in the Dynamic grid Compliance Verification Tool, it is necessary
-to modify the ``ini`` file corresponding to the type of equipment to which it belongs (``Bus.ini,
-Control_Modes.ini, Line.ini, Load.ini, Power_Park.ini, Storage.ini, Synch_Gen.ini, Transformer.ini``) 
-and link the keywords used in the Tool with the corresponding Dynawo parameter of the model.
-
+The following sections list all the generic keywords that DyCoV uses for each
+equipment type, together with their meaning and when they are required.
 
 Bus
 ^^^
-The Tool uses the following keywords to define the dynamic model:
 
 * ``'VoltageRe'``
-    Real part of complex AC voltage in per unit. It is required for the PDR.
+    Real part of complex AC voltage in per unit. Required for the PDR bus.
 
 * ``'VoltageIm'``
-    Imaginary part of complex AC voltage in per unit. It is required for the PDR.
+    Imaginary part of complex AC voltage in per unit. Required for the PDR bus.
 
 * ``'Voltage'``
-    Modulus of complex AC voltage in per unit. If the dynamic model does not have this information,
-    the tool calculates it from 'VoltageRe' and 'VoltageIm'. It is required for the PDR.
+    Modulus of complex AC voltage in per unit. If the model does not expose
+    this directly, the tool computes it from ``VoltageRe`` and ``VoltageIm``.
+    Required for the PDR bus.
 
 * ``'NetworkFrequencyPu'``
-    Bus frequency in per unit. It is required in Model Validation.
+    Bus frequency in per unit. Required for Model Validation.
 
 
 Synchronous Generator
 ^^^^^^^^^^^^^^^^^^^^^
-The Tool uses the following keywords to define the dynamic model:
 
-* ``'ActivePower0Pu'``
-    Start value of active power at terminal in per unit. It is required for initialization.
+Initialization:
 
-* ``'ReactivePower0Pu'``
-    Start value of reactive power at terminal in per unit. It is required for initialization.
+* ``'ActivePower0Pu'`` — start value of active power at terminal (pu).
+* ``'ReactivePower0Pu'`` — start value of reactive power at terminal (pu).
+* ``'Voltage0Pu'`` — start value of voltage amplitude at terminal (pu).
+* ``'Phase0'`` — start value of voltage angle at terminal (pu).
 
-* ``'Voltage0Pu'``
-    Start value of voltage amplitude at terminal in per unit. It is required for initialization.
-
-* ``'Phase0'``
-    Start value of voltage angle at terminal in per unit. It is required for initialization.
+Control and frequency:
 
 * ``'Running'``
-    Indicates if the generator is running or not. It is required when OmegaRef model is
-    *DYNModelOmegaRef*.
+    Indicates whether the generator is running. Required when the OmegaRef
+    model is *DYNModelOmegaRef*.
 
 * ``'RotorSpeedPu'``
-    Angular frequency in per unit. It is required when OmegaRef model is
+    Angular frequency in per unit. Required when OmegaRef is
     *DYNModelOmegaRef* and/or for Electrical Performance Verification.
 
 * ``'NetworkFrequencyPu'``
-    Reference frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Electrical Performance Verification and Model Validation.
+    Reference frequency in per unit. Required when OmegaRef is
+    *DYNModelOmegaRef* and/or for Electrical Performance Verification and
+    Model Validation.
 
 * ``'NetworkFrequencyValue'``
-    Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
+    Reference frequency value. Required when OmegaRef is a *SetPoint* or an
     *InfiniteBus*.
 
 * ``'InternalAngle'``
-    Internal angle in rad. It is required for Electrical Performance Verification.
+    Internal angle in radians. Required for Electrical Performance
+    Verification.
 
 * ``'VoltageSetpointPu'``
-    Control voltage in per unit. It is required.
+    Control voltage in per unit. Always required.
 
 * ``'MagnitudeControlledByAVRPu'``
-    Magnitude voltage amplitude in per unit. It is required.
+    Voltage amplitude controlled by the AVR in per unit. Always required.
 
-* ``'IpInjTerminal'``
-    Active current at the injector's low voltage terminal in per unit. It is required for 
-    Electrical Performance Verification and Model Validation.
+Currents (required for Electrical Performance Verification and Model Validation):
 
-* ``'IqInjTerminal'``
-    Reactive current at the injector's low voltage terminal in per unit. It is required for 
-    Electrical Performance Verification and Model Validation.
+* ``'IpInjTerminal'`` — active current at the injector's LV terminal (pu).
+* ``'IqInjTerminal'`` — reactive current at the injector's LV terminal (pu).
+* ``'UPuInjTerminal'`` — voltage amplitude at the injector terminal (pu).
+* ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
+  Electrical Performance Verification.
 
-* ``'UPuInjTerminal'``
-    Voltage amplitude in per unit at the injector terminal. It is required for 
-    Electrical Performance Verification and Model Validation.
+Setpoints (required for Model Validation):
 
-* ``'MaxCurrentAtConverter'``
-    Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
-
-* ``'ActivePowerSetpointPu'``
-    Active power set-point in per unit. It is required Model Validation.
-
-* ``'ReactivePowerSetpointPu'``
-    Reactive power set-point in per unit. It is required Model Validation.
+* ``'ActivePowerSetpointPu'`` — active power setpoint (pu).
+* ``'ReactivePowerSetpointPu'`` — reactive power setpoint (pu).
 
 
 Power Park
 ^^^^^^^^^^
-The Tool uses the following keywords to define the dynamic model:
 
-* ``'ActivePower0Pu'``
-    Start value of active power at terminal in per unit. It is required for initialization.
+The generic keywords for Power Park models are the same as for Synchronous
+Generators, with the same applicability conditions, plus the following
+model-family-specific control flags.
 
-* ``'ReactivePower0Pu'``
-    Start value of reactive power at terminal in per unit. It is required for initialization.
-
-* ``'Voltage0Pu'``
-    Start value of voltage amplitude at terminal in per unit. It is required for initialization.
-
-* ``'Phase0'``
-    Start value of voltage angle at terminal in per unit. It is required for initialization.
-
-* ``'Running'``
-    Indicates if the generator is running or not. It is required when OmegaRef model is
-    *DYNModelOmegaRef*.
-
-* ``'RotorSpeedPu'``
-    Angular frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Electrical Performance Verification.
-
-* ``'NetworkFrequencyPu'``
-    Reference frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Electrical Performance Verification and Model Validation.
-
-* ``'NetworkFrequencyValue'``
-    Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
-    *InfiniteBus*.
-
-* ``'InternalAngle'``
-    Internal angle in rad. It is required for Electrical Performance Verification.
-
-* ``'VoltageSetpointPu'``
-    Control voltage in per unit. It is required.
-
-* ``'MagnitudeControlledByAVRPu'``
-    Magnitude voltage amplitude in per unit. It is required.
-
-* ``'IpInjTerminal'``
-    Active current at the injector's low voltage terminal in per unit. It is required for 
-    Electrical Performance Verification and Model Validation.
-
-* ``'IqInjTerminal'``
-    Reactive current at the injector's low voltage terminal in per unit. It is required for 
-    Electrical Performance Verification and Model Validation.
-
-* ``'UPuInjTerminal'``
-    Voltage amplitude in per unit at the injector terminal. It is required for 
-    Electrical Performance Verification and Model Validation.
-
-* ``'MaxCurrentAtConverter'``
-    Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
-
-* ``'ActivePowerSetpointPu'``
-    Active power set-point in per unit. It is required Model Validation.
-
-* ``'ReactivePowerSetpointPu'``
-    Reactive power set-point in per unit. It is required Model Validation.
-
-WECC Family
-"""""""""""
+WECC family:
 
 * ``'RefFlag'``
-    RefFlag Plant level: reactive power (False) or voltage control (True). Only in Plant models.
+    Plant-level reactive control: reactive power (False) or voltage control
+    (True). Plant models only.
 
 * ``'VCompFlag'``
-    VCompFlag Plant level (if RefFlag is True): Reactive droop (False) or line drop compensation
-    (True). Only in Plant models.
+    Plant-level voltage compensation (when RefFlag is True): reactive droop
+    (False) or line drop compensation (True). Plant models only.
 
 * ``'VFlag'``
-    VFlag Voltage control flag: voltage control (False) or Q control (True).
+    Voltage control flag: voltage control (False) or Q control (True).
 
 * ``'QFlag'``
-    Q control flag: const. pf or Q ctrl (False) or voltage/Q (True).
+    Q control flag: constant PF or Q control (False) or voltage/Q (True).
 
 * ``'PFlag'``
-    Power reference flag: const. Pref (False) or consider generator speed (True).
+    Power reference flag: constant Pref (False) or speed-dependent (True).
 
 * ``'PfFlag'``
-    Power factor flag: Q control (False) or pf control(True).
+    Power factor flag: Q control (False) or PF control (True).
 
-IEC Family
-""""""""""
+IEC family:
 
 * ``'MwpqMode'``
-    Control mode: reactive power reference (0), power factor reference (1), UQ static (2),
-    voltage control (3). Only in Plant models.
+    Control mode: reactive power reference (0), power factor reference (1),
+    UQ static (2), voltage control (3). Plant models only.
 
 * ``'MqG'``
-    MqG QControl: Voltage control (0), reactive power control (1), open loop recative power (2),
-    power factor control (3), open loop power factor control (4).
+    Q control mode: voltage control (0), reactive power control (1), open loop
+    reactive power (2), power factor control (3), open loop PF control (4).
 
 
 Storage
 ^^^^^^^
-The Tool uses the following keywords to define the dynamic model:
 
-* ``'ActivePower0Pu'``
-    Start value of active power at terminal in per unit. It is required for initialization.
+The generic keywords for Storage models are a subset of the Power Park
+keywords (initialization, frequency, voltage setpoint, currents, setpoints),
+with the same applicability conditions and the same WECC family control flags.
 
-* ``'ReactivePower0Pu'``
-    Start value of reactive power at terminal in per unit. It is required for initialization.
-
-* ``'Voltage0Pu'``
-    Start value of voltage amplitude at terminal in per unit. It is required for initialization.
-
-* ``'Phase0'``
-    Start value of voltage angle at terminal in per unit. It is required for initialization.
-
-* ``'NetworkFrequencyPu'``
-    Reference frequency in per unit. It is required when OmegaRef model is
-    *DYNModelOmegaRef* and/or for Electrical Performance Verification and Model Validation.
-
-* ``'NetworkFrequencyValue'``
-    Reference frequency value. It is required when OmegaRef model is a *SetPoint* or an
-    *InfiniteBus*.
-
-* ``'VoltageSetpointPu'``
-    Control voltage in per unit. It is required.
-
-* ``'MagnitudeControlledByAVRPu'``
-    Magnitude voltage amplitude in per unit. It is required.
-
-* ``'IpInjTerminal'``
-    Active current at the injector's low voltage terminal in per unit. It is required for 
-    Electrical Performance Verification and Model Validation.
-
-* ``'IqInjTerminal'``
-    Reactive current at the injector's low voltage terminal in per unit. It is required for 
-    Electrical Performance Verification and Model Validation.
-
-* ``'UPuInjTerminal'``
-    Voltage amplitude in per unit at the injector terminal. It is required for 
-    Electrical Performance Verification and Model Validation.
-
-* ``'MaxCurrentAtConverter'``
-    Maximum current amplitude in per unit. It is required for Electrical Performance Verification.
-
-* ``'ActivePowerSetpointPu'``
-    Active power set-point in per unit. It is required Model Validation.
-
-* ``'ReactivePowerSetpointPu'``
-    Reactive power set-point in per unit. It is required Model Validation.
-
-WECC Family
-"""""""""""
-
-* ``'RefFlag'``
-    RefFlag Plant level: reactive power (False) or voltage control (True). Only in Plant models.
-
-* ``'VCompFlag'``
-    VCompFlag Plant level (if RefFlag is True): Reactive droop (False) or line drop compensation
-    (True). Only in Plant models.
-
-* ``'VFlag'``
-    VFlag Voltage control flag: voltage control (False) or Q control (True).
-
-* ``'QFlag'``
-    Q control flag: const. pf or Q ctrl (False) or voltage/Q (True).
-
-* ``'PFlag'``
-    Power reference flag: const. Pref (False) or consider generator speed (True).
-
-* ``'PfFlag'``
-    Power factor flag: Q control (False) or pf control(True).
 
 Line
 ^^^^
-The Tool uses the following keywords to define the dynamic model:
 
-* ``'ResistancePu'``
-    Resistance in per unit. It is required for initialization.
+Initialization:
 
-* ``'ReactancePu'``
-    Reactance in per unit. It is required for initialization.
+* ``'ResistancePu'``, ``'ReactancePu'``, ``'SusceptancePu'``,
+  ``'ConductancePu'``
+  — R, X, half-B, half-G in per unit. Required for initialization.
 
-* ``'SusceptancePu'``
-    Half-susceptance in per unit. It is required for initialization.
+Measurements (always required):
 
-* ``'ConductancePu'``
-    Half-conductance in per unit. It is required for initialization.
+* ``'ActivePower'`` — active power on side 2 (pu).
+* ``'ReactivePower'`` — reactive power on side 2 (pu).
 
-* ``'ActivePower'``
-    Active power on side 2 in per unit. It is required.
+Measurements (required for Model Validation):
 
-* ``'ReactivePower'``
-    Reactive power on side 2  in per unit. It is required.
-
-* ``'ActiveCurrent'``
-    Active current on side 2 in per unit. It is required in Model Validation.
-
-* ``'ReactiveCurrent'``
-    Reactive current on side 2 in per unit. It is required in Model Validation.
+* ``'ActiveCurrent'`` — active current on side 2 (pu).
+* ``'ReactiveCurrent'`` — reactive current on side 2 (pu).
 
 
 Load
 ^^^^
-The Tool uses the following keywords to define the dynamic model:
 
-* ``'ActivePower0'``
-    Start value of active power in per unit. It is required for initialization.
+Initialization:
 
-* ``'ReactivePower0'``
-    Start value of reactive power in per unit. It is required for initialization.
+* ``'ActivePower0'``, ``'ReactivePower0'`` — start values of P and Q (pu).
+* ``'Voltage0'`` — start voltage amplitude at load terminal (pu).
+* ``'Phase0'`` — start voltage angle at load terminal (rad).
 
-* ``'Voltage0'``
-    Start value of voltage amplitude at load terminal in per unit. It is required for
-    initialization.
+Measurements (always required):
 
-* ``'Phase0'``
-    Start value of voltage angle at load terminal in rad. It is required for initialization.
+* ``'ActivePower'``, ``'ReactivePower'`` — P and Q at load terminal (pu).
 
-* ``'ActivePower'``
-    Active power at load terminal in per unit. It is required.
+Measurements (required for Model Validation):
 
-* ``'ReactivePower'``
-    Reactive power at load terminal  in per unit. It is required.
-
-* ``'ActiveCurrent'``
-    Active current at load terminal in per unit. It is required in Model Validation.
-
-* ``'ReactiveCurrent'``
-    Reactive current at load terminal in per unit. It is required in Model Validation.
+* ``'ActiveCurrent'``, ``'ReactiveCurrent'`` — currents at load terminal (pu).
 
 
 Transformer
 ^^^^^^^^^^^
-The Tool uses the following keywords to define the dynamic model:
 
-* ``'Resistance'``
-    Resistance. It is required for initialization.
+Initialization:
 
-* ``'Reactance'``
-    Reactance. It is required for initialization.
-
-* ``'Susceptance'``
-    Susceptance. It is required for initialization.
-
-* ``'Conductance'``
-    Conductance. It is required for initialization.
+* ``'Resistance'``, ``'Reactance'``, ``'Susceptance'``, ``'Conductance'``
+  — transformer impedance values. Required for initialization.
 
 * ``'Rho'``
-    Start value of transformer ratio in per unit. It is required for initialization.
+    Start value of the transformer ratio in per unit. Required for
+    initialization.
 
 * ``'SNom'``
-    Nominal apparent power in MVA. It is required if 'Resistance', 'Resistance', 'Resistance' and
-    'Resistance' are expressed in %.
+    Nominal apparent power in MVA. Required if the impedance values above are
+    expressed in percent rather than per unit.
 
-* ``'ActivePower0'``
-    Start value of active power at terminal 1 in per unit. It is required for initialization.
-
-* ``'ReactivePower0'``
-    Start value of reactive power at terminal 1 in per unit. It is required for initialization.
-
-* ``'Voltage0'``
-    Start value of voltage amplitude at terminal 1 in per unit. It is required for initialization.
-
-* ``'Phase0'``
-    Start value of voltage angle at terminal 1 in rad. It is required for initialization.
+* ``'ActivePower0'``, ``'ReactivePower0'``, ``'Voltage0'``, ``'Phase0'``
+  — start values at terminal 1. Required for initialization.
 
 * ``'VoltageSetpoint'``
-    Voltage set-point on side 2 in per unit. It is required for initialization.
+    Voltage setpoint on side 2 in per unit. Required for initialization.
 
 * ``'Tap'``
-    Current tap.
+    Current tap position.
+
 
 Control Modes
-^^^^^^^^^^^^^
-The Tool uses this dictionary to define the valid options of control modes by:
+--------------
 
-* test type (USetpoint or QSetpoint)
-* family (WECC or IEC)
-* level (Plant or Turbine
+The ``Control_Modes.ini`` file (located at
+``src/dycov/configuration/Control_Modes.ini``) defines all available control
+mode configurations. It is organized in three sections.
 
-Under the ``ControlModes`` section the list of valid options for configuring the control mode
-is defined by dividing the models according to the mentioned characteristics. The parameter name
-must be created using the following rule:
+The ``[Parameters]`` section defines which flags are relevant for each
+family/zone combination:
 
-    ``testType_family_level``
+.. code-block:: ini
 
-An example of the ``ControlModes`` section:
+   [Parameters]
+   ControlMode_WECC_Zone3 = PfFlag,VFlag,QFlag,PFlag,FreqFlag,RefFlag
+   ControlMode_WECC_Zone1 = PfFlag,VFlag,QFlag
+   ControlMode_IEC_Zone3  = MqG,MwpqMode
+   ControlMode_IEC_Zone1  = MqG
+   VoltageDroop_WECC_Zone3 = RefFlag,VCompFlag
+   VoltageDroop_IEC_Zone3  = MqG,MwpqMode
 
-.. code-block:: console
+The ``[ControlModes]`` section maps each test-type/family/zone combination to
+the list of available named configurations, following the naming convention
+``<TestType>_<Family>_<Zone>``:
 
-    [ControlModes]
-    USetpoint_WECC_Plant = WTG_UControl_Local_Coordinated,WTG_Only_UControl
-    QSetpoint_WECC_Plant = WTG_QControl_Local_Coordinated,WTG_Only_QControl
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
 
-    USetpoint_WECC_Turbine = WT_Local_Coordinated,WT_UControl
-    QSetpoint_WECC_Turbine = WT_Local_Coordinated,WT_QControl
+   * - Key
+     - Available options
+   * - ``USetpoint_WECC_Zone3``
+     - ``WTG_UControl_Local_Coordinated``, ``WTG_Only_UControl``
+   * - ``QSetpoint_WECC_Zone3``
+     - ``WTG_QControl_Local_Coordinated``, ``WTG_Only_QControl``
+   * - ``PSetpoint_WECC_Zone3``
+     - ``WTG_PControl_Oscillation``, ``WTG_PControl``
+   * - ``VoltageDroop_WECC_Zone3``
+     - ``WTG_Voltage_Droop``
+   * - ``USetpoint_WECC_Zone1``
+     - ``WT_UControl``
+   * - ``QSetpoint_WECC_Zone1``
+     - ``WT_Local_Coordinated``, ``WT_QControl``
+   * - ``PSetpoint_WECC_Zone1``
+     - ``WT_PControl_Oscillation``, ``WT_PControl``
+   * - ``USetpoint_IEC_Zone3``
+     - ``IECWPP_ReactivePowerControl_UQStatic``,
+       ``IECWPP_ReactivePowerControl_UControl``,
+       ``IECWPP_Openloop_UQStatic``, ``IECWPP_Openloop_UControl``,
+       ``IECWPP_VoltageControl_UQStatic``, ``IECWPP_VoltageControl_UControl``
+   * - ``QSetpoint_IEC_Zone3``
+     - ``IECWPP_ReactivePowerControl_QReference``,
+       ``IECWPP_Openloop_ReactivePowerControl_QReference``
+   * - ``VoltageDroop_IEC_Zone3``
+     - ``IECWPP_Voltage_Droop``
+   * - ``USetpoint_IEC_Zone1``
+     - ``IECWT_VoltageControl``
+   * - ``QSetpoint_IEC_Zone1``
+     - ``IECWT_ReactivePowerControl``, ``IECWT_Openloop_ReactivePowerControl``
 
-    USetpoint_IEC_Plant = IECWPP_UQStatic,IECWPP_Openloop_UQStatic,IECWPP_UControl
-    QSetpoint_IEC_Plant = IECWPP_QControl,IECWPP_Openloop_QControl
+Each named configuration has its own section specifying the flag values to
+apply. The naming pattern for plant-level configurations is
+``ModelFamily_InverterLevelMode_PlantLevelMode``, and for turbine-level
+``ModelFamily_InverterLevelMode``.
 
-    USetpoint_IEC_Turbine = IECWT_UControl
-    QSetpoint_IEC_Turbine = IECWT_QControl,IECWT_Openloop_QControl
+WECC plant configurations:
 
+.. list-table::
+   :header-rows: 1
 
-A section is defined below for each of the previously configured options. These sections consist
-of the dynamic model parameters that need to be configured and the value to be applied.
+   * - Name
+     - PfFlag
+     - VFlag
+     - QFlag
+     - RefFlag
+     - VCompFlag
+   * - ``WTG_Voltage_Droop``
+     - —
+     - —
+     - —
+     - True
+     - False
+   * - ``WTG_UControl_Local_Coordinated``
+     - False
+     - True
+     - True
+     - True
+     - —
+   * - ``WTG_QControl_Local_Coordinated``
+     - False
+     - True
+     - True
+     - False
+     - —
+   * - ``WTG_Only_UControl``
+     - False
+     - —
+     - False
+     - True
+     - —
+   * - ``WTG_Only_QControl``
+     - False
+     - —
+     - False
+     - False
+     - —
+   * - ``WTG_PControl``
+     - —
+     - —
+     - —
+     - —
+     - —
+   * - ``WTG_PControl_Oscillation``
+     - —
+     - —
+     - —
+     - —
+     - —
 
-An example of a valid option section for a WECC dynamic model:
+WECC turbine configurations:
 
-.. code-block:: console
+.. list-table::
+   :header-rows: 1
 
-    [WTG_UControl_Local_Coordinated]
-    PfFlag = False
-    VFlag = True
-    QFlag = True
-    RefFlag = True
+   * - Name
+     - PfFlag
+     - VFlag
+     - QFlag
+     - PFlag
+   * - ``WT_Local_Coordinated``
+     - False
+     - True
+     - True
+     - —
+   * - ``WT_UControl``
+     - False
+     - False
+     - True
+     - —
+   * - ``WT_QControl``
+     - False
+     - —
+     - False
+     - —
+   * - ``WT_PControl``
+     - —
+     - —
+     - —
+     - False
+   * - ``WT_PControl_Oscillation``
+     - —
+     - —
+     - —
+     - True
 
+IEC plant configurations:
 
-An example of a valid option section for a IEC dynamic model:
+.. list-table::
+   :header-rows: 1
 
-.. code-block:: console
+   * - Name
+     - MqG
+     - MwpqMode
+   * - ``IECWPP_Voltage_Droop``
+     - 0
+     - 3
+   * - ``IECWPP_ReactivePowerControl_UQStatic``
+     - 1
+     - 2
+   * - ``IECWPP_ReactivePowerControl_UControl``
+     - 1
+     - 3
+   * - ``IECWPP_Openloop_UQStatic``
+     - 2
+     - 2
+   * - ``IECWPP_Openloop_UControl``
+     - 2
+     - 3
+   * - ``IECWPP_VoltageControl_UQStatic``
+     - 0
+     - 2
+   * - ``IECWPP_VoltageControl_UControl``
+     - 0
+     - 3
+   * - ``IECWPP_ReactivePowerControl_QReference``
+     - 1
+     - 0
+   * - ``IECWPP_Openloop_ReactivePowerControl_QReference``
+     - 2
+     - 0
+   * - ``IECWPP_PowerFactorControl_PfReference``
+     - 3
+     - 1
+   * - ``IECWPP_Openloop_PowerFactorControl_PfReference``
+     - 4
+     - 1
 
-    [IECWPP_UQStatic]
-    MqG = 1
-    MwpqMode = 2
+IEC turbine configurations:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Name
+     - MqG
+   * - ``IECWT_VoltageControl``
+     - 0
+   * - ``IECWT_ReactivePowerControl``
+     - 1
+   * - ``IECWT_Openloop_ReactivePowerControl``
+     - 2
+   * - ``IECWT_PowerFactorControl``
+     - 3
+   * - ``IECWT_Openloop_PowerFactorControl``
+     - 4
+
+To add a new control mode, add its name to the appropriate ``[ControlModes]``
+entry and define the corresponding section with the flag values. The
+``defaultConfig.ini`` defines which of these options is applied by default
+for each test type — update it if the new mode should become the default.

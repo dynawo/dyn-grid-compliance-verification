@@ -141,7 +141,6 @@ def _get_model_file_template(zone: str) -> str:
             "PCS_RTE-I16z1.SetPointStep.Active = \n"
             "PCS_RTE-I16z1.SetPointStep.Reactive = \n"
             "PCS_RTE-I16z1.SetPointStep.Voltage = \n"
-            "PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms = \n"
             "PCS_RTE-I16z1.GridVoltageStep.Rise = \n"
             "PCS_RTE-I16z1.GridVoltageStep.Drop = \n"
         )
@@ -158,6 +157,7 @@ def _get_model_file_template(zone: str) -> str:
             "PCS_RTE-I16z3.GridVoltageDip.Qzero = \n"
             "PCS_RTE-I16z3.GridVoltageSwell.QMax = \n"
             "PCS_RTE-I16z3.GridVoltageSwell.QMin = \n"
+            "PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms = \n"
             "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4 = \n"
         )
 
@@ -186,8 +186,6 @@ def _get_bess_model_file_template(zone: str) -> str:
             "PCS_RTE-I16z1.SetPointStep.ReactiveConsumption= \n"
             "PCS_RTE-I16z1.SetPointStep.VoltageInjection = \n"
             "PCS_RTE-I16z1.SetPointStep.VoltageConsumption= \n"
-            "PCS_RTE-I16z1.GridFreqRamp.W500mHz250msInjection = \n"
-            "PCS_RTE-I16z1.GridFreqRamp.W500mHz250msConsumption= \n"
             "PCS_RTE-I16z1.GridVoltageStep.RiseInjection = \n"
             "PCS_RTE-I16z1.GridVoltageStep.RiseConsumption= \n"
             "PCS_RTE-I16z1.GridVoltageStep.DropInjection = \n"
@@ -216,6 +214,8 @@ def _get_bess_model_file_template(zone: str) -> str:
             "PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption= \n"
             "PCS_RTE-I16z3.GridVoltageSwell.QMinInjection = \n"
             "PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption= \n"
+            "PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection = \n"
+            "PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption= \n"
             "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection = \n"
             "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption= \n"
         )

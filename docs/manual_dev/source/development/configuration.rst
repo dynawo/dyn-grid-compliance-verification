@@ -2,798 +2,416 @@
 Configuration
 =============
 
-Dynamic grid Compliance Verification has multiple configuration files, written in the
-well-known INI format (of the `Python flavor`__). This guide introduces the
-configuration parameters defined in each file. These configuration files are
-grouped into 3 types, in order to set the overriding priority of settings. The
-priority defined in the tool configuration is:
+DyCoV uses a layered configuration system where settings can be defined at
+different levels, each overriding the one below it. Understanding this
+hierarchy is key to knowing where to make changes and how they propagate
+through the tool.
 
-1. User Configuration
-2. :ref:`PCS Configuration <pcsconf>`
-3. :ref:`Dynamic grid Compliance Verification Configuration <toolconf>`
+The configuration is written in the standard INI format
+(`Python flavor <https://docs.python.org/3/library/configparser.html>`_)
+and organized into three levels, in decreasing order of priority:
+
+1. **User Configuration** — settings provided by the user in
+   ``~/.config/dycov/config.ini``. These always take precedence.
+2. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
+   ``src/dycov/templates/PCS/``. These should only be modified when a DTR
+   update changes the PCS definition.
+3. :ref:`Tool Configuration <toolconf>` — global defaults in
+   ``src/dycov/configuration/defaultConfig.ini``. These should only be
+   modified when a DTR update changes global conditions.
 
 
 .. _pcsconf:
 
 PCS Configuration
--------------------
+------------------
 
-This section explains the particular configuration of a *PCS*. Each
-implemented *PCS* must have its own configuration PCSDescription.ini file, which is located in
-the ``src/dycov/templates/PCS/`` directory of the tool.
-These configuration files should only be edited by developers, and only if there is
-any update of the DTR compliance document concerning the *PCS*.
+Each PCS has its own ``PCSDescription.ini`` file, located under
+``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/``. This file
+defines the complete structure of the PCS — its benchmarks, operating
+conditions, validation tests, and report curves.
+
+These files should only be edited by developers, and only when a DTR update
+requires it.
 
 
-PCS information
+PCS structure parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Under ``[PCS-Benchmarks]``:
+
+* ``PCSName``
+    Comma-separated list of Benchmarks that belong to the PCS.
+
+Under ``[PCS-OperatingConditions]``:
+
+* ``PCSName.BenchmarkName``
+    Comma-separated list of Operating Conditions for the given Benchmark.
+
+
+Validation tests
 ^^^^^^^^^^^^^^^^^
 
-This is under the section ``PCS-Benchmarks`` (required).
+Under ``[Performance-Validations]``, define which Performance Validation tests
+each Benchmark or Operating Condition must pass. Available tests:
+
+* ``static_diff`` — static difference between the controlled quantity and the
+  voltage adjustment setpoint.
+* ``time_5U`` — time at which voltage stays within ±5% of its final value.
+* ``time_10U`` — time at which voltage stays within ±10% of its final value.
+* ``time_5P`` — time at which P stays within ±5% of its final value.
+* ``time_10P`` — time at which P stays within ±10% of its final value.
+* ``time_85U`` — time at which voltage at the PDR returns above 0.85 pu.
+* ``time_clear`` — time at which the faulted line is disconnected at both ends.
+* ``time_cct`` — fault-clearing time threshold for rotor-angle stability onset.
+* ``stabilized`` — checks whether a steady state has been reached.
+* ``no_disconnection_gen`` — checks that no generator disconnection occurred.
+* ``no_disconnection_load`` — checks that no load disconnection occurred.
+* ``AVR_5`` — checks that the magnitude controlled by the plant-level voltage
+  regulation never deviates more than 5% from its setpoint.
+* ``time_10P_85U`` — time when 10P is achieved, measured from when voltage
+  returns above 0.85 pu.
+* ``freq_1`` — checks that frequency stays between 49 Hz and 51 Hz.
+* ``freq_200`` — checks that frequency stays within ±200 mHz.
+* ``freq_250`` — checks that frequency stays within ±250 mHz.
+* ``time_10Pfloor_85U`` — time when 10P_floor is achieved after voltage
+  returns above 0.85 pu.
+* ``time_10Pfloor_clear`` — time when 10P_tclear is achieved after voltage
+  returns above 0.85 pu.
+* ``imax_reac`` — checks that when Imax is reached, reactive support is
+  prioritized over active power.
+
+Under ``[Model-Validations]``, define which Model Validation tests each
+Benchmark or Operating Condition must pass. Available tests:
+
+* ``reaction_time`` — time from setpoint step until measured value reaches
+  10% of step height.
+* ``rise_time`` — time between 10% and 90% of the step variation.
+* ``response_time`` — time from step command until measured value first enters
+  the tolerance range of the target value.
+* ``settling_time`` — time from step command until measured value enters the
+  tolerance range for the last time.
+* ``overshoot`` — difference between maximum response and final steady-state
+  value.
+* ``ramp_time_lag`` — tracking error time.
+* ``ramp_error`` — tracking error value.
+* ``mean_absolute_error_power_1P`` — P and Q MAE must not exceed 1% of Pmax.
+* ``mean_absolute_error_injection_1P`` — active and reactive injection MAE
+  must not exceed 1% of Pmax.
+* ``mean_absolute_error_voltage`` — voltage MAE.
+* ``voltage_dips_active_power`` — P ME, MAE and MXE within thresholds.
+* ``voltage_dips_reactive_power`` — Q ME, MAE and MXE within thresholds.
+* ``voltage_dips_active_current`` — active injection ME, MAE and MXE within
+  thresholds.
+* ``voltage_dips_reactive_current`` — reactive injection ME, MAE and MXE
+  within thresholds.
+* ``setpoint_tracking_controlled_magnitude`` — ME, MAE and MXE of the
+  controlled magnitude within thresholds.
+* ``setpoint_tracking_active_power`` — ME, MAE and MXE of active power within
+  thresholds.
+* ``setpoint_tracking_reactive_power`` — ME, MAE and MXE of reactive power
+  within thresholds.
+
+
+Report curves
+^^^^^^^^^^^^^^
+
+Under ``[ReportCurves]``, define which figures appear in the PCS report by
+listing the Benchmarks or Operating Conditions that should include each graph:
+
+* ``fig_P`` — active power at the PDR bus.
+* ``fig_Q`` — reactive power at the PDR bus.
+* ``fig_Ip`` — active current at the PDR bus.
+* ``fig_Iq`` — reactive current at the PDR bus.
+* ``fig_Ustator`` — stator voltage magnitude (pu).
+* ``fig_V`` — voltage magnitude at the PDR bus.
+* ``fig_W`` — rotor speed.
+* ``fig_Theta`` — generator internal angle (pu).
+* ``fig_WRef`` — network frequency (Hz).
+* ``fig_I`` — injected active and reactive currents.
+* ``fig_Tap`` — main transformer tap ratio.
+
+
+PCS-level parameters
+^^^^^^^^^^^^^^^^^^^^^^
+
+Under ``[PCSName]``:
+
+* ``report_name`` — name of the LaTeX file used for the PCS summary report.
+* ``id`` — PCS identifier, used to sort the final report.
+* ``zone`` — Zone 1 or Zone 3 (for RMS Model Validation only).
+
+Under ``[PCSName.BenchmarkName]``:
+
+* ``job_name`` — name used to populate the Dynawo JOBS file.
+* ``TSO_model`` — Dynawo model name for the TSO network of the PCS.
+* ``Omega_model`` — Dynawo model name for the Omega model of the PCS.
+
+Under ``[PCSName.BenchmarkName.OCName]``:
+
+* ``report_name`` — LaTeX file name for the Operating Condition report.
+* ``reference_step_size`` — step magnitude for reference tracking tests,
+  used to scale the compliance tolerance. Optional.
+* ``bolted_fault`` — whether the fault test uses a bolted fault.
+* ``hiz_fault`` — whether the fault test uses a Hi-Z fault.
+* ``setpoint_change_test_type`` — type of setpoint affected in step tests.
+
+Under ``[PCSName.BenchmarkName.OCName.Model]``:
+
+* ``line_XPu`` — reactance of the line at the PDR, when the Benchmark has a
+  single Operating Condition. Optional.
+* ``SCR`` — Short-Circuit Ratio. Optional.
+* ``pdr_P``, ``pdr_Q``, ``pdr_U`` — initial P, Q, and voltage at the PDR.
+
+The infinite bus table configuration also lives in this section. The tool
+replaces placeholders found in the ``TableInfiniteBus.txt`` file with the
+values defined here. If a value depends on the generator type, append the
+type identifier to the variable name (e.g. ``u_ret_HTB1``).
+
+The same placeholder substitution applies to the TSO model files
+(``TSOModel.jobs``, ``TSOModel.dyd``, ``TSOModel.par``). Commonly used
+examples:
+
+* ``main_P0Pu``, ``main_Q0Pu``, ``main_U0Pu`` — initial conditions for the
+  main load.
+* ``secondary_P0Pu``, ``secondary_Q0Pu``, ``secondary_U0Pu`` — initial
+  conditions for the secondary load.
+
+Under ``[PCSName.BenchmarkName.OCName.Event]``:
+
+* ``connect_event_to`` — Dynawo model variable where the step is connected.
+* ``sim_t_event_start`` — event start time (s).
+* ``fault_duration`` — fault duration until line disconnection (s). When this
+  depends on generator type, declare ``fault_duration_HTB1``,
+  ``fault_duration_HTB2``, ``fault_duration_HTB3`` separately.
+* ``setpoint_step_value`` — increment applied after the step trigger.
 
-* ``'PCSName'``
-
-    List of *Benchmarks* of the *PCS* that will be used in the validation processes.
-
-Under the section called ``PCS-OperatingConditions`` (required).
-
-* ``'PCSName'.'BenchmarksName'``
-
-    List of *Operating Conditions* of a *Benchmarks* of the *PCS* that will be used in the validation processes.
-
-Under the section called ``Performance-Validations`` the tests that must be passed to validate a
-*PCS* are defined. Each configuration parameter in this section corresponds to a Performance
-Validation test implemented in Dynamic grid Compliance Verification. To configure the tests that will be used to
-validate the *PCS*, the list of its *Benchmarks* or *Operating Conditions* that must pass a
-test must be added to the corresponding parameter.
-
-* ``time_5P``
-
-    Time at which the power supplied P stays within the +/-5% tube centered on the final value of P.
-
-* ``time_10P``
-
-    Time at which the power supplied P stays within the +/-10% tube centered on the final value of P.
-
-* ``time_85U``
-
-    Time at which the the voltage at the PDR bus returns back above 0.85pu, regardless of any possible overshooting/undershooting that may take place later on.
-
-* ``time_clear``
-
-    Calculate the time at which the line is disconnected al both ends.
-
-* ``time_cct``
-
-    Calculate the fault-clearing time-threshold for the onset of rotor-angle stability.
-
-* ``stabilized``
-
-    Run various checks to determine if a steady state has been reached.
-
-* ``no_disconnection_gen``
-
-    Check that in the timeline there has been no generator disconnection caused by the simulation.
-
-* ``no_disconnection_load``
-
-    Check that in the timeline there has been no load disconnection caused by the simulation.
-
-* ``AVR_5``
-
-    Check that the magnitude controlled by the Plant-level voltage regulation (generator_UStatorPu_value) never deviates more than 5% from its setpoint.
-
-* ``time_10P_85U``
-
-    As soon as the voltage returns above 0.85 times pu, time when 10P is achieved.
-
-* ``freq_1``
-
-    Check that the fequency: a) Stays always above 49 Hz. b) Stays always below 51 Hz.
-
-* ``freq_200``
-
-    Check that the fequency stays in +-200 mHz.
-
-* ``freq_250``
-
-    Check that the fequency stays in +-250 mHz.
-
-* ``time_10Pfloor_85U``
-
-    As soon as the voltage returns above 0.85 times pu, time when 10P_floor is achieved.
-
-* ``time_10Pfloor_clear``
-
-    As soon as the voltage returns above 0.85 times pu, time when 10P_tclear is achieved.
-
-* ``imax_reac``
-
-    If Imax is reached, reactive support is prioritized over active power supply.
-
-Under the section called ``Model-Validations`` the tests that must be passed to validate a
-*PCS* are defined. Each configuration parameter in this section corresponds to a Model
-Validation test implemented in Dynamic grid Compliance Verification. To configure the tests that will be used to
-validate the *PCS*, the list of its *Benchmarks* or *Operating Conditions* that must pass a
-test must be added to the corresponding parameter.
-
-* ``reaction_time``
-
-    Time elapsed from change of setpoint step until measured value reaches 10% of step height.
-
-* ``rise_time``
-
-    Time elapsed between when the measured value reaches 10% of the scale variation and when the measured value reaches 90% of the scale variation.
-
-* ``response_time``
-
-    Time from the issue of a step change command or start of the event until the measured value first enters the predefined tolerance range of the target value.
-
-* ``settling_time``
-
-    Time elapsed from the issue of a step change command or the start of the event until the observed value enters the predefined tolerance range of the target value for the last time.
-
-* ``overshoot``
-
-    Difference between the maximum measured value of the response and the final value at steady state.
-
-* ``ramp_time_lag``
-
-    Tracking error time.
-
-* ``ramp_error``
-
-    Tracking error value.
-
-* ``mean_absolute_error_power_1P``
-
-    Active and Reactive power difference in MAE should not exceed 1% of Pmax.
-
-* ``mean_absolute_error_injection_1P``
-
-    Active and Reactive injection difference in MAE should not exceed 1% of Pmax.
-
-* ``mean_absolute_error_voltage``
-
-    Voltage difference in MAE.
-
-* ``voltage_dips_active_power``
-
-    Active power difference in ME, MAE and MXE should not exceed certain thresholds.
-
-* ``voltage_dips_reactive_power``
-
-    Reactive power difference in ME, MAE and MXE should not exceed certain thresholds.
-
-* ``voltage_dips_active_current``
-
-    Active injection difference in ME, MAE and MXE should not exceed certain thresholds.
-
-* ``voltage_dips_reactive_current``
-
-    Reactive injection difference in ME, MAE and MXE should not exceed certain thresholds.
-
-* ``setpoint_tracking_controlled_magnitude``
-
-    Difference in ME, MAE and MXE of the controlled magnitude should not exceed certain thresholds.
-
-* ``setpoint_tracking_active_power``
-
-    Difference in ME, MAE and MXE of the Active power should not exceed certain thresholds.
-
-* ``setpoint_tracking_reactive_power``
-
-    Difference in ME, MAE and MXE of the Reactive power should not exceed certain thresholds.
-
-Under the section called ``ReportCurves`` are the graphs included in the *PCS* report. To configure
-the graphs that will be included in the *PCS* report, the list of its *Benchmarks* or
-*Operating Conditions* must be added to the corresponding parameter.
-
-* ``fig_P``
-
-    Real power output P, measured at the PDR bus.
-
-* ``fig_Q``
-
-    Reactive power output Q, measured at the PDR bus.
-
-* ``fig_Ip``
-
-    Active current output Ip, measured at the PDR bus.
-
-* ``fig_Iq``
-
-    Reactive current output Iq, measured at the PDR bus.
-
-* ``fig_Ustator``
-
-    Stator voltage magnitude, in pu.
-
-* ``fig_V``
-
-    Voltage magnitude measured at the PDR bus.
-
-* ``fig_W``
-
-    Rotor speed.
-
-* ``fig_Theta``
-
-    Generator's internal angle, in pu.
-
-* ``fig_WRef``
-
-    Network frequency, in Hz.
-
-* ``fig_I``
-
-    Injected active and reactive currents.
-
-* ``fig_Tap``
-
-    The PPM's main transformer tap ratio.
-
-
-Below are the sections necessary to configure a PCS. Under the section called ``'PCSName'`` the user
-configures the variables that the entire *PCS* shares.
-
-* ``report_name``
-
-    Name of the latex file used to generate the *PCS* report.
-
-* ``id``
-
-    Indicates the identification of the *PCS*, it is used to sort the final report.
-
-* ``zone``
-
-    Indicates whether the current *PCS* is a representation of zone 1 or zone 3 for RMS Model Validation.
-
-Under the section called ``'PCSName'.'BenchmarksName'`` the user configures the particular variables
-of each *BenchMark*.
-
-* ``job_name``
-
-    Name used to populate the Dynawo JOBS file.
-
-* ``TSO_model``
-
-    Dynawo model name available in the tool library, which is used to implement the TSO network of the *PCS*.
-
-* ``Omega_model``
-
-    Dynawo model name available in the tool library, which is used to implement the Omega model of the *PCS*.
-
-Under the section called ``'PCSName'.'BenchmarksName'.'OCName'`` the user configures
-the particular variables of each *Operating Conditions*.
-
-* ``report_name``
-
-    Name of the latex file used to generate the *Operating Conditions* report.
-
-* ``reference_step_size``
-
-    Tolerance for reference tracking tests should be adapted to the magnitude of the step change. (Optional)
-
-* ``bolted_fault``
-
-    In the failure tests it is necessary to configure whether it is a bolted fault.
-
-* ``hiz_fault``
-
-    In the failure tests it is necessary to configure whether it is a HiZ fault.
-
-* ``setpoint_change_test_type``
-
-    In setpoint step tests it is necessary to configure the type of setpoint affected.
-
-Under the section called ``'PCSName'.'BenchmarksName'.'OCName'.Model`` the user configures
-the model variables of each *Operating Conditions*.
-
-* ``line_XPu``
-
-    Reactance of the line connected to the PDR point, if the *Benchmarks* does not have several *Operating Conditions*. (Optional)
-
-* ``SCR``
-
-    SCR stands for Short Circuit Ratio. (Optional)
-
-* ``pdr_P``
-
-    Initial active power in the PDR point, if the *Benchmarks* does not have several *Operating Conditions*.
-
-* ``pdr_Q``
-
-    Initial reactive power in the PDR point, if the *Benchmarks* does not have several *Operating Conditions*.
-
-* ``pdr_U``
-
-    Initial voltage power in the PDR point, if the *Benchmarks* does not have several *Operating Conditions*.
-
-
-The configuration of the infinite bus tables should be located in this section of the configuration file. The tool
-is designed to locate all the placeholders in the file containing the infinite bus table, and replace them with the
-values present in the configuration file. If the value depends on the type of generator, the text that identifies
-the generator must be added to the variable name in the configuration file.
-
-Example of a variable that does not depend on the type of generator: ``u_ret``
-Example of a variable that depends on the type of generator: ``u_ret_HTB1``
-
-It is also possible to assign placeholders in the following TSOModel files, so that the tool will replace them with
-the values present in the configuration file:
-
-* TSOModel.jobs
-* TSOModel.dyd
-* TSOModel.par
-
-Some examples available in the tool:
-
-* ``main_P0Pu``
-
-    Initial active power in the main load.
-
-* ``main_Q0Pu``
-
-    Initial reactive power in the main load.
-
-* ``main_U0Pu``
-
-    Initial voltage power in the main load.
-
-* ``secondary_P0Pu``
-
-    Initial active power in the secondary load.
-
-* ``secondary_Q0Pu``
-
-    Initial reactive power in the secondary load.
-
-* ``secondary_U0Pu``
-
-    Initial voltage power in the secondary load.
-
-Under the section called ``'PCSName'.'BenchmarksName'.'OCName'.Event`` the user configures
-the event variables of each *Operating Conditions*.
-
-* ``connect_event_to``
-
-    Variable of the Dynawo model where the step is connected.
-
-* ``sim_t_event_start``
-
-    Start time of the event (s)
-
-* ``fault_duration``
-
-    Fault duration time until the line is disconnected (s). If this value depends on the type of generator,
-    the variables ``fault_duration_HTB1``, ``fault_duration_HTB2``, ``fault_duration_HTB3`` must be declared,
-    each of them with their respective value.
-
-* ``setpoint_step_value``
-
-    Increment after step trigger.
 
 .. _toolconf:
 
-Dynamic grid Compliance Verification Configuration
---------------------------------------------------
+Tool Configuration
+-------------------
 
-This section explains the global configuration of the *Dynamic grid Compliance Verification Tool*.
-This configuration file should only be edited by developers, and only if in any
-update of the DTR compliance document, the global conditions of any implemented
-*PCS* is modified. The *Dynamic grid Compliance Verification* configuration file is located
-in the ``src/dycov/configuration`` directory of the tool, with the
-name ``defaultConfig.ini``.
+The global configuration of DyCoV lives in
+``src/dycov/configuration/defaultConfig.ini``. This file should only be
+modified by developers, and only when a DTR update changes the global
+conditions of an implemented PCS.
 
-Under the section called ``Global`` of the configuration file.
 
-* ``latex_templates_path``
+Global section
+^^^^^^^^^^^^^^
 
-    Path where the PDF templates are saved within the package
+Logging:
 
-* ``templates_path``
+* ``file_log_max_bytes`` — maximum log file size in bytes (default: 52428800 = 50 MB).
+* ``file_log_level`` — log level for the log file (10=DEBUG, 20=INFO, 30=WARNING,
+  40=ERROR, 50=CRITICAL).
+* ``file_formatter`` — format string for log file records.
+* ``console_log_level`` — log level for console output.
+* ``console_formatter`` — format string for console log records.
 
-    Path where the pcs templates are saved within the package
-
-* ``lib_path``
-
-    Path where the RTE models are saved within the package
-
-* ``modelica_path``
-
-    Path where the modelica models are saved within the package
-
-* ``temporal_path``
-
-    Path to store all the files needed to perform the calculations
-
-* ``electric_performance_verification_pcs``
-
-    List of SM pcs to be validated (If it's empty, all the SM pcs are validated)
-
-* ``electric_performance_ppm_verification_pcs``
-
-    List of PPM pcs to be validated (If it's empty, all the PPM pcs are validated)
-
-* ``model_validation_pcs``
-
-    List of model pcs to be validated (If it's empty, all the model pcs are validated)
-
-Under the section called ``Dynawo`` of the configuration file.
-
-* ``simulation_limit``
-
-    Maximum time to obtain the dynamic simulation results. The tool will stop the simulator
-    execution when the configured time limit is exceeded.
-
-* ``simulation_start``
-
-    Simulation start time in seconds.
-    Before modifying the instant of time in which the simulation starts, consider the PCSs that
-    will be executed to guarantee that the existing events occur within the period that the
-    simulation will be executed.
-
-* ``simulation_stop``
-
-    Simulation end time in seconds.
-    The PCSI7 has an event that occurs in the 30th second of the simulation, to guarantee that
-    the final result is stable, it is recommended to use a minimum duration of 60 seconds.
-
-* ``simulation_precision``
-
-    Value to configure the precision of the simulator steps.
-
-* ``f_nom``
-
-    Grid nominal frequency (fNom), for pu units.
-    These are constants defined by Dynawo in: Electrical/SystemBase.mo.
-    If you change them in Dynawo, make sure to change them here, too.
-
-* ``s_nref``
-
-    System-wide S base (SnRef), for pu units.
-    These are constants defined by Dynawo in: Electrical/SystemBase.mo.
-    If you change them in Dynawo, make sure to change them here, too.
-
-
-
-Under the section called ``GridCode`` of the configuration file.
-
-* ``t_com``
-
-    Common sampling interval (in seconds)
-    The t_com maximum is determined by 2 times the filter Cut-off frequency t_com < 1 / (2 * cutoff)
-
-* ``cutoff``
-
-    Cut-off frequency (in Hz)
-
-* ``t_integrator_tol``
-
-    Numerical tolerance for contemplating the fact that the t_fault, t_clear, and t_stepchange may
-    actually be slightly different than configured, due to the dynawo integrator
-
-* ``t_windowLPF_excl_start``
-
-    Exclusion windows (in seconds) at the beginning of each filtered window, to mitigate the boundary 
-    artifacts of LP filtering
-
-* ``t_windowLPF_excl_end``
-
-    Exclusion windows (in seconds) at the end of each filtered window, to mitigate the boundary 
-    artifacts of LP filtering
-
-* ``t_faultLPF_excl``
-
-    Exclusion windows on transients when inserting the fault to mitigate the effect of LP filtering
-    (in seconds)
-
-* ``t_faultQS_excl``
-
-    Exclusion windows on transients when inserting the fault (in seconds)
-    Current RTE PCS I16 specifies 20 ms
-    In no case will exceed 140ms (see IEC 61400-27-2 Ed. 1.0 July 2020)
-
-* ``t_clearQS_excl``
-
-    Exclusion windows on transients when clearing the fault (in seconds)
-    Current RTE PCS I16 specifies 60 ms
-    In no case will exceed 500ms (see IEC 61400-27-2 Ed. 1.0 July 2020)
-
-* ``disable_window_filtering``
-
-    Disable window filtering of signals, filtering is performed for the whole signal
-
-* ``stable_time``
-
-    Minimum time required to consider a simulation as stable
-
-* ``thr_ss_tol``
-
-    Numerical tolerance (in % of the value) with which it is decided when a signal (in this case
-    voltage) has reached the Steady State
-
-* ``thr_reaction_time``
-
-    Maximum value allowed for the mean absolute error (MAE) between the reaction time in the
-    calculated signal and the reaction time in the reference signal.
-
-* ``thr_rise_time``
-
-    Maximum value allowed for the mean absolute error (MAE) between the rise time in the
-    calculated signal and the rise time in the reference signal.
-
-* ``thr_settling_time``
-
-    Maximum value allowed for the mean absolute error (MAE) between the settling time in the
-    calculated signal and the settling time in the reference signal.
-
-* ``thr_overshoot``
-
-    Maximum value allowed for the mean absolute error (MAE) between the overshoot in the
-    calculated signal and the overshoot in the reference signal.
-
-* ``thr_ramp_time_lag``
-
-    Maximum value allowed for the maximum error (ME) of the ramp time lag between the
-    calculated signal versus the ideal ramp.
-
-* ``thr_ramp_error``
-
-    Maximum value allowed for the maximum error (MXE) of the ramp error between the
-    calculated signal versus the ideal ramp.
-
-* ``thr_final_ss_mae``
-
-    Maximum value allowed for the mean absolute error (MAE) between the calculated signal and the
-    reference signal in the regime established after the event.
-
-* ``thr_P_mxe_before``, ``thr_P_mxe_during``, ``thr_P_mxe_after``
-
-    Maximum value allowed for the active power maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_P_me_before``, ``thr_P_me_during``, ``thr_P_me_after``
-
-    Maximum value allowed for the active power mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_P_mae_before``, ``thr_P_mae_during``, ``thr_P_mae_after``
-
-    Maximum value allowed for the active power mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Q_mxe_before``, ``thr_Q_mxe_during``, ``thr_Q_mxe_after``
-
-    Maximum value allowed for the reactive power maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Q_me_before``, ``thr_Q_me_during``, ``thr_Q_me_after``
-
-    Maximum value allowed for the reactive power mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Q_mae_before``, ``thr_Q_mae_during``, ``thr_Q_mae_after``
-
-    Maximum value allowed for the reactive power mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Ip_mxe_before``, ``thr_Ip_mxe_during``, ``thr_Ip_mxe_after``
-
-    Maximum value allowed for the active current maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Ip_me_before``, ``thr_Ip_me_during``, ``thr_Ip_me_after``
-
-    Maximum value allowed for the active current mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Ip_mae_before``, ``thr_Ip_mae_during``, ``thr_Ip_mae_after``
-
-    Maximum value allowed for the active current mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Iq_mxe_before``, ``thr_Iq_mxe_during``, ``thr_Iq_mxe_after``
-
-    Maximum value allowed for the reactive current maximum error (MXE) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Iq_me_before``, ``thr_Iq_me_during``, ``thr_Iq_me_after``
-
-    Maximum value allowed for the reactive current mean error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_Iq_mae_before``, ``thr_Iq_mae_during``, ``thr_Iq_mae_after``
-
-    Maximum value allowed for the reactive current mean absolute error (ME) between the simulation and
-    the simulated reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_P_mxe_before``, ``thr_FT_P_mxe_during``, ``thr_FT_P_mxe_after``
-
-    Maximum value allowed for the active power maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_P_me_before``, ``thr_FT_P_me_during``, ``thr_FT_P_me_after``
-
-    Maximum value allowed for the active power mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_P_mae_before``, ``thr_FT_P_mae_during``, ``thr_FT_P_mae_after``
-
-    Maximum value allowed for the active power mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Q_mxe_before``, ``thr_FT_Q_mxe_during``, ``thr_FT_Q_mxe_after``
-
-    Maximum value allowed for the reactive power maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Q_me_before``, ``thr_FT_Q_me_during``, ``thr_FT_Q_me_after``
-
-    Maximum value allowed for the reactive power mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Q_mae_before``, ``thr_FT_Q_mae_during``, ``thr_FT_Q_mae_after``
-
-    Maximum value allowed for the reactive power mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Ip_mxe_before``, ``thr_FT_Ip_mxe_during``, ``thr_FT_Ip_mxe_after``
-
-    Maximum value allowed for the active current maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Ip_me_before``, ``thr_FT_Ip_me_during``, ``thr_FT_Ip_me_after``
-
-    Maximum value allowed for the active current mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Ip_mae_before``, ``thr_FT_Ip_mae_during``, ``thr_FT_Ip_mae_after``
-
-    Maximum value allowed for the active current mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Iq_mxe_before``, ``thr_FT_Iq_mxe_during``, ``thr_FT_Iq_mxe_after``
-
-    Maximum value allowed for the reactive current maximum error (MXE) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Iq_me_before``, ``thr_FT_Iq_me_during``, ``thr_FT_Iq_me_after``
-
-    Maximum value allowed for the reactive current mean error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_FT_Iq_mae_before``, ``thr_FT_Iq_mae_during``, ``thr_FT_Iq_mae_after``
-
-    Maximum value allowed for the reactive current mean absolute error (ME) between the simulation and
-    the test reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_reftrack_mxe_before``, ``thr_reftrack_mxe_during``, ``thr_reftrack_mxe_after``
-
-    Maximum value allowed for the maximum error (MXE) between the simulation monitored signal and
-    the reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_reftrack_me_before``, ``thr_reftrack_me_during``, ``thr_reftrack_me_after``
-
-    Maximum value allowed for the mean error (ME) between the simulation monitored signal and
-    the reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``thr_reftrack_mae_before``, ``thr_reftrack_mae_during``, ``thr_reftrack_mae_after``
-
-    Maximum value allowed for the mean absolute error (ME) between the simulation monitored signal and
-    the reference signal, for each of the windows present in the test (before, during and after
-    the event).
-
-* ``HTB1_Udims``
-
-    List of allowed Nominal voltages by generator type HTB1
-
-* ``HTB2_Udims``
-
-    List of allowed Nominal voltages by generator type HTB2
-
-* ``HTB3_Udims``
-
-    List of allowed Nominal voltages by generator type HTB3
-
-* ``HTB1_External_Udims``
-
-    List of allowed External Nominal voltages by generator type HTB1
-
-* ``HTB2_External_Udims``
-
-    List of allowed External Nominal voltages by generator type HTB2
-
-* ``HTB3_External_Udims``
-
-    List of allowed External Nominal voltages by generator type HTB3
-
-* ``HTB1_reactance_a``, ``HTB2_reactance_a``, ``HTB3_reactance_a``, ``HTB1_reactance_b_low``, ``HTB1_reactance_b_high``, ``HTB2_reactance_b_low``, ``HTB2_reactance_b_high``, ``HTB3_reactance_b_low``, ``HTB3_reactance_b_high``
-
-    Table with reactance measurements depending on the type of generator and/or active flow
-      ==============  ====  ===================
-      Generator Type   a             b
-      ==============  ====  ===================
-      HTB1            0.05  PMax < 50MW: 0.2
-                            PMax >= 50MW: 0.3
-      HTB2            0.05  PMax < 250MW: 0.3
-                            PMax >= 250MW: 0.54
-      HTB3            0.05  PMax < 800MW: 0.54
-                            PMax >= 800MW: 0.6
-      ==============  ====  ===================
-
-* ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max``
-
-    Active limit for reactance calculation
-
-* ``Udim_63kV``, ``Udim_90kV``, ``Udim_150kV``, ``Udim_225kV``, ``Udim_400kV``
-
-    Nominal voltage for voltage levels
-
-Under the section called ``CurvesVariables`` of the configuration file.
-
-* ``SM``
-
-    List of magnitudes for which the curve calculated by Dynawo is needed in Performance Validation
-    for synchronous production unit
-
-* ``PPM``
-
-    List of magnitudes for which the curve calculated by Dynawo is needed in Performance Validation
-    for non-synchronous park of generators
-
-
-* ``ModelValidationZ3``
-
-    List of magnitudes for which the curve calculated by Dynawo is needed in Zone 3 of the
-    Model Validation
-
-* ``ModelValidationZ1``
-
-    List of magnitudes for which the curve calculated by Dynawo is needed in Zone 1 of the
-    Model Validation
-
-Under the section called ``Debug`` of the configuration file.
-
-* ``show_figs_t0``
-
-    Modify the time range to include t0 in the showed range
-
-* ``show_figs_tend``
-
-    Modify the time range to include tend in the showed range
-
-* ``plot_all_curves_in_html``
-
-    In the HTML output, plot all available curves, not only the ones dictated by the PCS
-
-* ``disable_LP_filtering``
-
-    Disable the low-pass frequency filtering of the signals
-
-__ https://docs.python.org/3/library/configparser.html
+Path configuration (these paths are relative to the package installation and
+should not normally be changed):
+
+* ``input_templates_path`` — path to input skeleton templates within the package.
+* ``latex_templates_path`` — path to PDF templates within the package.
+* ``templates_path`` — path to PCS templates within the package.
+* ``lib_path`` — path to RTE models within the package.
+* ``modelica_path`` — path to Modelica models within the package.
+* ``temporal_path`` — path for temporary calculation files.
+
+PCS execution scope (empty means "run all"):
+
+* ``electric_performance_verification_pcs`` — SM PCSs to run.
+* ``electric_performance_ppm_verification_pcs`` — PPM PCSs to run.
+* ``electric_performance_bess_verification_pcs`` — BESS PCSs to run.
+* ``model_ppm_validation_pcs`` — PPM model validation PCSs to run.
+* ``model_bess_validation_pcs`` — BESS model validation PCSs to run.
+
+Parallel execution:
+
+* ``parallel_pcs_validation`` — enable parallel execution of PCS validation
+  across multiple CPU cores (default: True).
+* ``parallel_num_processes`` — maximum number of parallel processes (default: 4).
+
+HiZ fault bisection:
+
+* ``maximum_hiz_fault`` — maximum impedance value for the HiZ fault bisection
+  method.
+* ``minimum_hiz_fault`` — minimum impedance value.
+* ``hiz_fault_rel_tol`` — relative tolerance for bisection convergence.
+
+Initialization:
+
+* ``skip_voltage_droop_adjustment`` — when True, skips voltage droop parameter
+  adjustment during initialization, leaving the PAR file unmodified.
+
+
+Dynawo section
+^^^^^^^^^^^^^^
+
+* ``simulation_limit`` — maximum time (s) for the dynamic simulation. DyCoV
+  stops the simulator when this limit is exceeded.
+* ``simulation_start`` — simulation start time (s). Before changing this,
+  verify that all PCS events fall within the configured simulation window.
+* ``simulation_stop`` — simulation end time (s). PCS I7 has an event at t=30s;
+  use at least 60 seconds to ensure a stable final result.
+* ``simulation_precision`` — simulator step precision.
+* ``f_nom`` — grid nominal frequency (fNom) in pu. Must match Dynawo's
+  ``Electrical/SystemBase.mo``. If Dynawo is customized, update this too.
+* ``s_nref`` — system-wide S base (SnRef) in pu. Same note as above.
+
+Solver selection:
+
+* ``solver_lib`` — solver library to use: ``dynawo_SolverIDA`` (default) or
+  ``dynawo_SolverSIM``.
+
+IDA solver parameters (used when ``solver_lib = dynawo_SolverIDA``):
+
+* ``ida_order`` — integration order.
+* ``ida_initStep`` — initial step size.
+* ``ida_minStep`` — minimum step size.
+* ``ida_maxStep`` — maximum step size.
+* ``ida_absAccuracy`` — absolute accuracy.
+* ``ida_relAccuracy`` — relative accuracy.
+* ``ida_minimalAcceptableStep`` — minimum acceptable step.
+
+SIM solver parameters (used when ``solver_lib = dynawo_SolverSIM``):
+
+* ``sim_hMin``, ``sim_hMax`` — minimum and maximum step sizes.
+* ``sim_kReduceStep`` — step reduction factor on convergence failure.
+* ``sim_maxNewtonTry`` — maximum Newton iterations per step.
+* ``sim_linearSolverName`` — linear solver (default: KLU).
+* ``sim_fnormtol`` — function norm tolerance.
+* ``sim_minimalAcceptableStep`` — minimum acceptable step.
+
+Transition smoothing (for table-based step changes):
+
+* ``transition_enabled`` — enable smoothing of step transitions.
+* ``transition_points`` — number of interpolation points around the event.
+* ``transition_half_width`` — half-width of the smoothing window (s).
+
+
+GridCode section
+^^^^^^^^^^^^^^^^
+
+Signal processing parameters:
+
+* ``t_com`` — common sampling interval (s). Must satisfy
+  ``t_com < 1 / (2 * cutoff)``.
+* ``cutoff`` — low-pass filter cut-off frequency (Hz).
+* ``t_integrator_tol`` — numerical tolerance for event timing (accounts for
+  the fact that Dynawo's integrator may place events slightly off the
+  configured time).
+* ``t_windowLPF_excl_start``, ``t_windowLPF_excl_end`` — exclusion windows
+  at the boundaries of each filtered window, to mitigate LP filtering
+  boundary artifacts.
+* ``t_faultLPF_excl`` — exclusion window at fault insertion (LP filter
+  artifact mitigation).
+* ``t_faultQS_excl`` — exclusion window at fault insertion for quasi-static
+  transients. Current RTE PCS I16 specifies 20 ms; must not exceed 140 ms
+  (IEC 61400-27-2).
+* ``t_clearQS_excl`` — exclusion window at fault clearing. Current PCS I16
+  specifies 60 ms; must not exceed 500 ms (IEC 61400-27-2).
+* ``disable_window_filtering`` — disable windowed signal filtering (filter
+  applied to the whole signal instead).
+* ``stable_time`` — minimum time required to consider a simulation stable.
+* ``thr_ss_tol`` — numerical tolerance (% of value) for steady-state
+  detection.
+
+Step-response time characteristic thresholds:
+
+* ``thr_reaction_time`` — maximum allowed MAE on reaction time.
+* ``thr_rise_time`` — maximum allowed MAE on rise time.
+* ``thr_settling_time`` — maximum allowed MAE on settling time.
+* ``thr_overshoot`` — maximum allowed MAE on overshoot.
+* ``thr_ramp_time_lag`` — maximum allowed ME on ramp time lag.
+* ``thr_ramp_error`` — maximum allowed MXE on ramp error.
+* ``thr_final_ss_mae`` — maximum allowed MAE between simulation and reference
+  in steady state after the event.
+
+Impedance calculation factors:
+
+* ``XPu_r_factor`` — factor to calculate RPu from XPu (Zone 3 model validation).
+* ``SCR_r_factor`` — factor to calculate Rcc from Xcc.
+* ``fault_r_factor`` — factor to calculate Rv from Xv.
+* ``Ztanphi`` — factor to derive Xcc and Rcc from Zcc.
+
+Signal error thresholds (simulation reference):
+    For each signal ``<s>`` in {``P``, ``Q``, ``Ip``, ``Iq``} and each metric
+    ``<m>`` in {``mxe``, ``me``, ``mae``}, there is a parameter
+    ``thr_<s>_<m>_<w>`` for each window ``<w>`` in {``before``, ``during``,
+    ``after``}. For example: ``thr_P_mxe_during``, ``thr_Iq_mae_after``.
+
+Signal error thresholds (field test reference):
+    Same structure as above, with the ``FT_`` prefix:
+    ``thr_FT_<s>_<m>_<w>``. For example: ``thr_FT_P_mxe_during``.
+
+Setpoint tracking thresholds:
+    ``thr_reftrack_<m>_<w>`` for each metric and window.
+    For example: ``thr_reftrack_mxe_before``.
+
+Grid connection parameters by generator type (HTB1, HTB2, HTB3):
+
+* ``HTB1_Udims``, ``HTB2_Udims``, ``HTB3_Udims`` — allowed nominal voltages.
+* ``HTB1_External_Udims``, ``HTB2_External_Udims``, ``HTB3_External_Udims``
+  — allowed external nominal voltages.
+* ``HTBx_reactance_a``, ``HTBx_reactance_b_low``, ``HTBx_reactance_b_high``
+  — reactance table parameters:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Generator type
+       - a
+       - b
+     * - HTB1
+       - 0.05
+       - Pmax < 50 MW: 0.2 / Pmax >= 50 MW: 0.3
+     * - HTB2
+       - 0.05
+       - Pmax < 250 MW: 0.3 / Pmax >= 250 MW: 0.54
+     * - HTB3
+       - 0.05
+       - Pmax < 800 MW: 0.54 / Pmax >= 800 MW: 0.6
+
+* ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max`` — active power limit for
+  reactance calculation.
+* ``HTB1_Scc``, ``HTB2_Scc``, ``HTB3_Scc`` — reference short-circuit power
+  (MVA) by generator type (400, 1500, 7000 MVA respectively).
+* ``Udim_63kV``, ``Udim_66kV``, ``Udim_90kV``, ``Udim_132kV``,
+  ``Udim_150kV``, ``Udim_225kV``, ``Udim_400kV`` — nominal voltage for each
+  voltage level.
+
+
+GFM section
+^^^^^^^^^^^^
+
+* ``SCRmin`` — minimum Short-Circuit Ratio for GFM envelope generation.
+* ``SCRmax`` — maximum Short-Circuit Ratio for GFM envelope generation.
+
+
+CurvesVariables section
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Defines which Dynawo output curves are needed for each workflow:
+
+* ``SM`` — curves for Performance Validation of synchronous machines.
+* ``PPM`` — curves for Performance Validation of power park modules.
+* ``ModelValidationZ3`` — curves for Zone 3 Model Validation.
+* ``ModelValidationZ1`` — curves for Zone 1 Model Validation.
+
+
+Debug section
+^^^^^^^^^^^^^
+
+These parameters are useful during development and debugging:
+
+* ``show_figs_t0`` — extend the time range to include t0 in plots.
+* ``show_figs_tend`` — extend the time range to include tend in plots.
+* ``plot_all_curves_in_html`` — include all available curves in the HTML
+  output, not just those specified by the PCS.
+* ``disable_LP_filtering`` — disable low-pass filtering of signals entirely.
+* ``max_simulation_retries`` — maximum number of retries for a failed
+  simulation (default: 4, covering: base line, reduced step, increased
+  precision, small networks, solver switch).

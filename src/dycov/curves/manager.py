@@ -9,6 +9,7 @@
 #
 import logging
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -82,12 +83,12 @@ class CurvesManager:
         self._before_filters_curves["calculated"] = self._curves["calculated"].copy()
         self._before_filters_curves["reference"] = self._curves["reference"].copy()
 
-    def __get_before_filters_curves(self, curve: str) -> pd.DataFrame:
+    def __get_before_filters_curves(self, curve: str) -> Optional[pd.DataFrame]:
         if curve not in self._before_filters_curves:
-            return pd.DataFrame()
+            return None
 
         if self._before_filters_curves[curve].empty:
-            return pd.DataFrame()
+            return None
 
         return self._before_filters_curves[curve]
 
@@ -327,7 +328,17 @@ class CurvesManager:
         # TODO: refactor this function so that it really adheres to the Method described above.
 
         csv_calculated_curves = self.__get_before_filters_curves("calculated")
+        if csv_calculated_curves is None:
+            dycov_logging.get_logger("Curves Manager").warning(
+                "Signal processing cannot be applied because calculates curves are not available"
+            )
+            return
         csv_reference_curves = self.__get_before_filters_curves("reference")
+        if csv_reference_curves is None:
+            dycov_logging.get_logger("Curves Manager").warning(
+                "Signal processing cannot be applied because reference curves are not available"
+            )
+            return
 
         # Activate this code to use the curve calculated as a reference curve,
         # only for debug cases without reference curves.
