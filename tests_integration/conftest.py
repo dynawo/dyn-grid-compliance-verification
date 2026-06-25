@@ -34,7 +34,7 @@ def _find_latest_dynawo(base_dir="/opt"):
     return dynawo_bin.parent
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def dynawo_latest(monkeypatch):
     """Set DYNAWOPATH to the latest Dynawo installation."""
     latest_path = _find_latest_dynawo()
