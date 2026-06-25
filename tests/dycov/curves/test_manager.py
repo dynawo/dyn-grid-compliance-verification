@@ -8,9 +8,6 @@
 #     demiguelm@aia.es
 #
 
-from pathlib import Path
-
-
 def test_fix_after_windows():
     from dycov.curves.manager import _fix_after_windows
 
