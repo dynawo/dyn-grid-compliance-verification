@@ -85,7 +85,7 @@ def test_wrappers(monkeypatch):
     assert cm.get_generators_imax()["g"] == 1
 
 
-def test_has_required_curves_all(monkeypatch):
+def test_has_required_curves_all(monkeypatch, tmp_path):
     from types import SimpleNamespace
 
     import pandas as pd
@@ -110,7 +110,13 @@ def test_has_required_curves_all(monkeypatch):
         has_reference_curves_path=lambda: True,
     )
 
-    cm._working_dir = Path("/tmp")
+    cm._working_dir = tmp_path
+
+    monkeypatch.setattr(
+        cm,
+        "_CurvesManager__obtain_curve",
+        lambda *a, **k: (tmp_path, tmp_path, {"start_time": 1}, dummy_sim),
+    )
 
     # mock result
     dummy_sim = SimpleNamespace(
