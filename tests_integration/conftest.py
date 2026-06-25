@@ -7,7 +7,7 @@ import pytest
 def _find_latest_dynawo(base_dir="/opt"):
     base = Path(base_dir)
 
-    # Buscar directorios que sigan el patrón Dynawo_vX.Y.Z_YYYYMMDD
+    # Look for directories matching the pattern Dynawo_vX.Y.Z_YYYYMMDD
     pattern = re.compile(r"Dynawo_v[\d\.]+_(\d{8})")
 
     candidates = []
@@ -21,7 +21,7 @@ def _find_latest_dynawo(base_dir="/opt"):
     if not candidates:
         raise RuntimeError(f"No Dynawo installations found in {base_dir}")
 
-    # Elegir el más reciente por orden lexicográfico YYYYMMDD
+    # Select the most recent one using lexicographic order on YYYYMMDD
     candidates.sort(key=lambda x: x[0], reverse=True)
 
     latest_dir = candidates[0][1]
@@ -30,7 +30,8 @@ def _find_latest_dynawo(base_dir="/opt"):
     if not dynawo_bin.exists():
         raise RuntimeError(f"dynawo.sh not found in: {dynawo_bin}")
 
-    return dynawo_bin.parent  # el directorio donde está dynawo.sh
+    # Return the directory containing dynawo.sh
+    return dynawo_bin.parent
 
 
 @pytest.fixture
