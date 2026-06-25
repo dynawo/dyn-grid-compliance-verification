@@ -101,8 +101,6 @@ def test_has_required_curves_all(monkeypatch, tmp_path):
     }
 
     cm._missed_curves = {"calculated": [], "reference": []}
-
-
     cm.get_curves = lambda x: cm._curves[x]
 
     cm._producer = SimpleNamespace(
@@ -112,13 +110,8 @@ def test_has_required_curves_all(monkeypatch, tmp_path):
 
     cm._working_dir = tmp_path
 
-    monkeypatch.setattr(
-        cm,
-        "_CurvesManager__obtain_curve",
-        lambda *a, **k: (tmp_path, tmp_path, {"start_time": 1}, dummy_sim),
-    )
+    tmp_path.mkdir(parents=True, exist_ok=True)
 
-    # mock result
     dummy_sim = SimpleNamespace(
         success=True,
         time_exceeds=False,
@@ -130,7 +123,7 @@ def test_has_required_curves_all(monkeypatch, tmp_path):
     monkeypatch.setattr(
         cm,
         "_CurvesManager__obtain_curve",
-        lambda *a, **k: (Path("/tmp"), Path("/tmp"), {"start_time": 1}, dummy_sim),
+        lambda *a, **k: (tmp_path, tmp_path, {"start_time": 1}, dummy_sim),
     )
 
     res = cm.has_required_curves(["a"], "bm", "oc")
