@@ -2,148 +2,196 @@
 Validation Tests
 ================
 
-The Dynamic grid Compliance Verification tool can actually perform two very different types
-of validation tests:
+DyCoV implements two distinct types of validation, addressing different
+regulatory requirements:
 
-(a) Validation of *RMS model adequacy*, recently included in RTE's DTR as
-    another requirement for producers (PCS I16).
+(a) **RMS model validation** — verifies that a dynamic model of the producer's
+    installation matches a reference behavior within the tolerances defined by
+    RTE (PCS I16).
 
-(b) Validation of *electric performance requirements* of RTE's grid code, as
-    specified in the DTR PCSs.
+(b) **Electrical performance verification** — verifies that the installation
+    meets the dynamic performance requirements of RTE's grid code, as specified
+    in the applicable DTR PCSs.
 
-In both types of usage, the tool is structured as a series of independent tests.
-These tests correspond to the *PCSs I** in RTE's DTR document.
+In both types, the tool runs a series of independent tests organized according
+to the DTR's PCS structure. The following tests are currently implemented:
 
-To be more specific, the tool implements the following three types of tests :
+* **RMS model validation (Power Parks)**: PCS I16, structured into:
 
-  * **RMS Model Validation tests (Power Parks)**: PCS I16, structured into:
-    
-    - *Zone 1* (WT-level): Fault Ride-Through, Step Response to Control
-      Setpoints, Ramp Response to Grid Frequency, and Step Response to Grid
-      Voltage.
-      
-    - *Zone 3* (plant-level): Stability of Controls (like I2), Fault
-      Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
-      (like I7), and Islanding (like I10).
+  - *Zone 1* (unit-level): Fault Ride-Through, Step Response to Control
+    Setpoints, Ramp Response to Grid Frequency, and Step Response to Grid
+    Voltage.
 
-  * **Electric Performance tests (Synchronous Machines)**: PCSs I2 (except
-    stability margin calculations), I3, I4, I6, I7, I8, and I10.
+  - *Zone 3* (plant-level): Stability of Controls (like I2), Fault
+    Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
+    (like I7), and Islanding (like I10).
 
-  * **Electric Performance tests (Power Parks)**: PCSs I2, I5, I6, I7, and I10.
+* **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
-The last two types of tests (performance tests) have the same launcher.
+* **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
+  I7, and I10.
 
-When the user will run the tool a single PDF report will generated including all
-the PCS that have been run.
+* **Electrical performance (Synchronous Machines)**: PCSs I2, I3, I4, I6, I7,
+  I8, and I10.
 
+The performance tests for PPM, BESS, and SM share the same launcher
+(``dycov performance``). A single PDF report is generated covering all the
+PCSs that were run.
 
-      
+For details on how the results of these tests are reported and interpreted,
+see:
+
+:ref:`Understanding reports <understanding-reports>`
+
 
 Conceptual structuring of the tests
------------------------------------
+-------------------------------------
 
-.. note::   
-   Please do not skip this section: understanding these concepts will help
-   you to learn the tool and navigate the results much faster!
+.. note::
+Please do not skip this section: understanding these concepts will help
+you learn the tool and navigate the results much faster!
 
+All tests share the same conceptual split between the producer's model and the
+grid-side model:
 
-Common to all these tests is the conceptual split between the
-producer's model and the grid-side model:
+* **Producer's model** — the DYD+PAR Dynawo files describing the portion of
+  the system electrically located on the producer side of the PDR bus.
+  These files are provided by the producer and remain the same across all tests.
 
-* **Producer's model:** the DYD+PAR Dynawo files that describe the producer's
-  plant, that is, everything "to the left" of the connection point (the
-  PDR). These two files are provided by the producer and they remain always the
-  same for all types of tests.
-  
-* **TSO's model:** this is the grid-side model, that is, everything "to the
-  right" of the PDR. These DYD+PAR files are internal to the application, and
-  they change from test to test as defined by each specific PCS in the
-  DTR. Different tests define different *"benchmarks"*: for instance, some
-  tests specify three or for connecting lines, while others specify just one.
+* **TSO's model** — the grid-side model, everything electrically located on
+  the grid side of the PDR. These files are internal to the tool and change
+  from test to test as defined by each PCS in the DTR. Different tests define
+  different *benchmarks*: some specify three or four transmission lines,
+  while others use a single-line configuration.
 
-In addition to the variations due to these different benchmarks, one also
-has variations in the specified *operating points* for the test. For instance,
-operating at :math:`Q_\text{PDR} = 0` vs. :math:`Q_\text{PDR} = Q_\text{max}`.
+In addition to benchmark variations, tests are also run at different
+*operating conditions*, which define how each simulation is configured.
 
-Therefore, the tests are organized along this conceptual hierarchy:
+This gives rise to the following conceptual hierarchy:
 
 .. code-block::
 
-   launcher
-   ├── <PCS a>
-   │   ├── <Benchmarks j>
-   │   │   └── <OperatingPoint x>
-   │   ├── <Benchmarks k>
-   │   │   ├── <OperatingPoint y>   
-   │   │   └── <OperatingPoint z>
-   ├── <PCS b>
-   │   ├── <Benchmarks l>
-   │   │   └── <OperatingPoint r>
-   │   ├── <Benchmarks m>
-   │   │   └── <OperatingPoint s>
-   └── <PCS c>
-       ├──  <Benchmarks n>
-       │   └── <OperatingPoint t>
-       └── ... etc.
+launcher
+├── <PCS a>
+│   ├── <Benchmark j>
+│   │   └── <Operating Condition x>
+│   │       └── <Operating Point>
+│   └── <Benchmark k>
+│       ├── <Operating Condition y>
+│       │   └── <Operating Point>
+│       └── <Operating Condition z>
+│           └── <Operating Point>
+├── <PCS b>
+│   └── ...
+└── <PCS c>
+└── ...
 
-That is, the launcher will run one or more DTR *PCSs* (the user may configure
-to run all or skip some). Each PCS will run the tests specified in the
-DTR. Each one of these tests may consist of one or more benchmark
-configurations: the performance-related PCSs have only one benchmark, but
-the RMS model validation PCS contains several topologies (because it consists
-of several tests analogous to the electric performance PCSs). And finally, for
-each benchmark the DTR may request to run tests at several operating points.
+That is, the launcher runs one or more DTR PCSs (the user may configure which
+ones to run or skip). Each PCS runs the tests defined in the DTR. Each test
+may consist of one or more benchmark configurations, and for each benchmark
+the DTR defines one or more operating conditions, potentially evaluated under
+different operating points.
+
+This hierarchy is fundamental to understanding how DyCoV organizes executions
+and aggregates results in the final reports.
+
+Operating Conditions (OC)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An **Operating Condition (OC)** is the main hierarchical container used to
+define a complete simulation scenario. It groups all the parameters required
+to execute a test consistently. An Operating Condition includes:
+
+* **Initial operating point**, typically defined by:
+  :math:`V`, :math:`P`, and :math:`Q` at the PDR.
+* **Event characteristics**, including:
+  type of event (e.g. fault, step change),
+  timing, duration, and magnitude.
+* **Grid-side parameters**, such as:
+  Short-Circuit Ratio (SCR), equivalent impedance, or other
+  TSO-defined parameters.
+
+Each PCS includes a predefined set of Operating Conditions derived from the
+DTR. On the user side, these conditions can be:
+
+* **Overridden**, by modifying specific parameters of an existing OC.
+* **Extended**, by defining a new OC derived from an existing one.
+
+Operating Points
+^^^^^^^^^^^^^^^^
+
+An **Operating Point** corresponds to the subset of parameters within an
+Operating Condition that defines the **initial steady-state of the system**,
+typically:
+
+* Voltage :math:`V`
+* Active power :math:`P`
+* Reactive power :math:`Q`
+
+In practice, Operating Points represent variations of the same simulation
+scenario with different initial conditions. Typical examples include:
+
+* :math:`Q = 0` vs. :math:`Q = Q_{max}`
+* Different reactance values (e.g. :math:`X_a` vs. :math:`X_b`)
+* Different loading levels (e.g. partial vs. full :math:`P_{max}`)
+
+An Operating Condition may therefore include **multiple Operating Points**.
+
+PCS and Benchmark definitions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For completeness, the following definitions apply:
+
+* **PCS**  
+  A PCS is the set of tests and compliance criteria required to validate either:
+
+  * the producer’s model (**RMS model validation**), or
+  * the installation’s electrical dynamic performance (**Electrical performance verification**).
+
+* **Benchmark**  
+  A Benchmark defines a specific **TSO-side network configuration**, together
+  with the associated event to be simulated (e.g. fault, voltage step). It
+  represents the invariant description of the grid model used during the test.
+
+Within this framework:
+
+* A **PCS** contains one or more **Benchmarks**
+* Each **Benchmark** is evaluated under one or more **Operating Conditions**
+* Each **Operating Condition** may include one or more **Operating Points**
+
+Definition summary
+^^^^^^^^^^^^^^^^^^
+
+* **Benchmark** → defines the *grid setup and event*
+* **Operating Condition** → defines the *complete simulation scenario*
+* **Operating Point** → defines the *initial state of the scenario*
 
 
-.. caution::
-   Do not confuse these *benchmarks* with the allowed topologies on the
-   producer's side, which are mentioned in the Inputs section (see
-   :ref:`available topologies <topologies>`). Here, these topologies refer to
-   the various network setups on RTE's side, and they are all internal to the
-   tool. The user should supply only *one* producer model (or two in the case of
-   Zone 1 / Zone 3 tests), and said model must be structured according to one of
-   the allowed topologies (due to the way in which the tool calculates the
-   initialization of the dynamic model).
+RMS model validation (Power Park Modules)
+------------------------------------------
 
+RMS model validation checks that the dynamic response of a PPM model matches
+a set of reference curves within the tolerances defined in PCS I16. It always
+runs two independent perimeters: Zone 1 (unit-level) and Zone 3 (plant-level).
 
-
-   
-
-RMS Model Validation tests (Power Park Modules)
------------------------------------------------
-
-Usually, the inputs are simply three files: the **DYD** and **PAR** files
-corresponding to the Dynawo model on the producer's side (i.e., everything
-"left" of the connection point, the PDR bus), and an **INI** file containing the
-certain parameters and metadata that cannot be provided in the DYD/PAR
-files. See the available examples in the `examples` directory, at the top level
-of the git repository.
-
-Additionally, in the case of *RMS Model Validation*, the user must also provide the
-**reference curves** for each test, against which the simulated curves will be
-compared. They should be provided as a CSV file and a DICT file that describes
-the format.
-
-The user has also the option of providing test curves to be used *instead of*
-Dynawo simulations.
-
+Reference curves are always required. The producer response can come from
+Dynawo simulations or from producer-provided curves.
 
 
 PCS I16
-^^^^^^^^
+^^^^^^^
 
-The model validation test cases are currently grouped in two PCS, which respectively apply to
-the two PPM zones: Zone 1, the individual generating unit; and Zone 3, the whole plant. The
-simulated events encompass reference tracking and disturbance rejection, which include three-phase
-faults. Tables 1 and 2 show all these tests and how they are structured following the
-Benchmark/OC concepts. For Zone 3, two extreme values of the the grid connection impedance
-:math:`X_{sc}` are often considered, :math:`X^{min}_{sc}` and :math:`X^{max}_{sc}`, representing
-the minimal and maximal Short–Circuit Level (SCL) at the connection point. This test case selection
-is the result of a harmonisation of the French TSO validation requirements between RMS and EMT
-models, such that simulation results obtained for validating a given EMT model can directly be used
-as reference signals for RMS model validation.
+The test cases are grouped into two PCS corresponding to the two validation
+zones. The simulated events cover reference tracking and disturbance rejection,
+including three-phase faults. For Zone 3, two extreme values of the grid
+connection impedance :math:`X_{sc}` are often considered — :math:`X^{min}_{sc}`
+and :math:`X^{max}_{sc}` — representing the minimal and maximal Short-Circuit
+Level at the connection point.
 
-.. list-table:: Predefined benchmarks for Zone-1 (i.e. turbine-level).
+Each row in the table below corresponds to a single Operating Condition (OC),
+defined by an operating point (OP), event parameters, and grid parameters.
+
+.. list-table:: Predefined benchmarks for Zone 1 (unit-level).
     :header-rows: 2
 
     * - Benchmark
@@ -207,7 +255,7 @@ as reference signals for RMS model validation.
       - :math:`{\Delta}V=-10\%U_n`
       - SCR=10
 
-.. list-table:: Predefined benchmarks for Zone-3 (i.e. plant-level).
+.. list-table:: Predefined benchmarks for Zone 3 (plant-level).
     :header-rows: 2
 
     * - Benchmark
@@ -218,11 +266,11 @@ as reference signals for RMS model validation.
       - OP
       - event params.
       - grid params.
-    * - U-setpoint step 	
+    * - U-setpoint step
       - :math:`U_n,\ P_{max},\ Q=0`
       - :math:`+2\%\ U_n`
       - :math:`X_{min}`
-    * - 	
+    * -
       - :math:`U_n,\ P_{max},\ Q=0`
       - :math:`+2\%\ U_n`
       - :math:`X_{max}`
@@ -230,7 +278,7 @@ as reference signals for RMS model validation.
       - :math:`U_n,\ P_{max},\ Q=0`
       - :math:`-40\%\ P_{max}`
       - :math:`X_{max}`
-    * - 	
+    * -
       - :math:`U_n,\ 0.6P_{max},\ Q=0`
       - :math:`+40\%\ P_{max}`
       - :math:`X_{max}`
@@ -238,7 +286,7 @@ as reference signals for RMS model validation.
       - :math:`U_n,\ P_{max},\ Q=0`
       - :math:`+10\%\ P_{max}`
       - :math:`X_{max}`
-    * - 
+    * -
       - :math:`U_n,\ P_{max},\ Q=0`
       - :math:`-20\%\ P_{max}`
       - :math:`X_{max}`
@@ -254,14 +302,14 @@ as reference signals for RMS model validation.
       - :math:`U_n,\ P_{max},\ Q_{max}`
       - specified V profile
       - :math:`X_{min}`
-    * - 
+    * -
       - :math:`U_n,\ P_{max},\ Q_{min}`
       - specified V profile
       - :math:`X_{min}`
     * - islanding
       - :math:`U_n,\ 0.8P_{max},\ Q=0`
       - :math:`{\Delta}\ PQ = [+0.1,\ +0.04]P_{max}`
-      - --- 
+      - ---
 
 .. image:: figs_pcs/circuit_z1.*
    :width: 70%
@@ -269,52 +317,46 @@ as reference signals for RMS model validation.
    :align: center
 
 
+Electrical performance verification  (Power Park Modules)
+---------------------------------------------------------
 
+Electrical performance verification for PPMs checks compliance with the dynamic
+performance requirements of the applicable DTR PCSs. No reference curves are
+required — the tool evaluates the producer response directly against the PCS
+criteria.
 
-Electric Performance tests (Power Park Modules)
------------------------------------------------
-
-Usually, the inputs are simply three files: the **DYD** and **PAR** files
-corresponding to the Dynawo model on the producer's side (i.e., everything
-"left" of the connection point, the PDR bus), and an **INI** file containing the
-certain parameters and metadata that cannot be provided in the DYD/PAR
-files. See the available examples in the `examples` directory, at the top level
-of the git repository.
-
-In the case of *Electric Performance* testing, the user has also the option of
-providing test curves, either to be used *instead of* Dynawo simulations, or to
-be used along Dynawo simulations (just for plotting both and comparing them).
-
+The producer response can come from Dynawo simulations or from
+producer-provided curves.
 
 PCS I2
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-step change in the setpoint of the generator's voltage control.
+Checks for compliant behavior of the generator under a step change in the
+setpoint of the voltage control.
 
 .. image:: figs_pcs/circuit_I2PPM.*
    :width: 70%
    :alt: network setup for PCS I2 (PPMs)
    :align: center
 
+.. note::
+   This test does not yet implement the calculations of *control stability
+   margins*. These will be included once Dynawo incorporates the necessary
+   algorithms.
 
-.. note:: This test does not yet implement the calculations of *control
-   stability margins*. These will get included once Dynawo incorporates new
-   algorithms that perform this sort of analysis.
-
-           
 
 PCS I5
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore.
 
-Checks for compliant behavior of the PPM under a scenario where there is a
-symmetric three-phase fault at one of the four transmission lines (at a 1%
-distance from the PDR). The PPM should remain connected and be able to supply
-the necessary reactive injection.
+Checks for compliant behavior under a symmetric three-phase fault at one of
+the four transmission lines (at 1% distance from the PDR). The PPM should
+remain connected and supply the required reactive injection.
 
 .. image:: figs_pcs/circuit_I5PPM.*
    :width: 70%
@@ -322,14 +364,14 @@ the necessary reactive injection.
    :align: center
 
 
-
 PCS I6
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-severe drop of voltage at the PDR bus (which simulates the effect of a fault).
+Checks for compliant behavior under a severe voltage drop at the PDR bus
+(simulating the effect of a fault).
 
 .. image:: figs_pcs/circuit_I6PPM.*
    :width: 70%
@@ -337,15 +379,14 @@ severe drop of voltage at the PDR bus (which simulates the effect of a fault).
    :align: center
 
 
-
 PCS I7
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore.
 
-Checks for compliant behavior of the PPM under a scenario where there is a
-severe overvoltage at the PDR bus (which simulates the effect of clearing a
-fault in the network).
+Checks for compliant behavior under a severe overvoltage at the PDR bus
+(simulating the effect of a fault being cleared in the network).
 
 .. image:: figs_pcs/circuit_I7PPM.*
    :width: 70%
@@ -353,18 +394,16 @@ fault in the network).
    :align: center
 
 
-
 PCS I10
-^^^^^^^^^
-.. note::   
-   The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore*
+^^^^^^^^
 
-Checks for compliant behavior of the PPM under an islanding event scenario,
-i.e., the network has been split in such a way that the PPM is left as the only
-generating system that should sustain the frequency of its subnetwork. Note,
-however, that the DTR assumes that the PPM technology is "grid-following" and
-therefore suggests the use of a fictitious **synchronous condenser unit** to
-provide inertia and frequency reference for the island.
+.. note::
+   The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore.
+
+Checks for compliant behavior under an islanding event, where the PPM is left
+as the only generating system sustaining the frequency of its subnetwork. Since
+the DTR assumes the PPM technology is grid-following, a fictitious synchronous
+condenser unit provides inertia and frequency reference for the island.
 
 .. image:: figs_pcs/circuit_I10PPM.*
    :width: 70%
@@ -372,65 +411,55 @@ provide inertia and frequency reference for the island.
    :align: center
 
 
+Electrical performance verification  (Synchronous Machines)
+-----------------------------------------------------------
 
-
-Electric Performance tests (Synchronous Machines)
--------------------------------------------------
-
-Usually, the inputs are simply three files: the **DYD** and **PAR** files
-corresponding to the Dynawo model on the producer's side (i.e., everything
-"left" of the connection point, the PDR bus), and an **INI** file containing the
-certain parameters and metadata that cannot be provided in the DYD/PAR
-files. See the available examples in the ``examples`` directory, at the top level
-of the git repository.
-
-In the case of *Electric Performance* testing, the user has also the option of
-providing test curves, either to be used *instead of* Dynawo simulations, or to
-be used along Dynawo simulations (just for plotting both and comparing them).
-
+Electrical performance verification for synchronous machines follows the same
+structure as for PPMs. The producer response can come from Dynawo simulations
+or from producer-provided curves.
 
 
 PCS I2
-^^^^^^^^
-Checks for compliant behavior of the generator under a scenario where there is a
-step change in the setpoint of the generator's voltage control.
+^^^^^^^
+
+Checks for compliant behavior under a step change in the setpoint of the
+generator's voltage control.
 
 .. image:: figs_pcs/circuit_I2SM.*
    :width: 70%
-   :alt: network setup for PCS I3 (SMs)
+   :alt: network setup for PCS I2 (SMs)
    :align: center
 
-.. note:: This test does not yet implement the calculations of *control
-   stability margins*. These will get included once Dynawo incorporates new
-   algorithms that perform this sort of analysis.
-
-
+.. note::
+   This test does not yet implement the calculations of *control stability
+   margins*. These will be included once Dynawo incorporates the necessary
+   algorithms.
 
 
 PCS I3
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies only to generator classes: B, C, D.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-sudden change in the admittance of the connection to the network (loss of one of
-the three transmission lines, i.e. a 33% loss in branch admittance).
+Checks for compliant behavior under a sudden change in the admittance of the
+network connection — specifically, the loss of one of three transmission lines
+(a 33% loss in branch admittance).
 
 .. image:: figs_pcs/circuit_I3SM.*
    :width: 70%
    :alt: network setup for PCS I3 (SMs)
    :align: center
 
-          
 
 PCS I4
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to generator classes: B, C, D.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-symmetric three-phase fault at one of the four transmission lines (at a 1%
-distance from the PDR).
+Checks for compliant behavior under a symmetric three-phase fault at one of
+the four transmission lines (at 1% distance from the PDR).
 
 .. image:: figs_pcs/circuit_I4SM.*
    :width: 70%
@@ -438,14 +467,13 @@ distance from the PDR).
    :align: center
 
 
-
 PCS I6
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to generator classes: B, C, D.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-severe drop of voltage at the PDR bus (which simulates the effect of a fault).
+Checks for compliant behavior under a severe voltage drop at the PDR bus.
 
 .. image:: figs_pcs/circuit_I6SM.*
    :width: 70%
@@ -453,50 +481,46 @@ severe drop of voltage at the PDR bus (which simulates the effect of a fault).
    :align: center
 
 
-
 PCS I7
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to generator classes: B, C, D.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-severe overvoltage at the PDR bus (which simulates the effect of clearing a
-fault in the network).
-           
+Checks for compliant behavior under a severe overvoltage at the PDR bus.
+
 .. image:: figs_pcs/circuit_I7SM.*
    :width: 70%
    :alt: network setup for PCS I7 (SMs)
    :align: center
 
 
-
 PCS I8
-^^^^^^^^
-.. note::   
+^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to generator classes: B, C, D.
 
-Checks for compliant behavior of the generator under a scenario where there is a
-severe loss of load in the bulk transmission network: 7GW out of 307GW. In this
-case the network side is simulated by means of a large generator (340 GVA) and
-two large loads (300 and 7 GW).
-           
+Checks for compliant behavior under a severe loss of load in the bulk
+transmission network (7 GW out of 307 GW). The network side is modeled by a
+large generator (340 GVA) and two large loads (300 and 7 GW).
+
 .. image:: figs_pcs/circuit_I8SM.*
    :width: 70%
    :alt: network setup for PCS I8 (SMs)
    :align: center
 
 
-
 PCS I10
-^^^^^^^^^
-.. note::   
+^^^^^^^^
+
+.. note::
    The DTR specifies that this PCS applies to generator classes: B, C, D.
 
-Checks for compliant behavior of the generator under an islanding event
-scenario, i.e., the network has been split in such a way that the generator is
-left as the only synchronous machine that should sustain the frequency of its
-subnetwork. The generator should maintain the stability until the restoration
-process re-synchronizes this subnetwork with the bulk transmission network.
+Checks for compliant behavior under an islanding event where the generator is
+left as the only synchronous machine sustaining the frequency of its
+subnetwork. The generator should maintain stability until the restoration
+process re-synchronizes the subnetwork with the bulk transmission network.
 
 .. image:: figs_pcs/circuit_I10SM.*
    :width: 70%
@@ -504,19 +528,16 @@ process re-synchronizes this subnetwork with the bulk transmission network.
    :align: center
 
 
-
-
 Step-response Characteristics
------------------------------
+-------------------------------
 
-There are compliance criteria in the tool based on reaction, rise, settling, and response times,
-as well as others based on overshoot. The definition of these times coincides with the definition 
-shown in the IEC figure in the case of the RMS Model Validation tests (Power Parks), however in 
-the case of the Electric Performance tests, the definition of the rise time is equivalent to 
-reaction+rise time of the IEC definition.
+Several compliance criteria are based on reaction time, rise time, settling
+time, and overshoot. For RMS model validation tests, these definitions follow
+exactly the IEC standard. For Electrical performance verification, the rise time is
+defined as equivalent to the IEC reaction + rise time combined.
 
-Illustration depicting the definition of the step-response characteristics, taken from 
-IEC 61400-21-1 (Section 3, Terms and definitions).
+The figure below, taken from IEC 61400-21-1 (Section 3, Terms and definitions),
+illustrates these step-response characteristics:
 
 .. image:: figs_iec/step_response_characteristics.png
    :width: 70%

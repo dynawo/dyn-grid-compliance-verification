@@ -1,0 +1,294 @@
+.. _understanding-reports:
+
+================================
+Understanding DyCoV reports
+================================
+
+DyCoV generates structured PDF reports to summarize the results of
+validation and performance studies.
+
+These reports are used to:
+
+* provide a consolidated view of all executed tests,
+* document the simulation context and assumptions,
+* present time-domain responses,
+* and assess compliance with grid-code requirements.
+
+Although DyCoV supports different workflows and input sources, all reports
+follow a **common structure**, ensuring consistency across studies.
+
+
+Data sources and reporting
+--------------------------
+
+DyCoV supports two equivalent sources of time-domain responses:
+
+* RMS simulations generated internally using Dynawo,
+* precomputed producer curves provided as input.
+
+In both cases:
+
+* the same signal processing pipeline is applied,
+* the same KPIs are computed,
+* the same compliance checks are evaluated,
+* and the generated reports are **identical in structure and content**.
+
+The only difference lies in how the time-domain responses are obtained,
+not in how they are processed or reported.
+
+
+Global report structure
+-----------------------
+
+All DyCoV reports follow the same high-level structure:
+
+1. Header
+2. Summary
+3. Results organized by PCS
+4. Detailed results per test
+
+This structure applies consistently to:
+
+* electrical performance verification,
+* RMS model validation,
+* all supported technologies (PPM, BESS, SM),
+* all execution modes (Dynawo or producer curves).
+
+
+Header
+------
+
+The report begins with general contextual information:
+
+* Type of study:
+  
+  * *Electrical performance verification*, or
+  * *RMS model validation*
+
+* Technology:
+  
+  * PPM, BESS, or SM
+
+* Execution date
+* Reference to DTR tests and Dynawo usage
+
+This section provides the **formal context** of the study.
+
+
+Summary section
+---------------
+
+The summary provides a **global view of all executed tests**.
+
+It includes:
+
+* execution metadata:
+  
+  * timestamp,
+  * Dynawo version,
+  * model directory,
+
+* a consolidated table with:
+  
+  * PCS identifier,
+  * benchmark (test type),
+  * operating condition,
+  * overall result (Compliant / Non-compliant / other status).
+
+This is the primary entry point for quickly assessing the outcome of a study.
+
+
+Organization by PCS
+--------------------
+
+After the summary, results are grouped by PCS (Performance Checking Sheet).
+
+Each PCS is presented independently:
+
+.. code-block:: text
+
+   Results for PCS I2
+   Results for PCS I5
+   Results for PCS I6
+   ...
+
+Within each PCS, multiple test scenarios may be defined depending on:
+
+* benchmark definition,
+* operating conditions,
+* and technology-specific variants.
+
+For RMS model validation, results are further grouped into:
+
+* **Zone 1** (unit-level),
+* **Zone 3** (plant-level).
+
+
+Structure of a test
+--------------------
+
+Each test follows a consistent internal structure.
+
+Overview
+^^^^^^^^
+
+The overview describes the test scenario:
+
+* purpose of the test according to the DTR,
+* schematic representation of the network,
+* initial operating conditions (P, Q, U, SCR, etc.).
+
+This section defines the **physical and regulatory context** of the test.
+
+
+Simulation parameters
+^^^^^^^^^^^^^^^^^^^^^
+
+This section provides information about the numerical setup:
+
+* solver type,
+* solver parameters,
+* numerical tolerances.
+
+It ensures **traceability and reproducibility** of the results.
+
+
+Simulation
+^^^^^^^^^^
+
+The simulation section specifies the monitored quantities, such as:
+
+* voltage,
+* active and reactive power,
+* currents,
+* additional signals depending on the PCS and technology.
+
+This defines which signals are relevant for the evaluation.
+
+
+Simulation results
+^^^^^^^^^^^^^^^^^^
+
+This section presents time-domain plots of the monitored signals.
+
+* the simulated response is always shown,
+* when applicable, reference curves are also displayed.
+
+These plots provide a **visual representation of the system behavior**.
+
+
+Analysis of results
+^^^^^^^^^^^^^^^^^^^
+
+The analysis section extracts quantitative indicators from the simulation.
+
+The type of indicators depends on the workflow:
+
+* **Electrical performance verification:**
+  
+  * physical KPIs (e.g. response times, settling times, steady-state error)
+
+* **RMS model validation:**
+  
+  * error metrics (MXE, ME, MAE) evaluated over:
+    
+    * pre-event,
+    * event,
+    * post-event windows
+
+This section bridges raw simulation outputs and compliance evaluation.
+
+
+Compliance checks
+^^^^^^^^^^^^^^^^^
+
+This section determines whether the test is compliant.
+
+It includes:
+
+* the list of evaluated criteria,
+* the computed values,
+* the corresponding thresholds,
+* a boolean result for each check.
+
+The test is considered compliant only if **all criteria are satisfied**.
+
+
+Workflow-specific differences
+-----------------------------
+
+Electrical performance verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* No reference curves are used.
+* Compliance is based on **absolute performance criteria**.
+* Indicators focus on physical response:
+  
+  * timing,
+  * ride-through capability,
+  * stability.
+
+
+RMS model validation
+^^^^^^^^^^^^^^^^^^^^
+
+* Reference curves are mandatory.
+* Results are based on **comparison between model and reference behavior**.
+* Error metrics (MXE, ME, MAE) are evaluated against thresholds.
+* Results are structured by Zone 1 and Zone 3.
+
+
+Technology-specific aspects
+---------------------------
+
+Synchronous Machines (SM)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Additional quantities may be included:
+
+* rotor speed,
+* internal angles.
+
+
+Battery Energy Storage Systems (BESS)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Tests are typically evaluated in two operating modes:
+
+* injection,
+* consumption.
+
+These modes are reported separately within the same structure.
+
+
+Power Park Modules (PPM)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Reports follow the standard structure with plant-level control signals
+when relevant.
+
+
+Key interpretation principles
+-----------------------------
+
+* Each test is independent and must be interpreted on its own.
+* Visual inspection of plots is not sufficient: quantitative checks determine compliance.
+* A small deviation may still be compliant if thresholds are respected.
+* Conversely, a visually acceptable response may fail due to a single violated criterion.
+
+
+Summary
+-------
+
+DyCoV reports are:
+
+* structured,
+* consistent across workflows,
+* independent of the data source,
+* and directly aligned with DTR requirements.
+
+Understanding their structure allows users to:
+
+* quickly identify non-compliant scenarios,
+* interpret simulation behavior,
+* and diagnose model or performance issues efficiently.

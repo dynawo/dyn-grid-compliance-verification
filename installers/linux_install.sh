@@ -205,7 +205,7 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv; do
+for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv sha256sum; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1
@@ -284,7 +284,7 @@ if [ -n "$LOCAL_SOURCE_ZIP" ]; then
     
     # Copy file to current dir to avoid issues
     cp "$LOCAL_SOURCE_ZIP" .
-    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP$")
+    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP")
     unzip -q "$ZIP_FILENAME"
     rm -f "$ZIP_FILENAME"
 
@@ -312,10 +312,9 @@ elif [ -n "$DIRECT_URL" ]; then
 
 else
     color_msg "Step 2: Shallow-cloning the DyCoV repository (branch/tag: $TARGET_BRANCH)..."
-    git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
+    git clone --progress --depth 1 --single-branch --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
     cd "$TMP_LOCAL_REPO"
-    # Fetch tags for version info (if needed by setuptools_scm)
-    git fetch --tags
+    git fetch --depth 1 --tags --progress
 fi
 
 ################################################################################
@@ -331,12 +330,8 @@ cd "$INSTALL_DIR"
 # 1. Create venv
 uv venv "$VENV" --python "$python_cmd"
 
-# 2. Install uv inside venv
-# shellcheck source=/dev/null
+# 2. Install repo using uv
 . "$VENV"/bin/activate
-pip install -q uv
-
-# 3. Install repo using uv
 uv pip install -q "$TMP_LOCAL_REPO"
 deactivate
 color_msg "Virtual environment created."

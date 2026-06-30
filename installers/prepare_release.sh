@@ -166,6 +166,13 @@ info "SHA256: $DYNAWO_SHA256"
 LINUX_INSTALL_OUT="$OUTPUT_DIR/linux_install.sh"
 cp "$LINUX_INSTALL" "$LINUX_INSTALL_OUT"
 
+# Force version for release installer (avoids git tag dependency)
+sed -i "/^TARGET_BRANCH=/a export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov=${VERSION_PLAIN}" "$LINUX_INSTALL_OUT"
+
+# Remove the git fetch --tags line (we don't want to fetch tags in the release script)
+sed -i '/^[[:space:]]*cd "\$TMP_LOCAL_REPO"[[:space:]]*$/d' "$LINUX_INSTALL_OUT"
+sed -i '/git fetch .*--tags/d' "$LINUX_INSTALL_OUT"
+
 # Update TARGET_BRANCH (with 'v' prefix, matches the git tag)
 sed -i -E "s|^TARGET_BRANCH=.*|TARGET_BRANCH=\"${VERSION}\"|" "$LINUX_INSTALL_OUT"
 
