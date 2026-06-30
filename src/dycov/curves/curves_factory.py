@@ -22,7 +22,7 @@ def get_producer(
     parameters: Parameters,
     producer: Producer,
     pcs_benchmark_name: str,
-    stable_time: float,
+    thr_ss_tol: float,
     lib_path: Path,
     templates_path: Path,
     pcs_name: str,
@@ -37,8 +37,8 @@ def get_producer(
         The producer object containing configuration and producer information.
     pcs_benchmark_name : str
         Composite name, pcs + Benchmark name.
-    stable_time: float
-        Minimum duration required to consider stability reached (measured from the tail)
+    thr_ss_tol: float
+        Tolerance defining the steady-state band around the final value.
     lib_path : Path
         Path where the TSO models are saved within the package.
     templates_path : Path
@@ -73,7 +73,7 @@ def get_producer(
             omega_path,
             pcs_path,
             job_name,
-            stable_time,
+            thr_ss_tol,
         )
     elif producer.is_user_curves():
         return ImportedCurves(producer)
