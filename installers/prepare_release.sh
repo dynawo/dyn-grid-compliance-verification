@@ -19,6 +19,7 @@
 #   - dycov_rawimage.tar.gz         (Docker image export)
 #   - import_image.sh
 #   - run_dycov_docker.sh
+#   - dycov_par_tool.zip            (standalone Dynawo PAR utility)
 #
 # (c) Rte - Grupo AIA
 #
@@ -115,11 +116,14 @@ RUN_SH="$REPO_ROOT/installers/docker/run_dycov_docker.sh"
 IMPORT_WSL_BAT="$REPO_ROOT/installers/wsl/import_wsl.bat"
 IMPORT_WSL_PS1="$REPO_ROOT/installers/wsl/import_wsl.ps1"
 RUN_WSL_PS1="$REPO_ROOT/installers/wsl/run_dycov_wsl.ps1"
+TOOLS_DIR="$REPO_ROOT/tools/dynawo_par"
 
 for f in "$LINUX_INSTALL" "$PYPROJECT" "$BUILD_SH" "$EXPORT_SH" "$IMPORT_SH" "$RUN_SH" \
           "$IMPORT_WSL_BAT" "$IMPORT_WSL_PS1" "$RUN_WSL_PS1"; do
     [[ -f "$f" ]] || error "Expected file not found: $f"
 done
+
+[[ -d "$TOOLS_DIR" ]] || error "Expected tool directory not found: $TOOLS_DIR"
 
 # Output directory
 OUTPUT_DIR="$REPO_ROOT/release_${VERSION}"
@@ -230,6 +234,17 @@ cp "$RUN_SH"          "$OUTPUT_DIR/run_dycov_docker.sh"
 cp "$IMPORT_WSL_BAT"  "$OUTPUT_DIR/import_wsl.bat"
 cp "$IMPORT_WSL_PS1"  "$OUTPUT_DIR/import_wsl.ps1"
 cp "$RUN_WSL_PS1"     "$OUTPUT_DIR/run_dycov_wsl.ps1"
+
+# Standalone Dynawo PAR utility, as a directly-downloadable release artifact.
+# Built from a cleaned staging copy using the SAME steps as the Docker context
+# (installers/docker/build.sh), so the zip and the image ship identical content.
+rm -f "$OUTPUT_DIR/dycov_par_tool.zip"
+TOOL_STAGE=$(mktemp -d)
+cp -a "$TOOLS_DIR" "$TOOL_STAGE/"
+find "$TOOL_STAGE" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+( cd "$TOOL_STAGE" && zip -qr "$OUTPUT_DIR/dycov_par_tool.zip" dynawo_par )
+rm -rf "$TOOL_STAGE"
+info "Bundled standalone tool: dycov_par_tool.zip"
 
 info "All artifacts ready."
 

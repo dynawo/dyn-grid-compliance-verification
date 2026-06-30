@@ -53,9 +53,10 @@ fi
 TEMP_DIR=$(mktemp -d temp.XXXXXX)
 
 EXAMPLES_DIR="$TEMP_DIR/examples"
+TOOLS_DIR="$TEMP_DIR/tools"
 DYNAWO_DIR_NAME="$TEMP_DIR/dynawo_build"
 
-mkdir -p "$EXAMPLES_DIR" "$DYNAWO_DIR_NAME"
+mkdir -p "$EXAMPLES_DIR" "$TOOLS_DIR" "$DYNAWO_DIR_NAME"
 
 cleanup() {
     echo "Cleaning up temp directory..."
@@ -147,6 +148,20 @@ fi
 
 
 ########################################
+# 5b. Copy standalone tools (Dynawo PAR utility)
+########################################
+
+echo "Copying standalone tools..."
+if [[ -d "$ROOT_DIR/tools/dynawo_par" ]]; then
+    cp -a "$ROOT_DIR/tools/dynawo_par" "$TOOLS_DIR/"
+    find "$TOOLS_DIR" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+else
+    echo "ERROR: tools/dynawo_par not found at $ROOT_DIR/tools/dynawo_par"
+    exit 1
+fi
+
+
+########################################
 # 6. Copy Dynawo
 ########################################
 
@@ -202,6 +217,7 @@ docker build \
     -t "dycov:$TAG" \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
+    --build-arg dycov_TOOLS="tools" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \
     --build-arg MANUAL_BUILD="manual_build" \
     "$TEMP_DIR"
