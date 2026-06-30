@@ -6,11 +6,11 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+from dycov.validation.common import get_ss_tolerance
 from dycov.validation.model import (
     _check_value_by_threshold,
     _get_column_name,
     _get_measurement_name,
-    _get_ss_tolerance,
 )
 
 
@@ -20,7 +20,7 @@ def test_zero_setpoint_variation():
     setpoint_variation = 0.0
 
     # Act
-    result = _get_ss_tolerance(setpoint_variation)
+    result = get_ss_tolerance(setpoint_variation)
 
     # Assert
     assert result == 0.005
@@ -32,7 +32,7 @@ def test_ss_tolerance():
     setpoint_variation = 0.1
 
     # Act
-    result = _get_ss_tolerance(setpoint_variation)
+    result = get_ss_tolerance(setpoint_variation)
 
     # Assert
     assert result == 0.0005
