@@ -9,7 +9,12 @@
 #
 import cmath
 
-from dycov.electrical.initialization_calcs import _calc_pimodel, init_calcs
+from dycov.electrical.initialization_calcs import (
+    _calc_pimodel,
+    _calc_twobus_pf,
+    _zero_imp_line,
+    init_calcs,
+)
 from dycov.electrical.pimodel_parameters import line_pimodel
 from dycov.model.parameters import GenParams, LineParams, PdrParams, Terminal, XfmrParams
 
@@ -235,3 +240,119 @@ def _is_equal(a: float, b: float) -> bool:
             return True
         else:
             return False
+
+
+# =========================
+# _zero_imp_line
+# =========================
+
+def test_zero_imp_line():
+    class DummyLine:
+        y_tr = complex(float("inf"))
+        y_sh1 = 0
+        y_sh2 = 0
+
+    assert _zero_imp_line(DummyLine()) is True
+
+
+def test_non_zero_imp_line():
+    class DummyLine:
+        y_tr = complex(1.0)
+        y_sh1 = 0
+        y_sh2 = 0
+
+    assert _zero_imp_line(DummyLine()) is False
+
+
+# =========================
+# _calc_pimodel (branch i1 != None)
+# =========================
+
+def test_calc_pimodel_with_current():
+    from dycov.electrical.initialization_calcs import _calc_pimodel
+
+    v1 = complex(1, 0)
+    i1 = complex(1, 0)
+
+    v2, i2, s2 = _calc_pimodel(
+        ytr=1 + 0j,
+        ysh1=0,
+        ysh2=0,
+        v1=v1,
+        i1=i1,
+        s1=None,
+    )
+
+    # rama trivial: copia valores
+    assert v2 == v1
+    assert i2 == i1
+    assert s2 == v1 * i1.conjugate()
+
+
+# =========================
+# _calc_twobus_pf
+# =========================
+
+
+def test_calc_twobus_pf():
+    ytr = 1 + 0j
+    ysh1 = 0 + 0j
+    ysh2 = 0 + 0j
+    v1 = complex(1, 0)
+    s2 = complex(0.1, 0)  # 👈 más pequeño
+
+    i1, v2, i2 = _calc_twobus_pf(ytr, ysh1, ysh2, v1, s2)
+
+    assert isinstance(v2, complex)
+    assert isinstance(i1, complex)
+    assert isinstance(i2, complex)
+
+
+
+# =========================
+# init_calcs (zero imp branch)
+# =========================
+
+def test_init_calcs_zero_imp_grid_line(monkeypatch):
+    from dycov.model.parameters import GenParams, PdrParams, Terminal
+
+    # dummy gen
+    gen = GenParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        terminals=(Terminal(None),),
+        p=1,
+        q=1,
+        s_nom=1,
+        i_max=None,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+
+    pdr = PdrParams(u=1, u_phase=0, s=complex(-1, 0), p=-1, q=0)
+
+    class DummyLine:
+        y_tr = complex(float("inf"))
+        y_sh1 = 0
+        y_sh2 = 0
+
+    # parchear solve para evitar lógica interna compleja
+    monkeypatch.setattr(
+        "dycov.electrical.initialization_calcs._solve_gen_circuits",
+        lambda *a, **k: None,
+    )
+
+    res = init_calcs(
+        gens=(gen,),
+        gen_xfmrs=(),
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=None,
+        int_line=None,
+        pdr=pdr,
+        grid_line=DummyLine(),
+        grid_load=None,
+    )
+
+    assert res.u0 == 1
