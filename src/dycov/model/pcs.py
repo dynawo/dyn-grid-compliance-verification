@@ -109,7 +109,7 @@ class Pcs:
             file = files[list(files.keys())[0]]
             dycov_logging.get_logger("PCS").warning(
                 f"Loading '{file.name}'. To avoid confusion it is recommended to rename "
-                f"the configuration file to use the name: 'PCS_Description.ini'"
+                f"the configuration file to use the name: 'PCSDescription.ini'"
             )
             return file
 
