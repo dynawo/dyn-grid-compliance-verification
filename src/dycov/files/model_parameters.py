@@ -1136,12 +1136,6 @@ def _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone):
         generator, generator_control_mode, control_mode_parameters, zone
     )
 
-    if generator_control_mode != "Others" and not is_valid and zone != 1:
-        control_mode_name = _handle_invalid_control_mode(
-            generator, parset, nsmap, generator_control_mode, zone
-        )
-        return True, control_mode_name
-
     return is_valid, control_mode_name
 
 
@@ -1149,31 +1143,6 @@ def _log_control_mode(generator, control_mode_parameters):
     dycov_logging.get_logger("Model Parameters").debug(
         f"Generator {generator.id} Control Mode: {control_mode_parameters}"
     )
-
-
-def _handle_invalid_control_mode(generator, parset, nsmap, generator_control_mode, zone):
-    dycov_logging.get_logger("Model Parameters").warning(
-        f"{generator.lib} control mode will be changed"
-    )
-    default_control_mode_parameters = _get_default_control_mode_parameters(
-        generator, generator_control_mode, zone
-    )
-    dycov_logging.get_logger("Model Parameters").debug(
-        f"Default Control Mode: {default_control_mode_parameters} for {generator_control_mode}"
-    )
-
-    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
-        generator, generator_control_mode, default_control_mode_parameters, zone
-    )
-    if is_valid:
-        _set_parameters(generator, parset, nsmap, default_control_mode_parameters)
-    else:
-        dycov_logging.get_logger("Model Parameters").error(
-            f"{generator.lib} executed with wrong control mode"
-        )
-        raise ValueError(f"{generator.lib} executed with wrong control mode")
-
-    return control_mode_name
 
 
 def _apply_voltage_droop(
