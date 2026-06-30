@@ -53,7 +53,7 @@ class BisectionEngine:
         s_nref: float,
         f_nom: float,
         sim_time: float,
-        stable_time: float,
+        thr_ss_tol: float,
         curves_dict: dict,
     ):
         """
@@ -71,8 +71,8 @@ class BisectionEngine:
             Nominal frequency (Hz).
         sim_time : float
             Current simulation elapsed time; updated after successful runs.
-        stable_time : float
-            Time horizon used to evaluate generator angle stability in CCT checks.
+        thr_ss_tol : float
+            Tolerance defining the steady-state band around the final value.
         curves_dict : dict
             Mapping of curve variable names used by the simulator.
         """
@@ -82,7 +82,7 @@ class BisectionEngine:
         self._s_nref = s_nref
         self._f_nom = f_nom
         self.sim_time = sim_time
-        self._stable_time = stable_time
+        self._thr_ss_tol = thr_ss_tol
         self._curves_dict = curves_dict
 
     # ------------------------------------------------------------------
@@ -415,7 +415,7 @@ class BisectionEngine:
                         dynawo_translator.get_curve_variable(gen.id, gen.lib, "InternalAngle")
                     ]
                 ),
-                self._stable_time,
+                self._thr_ss_tol,
             )[0]
             for gen in self._producer.generators
         )
