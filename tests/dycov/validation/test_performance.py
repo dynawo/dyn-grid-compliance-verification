@@ -114,7 +114,7 @@ def _make_validator(validations=None):
     return PerformanceValidator(
         curves_manager=Mock(),
         producer=Mock(),
-        stable_time=1.0,
+        thr_ss_tol=1.0,
         validations=validations or [],
         is_field_measurements=False,
         pcs_name="test",
@@ -544,7 +544,7 @@ def test_run_common_tests_executes():
     validator._check_theta_stability = Mock(return_value=(True, 1, True))
 
     res = validator._PerformanceValidator__run_common_tests(
-        stable_time=1.0,
+        thr_ss_tol=1.0,
         is_ppm=False,
     )
 
