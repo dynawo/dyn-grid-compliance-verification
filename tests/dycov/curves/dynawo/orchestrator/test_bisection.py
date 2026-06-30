@@ -41,7 +41,7 @@ def _make_engine(**overrides) -> BisectionEngine:
         s_nref=100.0,
         f_nom=50.0,
         sim_time=30.0,
-        stable_time=10.0,
+        thr_ss_tol=10.0,
         curves_dict={"var1": "GEN1_var1"},
     )
     defaults.update(overrides)
@@ -390,7 +390,7 @@ class TestFindHizFault:
 
 class TestRunTimeCct:
     def _engine(self):
-        engine = _make_engine(stable_time=5.0)
+        engine = _make_engine(thr_ss_tol=5.0)
         engine._producer.generators = [
             MagicMock(id="GEN1", lib="GenLib"),
             MagicMock(id="GEN2", lib="GenLib"),

@@ -285,6 +285,9 @@ def _pcs_replace(
         subst_dict = subst_dict | {"ssem" + operating_condition_: steady_state_error_map}
         subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
         subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
+        if "stabilized" in oc_results:
+            stabilized = "stable" if oc_results["stabilized"] else "\\textcolor{{red}}unstable"
+            subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
