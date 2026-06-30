@@ -1,10 +1,10 @@
 import pytest
-
-from dycov.model.compliance import Compliance
 from tests.dycov.utils import PERFORMANCE, execute_tool
 
+from dycov.model.compliance import Compliance
 
-def test_perf_sm_dynawo_model(dynawo_latest):
+
+def test_perf_sm_dynawo_model():
     compliance = execute_tool(
         PERFORMANCE / "SingleAux" / "GeneratorSynchronousFourWindingsTGov1SexsPss2a" / "Dynawo",
         None,
@@ -23,7 +23,7 @@ def test_perf_sm_dynawo_model(dynawo_latest):
     ] == compliance
 
 
-def test_perf_sm_complete(dynawo_latest):
+def test_perf_sm_complete():
     compliance = execute_tool(
         PERFORMANCE / "SingleAuxI" / "GeneratorSynchronousFourWindingsTGov1SexsPss2a" / "Dynawo",
         PERFORMANCE / "ProducerCurves" / "SM",
@@ -46,28 +46,28 @@ def test_perf_sm_complete(dynawo_latest):
     ] == compliance
 
 
-def test_perf_ppm_dynawo_model(dynawo_latest):
+def test_perf_ppm_dynawo_model():
     compliance = execute_tool(PERFORMANCE / "SingleAux" / "WECC4B" / "Dynawo", None, None)
     assert [
-        Compliance.NonCompliant,  # 0
+        Compliance.Compliant,  # 0
         Compliance.NonCompliant,  # 1
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
         Compliance.Compliant,  # 5
-        Compliance.FailedSimulation,  # 6
+        Compliance.NonCompliant,  # 6
     ] == compliance
 
 
 def test_perf_ppm_curves():
-    compliance = execute_tool(None, f"{PERFORMANCE}/ProducerCurves/Wind", None)
+    compliance = execute_tool(None, PERFORMANCE / "ProducerCurves" / "PPM", None)
 
     if isinstance(compliance, str) and "Validation skipped" in compliance:
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
 
     assert [
-        Compliance.NonCompliant,  # 0
-        Compliance.NonCompliant,  # 1
+        Compliance.Compliant,  # 0
+        Compliance.Compliant,  # 1
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
@@ -92,6 +92,6 @@ def test_perf_ppm_complete():
         Compliance.Compliant,  # 2
         Compliance.Compliant,  # 3
         Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.FailedSimulation,  # 6
+        Compliance.NonCompliant,  # 5
+        Compliance.NonCompliant,  # 6
     ] == compliance

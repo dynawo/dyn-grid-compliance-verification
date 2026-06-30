@@ -17,11 +17,11 @@ from dycov.validation import common
 
 
 def test_is_stable_returns_true_when_curve_stabilizes():
-    # Curve stabilizes at value 5 after t=5, stable_time=3
+    # Curve stabilizes at value 5 after t=5, thr_ss_tol=3
     time = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     curve = [1, 2, 3, 4, 5, 5, 5, 5, 5]
-    stable_time = 3
-    stable, idx = common.is_stable(time, curve, stable_time)
+    thr_ss_tol = 3
+    stable, idx = common.is_stable(time, curve, thr_ss_tol)
     assert stable is True
     assert idx != -1
 
@@ -49,9 +49,9 @@ def test_mean_absolute_error_correctness():
 def test_is_stable_raises_value_error_on_length_mismatch():
     time = [0, 1, 2]
     curve = [1, 2]
-    stable_time = 1
+    thr_ss_tol = 1
     with pytest.raises(ValueError, match="different length"):
-        common.is_stable(time, curve, stable_time)
+        common.is_stable(time, curve, thr_ss_tol)
 
 
 def test_get_txu_returns_zero_if_threshold_not_reached():

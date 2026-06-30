@@ -12,12 +12,12 @@ from unittest.mock import Mock, patch
 
 import pandas as pd
 
+from dycov.validation.common import get_ss_tolerance
 from dycov.validation.model import (
     ModelValidator,
     _check_value_by_threshold,
     _get_column_name,
     _get_measurement_name,
-    _get_ss_tolerance,
 )
 
 
@@ -38,11 +38,11 @@ def _make_validator(validations=None):
 # =========================
 
 def test_zero_setpoint_variation():
-    assert _get_ss_tolerance(0.0) == 0.005
+    assert get_ss_tolerance(0.0) == 0.005
 
 
 def test_ss_tolerance():
-    assert _get_ss_tolerance(0.1) == 0.0005
+    assert get_ss_tolerance(0.1) == 0.0005
 
 
 def test_check_value_by_threshold():
@@ -176,7 +176,7 @@ def test_check_ramp_executes():
 def test_check_mae_executes():
     validator = _make_validator(validations=["mean_absolute_error_voltage"])
 
-    results = {"compliance": True}
+    results = {"compliance": True, "stabilized": True}
     compliance_values = {
         "mae_voltage_1P": 0.005,
         "ss_error_voltage_1P": 0.001,
@@ -550,12 +550,12 @@ def test_compare_ideal_ramp_executes():
 
 def test_get_ss_tolerance_zero_variation_branch():
     with patch("dycov.configuration.cfg.Config.get_float", return_value=0.01):
-        assert _get_ss_tolerance(0.0) == 0.01
+        assert get_ss_tolerance(0.0) == 0.01
 
 
 def test_get_ss_tolerance_non_zero_branch():
     with patch("dycov.configuration.cfg.Config.get_float", return_value=0.01):
-        assert _get_ss_tolerance(0.2) == 0.002
+        assert get_ss_tolerance(0.2) == 0.002
 
 # =========================
 # Check - full time branches
