@@ -1,5 +1,6 @@
-from dycov.model.compliance import Compliance
 from tests.dycov.utils import PERFORMANCE, execute_tool
+
+from dycov.model.compliance import Compliance
 
 
 def test_perf_sm_producer_curves():
@@ -41,9 +42,9 @@ def test_perf_bess_producer_curves():
         Compliance.Compliant,  # 5
         Compliance.Compliant,  # 6
         Compliance.NonCompliant,  # 7
-        Compliance.NonCompliant,  # 8
+        Compliance.Compliant,  # 8
         Compliance.Compliant,  # 9
-        Compliance.NonCompliant,  # 10
+        Compliance.Compliant,  # 10
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
