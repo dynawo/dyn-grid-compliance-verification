@@ -31,7 +31,6 @@ class GFMParameters(Parameters):
 
     def __init__(
         self,
-        launcher_dwo: Path,
         producer_ini: Path,
         selected_pcs: str,
         output_dir: Path,
@@ -43,8 +42,6 @@ class GFMParameters(Parameters):
 
         Parameters
         ----------
-        launcher_dwo : Path
-            The absolute or relative path pointing to the Dynawo launcher executable.
         producer_ini : Path
             The directory path containing the Producer Model INI configuration files.
         selected_pcs : str
@@ -59,7 +56,7 @@ class GFMParameters(Parameters):
             A flag defining whether the Electro-Magnetic Transients (EMT) simulation engine is
             enabled.
         """
-        super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
+        super().__init__(None, selected_pcs, output_dir, only_dtr)
         self._emt = emt
         self._producer = GFMProducer(producer_ini)
 

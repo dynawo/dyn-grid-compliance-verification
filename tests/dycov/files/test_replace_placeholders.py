@@ -112,3 +112,133 @@ class TestReplacePlaceholders:
             # File should remain unchanged
             after = file_path.read_text(encoding="utf-8")
             assert "not_fault_tBegin" in after
+
+    # =========================
+    # PAR modifications
+    # =========================
+
+    def test_modify_par_file_updates_value(self):
+        from dycov.files.replace_placeholders import modify_par_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            xml = """
+            <root xmlns="http://test">
+                <par name="param" value="1"/>
+            </root>
+            """
+            f = path / "file.xml"
+            f.write_text(xml, encoding="utf-8")
+
+            modify_par_file(path, "file.xml", "param", 5.0)
+
+            content = f.read_text()
+            assert 'value="5.0"' in content
+
+    # =========================
+    # Add parameters
+    # =========================
+
+    def test_add_parameters_add(self):
+        from dycov.files.replace_placeholders import add_parameters
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            xml = """
+            <root xmlns="http://test">
+                <set id="solver1"></set>
+            </root>
+            """
+            f = path / "file.xml"
+            f.write_text(xml, encoding="utf-8")
+
+            add_parameters(
+                path,
+                "file.xml",
+                "solver1",
+                [{"type": "DOUBLE", "name": "p1", "value": "1"}],
+            )
+
+            content = f.read_text()
+            assert "p1" in content
+
+    def test_add_parameters_update(self):
+        from dycov.files.replace_placeholders import add_parameters
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            xml = """
+            <root xmlns="http://test">
+                <set id="solver1">
+                    <par name="p1" value="1"/>
+                </set>
+            </root>
+            """
+            f = path / "file.xml"
+            f.write_text(xml, encoding="utf-8")
+
+            add_parameters(
+                path,
+                "file.xml",
+                "solver1",
+                [{"type": "DOUBLE", "name": "p1", "value": "5"}],
+            )
+
+            content = f.read_text()
+            assert 'value="5"' in content
+
+    # =========================
+    # Fault PAR
+    # =========================
+
+    def test_fault_par_file_updates_all(self):
+        from dycov.files.replace_placeholders import fault_par_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            xml = """
+            <root xmlns="http://test">
+                <par name="fault_tEnd" value="1"/>
+                <par name="fault_RPu" value="1"/>
+                <par name="fault_XPu" value="1"/>
+            </root>
+            """
+            f = path / "file.xml"
+            f.write_text(xml, encoding="utf-8")
+
+            fault_par_file(path, "file.xml", 2.0, 3.0, 4.0)
+
+            content = f.read_text()
+            assert 'value="2.0"' in content
+            assert 'value="4.0"' in content
+            assert 'value="3.0"' in content
+
+    # =========================
+    # Fault time main branch
+    # =========================
+
+    def test_fault_time_updates_values(self):
+        from dycov.files.replace_placeholders import fault_time
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+
+            xml = """
+            <root xmlns="http://test">
+                <set id="NodeFault">
+                    <par name="fault_tBegin" value="1"/>
+                    <par name="fault_tEnd" value="1"/>
+                </set>
+                <set id="DisconnectLine">
+                    <par name="event_tEvent" value="1"/>
+                </set>
+            </root>
+            """
+
+            f = path / "file.xml"
+            f.write_text(xml, encoding="utf-8")
+
+            fault_time(f, 2.0)
+
+            content = f.read_text()
+            assert 'value="3.0"' in content

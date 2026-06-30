@@ -21,11 +21,7 @@ from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import (
-    CurvesAvailability,
-    CurvesCheckResult,
-    SimulationError,
-)
+from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -114,12 +110,12 @@ class Benchmark:
         self._lib_path = Path(config.get_value("Global", "lib_path"))
         self._figures_description = None
 
-        stable_time = config.get_float("GridCode", "stable_time", 100.0)
+        thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
         (
             oc_names,
             curves_manager,
             validator,
-        ) = self.__prepare_benchmark_validation(parameters, producer, stable_time)
+        ) = self.__prepare_benchmark_validation(parameters, producer, thr_ss_tol)
         self._curves_manager = curves_manager
         self._validator = validator
         self._oc_list = [
@@ -140,7 +136,7 @@ class Benchmark:
             manage_files.create_dir(working_oc_dir)
 
     def __prepare_benchmark_validation(
-        self, parameters: Parameters, producer: Producer, stable_time: float
+        self, parameters: Parameters, producer: Producer, thr_ss_tol: float
     ) -> tuple[list, CurvesManager | None, Validator | None]:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         oc_names = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
@@ -152,7 +148,7 @@ class Benchmark:
             parameters,
             producer,
             pcs_benchmark_name,
-            stable_time,
+            thr_ss_tol,
             self._lib_path,
             self._templates_path,
             self._pcs_name,
@@ -173,7 +169,7 @@ class Benchmark:
             validator = PerformanceValidator(
                 curves_manager,
                 producer,
-                stable_time,
+                thr_ss_tol,
                 validations,
                 curves_manager.is_field_measurements(),
                 self._pcs_name,
@@ -793,9 +789,10 @@ class Benchmark:
             if self._validator.is_defined_imax_reac():
                 gen_imax = self._curves_manager.get_generators_imax()
                 voltage_dip = self._curves_manager.get_voltage_dip()
-                results["reactive_current_target"] = {
-                    key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
-                }
+                if voltage_dip is not None and gen_imax is not None:
+                    results["reactive_current_target"] = {
+                        key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
+                    }
 
             summary_list.append(
                 Summary(

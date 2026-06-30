@@ -2,50 +2,36 @@
 Welcome to Dynamic grid Compliance Verification's documentation!
 ================================================================
 
-The **Dynamic grid Compliance Verification** tool (dycov for short) is designed to automate
-most tasks related to the validation of RMS models, in the context of compliance
-requirements for new generation facilities. It contemplates **model validation**
-properly speaking (i.e., *"does the model and its parameterization match the
-actual behavior?"*), as well as **electric performance** requirements testing
-(i.e., *"does the behavior, either measured or simulated, pass the grid code
-requirements for connection?"*).
+**Dynamic grid Compliance Verification** (DyCoV for short) automates the
+verification of dynamic grid compliance requirements for electrical
+installations — wind and solar farms, battery energy storage systems, and
+synchronous machines.
 
-The tool is built with **Python**. Internally it is structured as a series of independent
-tests, each producing its own report in PDF. These tests correspond to the
-*PCSs I** in RTE's Connection Network code - `DTR document`__. To be specific, they contain the following
-tests:
+It implements three main workflows:
 
-* **Electric Performance tests (Synchronous Machines)**: PCSs I2 (except
-  stability margin calculations), I3, I4, I6, I7, I8, and I10.
-* **Electric Performance tests (Power Park Modules)**: PCSs I2 (except
-  stability margin calculations), I5, I6, I7, and I10.
-* **RMS Model Validation tests (Power Park Modules)**: PCS I16, structured into:
-    - **Zone 1** (WT-level): Fault Ride-Through, Setpoint steps, Grid Frequency ramps, and Grid Voltage step.
-    - **Zone 3** (plant-level): Voltage Regulation behavior (like I2), Fault
-      Ride-Through (like I5), Voltage-dip Ride-Through (like I6), Voltage-swell Ride-Through
-      (like I7), and Islanding (like I10).
+* **RMS model validation** — verifies that the dynamic response of a model
+  matches a reference behavior within the tolerances defined by RTE (PCS I16,
+  Zones 1 and 3).
 
-Correspondingly, the results directory is structured along these lines.
+* **Electric performance verification** — verifies that an installation meets
+  the dynamic performance requirements of RTE's grid code, as specified in the
+  applicable `DTR <https://www.services-rte.com/files/live//sites/services-rte/files/documentsLibrary/20240729_DTR_5867_fr>`_
+  PCSs:
 
-__ https://www.services-rte.com/files/live//sites/services-rte/files/documentsLibrary/20240729_DTR_5867_fr
+  - *Synchronous Machines*: PCSs I2, I3, I4, I6, I7, I8, and I10.
+  - *Power Park Modules*: PCSs I2, I5, I6, I7, and I10.
+  - *Battery Energy Storage Systems*: PCSs I2, I5, I6, I7, and I10.
 
-Usually, the inputs are simply three files: the **DYD** and **PAR** files
-corresponding to the Dynawo model on the producer's side (i.e., everything
-"left" of the connection point, the PDR bus), and an **INI** file containing the parameters and metadata that cannot be provided in the DYD/PAR
-files. It is also possible to provide a set of curves as input to the tool, these
-should be provided as a file in one of the accepted formats plus a
-special DICT file that describes the format (see :ref:`Producer Curves <producerCurves>` below).
-See the available examples in the `examples` directory, at the top level of the git repository.
+* **Grid-Forming (GFM) envelope generation** — analytically computes
+  admissible dynamic response envelopes for Grid-Forming units under specific
+  grid disturbances, without running any time-domain simulation.
 
-Additionally, in the case of *Model Validation*, the user must also provide the
-**reference curves** for each test, against which the simulated curves will be
-compared. They should be provided as a file in one of the accepted formats plus a
-special DICT file that describes the format (see :ref:`Reference Curves <referenceCurves>`
-below).
+The tool is built with **Python** and uses **Dynawo** as the underlying RMS
+simulator. The producer response can alternatively be provided as a set of
+curves (measured or pre-simulated), in which case no Dynawo model is needed.
 
-In the case of *Electric Performance* testing, the user has also the option of
-providing test curves to be used along Dynawo simulations (just for plotting both
-and comparing them).
+For RMS model validation, a set of reference curves is always required in
+addition to the producer response.
 
 
 .. _get-started:
@@ -53,7 +39,8 @@ and comparing them).
 Get Started
 ===========
 
-These sections cover the basics of getting started with Dynamic grid Compliance Verification.
+New to DyCoV? Start here. These sections cover installation and your first
+run.
 
 .. toctree::
    :maxdepth: 3
@@ -61,37 +48,41 @@ These sections cover the basics of getting started with Dynamic grid Compliance 
 
    usage/installation
    usage/quickstart
+   examples
+
 
 .. _user-guides:
 
-Using Dynamic grid Compliance Verification
-==========================================
+User Guide
+==========
 
-These sections cover various topics in using Dynamic grid Compliance Verification for various
-use-case. They are comprehensive guide to using Dynamic grid Compliance Verification in many contexts and assume
-more knowledge of Dynamic grid Compliance Verification. If you are new to Dynamic grid Compliance Verification, we recommend
-starting with :ref:`get-started`.
+These sections cover the main topics in depth. If you are new to DyCoV, we
+recommend reading :ref:`get-started` first.
 
 .. toctree::
    :maxdepth: 3
-   :caption: Using Dynamic grid Compliance Verification
+   :caption: User Guide
 
    usage/validations
    usage/inputs
+   usage/understanding_reports
    usage/results
    usage/configuration
    usage/gfm_envelopes
 
+
+.. _reference:
+
 Reference
 =========
 
-Reference documentation is more complete and programmatic in nature, it is a collection of
-information that can be quickly referenced. If you would like usecase-driven documentation, see
-:ref:`get-started` or :ref:`user-guides`.
+Quick-access reference for the most frequently consulted information.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Reference
 
-   usage/configuration
    examples
+   usage/configuration
+   usage/inputs
+   usage/cli_reference
