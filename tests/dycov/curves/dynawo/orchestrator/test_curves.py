@@ -15,6 +15,7 @@ collaborators correctly, not from complex logic.  We therefore:
   2. Test each public method by asserting on which collaborator is called,
      with which arguments, and how the return value is assembled.
 """
+
 from collections import namedtuple
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
@@ -111,7 +112,7 @@ def _make_curves(mock_config, mock_be_cls, mock_ms_cls, mock_pc, **overrides):
                 omega_path=Path("/omega"),
                 pcs_path=Path("/pcs"),
                 job_name="job1",
-                stable_time=5.0,
+                thr_ss_tol=5.0,
             )
             instance._producer = producer
             instance.get_producer = MagicMock(return_value=producer)
@@ -419,7 +420,7 @@ class TestObtainSimulatedCurve:
             curves._omega_path = Path("/omega")
             curves._pcs_path = Path("/pcs")
             curves._job_name = "job1"
-            curves._stable_time = 5.0
+            curves._thr_ss_tol = 5.0
             curves._f_nom = 50.0
             curves._s_nref = 100.0
             curves._sim_time = 30.0
