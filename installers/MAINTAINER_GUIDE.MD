@@ -85,6 +85,15 @@ to the GitHub release:
 | `run_dycov_docker.sh` | Method 4 (Linux Docker) |
 | `linux_install.sh` | Method 3 (Linux Native) |
 | `Dynawo_omc_v1.8.0.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`) |
+| `dycov_par_tool.zip` | Standalone Dynawo PAR utility (also bundled inside every install method) |
+
+The standalone Dynawo PAR utility (`tools/dynawo_par`) is shipped to end users by
+every install method — it is copied into `~/tools/dynawo_par` in the Docker/WSL
+image (via `start_dycov.sh`) and into `<install_dir>/tools/dynawo_par` by
+`linux_install.sh`. `dycov_par_tool.zip` is additionally provided as a direct
+download for users who only want the script. Being dependency-free (standard
+library only), it runs with any Python 3 — e.g.
+`python tools/dynawo_par/generate_par.py --excel <file.xlsx>`.
 
 ---
 

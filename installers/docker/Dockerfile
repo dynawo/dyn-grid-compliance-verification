@@ -8,6 +8,7 @@ FROM python:3.13-slim-bookworm
 
 ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
+ARG dycov_TOOLS=tools
 ARG DYNAWO_DIR_NAME=dynawo_build
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,6 +35,10 @@ RUN uv pip install --system /tmp/$dycov_PKG && rm /tmp/$dycov_PKG
 
 # Create directory and copy examples
 COPY ./$dycov_EXAMPLES /opt/dycov/examples
+
+# Copy the standalone Dynawo PAR generation utility (tools/dynawo_par).
+# It is a dependency-free helper, not part of the dycov package.
+COPY ./$dycov_TOOLS /opt/dycov/tools
 
 # Third layer:
 #   - Install Dynawo from the host path provided at build time.
