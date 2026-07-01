@@ -46,6 +46,12 @@ if [ -d "/opt/dycov/manual" ] && [ ! -d "$USER_HOME/manual" ]; then
     chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/manual"
 fi
 
+if [ -d "/opt/dycov/tools" ] && [ ! -d "$USER_HOME/tools" ]; then
+    echo "Copying tools to $USER_HOME/tools..."
+    cp -r /opt/dycov/tools "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/tools"
+fi
+
 # Leave the user in an interactive shell
 echo -e "\n-----------------------------------------------------------"
 echo -e " Dycov Container Environment"
@@ -54,6 +60,7 @@ echo -e " User:     $dycov_USER ($dycov_UID)"
 echo -e " Examples: ~/examples"
 echo -e " Manual:   ~/manual/html/index.html  (HTML)"
 echo -e "           ~/manual/dycov.pdf        (PDF)"
+echo -e " Tools:    ~/tools/dynawo_par/generate_par.py  (Excel -> Dynawo PAR)"
 echo -e " Type 'exit' to quit."
 echo -e "-----------------------------------------------------------\n"
 
