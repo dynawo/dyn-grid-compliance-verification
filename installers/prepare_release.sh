@@ -15,7 +15,6 @@
 #
 # Artifacts generated:
 #   - Dynawo_omc_v1.8.0.zip        (zipped from DYNAWO_DIR)
-#   - dycov_examples.zip            (examples/, downloaded separately by the installer)
 #   - linux_install.sh              (updated with new version and URLs)
 #   - dycov_rawimage.tar.gz         (Docker image export)
 #   - import_image.sh
@@ -75,11 +74,6 @@ VERSION_PLAIN="${VERSION#v}"
 
 # Repo root = current directory
 REPO_ROOT="$PWD"
-
-# Base URL where this release's assets will live on GitHub. Used to point the
-# generated installer at the examples zip (uploaded alongside the other assets).
-RELEASE_BASE_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/${VERSION}"
-EXAMPLES_ZIP_URL="${RELEASE_BASE_URL}/dycov_examples.zip"
 
 ###############################################################################
 # Strict Git safety checks
@@ -153,19 +147,6 @@ zip -qr "$DYNAWO_ZIP" "$DYNAWO_BASENAME"
 info "$DYNAWO_ZIP_NAME generated."
 
 ###############################################################################
-# Step 1b — Generate examples ZIP
-###############################################################################
-# Shipped as a standalone release asset so the native installer can fetch it
-# separately and clone the source WITHOUT the (large) examples/ tree.
-step "Step 1b: Generating dycov_examples.zip from examples/..."
-
-EXAMPLES_ZIP="$OUTPUT_DIR/dycov_examples.zip"
-rm -f "$EXAMPLES_ZIP"
-( cd "$REPO_ROOT" && zip -qr "$EXAMPLES_ZIP" examples -x '*__pycache__*' )
-EXAMPLES_SHA256=$(sha256sum "$EXAMPLES_ZIP" | cut -d' ' -f1)
-info "dycov_examples.zip generated. SHA256: $EXAMPLES_SHA256"
-
-###############################################################################
 # Step 2 — Update pyproject.toml in the repo
 ###############################################################################
 step "Step 2: Updating pyproject.toml (version -> $VERSION_PLAIN)..."
@@ -198,15 +179,9 @@ sed -i -E "s|^TARGET_BRANCH=.*|TARGET_BRANCH=\"${VERSION}\"|" "$LINUX_INSTALL_OU
 # Update DYNAWO_SHA256SUM with the checksum of the zip generated in Step 1
 sed -i -E "s|^DYNAWO_SHA256SUM=.*|DYNAWO_SHA256SUM=\"${DYNAWO_SHA256}\"|" "$LINUX_INSTALL_OUT"
 
-# Point the installer at the examples release asset and its checksum. Setting
-# EXAMPLES_ZIP_URL is what switches the installer to the sparse clone (no
-# examples) + separate examples download.
-sed -i -E "s|^EXAMPLES_ZIP_URL=.*|EXAMPLES_ZIP_URL=\"${EXAMPLES_ZIP_URL}\"|" "$LINUX_INSTALL_OUT"
-sed -i -E "s|^EXAMPLES_SHA256=.*|EXAMPLES_SHA256=\"${EXAMPLES_SHA256}\"|" "$LINUX_INSTALL_OUT"
-
 info "linux_install.sh updated."
 info "--- Relevant lines ---"
-grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM|EXAMPLES_ZIP_URL|EXAMPLES_SHA256)=" "$LINUX_INSTALL_OUT"
+grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM)=" "$LINUX_INSTALL_OUT"
 echo "----------------------"
 
 ###############################################################################
