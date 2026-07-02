@@ -199,11 +199,33 @@ cp "$MANUAL_BUILD_DIR/latex/dycov.pdf" "$MANUAL_DIR/"
 
 
 ########################################
+# 7b. Copy user-facing tutorials
+########################################
+
+# User tutorials (Markdown), kept as-is so their relative cross-links work. The
+# docs/installation guides are intentionally excluded: they are pre-install
+# guides and add no value inside an already-installed image.
+echo "Copying tutorials..."
+TUTORIALS_SRC="$ROOT_DIR/docs/tutorials"
+if [[ ! -d "$TUTORIALS_SRC" ]]; then
+    echo "ERROR: tutorials not found at $TUTORIALS_SRC"
+    exit 1
+fi
+# Only the tutorials themselves (*.md); build helpers (md2pdf.sh,
+# listings-setup.tex) are not shipped.
+mkdir -p "$TEMP_DIR/tutorials"
+cp -a "$TUTORIALS_SRC"/*.md "$TEMP_DIR/tutorials/"
+
+
+########################################
 # 8. Copy Dockerfile + start script
 ########################################
 
 cp Dockerfile "$TEMP_DIR/"
 cp start_dycov.sh "$TEMP_DIR/"
+# Normalize the exec bit so the build context is deterministic regardless of the
+# host checkout's file mode (Windows/WSL, git archive, core.fileMode=false, ...).
+chmod 0755 "$TEMP_DIR/start_dycov.sh"
 
 
 ########################################
@@ -218,6 +240,7 @@ docker build \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
     --build-arg dycov_TOOLS="tools" \
+    --build-arg dycov_TUTORIALS="tutorials" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \
     --build-arg MANUAL_BUILD="manual_build" \
     "$TEMP_DIR"

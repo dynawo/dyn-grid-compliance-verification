@@ -194,10 +194,17 @@ MANUAL_BUILD_DIR="$REPO_ROOT/docs/manual/build"
 # Clean any previous build
 rm -rf "$MANUAL_BUILD_DIR"
 
-# Install sphinx in a temporary venv and build
+# Install sphinx AND dycov in a temporary venv and build.
+# helps.py invokes the `dycov` CLI (dycov --help, dycov generate --help, ...) to
+# generate the command help pages, so dycov must be installed in the venv. This
+# keeps the manual build self-contained instead of relying on a dev environment
+# having dycov on PATH. The version is forced to match the release (dycov uses
+# setuptools_scm), reusing the same var as linux_install.sh.
 uv venv "$REPO_ROOT/.manual_venv" --python 3.13 --quiet
 source "$REPO_ROOT/.manual_venv/bin/activate"
 uv pip install -q sphinx
+SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov=${VERSION_PLAIN} \
+    uv pip install -q "$REPO_ROOT"
 cd "$REPO_ROOT/docs/manual"
 make latexpdf > /dev/null 2>&1
 make html > /dev/null 2>&1
@@ -281,4 +288,9 @@ echo "Files to upload to GitHub release:"
 ls -lh "$OUTPUT_DIR" | grep -v '^total' | awk '{print "  " $NF " (" $5 ")"}'
 echo ""
 warn "pyproject.toml has been updated in the repo. Remember to commit and push before creating the GitHub release."
+echo ""
+warn "The loose *.sh artifacts (import_image.sh, run_dycov_docker.sh, linux_install.sh)"
+warn "lose their exec bit when downloaded from GitHub. End users must run 'chmod +x'"
+warn "before executing them; this is documented in docs/installation/using_the_provided_image.md"
+warn "(section 3.2) and in the manual's usage/installation page."
 echo ""
