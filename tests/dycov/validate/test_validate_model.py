@@ -21,15 +21,15 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 6
         Compliance.Compliant,  # 7
         Compliance.Compliant,  # 8
-        Compliance.Compliant,  # 9
+        Compliance.WithoutCurves,  # 9
         Compliance.Compliant,  # 10
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
         Compliance.Compliant,  # 14
         Compliance.Compliant,  # 15
-        Compliance.Compliant,  # 16
-        Compliance.Compliant,  # 17
+        Compliance.WithoutCurves,  # 16
+        Compliance.WithoutCurves,  # 17
         Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
         Compliance.Compliant,  # 20
@@ -62,10 +62,10 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 13
         Compliance.Compliant,  # 14
         Compliance.Compliant,  # 15
-        Compliance.Compliant,  # 16
+        Compliance.WithoutCurves,  # 16
         Compliance.Compliant,  # 17
         Compliance.Compliant,  # 18
-        Compliance.Compliant,  # 19
+        Compliance.WithoutCurves,  # 19
         Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
@@ -78,10 +78,10 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 29
         Compliance.Compliant,  # 30
         Compliance.Compliant,  # 31
-        Compliance.Compliant,  # 32
-        Compliance.Compliant,  # 33
-        Compliance.Compliant,  # 34
-        Compliance.Compliant,  # 35
+        Compliance.WithoutCurves,  # 32
+        Compliance.WithoutCurves,  # 33
+        Compliance.WithoutCurves,  # 34
+        Compliance.WithoutCurves,  # 35
         Compliance.Compliant,  # 36
         Compliance.Compliant,  # 37
         Compliance.Compliant,  # 38
