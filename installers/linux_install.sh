@@ -36,6 +36,14 @@ DYNAWO_SHA256SUM="fbba80aa7ac6a990928b601e339a43ec49d538b956c97a51d038d1dcdea487
 # Default branch is master
 DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
 
+# Examples delivery. In release mode, prepare_release.sh fills these in so the
+# examples are downloaded as a separate release asset (and the source is cloned
+# without them, which is dramatically faster). When empty (dev/master), the
+# examples are taken from the repository clone instead.
+EXAMPLES_ZIP_URL=""
+EXAMPLES_SHA256=""
+EXAMPLES_ZIP_FILE="dycov_examples.zip"
+
 # Script State Variables
 INSTALL_DIR_BASE="$PWD/dycov"
 NON_INTERACTIVE=false
@@ -43,6 +51,7 @@ CUSTOM_ZIP_USED=false
 DIRECT_URL=""
 LOCAL_SOURCE_ZIP=""
 INSTALL_DYNAWO=true
+INSTALL_EXAMPLES=true
 
 # Local paths
 INSTALL_DIR="$INSTALL_DIR_BASE"
@@ -232,6 +241,17 @@ else
     color_msg "Non-interactive mode: Installing Dynawo automatically."
 fi
 
+if [[ "$NON_INTERACTIVE" == false ]]; then
+    echo -n -e "\nDo you want to download the examples? (~770 MB) [Y/n] " >&6
+    read -r response </dev/tty
+    case "$response" in
+        [nN][oO] | [nN]) INSTALL_EXAMPLES=false; color_msg "Skipping examples." ;;
+        *) INSTALL_EXAMPLES=true; color_msg "Confirmed examples installation." ;;
+    esac
+else
+    color_msg "Non-interactive mode: Installing examples automatically."
+fi
+
 if [[ "$INSTALL_DYNAWO" == true ]]; then
     if [[ "$CUSTOM_ZIP_USED" == false ]] && [[ "$TARGET_BRANCH" != "master" ]]; then
         DYNAWO_ZIP_URL="https://github.com/dynawo/dyn-grid-compliance-verification/releases/download/$TARGET_BRANCH/$DYNAWO_ZIP_FILE"
@@ -310,6 +330,17 @@ elif [ -n "$DIRECT_URL" ]; then
     fi
     mv "$UNZIPPED_DIR" "$TMP_LOCAL_REPO"
 
+elif [ -n "$EXAMPLES_ZIP_URL" ]; then
+    # Release mode: the examples are downloaded separately (see Step 5), so we
+    # clone WITHOUT them via a partial + sparse checkout. This avoids fetching
+    # and writing the ~770 MB examples/ tree and is dramatically faster.
+    # Cone mode also keeps the root files (pyproject.toml, README.md, LICENSE)
+    # that pip/setuptools need.
+    color_msg "Step 2: Sparse-cloning the DyCoV repository without examples (branch/tag: $TARGET_BRANCH)..."
+    git clone --progress --no-checkout --depth 1 --single-branch --branch "$TARGET_BRANCH" \
+              --filter=blob:none -c advice.detachedHead=false "$REPO_URL" "$TMP_LOCAL_REPO"
+    git -C "$TMP_LOCAL_REPO" sparse-checkout set --cone src docs/manual docs/tutorials tools
+    git -C "$TMP_LOCAL_REPO" checkout
 else
     color_msg "Step 2: Shallow-cloning the DyCoV repository (branch/tag: $TARGET_BRANCH)..."
     git clone --progress --depth 1 --single-branch --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
@@ -362,7 +393,31 @@ deactivate
 # Copy Examples and Build the Manual
 ################################################################################
 color_msg "Step 5: Installing examples, tutorials and building the manual..."
-cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
+# Examples: from the release zip asset (release mode), or from the repository
+# clone (dev/master). Skipped entirely if the user declined.
+if [[ "$INSTALL_EXAMPLES" == true ]]; then
+    if [ -n "$EXAMPLES_ZIP_URL" ]; then
+        color_msg "Downloading examples from: $EXAMPLES_ZIP_URL"
+        cd "$INSTALL_DIR"
+        curl -O -L --fail "$EXAMPLES_ZIP_URL"
+        if [ -n "$EXAMPLES_SHA256" ]; then
+            color_msg "Verifying examples checksum..."
+            EXAMPLES_SHA256_CALCULATED=$(sha256sum "$EXAMPLES_ZIP_FILE" | cut -d" " -f1)
+            if [ "$EXAMPLES_SHA256_CALCULATED" != "$EXAMPLES_SHA256" ]; then
+                color_err_msg "FATAL ERROR: examples checksum mismatch. Aborting."
+                exit 1
+            fi
+        else
+            color_msg "NOTICE: No checksum provided for examples; skipping verification."
+        fi
+        unzip -q "$EXAMPLES_ZIP_FILE"
+        rm -f "$EXAMPLES_ZIP_FILE"
+    else
+        cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
+    fi
+else
+    color_msg "Skipping examples installation (user choice)."
+fi
 # User-facing tutorials (only the *.md files, so their relative cross-links
 # work). Build helpers (md2pdf.sh, listings-setup.tex) and the docs/installation
 # guides are intentionally excluded (the user is already installed here).
@@ -405,7 +460,11 @@ exec 6>&- 7>&-
 echo -e ""
 echo -e "${GREEN}INSTALLATION COMPLETED SUCCESSFULLY!${NC}"
 echo -e "${GREEN}To start using the tool, run: source $INSTALL_DIR/activate_dycov${NC}"
-echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
+if [ -d "$INSTALL_DIR/examples" ]; then
+    echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
+else
+    echo -e "${GREEN}Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
+fi
 if [ -d "$INSTALL_DIR/tools/dynawo_par" ]; then
     echo -e "${GREEN}Dynawo PAR utility: python $INSTALL_DIR/tools/dynawo_par/generate_par.py --excel <file.xlsx>${NC}"
 fi
