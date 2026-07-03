@@ -187,7 +187,7 @@ https://learn.microsoft.com/en-us/windows/wsl/install
 
 Download the following files:
 
-- [dycov_rawimage.tar.gz](https://github.com/dynawo/dynation/releases/latest/download/dycov_rawimage.tar.gz)
+- [dycov_rawimage.tar.gz](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/dycov_rawimage.tar.gz)
 - [import_wsl.bat](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.bat)
 - [import_wsl.ps1](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/import_wsl.ps1)
 - [run_dycov_wsl.ps1](https://github.com/dynawo/dyn-grid-compliance-verification/releases/latest/download/run_dycov_wsl.ps1)
