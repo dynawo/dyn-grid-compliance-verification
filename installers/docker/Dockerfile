@@ -9,6 +9,7 @@ FROM python:3.13-slim-bookworm
 ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
 ARG dycov_TOOLS=tools
+ARG dycov_TUTORIALS=tutorials
 ARG DYNAWO_DIR_NAME=dynawo_build
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -39,6 +40,11 @@ COPY ./$dycov_EXAMPLES /opt/dycov/examples
 # Copy the standalone Dynawo PAR generation utility (tools/dynawo_par).
 # It is a dependency-free helper, not part of the dycov package.
 COPY ./$dycov_TOOLS /opt/dycov/tools
+
+# Copy the user-facing tutorials (Markdown). Kept as-is so their relative
+# cross-links work. docs/installation is intentionally not shipped: it is a
+# pre-install guide with no value inside an already-installed image.
+COPY ./$dycov_TUTORIALS /opt/dycov/tutorials
 
 # Third layer:
 #   - Install Dynawo from the host path provided at build time.
@@ -71,7 +77,11 @@ RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dyc
 ARG MANUAL_BUILD=manual_build
 COPY ./$MANUAL_BUILD /opt/dycov/manual
 
-# Copy the entrypoint shell script
+# Copy the entrypoint shell script.
+# Set the exec bit explicitly: COPY preserves the source file mode, so if the
+# checkout lost +x (Windows/WSL, git archive, core.fileMode=false, ...) the
+# ENTRYPOINT would fail at runtime with "permission denied".
 COPY start_dycov.sh /
+RUN chmod 0755 /start_dycov.sh
 
 ENTRYPOINT ["/start_dycov.sh"]
