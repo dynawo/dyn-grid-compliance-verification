@@ -361,8 +361,13 @@ deactivate
 ################################################################################
 # Copy Examples and Build the Manual
 ################################################################################
-color_msg "Step 5: Installing examples and building the manual..."
+color_msg "Step 5: Installing examples, tutorials and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
+# User-facing tutorials (only the *.md files, so their relative cross-links
+# work). Build helpers (md2pdf.sh, listings-setup.tex) and the docs/installation
+# guides are intentionally excluded (the user is already installed here).
+mkdir -p "$INSTALL_DIR"/tutorials
+cp -a "$TMP_LOCAL_REPO"/docs/tutorials/*.md "$INSTALL_DIR"/tutorials/
 # shellcheck source=/dev/null
 . "$INSTALL_DIR"/activate_dycov
 uv pip install -q sphinx
@@ -373,7 +378,7 @@ deactivate
 mkdir -p "$INSTALL_DIR"/manual
 mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
 mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
-color_msg "Examples and manuals ready."
+color_msg "Examples, tutorials and manuals ready."
 
 ################################################################################
 # Install standalone tools (e.g. the Dynawo PAR generation utility)
@@ -400,6 +405,7 @@ exec 6>&- 7>&-
 echo -e ""
 echo -e "${GREEN}INSTALLATION COMPLETED SUCCESSFULLY!${NC}"
 echo -e "${GREEN}To start using the tool, run: source $INSTALL_DIR/activate_dycov${NC}"
+echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
 if [ -d "$INSTALL_DIR/tools/dynawo_par" ]; then
     echo -e "${GREEN}Dynawo PAR utility: python $INSTALL_DIR/tools/dynawo_par/generate_par.py --excel <file.xlsx>${NC}"
 fi
