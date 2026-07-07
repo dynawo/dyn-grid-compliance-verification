@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# (c) 2023/24 RTE
+# (c) 2023-2025 RTE
 # Developed by Grupo AIA
-# marinjl@aia.es
-# omsg@aia.es
-# demiguelm@aia.es
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
 #
 import pytest
 
 from dycov.model.parameters import GenParams, LineParams, LoadParams, Terminal, XfmrParams
 from dycov.sanity_checks import topology_checks
 
-
 # -------------------------
 # Helper functions
 # -------------------------
-def make_generator(gen_type="S"):
+
+
+def make_generator(gen_type="S", converter_lv_control=True):
     if gen_type == "S":
         return [
             GenParams(
@@ -30,13 +31,14 @@ def make_generator(gen_type="S"):
                 q=0.05,
                 voltage_droop=None,
                 use_voltage_droop=False,
+                converter_lv_control=converter_lv_control,
             )
         ]
     elif gen_type == "M":
         return [
             GenParams(
                 id="Wind_Turbine1",
-                lib="WTG4AWeccCurrentSource1",
+                lib="WTG4AWeccCurrentSource",
                 terminals=(Terminal(connected_equipment=""),),
                 s_nom=90,
                 i_max=100.0,
@@ -45,10 +47,11 @@ def make_generator(gen_type="S"):
                 q=0.05,
                 voltage_droop=None,
                 use_voltage_droop=False,
+                converter_lv_control=converter_lv_control,
             ),
             GenParams(
                 id="Wind_Turbine2",
-                lib="WTG4AWeccCurrentSource1",
+                lib="WTG4AWeccCurrentSource",
                 terminals=(Terminal(connected_equipment=""),),
                 s_nom=90,
                 i_max=120.0,
@@ -57,12 +60,21 @@ def make_generator(gen_type="S"):
                 q=0.025,
                 voltage_droop=None,
                 use_voltage_droop=False,
+                converter_lv_control=converter_lv_control,
             ),
         ]
 
 
-def make_transformers(topology="S"):
+def make_transformers(topology="S", generators=None):
+    """Build StepUp transformers.
+
+    When generators is provided, each transformer's first terminal points to the
+    corresponding generator id, establishing the Gen → Xfmr connection that
+    _find_stepup_xfmr relies on.  When generators is None the terminals are left
+    empty, so no generator-xfmr association exists.
+    """
     if topology == "S":
+        gen_id = generators[0].id if generators else ""
         return [
             XfmrParams(
                 id="StepUp_Xfmr",
@@ -74,7 +86,10 @@ def make_transformers(topology="S"):
                 r_tfo=0.9574,
                 alpha_tfo=0.0,
                 par_id="",
-                terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
+                terminals=(
+                    Terminal(connected_equipment=gen_id),
+                    Terminal(connected_equipment=""),
+                ),
             )
         ]
     elif topology == "M":
@@ -89,7 +104,10 @@ def make_transformers(topology="S"):
                 r_tfo=0.9574,
                 alpha_tfo=0.0,
                 par_id="",
-                terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
+                terminals=(
+                    Terminal(connected_equipment=generators[0].id if generators else ""),
+                    Terminal(connected_equipment=""),
+                ),
             ),
             XfmrParams(
                 id="StepUp_Xfmr2",
@@ -101,7 +119,10 @@ def make_transformers(topology="S"):
                 r_tfo=0.9574,
                 alpha_tfo=0.0,
                 par_id="",
-                terminals=(Terminal(connected_equipment=""), Terminal(connected_equipment="")),
+                terminals=(
+                    Terminal(connected_equipment=generators[1].id if generators else ""),
+                    Terminal(connected_equipment=""),
+                ),
             ),
         ]
 
@@ -176,7 +197,7 @@ def _assert_error_contains(pytest_wrapped_e, topology_name):
 
 
 # -------------------------
-# Tests
+# Tests: topology validation
 # -------------------------
 
 
@@ -366,3 +387,102 @@ def test_check_topology_MAuxi_success():
         main_transformer,
         internal_line,
     )
+
+
+# -------------------------
+# Tests: converter_lv_control warning
+# -------------------------
+
+
+def test_converter_lv_control_no_warning_when_lv_true(caplog):
+    """converter_lv_control=True → no warning even when xfmr terminal references the gen."""
+    generators = make_generator("S", converter_lv_control=True)
+    transformers = make_transformers("S", generators)  # xfmr terminal → gen.id
+
+    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
+
+    assert "ConverterLVControl=False" not in caplog.text
+
+
+def test_converter_lv_control_no_warning_when_xfmr_not_referencing_gen(caplog):
+    """converter_lv_control=False but no xfmr terminal references the gen → no warning."""
+    generators = make_generator("S", converter_lv_control=False)
+    transformers = make_transformers("S")  # xfmr terminals are empty, no gen reference
+
+    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
+
+    assert "ConverterLVControl=False" not in caplog.text
+
+
+def test_converter_lv_control_warning_single_generator(caplog):
+    """converter_lv_control=False + xfmr terminal references the gen → warning emitted."""
+    caplog.set_level("WARNING", logger="Sanity Checks")
+
+    generators = make_generator("S", converter_lv_control=False)
+    transformers = make_transformers("S", generators)  # xfmr terminal → gen.id
+
+    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
+
+    assert "ConverterLVControl=False" in caplog.text
+    assert "Synch_Gen" in caplog.text
+    assert "StepUp_Xfmr" in caplog.text
+
+
+def test_converter_lv_control_warning_multiple_generators(caplog):
+    """One warning listing both generators when both have converter_lv_control=False."""
+    caplog.set_level("WARNING", logger="Sanity Checks")
+
+    generators = make_generator("M", converter_lv_control=False)
+    transformers = make_transformers("M", generators)  # each xfmr terminal → matching gen.id
+    main_transformer = make_main_transformer()
+
+    topology_checks.check_topology(
+        "M", generators, transformers, None, None, main_transformer, None
+    )
+
+    assert "ConverterLVControl=False" in caplog.text
+    assert "Wind_Turbine1 → StepUp_Xfmr1" in caplog.text
+    assert "Wind_Turbine2 → StepUp_Xfmr2" in caplog.text
+
+
+def test_converter_lv_control_warning_only_for_affected_generator(caplog):
+    """Only the gen with converter_lv_control=False connected to a xfmr appears in the warning."""
+    caplog.set_level("WARNING", logger="Sanity Checks")
+
+    generators = [
+        GenParams(
+            id="Wind_Turbine1",
+            lib="WTG4AWeccCurrentSource1",
+            terminals=(Terminal(connected_equipment=""),),
+            s_nom=90,
+            i_max=100.0,
+            par_id="",
+            p=0.1,
+            q=0.05,
+            voltage_droop=None,
+            use_voltage_droop=False,
+            converter_lv_control=False,  # affected
+        ),
+        GenParams(
+            id="Wind_Turbine2",
+            lib="WTG4AWeccCurrentSource1",
+            terminals=(Terminal(connected_equipment=""),),
+            s_nom=90,
+            i_max=120.0,
+            par_id="",
+            p=0.12,
+            q=0.025,
+            voltage_droop=None,
+            use_voltage_droop=False,
+            converter_lv_control=True,  # not affected
+        ),
+    ]
+    transformers = make_transformers("M", generators)
+    main_transformer = make_main_transformer()
+
+    topology_checks.check_topology(
+        "M", generators, transformers, None, None, main_transformer, None
+    )
+
+    assert "Wind_Turbine1 → StepUp_Xfmr1" in caplog.text
+    assert "Wind_Turbine2" not in caplog.text

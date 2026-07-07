@@ -26,7 +26,7 @@ def create_simple_dyd_and_par(
         dyd_root,
         f"{{{ns}}}blackBoxModel",
         id=gen_id,
-        lib="WTG4AWeccCurrentSource1",
+        lib="WTG4AWeccCurrentSource",
         parId="parGen",
     )
     # Transformer
@@ -213,3 +213,54 @@ def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch)
     parset_elem = etree.SubElement(par_root, f"{{{ns}}}set", id="parGen")
     nsmap = {"ns": ns}
     model_parameters._apply_control_mode(DummyGen(), parset_elem, nsmap, "USetpoint", 3)
+
+
+def test_get_grid_load():
+    from dycov.model.parameters import LoadInit
+
+    loads = [
+        LoadInit(id="l1", lib=None, p0=1, q0=2, u0=None, u_phase0=None),
+        LoadInit(id="l2", lib=None, p0=3, q0=4, u0=None, u_phase0=None),
+    ]
+
+    res = model_parameters.get_grid_load(loads)
+
+    assert res.p == 4
+    assert res.q == 6
+
+
+def test_get_grid_load_empty():
+    res = model_parameters.get_grid_load([])
+
+    assert res is None
+
+
+def test_find_output_dir(tmp_path):
+    ns = "http://x"
+    root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
+
+    etree.SubElement(root, f"{{{ns}}}outputs", directory="outdir")
+
+    f = tmp_path / "file.jobs"
+    etree.ElementTree(root).write(str(tmp_path / "file.jobs"))
+
+    res = model_parameters.find_output_dir(tmp_path, "file")
+
+    assert res == "outdir"
+
+
+def test_extract_defined_value_errors():
+    with pytest.raises(ValueError):
+        model_parameters.extract_defined_value("", "p", 1)
+
+    with pytest.raises(ValueError):
+        model_parameters.extract_defined_value("abc", "p", 1)
+
+    with pytest.raises(ValueError):
+        model_parameters.extract_defined_value("2*x", "p", 1)
+
+
+def test_extract_defined_value_numeric():
+    val = model_parameters.extract_defined_value("2.5", "p", 1)
+
+    assert val == pytest.approx(2.5)

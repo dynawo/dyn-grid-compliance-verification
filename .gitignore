@@ -17,6 +17,7 @@ __pycache__/
 
 # Tool logs
 *.log
+public_api_audit.txt
 
 # VS Code
 .vscode
@@ -28,6 +29,7 @@ dist/
 build/
 installers/docker/temp*/
 release_*/
+src/dycov/_build_info.py
 
 # Exclude the recommended virtual env:
 dycov_venv/

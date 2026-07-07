@@ -33,21 +33,38 @@ def _connect_generator_by_lib(
     elif "SetPoint" == omega_lib:
         dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to SetPoint")
         _connect_generator_to_setpoint(dyd_root, ns, generator)
+    elif "Ramp" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to Ramp")
+        _connect_generator_to_ramp(dyd_root, ns, generator, grp)
+
+
+def _connect_generator_to_ramp(
+    dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
+) -> None:
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
+    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
 
 
 def _connect_generator_to_dynmodelomegaref(
     dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "RotorSpeedPu")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value")
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value"
+        )
 
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
-    _connect_generator(
-        dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
-    )
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
+        )
 
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "Running")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}")
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}_value"
+        )
 
 
 def _connect_generator_to_setpoint(dyd_root: etree.Element, ns: str, generator: GenParams) -> None:
@@ -133,17 +150,13 @@ def complete_omega(
         parset = par_root.find(f"{{{par_ns}}}set[@id='{par_id}']")
         nbGen = parset.find(f"{{{par_ns}}}par[@name='nbGen']")
         if nbGen is not None:
-            grp = int(nbGen.get("value"))
+            grp = int(nbGen.get("value")) - 1
         dycov_logging.get_logger("Omega File").debug(f"OmegaRef lib={lib} par_id={par_id}")
 
     dycov_logging.get_logger("Omega File").debug(f"Generators {len(generators)}")
     for generator in generators:
         dycov_logging.get_logger("Omega File").debug(f"Generator {generator.id}")
         _connect_generator_by_lib(dyd_root, dyd_ns, lib, generator, grp)
-        grp = _add_generator_weight(parset, par_ns, grp)
-
-    if grp:
-        nbGen.set("value", str(grp))
 
     par_tree.write(path / par_file, pretty_print=True)
     dyd_tree.write(path / dyd_file, pretty_print=True)

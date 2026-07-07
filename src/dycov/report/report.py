@@ -31,8 +31,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.curves.dynawo.runtime.dynawo_precompile import get_dynawo_version
-from dycov.files.manage_files import copy_latex_files, move_report
+from dycov.files import manage_files
 from dycov.logging.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
@@ -157,7 +156,7 @@ def _create_pcs_reports(
     pcs_results: dict,
     output_path: Path,
     working_path: Path,
-) -> list:
+) -> bool:
     pcs = pcs_results["pcs"]
     producer = pcs.get_producer()
     producer.set_zone(pcs.get_zone(), pcs_results["producer"])
@@ -216,9 +215,13 @@ def _copy_pcs_latex_files(
     )
 
     if latex_user_path.exists():
-        copy_latex_files(latex_user_path, working_path, pcs_results["producer"].replace("_", ""))
+        manage_files.copy_latex_files(
+            latex_user_path, working_path, pcs_results["producer"].replace("_", "")
+        )
     if latex_tool_path.exists():
-        copy_latex_files(latex_tool_path, working_path, pcs_results["producer"].replace("_", ""))
+        manage_files.copy_latex_files(
+            latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
+        )
 
     if not (latex_tool_path.exists() or latex_user_path.exists()):
         dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
@@ -282,6 +285,9 @@ def _pcs_replace(
         subst_dict = subst_dict | {"ssem" + operating_condition_: steady_state_error_map}
         subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
         subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
+        if "stabilized" in oc_results:
+            stabilized = "stable" if oc_results["stabilized"] else "\\textcolor{{red}}unstable"
+            subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
@@ -299,9 +305,9 @@ def _pcs_replace(
                 oc_subst_dict2 |= {"missedColumns": ""}
                 oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{}"}
             else:
+                missed_columns = [col.replace("_", r"\_") for col in oc_results["missed_columns"]]
                 missed_list = "\n".join(
-                    f"    \\item \\textcolor{{red}}{{{col.replace("_", "\_")}}}"
-                    for col in oc_results["missed_columns"]
+                    f"    \\item \\textcolor{{red}}{{{col}}}" for col in missed_columns
                 )
                 oc_subst_dict2 |= {
                     "missedColumns": (
@@ -455,7 +461,7 @@ def _generate_figures(
                 f"{figure_description.name}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
-            dycov_logging.get_logger("Report").error(
+            dycov_logging.get_logger("Report").exception(
                 f"{figure_description.name}.{operating_condition}: {e}"
             )
 
@@ -487,7 +493,6 @@ def _create_full_tex(
     producer: Producer
         Producer model
     """
-
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
@@ -580,17 +585,19 @@ def _clean(working_path: Path):
     extensions_to_clean = [
         "*.toc",
         "*.aux",
-        "*.log",
         "*.out",
         "*.bbl",
         "*.blg",
         "*.run.xml",
         "*.bcf",
     ]
-    working_dir = Path(working_path)
+    # If the PDF report exists delete all log files
+    pdf_file = working_path / (REPORT_NAME.split(CASE_SEPARATOR)[0] + ".pdf")
+    if pdf_file.exists():
+        extensions_to_clean.append("*.log")
+
     for ext in extensions_to_clean:
-        # Busca los archivos con la extensión en el working_path
-        for file_to_delete in working_dir.glob(ext):
+        for file_to_delete in working_path.glob(ext):
             try:
                 file_to_delete.unlink()
             except OSError as e:
@@ -599,7 +606,22 @@ def _clean(working_path: Path):
 
 def prepare_pcs_report(
     pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
-):
+) -> None:
+    """Prepares the report for the PCS validation.
+
+    This includes copying LaTeX templates, generating figures, and creating
+    intermediate PCS reports
+
+
+    Parameters
+    ----------
+    pcs_results: dict
+        Results of the PCS validation
+    parameters: ValidationParameters
+        Validation parameters
+    path_latex_files: Path
+        Path to the LaTex templates
+    """
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 
@@ -641,6 +663,8 @@ def create_pdf(
         Temporal working path
     path_latex_files: Path
         Path to the LaTex templates
+    dry_run: bool
+        If True, skip the actual PDF generation (useful for testing/report design)
     """
 
     output_path = parameters.get_working_dir() / "Reports"
@@ -664,9 +688,9 @@ def create_pdf(
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
-        dynawo_version = str(get_dynawo_version(parameters.get_launcher_dwo())).replace(
-            "\\", "\\textbackslash"
-        )
+        dynawo_version = str(
+            manage_files.get_dynawo_version(parameters.get_launcher_dwo())
+        ).replace("\\", "\\textbackslash")
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
     model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
@@ -716,7 +740,7 @@ def create_pdf(
         _clean(working_path)
 
     dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
-    if move_report(working_path, output_path, REPORT_NAME):
+    if manage_files.move_report(working_path, output_path, REPORT_NAME):
         dycov_logging.get_logger("Report").info("PDF done.")
     else:
         dycov_logging.get_logger("Report").error("PDFLatex Error.")

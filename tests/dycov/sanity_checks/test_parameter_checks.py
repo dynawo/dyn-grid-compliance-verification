@@ -107,7 +107,7 @@ def test_generators():
     )
     ppm = GenParams(
         id=None,
-        lib="WTG4AWeccCurrentSource1",
+        lib="WTG4AWeccCurrentSource",
         terminals=(Terminal(connected_equipment=""),),
         s_nom=90,
         i_max=100.0,
@@ -221,12 +221,12 @@ def test_producer_params_consistency():
         q_min=-0.3,
     )
     parameter_checks.check_producer_params_consistency(
-        [gen1, gen2], p_max_pu=1.0, q_max_pu=0.6, q_min_pu=-0.6
+        [gen1, gen2], p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5
     )
 
     with pytest.raises(ValueError) as pytest_wrapped_e:
         parameter_checks.check_producer_params_consistency(
-            [gen1, gen2], p_max_pu=1.2, q_max_pu=0.6, q_min_pu=-0.6
+            [gen1, gen2], p_max_pu=1.0, q_max_pu=0.5, q_min_pu=-0.5
         )
     assert pytest_wrapped_e.type is ValueError
     assert (
@@ -306,7 +306,7 @@ def test_check_generators_zone3_different_types():
     )
     ppm = GenParams(
         id=None,
-        lib="WTG4AWeccCurrentSource1",
+        lib="WTG4AWeccCurrentSource",
         terminals=(Terminal(connected_equipment=""),),
         s_nom=90,
         i_max=100.0,

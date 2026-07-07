@@ -85,7 +85,8 @@ def _get_voltage_dip_threshold_values_for_test(measurement_name: str) -> dict:
 
 def get_setpoint_tracking_threshold_values() -> dict:
     """
-    Get the setpoint tracking threshold values for different time windows.
+    Get the setpoint tracking threshold values used for electrical performance
+    verification against reference setpoints.
 
     Regardless of the nature of the reference signal, the maximum permissible errors on the
     quantity tracked in pu (base setpoint variation level) are as follow:

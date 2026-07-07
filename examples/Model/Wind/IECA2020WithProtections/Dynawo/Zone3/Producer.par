@@ -4,21 +4,12 @@
   <set id="Wind_Turbine">
     <!-- PCS-->
     <par type="BOOL" name="WPP_PPCLocal" value="false"/>
-    <par type="DOUBLE" name="WPP_BMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WPP_GMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WPP_RMvHvPu" value="0"/>
-    <par type="DOUBLE" name="WPP_XMvHvPu" value="0"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WPP_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WPP_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WPP_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WPP_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WPP_XLvTrPu" value="0.02"/>
-    <!-- Electrical -->
-    <par type="DOUBLE" name="WPP_BesPu" value="0"/>
-    <par type="DOUBLE" name="WPP_GesPu" value="0"/>
-    <par type="DOUBLE" name="WPP_ResPu" value="0"/>
-    <par type="DOUBLE" name="WPP_XesPu" value="0"/>
+    <par type="DOUBLE" name="WPP_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WPP_XLvTrPu" value="0.06"/>
     <!-- Control -->
     <par type="DOUBLE" name="WPP_DipMaxPu" value="1"/>
     <par type="DOUBLE" name="WPP_DiqMaxPu" value="100"/>
@@ -153,8 +144,9 @@
     <par type="DOUBLE" name="WPP_SNom" value="90"/>
     <par type="DOUBLE" name="WPP_tS" value="0.001"/>
   </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
@@ -166,14 +158,16 @@
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
     <par type="INT" name="transformer_NbTap" value="21"/>
     <par type="INT" name="transformer_Tap0" value="10"/>
-  </set>
-  <set id="AuxLoad_Xfmr">
+  </set>  
+
+  <set id="AuxLoad_Xfmr"> <!-- Be careful: In this model, impedances are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
+  
   <set id="Aux_Load">
     <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
     <par type="DOUBLE" name="load_QRefPu" value="0.005"/>

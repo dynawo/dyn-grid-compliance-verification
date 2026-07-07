@@ -9,17 +9,21 @@ set -o errexit -o pipefail
 GREEN="\\033[1;32m"
 NC="\\033[0m"
 
-# fd 6 is for console output (color_msg uses this)
+# fd 6 is for console output (log_msg uses this)
 # fd 1 is for log output (standard output)
-# fd 7 is for original stderr (not used explicitly in color_msg, but good to preserve)
+# fd 7 is for original stderr (not used explicitly in log_msg, but good to preserve)
 
-color_msg() {
-    # Ensure this message goes to the log file
-    echo -e "$(date '+%Y-%m-%d %H:%M:%S')     | $1"
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S')     | $1"
+    echo -e "${GREEN}$1${NC}" > /dev/tty
+}
+export -f log_msg
 
-    # Ensure this message goes to the console (fd 6)
-    # Regardless of the main shell's stdout redirection
-    echo -e "${GREEN}$1${NC}" >&6
+parallel_run() {
+    local -n cmds=$1
+
+    printf '%s\n' "${cmds[@]}" | \
+        xargs -P "$max_parallel" -I {} bash -c "{}"
 }
 
 usage() {
@@ -35,10 +39,11 @@ usage() {
     echo "  -v, --validate: execute only model validation"
     echo "  -p, --performance: execute only performance verification"
     echo "  -g, --generate: execute only envelope generation (GFM)"
+    echo "  -j, --jobs: max parallel processes per phase (default: 4)"
     echo "  -h, --help: display this help"
     echo
     echo "Notes:"
-    echo "  • By default the script runs Validation, Performance, and Envelope Generation phases in parallel (max 4 processes per phase)."
+    echo "  • By default the script runs Validation, Performance, and Envelope Generation phases in parallel (max $max_parallel processes per phase)."
     echo "  • At the end of the run, an Overall Result summary is produced from the log:"
     echo "    CSV at:   <output>/test_tool.log.overall_result_counts.csv"
     echo "    PNG at:   <output>/overall_result_counts.png   (if Matplotlib available)"
@@ -55,12 +60,13 @@ run_dycov_validate() {
 
     # Full command to execute (for logging purposes)
     local command_to_execute="dycov validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
+    log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     dycov validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing
     end=$(date +%s)
-    echo "$(date '+%Y-%m-%d %H:%M:%S')     | Validate: $model_name Elapsed Time: $((end - start)) seconds"
+    log_msg "Validate: $model_name Elapsed Time: $((end - start)) seconds"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_validate
@@ -70,12 +76,12 @@ launch_validate() {
     declare -a photo_models=()
     declare -a bess_models=()
     if [ "$iec_models" = true ]; then
-        color_msg "INFO: Including IEC models for Model validation."
+        log_msg "INFO: Including IEC models for Model validation."
         wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
     fi
     if [ "$wecc_models" = true ]; then
-        color_msg "INFO: Including WECC models for Model validation."
-        wind_models+=("WECC31" "WECC32" "WECC4A1" "WECC4A2" "WECC4B" "WECC4")
+        log_msg "INFO: Including WECC models for Model validation."
+        wind_models+=("WECC31" "WECC32" "WECC4A" "WECC4B" "WECC4")
         photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2" "WECCVoltageSource3" "WECCVoltageSource4")
         bess_models+=("WECC")
     fi
@@ -101,9 +107,9 @@ launch_validate() {
     done
 
     # Execute commands in parallel with xargs, limiting to 4 processes
-    color_msg "INFO: Starting parallel Model validation with max 4 processes..."
-    printf '%s\n' "${validation_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
-    color_msg "INFO: All model validation processes completed."
+    log_msg "INFO: Starting parallel Model validation with max $max_parallel processes..."
+    parallel_run validation_commands
+    log_msg "INFO: All model validation processes completed."
 }
 
 launch_model_as_performance() {
@@ -111,12 +117,12 @@ launch_model_as_performance() {
     declare -a photo_models=()
     declare -a bess_models=()
     if [ "$iec_models" = true ]; then
-        color_msg "INFO: Including IEC models for Performance validation."
+        log_msg "INFO: Including IEC models for Performance validation."
         wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
     fi
     if [ "$wecc_models" = true ]; then
-        color_msg "INFO: Including WECC models for Performance validation."
-        wind_models+=("WECC31" "WECC32" "WECC4A1" "WECC4A2" "WECC4B" "WECC4")
+        log_msg "INFO: Including WECC models for Performance validation."
+        wind_models+=("WECC31" "WECC32" "WECC4A" "WECC4B" "WECC4")
         photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2" "WECCVoltageSource3" "WECCVoltageSource4")
         bess_models+=("WECC")
     fi
@@ -125,26 +131,26 @@ launch_model_as_performance() {
 
     # Performance validation for BESS models
     for bess_model in "${bess_models[@]}"; do
-        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/BESS/$bess_model/Dynawo/Zone3\" \"$results_path/Performance/BESS/$bess_model\" \"$bess_model\""
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/BESS/$bess_model/Dynawo/Zone3\" \"$results_path/Performance/BESS/$bess_model\" \"Model\" \"$bess_model\""
         validation_commands+=("$cmd")
     done
 
     # Performance validation for Photovoltaics models
     for photo_model in "${photo_models[@]}"; do
-        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Photovoltaics/$photo_model/Dynawo/Zone3\" \"$results_path/Performance/Photovoltaics/$photo_model\" \"$photo_model\""
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Photovoltaics/$photo_model/Dynawo/Zone3\" \"$results_path/Performance/Photovoltaics/$photo_model\" \"Model\" \"$photo_model\""
         validation_commands+=("$cmd")
     done
 
     # Performance validation for Wind models
     for wind_model in "${wind_models[@]}"; do
-        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Wind/$wind_model/Dynawo/Zone3\" \"$results_path/Performance/Wind/$wind_model\" \"$wind_model\""
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Wind/$wind_model/Dynawo/Zone3\" \"$results_path/Performance/Wind/$wind_model\" \"Model\" \"$wind_model\""
         validation_commands+=("$cmd")
     done
 
     # Execute commands in parallel with xargs, limiting to 4 processes
-    color_msg "INFO: Starting parallel performance verification with Model examples with max 4 processes..."
-    printf '%s\n' "${validation_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
-    color_msg "INFO: All performance verification processes completed."
+    log_msg "INFO: Starting parallel performance verification with Model examples with max $max_parallel processes..."
+    parallel_run validation_commands
+    log_msg "INFO: All performance verification processes completed."
 }
 
 # Function to execute a performance command and record time
@@ -157,12 +163,13 @@ run_dycov_performance() {
 
     # Full command to execute (for logging purposes)
     local command_to_execute="dycov performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
+    log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     dycov performance -l "$launcher" -m "$model_path" -o "$output_path" --testing
     end=$(date +%s)
-    echo "$(date '+%Y-%m-%d %H:%M:%S')     | Verify: $topology - $model_name Elapsed Time: $((end - start)) seconds"
+    log_msg "Verify: $topology - $model_name Elapsed Time: $((end - start)) seconds"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_performance
@@ -170,11 +177,11 @@ export -f run_dycov_performance
 launch_performance() {
     declare -a models=("GeneratorSynchronousFourWindingsTGov1SexsPss2a")
     if [ "$iec_models" = true ]; then
-        color_msg "INFO: Including IEC models for Performance validation."
+        log_msg "INFO: Including IEC models for Performance validation."
         models+=("IECB2015" "IECB2020")
     fi
     if [ "$wecc_models" = true ]; then
-        color_msg "INFO: Including WECC models for Performance validation."
+        log_msg "INFO: Including WECC models for Performance validation."
         models+=("WECC4B")
     fi
     declare -a topologies=("Single" "SingleAux" "SingleAuxI" "SingleI")
@@ -189,9 +196,9 @@ launch_performance() {
         done
     done
 
-    color_msg "INFO: Starting parallel performance verification with max 4 processes..."
-    printf '%s\n' "${performance_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
-    color_msg "INFO: All performance verification processes completed."
+    log_msg "INFO: Starting parallel performance verification with max $max_parallel processes..."
+    parallel_run performance_commands
+    log_msg "INFO: All performance verification processes completed."
 }
 
 # Function to execute a performance command and record time
@@ -202,12 +209,13 @@ run_dycov_generate() {
 
     # Full command to execute (for logging purposes)
     local command_to_execute="dycov generateEnvelopes -i \"$model_path\" -e -o \"$output_path\""
+    log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     dycov generateEnvelopes -i "$model_path" -e -o "$output_path"
     end=$(date +%s)
-    echo "$(date '+%Y-%m-%d %H:%M:%S')     | Verify: $model_name Elapsed Time: $((end - start)) seconds"
+    log_msg "Generate: $model_name Elapsed Time: $((end - start)) seconds"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_generate
@@ -222,9 +230,9 @@ launch_generate() {
         generate_commands+=("$cmd")
     done
 
-    color_msg "INFO: Starting parallel envelope generation with max 4 processes..."
-    printf '%s\n' "${generate_commands[@]}" | xargs -P 4 -I {} bash -c "{}"
-    color_msg "INFO: All envelope generation processes completed."
+    log_msg "INFO: Starting parallel envelope generation with max $max_parallel processes..."
+    parallel_run generate_commands
+    log_msg "INFO: All envelope generation processes completed."
 }
 
 summarize_overall_results() {
@@ -354,9 +362,10 @@ validate=false
 performance=false
 generate=false
 any_exec_flag=false
-remove=false     # by default, remove Results path
+remove=false     # by default, do NOT remove Results path
 examples_path="./examples"
 results_path="../Results"
+max_parallel=4  # default
 
 while (($#)); do
     case "$1" in
@@ -403,6 +412,10 @@ while (($#)); do
             usage
             exit 0
             ;;
+        -j | --jobs)
+            max_parallel=$2
+            shift 2
+            ;;
         *)
             echo "$1: invalid option."
             usage
@@ -424,7 +437,7 @@ fi
 mkdir -p "$results_path"
 
 # Save original stdout before redirecting it to a file
-# This is crucial for color_msg to continue writing to the console
+# This is crucial for log_msg to continue writing to the console
 exec 6>&1 # Link file descriptor #6 with stdout. Saves stdout.
 
 LOG="$results_path/test_tool.log"
@@ -436,20 +449,29 @@ exec 2>&1     # stderr redirected to stdout
 
 launch_start=$(date +%s)
 if [ "$validate" = true ]; then
-    color_msg "Starting model validation phase..."
+    log_msg "Starting model validation phase..."
+    phase_start=$(date +%s)
     launch_validate
+    phase_end=$(date +%s)
+    log_msg "Validation time: $((phase_end - phase_start)) seconds"
 fi
 if [ "$performance" = true ]; then
-    color_msg "Starting performance verification phase..."
+    log_msg "Starting performance verification phase..."
+    phase_start=$(date +%s)
     launch_performance
     launch_model_as_performance
+    phase_end=$(date +%s)
+    log_msg "Performance time: $((phase_end - phase_start)) seconds"
 fi
 if [ "$generate" = true ]; then
-    color_msg "Starting envelope generation phase..."
+    log_msg "Starting envelope generation phase..."
+    phase_start=$(date +%s)
     launch_generate
+    phase_end=$(date +%s)
+    log_msg "Generation time: $((phase_end - phase_start)) seconds"
 fi
 launch_end=$(date +%s)
-color_msg "Total Elapsed Time: $((launch_end - launch_start)) seconds"
+log_msg "Total Elapsed Time: $((launch_end - launch_start)) seconds"
 
 # Build and print Overall Result metrics
 summarize_overall_results "$LOG" "$results_path"

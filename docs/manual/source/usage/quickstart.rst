@@ -2,14 +2,18 @@
 Getting Started
 ===============
 
-The tool currently has different entry points, depending on what you want to use it for:
- 
-* For :ref:`RMS Model Validation for PPM <model_validation>`: `dycov validate`
-* For :ref:`Electric Performance Verification <perf_verification>`: `dycov performance`
- 
-Run the command `dycov` with option ``--help`` (or ``-h``) to get a quick overview of the
-inputs you need to provide:
- 
+DyCoV has three main workflows, each with its own entry point:
+
+* For :ref:`RMS Model Validation <model_validation>`: ``dycov validate``
+* For :ref:`Electric Performance Verification <perf_verification>`: ``dycov performance``
+* For :ref:`Grid-Forming envelope generation <gfm_envelopes_cmd>`: ``dycov generateEnvelopes``
+
+There are also two utility commands: ``dycov generate`` to create input files
+through a guided process, and ``dycov anonymize`` to produce anonymized curve
+files. All commands are described below.
+
+Run ``dycov --help`` (or ``-h``) at any time to get a quick overview:
+
 .. include:: helps/dycov.rst
 
 
@@ -18,80 +22,89 @@ inputs you need to provide:
 RMS Model Validation
 --------------------
 
-In this mode the tool runs a set of *Model Validation tests*. Some of these tests resemble those
-of the *PCS* in the provisional operation notification (ION) stage in the RTE's DTR, while some 
-are different. Of course, here one is validating the model, not the electric performance; 
-therefore, it is mandatory to provide *reference curves* as well as a model or producer curves. 
-You would use the command `dycov validate`
+RMS model validation checks whether a dynamic model behaves as expected by
+comparing its response against a set of reference curves. The tests follow the
+*PCS* defined in the ION stage of the RTE DTR, but the objective here is to
+validate the model — not the electrical performance of the installation. This
+means reference curves are always required, in addition to either a Dynawo
+model or producer curves.
 
-Run the command with option ``--help`` (or ``-h``) to get a quick overview of the
-inputs you need to provide:
+You would use the command ``dycov validate``:
 
 .. include:: helps/validate.rst
 
-.. warning::
-    Remember that the Python virtual environment should be activated executing the corresponding
-    source command, such as: `source ~/dycov/bin/activate` (assuming that you cloned the
-    repository locally under `$HOME/dycov`). You can easily tell whether the environment is
-    active or not because the prompt changes to show the name of said virtual environment.
+.. note::
+   If you installed DyCoV natively on Linux, make sure the virtual
+   environment is active before running any command:
+
+   .. code-block:: console
+
+      source ~/dycov/activate_dycov
+
+   You can tell the environment is active because the shell prompt will show
+   its name. The Docker and WSL installations handle this automatically.
 
 
 .. _perf_verification:
 
 Electric Performance Verification
----------------------------------
+----------------------------------
 
-This command can be used with PPM, Stockage or with synchronous machines.
-In this mode the tool runs an execution pipeline consisting in a set of pre-defined tests, those
-of the *PCS* in the provisional operation notification (ION) stage in the RTE's DTR. You would
-use the command `dycov performance`
+Electric performance verification checks whether an installation meets the
+dynamic performance requirements defined in the RTE DTR PCS. Unlike model
+validation, no reference curves are needed — the tool evaluates the producer
+response directly against the PCS criteria.
 
-Run the command with option ``--help`` (or ``-h``) to get a quick overview of the
-inputs you need to provide:
+This workflow applies to Power Park Modules (PPM), Battery Energy Storage
+Systems (BESS), and Synchronous Machines (SM).
+
+The producer response can come from a Dynawo model (the tool runs the
+simulations) or from producer-provided curves. You would use the command
+``dycov performance``:
 
 .. include:: helps/performance.rst
 
-.. warning::
-    Remember that the Python virtual environment should be activated executing the corresponding
-    source command, such as: `source ~/dycov/bin/activate` (assuming that you cloned the
-    repository locally under `$HOME/dycov`). You can easily tell whether the environment is
-    active or not because the prompt changes to show the name of said virtual environment.
+.. note::
+   If you installed DyCoV natively on Linux, make sure the virtual
+   environment is active before running any command:
 
-Note that, in this mode, the tool can perform the electrical performance validation using either
-a user-provided Dynawo **model** (running Dynawo simulations), or a set of user-provided **curves**,
-or both (in which case the curves are used only for showning them on the graphs, along the simulated
-curves). Therefore you must provide either a `PRODUCER_MODEL` or a `PRODUCER_CURVE` directory, or both.
+   .. code-block:: console
 
-The options and the required format of INI and curves files are documented in this manual. For the format of DYD and PAR files (that is, the Dynawo model of the
-producer's facilities), see the Dynawo documentation.
+      source ~/dycov/activate_dycov
+
+For the format of DYD and PAR files (the Dynawo model of the producer's
+facilities), refer to the Dynawo documentation. The format of INI and curve
+files is documented in this manual.
+
+
+.. _gfm_envelopes_cmd:
 
 GFM Envelope Generation
------------------------
+------------------------
 
-This command is a special utility for Grid-Forming (GFM) analysis. It calculates and plots theoretical response envelopes for GFM assets based on their key parameters (D, H, Xeff). It does not run a full dynamic simulation but instead solves the analytical equations for various grid events.
+Grid-Forming (GFM) analysis is a purely analytical workflow — no dynamic
+simulation is involved. Given the key parameters of a GFM unit (inertia,
+damping, effective reactance), the tool computes the admissible upper and
+lower response envelopes for specific grid disturbances.
 
-You would use the command ``dycov generateEnvelopes``.
+You would use the command ``dycov generateEnvelopes``:
 
-A typical command looks like this:
+.. include:: helps/generateEnvelopes.rst
 
-.. code-block:: console
-
-   dycov generateEnvelopes -i /path/to/gfm_producer.ini -o /path/to/results
-
-This command requires a specific ``.ini`` file defining the GFM producer's parameters. The output consists of CSV data files and plots in both PNG and interactive HTML formats.
+The output consists of CSV files with the envelope data, static PNG figures,
+and interactive HTML plots.
 
 .. seealso::
-   For detailed instructions, refer to the full :doc:`GFM Envelope Generation <gfm_envelopes>` guide.
+   For a detailed description of the supported disturbance cases, input
+   parameters, and output format, see :doc:`GFM Envelope Generation <gfm_envelopes>`.
 
 
 Generate Producer Input Files
------------------------------
+------------------------------
 
-In this mode the tool creates all the input files necessary to run the different verification
-modes of the tool through a guided process. You would use the command `dycov generate`
-
-Run the command with option ``--help`` (or ``-h``) to get a quick overview of the
-inputs you need to provide:
+If you are starting from scratch and need to create the input files required
+by DyCoV, the ``dycov generate`` command walks you through the process
+interactively:
 
 .. include:: helps/generate.rst
 
@@ -99,10 +112,8 @@ inputs you need to provide:
 Curve Anonymizer
 ----------------
 
-In this mode the tool generates a set of curves with generic names from the input curves to which
-a noise signal is added. You would use the command `dycov anonymize`.
-
-Run the command with option ``--help`` (or ``-h``) to get a quick overview of the
-inputs you need to provide:
+The anonymizer produces a version of your curves with generic signal names
+and an added noise signal, useful for sharing data without exposing
+proprietary information. You would use the command ``dycov anonymize``:
 
 .. include:: helps/anonymize.rst

@@ -6,11 +6,11 @@
     <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
 
     <!-- LV Transformer -->
-    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="false"/>
+    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/> <!-- not used for zone 1 when ConverterLVControl=true --> 
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/> <!-- not used for zone 1 when ConverterLVControl=true -->
 
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
@@ -29,13 +29,17 @@
     <par type="DOUBLE" name="photovoltaics_Kqv" value="2"/>
     <par type="DOUBLE" name="photovoltaics_Kvi" value="0.7"/>
     <par type="DOUBLE" name="photovoltaics_Kvp" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_PMaxPu" value="1.0"/>
-    <par type="DOUBLE" name="photovoltaics_PMinPu" value="0.0"/>
-    <par type="DOUBLE" name="photovoltaics_QMaxPu" value="1.0"/>
-    <par type="DOUBLE" name="photovoltaics_QMinPu" value="-1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMinREECPu" value="0.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMinREECPu" value="-1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMinREPCPu" value="0.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMinREPCPu" value="-1.0"/>
     <par type="DOUBLE" name="photovoltaics_tIq" value="0.01"/>
     <par type="DOUBLE" name="photovoltaics_tRv" value="0.01"/>
-    <par type="DOUBLE" name="photovoltaics_tP" value="0.05"/>
+    <par type="DOUBLE" name="photovoltaics_tpREEC" value="0.05"/>
     <par type="DOUBLE" name="photovoltaics_tPord" value="0.01"/>
     <par type="DOUBLE" name="photovoltaics_VDipPu" value="0.8"/>
     <par type="DOUBLE" name="photovoltaics_VMaxPu" value="1.2"/>
@@ -67,11 +71,10 @@
 
     <!-- General -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
-    <par type="DOUBLE" name="photovoltaics_RPu" value="1e-7"/>
-    <par type="DOUBLE" name="photovoltaics_XPu" value="1e-6"/>
   </set>
-  <!-- tfo -->
-  <set id="StepUp_Xfmr">
+ 
+ <!-- tfo -->
+  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="0.25"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
