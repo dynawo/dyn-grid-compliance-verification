@@ -119,7 +119,15 @@ def calculate(
     fault_duration: float,
     setpoint_tracking_controlled_magnitude: bool,
 ) -> dict:
-    """Calculate the positions to the windows.
+    """Calculate validation and signal-processing time windows for an event.
+
+    This function computes the "before", "during", and "after" time windows used
+    both for validation checks and for signal processing (e.g. low-pass filtering),
+    taking into account exclusion zones defined by the Grid Code configuration.
+
+    The exclusion rules depend on whether the setpoint tracking concerns a
+    controlled magnitude.
+
 
     Parameters
     ----------

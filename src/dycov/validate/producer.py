@@ -143,6 +143,7 @@ class ModelProducer(Producer):
                 p_max_pu=self.p_max_injection_pu,
                 q_max_pu=self.q_max_pu,
                 q_min_pu=self.q_min_pu,
+                s_nref=self._s_nref,
             )
             sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
@@ -199,15 +200,15 @@ class ModelProducer(Producer):
         # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.dict
         # ├── Producer_G1
         # │   ├── CurvesFiles.ini
-        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        # │   ├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
+        # │   ├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
         #  ...
         # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
         # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
         # └── Producer_G2
         #     ├── CurvesFiles.ini
-        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #     ├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
+        #     ├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
         #  ...
         #     ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
         #     └── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
@@ -255,6 +256,7 @@ class ModelProducer(Producer):
                 p_max_pu=self.p_max_injection_pu,
                 q_max_pu=self.q_max_pu,
                 q_min_pu=self.q_min_pu,
+                s_nref=self._s_nref,
             )
             generators_z1 += generators
         self._zone = 3
@@ -280,6 +282,7 @@ class ModelProducer(Producer):
             p_max_pu=self.p_max_injection_pu,
             q_max_pu=self.q_max_pu,
             q_min_pu=self.q_min_pu,
+            s_nref=self._s_nref,
         )
         sm_models, ppm_models, bess_models = parameter_checks.check_generators(
             generators_z1, generators_z3
@@ -352,6 +355,7 @@ class ModelProducer(Producer):
         self.q_min_pu = float(producer_config.get(default_section, "q_min_at_PDR")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom_at_PDR"))
         self.topology = producer_config.get(default_section, "topology")
+        self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""
@@ -450,15 +454,16 @@ class ModelProducer(Producer):
         dycov_logging.get_logger("Producer").error("No producer model has been defined")
         return list()
 
-    def set_consumption(self, consumption: float) -> None:
+    def set_consumption(self, consumption: bool) -> None:
         """The value of p_max_pu is defined depending on the
         operating mode: injection or consumption.
 
         Parameters
         ----------
-        consumption: float
-            If it is True use the Pmax Consumption
-            If it is False use the Pmax Injection
+        consumption: bool
+            If True use the maximum active power consumption.
+            If False use the maximum active power injection.
+
         """
         if consumption:
             # The maximum active power consumption value must be
@@ -467,7 +472,7 @@ class ModelProducer(Producer):
         else:
             self.p_max_pu = self.p_max_injection_pu
 
-    def get_element(self, id: str) -> tuple[str, str]:
+    def get_element(self, id: str) -> tuple[str | None, str | None]:
         """Get element information by id
 
         Parameters
@@ -477,9 +482,9 @@ class ModelProducer(Producer):
 
         Returns
         -------
-        str
+        str | None
             Element id
-        str
+        str | None
             Dynamic model library
         """
         for gen in self._generators:
@@ -580,7 +585,7 @@ class ModelProducer(Producer):
         return self._is_user_curves
 
     def has_reference_curves_path(self) -> bool:
-        """Check if there are reference curves directory.
+        """Check if a reference curves directory is defined.
 
         Returns
         -------
@@ -646,7 +651,7 @@ class ModelProducer(Producer):
             pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
         return self.__get_file_by_pattern(pattern_dyd)
 
-    def get_producer_par(self):
+    def get_producer_par(self) -> Path:
         """Gets the Producer PAR file.
 
         Returns
@@ -681,12 +686,12 @@ class ModelProducer(Producer):
         return self._reference_curves_path.resolve()
 
     def set_generators(self, generators: list) -> None:
-        """Gets the Producer model generators.
+        """Sets the Producer model generators.
 
         Parameters
         ----------
         generators: list
-            Generators obtained from producer curves
+            Generators obtained from producer curves or model parsing.
         """
         self._generators = generators
 

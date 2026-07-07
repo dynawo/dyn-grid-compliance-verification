@@ -186,7 +186,30 @@ If you see "Permission Denied" when trying to open the result files after the si
 
 ---
 
-## 5. Native Windows installation for developers (not recommended)
+## 5. Dynawo PAR generation utility (from Excel)
+
+Every installation ships a small standalone utility that turns an Excel model
+specification into two Dynawo PAR fragments (`zone1.par` and `zone3.par`), ready
+to paste into your models. It only extracts and formats parameters — it does not
+validate or interpret the model.
+
+**Where it is:**
+* Methods 1, 2, 4 (WSL / Docker): `~/tools/dynawo_par/`
+* Method 3 (Linux Native): `dycov/tools/dynawo_par/` (inside your install folder)
+* It is also available as a direct download, `dycov_par_tool.zip`, on the Release page.
+
+**How to run it** (no extra dependencies — any Python 3 works):
+```bash
+python ~/tools/dynawo_par/generate_par.py --excel my_model.xlsx
+```
+This writes `zone1.par` and `zone3.par` next to the Excel file (or use
+`--outdir DIR`). A worked example is included at
+`tools/dynawo_par/examples/WECCSample.xlsx`, and full details are in
+`tools/dynawo_par/README.md`.
+
+---
+
+## 6. Native Windows installation for developers (not recommended)
 
 > [!WARNING]
 > Native Windows execution is not recommended because Dynawo, LaTeX tools, and several
@@ -222,9 +245,9 @@ If you still prefer to set up DyCoV natively in Windows:
       uv pip install -e .[dev,test]
       ```
 
-4.  Verify Installation. This should display the help message for the tool.
+4.  Verify Installation. This should display the installed DyCoV version:
     ```winbatch
-    dycov -h
+    dycov --version
     ```
 
 5.  Pre-Execution Compilation. Before running the tool for the first time, compile the tool's resources:

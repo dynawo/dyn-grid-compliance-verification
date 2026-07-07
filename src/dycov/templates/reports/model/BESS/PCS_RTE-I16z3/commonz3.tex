@@ -30,25 +30,43 @@
 }
 %End snippet for the circuits
 
-%Snippet for the figures
-\newcommand{\GridCurvesZthree}{
-
+%Snippet for the simulation section header
+% #1 = description items (one or more \GridCurvesXxxDescription commands)
+\newcommand{\GridSimulationHeaderZthree}[1]{
     \subsubsection{Simulation}
     As required by the DTR PCS \DTRPcs, the figures below show the
     following magnitudes:
     \begin{itemize}
-        \item Voltage at connection point.
-        \item Active power supplied at the connection point.
-        \item Reactive power supplied at the connection point.
-        \item Active current supplied at the connection point.
-        \item Reactive current supplied at the connection point.
-        \item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.
-        All BESS units are plotted on the same graph.
+        #1
     \end{itemize}
 
     \subsubsection{Simulation results}
     The blue line shows the calculated curve and the orange line shows the reference curve.
+}
+%End snippet for the simulation section header
 
+%Snippet for the base figure descriptions (6 standard figures)
+\newcommand{\GridCurvesDescriptionZthree}{
+    \item Voltage at connection point.
+    \item Active power supplied at the connection point.
+    \item Reactive power supplied at the connection point.
+    \item Active current supplied at the connection point.
+    \item Reactive current supplied at the connection point.
+    \item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.
+    All BESS units are plotted on the same graph.
+}
+%End snippet for the base figure descriptions
+
+%Snippet for the It figure descriptions (injector terminal figures)
+\newcommand{\GridCurvesItZthreeDescriptionZthree}{
+    \item Active, reactive, and magnitude currents at the injector's low voltage terminal,
+    with all BESS units displayed on a single plot.
+    \item Low voltage at the injector terminal.
+}
+%End snippet for the It figure descriptions
+
+%Snippet for the base figures (6 standard figures)
+\newcommand{\GridCurvesZthree}{
 % For now we won't use floats for figures, to get more precise placement
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
@@ -104,89 +122,16 @@
         \end{minipage}
     \end{minipage}
 }
+%End snippet for the base figures
 
-\newcommand{\GridCurvesZthreeIt}{
-
-    \subsubsection{Simulation}
-    As required by the DTR PCS \DTRPcs, the figures below show the
-    following magnitudes:
-    \begin{itemize}
-        \item Voltage at connection point.
-        \item Active power supplied at the connection point.
-        \item Reactive power supplied at the connection point.
-        \item Active current supplied at the connection point.
-        \item Reactive current supplied at the connection point.
-        \item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.
-        All BESS units are plotted on the same graph.
-        \item Active, reactive, and magnitude currents at the injector's low voltage terminal, 
-        with all BESS units displayed on a single plot.
-        \item Low voltage at the injector terminal.
-    \end{itemize}
-
-    \subsubsection{Simulation results}
-    The blue line shows the calculated curve and the orange line shows the reference curve.
-
-% For now we won't use floats for figures, to get more precise placement
-    \noindent
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_V_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Voltage magnitude measured at the PDR bus.
-%     The vertical dashed line marks the rise time $T_{85U}$.
-        \end{minipage}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ustator_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage
-            at the REPC. All BESS units are plotted on the same graph.
-            The gray dotted line shows the Plant-level voltage regulation setpoint.
-        \end{minipage}
-    \end{minipage}
-%
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Real power output P, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive power output Q, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-%
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Active current output Ip, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z3.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive current output Iq, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-%
+%Snippet for the It figures (injector terminal figures)
+\newcommand{\GridCurvesItZthree}{
     \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I16z3.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small active (light blue), reactive (violet), and magnitude (yellow) currents at 
+            \small active (light blue), reactive (violet), and magnitude (yellow) currents at
             the injector's low voltage terminal. All BESS units shown on one plot.
         \end{minipage}
     \end{minipage}
@@ -199,4 +144,103 @@
         \end{minipage}
     \end{minipage}
 }
-%End of snippet for the figures
+%End snippet for the It figures
+
+%Snippet for the Tap figure descriptions
+\newcommand{\GridCurvesTapZthreeDescriptionZthree}{
+    \item The BESS's main transformer tap ratio, if it is a transformer with an
+    automatic tap changer.
+}
+%End snippet for the Tap figure descriptions
+
+%Snippet for the Tap figures
+\newcommand{\GridCurvesTapZthree}{
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_Tap_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small The BESS's main transformer tap ratio (if it is a transformer with an
+            automatic tap changer).
+        \end{minipage}
+    \end{minipage}
+}
+%End snippet for the Tap figures
+
+%Snippet for the Islanding figure descriptions (5 extra figures)
+\newcommand{\GridCurvesIslandingZthreeDescriptionZthree}{
+    \item Active power of the synchronous condenser at the injector's low voltage terminal.
+    \item Reactive power of the synchronous condenser at the injector's low voltage terminal.
+    \item Frequency of the synchronous condenser.
+    \item Active power of the load.
+    \item Reactive power of the load.
+}
+%End snippet for the Islanding figure descriptions
+
+%Snippet for the Islanding figures (5 extra figures)
+% All power quantities are converted to the common base SNom.
+\newcommand{\GridCurvesIslandingZthree}{
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_SyncCondP_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active power of the synchronous condenser at the injector's low voltage terminal.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_SyncCondQ_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power of the synchronous condenser at the injector's low voltage terminal.
+        \end{minipage}
+    \end{minipage}
+%
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_SyncCondFreq_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Frequency of the synchronous condenser.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_LoadP_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active power of the load.
+        \end{minipage}
+    \end{minipage}
+%
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_LoadQ_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Reactive power of the load.
+        \end{minipage}
+    \end{minipage}
+}
+%End snippet for the Islanding figures
+
+%Snippet for the frequency figures (1 extra figure)
+\newcommand{\GridCurvesFrequencyZthreeDescriptionZthree}{
+    \item Network frequency.
+}
+%End snippet for the frequency figure descriptions
+
+%Snippet for the frequency figures (1 extra figure)
+% All power quantities are converted to the common base SNom.
+\newcommand{\GridCurvesFrequencyZthree}{
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_WRef_PCS_RTE-I16z3.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Network frequency.
+        \end{minipage}
+    \end{minipage}
+}
+%End snippet for the frequency figures

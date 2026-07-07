@@ -17,12 +17,37 @@ from dycov.logging.logging import dycov_logging
 
 # when magnitudes are smaller than atol, switch to absolute error
 ATOL = 1.0e-6
+# Threshold below which relative tolerance becomes meaningless
+TUBE_TARGET_THRESHOLD = 0.01
+# Absolute tolerance used when target is small
+TUBE_ABSOLUTE_TOL = 0.02
 
 
+def get_ss_tolerance(setpoint_variation: float) -> float:
+    tolerance = config.get_float("GridCode", "thr_ss_tol", 0.002)
+    if setpoint_variation > 0.0:
+        tolerance = setpoint_variation * tolerance
+    return tolerance
+
+
+# Absolute tube for small targets avoids unrealistic relative tolerances near zero
 def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
     if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
         return True
     return False
+
+
+def _compute_tube(target: float, percent: float) -> tuple[float, float]:
+    """Compute tolerance tube around target value.
+
+    If target is near zero (<TUBE_TARGET_THRESHOLD), use absolute ±TUBE_ABSOLUTE_TOL.
+    Otherwise, use relative tolerance based on percent.
+    """
+    if abs(target) < TUBE_TARGET_THRESHOLD:
+        return target - TUBE_ABSOLUTE_TOL, target + TUBE_ABSOLUTE_TOL
+    else:
+        delta = abs(percent * target)
+        return target - delta, target + delta
 
 
 def check_time(
@@ -39,7 +64,7 @@ def check_time(
     rtol: float
         Relative tolerance
     atol: float
-        Aboslute tolerance
+        Absolute tolerance
 
     Returns
     -------
@@ -62,7 +87,9 @@ def check_time(
         return "-", time_check
 
 
-def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_event: float):
+def is_invalid_test(
+    time: list, voltage: list, active: list, reactive: list, t_event: float
+) -> bool:
     """Check if the results of a step-response test are completely flat (no response).
     This is used for checking for a common error, i.e., the event not producing any effect.
 
@@ -123,10 +150,13 @@ def is_invalid_test(time: list, voltage: list, active: list, reactive: list, t_e
     return v_flat and p_flat and q_flat
 
 
-def is_stable(time: list, curve: list, stable_time: float = 1e-20) -> tuple[bool, int]:
-    """Check if the stabilization is reached.
-    The curve is considered to have stabilized if, for the given minimum duration (stable_time),
-    the curve does not have variations exceeding the given relative tolerance.
+def is_stable(time: list, curve: list, thr_ss_tol: float = 0.002) -> tuple[bool, int]:
+    """
+    Detects whether the signal reaches a steady-state and returns the
+    first index from which it remains within tolerance until the end.
+
+    Stability is defined as:
+    The signal enters the tolerance band and never leaves it afterwards.
 
     Parameters
     ----------
@@ -134,54 +164,42 @@ def is_stable(time: list, curve: list, stable_time: float = 1e-20) -> tuple[bool
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
-    stable_time: float
-        Minimum duration required to consider stability reached (measured from the tail)
+    thr_ss_tol: float
+        Tolerance defining the steady-state band around the final value.
 
     Returns
     -------
     bool
-        True if the stabilization is reached, False otherwise
+        True if steady-state is reached, False otherwise
     int
-        The position where the stabilization is reached in the given lists
-        -1 if the stabilization is not reached
+        Index where steady-state begins, or -1 if not reached
     """
-
-    thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
+    atol = 0.01 * thr_ss_tol
 
     if len(time) != len(curve):
         raise ValueError("the curve values and its time series have different length")
-    if stable_time <= 0:
-        raise ValueError("stable_time should be > 0")
 
-    # Get the index of the time series where the minimum SS duration "tail window" starts
-    tail_window_start = time[-1] - stable_time
-    if tail_window_start < time[0]:
-        raise ValueError("stable_time is longer than the whole simulation time")
-    idx_time = np.argmin(abs(np.array(time) - tail_window_start))
+    final_value = curve[-1]
+    n = len(curve)
 
-    # Stability == all values in the tail are close to the end value (within tolerances)
-    atol = 0.01 * thr_ss_tol
-    curve_tail = curve[idx_time:]
-    stable = True
-    for val in curve_tail:
-        if not math.isclose(val, curve_tail[-1], rel_tol=thr_ss_tol, abs_tol=atol):
-            stable = False
-            break
+    for i in range(n):
+        stable = True
 
-    # If stable, get the index of time at which it first becomes stable
-    idx_first_stable = -1
-    if stable:
-        for i in range(idx_time, 0, -1):
-            if not math.isclose(curve[i], curve[-1], rel_tol=thr_ss_tol, abs_tol=atol):
-                idx_first_stable = i
+        for j in range(i, n):
+            if not math.isclose(curve[j], final_value, rel_tol=thr_ss_tol, abs_tol=atol):
+                stable = False
                 break
 
-    return stable, idx_first_stable
+        if stable:
+            return True, i
+
+    return False, -1
 
 
 def theta_pi(time: list, curve: list) -> bool:
-    """Check if the stabilization is reached.
-    The curve is considered to have stabilized if the curve does not exceed PI.
+    """Check whether the angle remains within the ±pi bounds.
+
+    This check ensures that the angle does not exceed ±π during the simulation.
 
     Parameters
     ----------
@@ -230,7 +248,10 @@ def get_static_diff(primary_voltages: list, voltage_setpoint: list) -> float:
 
     end_val = primary_voltages[-1]
     cons_val = voltage_setpoint[-1]
-    return math.fabs((end_val - cons_val) / cons_val)
+    if abs(cons_val) < ATOL:
+        return math.fabs(end_val - cons_val)
+    else:
+        return math.fabs((end_val - cons_val) / cons_val)
 
 
 def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
@@ -259,8 +280,12 @@ def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: f
 
     # Get the tube
     mean_val = curve[-1] - curve[0]
-    mean_val_max = curve[-1] + abs(percent * mean_val)
-    mean_val_min = curve[-1] - abs(percent * mean_val)
+    if abs(mean_val) < ATOL:
+        mean_val_min = curve[-1] - abs(percent)
+        mean_val_max = curve[-1] + abs(percent)
+    else:
+        mean_val_max = curve[-1] + abs(percent * mean_val)
+        mean_val_min = curve[-1] - abs(percent * mean_val)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -299,15 +324,8 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
         raise ValueError("curve values and time values have different length")
 
     # Get the tube
-    if abs(curve[-1]) <= 1:
-        mean_val_max = curve[-1] + percent
-        mean_val_min = curve[-1] - percent
-
-    # If the value is more than 1, we use relative value
-    else:
-        mean_val = curve[-1]
-        mean_val_max = mean_val + abs(percent * mean_val)
-        mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val = curve[-1]
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -347,13 +365,8 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
         raise ValueError("curve values and time values have different length")
 
     # Get the tube
-    if abs(curve[-1]) <= 1:
-        mean_val_min = curve[-1] - percent
-
-    # If the value is more than 1, we use relative value
-    else:
-        mean_val = curve[-1]
-        mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val = curve[-1]
+    mean_val_min, _ = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -415,53 +428,65 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
 
 
 def check_generator_imax(
-    imax: float, time: list, current_at_converter: list, active_current_at_converter: list
-) -> tuple[int, bool]:
-    """Check that, if Imax is reached, reactive support is priorized over active power supply.
+    imax: float,
+    time: list,
+    current_at_converter: list,
+    active_current_at_converter: list,
+) -> tuple[float, bool]:
+    """Check that, when the generator current reaches Imax, reactive current is
+    prioritized over active current (Id should not increase while saturated).
 
     Parameters
     ----------
-    imax: float
+    imax : float
         IMax value of the generator
-    time: list
-        List of time instants that make up the curve
-    current_at_converter: list
-        Curve of the injected current
-    active_current_at_converter: float
-        Curve of the injected active current
+    time : list
+        Time vector
+    current_at_converter : list
+        Total current magnitude |I|
+    active_current_at_converter : list
+        Active current Id
 
     Returns
     -------
-    int
-        The position where the injected active current increases despite having reached Imax
+    float
+        Time where Id increases while |I| >= Imax. -1 if no issue detected.
     bool
-        True if the injected active current does not increase, False otherwise
+        True if the condition is respected, False otherwise
     """
-    # Get curves file and steady time
-    if len(time) != len(current_at_converter):
-        raise ValueError("curve values and time values have different length")
+    if not (len(time) == len(current_at_converter) == len(active_current_at_converter)):
+        raise ValueError("All input lists must have the same length")
 
-    pos = 0
-    while pos < len(current_at_converter) and current_at_converter[pos] < imax:
-        pos += 1
+    TOL = 1e-3
 
-    if pos >= len(current_at_converter):
-        pos = len(current_at_converter) - 1
-
-    id_max = active_current_at_converter[pos]
-
-    # Cut list values
-    active_current_at_converter = active_current_at_converter[pos:]
-    time = time[pos:]
-
-    id_not_increase = True
+    in_saturation = False
+    id_ref = None
     first_id_value = -1
-    for i in range(len(active_current_at_converter)):
-        pos = len(active_current_at_converter) - (i + 1)
-        if active_current_at_converter[pos] > id_max:
-            first_id_value = time[pos]
-            id_not_increase = False
-            break
+    id_not_increase = True
+
+    for i in range(len(time)):
+        Im = current_at_converter[i]
+        Id = active_current_at_converter[i]
+
+        if Im >= imax - TOL:
+            # Entering saturation
+            if not in_saturation:
+                in_saturation = True
+                id_ref = Id
+            else:
+                # Check condition only while saturated
+                if Id > id_ref + TOL:
+                    first_id_value = time[i]
+                    id_not_increase = False
+                    break
+
+                # Update reference (Id should not increase, allow decrease)
+                id_ref = min(id_ref, Id)
+
+        else:
+            # Leave saturation → reset logic
+            in_saturation = False
+            id_ref = None
 
     return first_id_value, id_not_increase
 
@@ -502,7 +527,11 @@ def get_AVR_x(
     pass_AVR_check = True
     error_time = -1
     for i in range(len(curve)):
-        if 0.05 < abs(curve[i] - target_values[i]) / target_values[i]:
+        if abs(target_values[i]) < ATOL:
+            error = abs(curve[i] - target_values[i])
+        else:
+            error = abs(curve[i] - target_values[i]) / target_values[i]
+        if 0.05 < error:
             pass_AVR_check = False
             error_time = time[i] - sim_t_event_end
             break
@@ -619,13 +648,13 @@ def maximum_error(signal: list, reference: list, step_magnitude: float) -> float
 
 def maximum_error_position(
     time: list, signal: list, reference: list, name: str
-) -> tuple[float, float]:
+) -> tuple[float, float, float]:
     """Gets the position of the maximum error between two signals.
 
     Parameters
     ----------
     time: list
-        Input signal
+        Time values corresponding to the signals
     signal: list
         Input signal
     reference: list
@@ -639,6 +668,8 @@ def maximum_error_position(
         Time in the maximum error
     float
         Signal value in the maximum error
+    float
+        Reference value in the maximum error
     """
     if np.isnan(reference).all():
         dycov_logging.get_logger("Common Validation").warning(f"No reference values in {name}")
@@ -656,7 +687,7 @@ def maximum_error_position(
 
     errors = abs(signal - reference)
     pos = errors.idxmax()
-    return time.iloc[pos], signal.iloc[pos]
+    return time.iloc[pos], signal.iloc[pos], reference.iloc[pos]
 
 
 def get_response_time(percent: float, time: list, curve: list, sim_t_event_start: float) -> float:
@@ -693,8 +724,7 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_max = mean_val + abs(percent * mean_val)
-    mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
 
     for pos in range(len(curve)):
         if mean_val_min < curve[pos] < mean_val_max:
@@ -747,8 +777,7 @@ def get_settling_time(
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_max = mean_val + abs(percent * mean_val)
-    mean_val_min = mean_val - abs(percent * mean_val)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -760,6 +789,7 @@ def get_settling_time(
         ret_val = 0
     else:
         ret_val = time[pos] - sim_t_event_start
+
     return ret_val, pos, mean_val_min, mean_val_max, curve[pos]
 
 
@@ -797,7 +827,10 @@ def get_reached_time(
     stable_value = curve[pos_t_event - 1]
 
     difference_val = curve[-1] - stable_value
-    objective_value = stable_value + percentage * difference_val
+    if abs(difference_val) < ATOL:
+        objective_value = stable_value + percentage
+    else:
+        objective_value = stable_value + percentage * difference_val
 
     # Cut list values
     time = time[pos_t_event:]

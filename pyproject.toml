@@ -15,13 +15,19 @@
 #
 
 
+
 [build-system]
-requires = ["setuptools>=65", "wheel"]
+requires = [
+    "setuptools>=65",
+    "wheel",
+    "setuptools_scm[toml]>=8"
+]
 build-backend = "setuptools.build_meta"
+
 
 [project]
 name = "dycov"
-version = "0.8.1"
+dynamic = ["version"]
 description = "A tool for automating the verification of dynamic grid compliance requirements for solar, wind, and storage farms, including RMS model validation."
 authors = [
     { name = "Guiu Oms", email = "omsg@aia.es" },
@@ -43,7 +49,6 @@ classifiers = [
 # Required packages: here we declare only the direct dependencies.
 dependencies = [
     "comtrade>=0.0.10",		# MIT License
-    "fpdf>=1.7.2",		    # GNU Lesser General Public License v3 (LGPLv3)
     "Jinja2>=3.1.2",		# BSD License
     "lxml>=4.6.3",		    # BSD License
     "matplotlib>=3.4.0",	# Python Software Foundation License
@@ -52,7 +57,6 @@ dependencies = [
     "plotly>=5.20.0",		# MIT License
     "SciPy>=1.9.3",		    # BSD License
     "colorama>=0.4.6",		# BSD License
-    "kaleido>=1.0.0"        # MIT License
 ]
 
 # Optional dependencies for development and testing.
@@ -66,7 +70,6 @@ test = [
 dev = [
     "ruff",
     "sphinx",
-    "jupyter",
 ]
 dynawo-pypowsybl = [
     "pypowsybl>=1.7,<2.0"
@@ -140,3 +143,8 @@ quote-style = "double"
 [project.urls]
 "Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
 "Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+
+[tool.setuptools_scm]
+write_to = "src/dycov/_build_info.py"
+version_scheme = "release-branch-semver"
+local_scheme = "node-and-date"

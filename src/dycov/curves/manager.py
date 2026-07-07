@@ -9,6 +9,7 @@
 #
 import logging
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -51,7 +52,7 @@ class CurvesManager:
         parameters: Parameters,
         producer: Producer,
         pcs_benchmark_name: str,
-        stable_time: float,
+        thr_ss_tol: float,
         lib_path: Path,
         templates_path: Path,
         pcs_name: str,
@@ -71,7 +72,7 @@ class CurvesManager:
             parameters,
             producer,
             pcs_benchmark_name,
-            stable_time,
+            thr_ss_tol,
             lib_path,
             templates_path,
             pcs_name,
@@ -82,12 +83,12 @@ class CurvesManager:
         self._before_filters_curves["calculated"] = self._curves["calculated"].copy()
         self._before_filters_curves["reference"] = self._curves["reference"].copy()
 
-    def __get_before_filters_curves(self, curve: str) -> pd.DataFrame:
+    def __get_before_filters_curves(self, curve: str) -> Optional[pd.DataFrame]:
         if curve not in self._before_filters_curves:
-            return pd.DataFrame()
+            return None
 
         if self._before_filters_curves[curve].empty:
-            return pd.DataFrame()
+            return None
 
         return self._before_filters_curves[curve]
 
@@ -295,7 +296,7 @@ class CurvesManager:
         working_path: Path,
         event_params: dict,
         setpoint_tracking_controlled_magnitude: bool,
-    ):
+    ) -> None:
         """Apply signal processing.
 
         Parameters
@@ -327,7 +328,17 @@ class CurvesManager:
         # TODO: refactor this function so that it really adheres to the Method described above.
 
         csv_calculated_curves = self.__get_before_filters_curves("calculated")
+        if csv_calculated_curves is None:
+            dycov_logging.get_logger("Curves Manager").warning(
+                "Signal processing cannot be applied because calculates curves are not available"
+            )
+            return
         csv_reference_curves = self.__get_before_filters_curves("reference")
+        if csv_reference_curves is None:
+            dycov_logging.get_logger("Curves Manager").warning(
+                "Signal processing cannot be applied because reference curves are not available"
+            )
+            return
 
         # Activate this code to use the curve calculated as a reference curve,
         # only for debug cases without reference curves.
@@ -344,6 +355,13 @@ class CurvesManager:
         # First resampling: ensure a constant time-step signal
         calculated_curves = sigpro.resample_to_fixed_step(csv_calculated_curves)
         reference_curves = sigpro.resample_to_fixed_step(reference_curves)
+
+        # Apply alignment of event times
+        calculated_curves = sigpro.apply_time_shift(
+            calculated_curves,
+            t_event_curves=self._simulated_event_start_time,
+            t_event_reference=self._reference_event_start_time,
+        )
 
         calc_time_values = list(calculated_curves["time"])
         calculated_windows = signal_windows.calculate(
@@ -372,13 +390,6 @@ class CurvesManager:
         # low-pass filter has already been applied (therefore, no aliasing is produced).
         calculated_curves, reference_curves = sigpro.resample_to_common_tgrid(
             calculated_curves, reference_curves
-        )
-
-        # Apply alignment of event times
-        calculated_curves = sigpro.apply_time_shift(
-            calculated_curves,
-            t_event_curves=self._simulated_event_start_time,
-            t_event_reference=self._reference_event_start_time,
         )
 
         # In the second resampling the curves are trimmed to ensure that both sets start and end

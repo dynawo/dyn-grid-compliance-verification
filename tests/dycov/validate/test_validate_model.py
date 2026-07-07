@@ -1,5 +1,6 @@
-from dycov.model.compliance import Compliance
 from tests.dycov.utils import MODEL, execute_tool
+
+from dycov.model.compliance import Compliance
 
 RESOURCES = "./resources"
 
@@ -20,20 +21,20 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # 6
         Compliance.Compliant,  # 7
         Compliance.Compliant,  # 8
-        Compliance.Compliant,  # 9
-        Compliance.InvalidTest,  # 10
+        Compliance.WithoutCurves,  # 9
+        Compliance.Compliant,  # 10
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
         Compliance.Compliant,  # 14
         Compliance.Compliant,  # 15
-        Compliance.Compliant,  # 16
-        Compliance.Compliant,  # 17
+        Compliance.WithoutCurves,  # 16
+        Compliance.WithoutCurves,  # 17
         Compliance.Compliant,  # 18
         Compliance.Compliant,  # 19
         Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21
-        Compliance.Compliant,  # 22
+        Compliance.NonCompliant,  # 22
         Compliance.Compliant,  # 23
     ] == compliance
 
@@ -59,14 +60,14 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 11
         Compliance.Compliant,  # 12
         Compliance.Compliant,  # 13
-        Compliance.InvalidTest,  # 14
-        Compliance.InvalidTest,  # 15
-        Compliance.Compliant,  # 16
-        Compliance.InvalidTest,  # 17
-        Compliance.InvalidTest,  # 18
-        Compliance.Compliant,  # 19
-        Compliance.InvalidTest,  # 20
-        Compliance.InvalidTest,  # 21
+        Compliance.Compliant,  # 14
+        Compliance.Compliant,  # 15
+        Compliance.WithoutCurves,  # 16
+        Compliance.Compliant,  # 17
+        Compliance.Compliant,  # 18
+        Compliance.WithoutCurves,  # 19
+        Compliance.Compliant,  # 20
+        Compliance.Compliant,  # 21
         Compliance.Compliant,  # 22
         Compliance.Compliant,  # 23
         Compliance.Compliant,  # 24
@@ -77,10 +78,10 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 29
         Compliance.Compliant,  # 30
         Compliance.Compliant,  # 31
-        Compliance.Compliant,  # 32
-        Compliance.Compliant,  # 33
-        Compliance.Compliant,  # 34
-        Compliance.Compliant,  # 35
+        Compliance.WithoutCurves,  # 32
+        Compliance.WithoutCurves,  # 33
+        Compliance.WithoutCurves,  # 34
+        Compliance.WithoutCurves,  # 35
         Compliance.Compliant,  # 36
         Compliance.Compliant,  # 37
         Compliance.Compliant,  # 38
@@ -89,8 +90,8 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 41
         Compliance.Compliant,  # 42
         Compliance.Compliant,  # 43
-        Compliance.Compliant,  # 44
-        Compliance.Compliant,  # 45
+        Compliance.NonCompliant,  # 44
+        Compliance.NonCompliant,  # 45
         Compliance.Compliant,  # 46
-        Compliance.Compliant,  # 47
+        Compliance.InvalidTest,  # 47
     ] == compliance

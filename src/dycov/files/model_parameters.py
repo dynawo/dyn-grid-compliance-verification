@@ -487,7 +487,7 @@ def extract_defined_value(
         param_name = m.group("name")
 
         # Validate parameter name, case-insensitive.
-        if param_name.lower() != parameter.lower():
+        if parameter.lower() not in param_name.lower():
             raise ValueError(
                 f"Parameter name mismatch: expected '{parameter}', got '{param_name}'"
             )
@@ -652,6 +652,8 @@ def _append_generator(
     droop_value, s_nom = _get_generator_droop_and_snom(parset, nsmap, lib)
     ppc_local = _get_generator_ppc_local(parset, nsmap, lib)
 
+    converter_lv_control = _get_generator_converter_lv_control(parset, nsmap, lib)
+
     generators.append(
         GenParams(
             id=gen_id,
@@ -669,6 +671,7 @@ def _append_generator(
             voltage_droop=droop_value,
             use_voltage_droop=False,
             ppc_local=ppc_local,
+            converter_lv_control=converter_lv_control,
         )
     )
 
@@ -771,6 +774,15 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
 def _get_generator_ppc_local(parset, nsmap, lib):
     _, ppc_local = _get_parameter(parset, nsmap, lib, "PPCLocal")
     return ppc_local.lower() == "true" if ppc_local is not None else False
+
+
+def _get_generator_converter_lv_control(parset, nsmap, lib):
+    _, converter_lv_control_str = _get_parameter(parset, nsmap, lib, "ConverterLVControl")
+    return (
+        converter_lv_control_str.lower() == "true"
+        if converter_lv_control_str is not None
+        else True
+    )
 
 
 def _get_line_values(
@@ -1057,6 +1069,15 @@ def _adjust_generator(
     _set_initial_voltage_phase(parset, nsmap, generator.lib, generator_u0pu, generator_uphase0)
     _set_initial_pcc_voltage_phase(parset, nsmap, generator.lib, pdr)
 
+    # For synchronous machine models, control mode and voltage droop adjustments are not
+    # applicable.
+    if dynawo_translator.is_synchronous_machine_model(generator):
+        return True
+
+    # Control mode and voltage droop are configured based on the zone.
+    if zone != 1:
+        zone = 3
+
     is_valid, control_mode_name = _apply_control_mode(
         generator, parset, nsmap, generator_control_mode, zone
     )
@@ -1115,12 +1136,6 @@ def _apply_control_mode(generator, parset, nsmap, generator_control_mode, zone):
         generator, generator_control_mode, control_mode_parameters, zone
     )
 
-    if generator_control_mode != "Others" and not is_valid and zone != 1:
-        control_mode_name = _handle_invalid_control_mode(
-            generator, parset, nsmap, generator_control_mode, zone
-        )
-        return True, control_mode_name
-
     return is_valid, control_mode_name
 
 
@@ -1128,31 +1143,6 @@ def _log_control_mode(generator, control_mode_parameters):
     dycov_logging.get_logger("Model Parameters").debug(
         f"Generator {generator.id} Control Mode: {control_mode_parameters}"
     )
-
-
-def _handle_invalid_control_mode(generator, parset, nsmap, generator_control_mode, zone):
-    dycov_logging.get_logger("Model Parameters").warning(
-        f"{generator.lib} control mode will be changed"
-    )
-    default_control_mode_parameters = _get_default_control_mode_parameters(
-        generator, generator_control_mode, zone
-    )
-    dycov_logging.get_logger("Model Parameters").debug(
-        f"Default Control Mode: {default_control_mode_parameters} for {generator_control_mode}"
-    )
-
-    is_valid, control_mode_name = dynawo_translator.is_valid_control_mode(
-        generator, generator_control_mode, default_control_mode_parameters, zone
-    )
-    if is_valid:
-        _set_parameters(generator, parset, nsmap, default_control_mode_parameters)
-    else:
-        dycov_logging.get_logger("Model Parameters").error(
-            f"{generator.lib} executed with wrong control mode"
-        )
-        raise ValueError(f"{generator.lib} executed with wrong control mode")
-
-    return control_mode_name
 
 
 def _apply_voltage_droop(

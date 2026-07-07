@@ -13,8 +13,10 @@ import math
 from dataclasses import dataclass
 from enum import IntEnum
 
+import numpy as np
 import pandas as pd
 
+from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 from dycov.validation.common import is_stable
 
@@ -136,6 +138,20 @@ def classify_voltage_dip(
     return VoltDipResult.DIP_TOO_SMALL
 
 
+def _is_flat_after_event(time, voltage, fault_start):
+    thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
+
+    idx = np.argmin(abs(np.array(time) - fault_start)) - 1
+    v_init = voltage[idx]
+
+    v_max_diff = max(abs(np.array(voltage[idx:]) - v_init))
+
+    rtol = thr_ss_tol
+    atol = 0.1 * rtol
+
+    return math.isclose(v_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
+
+
 def _compute_voltage_dip(
     pcs_name: str,
     bm_name: str,
@@ -150,6 +166,9 @@ def _compute_voltage_dip(
 
     time_values = curves["time"].tolist()
     voltage_values = curves[bus_pdr_voltage_column].tolist()
+    if _is_flat_after_event(time_values, voltage_values, fault_start):
+        return 0.0
+
     clamped_duration = _clamp_fault_duration(
         pcs_name, bm_name, oc_name, fault_start, fault_duration, time_values
     )

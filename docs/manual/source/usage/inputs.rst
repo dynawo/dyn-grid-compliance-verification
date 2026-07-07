@@ -6,115 +6,133 @@ Inputs
 Overview
 --------
 
-Usually, the inputs are simply three files: the **DYD** and **PAR** files
-corresponding to the Dynawo model on the producer's side (i.e., everything
-"left" of the connection point, the PDR bus), and an **INI** file containing the
-certain parameters and metadata that cannot be provided in the DYD/PAR
-files. It is also possible to provide a set of curves as input to the tool, these
-should be provided as a file in one of the accepted formats plus a
-special DICT file that describes the format (see :ref:`Producer Curves <producerCurves>` below).
-See the available examples in the `examples` directory, at the top level of the git repository.
+The inputs to DyCoV depend on the workflow you are running, but in all cases
+the goal is the same: describe the producer's installation to the tool so it
+can run the appropriate tests and compare the results against the applicable
+criteria.
 
-Additionally, in the case of *RMS Model Validation*, the user must also provide the
-**reference curves** for each test, against which the simulated curves will be
-compared. They should be provided as a file in one of the accepted formats plus a
-special DICT file that describes the format (see :ref:`Reference Curves <referenceCurves>`
-below).
+For **simulation-based workflows**, the core inputs are three files that
+describe the Dynawo model on the producer's side — everything to the "left"
+of the connection point (the PDR bus):
 
-In the case of *Electric Performance* testing, the user also has the option of providing
-test curves to be used along Dynawo simulations (just for plotting both and comparing them).
+* **DYD** — defines the equipment and connectivity of the producer's network,
+* **PAR** — contains the parameter values for each piece of equipment,
+* **INI** — provides additional metadata that cannot be expressed in DYD/PAR
+  files (nominal values, operating limits, topology, etc.).
+
+It is also possible to skip the Dynawo model entirely and provide a set of
+**producer curves** directly (see :ref:`Producer Curves <producerCurves>`
+below). In this case DyCoV evaluates the PCS criteria on the provided curves
+without running any simulation.
+
+For **RMS Model Validation**, a set of **reference curves** is always required
+in addition to the model or producer curves (see
+:ref:`Reference Curves <referenceCurves>` below). These are the baseline
+against which the model's response is compared.
+
+See the ``examples/`` directory at the top level of the repository for
+ready-to-run cases illustrating each input organization.
 
 
 Producer Model
 --------------
 
-The *Producer Model* is built using 3 files: **DYD**, **PAR**, and **INI**. The **DYD**
-and **PAR** files correspond to the Dynawo model on the producer side, using these files
-one of the topologies accepted by the tool is generated (see :ref:`available topologies
-<topologies>`). The **DYD** file expresses the models and connectivity of the Producer's
-side, meaning everything to the "left hand side" of the connection to the transmission
-grid (TSO's grid being on the "right hand side", in this symbolic picture).  This
-connection point is represented by a bus called 'busPDR'. This bus should *not* be
-defined in the *Producer Model*, since it is already defined in the **DYD** files that
-the tool uses internally to represent the grid's side. Therefore the *Producer Model*
-should only express the connections between the aforementioned bus and the production
-plant equipment. The **PAR** file is where all the equipment modeled in the **DYD** file
-should be parameterized. Finally, the **INI** file contains some parameters and
-information that is specifically required by the tool and that cannot be provided by
-Dynawo's **DYD** / **PAR** files (see `Dynawo documentation`__ for more info about
-Dynawo).
+The *Producer Model* is built from three files: **DYD**, **PAR**, and **INI**.
 
-When running one of the *Electric Performance* testing commands to validate a given
-*Producer Model* (synchronous generators or PPMs), the user must indicate the directory
-where these 3 model files are located.
+The **DYD** file expresses the models and connectivity of the producer's
+installation — everything to the left of the PDR bus. This bus should *not*
+be defined in the producer's DYD, since it is already defined internally by
+DyCoV to represent the grid connection point. The producer model should only
+express the connections between the PDR bus and the production plant equipment.
 
-However, when running the *RMS Model Validation* command, the user must indicate a
-directory containing **two** Dynawo models, each in its own subfolder, respectively
-named 'Zone1' and 'Zone3'.  The Zone 1 model should represent a single production unit,
-such as a Wind Turbine. The Zone 3 model should represent the whole wind farm (i.e. the
-PPM plant), although in this case multiple generating units of the same kind should be
-represented by one equivalent unit.  For more details, see the definition of these zones
-in the DTR documentation, in PCS I16.
+The **PAR** file contains the parameter values for all equipment defined in
+the DYD.
 
-__ https://dynawo.github.io/
+The **INI** file provides the additional information that DyCoV needs but
+that cannot be derived from DYD/PAR files: nominal voltage, active and
+reactive power limits, topology identifier, and so on.
+
+For **Electric Performance Verification**, the three model files should all
+live in the same directory, which is then passed to ``dycov performance``
+via the ``-m`` option.
+
+For **RMS Model Validation**, the directory must contain two subdirectories
+named ``Zone1/`` and ``Zone3/``, each with its own set of three files.
+Zone 1 should represent a single production unit (e.g. a single wind turbine),
+while Zone 3 should represent the complete installation at the PDR, including
+plant-level control. For the precise definition of these zones, refer to
+PCS I16 in the RTE DTR.
+
+For information on the DYD and PAR file formats, refer to the
+`Dynawo documentation <https://dynawo.github.io/>`_.
+
 
 .. _gfm_producer_input:
 
 GFM Producer Input (.ini file)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``dycov generateEnvelopes`` command requires a dedicated ``.ini`` file that specifies the characteristics of the Grid-Forming asset. This file must contain two main sections: ``[DEFAULT]`` for general parameters and ``[GFM Parameters]`` for the core GFM constants.
+The ``dycov generateEnvelopes`` command takes a dedicated ``.ini`` file that
+describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
+nominal and operational parameters, and a ``[GFM Parameters]`` section for
+the core GFM control constants.
 
-Here is an example of a valid GFM producer file:
+A typical file looks like this:
 
 .. code-block:: ini
-   :caption: Example GFM Producer INI File
+   :caption: Example GFM Producer INI file
 
    [DEFAULT]
    # Nominal voltage at the PDR Bus (in kV)
    Unom = 20.0
-   # Maximum active power injection of the unit (in MW)
+   # Active power limits (in MW)
    p_max_injection = 100.0
-   # Minimum active power injection of the unit (in MW)
    p_min_injection = 0.0
-   # Maximum reactive power capability (in MVar)
+   # Reactive power limits (in MVar)
    q_max = 50.0
-   # Minimum reactive power capability (in MVar)
    q_min = -50.0
 
    [GFM Parameters]
-   # Damping constant (unitless or in pu)
+   # Damping constant
    D = 20.0
    # Inertia constant (in seconds)
    H = 3.5
    # Effective reactance from the inverter to the PDR (in pu)
    Xeff = 0.15
-   # Nominal apparent power of the GFM unit (in MVA)
+   # Nominal apparent power (in MVA)
    Snom = 110.0
 
+For **Hybrid mode** (combining overdamped and underdamped envelopes), the
+``[GFM Parameters]`` section should instead define separate parameter sets:
+
+.. code-block:: ini
+
+   [GFM Parameters]
+   D_Overdamped = 25.0
+   H_Overdamped = 4.0
+   D_Underdamped = 10.0
+   H_Underdamped = 2.5
+   Snom = 110.0
+
+.. seealso::
+   :ref:`GFM Envelope Generation <gfm_envelopes_cmd>` for a description of
+   supported disturbance cases and output format.
+
+
 Supported Dynamic Models
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Dynawo is a dynamic network simulator with a wide variety of models implementing the
-different equipment of a power transmission grid. Each of these models has his own
-collection of *parameters* (initialization, control, electric characteristics, etc.).
+Dynawo supports a wide variety of equipment models, and parameter names vary
+across models even when they refer to the same physical quantity. For example,
+the voltage regulation setpoint of a generating unit is called
+``voltageRegulator_UsRefPu`` for synchronous generators,
+``WTG4B_wecc_repc_URefPu`` for WECC wind models, and ``WPP_xWPRefPu`` for
+IEC models. DyCoV maintains an internal dictionary that maps all these
+variant names to a common identifier (``VoltageSetpointPu`` in this example).
 
-Due to the huge variety of Dynawo models and model parameters, the names of those Dynawo
-parameters vary wildly, even when they refer conceptually to the same thing. Take for
-instance something quite common, such as the setpoint of the voltage regulation of a
-generating unit (of any kind). The Dynawo name for this parameter is
-``voltageRegulator_UsRefPu`` in the case of synchronous generators,
-``WTG4A_wecc_repc_URefPu`` or ``WTG4B_wecc_repc_URefPu`` in the case of WECC wind farm
-models, ``WPP_xWPRefPu`` in the case of IEC models, etc. Therefore the tool has to
-maintain an internal "master dictionary" that maps these different names to a common
-name, thanks to which the parameters can be identified and be read or written by the
-tool. For instance, in the example given all these names map to a common name
-``VoltageSetpointPu``.
-
-This is internal and the user does not need to be concerned with this translation, but
-it means that **in order to support a new Dynawo model (or an updated one), this
-internal dictionary must be updated**. See the Developer Manual for the details on how
-to do this.
+This translation is transparent to the user, but it means that **supporting a
+new or updated Dynawo model requires updating this internal dictionary**. See
+the Developer Manual for details.
 
 Currently supported models:
 
@@ -151,7 +169,7 @@ Currently supported models:
     * GeneratorSynchronousThreeWindingsDTRI8
         Ad-hoc machine model for the I8 PCS
 * WECC Wind models:
-    * WTG4AWeccCurrentSource1
+    * WTG4AWeccCurrentSource
         WECC Wind Turbine model with a simplified drive train model (dual-mass model) and with a
         current source as interface with the grid
     * WTG4BWeccCurrentSource
@@ -164,29 +182,21 @@ Currently supported models:
         with the grid
 * IEC Wind models:
     * IECWPP4ACurrentSource2015
-        Wind Power Plant Type 4A model from IEC 61400-27-1:2015 standard : WT4A 2015 and plant controller
-        (P/f control module, Q/V control module)
+        Wind Power Plant Type 4A model from IEC 61400-27-1:2015
     * IECWPP4BCurrentSource2015
-        Wind Power Plant Type 4B model from IEC 61400-27-1:2015 standard : WT4B 2015 and plant controller
-        (P/f control module, Q/V control module)
+        Wind Power Plant Type 4B model from IEC 61400-27-1:2015
     * IECWPP4ACurrentSource2020
-        Wind Power Plant Type 4A model from IEC 61400-27-1:2020 standard : WT4A 2020, plant controller
-        (P/f control module, Q/V control module) and communication modules
+        Wind Power Plant Type 4A model from IEC 61400-27-1:2020
     * IECWPP4BCurrentSource2020
-        Wind Power Plant Type 4B model from IEC 61400-27-1:2020 standard : WT4B 2020, plant controller
-        (P/f control module, Q/V control module) and communication modules
+        Wind Power Plant Type 4B model from IEC 61400-27-1:2020
     * IECWT4ACurrentSource2015
-        Wind Turbine Type 4A model from IEC 61400-27-1:2015 standard : measurement, PLL, protection,
-        PControl, QControl, limiters, electrical and generator modules
+        Wind Turbine Type 4A model from IEC 61400-27-1:2015
     * IECWT4BCurrentSource2015
-        Wind Turbine Type 4B model from IEC 61400-27-1:2015 standard : measurement, PLL, protection,
-        PControl, QControl, limiters, electrical, generator and mechanical modules
+        Wind Turbine Type 4B model from IEC 61400-27-1:2015
     * IECWT4ACurrentSource2020
-        Wind Turbine Type 4A model from IEC 61400-27-1:2020 standard : measurement, PLL, protection,
-        PControl, QControl, limiters, electrical and generator modules
+        Wind Turbine Type 4A model from IEC 61400-27-1:2020
     * IECWT4BCurrentSource2020
-        Wind Turbine Type 4B model from IEC 61400-27-1:2020 standard : measurement, PLL, protection,
-        PControl, QControl, limiters, electrical, generator and mechanical modules
+        Wind Turbine Type 4B model from IEC 61400-27-1:2020
 * WECC Storage models:
     * BESSWeccCurrentSource
         WECC Storage model
@@ -209,72 +219,89 @@ Currently supported models:
 
 .. _referenceCurves:
 
-
 Reference Curves
 ----------------
 
-For **RMS Model Validation**, the user must provide the reference curves. The reference curves
-are a set of files like the one shown in this example:
+RMS Model Validation always requires reference curves — the baseline dynamic
+behavior against which the model's response is evaluated. These are typically
+obtained from field measurements or EMT simulations, though RMS curves from a
+phasor simulation tool are also accepted.
+
+The reference curves directory follows this structure:
 
 .. figure:: figs_inputs/reference_curves.png
     :scale: 90
 
     Reference curves structure
 
-The example in this image shows what the reference curves would look like for a *PCS*
-with 2 *Benchmarks*, where 'Benchmark1' has 2 *Operating Conditions* and 'Benchmark2'
-has only 1 *Operating Conditions*. It is also observed how each producer curve is made
-up of 2 files, the producer signals file (in the image in **CSV** format), and a **DICT**
-file.
+Each test case (Operating Condition) requires a curve file and an associated
+DICT file. The example above shows a PCS with two Benchmarks: Benchmark1 has
+two Operating Conditions and Benchmark2 has one.
 
-Reference signals are normally of EMT-type, obtained either from real field tests or
-from an EMT simulator. But they could also be RMS signals, obtained from a phasor
-simulation tool. For this reason, the tool can import producer signal in the following
-formats:
+Accepted curve file formats:
 
-* COMTRADE:
-    All versions of the COMTRADE standard up to version C37.111-2013 are admissible. The
-    signals can be provided either as a single file in the SBB format, or as a pair of
-    files in DAT+CFG formats (the two files must in this case have the same name and
-    differ only by their extension).
-* EUROSTAG:
-    Only the EXP ASCII format is supported.
-* CSV:
-    The column separator must be ";". A "time" column is required, although it does not
-    need to be the first column (see the DICT file below).
+* **COMTRADE** — all versions up to C37.111-2013 are accepted, either as a
+  single CFF file or as a DAT+CFG pair (both files must share the same name).
+* **EUROSTAG** — only the EXP ASCII format is supported.
+* **CSV** — the column separator must be ``";"``. A ``time`` column is
+  required but does not need to be the first column.
 
-    The nature of the records must be specified as follows.
+Regardless of the format, **a companion DICT file is always mandatory**. It
+must have the same filename as the curve file but with the ``.dict``
+extension. This file provides two types of information that cannot be inferred
+from the curve file itself:
 
-In addition, **it is mandatory to provide a companion 'DICT' file, regardless of the
-format of the producer signal file**. This dictionary file must have the same filename,
-but with the .DICT extension. This file provides two types of information that are
-otherwise impossible to guess:
+* the mapping between curve columns and the signal names expected by DyCoV,
+* simulation parameters used to obtain the curves (event timing, etc.).
 
-* The correspondence between the columns of the file and the quantities expected in the PCSs.
-* Certain simulation parameters used to obtain the curves (depending on the PCS).
+The DICT file uses INI format, interpreted by Python's ``configparser``
+module. The precise syntax is described in the
+`Supported ini file structure <https://docs.python.org/3/library/configparser.html#supported-ini-file-structure>`_
+documentation.
 
-The DICT file must be written in "INI" format. More precisely, this file is interpreted
-using the module ``configparser`` from the standard Python library. The precise
-syntax is documented in the `Supported ini file structure`__ document.
-
-__ https://docs.python.org/3/library/configparser.html#supported-ini-file-structure
 
 .. _producerCurves:
 
 Producer Curves
 ---------------
 
-Producer curves, as in the Reference Curves, are a set of files, where each reference curve is made up of 2 files,
-the reference signals file (in the image in **CSV** format), and a **DICT** file. See
-:ref:`Reference Curves <referenceCurves>` for more details on curves files.
+Producer curves follow the same file format and DICT requirements as
+:ref:`Reference Curves <referenceCurves>`. The key difference is their role:
+producer curves represent the producer's response, not a reference baseline.
 
-In the case of *Electric Performance* PCSs, it is possible to provide a set of
-producer curves. If curves are provided and Dynawo models are not, then the tests are
-carried out using the curves, and no Dynawo simulations are run. However, when the user
-provides both the Dynawo model and producer curves, the curves will only used to show
-them in the graphs of the final report, along with the ones simulated by Dynawo (the
-tests will use the Dynawo curves).  The structure of the curves directory is identical
-to the case of *RMS Model Validation* tests.
+For **RMS Model Validation**, a single set of curve files is shared across
+zones. The zone is identified through the PCS identifier in the filename
+(``z1`` or ``z3``) and through a per-zone ``Producer.ini`` file. The
+``ProducerCurves/`` directory is a self-contained entity, separate from the
+Dynawo model examples:
+
+.. code-block:: text
+
+   ProducerCurves/
+   └── PPM/
+       ├── Producer/
+       │   ├── CurvesFiles.ini
+       │   ├── PCS_RTE-I16z1.<Benchmark>.<OC>.csv
+       │   ├── PCS_RTE-I16z1.<Benchmark>.<OC>.dict
+       │   ├── PCS_RTE-I16z3.<Benchmark>.<OC>.csv
+       │   └── PCS_RTE-I16z3.<Benchmark>.<OC>.dict
+       ├── Zone1/
+       │   └── Producer.ini
+       └── Zone3/
+           └── Producer.ini
+
+For **Electric Performance Verification**, there is no Zone 1 / Zone 3
+distinction. A single ``Producer.ini`` covers the entire case:
+
+.. code-block:: text
+
+   ProducerCurves/
+   └── PPM/
+       ├── Producer/
+       │   ├── CurvesFiles.ini
+       │   ├── PCS_RTE-I*.csv
+       │   └── PCS_RTE-I*.dict
+       └── Producer.ini
 
 
 .. _topologies:
@@ -282,8 +309,9 @@ to the case of *RMS Model Validation* tests.
 Available Topologies
 --------------------
 
-Currently *Dynamic grid Compliance Verification* is limited to 8 different topologies to represent the
-*Producer Model*:
+DyCoV currently supports eight topologies to represent the producer model.
+The topology is declared in the ``Producer.ini`` file and determines how
+DyCoV connects the producer's equipment to the PDR bus internally.
 
 .. figure:: figs_topologies/s.png
     :width: 600px
@@ -291,9 +319,9 @@ Currently *Dynamic grid Compliance Verification* is limited to 8 different topol
     S and S+i topologies
 
 * S
-    single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)`
+    Single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)`
 * S+i
-    single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Internal Network Line
+    Single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Internal Network Line
 
 .. figure:: figs_topologies/saux.png
     :width: 600px
@@ -301,10 +329,9 @@ Currently *Dynamic grid Compliance Verification* is limited to 8 different topol
     S+Aux and S+Aux+i topologies
 
 * S+Aux
-    single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load
+    Single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load
 * S+Aux+i
-    single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load + Internal Network Line
-
+    Single :abbr:`gen (generator)`/:abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load + Internal Network Line
 
 .. figure:: figs_topologies/m.png
     :width: 600px
@@ -312,10 +339,9 @@ Currently *Dynamic grid Compliance Verification* is limited to 8 different topol
     M and M+i topologies
 
 * M
-    multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)`
+    Multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)`
 * M+i
-    multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Internal Network Line
-
+    Multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Internal Network Line
 
 .. figure:: figs_topologies/maux.png
     :width: 600px
@@ -323,144 +349,94 @@ Currently *Dynamic grid Compliance Verification* is limited to 8 different topol
     M+Aux and M+Aux+i topologies
 
 * M+Aux
-    multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load
+    Multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load
 * M+Aux+i
-    multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load + Internal Network Line
-
+    Multiple :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` + Auxiliary Load + Internal Network Line
 
 .. note::
-    For Zone 1 :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` the only one allowed is "S"
+   For Zone 1 :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` validation,
+   only the S topology is allowed.
 
-    .. figure:: figs_topologies/zone1.png
-        :width: 500px
+   .. figure:: figs_topologies/zone1.png
+       :width: 500px
 
-        S Topology
+       S Topology
 
 
 Generating input files
 ----------------------
 
-The tool has a guided process that allows the user to create all the input files necessary to model
-the network on the producer side using Dynawo models. Additionally, the **DICT** files
-necessary to generate sets of input curves that can be used as
-:ref:`Producer Curves <producerCurves>` and/or :ref:`Reference Curves <referenceCurves>` are
-generated.
+Starting from scratch? The ``dycov generate`` command walks you through the
+process of creating all the input files interactively, so you do not need to
+build the DYD, PAR, and INI files manually.
 
-This process creates an output directory with the input files required by the tool for the
-selected verification method. Initially, the process starts with empty template files that the
-tool will complete with the help of the user.
+The guided process works in stages:
 
-The first file that the tool will work on is the **DYD** file, creating the equipment and
-connections necessary to implement the topology selected by the user. The generated file must be
-edited by the user, modifying the placeholders present in the file for the dynamic model that he
-wishes to use among all the models available in the tool. The same file includes in comments the
-dynamic models available for each placeholder used when generating the topology. Upon completion
-of editing the **DYD** file, the user must press Enter to continue the process. At that time, the
-tool will check that the edited file is correct, notifying the user if there are any errors in it.
+1. **DYD file** — DyCoV generates a template with placeholder model names and
+   comments listing the available options for each component. Edit the file to
+   replace the placeholders with the actual Dynawo model names you want to use,
+   then press Enter to continue. DyCoV will validate the file before proceeding.
 
-.. code-block:: console
+   Example of a generated DYD template:
 
-            <?xml version='1.0' encoding='UTF-8'?>
-            <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
-              <!--Topology: S+Aux-->
-              <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
-              <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
-              <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
-              <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
-              <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
-              <dyn:connect id1="StepUp_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
-              <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
-              <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="StepUp_Xfmr" var2="transformer_terminal1"/>
-              <!--Replace the placeholder: 'XFMR_DYNAMIC_MODEL', available_options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
-              <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousThreeWindingsDTRI8', 'InertialGrid']-->
-              <!--Replace the placeholder: 'LOAD_DYNAMIC_MODEL', available_options: ['LoadPQ','LoadAlphaBeta']-->
-            </dyn:dynamicModelsArchitecture>
+   .. code-block:: xml
 
-The next file that the tool will work on is the **PAR** file, generating all the parameters needed
-to complete the dynamic models selected by the user in the **DYD** file. The parameters in the
-**PAR** file are ordered to first show all the parameters that do not have a default value
-assigned, and therefore require the user to complete them. Next, the parameters with default
-values are shown. In these parameters, the default value has been used when generating the **PAR**
-file, so the user only needs to edit them in case the equipment to be modeled has a different
-value. Upon completion of editing the **PAR** file, the user must press Enter to continue the
-process. At that time, the tool will check that the edited file is correct, notifying the user if
-there are any errors in it.
+      <?xml version='1.0' encoding='UTF-8'?>
+      <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
+        <!--Topology: S+Aux-->
+        <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
+        <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
+        <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
+        <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
+        <!--Replace: 'XFMR_DYNAMIC_MODEL', options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
+        <!--Replace: 'SM_DYNAMIC_MODEL', options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', ...]-->
+        <!--Replace: 'LOAD_DYNAMIC_MODEL', options: ['LoadPQ','LoadAlphaBeta']-->
+      </dyn:dynamicModelsArchitecture>
 
-.. code-block:: console
+2. **PAR file** — DyCoV generates a parameter file with all the parameters
+   required by the models chosen in step 1. Parameters without default values
+   appear first and must be filled in; those with defaults are pre-filled but
+   can be changed. Press Enter when done; DyCoV validates the file.
 
-            <?xml version='1.0' encoding='UTF-8'?>
-            <parametersSet xmlns="http://www.rte-france.com/dynawo">
-              <set id="AuxLoad_Xfmr">
-                <par type="DOUBLE" name="transformer_BPu" value=""/>
-                <par type="DOUBLE" name="transformer_GPu" value=""/>
-                <par type="DOUBLE" name="transformer_RPu" value=""/>
-                <par type="DOUBLE" name="transformer_XPu" value=""/>
-                <par type="DOUBLE" name="transformer_rTfoPu" value=""/>
-                <par type="INT" name="transformer_NbSwitchOffSignals" value="2"/>
-                <par type="INT" name="transformer_State0" value="2"/>
-                <par type="BOOL" name="transformer_SwitchOffSignal10" value="false"/>
-                <par type="BOOL" name="transformer_SwitchOffSignal20" value="false"/>
-                <par type="BOOL" name="transformer_SwitchOffSignal30" value="false"/>
-              </set>
-            </parametersSet>
+   .. code-block:: xml
 
-To finish modeling the producer's network, the tool will edit the **INI** file to complete the
-topology that has been selected, with the user being responsible for completing the parameters
-that make up the file. Upon completion of editing the **INI** file, the user must press Enter to
-continue the process. At that time, the tool will check that the edited file is correct, notifying
-the user if there are any errors in it.
+      <?xml version='1.0' encoding='UTF-8'?>
+      <parametersSet xmlns="http://www.rte-france.com/dynawo">
+        <set id="AuxLoad_Xfmr">
+          <par type="DOUBLE" name="transformer_BPu" value=""/>
+          <par type="DOUBLE" name="transformer_RPu" value=""/>
+          <par type="DOUBLE" name="transformer_XPu" value=""/>
+          ...
+        </set>
+      </parametersSet>
 
-.. code-block:: console
+3. **INI file** — DyCoV fills in the topology and leaves the remaining
+   parameters (nominal voltage, power limits, etc.) for you to complete.
+   Press Enter when done; DyCoV validates the file.
 
-            # p_{max_unite} injection as defined by the DTR in MW 
-            p_max_injection_at_PDR =
-            # u_nom is the nominal voltage at the PDR bus (in kV)
-            # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
-            u_nom =
-            # q_max is the maximum reactive power at the PDR bus (in MVar)
-            q_max_at_PDR =
-            # q_min is the minimum reactive power at the PDR bus (in MVar)
-            q_min_at_PDR =
-            # topology
-            topology = S+Aux
+   .. code-block:: ini
 
-The last stage of the process is to generate a set of curves for the selected verification. Along
-with the model files created, the tool has created a directory called ReferenceCurves. This file
-contains a **DICT** file for each test that makes up the verification, as well as an **INI** file
-that allows the files containing the user's curves to be related to the relevant test. The user
-must edit the **INI** file to provide the path to the file with the curves that the tool should
-use, as well as select the columns to verify. Upon completion of editing the **INI** file, the user
-must press Enter to continue the process. At that time, the tool will check that the edited file is
-correct, notifying the user if there are any errors in it, and that the paths to the curve files
-are correct.
+      p_max_injection_at_PDR =
+      u_nom =
+      q_max_at_PDR =
+      q_min_at_PDR =
+      topology = S+Aux
 
-.. code-block:: console
+4. **Curve files** — DyCoV creates a ``ReferenceCurves/`` directory with a
+   DICT file for each test and a ``CurvesFiles.ini`` for you to fill in with
+   the paths to your curve files and the column mapping. Press Enter when done;
+   DyCoV validates both the file and the curve paths.
 
-            [Curves-Files]
-            PCS_RTE-I2.USetPointStep.AReactance =
-            PCS_RTE-I2.USetPointStep.BReactance =
-            PCS_RTE-I3.LineTrip.2BReactance =
-            PCS_RTE-I4.ThreePhaseFault.TransientBolted =
-            PCS_RTE-I6.GridVoltageDip.Qzero =
-            PCS_RTE-I7.GridVoltageSwell.QMax =
-            PCS_RTE-I7.GridVoltageSwell.QMin =
-            PCS_RTE-I8.LoadShedDisturbance.PmaxQzero =
-            PCS_RTE-I10.Islanding.DeltaP10DeltaQ4 =
+   .. code-block:: ini
 
+      [Curves-Files]
+      PCS_RTE-I2.USetPointStep.AReactance =
+      PCS_RTE-I2.USetPointStep.BReactance =
+      ...
 
-            [Curves-Dictionary]
-            time =
-            BusPDR_BUS_Voltage =
-            BusPDR_BUS_ActivePower =
-            BusPDR_BUS_ReactivePower =
-            StepUp_Xfmr_XFMR_Tap =
-            Synch_Gen_GEN_RotorSpeedPu =
-            Synch_Gen_GEN_InternalAngle =
-            Synch_Gen_GEN_VoltageSetpointPu =
-            Synch_Gen_GEN_MagnitudeControlledByAVRP =
-            Synch_Gen_GEN_NetworkFrequencyPu =
-            # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
-            # and the suffixes _a, _b and _c must be added as in the following example:
-            #    BusPDR_BUS_Voltage_a =
-            #    BusPDR_BUS_Voltage_b =
-            #    BusPDR_BUS_Voltage_c =
+      [Curves-Dictionary]
+      time =
+      BusPDR_BUS_Voltage =
+      BusPDR_BUS_ActivePower =
+      BusPDR_BUS_ReactivePower =
+      ...

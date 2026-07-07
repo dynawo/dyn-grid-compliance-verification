@@ -35,15 +35,15 @@ class DycovCLI:
     """
 
     def __init__(self):
-        """Initializes the DycovCLI, creating an instance of the DycovInitializer."""
+        """Initializes the DycovCLI, setting up the core initializer and the CLI logger."""
         self.initializer = DycovInitializer()
         self.logger = dycov_logging.get_logger("DycovCLI")
 
     def dycov(self) -> int:
         """Main entry point for the dycov command-line interface.
 
-        It parses command-line arguments, performs necessary initializations,
-        and dispatches to the relevant command handler functions.
+        It parses command-line arguments, performs basic validation,
+        and delegates execution to the appropriate command handler.
         """
         self.logger.info("Starting DYCOV CLI.")
         # Set up the main argument parser and its subparsers.
@@ -63,6 +63,9 @@ class DycovCLI:
     def _execute_command(self, parser, args) -> int:
         """Executes the given command after handling initialization steps.
 
+        This includes resolving the Dynawo launcher when required and
+        initializing the core DYCOV environment.
+
         Parameters
         ----------
         parser : argparse.ArgumentParser
@@ -70,24 +73,43 @@ class DycovCLI:
         args : argparse.Namespace
             Parsed command-line arguments.
         """
-        dynawo_launcher_path: Optional[Path] = None
-
         # Determine Dynawo launcher availability and initialize components.
-        # The 'anonymize' command does not require a Dynawo launcher.
-        # The 'generateEnvelopes' command does not require a Dynawo launcher.
-        simple_commands = ["anonymize", "generateEnvelopes"]
-        if args.command not in simple_commands:
+        dynawo_launcher_path: Optional[Path] = None
+        needs_launcher = (
+            args.command in {"performance", "validate"} and args.model is not None
+        ) or args.command == "generate"
+        if needs_launcher:
             dynawo_launcher_name = get_dynawo_launcher_name(parser, args)
             check_dynawo_launcher_availability(dynawo_launcher_name)
             dynawo_launcher_path = Path(shutil.which(dynawo_launcher_name)).resolve()
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
+        else:
+            dynawo_launcher_path = None
+
+        # Apply diagnostic mode BEFORE initialization
+        self._apply_diagnostic_mode(args)
 
         # Initialize core DYCOV components
-        self.initializer.init(dynawo_launcher_path, args.debug)
+        self.initializer.init(args.user_config, dynawo_launcher_path, args.debug)
         self.logger.debug("DycovInitializer completed initialization.")
 
         # Dispatch the command to the appropriate handler function.
         return self._dispatch_command(parser, args, dynawo_launcher_path)
+
+    def _apply_diagnostic_mode(self, args):
+        if not getattr(args, "diagnostic", False):
+            return
+
+        self.logger.info("DIAGNOSTIC mode enabled")
+
+        # 1) Diagnostic implies debug
+        args.debug = True
+
+        # 2) Force serial execution via in‑memory config override
+        from dycov.configuration.cfg import config
+
+        config.set_value("Global", "parallel_pcs_validation", "false")
+        config.set_value("Global", "parallel_num_processes", "1")
 
     def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> int:
         """Dispatches the parsed command to its respective handler function.
@@ -103,7 +125,7 @@ class DycovCLI:
         """
         self.logger.info(f"Dispatching command: {args.command}")
         if args.command == "generateEnvelopes":
-            ret = handle_generate_envelopes_command(parser, args, dynawo_launcher_path)
+            ret = handle_generate_envelopes_command(parser, args)
         elif args.command == "validate":
             ret = handle_validate_command(parser, args, dynawo_launcher_path)
         elif args.command == "generate":
@@ -123,10 +145,15 @@ class DycovCLI:
         return ret
 
 
-def dycov():
+def dycov() -> int:
     """Entry point for the DYCOV command-line interface.
 
     Instantiates and runs the DycovCLI.
+
+    Returns
+    -------
+    int
+        Exit code indicating success (0) or failure (non-zero).
     """
     cli = DycovCLI()
     return cli.dycov()

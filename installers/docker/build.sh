@@ -9,13 +9,17 @@ set -o nounset -o noclobber -o errexit -o pipefail
 # Argument parsing
 ########################################
 
-if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <TAG> <DYNAWO_HOST_PATH>"
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    echo "Usage: $0 <TAG> <DYNAWO_HOST_PATH> [--dry-run]"
     exit 4
 fi
 
 TAG="$1"
 DYNAWO_HOST_PATH="$2"
+DRY_RUN=false
+if [[ "${3:-}" == "--dry-run" ]]; then
+    DRY_RUN=true
+fi
 ROOT_DIR="../.."
 
 ########################################
@@ -49,9 +53,10 @@ fi
 TEMP_DIR=$(mktemp -d temp.XXXXXX)
 
 EXAMPLES_DIR="$TEMP_DIR/examples"
+TOOLS_DIR="$TEMP_DIR/tools"
 DYNAWO_DIR_NAME="$TEMP_DIR/dynawo_build"
 
-mkdir -p "$EXAMPLES_DIR" "$DYNAWO_DIR_NAME"
+mkdir -p "$EXAMPLES_DIR" "$TOOLS_DIR" "$DYNAWO_DIR_NAME"
 
 cleanup() {
     echo "Cleaning up temp directory..."
@@ -97,41 +102,33 @@ echo "Found unique wheel: $PKG_BASENAME"
 # 3. Version Consistency Check
 ########################################
 
-# Extract version from pyproject.toml
-VERSION=$(grep '^version' "$ROOT_DIR/pyproject.toml" | cut -d'"' -f2)
+# Extract version from wheel filename
+WHEEL_VERSION=$(echo "$PKG_BASENAME" | sed -E 's/^[^-]+-([0-9]+\.[0-9]+\.[0-9]+)-.*$/\1/')
 
-if [[ -z "$VERSION" ]]; then
-    echo "ERROR: Could not extract version from pyproject.toml"
+if [[ -z "$WHEEL_VERSION" ]]; then
+    echo "ERROR: Could not extract version from wheel filename"
     exit 1
 fi
 
-# Ensure wheel name contains version
-if [[ "$PKG_BASENAME" != *"$VERSION"* ]]; then
-    echo "ERROR: Wheel version mismatch!"
-    echo "  pyproject.toml version: $VERSION"
-    echo "  wheel filename:         $PKG_BASENAME"
-    exit 1
-fi
-
-
-# Extract numeric part of TAG ("v0.9.2" → "0.9.2")
+# Extract numeric part of tag ("v1.0.0" -> "1.0.0")
 TAG_VERSION="${TAG#v}"
 
-# Ensure TAG matches project version
-if [[ "$TAG_VERSION" != "$VERSION" ]]; then
-    echo "ERROR: TAG mismatch!"
-    echo "  TAG argument:           $TAG  (numeric part: $TAG_VERSION)"
-    echo "  pyproject.toml version: $VERSION"
-    echo ""
-    echo "TAG must be 'v$VERSION' for reproducible builds."
-    exit 1
+if [[ "$WHEEL_VERSION" != "$TAG_VERSION" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "[DRY-RUN] Skipping version mismatch check"
+        echo " tag version:   $TAG_VERSION"
+        echo " wheel version: $WHEEL_VERSION"
+    else
+        echo "ERROR: Wheel version mismatch vs tag!"
+        echo " tag version:   $TAG_VERSION"
+        echo " wheel version: $WHEEL_VERSION"
+        exit 1
+    fi
 fi
 
 echo "Version check OK:"
-echo " - project version = $VERSION"
-echo " - wheel filename  = $PKG_BASENAME"
-echo " - TAG             = $TAG"
-
+echo " - wheel version = $WHEEL_VERSION"
+echo " - tag           = $TAG"
 
 ########################################
 # 4. Copy wheel into TEMP_DIR
@@ -147,6 +144,20 @@ cp "$PKG" "$TEMP_DIR/"
 echo "Copying examples..."
 if [[ -d "$ROOT_DIR/examples" ]]; then
     cp -a "$ROOT_DIR/examples/"* "$EXAMPLES_DIR/" 2>/dev/null || true
+fi
+
+
+########################################
+# 5b. Copy standalone tools (Dynawo PAR utility)
+########################################
+
+echo "Copying standalone tools..."
+if [[ -d "$ROOT_DIR/tools/dynawo_par" ]]; then
+    cp -a "$ROOT_DIR/tools/dynawo_par" "$TOOLS_DIR/"
+    find "$TOOLS_DIR" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+else
+    echo "ERROR: tools/dynawo_par not found at $ROOT_DIR/tools/dynawo_par"
+    exit 1
 fi
 
 
@@ -171,15 +182,54 @@ fi
 
 
 ########################################
-# 7. Copy Dockerfile + start script
+# 7. Copy compiled manual
+########################################
+
+echo "Copying compiled manual..."
+MANUAL_BUILD_DIR="$ROOT_DIR/docs/manual/build"
+if [[ ! -d "$MANUAL_BUILD_DIR/html" ]] || [[ ! -f "$MANUAL_BUILD_DIR/latex/dycov.pdf" ]]; then
+    echo "ERROR: Manual build artifacts not found in $MANUAL_BUILD_DIR"
+    echo "Run prepare_release.sh first, which compiles the manuals before building the image."
+    exit 1
+fi
+MANUAL_DIR="$TEMP_DIR/manual_build"
+mkdir -p "$MANUAL_DIR"
+cp -a "$MANUAL_BUILD_DIR/html" "$MANUAL_DIR/"
+cp "$MANUAL_BUILD_DIR/latex/dycov.pdf" "$MANUAL_DIR/"
+
+
+########################################
+# 7b. Copy user-facing tutorials
+########################################
+
+# User tutorials (Markdown), kept as-is so their relative cross-links work. The
+# docs/installation guides are intentionally excluded: they are pre-install
+# guides and add no value inside an already-installed image.
+echo "Copying tutorials..."
+TUTORIALS_SRC="$ROOT_DIR/docs/tutorials"
+if [[ ! -d "$TUTORIALS_SRC" ]]; then
+    echo "ERROR: tutorials not found at $TUTORIALS_SRC"
+    exit 1
+fi
+# Only the tutorials themselves (*.md); build helpers (md2pdf.sh,
+# listings-setup.tex) are not shipped.
+mkdir -p "$TEMP_DIR/tutorials"
+cp -a "$TUTORIALS_SRC"/*.md "$TEMP_DIR/tutorials/"
+
+
+########################################
+# 8. Copy Dockerfile + start script
 ########################################
 
 cp Dockerfile "$TEMP_DIR/"
 cp start_dycov.sh "$TEMP_DIR/"
+# Normalize the exec bit so the build context is deterministic regardless of the
+# host checkout's file mode (Windows/WSL, git archive, core.fileMode=false, ...).
+chmod 0755 "$TEMP_DIR/start_dycov.sh"
 
 
 ########################################
-# 8. Docker build (context = TEMP_DIR)
+# 9. Docker build (context = TEMP_DIR)
 ########################################
 
 echo "Starting Docker build using context $TEMP_DIR..."
@@ -189,7 +239,10 @@ docker build \
     -t "dycov:$TAG" \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
+    --build-arg dycov_TOOLS="tools" \
+    --build-arg dycov_TUTORIALS="tutorials" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \
+    --build-arg MANUAL_BUILD="manual_build" \
     "$TEMP_DIR"
 
 echo "Build complete:"

@@ -21,7 +21,8 @@ def create_curves_file(
     curves_filename: str,
     xfmrs: list,
     generators: list,
-    rte_loads: list,  # This parameter is not used in the current implementation.
+    tso_loads: list,
+    tso_generators: list,
     sim_type: int,
     zone: int,
     control_mode: str,
@@ -38,8 +39,10 @@ def create_curves_file(
         List of transformers on the Producer side.
     generators: list
         List of generators on the Producer side.
-    rte_loads: list
-        Loads on the TSO side, if the model has loads. (Currently not used)
+    tso_loads: list
+        Loads on the TSO side, if the model has loads.
+    tso_generators: list
+        Generators on the TSO side, if the model has generators.
     sim_type: int
         Type of simulation:
         * 1: Electrical performance for Synchronous Machine Model (ELECTRIC_PERFORMANCE_SM)
@@ -67,6 +70,11 @@ def create_curves_file(
     if zone == 1:
         _add_bus_curves(curves_root, curves_dict)
     _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
+
+    if tso_loads:
+        _add_tso_loads_curves(curves_root, tso_loads, curves_dict)
+    if tso_generators:
+        _add_tso_generators_curves(curves_root, tso_generators, curves_dict)
 
     if sim_type == ELECTRIC_PERFORMANCE_SM:
         generator_variables = config.get_list("CurvesVariables", "SM")
@@ -253,6 +261,52 @@ def _add_pdr_curves(curves_root: etree.Element, connected_to_pdr: list, curves_d
             key = f"{equipment.id}_{dynawo_variable}"
             curves_dict[key] = [f"BusPDR_TE_{equipment.id}_{variable}"]
             curves_dict[f"BusPDR_TE_{equipment.id}_{variable}"] = 1
+
+
+def _add_tso_loads_curves(curves_root: etree.Element, tso_loads: list, curves_dict: dict) -> None:
+    """Adds TSO load-related curves to the XML root and curves dictionary.
+
+    Parameters
+    ----------
+    curves_root : etree.Element
+        The root XML element for curves.
+    tso_loads : list
+        Loads on the TSO side, if the model has loads.
+    curves_dict : dict
+        The dictionary to which curve entries will be added.
+    """
+    load_variables = ["ActivePower", "ReactivePower"]
+    for load in tso_loads:
+        for variable in load_variables:
+            sign, dynawo_variable = dynawo_translator.get_dynawo_variable(load.lib, variable)
+            if dynawo_variable:  # Check if dynawo_variable is not empty
+                _add_curve_to_file(
+                    curves_root, load.id, variable, "LOAD", sign, dynawo_variable, curves_dict
+                )
+
+
+def _add_tso_generators_curves(
+    curves_root: etree.Element, tso_generators: list, curves_dict: dict
+) -> None:
+    """Adds TSO generator-related curves to the XML root and curves dictionary.
+
+    Parameters
+    ----------
+    curves_root : etree.Element
+        The root XML element for curves.
+    tso_generators : list
+        Generators on the TSO side, if the model has generators.
+    curves_dict : dict
+        The dictionary to which curve entries will be added.
+    """
+    generator_variables = ["ActivePower", "ReactivePower", "FrequencyHz"]
+    for generator in tso_generators:
+        for variable in generator_variables:
+            sign, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, variable)
+            if dynawo_variable:  # Check if dynawo_variable is not empty
+                _add_curve_to_file(
+                    curves_root, generator.id, variable, "GEN", sign, dynawo_variable, curves_dict
+                )
 
 
 def _add_xfmrs_curves(curves_root: etree.Element, xfmrs: list, curves_dict: dict) -> None:

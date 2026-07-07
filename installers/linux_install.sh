@@ -205,7 +205,7 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv; do
+for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv sha256sum; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1
@@ -284,7 +284,7 @@ if [ -n "$LOCAL_SOURCE_ZIP" ]; then
     
     # Copy file to current dir to avoid issues
     cp "$LOCAL_SOURCE_ZIP" .
-    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP$")
+    ZIP_FILENAME=$(basename "$LOCAL_SOURCE_ZIP")
     unzip -q "$ZIP_FILENAME"
     rm -f "$ZIP_FILENAME"
 
@@ -312,7 +312,9 @@ elif [ -n "$DIRECT_URL" ]; then
 
 else
     color_msg "Step 2: Shallow-cloning the DyCoV repository (branch/tag: $TARGET_BRANCH)..."
-    git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
+    git clone --progress --depth 1 --single-branch --branch "$TARGET_BRANCH" "$REPO_URL" "$TMP_LOCAL_REPO"
+    cd "$TMP_LOCAL_REPO"
+    git fetch --depth 1 --tags --progress
 fi
 
 ################################################################################
@@ -328,12 +330,8 @@ cd "$INSTALL_DIR"
 # 1. Create venv
 uv venv "$VENV" --python "$python_cmd"
 
-# 2. Install uv inside venv
-# shellcheck source=/dev/null
+# 2. Install repo using uv
 . "$VENV"/bin/activate
-pip install -q uv
-
-# 3. Install repo using uv
 uv pip install -q "$TMP_LOCAL_REPO"
 deactivate
 color_msg "Virtual environment created."
@@ -363,8 +361,13 @@ deactivate
 ################################################################################
 # Copy Examples and Build the Manual
 ################################################################################
-color_msg "Step 5: Installing examples and building the manual..."
+color_msg "Step 5: Installing examples, tutorials and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
+# User-facing tutorials (only the *.md files, so their relative cross-links
+# work). Build helpers (md2pdf.sh, listings-setup.tex) and the docs/installation
+# guides are intentionally excluded (the user is already installed here).
+mkdir -p "$INSTALL_DIR"/tutorials
+cp -a "$TMP_LOCAL_REPO"/docs/tutorials/*.md "$INSTALL_DIR"/tutorials/
 # shellcheck source=/dev/null
 . "$INSTALL_DIR"/activate_dycov
 uv pip install -q sphinx
@@ -375,7 +378,17 @@ deactivate
 mkdir -p "$INSTALL_DIR"/manual
 mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
 mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
-color_msg "Examples and manuals ready."
+color_msg "Examples, tutorials and manuals ready."
+
+################################################################################
+# Install standalone tools (e.g. the Dynawo PAR generation utility)
+################################################################################
+if [ -d "$TMP_LOCAL_REPO/tools/dynawo_par" ]; then
+    color_msg "Step 6: Installing standalone tools..."
+    mkdir -p "$INSTALL_DIR"/tools
+    cp -a "$TMP_LOCAL_REPO"/tools/dynawo_par "$INSTALL_DIR"/tools/
+    color_msg "Tools installed in $INSTALL_DIR/tools."
+fi
 
 ################################################################################
 # Final Cleanup
@@ -392,4 +405,8 @@ exec 6>&- 7>&-
 echo -e ""
 echo -e "${GREEN}INSTALLATION COMPLETED SUCCESSFULLY!${NC}"
 echo -e "${GREEN}To start using the tool, run: source $INSTALL_DIR/activate_dycov${NC}"
+echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
+if [ -d "$INSTALL_DIR/tools/dynawo_par" ]; then
+    echo -e "${GREEN}Dynawo PAR utility: python $INSTALL_DIR/tools/dynawo_par/generate_par.py --excel <file.xlsx>${NC}"
+fi
 echo -e ""

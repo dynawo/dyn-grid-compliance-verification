@@ -9,6 +9,7 @@
 #
 
 import configparser
+import importlib.metadata
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,8 @@ def save_results_to_csv(
     upper_envelope: np.ndarray,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """Exports the generated mathematical envelopes and signals into a CSV format.
+    """
+    Exports the generated mathematical envelopes and signals into a CSV format.
 
     If the system operates in hybrid mode and generates extra envelopes,
     they are dynamically appended as subsequent columns in the dataset.
@@ -75,7 +77,8 @@ def find_start_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """Identifies the ideal index to trim leading stable, non-informative data.
+    """
+    Identifies the ideal index to trim leading stable, non-informative data.
 
     This function iterates forward from the start of the signals and stops when
     it detects a significant variation exceeding the predefined tolerance threshold.
@@ -119,7 +122,8 @@ def find_end_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """Identifies the ideal index to trim trailing stable, non-informative data.
+    """
+    Identifies the ideal index to trim trailing stable, non-informative data.
 
     This function iterates backward from the end of the signals and stops when
     it detects the last point where there is a significant variation.
@@ -172,7 +176,8 @@ def plot_results(
     disclaimer_message: str = None,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """Renders and exports the simulation results graphically, automatically trimming stable data.
+    """
+    Renders and exports the simulation results graphically, automatically trimming stable data.
 
     Generates both an interactive HTML file and a static PNG image depending on the requested
     format.
@@ -234,6 +239,13 @@ def plot_results(
         # Configure HTML tags for Plotly rendering
         html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
         disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
+
+    # Fetch the exact software version for the watermark ---
+    try:
+        software_version = importlib.metadata.version("dycov")
+        watermark_text = f"dycov v{software_version}"
+    except importlib.metadata.PackageNotFoundError:
+        watermark_text = "dycov v(unknown)"
 
     # --- Static Plot Generation via Matplotlib (PNG) ---
     if "png" in output_format:
@@ -307,6 +319,19 @@ def plot_results(
                 horizontalalignment="left",
                 bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
             )
+
+        # Add watermark text to Matplotlib plot ---
+        plt.text(
+            0.98,
+            0.02,
+            watermark_text,
+            transform=plt.gca().transAxes,
+            fontsize=12,
+            color="gray",
+            alpha=0.3,  # Semi-transparent
+            verticalalignment="bottom",
+            horizontalalignment="right",
+        )
 
         # Apply layout adjustments and export
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
@@ -426,6 +451,20 @@ def plot_results(
                 borderpad=10,
             )
 
+        # Add watermark annotation to Plotly plot ---
+        fig.add_annotation(
+            xref="paper",
+            yref="paper",
+            x=0.98,
+            y=0.02,
+            text=watermark_text,
+            showarrow=False,
+            font=dict(color="gray", size=14),
+            opacity=0.3,  # Semi-transparent
+            xanchor="right",
+            yanchor="bottom",
+        )
+
         fig.update_layout(
             title_text=title,
             xaxis_title="Time (s)",
@@ -444,8 +483,8 @@ def save_ini_dump(
     producer_config: configparser.ConfigParser,
     calculator: Any,
 ) -> None:
-    """Serializes and exports all internal attributes from the simulation entities into a text
-    file.
+    """
+    Serializes and exports all internal attributes from the simulation entities into a text file.
 
     Parameters
     ----------
@@ -460,7 +499,8 @@ def save_ini_dump(
     """
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
-        """Helper method to format and write a dictionary's contents to an open file.
+        """
+        Helper method to format and write a dictionary's contents to an open file.
 
         Parameters
         ----------

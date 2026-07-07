@@ -55,9 +55,11 @@ def check_pre_stable(time: list[float], curve: list[float]) -> None:
 
 
 def check_sampling_interval(sampling_interval: float, cutoff: float) -> None:
-    """Check that the sampling interval and cut-off values do not exceed the maximum allowed value.
-    The maximum value for the sampling interval is determined by 2 times the filter Cut-off
-    frequency.
+    """Check that the sampling interval is compatible with the filter cut-off frequency.
+
+    The sampling interval must satisfy the Nyquist criterion, i.e. it must be
+    smaller than or equal to 1 / (2 * cutoff).
+
 
     Parameters
     ----------
@@ -117,6 +119,7 @@ def check_producer_params_consistency(
     q_min_pu: float = 0.0,
     rel_tol: float = 1e-6,
     abs_tol: float = 1e-9,
+    s_nref: float = 100.0,
 ) -> None:
     """
     Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
@@ -144,9 +147,9 @@ def check_producer_params_consistency(
     """
 
     # Aggregate PAR values
-    gen_p_max = sum(g.p_max for g in generators if g.p_max is not None)
-    gen_q_max = sum(g.q_max for g in generators if g.q_max is not None)
-    gen_q_min = sum(g.q_min for g in generators if g.q_min is not None)
+    gen_p_max = sum(g.p_max * g.s_nom / s_nref for g in generators if g.p_max is not None)
+    gen_q_max = sum(g.q_max * g.s_nom / s_nref for g in generators if g.q_max is not None)
+    gen_q_min = sum(g.q_min * g.s_nom / s_nref for g in generators if g.q_min is not None)
 
     log = dycov_logging.get_logger("Sanity Checks")
     has_error = False
@@ -308,7 +311,7 @@ def check_simulation_duration(time: float) -> None:
         )
 
 
-def check_solver(id: str, lib: str):
+def check_solver(id: str, lib: str) -> None:
     """Check if a solver allowed by the tool has been configured.
 
     Parameters

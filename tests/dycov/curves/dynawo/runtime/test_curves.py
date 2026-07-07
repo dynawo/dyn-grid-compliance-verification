@@ -13,9 +13,9 @@ import pandas as pd
 import pytest
 
 from dycov.curves.dynawo.runtime._curves import (
+    _get_magnitude_controlled_by_avr,
     _get_modulus,
     create_curves,
-    get_magnitude_controlled_by_avr,
     prepare_complex_column,
     translate_curves,
 )
@@ -180,7 +180,7 @@ def test_process_generators_with_variable_in_columns():
     )
 
     curves_dict = {}
-    get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
+    _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
 
     assert "GEN1_GEN_MagnitudeControlledByAVRPu" in curves_dict
     assert "GEN2_GEN_MagnitudeControlledByAVRPu" in curves_dict
@@ -206,7 +206,7 @@ def test_empty_generators_list():
     original_df = df_curves.copy()
 
     curves_dict = {}
-    get_magnitude_controlled_by_avr([], df_curves, curves_dict)
+    _get_magnitude_controlled_by_avr([], df_curves, curves_dict)
 
     assert len(curves_dict) == 0
     pd.testing.assert_frame_equal(df_curves, original_df)
