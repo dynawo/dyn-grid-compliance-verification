@@ -1,5 +1,15 @@
 # Dynawo → PyPowsybl execution backend
 
+> **ℹ️ Feasibility status (2026-07-08): BLOCKED today by a Dynawo release-cycle mismatch.**
+> powsybl-dynawo pins to official Dynawo *releases* (latest = 1.7.0); DyCoV runs Dynawo
+> 1.8.0 *development* (master), so pypowsybl 1.15 generates connections for the 1.7.0
+> interface and **no dynamic simulation completes** (not even pypowsybl's own example). A
+> powsybl-dynawo PR for 1.8.0 exists but ships only after Dynawo 1.8.0 is released — so this
+> is a release-cycle blocker, not architectural. Separately: the model catalog is
+> runtime-extensible via `additionalModelsFile`, but `Measurements`/PCC wiring, the missing
+> `IEC` category, and numerical parity remain open. See
+> [`Dynawo_PyPowsybl_feasibility.md`](Dynawo_PyPowsybl_feasibility.md).
+
 ## 1. Context
 
 Currently, DyCoV runs dynamic simulations through the Dynawo command-line interface (CLI). Execution is performed by calling `subprocess`, creating working directories where DyCoV stores the PAR, DYD, JOBS, and CRV files, which serve as inputs for Dynawo. Dynawo then writes the results to the outputs directory within the same working directory.
