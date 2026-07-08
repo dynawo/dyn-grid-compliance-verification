@@ -1,0 +1,5 @@
+_run/
+__pycache__/
+# generated at runtime with a machine-specific Dynawo homeDir (see e2e/config.yml.example)
+e2e/config.yml
+e2e/curves_pypowsybl.csv
