@@ -52,7 +52,15 @@ Core PCC signals come from the `Measurements` pseudo-model columns (`Measurement
 
 ## Working directory layout
 
+Inputs sit **flat** in the working dir (base-case + producer files are copied in). Dynawo
+writes results under the subdir named by `<outputs directory>` in `TSOModel.jobs` (`outputs`),
+resolved by `find_output_dir` (`files/model_parameters.py`).
+
 ```
-working_oc_dir/TSOModel/inputs/   TSOModel.{jobs,par,dyd,crv}, solvers.par
-working_oc_dir/TSOModel/outputs/  logs/dynawo.log, curves/curves.csv
+working_oc_dir/          TSOModel.{jobs,par,dyd,crv}, solvers.par, Producer.*, Omega.*, CurvesFiles.ini
+working_oc_dir/outputs/  logs/ (dynawo.log)  curves/ (curves.csv)  timeLine/  compilation/  finalState/
 ```
+
+The Results tree (`-o` output dir: `<Results>/…/Producer/<PCS>/<benchmark>/<oc>/`) mirrors
+this layout — DyCoV copies selected files/dirs from the working dir into it, then adds its
+post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`.
