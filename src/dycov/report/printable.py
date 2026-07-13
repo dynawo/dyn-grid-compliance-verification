@@ -9,47 +9,6 @@
 #
 
 
-def format_time_error(
-    results: dict,
-    key: str,
-    minimum_value: float = 1.0e-4,
-    apply_formatter: bool = False,
-    add_seconds_unit: bool = False,
-    default_value: str = "\\textemdash",
-) -> str:
-    """Get and format a time-related value, adding a Latex footnote when the value is '-'.
-
-    Parameters
-    ----------
-    results: dict
-        Results of the validations applied.
-    key: str
-        Searched value key.
-    minimum_value: float
-        Minimum value allowed, any lower value will be considered 0.
-    apply_formatter: bool
-        True to apply floating point format.
-    add_seconds_unit: bool
-        Add units of seconds.
-    default_value: str
-        Default return value if the key does not exist.
-
-    Returns
-    -------
-    str
-        A formatted value
-    """
-    if results[key] == "-":
-        return (
-            f"\\footnote{{Not Calculated because the reference value "
-            f"is exactly zero or very close to zero.}}{results[key]}".strip()
-        )
-    else:
-        return format_value(
-            results, key, minimum_value, apply_formatter, add_seconds_unit, default_value
-        )
-
-
 def format_value(
     results: dict,
     key: str,

@@ -155,11 +155,30 @@ def test_check_times_executes():
     }
 
     import dycov.validation.common as common
-    common.check_time = Mock(return_value=(0.0, True))
+    common.check_relative_error = Mock(return_value=(0.0, True))
 
     validator._ModelValidator__check_times(results, compliance_values)
 
     assert "reaction_time_check" in results
+
+
+def test_check_times_marks_non_compliant_on_failed_check():
+    validator = _make_validator(validations=["reaction_time"])
+
+    results = {"compliance": True}
+    compliance_values = {
+        "calc_reaction_time": 1.0,
+        "ref_reaction_time": 0.0,
+        "calc_reaction_target": {"x": 1.0},
+    }
+
+    import dycov.validation.common as common
+    common.check_relative_error = Mock(return_value=(1.0, False))
+
+    validator._ModelValidator__check_times(results, compliance_values)
+
+    assert results["reaction_time_check"] is False
+    assert results["compliance"] is False
 
 
 def test_check_ramp_executes():
@@ -586,7 +605,7 @@ def test_check_times_all_branches():
     }
 
     import dycov.validation.common as common
-    common.check_time = Mock(return_value=(0.0, True))
+    common.check_relative_error = Mock(return_value=(0.0, True))
 
     validator._ModelValidator__check_times(results, compliance_values)
 

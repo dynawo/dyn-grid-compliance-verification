@@ -479,12 +479,16 @@ class ModelValidator(Validator):
 
                 thr_reaction_time = config.get_float("GridCode", "thr_reaction_time", 0.10)
                 check_results["reaction_time_thr"] = thr_reaction_time * 100
+                thr_reaction_time_atol = config.get_float(
+                    "GridCode", "thr_reaction_time_atol", 0.05
+                )
 
                 check_results["reaction_time_error"], check_results["reaction_time_check"] = (
-                    common.check_time(
+                    common.check_relative_error(
                         compliance_values["calc_reaction_time"],
                         compliance_values["ref_reaction_time"],
                         thr_reaction_time,
+                        thr_reaction_time_atol,
                     )
                 )
 
@@ -501,12 +505,14 @@ class ModelValidator(Validator):
 
                 thr_rise_time = config.get_float("GridCode", "thr_rise_time", 0.10)
                 check_results["rise_time_thr"] = thr_rise_time * 100
+                thr_rise_time_atol = config.get_float("GridCode", "thr_rise_time_atol", 0.05)
 
                 check_results["rise_time_error"], check_results["rise_time_check"] = (
-                    common.check_time(
+                    common.check_relative_error(
                         compliance_values["calc_rise_time"],
                         compliance_values["ref_rise_time"],
                         thr_rise_time,
+                        thr_rise_time_atol,
                     )
                 )
 
@@ -524,12 +530,16 @@ class ModelValidator(Validator):
 
                 thr_settling_time = config.get_float("GridCode", "thr_settling_time", 0.10)
                 check_results["settling_time_thr"] = thr_settling_time * 100
+                thr_settling_time_atol = config.get_float(
+                    "GridCode", "thr_settling_time_atol", 0.05
+                )
 
                 check_results["settling_time_error"], check_results["settling_time_check"] = (
-                    common.check_time(
+                    common.check_relative_error(
                         compliance_values["calc_settling_time"],
                         compliance_values["ref_settling_time"],
                         thr_settling_time,
+                        thr_settling_time_atol,
                     )
                 )
 
@@ -545,12 +555,14 @@ class ModelValidator(Validator):
 
                 thr_overshoot = config.get_float("GridCode", "thr_overshoot", 0.15)
                 check_results["overshoot_thr"] = thr_overshoot * 100
+                thr_overshoot_atol = config.get_float("GridCode", "thr_overshoot_atol", 0.001)
 
                 check_results["overshoot_error"], check_results["overshoot_check"] = (
-                    common.check_time(
+                    common.check_relative_error(
                         compliance_values["calc_overshoot"],
                         compliance_values["ref_overshoot"],
                         thr_overshoot,
+                        thr_overshoot_atol,
                     )
                 )
 

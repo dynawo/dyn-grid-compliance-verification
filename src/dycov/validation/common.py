@@ -15,7 +15,8 @@ import numpy as np
 from dycov.configuration.cfg import config
 from dycov.logging.logging import dycov_logging
 
-# when magnitudes are smaller than atol, switch to absolute error
+# Absolute tolerance used when a magnitude is near zero and dividing by it directly
+# would be unstable (e.g. get_static_diff, get_AVR_x).
 ATOL = 1.0e-6
 # Threshold below which relative tolerance becomes meaningless
 TUBE_TARGET_THRESHOLD = 0.01
@@ -28,13 +29,6 @@ def get_ss_tolerance(setpoint_variation: float) -> float:
     if setpoint_variation > 0.0:
         tolerance = setpoint_variation * tolerance
     return tolerance
-
-
-# Absolute tube for small targets avoids unrealistic relative tolerances near zero
-def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
-    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
-        return True
-    return False
 
 
 def _compute_tube(target: float, percent: float) -> tuple[float, float]:
@@ -50,41 +44,50 @@ def _compute_tube(target: float, percent: float) -> tuple[float, float]:
         return target - delta, target + delta
 
 
-def check_time(
-    calculated_time: float, reference_time: float, rtol: float, atol: float = ATOL
+def check_relative_error(
+    calculated_value: float,
+    reference_value: float,
+    rtol: float,
+    zero_reference_atol: float,
 ) -> tuple[float, bool]:
-    """Check if the calculated time is within the tolerances of the reference time.
+    """Check if the calculated value is within the relative-error tolerance of the
+    reference value, per the DTR's Fiche I16 criteria (temps de reaction/montee/
+    etablissement, depassement) -- used for reaction/rise/settling time as well as
+    overshoot, which is a magnitude, not a time. All are expressed by the DTR as a
+    relative error in %, but the DTR defines no criterion for when the reference value
+    is exactly zero (dividing by it is undefined). This is a realistic case, not just a
+    corner case -- e.g. a reference curve with no overshoot at all (a well-damped,
+    monotonic response) has reference_value == 0 -- so it falls back to an absolute
+    tolerance instead: a calculated value close enough to zero is still compliant, even
+    though no relative error can be computed.
 
     Parameters
     ----------
-    calculated_time: float
-        Calculated time
-    reference_time: float
-        Reference time
+    calculated_value: float
+        Calculated value
+    reference_value: float
+        Reference value
     rtol: float
-        Relative tolerance
-    atol: float
-        Absolute tolerance
+        Relative tolerance (fraction, e.g. 0.10 for 10%)
+    zero_reference_atol: float
+        Absolute tolerance used only when reference_value == 0.0. Not derived from the
+        DTR -- tentative, unit-specific (seconds for reaction/rise/settling time, pu for
+        overshoot), pending confirmation with RTE.
 
     Returns
     -------
     float
-        Relative error between the calculated and reference time
+        Relative error (in %) between the calculated and reference value; or the
+        absolute value of calculated_value if reference_value == 0.0.
     bool
-        True if the calculated time is within the tolerances of the reference time, False otherwise
-
+        True if the calculated value is within tolerance of the reference: below rtol
+        when reference_value != 0.0, or within zero_reference_atol otherwise.
     """
-    # when magnitudes are smaller than atol, switch to absolute error
-    time_check = math.isclose(
-        calculated_time,
-        reference_time,
-        rel_tol=rtol,
-        abs_tol=atol,
-    )
-    if _show_error(calculated_time, reference_time, rtol, atol):
-        return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
-    else:
-        return "-", time_check
+    if reference_value == 0.0:
+        return abs(calculated_value), abs(calculated_value) <= zero_reference_atol
+
+    relative_error = 100 * abs(calculated_value - reference_value) / reference_value
+    return relative_error, relative_error < rtol * 100
 
 
 def is_invalid_test(

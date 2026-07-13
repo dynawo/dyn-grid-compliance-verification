@@ -72,17 +72,54 @@ def test_maximum_error_returns_zero_on_empty_input():
     assert result == 0
 
 
-def test_check_time_within_tolerances_returns_true_and_correct_error():
-    # calculated_time is within rtol and atol of reference_time
-    calculated_time = 10.01
-    reference_time = 10.0
-    rtol = 0.1  # 0.1%
-    atol = 0.05
-    error, is_within = common.check_time(calculated_time, reference_time, rtol, atol)
-    print(f"Error: {error}, is_within: {is_within}")
+def test_check_relative_error_within_tolerance_returns_true_and_correct_error():
+    # calculated_value is within rtol of reference_value
+    calculated_value = 10.01
+    reference_value = 10.0
+    rtol = 0.1  # 10%
+    error, is_within = common.check_relative_error(
+        calculated_value, reference_value, rtol, zero_reference_atol=0.05
+    )
     # Relative error: 100 * abs(10.01 - 10.0) / 10.0 = 0.1%
     assert is_within is True
     assert pytest.approx(error, rel=1e-6) == 0.1
+
+
+def test_check_relative_error_outside_tolerance_returns_false_and_correct_error():
+    # DTR Fiche I16 example: reaction time threshold is 10%.
+    calculated_value = 0.404
+    reference_value = 0.094
+    rtol = 0.10
+    error, is_within = common.check_relative_error(
+        calculated_value, reference_value, rtol, zero_reference_atol=0.05
+    )
+    assert is_within is False
+    assert pytest.approx(error, rel=1e-6) == 100 * abs(
+        calculated_value - reference_value
+    ) / reference_value
+
+
+def test_check_relative_error_with_zero_reference_within_absolute_tolerance():
+    # The DTR only defines a relative-error (%) criterion here, which is undefined
+    # when the reference is exactly zero (division by zero) -- e.g. an overshoot test
+    # where the reference curve has no overshoot at all. A calculated value close
+    # enough to zero must still be compliant (real report example: calc_overshoot of
+    # 0.000184 pu against a perfectly-damped reference).
+    error, is_within = common.check_relative_error(
+        0.000184, 0.0, rtol=0.15, zero_reference_atol=0.001
+    )
+    assert error == pytest.approx(0.000184)
+    assert is_within is True
+
+
+def test_check_relative_error_with_zero_reference_outside_absolute_tolerance():
+    # A calculated value that meaningfully deviates from a zero reference is still
+    # non-compliant.
+    error, is_within = common.check_relative_error(
+        0.5, 0.0, rtol=0.15, zero_reference_atol=0.001
+    )
+    assert error == pytest.approx(0.5)
+    assert is_within is False
 
 
 def test_get_settling_time_raises_value_error_on_length_mismatch():

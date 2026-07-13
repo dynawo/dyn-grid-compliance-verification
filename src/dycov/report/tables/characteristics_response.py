@@ -66,7 +66,7 @@ def _time_error(results: dict, name: str, variable: str, errors_map: list) -> No
         apply_formatter=True,
         default_value="",
     )
-    abs_error = printable.format_time_error(
+    abs_error = printable.format_value(
         results,
         variable + "_error",
         minimum_value=1.0e-8,
