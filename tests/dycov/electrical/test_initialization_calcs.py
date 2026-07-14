@@ -131,10 +131,10 @@ def _initialize_topo_s():
     assert _is_equal(grid_init.p0, 4.567)
     assert _is_equal(grid_init.q0, -1.522032981081081)
 
-    assert _is_equal(gen.terminals[0].u0, 1.0087747269606742)
-    assert _is_equal(gen.terminals[0].u_phase0, 0.44332797328537715)
-    assert _is_equal(gen.terminals[0].p0, -4.573257858564547)
-    assert _is_equal(gen.terminals[0].q0, -0.5590353650995359)
+    assert _is_equal(gen.terminals[0].u0, 1.0991244531721)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.43328564582460044)
+    assert _is_equal(gen.terminals[0].p0, -4.572736045526256)
+    assert _is_equal(gen.terminals[0].q0, -0.5124200670122216)
 
 
 def _initialize_topo_s_i():
@@ -222,10 +222,10 @@ def _initialize_topo_s_i():
     assert _is_equal(grid_init.p0, 4.567)
     assert _is_equal(grid_init.q0, -1.522032981081081)
 
-    assert _is_equal(gen.terminals[0].u0, 1.0147055890384953)
-    assert _is_equal(gen.terminals[0].u_phase0, 0.48429172795433334)
-    assert _is_equal(gen.terminals[0].p0, -4.573257858564549)
-    assert _is_equal(gen.terminals[0].q0, -0.7502368826414034)
+    assert _is_equal(gen.terminals[0].u0, 1.1051430783919824)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.4743671252012512)
+    assert _is_equal(gen.terminals[0].p0, -4.572736045526256)
+    assert _is_equal(gen.terminals[0].q0, -0.7036215845540932)
 
 
 def test_initialize_topo_s_with_main_xfmr():
@@ -233,6 +233,8 @@ def test_initialize_topo_s_with_main_xfmr():
 
     Regression test for issue #353 (point 1): the plant transformer must be
     converted with xfmr_pimodel, so its transformer ratio is honoured.
+    Expected values satisfy the Dynawo transformer equations with the declared
+    terminal orientation (issue #355).
     """
     gen = GenParams(
         id=None,
@@ -322,10 +324,10 @@ def test_initialize_topo_s_with_main_xfmr():
     assert _is_equal(ppm_xfmr.terminals[1].q0, 0.5590353650995359)
 
     # Generator, behind Main_Xfmr + step-up transformer
-    assert _is_equal(gen.terminals[0].u0, 0.99087174205643)
-    assert _is_equal(gen.terminals[0].u_phase0, 0.5715763627421826)
-    assert _is_equal(gen.terminals[0].p0, -4.58008499995222)
-    assert _is_equal(gen.terminals[0].q0, -1.1689266623982368)
+    assert _is_equal(gen.terminals[0].u0, 1.0780685014941822)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.5611528954914154)
+    assert _is_equal(gen.terminals[0].p0, -4.5795157171290946)
+    assert _is_equal(gen.terminals[0].q0, -1.118070730199069)
 
 
 def test_initialize_topo_m_power_share():
@@ -334,7 +336,8 @@ def test_initialize_topo_m_power_share():
     Regression test for issue #353 (point 2): the network-side terminal of
     each step-up transformer must carry its per-generator share of the plant
     flow (s_int_share), not the plant total. Covers both terminal
-    orientations (generator on terminal 1 and on terminal 2).
+    orientations (generator on terminal 1 and on terminal 2), whose pi models
+    are solved from the declared known side (issue #355).
     """
     gen1 = GenParams(
         id="G1",
@@ -440,12 +443,12 @@ def test_initialize_topo_m_power_share():
     assert _is_equal(xfmr1.terminals[1].q0 + xfmr2.terminals[0].q0, -1.0)
 
     # Generator-side values, consistent with each unit's flow
-    assert _is_equal(gen1.terminals[0].u0, 1.022160755352143)
-    assert _is_equal(gen1.terminals[0].u_phase0, 0.4168188674956146)
-    assert _is_equal(gen1.terminals[0].p0, -2.742599843457625)
-    assert _is_equal(gen1.terminals[0].q0, -0.9143860155477772)
-    assert _is_equal(xfmr1.terminals[0].p0, 2.742599843457625)
-    assert _is_equal(xfmr1.terminals[0].q0, 0.9143860155477772)
+    assert _is_equal(gen1.terminals[0].u0, 1.1129125029368876)
+    assert _is_equal(gen1.terminals[0].u_phase0, 0.4109629092433011)
+    assert _is_equal(gen1.terminals[0].p0, -2.7423997319349467)
+    assert _is_equal(gen1.terminals[0].q0, -0.8965093861886826)
+    assert _is_equal(xfmr1.terminals[0].p0, 2.7423997319349467)
+    assert _is_equal(xfmr1.terminals[0].q0, 0.8965093861886826)
     assert _is_equal(gen2.terminals[0].u0, 1.0344428846880473)
     assert _is_equal(gen2.terminals[0].u_phase0, 0.3967838257659877)
     assert _is_equal(gen2.terminals[0].p0, -1.828108507986619)
