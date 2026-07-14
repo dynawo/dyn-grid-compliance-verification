@@ -268,15 +268,19 @@ class ModelSetup:
         )
         return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
-    def _get_grid_load(
+    def _get_tso_loads(
         self,
         pcs_name: str,
         bm_name: str,
         oc_name: str,
         u_dim: float,
-    ) -> LoadParams:
+    ) -> tuple[LoadParams, LoadParams]:
         """
-        Retrieves grid load parameters.
+        Retrieves the TSO-model loads aggregated by network side.
+
+        Loads hanging directly from the PDR bus (connected to BusPDR or to the
+        Measurements pseudo-model, as in the Islanding PCS) are separated from
+        the loads behind the connection line, on the grid side (as in Pcs I8).
 
         Parameters
         ----------
@@ -291,12 +295,25 @@ class ModelSetup:
 
         Returns
         -------
-        LoadParams
-            Grid load parameters.
+        tuple[LoadParams, LoadParams]
+            (PDR-side load, grid-side load) aggregates; None when absent.
         """
         config_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Model")
         init_loads = self._complete_loads(config_section, bm_name, oc_name, u_dim)
-        return model_parameters.get_grid_load(init_loads)
+        connected_to = {
+            load.id: load.terminals[0].connected_equipment for load in self.tso_loads
+        }
+        pdr_bus_equipment = ("BusPDR", "Measurements")
+        pdr_loads = [
+            load for load in init_loads if connected_to.get(load.id) in pdr_bus_equipment
+        ]
+        grid_loads = [
+            load for load in init_loads if connected_to.get(load.id) not in pdr_bus_equipment
+        ]
+        return (
+            model_parameters.get_grid_load(pdr_loads),
+            model_parameters.get_grid_load(grid_loads),
+        )
 
     def _complete_loads(
         self,
@@ -617,6 +634,7 @@ class ModelSetup:
             if gen.terminals[0].connected_equipment in xfmr_map
         ]
 
+        pdr_load, grid_load = self._get_tso_loads(pcs_name, bm_name, oc_name, u_dim)
         tso_gen = init_calcs(
             tuple(producer.generators),
             tuple(sorted_stepup_xfmrs),
@@ -626,7 +644,8 @@ class ModelSetup:
             producer.intline,
             pdr,
             conn_line,
-            self._get_grid_load(pcs_name, bm_name, oc_name, u_dim),
+            grid_load,
+            pdr_load,
         )
 
         dycov_logging.get_logger("ModelSetup").debug(

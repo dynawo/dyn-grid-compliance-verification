@@ -25,6 +25,7 @@ def init_calcs(
     pdr: mp.PdrParams,
     grid_line: mp.PimodelParams,
     grid_load: mp.LoadParams,
+    pdr_load: mp.LoadParams = None,
 ) -> mp.GenInit:
     """Calculates initialization parameters for generators.
 
@@ -54,6 +55,10 @@ def init_calcs(
         Params of the equiv line on the grid side (zero-impedance if not used)
     grid_load: LoadParams
         Params of the equiv load on the grid side (if not Inf Bus, as in Pcs I8)
+    pdr_load: LoadParams
+        Params of the equiv load hanging directly from the PDR bus (as in the
+        Islanding PCS); it consumes part of the producer's delivery before it
+        enters the grid line
 
     Returns
     -------
@@ -69,12 +74,18 @@ def init_calcs(
     # Sign convention: we expect Pdr to be negative; therefore we need
     # to flip its sign here in this call. All other loadflows below do
     # not need this, as they are looking in the opposite direction.
+
+    # Loads hanging directly from the PDR bus consume part of the producer's
+    # delivery before it enters the grid line:
+    s_line = -pdr.s
+    if pdr_load is not None:
+        s_line = s_line - complex(pdr_load.p, pdr_load.q)
     if _zero_imp_line(grid_line):
         v_grid = v_pdr
-        s_grid = -pdr.s
+        s_grid = s_line
     else:
         v_grid, _, s_grid = _calc_pimodel(
-            grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, -pdr.s
+            grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, s_line
         )
         # Re-set phase angle globally. The grid sets the reference now:
         pdr.u_phase = -cmath.phase(v_grid)
@@ -122,8 +133,13 @@ def init_calcs(
         xfmr = xfmr_pimodel(ppm_xfmr)
         v_int_ = v_int
         s_int_ = s_int
-        v_int, _, s_int = _calc_pimodel(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int)
+        # The transformer pi model is asymmetric: its ratio lives on the declared
+        # terminal 1 side. When the known bus faces terminal 2, the pi must be
+        # solved as seen from side 2, i.e. with its shunts swapped.
         if ppm_xfmr.terminals[0].connected_equipment in int_id:
+            v_int, _, s_int = _calc_pimodel(
+                xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int
+            )
             ppm_xfmr.terminals[0].u0 = abs(v_int_)
             ppm_xfmr.terminals[0].u_phase0 = cmath.phase(v_int_)
             ppm_xfmr.terminals[0].p0 = s_int_.real
@@ -133,6 +149,9 @@ def init_calcs(
             ppm_xfmr.terminals[1].p0 = -s_int.real
             ppm_xfmr.terminals[1].q0 = -s_int.imag
         else:
+            v_int, _, s_int = _calc_pimodel(
+                xfmr.y_tr, xfmr.y_sh2, xfmr.y_sh1, v_int, None, s_int
+            )
             ppm_xfmr.terminals[1].u0 = abs(v_int_)
             ppm_xfmr.terminals[1].u_phase0 = cmath.phase(v_int_)
             ppm_xfmr.terminals[1].p0 = s_int_.real
@@ -160,7 +179,12 @@ def init_calcs(
         # solve first the powerflow for the aux load circuit
         xfmr = xfmr_pimodel(auxload_xfmr)
         pq = complex(aux_load.p, aux_load.q)
-        i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, pq)
+        if auxload_xfmr.terminals[0].connected_equipment == aux_load.id:
+            # the load is on the declared terminal 1: the known bus faces
+            # terminal 2, so solve the pi seen from side 2 (shunts swapped)
+            i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.y_tr, xfmr.y_sh2, xfmr.y_sh1, v_int, pq)
+        else:
+            i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, pq)
         aux_load.terminals[0].u0 = abs(v2_aux)
         aux_load.terminals[0].u_phase0 = cmath.phase(v2_aux)
         aux_load.terminals[0].p0 = aux_load.p
@@ -192,14 +216,22 @@ def _solve_gen_circuits(
     for gen, gen_xfmr in zip(gens, gen_xfmrs):
         s_int_share = complex(s_int.real * gen.p / tot_P, s_int.imag * gen.q / tot_Q)
         xfmr = xfmr_pimodel(gen_xfmr)
-        v_gen, _, s_gen = _calc_pimodel(
-            xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int_share
-        )
+        gen_on_terminal1 = gen_xfmr.terminals[0].connected_equipment == gen.id
+        if gen_on_terminal1:
+            # the generator is on the declared terminal 1: the known bus faces
+            # terminal 2, so solve the pi seen from side 2 (shunts swapped)
+            v_gen, _, s_gen = _calc_pimodel(
+                xfmr.y_tr, xfmr.y_sh2, xfmr.y_sh1, v_int, None, s_int_share
+            )
+        else:
+            v_gen, _, s_gen = _calc_pimodel(
+                xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int_share
+            )
         gen.terminals[0].u0 = abs(v_gen)
         gen.terminals[0].u_phase0 = cmath.phase(v_gen)
         gen.terminals[0].p0 = s_gen.real
         gen.terminals[0].q0 = s_gen.imag
-        if gen_xfmr.terminals[0].connected_equipment == gen.id:
+        if gen_on_terminal1:
             gen_xfmr.terminals[1].u0 = abs(v_int)
             gen_xfmr.terminals[1].u_phase0 = cmath.phase(v_int)
             gen_xfmr.terminals[1].p0 = s_int_share.real
