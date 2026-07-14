@@ -119,7 +119,7 @@ def init_calcs(
             int_line.terminals[0].q0 = -s_int.imag
     # Next comes the plant-level transformer, if present
     if ppm_xfmr is not None:
-        xfmr = line_pimodel(ppm_xfmr)
+        xfmr = xfmr_pimodel(ppm_xfmr)
         v_int_ = v_int
         s_int_ = s_int
         v_int, _, s_int = _calc_pimodel(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int)
