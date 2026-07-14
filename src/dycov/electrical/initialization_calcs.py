@@ -25,6 +25,7 @@ def init_calcs(
     pdr: mp.PdrParams,
     grid_line: mp.PimodelParams,
     grid_load: mp.LoadParams,
+    pdr_load: mp.LoadParams = None,
 ) -> mp.GenInit:
     """Calculates initialization parameters for generators.
 
@@ -54,6 +55,10 @@ def init_calcs(
         Params of the equiv line on the grid side (zero-impedance if not used)
     grid_load: LoadParams
         Params of the equiv load on the grid side (if not Inf Bus, as in Pcs I8)
+    pdr_load: LoadParams
+        Params of the equiv load hanging directly from the PDR bus (as in the
+        Islanding PCS); it consumes part of the producer's delivery before it
+        enters the grid line
 
     Returns
     -------
@@ -69,12 +74,18 @@ def init_calcs(
     # Sign convention: we expect Pdr to be negative; therefore we need
     # to flip its sign here in this call. All other loadflows below do
     # not need this, as they are looking in the opposite direction.
+
+    # Loads hanging directly from the PDR bus consume part of the producer's
+    # delivery before it enters the grid line:
+    s_line = -pdr.s
+    if pdr_load is not None:
+        s_line = s_line - complex(pdr_load.p, pdr_load.q)
     if _zero_imp_line(grid_line):
         v_grid = v_pdr
-        s_grid = -pdr.s
+        s_grid = s_line
     else:
         v_grid, _, s_grid = _calc_pimodel(
-            grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, -pdr.s
+            grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, s_line
         )
         # Re-set phase angle globally. The grid sets the reference now:
         pdr.u_phase = -cmath.phase(v_grid)
