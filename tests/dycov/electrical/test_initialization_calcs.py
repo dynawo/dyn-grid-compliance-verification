@@ -228,6 +228,106 @@ def _initialize_topo_s_i():
     assert _is_equal(gen.terminals[0].q0, -0.7502368826414034)
 
 
+def test_initialize_topo_s_with_main_xfmr():
+    """Topology 'S' plus a plant transformer (Main_Xfmr) with r_tfo != 1.
+
+    Regression test for issue #353 (point 1): the plant transformer must be
+    converted with xfmr_pimodel, so its transformer ratio is honoured.
+    """
+    gen = GenParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        terminals=(Terminal(connected_equipment=None),),
+        p=1,
+        q=1,
+        s_nom=90,
+        i_max=None,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+    gen_xfmr = XfmrParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    ppm_xfmr = XfmrParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment="Measurements"),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    line = LineParams(
+        id=None,
+        lib=None,
+        r=0.0,
+        x=1 / 12.562245359891353,
+        g=0.0,
+        b=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
+
+    grid_init = init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=ppm_xfmr,
+        int_line=None,
+        pdr=pdr,
+        grid_line=grid_line,
+        grid_load=None,
+    )
+
+    # The grid side is solved before the plant transformer, so it must match
+    # the plain topology 'S' case
+    assert _is_equal(grid_init.u0, 1.1009193919758402)
+    assert _is_equal(grid_init.u_phase0, 0.0)
+    assert _is_equal(grid_init.p0, 4.567)
+    assert _is_equal(grid_init.q0, -1.522032981081081)
+
+    # Main_Xfmr terminals: PDR side and internal side
+    assert _is_equal(ppm_xfmr.terminals[0].u0, 1.0444444444444445)
+    assert _is_equal(ppm_xfmr.terminals[0].u_phase0, 0.3216913640397123)
+    assert _is_equal(ppm_xfmr.terminals[0].p0, -4.567)
+    assert _is_equal(ppm_xfmr.terminals[0].q0, 0.0)
+    assert _is_equal(ppm_xfmr.terminals[1].u0, 1.0087747269606742)
+    assert _is_equal(ppm_xfmr.terminals[1].u_phase0, 0.44332797328537715)
+    assert _is_equal(ppm_xfmr.terminals[1].p0, 4.573257858564547)
+    assert _is_equal(ppm_xfmr.terminals[1].q0, 0.5590353650995359)
+
+    # Generator, behind Main_Xfmr + step-up transformer
+    assert _is_equal(gen.terminals[0].u0, 0.99087174205643)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.5715763627421826)
+    assert _is_equal(gen.terminals[0].p0, -4.58008499995222)
+    assert _is_equal(gen.terminals[0].q0, -1.1689266623982368)
+
+
 def _is_equal(a: float, b: float) -> bool:
     scale = 0.5 * (abs(a) + abs(b))
     if scale >= 1.0:
