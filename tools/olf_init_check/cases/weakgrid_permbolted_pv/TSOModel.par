@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <!--PDR parameters: U=1.0, UPhase=0.08328508371604713, S=(-0.00208-0j), P=-0.00208, Q=-0.0-->
+  <set id="InfiniteBus">
+    <par type="DOUBLE" name="infiniteBus_UPu" value="0.9951707497484569"/>
+    <par type="DOUBLE" name="infiniteBus_UPhase" value="0"/>
+    <par type="DOUBLE" name="infiniteBus_UNom" value="225.0"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="3.980148760839956"/>
+    <par type="DOUBLE" name="line_XPu" value="39.80148760839957"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="225.0"/>
+  </set>
+  <set id="NodeFault">
+    <par type="DOUBLE" name="fault_tBegin" value="30.0"/>
+    <par type="DOUBLE" name="fault_tEnd" value="10029.0"/>
+    <par type="DOUBLE" name="fault_RPu" value="1.0000000000000002e-06"/>
+    <par type="DOUBLE" name="fault_XPu" value="1e-05"/>
+  </set>
+</parametersSet>
