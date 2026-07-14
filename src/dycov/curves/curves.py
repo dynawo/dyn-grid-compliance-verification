@@ -78,6 +78,12 @@ class ProducerCurves:
         Union[str, float]
             Final value.
         """
+        # Ensure the PmaxConsumption and PmaxInjection are treated as Pmax for consistency
+        value_definition = (
+            value_definition
+            .replace("PmaxConsumption", "Pmax")
+            .replace("PmaxInjection", "Pmax")
+        )
         unit_characteristics = self.get_unit_characteristics()
         if "*" in value_definition:
             # Split the value definition by '*'
