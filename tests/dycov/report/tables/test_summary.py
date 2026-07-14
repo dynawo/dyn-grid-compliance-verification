@@ -99,3 +99,44 @@ def test_create_map_with_empty_summary_list():
     summary_list = []
     result = create_map(summary_list)
     assert result == []
+
+
+def test_create_map_not_applicable_defines_footnote_once():
+    summary_list = [
+        DummySummary(
+            producer_name="dummy_path",
+            pcs="PCS1",
+            benchmark="BenchmarkA",
+            operating_condition="OC1",
+            compliance=Compliance.NotApplicableTest,
+        )
+    ]
+    result = create_map(summary_list)
+    assert result[0][4] == (
+        "\\textcolor{red}{Not applicable test}"
+        "\\footnote{Not executed: incompatible control mode.}"
+    )
+
+
+def test_create_map_repeated_not_applicable_reuses_footnote():
+    summary_list = [
+        DummySummary(
+            producer_name="dummy_path",
+            pcs="PCS1",
+            benchmark="BenchmarkA",
+            operating_condition="OC1",
+            compliance=Compliance.NotApplicableTest,
+        ),
+        DummySummary(
+            producer_name="dummy_path",
+            pcs="PCS2",
+            benchmark="BenchmarkB",
+            operating_condition="OC2",
+            compliance=Compliance.NotApplicableTest,
+        ),
+    ]
+    result = create_map(summary_list)
+    assert "\\footnote{" in result[0][4]
+    assert result[1][4] == (
+        "\\textcolor{red}{Not applicable test}\\footnotemark[\\value{footnote}]"
+    )
