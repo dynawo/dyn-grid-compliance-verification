@@ -94,6 +94,28 @@ def test_ramp_error_with_valid_ramp_keys():
     assert row[5] == "\\textcolor{red}{ False }"
 
 
+def test_create_map_repeated_not_calculated_reuses_footnote():
+    results = {
+        "calc_reaction_time": 1.23,
+        "ref_reaction_time": 1.20,
+        "reaction_time_error": "-",
+        "reaction_time_thr": 0.05,
+        "reaction_time_check": "True",
+        "calc_rise_time": 2.34,
+        "ref_rise_time": 2.30,
+        "rise_time_error": "-",
+        "rise_time_thr": 0.06,
+        "rise_time_check": "True",
+    }
+    table = characteristics_response.create_map(results)
+    assert len(table) == 2
+    assert table[0][3].startswith(
+        "\\footnote{Not Calculated because the reference value "
+        "is exactly zero or very close to zero.}"
+    )
+    assert table[1][3].startswith("\\footnotemark[\\value{footnote}]")
+
+
 def test_create_map_with_missing_keys():
     results = {
         # Only overshoot keys present
