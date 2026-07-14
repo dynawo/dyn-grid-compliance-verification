@@ -16,7 +16,14 @@ from dycov.electrical.initialization_calcs import (
     init_calcs,
 )
 from dycov.electrical.pimodel_parameters import line_pimodel
-from dycov.model.parameters import GenParams, LineParams, PdrParams, Terminal, XfmrParams
+from dycov.model.parameters import (
+    GenParams,
+    LineParams,
+    LoadParams,
+    PdrParams,
+    Terminal,
+    XfmrParams,
+)
 
 REL_ERR = 1.0e-9  # max allowed relative error
 ABS_ERR = 1.0e-6  # max allowed absolute error (for magnitudes near zero)
@@ -452,6 +459,145 @@ def test_initialize_topo_m_power_share():
     assert _is_equal(gen2.terminals[0].q0, -0.3981380989964001)
     assert _is_equal(xfmr2.terminals[1].p0, 1.828108507986619)
     assert _is_equal(xfmr2.terminals[1].q0, 0.3981380989964001)
+
+
+def _make_load(p: float, q: float) -> LoadParams:
+    return LoadParams(
+        id=None,
+        lib=None,
+        p=p,
+        q=q,
+        u=None,
+        u_phase=None,
+        alpha=None,
+        beta=None,
+        par_id=None,
+        terminals=(Terminal(connected_equipment=None),),
+    )
+
+
+def _make_gen_and_xfmr() -> tuple[GenParams, XfmrParams]:
+    gen = GenParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        terminals=(Terminal(connected_equipment=None),),
+        p=1,
+        q=1,
+        s_nom=90,
+        i_max=None,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+    gen_xfmr = XfmrParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    return gen, gen_xfmr
+
+
+def test_initialize_islanding_pdr_side_load():
+    """Islanding topology: the Main_Load hangs directly from the PDR bus.
+
+    The load consumes the whole producer delivery, so the grid line must carry
+    no flow: the grid-side equivalent generator initializes at ~0 PQ and the
+    PDR bus keeps the grid phase reference (u_phase ~ 0). Regression test for
+    the bug where the full delivery was sent through the line, producing a
+    spurious phase shift at the PDR bus.
+    """
+    gen, gen_xfmr = _make_gen_and_xfmr()
+    pdr = PdrParams(u=1.0, u_phase=0.0, s=complex(-0.32, 0.0), p=-0.32, q=0.0)
+    line = LineParams(
+        id=None,
+        lib=None,
+        r=0.0,
+        x=0.05,
+        g=0.0,
+        b=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
+
+    grid_init = init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=None,
+        int_line=None,
+        pdr=pdr,
+        grid_line=grid_line,
+        grid_load=None,
+        pdr_load=_make_load(0.32, 0.0),
+    )
+
+    assert _is_equal(grid_init.p0, 0.0)
+    assert _is_equal(grid_init.q0, 0.0)
+    assert _is_equal(grid_init.u0, 1.0)
+    assert _is_equal(pdr.u_phase, 0.0)
+
+
+def test_initialize_grid_side_load_keeps_line_flow():
+    """Topology with the load behind the line, on the grid side (as in Pcs I8).
+
+    The grid-side load must be subtracted only from the equivalent generator's
+    PQ init params; the line still carries the full producer delivery, so the
+    voltages and the PDR phase must match the plain topology 'S' case.
+    """
+    gen, gen_xfmr = _make_gen_and_xfmr()
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    line = LineParams(
+        id=None,
+        lib=None,
+        r=0.0,
+        x=1 / 12.562245359891353,
+        g=0.0,
+        b=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
+
+    grid_init = init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=None,
+        int_line=None,
+        pdr=pdr,
+        grid_line=grid_line,
+        grid_load=_make_load(0.5, 0.1),
+        pdr_load=None,
+    )
+
+    # Voltages match the plain topology 'S' case (same line flow)
+    assert _is_equal(grid_init.u0, 1.1009193919758402)
+    assert _is_equal(grid_init.u_phase0, 0.0)
+    # The equiv generator PQ is reduced by the grid-side load consumption
+    assert _is_equal(grid_init.p0, 4.567 - 0.5)
+    assert _is_equal(grid_init.q0, -1.522032981081081 - 0.1)
+    # Generator-side values unaffected by the grid-side load
+    assert _is_equal(gen.terminals[0].u0, 1.0087747269606742)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.44332797328537715)
 
 
 def _is_equal(a: float, b: float) -> bool:
