@@ -202,8 +202,8 @@ def _solve_gen_circuits(
         if gen_xfmr.terminals[0].connected_equipment == gen.id:
             gen_xfmr.terminals[1].u0 = abs(v_int)
             gen_xfmr.terminals[1].u_phase0 = cmath.phase(v_int)
-            gen_xfmr.terminals[1].p0 = s_int.real
-            gen_xfmr.terminals[1].q0 = s_int.imag
+            gen_xfmr.terminals[1].p0 = s_int_share.real
+            gen_xfmr.terminals[1].q0 = s_int_share.imag
             gen_xfmr.terminals[0].u0 = abs(v_gen)
             gen_xfmr.terminals[0].u_phase0 = cmath.phase(v_gen)
             gen_xfmr.terminals[0].p0 = -s_gen.real
@@ -211,8 +211,8 @@ def _solve_gen_circuits(
         else:
             gen_xfmr.terminals[0].u0 = abs(v_int)
             gen_xfmr.terminals[0].u_phase0 = cmath.phase(v_int)
-            gen_xfmr.terminals[0].p0 = s_int.real
-            gen_xfmr.terminals[0].q0 = s_int.imag
+            gen_xfmr.terminals[0].p0 = s_int_share.real
+            gen_xfmr.terminals[0].q0 = s_int_share.imag
             gen_xfmr.terminals[1].u0 = abs(v_gen)
             gen_xfmr.terminals[1].u_phase0 = cmath.phase(v_gen)
             gen_xfmr.terminals[1].p0 = -s_gen.real
