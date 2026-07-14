@@ -228,6 +228,232 @@ def _initialize_topo_s_i():
     assert _is_equal(gen.terminals[0].q0, -0.7502368826414034)
 
 
+def test_initialize_topo_s_with_main_xfmr():
+    """Topology 'S' plus a plant transformer (Main_Xfmr) with r_tfo != 1.
+
+    Regression test for issue #353 (point 1): the plant transformer must be
+    converted with xfmr_pimodel, so its transformer ratio is honoured.
+    """
+    gen = GenParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        terminals=(Terminal(connected_equipment=None),),
+        p=1,
+        q=1,
+        s_nom=90,
+        i_max=None,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+    gen_xfmr = XfmrParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    ppm_xfmr = XfmrParams(
+        id=None,
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment="Measurements"),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    line = LineParams(
+        id=None,
+        lib=None,
+        r=0.0,
+        x=1 / 12.562245359891353,
+        g=0.0,
+        b=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
+
+    grid_init = init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=ppm_xfmr,
+        int_line=None,
+        pdr=pdr,
+        grid_line=grid_line,
+        grid_load=None,
+    )
+
+    # The grid side is solved before the plant transformer, so it must match
+    # the plain topology 'S' case
+    assert _is_equal(grid_init.u0, 1.1009193919758402)
+    assert _is_equal(grid_init.u_phase0, 0.0)
+    assert _is_equal(grid_init.p0, 4.567)
+    assert _is_equal(grid_init.q0, -1.522032981081081)
+
+    # Main_Xfmr terminals: PDR side and internal side
+    assert _is_equal(ppm_xfmr.terminals[0].u0, 1.0444444444444445)
+    assert _is_equal(ppm_xfmr.terminals[0].u_phase0, 0.3216913640397123)
+    assert _is_equal(ppm_xfmr.terminals[0].p0, -4.567)
+    assert _is_equal(ppm_xfmr.terminals[0].q0, 0.0)
+    assert _is_equal(ppm_xfmr.terminals[1].u0, 1.0087747269606742)
+    assert _is_equal(ppm_xfmr.terminals[1].u_phase0, 0.44332797328537715)
+    assert _is_equal(ppm_xfmr.terminals[1].p0, 4.573257858564547)
+    assert _is_equal(ppm_xfmr.terminals[1].q0, 0.5590353650995359)
+
+    # Generator, behind Main_Xfmr + step-up transformer
+    assert _is_equal(gen.terminals[0].u0, 0.99087174205643)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.5715763627421826)
+    assert _is_equal(gen.terminals[0].p0, -4.58008499995222)
+    assert _is_equal(gen.terminals[0].q0, -1.1689266623982368)
+
+
+def test_initialize_topo_m_power_share():
+    """Topology 'M': two generators with different P/Q shares.
+
+    Regression test for issue #353 (point 2): the network-side terminal of
+    each step-up transformer must carry its per-generator share of the plant
+    flow (s_int_share), not the plant total. Covers both terminal
+    orientations (generator on terminal 1 and on terminal 2).
+    """
+    gen1 = GenParams(
+        id="G1",
+        lib=None,
+        par_id=None,
+        terminals=(Terminal(connected_equipment=None),),
+        p=0.6,
+        q=0.7,
+        s_nom=45,
+        i_max=None,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+    gen2 = GenParams(
+        id="G2",
+        lib=None,
+        par_id=None,
+        terminals=(Terminal(connected_equipment=None),),
+        p=0.4,
+        q=0.3,
+        s_nom=45,
+        i_max=None,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+    # Usual orientation: terminal 1 on the generator side
+    xfmr1 = XfmrParams(
+        id="X1",
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment="G1"),
+            Terminal(connected_equipment="Int"),
+        ),
+    )
+    # Reversed orientation: terminal 2 on the generator side
+    xfmr2 = XfmrParams(
+        id="X2",
+        lib=None,
+        par_id=None,
+        r=0.0004,
+        x=0.0300,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.98,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment="Int"),
+            Terminal(connected_equipment="G2"),
+        ),
+    )
+    pdr = PdrParams(
+        u=1.04444444444444444444, u_phase=0.0, s=complex(-4.567, -1.0), p=-4.567, q=-1.0
+    )
+    line = LineParams(
+        id=None,
+        lib=None,
+        r=0.0,
+        x=1 / 12.562245359891353,
+        g=0.0,
+        b=0.0,
+        par_id=None,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    grid_line = line_pimodel(line)
+
+    grid_init = init_calcs(
+        gens=[gen1, gen2],
+        gen_xfmrs=[xfmr1, xfmr2],
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=None,
+        int_line=None,
+        pdr=pdr,
+        grid_line=grid_line,
+        grid_load=None,
+    )
+
+    assert _is_equal(grid_init.u0, 1.0288951414189706)
+    assert _is_equal(grid_init.u_phase0, 0.0)
+    assert _is_equal(grid_init.p0, 4.567)
+    assert _is_equal(grid_init.q0, -0.5950059540540541)
+
+    # Network-side terminal of each step-up transformer: its own share
+    assert _is_equal(xfmr1.terminals[1].u0, 1.0444444444444445)
+    assert _is_equal(xfmr1.terminals[1].p0, -2.7402)
+    assert _is_equal(xfmr1.terminals[1].q0, -0.7)
+    assert _is_equal(xfmr2.terminals[0].u0, 1.0444444444444445)
+    assert _is_equal(xfmr2.terminals[0].p0, -1.8268000000000002)
+    assert _is_equal(xfmr2.terminals[0].q0, -0.3)
+
+    # Shares must add up to the plant total at the internal bus
+    assert _is_equal(xfmr1.terminals[1].p0 + xfmr2.terminals[0].p0, -4.567)
+    assert _is_equal(xfmr1.terminals[1].q0 + xfmr2.terminals[0].q0, -1.0)
+
+    # Generator-side values, consistent with each unit's flow
+    assert _is_equal(gen1.terminals[0].u0, 1.022160755352143)
+    assert _is_equal(gen1.terminals[0].u_phase0, 0.4168188674956146)
+    assert _is_equal(gen1.terminals[0].p0, -2.742599843457625)
+    assert _is_equal(gen1.terminals[0].q0, -0.9143860155477772)
+    assert _is_equal(xfmr1.terminals[0].p0, 2.742599843457625)
+    assert _is_equal(xfmr1.terminals[0].q0, 0.9143860155477772)
+    assert _is_equal(gen2.terminals[0].u0, 1.0344428846880473)
+    assert _is_equal(gen2.terminals[0].u_phase0, 0.3967838257659877)
+    assert _is_equal(gen2.terminals[0].p0, -1.828108507986619)
+    assert _is_equal(gen2.terminals[0].q0, -0.3981380989964001)
+    assert _is_equal(xfmr2.terminals[1].p0, 1.828108507986619)
+    assert _is_equal(xfmr2.terminals[1].q0, 0.3981380989964001)
+
+
 def _is_equal(a: float, b: float) -> bool:
     scale = 0.5 * (abs(a) + abs(b))
     if scale >= 1.0:
