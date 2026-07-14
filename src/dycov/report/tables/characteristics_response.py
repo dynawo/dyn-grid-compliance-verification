@@ -48,9 +48,11 @@ def _ramp_error(
     )
 
 
-def _time_error(results: dict, name: str, variable: str, errors_map: list) -> None:
+def _time_error(
+    results: dict, name: str, variable: str, errors_map: list, footnote_defined: bool = False
+) -> bool:
     if "calc_" + variable not in results:
-        return
+        return footnote_defined
 
     simulated_time = printable.format_value(
         results,
@@ -66,12 +68,13 @@ def _time_error(results: dict, name: str, variable: str, errors_map: list) -> No
         apply_formatter=True,
         default_value="",
     )
-    abs_error = printable.format_time_error(
+    abs_error, footnote_defined = printable.format_time_error(
         results,
         variable + "_error",
         minimum_value=1.0e-8,
         apply_formatter=True,
         default_value="",
+        footnote_defined=footnote_defined,
     )
     threshold = printable.format_value(
         results,
@@ -91,6 +94,7 @@ def _time_error(results: dict, name: str, variable: str, errors_map: list) -> No
             check,
         ]
     )
+    return footnote_defined
 
 
 def create_map(results: dict) -> list:
@@ -107,10 +111,19 @@ def create_map(results: dict) -> list:
         Characteristics table
     """
     errors_map = []
-    _time_error(results, "Reaction time", "reaction_time", errors_map)
-    _time_error(results, "Rise time", "rise_time", errors_map)
-    _time_error(results, "Settling time", "settling_time", errors_map)
-    _time_error(results, "Overshoot", "overshoot", errors_map)
+    footnote_defined = False
+    footnote_defined = _time_error(
+        results, "Reaction time", "reaction_time", errors_map, footnote_defined
+    )
+    footnote_defined = _time_error(
+        results, "Rise time", "rise_time", errors_map, footnote_defined
+    )
+    footnote_defined = _time_error(
+        results, "Settling time", "settling_time", errors_map, footnote_defined
+    )
+    footnote_defined = _time_error(
+        results, "Overshoot", "overshoot", errors_map, footnote_defined
+    )
     _ramp_error(
         results, "Ramp time lag", "ramp_time_lag", "ramp_time_thr", "ramp_time_check", errors_map
     )
