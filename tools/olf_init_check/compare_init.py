@@ -331,7 +331,7 @@ def compare_case(case):
         dQgen = max(dQgen, abs(q_inj - iq))
 
     # PDR flow toward the grid (OUTPUT), vs the PDR setpoint (DyCoV comment P/Q are receptor-signed => -flow).
-    lines_df = net.get_lines(); P = Q = 0.0
+    lines_df = net.get_lines(); P = Q = 0.0; locP = locQ = 0.0
     if gridline_idx:                                   # with a grid line: sum the grid lines at the PDR end
         for j in gridline_idx:
             _, n1, n2, _, _ = branches[j]
@@ -340,6 +340,10 @@ def compare_case(case):
                 P += row["p1"]; Q += row["q1"]
             elif n2 == pdr_node:
                 P += row["p2"]; Q += row["q2"]
+        # loads hanging directly from the PDR node (Islanding's Main_Load) consume part of the
+        # PCC delivery before it enters the grid line: discount them from the expected flow
+        locP = sum(p for (_, node, p, q, _, _) in loads if node == pdr_node)
+        locQ = sum(q for (_, node, p, q, _, _) in loads if node == pdr_node)
     else:                                              # grid source sits on the PDR: flow to grid = the
         for j, (_, n1, n2, _, _) in enumerate(branches):   # producer's net delivery into the PDR node
             row = lines_df.loc[f"BR{j}"]
@@ -347,8 +351,8 @@ def compare_case(case):
                 P -= row["p1"]; Q -= row["q1"]
             elif n2 == pdr_node:
                 P -= row["p2"]; Q -= row["q2"]
-    dP, dQ = abs(P / SNREF + sp["P"]), abs(Q / SNREF + sp["Q"])
-    flow = dict(expP=-sp["P"], olfP=P / SNREF, dP=dP, expQ=-sp["Q"], olfQ=Q / SNREF, dQ=dQ)
+    dP, dQ = abs(P / SNREF + sp["P"] + locP), abs(Q / SNREF + sp["Q"] + locQ)
+    flow = dict(expP=-sp["P"] - locP, olfP=P / SNREF, dP=dP, expQ=-sp["Q"] - locQ, olfQ=Q / SNREF, dQ=dQ)
 
     ngen = len(gens)
     topo = ("M" if ngen > 1 else "S") + ("+Aux" if loads else "") + \
