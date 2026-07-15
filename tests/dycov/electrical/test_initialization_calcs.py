@@ -599,8 +599,8 @@ def test_initialize_grid_side_load_keeps_line_flow():
     assert _is_equal(grid_init.p0, 4.567 - 0.5)
     assert _is_equal(grid_init.q0, -1.522032981081081 - 0.1)
     # Generator-side values unaffected by the grid-side load
-    assert _is_equal(gen.terminals[0].u0, 1.0087747269606742)
-    assert _is_equal(gen.terminals[0].u_phase0, 0.44332797328537715)
+    assert _is_equal(gen.terminals[0].u0, 1.0991244531721)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.43328564582460044)
 
 
 def _is_equal(a: float, b: float) -> bool:

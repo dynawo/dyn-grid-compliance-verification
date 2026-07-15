@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
+from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
     CASE_SEPARATOR,
@@ -555,6 +556,7 @@ def _summary_log(
     reference_template: str,
 ) -> None:
     header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
+    header_txt += f"***Dycov version: {version} commit: {commit_id}***\n"
     if dynawo_version:
         header_txt += f"***Dynawo version: {dynawo_version}***\n"
     if model_template:
@@ -684,6 +686,7 @@ def create_pdf(
     now = time.time()
     timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(now))
     summary_description += f"Run on: {timestamp} \\\\"
+    summary_description += f"Dycov version: {version} commit: {commit_id} \\\\"
 
     producer = parameters.get_producer()
     dynawo_version = None
