@@ -51,22 +51,36 @@ surface. Each folder holds only the minimal files:
 |---|---|---|---|
 | `S_setpoint_bess` | S | InfiniteBus | single BESS, setpoint step |
 | `Splus_aux_infbus_wtg4b` | S+Aux | InfiniteBus | single WTG4B + aux load |
-| `M_main_2gen_infbus` | M+Aux+Main | InfiniteBus | 2 generators, plant transformer |
-| `Splus_aux_table_bess` | S+Aux | InfiniteBusFromTable | grid U from `TableInfiniteBus.txt` (t=0) |
-| `linefault_bess` | S(+Aux) | LineFault | fault grid line (pre-fault steady state) |
+| `M_main_2gen_infbus` | M+Aux (Main) | InfiniteBus | 2 generators, plant transformer |
+| `Splus_aux_table_bess` | S | InfiniteBusFromTable | grid U from `TableInfiniteBus.txt` (t=0); folder name is historical, the producer has no aux load |
+| `linefault_bess` | S+Aux | LineFault | fault grid line (pre-fault steady state) |
 | `weakgrid_permbolted_pv` | S | InfiniteBus (weak) | very low SCR — needs the tight Newton tolerance |
-| `islanding_inertialgrid` | S+Aux | InertialGrid | islanding test — the divergence case |
+| `islanding_inertialgrid` | S+Aux | InertialGrid | islanding test — historically divergent, MATCH since PR #358 |
+
+The `topo` column follows DyCoV's official naming — `S`/`M` (single/multiple units),
+`+Aux` (producer auxiliary load), `+i` (equivalent internal line) — with ` (Main)` appended
+when the producer has a plant transformer (`Main_Xfmr`), which is orthogonal to the eight
+official topologies. `+Aux` counts only producer-side loads (TSO loads, e.g. the islanding
+`Main_Load`, don't change the topology). No case in the current catalogue uses `+i`.
+
+The cases were frozen from a `Results` tree generated after the initialization fixes
+(#354, #355/#358, #360); all seven MATCH.
 
 ## Finding (why the verdict reads as it does)
 
-Across the full DyCoV catalogue (`Model/{BESS,Photovoltaics,Wind}`), OLF reproduces DyCoV's
-internal init — node V/angle, generator reactive power, and PDR P/Q flow — to numerical
-precision (≤ ~1e-4, typically 1e-7 or tighter) on every non-islanding, non-Not-Applicable
-case. So OLF adds no initialization accuracy there. The **islanding** cases are the
-exception: a local load sits electrically at the PDR, but DyCoV's recorded angles correspond
-to that power flowing through the line to the grid, so its closed-form init is not
-AC-consistent; OLF returns the physically consistent operating point. That single family is
-the only correctness argument for the dependency (beyond robustness / generality).
+Across the full DyCoV catalogue (`Model/{BESS,Photovoltaics,Wind}`, 389 comparable cases +
+55 Not-Applicable skips), OLF reproduces DyCoV's internal init — node V/angle, generator
+reactive power, and PDR P/Q flow — to numerical precision (≤ ~1e-4, typically 1e-7 or
+tighter) on **every** case, islanding included. So OLF adds no initialization accuracy, and
+the dependency can only be justified by robustness or generality (e.g. future meshed or
+asymmetric topologies).
+
+Historical note: the **islanding** family (grid=`InertialGrid`) diverged before PR #358 —
+the `Main_Load` sits electrically at the PDR but the recorded angles assumed its power
+flowed through the line to the grid. The comparison against OLF pinpointed that bug (and
+this tool's PDR-flow check needed the same load-side split, since the PCC setpoint includes
+the local load while the OLF line flow does not). A divergence on freshly generated results
+now means a regression.
 
 ## Modelling notes & caveats
 

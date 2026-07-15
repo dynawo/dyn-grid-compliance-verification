@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!--PDR parameters: U=1.0444444444444445, UPhase=0.19739555984988078, S=(-0.6000000000000001-0j), P=-0.6000000000000001, Q=-0.0-->
+  <!--PDR parameters: U=1.0444444444444445, UPhase=-0.0, S=(-0.6000000000000001-0j), P=-0.6000000000000001, Q=-0.0-->
   <set id="Main_Load">
     <par type="DOUBLE" name="load_alpha" value="0"/>
     <par type="DOUBLE" name="load_beta" value="0"/>
