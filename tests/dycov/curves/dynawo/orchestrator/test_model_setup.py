@@ -24,6 +24,8 @@ def _make_gen(
     u0: float = 1.0,
     use_voltage_droop: bool = False,
     voltage_droop: float = 0.0,
+    s_nom: float = 100.0,
+    ppc_local: bool = True,
 ) -> MagicMock:
     terminal = MagicMock()
     terminal.p0 = p0
@@ -34,6 +36,8 @@ def _make_gen(
     gen.terminals = [terminal]
     gen.use_voltage_droop = use_voltage_droop
     gen.voltage_droop = voltage_droop
+    gen.s_nom = s_nom
+    gen.ppc_local = ppc_local
     return gen
 
 
@@ -353,8 +357,9 @@ class TestGetEventParameters:
 
     @patch("dycov.curves.dynawo.orchestrator.model_setup.generator_variables")
     @patch("dycov.curves.dynawo.orchestrator.model_setup.config")
-    def test_step_value_scaled_by_setpoint_factor(self, mock_config, mock_gv):
-        producer = _make_producer(s_nom=50.0)
+    def test_step_value_scaled_by_generator_snom(self, mock_config, mock_gv):
+        gen = _make_gen(s_nom=50.0)
+        producer = _make_producer(s_nom=50.0, generators=[gen])
         owner = _make_owner(producer)
         owner.obtain_value.side_effect = lambda v: 0.1  # raw step
         setup = _make_setup(owner, s_nref=100.0)
@@ -367,8 +372,67 @@ class TestGetEventParameters:
         result = setup._get_event_parameters(
             "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
         )
-        # setpoint_factor = 100/50 = 2.0
-        assert result["step_value"] == pytest.approx(0.2)
+        # per-generator factor = s_nref / gen.s_nom = 100/50 = 2.0
+        assert result["step_value"] == [pytest.approx(0.2)]
+
+    @patch("dycov.curves.dynawo.orchestrator.model_setup.generator_variables")
+    @patch("dycov.curves.dynawo.orchestrator.model_setup.config")
+    def test_multi_unit_pre_value_uses_generator_snom(self, mock_config, mock_gv):
+        """Regression for #359: 2 x 90 MVA units (plant SNom = 180). The setpoint must
+        be converted with each unit's SNom, not the plant aggregate."""
+        gens = [_make_gen(s_nom=90.0, ppc_local=False) for _ in range(2)]
+        producer = _make_producer(s_nom=180.0, generators=gens)
+        owner = _make_owner(producer)
+        setup = _make_setup(owner, s_nref=100.0)
+        self._setup_config(mock_config, connect_to="ActivePowerSetpointPu")
+
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(-0.75, 0.0), -0.75, 0.0)
+        )
+
+        # pre_value = -pdr.p * s_nref / gen.s_nom = 0.75 * 100/90 (NOT 100/180)
+        assert result["pre_value"] == [pytest.approx(0.75 * 100 / 90)] * 2
+
+    @patch("dycov.curves.dynawo.orchestrator.model_setup.generator_variables")
+    @patch("dycov.curves.dynawo.orchestrator.model_setup.config")
+    def test_multi_unit_step_value_uses_generator_snom(self, mock_config, mock_gv):
+        """Regression for #359: step_value in the WECC4 case must be 0.75*100/90 = 0.8333
+        per unit, not 0.75*100/180 = 0.4167."""
+        gens = [_make_gen(s_nom=90.0, ppc_local=False) for _ in range(2)]
+        producer = _make_producer(s_nom=180.0, generators=gens)
+        owner = _make_owner(producer)
+        owner.obtain_value.side_effect = lambda v: 0.75  # raw step (SnRef base)
+        setup = _make_setup(owner, s_nref=100.0)
+        self._setup_config(
+            mock_config,
+            connect_to="ActivePowerSetpointPu",
+            has_step_value=True,
+            step_value=0.75,
+        )
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(-0.75, 0.0), -0.75, 0.0)
+        )
+        assert result["step_value"] == [pytest.approx(0.75 * 100 / 90)] * 2
+
+    @patch("dycov.curves.dynawo.orchestrator.model_setup.generator_variables")
+    @patch("dycov.curves.dynawo.orchestrator.model_setup.config")
+    def test_step_value_not_scaled_for_voltage_setpoint(self, mock_config, mock_gv):
+        gen = _make_gen(s_nom=50.0)
+        producer = _make_producer(s_nom=50.0, generators=[gen])
+        owner = _make_owner(producer)
+        owner.obtain_value.side_effect = lambda v: 0.02
+        setup = _make_setup(owner, s_nref=100.0)
+        self._setup_config(
+            mock_config,
+            connect_to="VoltageSetpointPu",
+            has_step_value=True,
+            step_value=0.02,
+        )
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
+        # Voltage setpoint carries no SNom conversion and stays scalar
+        assert result["step_value"] == pytest.approx(0.02)
 
     @patch("dycov.curves.dynawo.orchestrator.model_setup.generator_variables")
     @patch("dycov.curves.dynawo.orchestrator.model_setup.config")

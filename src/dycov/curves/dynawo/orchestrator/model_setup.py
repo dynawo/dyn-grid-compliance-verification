@@ -470,23 +470,24 @@ class ModelSetup:
         dycov_logging.get_logger("ModelSetup").debug(f"\t{connect_event_to=}")
 
         pre_value = 1.0
-        setpoint_factor = self._s_nref / producer.s_nom
+        # The *SetpointPu ports of each Dynawo model instance are expressed in the base
+        # of that instance's SNom, so the conversion factor must be per generator.
         if connect_event_to:
             if connect_event_to == "ActivePowerSetpointPu":
                 pre_value = [
                     (
-                        -pdr.p * setpoint_factor
+                        -pdr.p * self._s_nref / gen.s_nom
                         if not gen.ppc_local
-                        else -gen.terminals[0].p0 * setpoint_factor
+                        else -gen.terminals[0].p0 * self._s_nref / gen.s_nom
                     )
                     for gen in producer.generators
                 ]
             elif connect_event_to == "ReactivePowerSetpointPu":
                 pre_value = [
                     (
-                        -pdr.q * setpoint_factor
+                        -pdr.q * self._s_nref / gen.s_nom
                         if not gen.ppc_local
-                        else -gen.terminals[0].q0 * setpoint_factor
+                        else -gen.terminals[0].q0 * self._s_nref / gen.s_nom
                     )
                     for gen in producer.generators
                 ]
@@ -514,7 +515,9 @@ class ModelSetup:
                 str(config.get_value(config_section, "setpoint_step_value"))
             )
             if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
-                step_value *= setpoint_factor
+                step_value = [
+                    step_value * self._s_nref / gen.s_nom for gen in producer.generators
+                ]
         dycov_logging.get_logger("ModelSetup").debug(f"\tsetpoint_step_value={step_value}")
 
         return {
