@@ -135,7 +135,11 @@ def complete_setpoint(
             dyd_root, dyd_ns, generator, event_params["connect_to"]
         )
         pre_value = event_params["pre_value"][i]
-        step_value = event_params["step_value"] * sign
+        # step_value is a per-generator list for P/Q setpoint events, a scalar otherwise
+        if isinstance(event_params["step_value"], list):
+            step_value = event_params["step_value"][i] * sign
+        else:
+            step_value = event_params["step_value"] * sign
         _add_setpoint_parameters(par_root, par_ns, generator, event_params, pre_value, step_value)
 
     par_tree.write(path / par_file, pretty_print=True)
