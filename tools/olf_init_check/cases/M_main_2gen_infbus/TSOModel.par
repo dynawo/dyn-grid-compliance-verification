@@ -20,12 +20,12 @@
   model. -->
   <set id="SetPoint_Wind_Turbine1">
     <par type="DOUBLE" name="step_tStep" value="20.0"/>
-    <par type="DOUBLE" name="step_Value0" value="0.25"/>
-    <par type="DOUBLE" name="step_Height" value="0.16666666666666669"/>
+    <par type="DOUBLE" name="step_Value0" value="0.49999999999999994"/>
+    <par type="DOUBLE" name="step_Height" value="0.33333333333333337"/>
   </set>
   <set id="SetPoint_Wind_Turbine2">
     <par type="DOUBLE" name="step_tStep" value="20.0"/>
-    <par type="DOUBLE" name="step_Value0" value="0.25"/>
-    <par type="DOUBLE" name="step_Height" value="0.16666666666666669"/>
+    <par type="DOUBLE" name="step_Value0" value="0.49999999999999994"/>
+    <par type="DOUBLE" name="step_Height" value="0.33333333333333337"/>
   </set>
 </parametersSet>

@@ -200,6 +200,8 @@ def compare_case(case):
                        if a == mid and TERM.search(va)})
 
     branches, gridline_idx, gens, loads, src, pdr_node, grid_family = [], [], [], [], None, None, "InfiniteBus"
+    producer_ids = {mid for mid, _, _ in pmodels}
+    has_intline = False
     for mid, lib, par in models:
         if lib in SKIP_LIBS:
             continue
@@ -230,7 +232,10 @@ def compare_case(case):
                 return dict(status="SKIP", reason=f"no branch impedance ({lib})")
             branches.append((mid, uf.find(ts[0]), uf.find(ts[1]), r, x))
             if lib in LINE_LIBS:
-                gridline_idx.append(len(branches) - 1)
+                if mid in producer_ids:      # producer-side equivalent internal line ("+i")
+                    has_intline = True
+                else:
+                    gridline_idx.append(len(branches) - 1)
         elif lib in LOAD_LIBS:
             loads.append((mid, uf.find(ts[0]), float(s.get("load_P0Pu", "0")), float(s.get("load_Q0Pu", "0")),
                           float(s.get("load_U0Pu", "nan")), float(s.get("load_UPhase0", "nan"))))
@@ -355,8 +360,11 @@ def compare_case(case):
     flow = dict(expP=-sp["P"] - locP, olfP=P / SNREF, dP=dP, expQ=-sp["Q"] - locQ, olfQ=Q / SNREF, dQ=dQ)
 
     ngen = len(gens)
-    topo = ("M" if ngen > 1 else "S") + ("+Aux" if loads else "") + \
-           ("+Main" if any(m == "Main_Xfmr" for m, *_ in branches) else "")
+    # official DyCoV topology naming: S/M [+Aux] [+i]; the plant transformer is an annotation
+    has_aux = any(mid in producer_ids for mid, *_ in loads)
+    topo = ("M" if ngen > 1 else "S") + ("+Aux" if has_aux else "") + ("+i" if has_intline else "")
+    if any(m == "Main_Xfmr" for m, *_ in branches):
+        topo += " (Main)"
     match = maxdv < TOL and maxda < TOL and dQgen < TOL and dP < TOL and dQ < TOL
     return dict(status=("MATCH" if match else "DIVERGE"),
                 topo=topo, grid=grid_family, ngen=ngen, maxdv=maxdv, maxda=maxda, dQgen=dQgen, dP=dP, dQ=dQ,
@@ -391,7 +399,7 @@ def main(argv=None):
     show_all = args.all or len(case_dirs) <= 25
     width = max(28, min(64, max(len(label(cd)) for cd in case_dirs) + 2))
     print(f"OLF vs DyCoV internal init  —  {len(case_dirs)} case(s) under {root}\n")
-    hdr = f"{'case':<{width}}  {'topo':<12}{'grid':<22}{'it':>3}  {'max|dV|':>9} {'max|dPhi|':>9}  verdict"
+    hdr = f"{'case':<{width}}  {'topo':<16}{'grid':<22}{'it':>3}  {'max|dV|':>9} {'max|dPhi|':>9}  verdict"
     print(hdr); print("-" * len(hdr))
     results = {}
     for cd in case_dirs:
@@ -405,7 +413,7 @@ def main(argv=None):
                 print(f"{name:<{width}}  {st}: {r['reason']}")
             continue
         if show:
-            print(f"{name:<{width}}  {r['topo']:<12}{r['grid']:<22}{r['iters']:>3}  "
+            print(f"{name:<{width}}  {r['topo']:<16}{r['grid']:<22}{r['iters']:>3}  "
                   f"{r['maxdv']:>9.1e} {r['maxda']:>9.1e}  {st}"
                   f"{'  (worst @ ' + str(r['worst']) + ')' if st == 'DIVERGE' else ''}")
             if args.verbose:
@@ -440,10 +448,10 @@ def main(argv=None):
         print("    -> OLF (generators as PV regulating the PDR) reproduces the internal init — node V/angle,")
         print("       generator reactive power AND PDR P/Q flow — to numerical precision. No accuracy gained.")
     if isl:
-        print(f"  {len(isl)} islanding case(s) DIVERGE (grid=InertialGrid) -> OLF is 'better':")
-        print("    the closed-form init is not AC-consistent (a local load sits electrically at the PDR")
-        print("    but the recorded angles assume power flows through the line to the grid); OLF returns")
-        print("    the physically consistent operating point.")
+        print(f"  {len(isl)} islanding case(s) DIVERGE (grid=InertialGrid):")
+        print("    this was DyCoV's historical islanding bug (PDR-side load sent through the grid line,")
+        print("    fixed by the load-side split in PR #358). On results generated with current DyCoV a")
+        print("    divergence here means a REGRESSION; on pre-#358 results it is the known old bug.")
     if oth:
         print(f"  {len(oth)} non-islanding case(s) ABOVE TOLERANCE (worth a look):")
         for n, r in sorted(oth.items(), key=lambda kv: -max(kv[1]['maxdv'], kv[1]['maxda'], kv[1]['dQgen']))[:20]:
@@ -454,8 +462,9 @@ def main(argv=None):
     if skip:
         reasons = collections.Counter(r["reason"] for r in skip)
         print(f"  {len(skip)} case(s) skipped: " + "; ".join(f"{v}x {k}" for k, v in reasons.most_common()))
-    print("\n  DECISION INPUT: outside islanding, the internal init is as good as OLF, so adding the")
-    print("  PyPowsybl dependency is justified only by islanding correctness and/or robustness/generality.")
+    print("\n  DECISION INPUT: the internal init matches OLF on the whole catalogue (islanding included")
+    print("  since PR #358), so adding the PyPowsybl dependency is justified only by robustness or")
+    print("  generality (e.g. future meshed/asymmetric topologies), not by initialization accuracy.")
     return 1 if fail else 0
 
 
