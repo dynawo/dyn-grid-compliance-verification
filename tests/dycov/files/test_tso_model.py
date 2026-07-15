@@ -138,6 +138,42 @@ def test_complete_setpoint_executes(tmp_path):
         )
 
 
+def test_complete_setpoint_per_generator_step_value(tmp_path):
+    """step_value may be a per-generator list (P/Q setpoint events, issue #359)."""
+    dyd_file = tmp_path / "file.dyd"
+    par_file = tmp_path / "file.par"
+    dyd_file.write_text('<root xmlns="http://test"></root>')
+    par_file.write_text('<root xmlns="http://test"></root>')
+
+    g1 = _make_generator()
+    g2 = _make_generator()
+    g2.id = "gen2"
+
+    event_params = {
+        "start_time": 1.0,
+        "connect_to": "ActivePowerSetpointPu",
+        "pre_value": [0.5, 0.4],
+        "step_value": [0.8, 0.6],
+    }
+
+    with patch("dycov.files.tso_file._connect_generator_to_setpoint", return_value=1):
+        complete_setpoint(
+            tmp_path,
+            "file.dyd",
+            "file.par",
+            [g1, g2],
+            "RefTracking_1Line_InfBus",
+            event_params,
+        )
+
+    par_root = etree.parse(par_file).getroot()
+    heights = {
+        parset.get("id"): parset.xpath("./*[@name='step_Height']/@value")[0]
+        for parset in par_root
+    }
+    assert heights == {"SetPoint_gen1": "0.8", "SetPoint_gen2": "0.6"}
+
+
 def test_complete_setpoint_skip():
     complete_setpoint(
         Path("/tmp"),
