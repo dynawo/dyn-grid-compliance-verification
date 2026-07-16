@@ -8,12 +8,16 @@
 #     demiguelm@aia.es
 #
 
+import os
+import sys
+
 import pytest
 
 pypowsybl = pytest.importorskip("pypowsybl")
 import pypowsybl.network as nw
 
-from dycov.curves.dynawo.pypowsybl.network_builder import PypowsyblNetworkBuilder
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from network_builder import PypowsyblNetworkBuilder  # noqa: E402
 
 
 def test_minimal_bus_breaker_network():

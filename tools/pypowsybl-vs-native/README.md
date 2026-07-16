@@ -3,6 +3,18 @@
 Small demos to answer: **can DyCoV's Dynawo cases be executed through PyPowsybl
 (so the Dynawo CLI backend could be replaced)?**
 
+## Why this exists
+
+DyCoV drives Dynawo through its command-line interface, writing native input files
+and launching `dynawo jobs` as a subprocess. Adopting PyPowsybl instead was
+considered attractive for three reasons: it would let DyCoV accept **arbitrary input
+topologies** (rather than its fixed catalogue), run Dynawo through a **Python-native
+backend** in place of the CLI subprocess, and **generate each test's network
+programmatically**. The last two only pay off if Dynawo can actually be executed
+through PyPowsybl, so that had to be established first — which is exactly what these
+demos test. (The initialization-only fallback, explored once this turned out
+infeasible, lives in `../olf_init_check/`.)
+
 PyPowsybl runs the *same Dynawo backend* underneath, but it does **not** ingest
 native DYD/JOBS/CRV files. Those are generated programmatically by powsybl-dynawo
 from an IIDM network + a `ModelMapping`. So a case can only be executed if every
