@@ -1,0 +1,119 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <!--PDR parameters: U=1.0, UPhase=0.08328508371604713, S=(-0.00208-0j), P=-0.00208, Q=-0.0-->
+  <!-- Unit parameters -->
+  <set id="Wind_Turbine">
+    <!-- PCS-->
+    <par type="BOOL" name="photovoltaics_PPCLocal" value="true"/>
+    <!-- LV Transformer -->
+    <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
+    <par type="DOUBLE" name="photovoltaics_BLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/>
+    <!-- not used for zone 1 when ConverterLVControl=true -->
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/>
+    <!-- not used for zone 1 when ConverterLVControl=true -->
+    <!-- Electrical Control REEC -->
+    <par type="BOOL" name="photovoltaics_PfFlag" value="false"/>
+    <par type="BOOL" name="photovoltaics_PQFlag" value="false"/>
+    <par type="BOOL" name="photovoltaics_QFlag" value="true"/>
+    <par type="BOOL" name="photovoltaics_VFlag" value="true"/>
+    <par type="DOUBLE" name="photovoltaics_Dbd1Pu" value="-0.05"/>
+    <par type="DOUBLE" name="photovoltaics_Dbd2Pu" value="0.05"/>
+    <par type="DOUBLE" name="photovoltaics_DPMaxPu" value="999"/>
+    <par type="DOUBLE" name="photovoltaics_DPMinPu" value="-999"/>
+    <par type="DOUBLE" name="photovoltaics_IMaxPu" value="1.3"/>
+    <par type="DOUBLE" name="photovoltaics_Iqh1Pu" value="1.1"/>
+    <par type="DOUBLE" name="photovoltaics_Iql1Pu" value="-1.1"/>
+    <par type="DOUBLE" name="photovoltaics_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="photovoltaics_Kqp" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_Kqv" value="2"/>
+    <par type="DOUBLE" name="photovoltaics_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="photovoltaics_Kvp" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMinREECPu" value="0.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxREECPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMinREECPu" value="-1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_PMinREPCPu" value="0.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMaxREPCPu" value="1.0"/>
+    <par type="DOUBLE" name="photovoltaics_QMinREPCPu" value="-1.0"/>
+    <par type="DOUBLE" name="photovoltaics_tIq" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_tRv" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_tpREEC" value="0.05"/>
+    <par type="DOUBLE" name="photovoltaics_tPord" value="0.01"/>
+    <par type="DOUBLE" name="photovoltaics_VDipPu" value="0.8"/>
+    <par type="DOUBLE" name="photovoltaics_VMaxPu" value="1.2"/>
+    <par type="DOUBLE" name="photovoltaics_VMinPu" value="0.8"/>
+    <par type="DOUBLE" name="photovoltaics_VRef0Pu" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VUpPu" value="1.35"/>
+    <!-- Electrical Control REECa -->
+    <par type="DOUBLE" name="photovoltaics_VDLIp11" value="1.1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp12" value="1.1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp21" value="1.15"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp22" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp31" value="1.16"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp32" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp41" value="1.17"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIp42" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq11" value="1.1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq12" value="1.1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq21" value="1.15"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq22" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq31" value="1.16"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq32" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq41" value="1.17"/>
+    <par type="DOUBLE" name="photovoltaics_VDLIq42" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_tHoldIpMax" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_tHoldIq" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_IqFrzPu" value="0"/>
+    <par type="BOOL" name="photovoltaics_PFlag" value="false"/>
+    <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="0"/>
+    <!-- Generator Converter REGC -->
+    <par type="DOUBLE" name="photovoltaics_IqrMaxPu" value="20"/>
+    <par type="DOUBLE" name="photovoltaics_IqrMinPu" value="-20"/>
+    <par type="DOUBLE" name="photovoltaics_RrpwrPu" value="10"/>
+    <par type="DOUBLE" name="photovoltaics_tFilterGC" value="0.02"/>
+    <!-- Generator Converter REGCb -->
+    <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
+    <par type="DOUBLE" name="photovoltaics_tG" value="0.02"/>
+    <!-- PLL Control -->
+    <par type="DOUBLE" name="photovoltaics_KiPLL" value="20"/>
+    <par type="DOUBLE" name="photovoltaics_KpPLL" value="3"/>
+    <par type="DOUBLE" name="photovoltaics_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="0.5"/>
+    <!-- General -->
+    <par type="DOUBLE" name="photovoltaics_tE" value="0.005"/>
+    <par type="DOUBLE" name="photovoltaics_RSourcePu" value="0.0"/>
+    <par type="DOUBLE" name="photovoltaics_XSourcePu" value="0.05"/>
+    <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
+    <par name="photovoltaics_P0Pu" type="DOUBLE" value="-0.002080064896000033"/>
+    <par name="photovoltaics_Q0Pu" type="DOUBLE" value="-2.595839999558556e-07"/>
+    <par name="photovoltaics_PPcc0Pu" type="DOUBLE" value="-0.00208"/>
+    <par name="photovoltaics_QPcc0Pu" type="DOUBLE" value="-0.0"/>
+    <par name="photovoltaics_U0Pu" type="DOUBLE" value="1.000031207787277"/>
+    <par name="photovoltaics_UPhase0" type="DOUBLE" value="0.08340987982176076"/>
+    <par name="photovoltaics_UPcc0Pu" type="DOUBLE" value="1.0"/>
+    <par name="photovoltaics_UPhasePcc0" type="DOUBLE" value="0.08328508371604713"/>
+  </set>
+  <!-- tfo -->
+  <set id="StepUp_Xfmr">
+    <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
+    <par type="DOUBLE" name="transformer_SNom" value="0.25"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.015"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.06"/>
+    <par type="DOUBLE" name="transformer_BPu" value="0"/>
+    <par type="DOUBLE" name="transformer_GPu" value="0"/>
+    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
+    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
+    <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
+    <par type="INT" name="transformer_NbTap" value="21"/>
+    <par type="INT" name="transformer_Tap0" value="10"/>
+    <par name="transformer_P10Pu" type="DOUBLE" value="0.002080064896000033"/>
+    <par name="transformer_Q10Pu" type="DOUBLE" value="2.595839999558556e-07"/>
+    <par name="transformer_U10Pu" type="DOUBLE" value="1.000031207787277"/>
+    <par name="transformer_U1Phase0" type="DOUBLE" value="0.08340987982176076"/>
+    <par name="transformer_U20Pu" type="DOUBLE" value="1.0"/>
+  </set>
+</parametersSet>

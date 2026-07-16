@@ -33,6 +33,7 @@ Usage: $0 [OPTIONS]
   Options:
     -e | --editable   Install the tool as an editable package (for developers)
     -d | --devel      Install additional Python packages for developers (ruff, etc.)
+    -p | --pypowsybl  Install the PyPowsybl Dynawo execution backend
     -h | --help       Show this help message
 EOF
 }
@@ -50,18 +51,20 @@ if [[ $? -ne 4 ]]; then
 fi
 set -e
 
-OPTIONS=edh
-LONGOPTS=editable,devel,help
+OPTIONS=edph
+LONGOPTS=editable,devel,pypowsybl,help
 PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 eval set -- "$PARSED"
 
 EDITABLE=n
 DEVELOPER=n
+PYPWSBL=n
 HELP=n
 while true; do
     case "$1" in
         -e|--editable) EDITABLE=y; shift ;;
         -d|--devel) DEVELOPER=y; shift ;;
+        -p|--pypowsybl) PYPWSBL=y; shift ;;
         -h|--help) HELP=y; shift ;;
         --) shift; break ;;
         *) echo "Programming error"; exit 3 ;;
@@ -91,16 +94,24 @@ colormsg "Step 2: Activating environment and installing dependencies..."
 . "$MY_VENV"/bin/activate
 
 # Build the installation command
+extras=()
+
+if [ "$DEVELOPER" = "y" ]; then
+    extras+=("dev" "test")
+fi
+
+if [ "$PYPWSBL" = "y" ]; then
+    extras+=("dynawo-pypowsybl")
+fi
+
 install_target="."
 install_extras=""
-
 if [ "$EDITABLE" = "y" ]; then
     install_target="-e ."
 fi
 
-if [ "$DEVELOPER" = "y" ]; then
-    # These extras are defined in pyproject.toml
-    install_extras="[dev,test]"
+if [ ${#extras[@]} -gt 0 ]; then
+    install_extras="[$(IFS=,; echo "${extras[*]}")]"
 fi
 
 # Install with uv, ensuring proper quoting

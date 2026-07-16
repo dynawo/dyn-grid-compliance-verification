@@ -1,0 +1,13 @@
+# itools/powsybl config for the e2e demo — TEMPLATE.
+#
+# run_pypowsybl.py GENERATES `config.yml` automatically from $DYNAWO_HOME (or by
+# globbing /opt/Dynawo_v*/dynawo and picking the newest), so you normally do NOT
+# need to edit anything — just run:
+#
+#     DYNAWO_HOME=/path/to/your/dynawo  python run_pypowsybl.py
+#
+# `homeDir` must point to the directory that contains `dynawo.sh`.
+# Only copy this to `config.yml` and edit by hand if you prefer a fixed path.
+dynawo:
+  homeDir: /path/to/your/dynawo   # e.g. /opt/Dynawo_v1.8.0_YYYYMMDD/dynawo
+  debug: true

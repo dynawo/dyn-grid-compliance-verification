@@ -71,6 +71,9 @@ dev = [
     "ruff",
     "sphinx",
 ]
+dynawo-pypowsybl = [
+    "pypowsybl>=1.7,<2.0"
+]
 
 
 [tool.setuptools]

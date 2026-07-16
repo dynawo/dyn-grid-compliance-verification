@@ -1,0 +1,10 @@
+{
+  "WECC": {
+    "libs": [
+      {"lib": "WTG3WeccCurrentSource1", "internalModelPrefix": "WTG3", "properties": ["SYNCHRONIZED"]},
+      {"lib": "WTG3WeccCurrentSource2", "internalModelPrefix": "WTG3", "properties": ["SYNCHRONIZED"]},
+      {"lib": "WeccWT3CurrentSource1", "internalModelPrefix": "WT3", "properties": ["SYNCHRONIZED"]},
+      {"lib": "WeccWT3CurrentSource2", "internalModelPrefix": "WT3", "properties": ["SYNCHRONIZED"]}
+    ]
+  }
+}
