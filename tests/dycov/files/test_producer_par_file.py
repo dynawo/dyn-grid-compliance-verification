@@ -12,7 +12,6 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.files.producer_par_file import check_parameters, create_producer_par_file
-from dycov.logging.logging import dycov_logging
 
 
 class TestProducerParFile:
@@ -47,6 +46,11 @@ class TestProducerParFile:
         self._write_desc_xml(desc_path, params)
         return ddb_dir
 
+    def _parse_par_sets(self, par_file):
+        root = etree.parse(par_file).getroot()
+        ns = etree.QName(root).namespace
+        return list(root.iterfind(f"{{{ns}}}set")), ns
+
     def test_create_par_file_performance_sm_happy_path(self, tmp_path, monkeypatch):
         dyd_dir = tmp_path
         dyd_file = dyd_dir / "Producer.dyd"
@@ -72,10 +76,7 @@ class TestProducerParFile:
 
         par_file = dyd_dir / "Producer.par"
         assert par_file.exists()
-        tree = etree.parse(par_file)
-        root = tree.getroot()
-        ns = etree.QName(root).namespace
-        sets = list(root.iterfind(f"{{{ns}}}set"))
+        sets, ns = self._parse_par_sets(par_file)
         assert len(sets) == 1
         pars = list(sets[0].iterfind(f"{{{ns}}}par"))
         assert len(pars) == 2
@@ -103,10 +104,7 @@ class TestProducerParFile:
         for zone in [zone1, zone3]:
             par_file = zone / "Producer.par"
             assert par_file.exists()
-            tree = etree.parse(par_file)
-            root = tree.getroot()
-            ns = etree.QName(root).namespace
-            sets = list(root.iterfind(f"{{{ns}}}set"))
+            sets, ns = self._parse_par_sets(par_file)
             assert len(sets) == 1
             pars = list(sets[0].iterfind(f"{{{ns}}}par"))
             assert len(pars) == 1
@@ -153,13 +151,10 @@ class TestProducerParFile:
         # Producer.par should exist but be empty (no <set>)
         par_file = tmp_path / "Producer.par"
         assert par_file.exists()
-        tree = etree.parse(par_file)
-        root = tree.getroot()
-        ns = etree.QName(root).namespace
-        sets = list(root.iterfind(f"{{{ns}}}set"))
+        sets, _ = self._parse_par_sets(par_file)
         assert len(sets) == 0
 
-    def test_check_parameters_with_empty_values(self, tmp_path, monkeypatch):
+    def test_check_parameters_with_empty_values(self, tmp_path, monkeypatch, capture_error_logs):
         dyd_file = tmp_path / "Producer.dyd"
         bbmodels = [{"id": "BB1", "lib": "libA", "parId": "parA"}]
         self._write_dyd(dyd_file, bbmodels)
@@ -178,20 +173,10 @@ class TestProducerParFile:
             template="performance_SM",
         )
 
-        # Patch logger to capture error
-        class DummyLogger:
-            def __init__(self):
-                self.logged = []
-
-            def error(self, msg):
-                self.logged.append(msg)
-
-        dummy_logger = DummyLogger()
-        monkeypatch.setattr(dycov_logging, "get_logger", lambda _: dummy_logger)
         result = check_parameters(tmp_path, "performance_SM")
         assert result is False
-        assert any("parameters without value" in msg for msg in dummy_logger.logged)
-        assert "p2" in dummy_logger.logged[0]
+        assert any("parameters without value" in msg for msg in capture_error_logs)
+        assert "p2" in capture_error_logs[0]
 
     def test_blackboxmodel_without_parid(self, tmp_path, monkeypatch):
         dyd_file = tmp_path / "Producer.dyd"
@@ -214,9 +199,6 @@ class TestProducerParFile:
         # Only one <set> should be present (for BB1)
         par_file = tmp_path / "Producer.par"
         assert par_file.exists()
-        tree = etree.parse(par_file)
-        root = tree.getroot()
-        ns = etree.QName(root).namespace
-        sets = list(root.iterfind(f"{{{ns}}}set"))
+        sets, _ = self._parse_par_sets(par_file)
         assert len(sets) == 1
         assert sets[0].get("id") == "parA"

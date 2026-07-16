@@ -206,36 +206,9 @@ class TableFile(FileVariables):
                     i += 1
                 continue
 
-            # SMOOTHING LOGIC ----------------------------------------------------
-            new_rows = []
-            k = 0
-            while k < len(parsed):
-                if k + 1 < len(parsed):
-                    t1, c21, v1 = parsed[k]
-                    t2, c22, v2 = parsed[k + 1]
-                    if abs(t1 - t2) <= float_tol and v1 != v2:
-                        # Interpolate
-                        pos = [(-1.0 + 2.0 * j / (points - 1)) for j in range(points)]
-                        times = [t1 + half_width * p for p in pos]
-                        vals = [v1 + (v2 - v1) * (j / (points - 1)) for j in range(points)]
-
-                        if ncols == 2:
-                            for tt, vv in zip(times, vals):
-                                new_rows.append(f"{tt:.6f} {vv:.6f}")
-                        else:
-                            for tt, vv in zip(times, vals):
-                                new_rows.append(f"{tt:.6f} {c21} {vv:.6f}")
-
-                        k += 2
-                        continue
-
-                # default copy
-                t, c2, v = parsed[k]
-                if ncols == 2:
-                    new_rows.append(f"{t:.6f} {v:.6f}")
-                else:
-                    new_rows.append(f"{t:.6f} {c2} {v:.6f}")
-                k += 1
+            new_rows = self.__interpolate_duplicate_rows(
+                parsed, points, half_width, float_tol, ncols
+            )
 
             out_lines[header_index] = f"double {table_name}({len(new_rows)},{ncols})"
             out_lines.extend(new_rows)
@@ -248,6 +221,44 @@ class TableFile(FileVariables):
                 i += 1
 
         file_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+
+    def __interpolate_duplicate_rows(
+        self, parsed: list, points: int, half_width: float, float_tol: float, ncols: int
+    ) -> list:
+        """
+        Rebuilds the table rows, replacing each pair of consecutive rows that share the same
+        timestamp but change value with `points` interpolated rows spaced in
+        [-half_width, +half_width].
+        """
+        new_rows = []
+        k = 0
+        while k < len(parsed):
+            if k + 1 < len(parsed):
+                t1, c21, v1 = parsed[k]
+                t2, c22, v2 = parsed[k + 1]
+                if abs(t1 - t2) <= float_tol and v1 != v2:
+                    pos = [(-1.0 + 2.0 * j / (points - 1)) for j in range(points)]
+                    times = [t1 + half_width * p for p in pos]
+                    vals = [v1 + (v2 - v1) * (j / (points - 1)) for j in range(points)]
+
+                    if ncols == 2:
+                        for tt, vv in zip(times, vals):
+                            new_rows.append(f"{tt:.6f} {vv:.6f}")
+                    else:
+                        for tt, vv in zip(times, vals):
+                            new_rows.append(f"{tt:.6f} {c21} {vv:.6f}")
+
+                    k += 2
+                    continue
+
+            t, c2, v = parsed[k]
+            if ncols == 2:
+                new_rows.append(f"{t:.6f} {v:.6f}")
+            else:
+                new_rows.append(f"{t:.6f} {c2} {v:.6f}")
+            k += 1
+
+        return new_rows
 
     def complete_file(self, working_oc_dir: Path, tso_gen: GenInit, event_params: dict) -> None:
         """

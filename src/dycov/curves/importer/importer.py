@@ -12,6 +12,7 @@ import errno
 import os
 import re
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -128,6 +129,23 @@ class CurvesImporter:
         """
         return self._curves_cfg
 
+    def _get_time_channel_name(self) -> Optional[str]:
+        """Get the time channel name, if defined in the curves configuration.
+
+        Returns
+        -------
+        Optional[str]
+            The time channel name, or None if it is not defined.
+        """
+        section = "Curves-Dictionary"
+        if self._curves_cfg.has_section(section) and self._curves_cfg.has_option(section, "time"):
+            return self._curves_cfg.get(section, "time")
+        if self._default_curves.has_section(section) and self._default_curves.has_option(
+            section, "time"
+        ):
+            return self._default_curves.get(section, "time")
+        return None
+
     def get_curves_dataframe(self, zone: int, remove_file: bool = True) -> pd.DataFrame:
         """
         Imports a curve file and returns its relevant data as a Pandas DataFrame.
@@ -148,16 +166,7 @@ class CurvesImporter:
         """
         curves_dict = self.__get_curves_dict(zone)
         df_dict = {}
-        section = "Curves-Dictionary"
-        time_name = None
-
-        # Determine the time channel name from curves_cfg or default_curves
-        if self._curves_cfg.has_section(section) and self._curves_cfg.has_option(section, "time"):
-            time_name = self._curves_cfg.get(section, "time")
-        elif self._default_curves.has_section(section) and self._default_curves.has_option(
-            section, "time"
-        ):
-            time_name = self._default_curves.get("Curves-Dictionary", "time")
+        time_name = self._get_time_channel_name()
 
         # Load curves using the appropriate reader
         curves_reader = get_curves_reader(self._path, self._filename, time_name)
