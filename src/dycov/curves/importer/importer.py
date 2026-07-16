@@ -53,7 +53,6 @@ class CurvesImporter:
             self._default_curves.add_section("Curves-Dictionary-Zone1")
             self._default_curves.add_section("Curves-Dictionary-Zone3")
 
-        # Search for the dictionary file matching the pattern
         pattern = re.compile(rf".*.{re.escape(filename)}.[dD][iI][cC][tT]")
         files = [file for file in path.resolve().iterdir() if pattern.match(str(file))]
         if not files:
@@ -64,7 +63,6 @@ class CurvesImporter:
         self._curves_cfg.optionxform = str
         self._curves_cfg.read(dict_file)
 
-        # Remove the dictionary file from the working directory if requested
         if remove_working_dict:
             dict_file.unlink()
 

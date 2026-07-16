@@ -65,18 +65,14 @@ class JobsFile(FileVariables):
         event_params: dict
             A dictionary containing event-specific parameters to be included.
         """
-        # Retrieve all existing variables from the TSOModel.jobs file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.jobs")
 
-        # Update solver-related variables in the dictionary
         variables_dict["solver_lib"] = solver_lib
         variables_dict["solver_id"] = solver_id
 
-        # Get the name of the producer's DYD file from the Dynawo curves
         variables_dict["producer_dyd"] = self._dynawo_curves.get_producer().get_producer_dyd().name
 
         # Complete other parameters using the inherited method from FileVariables
         self.complete_parameters(variables_dict, event_params)
 
-        # Dump the updated variables back into the JOBS file, replacing placeholders
         replace_placeholders.dump_file(working_oc_dir, "TSOModel.jobs", variables_dict)

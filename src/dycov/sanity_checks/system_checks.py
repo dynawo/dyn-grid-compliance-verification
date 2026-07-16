@@ -35,21 +35,16 @@ def check_launchers(launcher_dwo: Path) -> None:
 
     """
     error_txt = ""
-    # Check if Dynawo launcher is found in system's PATH
     if not shutil.which(str(launcher_dwo)):  # shutil.which expects a string
         error_txt += "Dynawo not found.\n"
-    # Check if PdfLatex is found in system's PATH
     if not shutil.which("pdflatex"):
         error_txt += "PdfLatex not found.\n"
-    # Check if CMake is found in system's PATH
     if not shutil.which("cmake"):
         error_txt += "CMake not found.\n"
     # TODO: for Windows, add an analogous check for the presence of the VS2019 compiler.
-    # Check if G++ is found in system's PATH (for POSIX systems)
     if os.name == "posix" and not shutil.which("g++"):
         error_txt += "G++ not found.\n"
 
-    # If any required launcher is missing, raise an OSError
     if len(error_txt) > 0:
         raise OSError(error_txt)
 

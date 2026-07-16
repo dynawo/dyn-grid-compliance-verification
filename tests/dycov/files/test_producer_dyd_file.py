@@ -67,10 +67,8 @@ def test_create_producer_dyd_file_performance_success():
         tree = etree.parse(str(dyd_path))
         root = tree.getroot()
         assert root.tag.endswith("dynamicModelsArchitecture")
-        # Check that topology comment is present
         comments = [e for e in root.iter() if isinstance(e, etree._Comment)]
         assert any("Topology: S" in c.text for c in comments)
-        # Check that at least one blackBoxModel is present
         ns = etree.QName(root).namespace
         bbmodels = list(root.iterfind(f"{{{ns}}}blackBoxModel"))
         assert len(bbmodels) > 0
@@ -108,7 +106,6 @@ def test_check_dynamic_models_with_unsupported_models():
         tree = etree.parse(str(dyd_path))
         root = tree.getroot()
         ns = etree.QName(root).namespace
-        # Add a blackBoxModel with unsupported lib
         etree.SubElement(
             root,
             f"{{{ns}}}blackBoxModel",
@@ -118,5 +115,4 @@ def test_check_dynamic_models_with_unsupported_models():
             parId="Unsupported",
         )
         tree.write(str(dyd_path), encoding="utf-8", pretty_print=True, xml_declaration=True)
-        # Now check_dynamic_models should return False
         assert check_dynamic_models(target, "performance_SM") is False

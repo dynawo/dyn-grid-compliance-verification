@@ -164,7 +164,7 @@ def test_validator_initialization():
     """Tests the initialization of the Validator class."""
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator instead of Validator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=["val1", "val2"],
@@ -187,7 +187,7 @@ def test_set_time_cct():
     """Tests the setter for time_cct."""
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -203,7 +203,7 @@ def test_set_generators_imax():
     """Tests the setter for generators_imax."""
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -219,7 +219,7 @@ def test_set_disconnection_model():
     """Tests the setter for disconnection_model."""
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -238,7 +238,7 @@ def test_set_setpoint_variation():
     """Tests the setter for setpoint_variation."""
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -253,7 +253,7 @@ def test_set_setpoint_variation():
 def test_get_generator_u_dim_returns_correct_value():
     curves_manager = DummyCurvesManager(generator_u_dim=456.7)
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -277,7 +277,7 @@ def test_complete_producer_sets_all_attributes():
             setpoint_variation=0.99,
         )
         producer = DummyProducer(sim_type=0)
-        validator = CustomValidator(  # Use CustomValidator
+        validator = CustomValidator(
             curves_manager,
             producer,
             validations=["time_cct"],
@@ -303,7 +303,7 @@ def test_complete_producer_sets_all_attributes():
 def test_has_validations_returns_true_when_validations_exist():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=["some_validation"],
@@ -320,7 +320,7 @@ def test_get_curve_by_name_returns_empty_for_missing_curve():
         reference_curves={"curve2": pd.DataFrame({"b": [2]})},
     )
     producer = DummyProducer(sim_type=1)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -340,7 +340,7 @@ def test_get_curve_by_name_returns_empty_for_missing_curve():
 def test_has_validations_returns_false_when_no_validations():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=2)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -363,7 +363,7 @@ def test_complete_producer_handles_missing_optional_producer():
         )
         producer = DummyProducer(sim_type=0)
         # No "time_cct" in validations, so set_time_cct should not be called
-        validator = CustomValidator(  # Use CustomValidator
+        validator = CustomValidator(
             curves_manager,
             producer,
             validations=[],
@@ -389,7 +389,7 @@ def test_complete_producer_handles_missing_optional_producer():
 def test_get_sim_type_returns_expected_value():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=42)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -403,7 +403,7 @@ def test_get_sim_type_returns_expected_value():
 def test_set_generators_imax_handles_empty_dict():
     curves_manager = DummyCurvesManager()
     producer = DummyProducer(sim_type=0)
-    validator = CustomValidator(  # Use CustomValidator
+    validator = CustomValidator(
         curves_manager,
         producer,
         validations=[],
@@ -438,7 +438,6 @@ def test_validate_returns_compliance_results_dict():
                 bm_name,
             )
 
-        # Corrected signature to match the abstract method in validator.py
         def validate(self, oc_name, results_path, sim_output_path, event_params) -> dict:
             """Simulates compliance result."""
             return {"compliance": True, "details": {"oc_name": oc_name}}
@@ -459,7 +458,6 @@ def test_validate_returns_compliance_results_dict():
     )
     with TemporaryDirectory() as tmp_dir:
         path = Path(tmp_dir)
-        # Remove the extra 'fs' argument when calling validate
         result = validator.validate("OC1", path / "results", "sim", {"param": 1})
         assert isinstance(result, dict)
         assert "compliance" in result

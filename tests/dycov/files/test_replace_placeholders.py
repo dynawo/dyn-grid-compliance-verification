@@ -106,7 +106,6 @@ class TestReplacePlaceholders:
             caplog.set_level(logging.INFO)
             fault_time(file_path, 5.0)
 
-            # Check that the log message was emitted
             assert any("No event to disconnect" in r.message for r in caplog.records)
 
             # File should remain unchanged

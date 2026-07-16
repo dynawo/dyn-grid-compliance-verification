@@ -43,7 +43,6 @@ def test_install_signal_handlers_no_extra_signals_does_not_raise():
         # Should not raise on any platform
         install_signal_handlers(_on_exit)
     finally:
-        # Restore previous handler
         try:
             signal.signal(signal.SIGINT, prev)
         except Exception:
@@ -54,7 +53,6 @@ def test_terminate_all_children_invokes_dynawo_and_report(monkeypatch):
     """Simulate presence of DynawoSimulator and report.terminate_all_children
     via sys.modules and ensure our helpers call them without raising.
     """
-    # Create fake dynawo_simulator module
     dynawo_mod = types.ModuleType("dycov.curves.dynawo.runtime.dynawo_simulator")
 
     class _DynawoSimulator:
@@ -66,7 +64,6 @@ def test_terminate_all_children_invokes_dynawo_and_report(monkeypatch):
 
     dynawo_mod.DynawoSimulator = _DynawoSimulator
 
-    # Create fake report module
     report_mod = types.ModuleType("dycov.report.report")
     report_called = []
 
@@ -75,7 +72,6 @@ def test_terminate_all_children_invokes_dynawo_and_report(monkeypatch):
 
     report_mod.terminate_all_children = _report_term
 
-    # Register fakes in sys.modules
     sys.modules["dycov.curves.dynawo.runtime.dynawo_simulator"] = dynawo_mod
     sys.modules["dycov.report.report"] = report_mod
 

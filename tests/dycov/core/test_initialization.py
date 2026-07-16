@@ -11,9 +11,7 @@ import configparser
 
 import pytest
 
-from dycov.core.initialization import DycovInitializer  # Import the class
-
-# No need to import cfg directly if patching via string path
+from dycov.core.initialization import DycovInitializer
 
 
 class TestDycovInitializer:
@@ -55,15 +53,11 @@ class TestDycovInitializer:
         mocker.patch(
             "dycov.logging.logging.dycov_logging.get_logger", return_value=self._mock_logger
         )
-        # We'll assert this directly in initialize_logger tests, no need to patch globally here
-        # mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
 
-        # Mock Validation.get_project_path
         self._mock_get_project_path = mocker.patch(
             "dycov.validate.validation.Validation.get_project_path",
             return_value=tmp_path / "project_root",
         )
-        # Create dummy project root config files
         (tmp_path / "project_root" / "configuration").mkdir(parents=True, exist_ok=True)
         (tmp_path / "project_root" / "configuration" / "config.ini").write_text(
             "[dycov]\nversion = 1.0.0.RC\n"
@@ -102,7 +96,7 @@ class TestDycovInitializer:
                     dummy_sample_dir = template_dir / category / model / ".DummySample"
                     dummy_sample_dir.mkdir(
                         parents=True, exist_ok=True
-                    )  # <-- This creates the directory
+                    )
                     (dummy_sample_dir / "dummy.txt").write_text(
                         f"dummy sample for {template}/{category}/{model}"
                     )
@@ -149,7 +143,6 @@ class TestDycovInitializer:
         user_config_dir = self.mock_config.get_config_dir.return_value
         config_templates_dir = user_config_dir / "templates"
 
-        # Assert copy_from_path calls
         mock_copy_from_path.assert_any_call(
             tool_path_fixture / "templates" / "README.md", config_templates_dir
         )
@@ -171,7 +164,6 @@ class TestDycovInitializer:
 
         assert mock_copy_from_path.call_count == 5  # Total copy_from_path calls
 
-        # Assert copy_directory calls for dummy samples
         # There are 2 templates ("PCS", "reports"), 2 categories,
         # 3 models = 12 copy_directory calls
         assert mock_copy_directory.call_count == 12
@@ -286,7 +278,6 @@ class TestDycovInitializer:
         """
         Tests that _initialize_logger sets log levels to DEBUG when debug is True.
         """
-        # Ensure init_handlers is mocked correctly
         mock_init_handlers = mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
 
         dycov_initializer._initialize_logger(debug=True)

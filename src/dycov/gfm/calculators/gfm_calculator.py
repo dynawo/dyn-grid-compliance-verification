@@ -147,7 +147,6 @@ class GFMCalculator:
         # Step 1: Derive the simulation sample step (dt) assuming a uniformly spaced time array
         dt = time_array[1] - time_array[0]
 
-        # Step 2: Translate the continuous delay time into a discrete sample count
         delay_samples = int(delay_time / dt) + 1
 
         # Safety Check: If the requested start time exceeds the simulation horizon, abort
@@ -158,16 +157,13 @@ class GFMCalculator:
         # Step 3: Isolate the precise index corresponding to the delay initiation threshold
         start_idx = np.argmax(time_array >= start_time)
 
-        # Step 4: Construct the constituent parts of the new shifted signal
         pre_delay_signal = signal[:start_idx]
         delay_block = np.full(delay_samples, delayed_value)
         post_delay_signal = signal[start_idx:]
 
-        # Step 5: Synthesize the full array by concatenating the unshifted, delayed, and shifted
         # blocks
         combined_signal = np.concatenate((pre_delay_signal, delay_block, post_delay_signal))
 
-        # Step 6: Enforce array dimensional consistency by truncating overflow data
         return combined_signal[: len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:

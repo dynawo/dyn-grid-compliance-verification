@@ -129,7 +129,6 @@ def resample_to_fixed_step(curves: pd.DataFrame, fs_max: float = 1000) -> pd.Dat
     min_tstep = np.min(curve_tsteps)
     new_tstep = max(min_tstep, 1 / fs_max)
 
-    # Construct the new time grid
     t_start, t_end = uniq_tgrid[0], uniq_tgrid[-1]
     new_tgrid = np.arange(t_start, t_end, step=new_tstep)
 

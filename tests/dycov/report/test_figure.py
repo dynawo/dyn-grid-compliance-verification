@@ -63,7 +63,6 @@ def cleanup_matplotlib():
 
 
 def test_create_plot_saves_expected_plot():
-    # Setup
     time = [0, 1, 2, 3, 4]
     curves = [{"curve": [0, 1, 2, 3, 4], "color": "#4c72b0", "style": "-"}]
     time_reference = [0, 1, 2, 3, 4]

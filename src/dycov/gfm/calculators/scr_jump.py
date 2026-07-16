@@ -112,7 +112,6 @@ class SCRJump(GFMCalculator):
         """
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
-        # Step 1: Compute DeltaP arrays across nominal and boundary D, H variations.
         (
             delta_p_results,
             min_envelope_results,
@@ -127,7 +126,6 @@ class SCRJump(GFMCalculator):
             event_time=event_time,
         )
 
-        # Step 2: Synthesize the final definitive envelopes from all calculated DeltaP candidate
         # traces.
         power_at_pcc, upper_envelope, lower_envelope = self._get_envelopes(
             delta_p_array=delta_p_results,
@@ -181,7 +179,6 @@ class SCRJump(GFMCalculator):
         peak_power_results = np.zeros(num_variations)
         epsilon_results = np.zeros(num_variations)
 
-        # Iterate and resolve the response profile for each parameter permutation.
         for i in range(num_variations):
             delta_p, delta_p_min, delta_p_max, p_peak, epsilon = (
                 self._calculate_delta_p_for_damping(
@@ -264,7 +261,6 @@ class SCRJump(GFMCalculator):
         modification_mask = (time_array >= event_time) & (
             time_array <= event_time + constants.SCRJUMP_MODIFY_ENVELOPE_S
         )
-        # Superimpose the 50% anchor value strictly within the established masked window.
         modified_signal = np.where(modification_mask, power_at_50_percent, envelope_signal)
 
         # Apply robust sanity checks to ensure modifications do not breach hardware limits.
@@ -364,7 +360,6 @@ class SCRJump(GFMCalculator):
                 # Artificial flattening constraint bypassed to preserve natural exponential decay
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
             else:  # Underdamped execution branch
-                # Artificial flattening constraint bypassed to preserve natural exponential decay
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
 
         # Enforce hard limits restricting signals to physical hardware capabilities.
@@ -503,13 +498,11 @@ class SCRJump(GFMCalculator):
             delta_p_nominal[event_index] if event_index < len(delta_p_nominal) else 0
         )
 
-        # Iteratively extract and compute operational envelope traces for every parameter set.
         for i in range(delta_p_array.shape[0]):
             current_delta_p = delta_p_array[i, :]
             current_peak_power = p_peak_array[i]
             tunnel_value = self._get_tunnel(current_peak_power)
 
-            # Extract bounded traces referencing the main foundational delta_p waveform.
             upper_trace, lower_trace = self._get_envelope_traces(
                 delta_p=current_delta_p,
                 time_array=time_array,
@@ -802,11 +795,9 @@ class SCRJump(GFMCalculator):
             )
             sqrt_term_val = 0
 
-        # Define analytical equation roots
         p1 = (alpha_coeff - np.sqrt(sqrt_term_val)) / 2
         p2 = (alpha_coeff + np.sqrt(sqrt_term_val)) / 2
 
-        # Extract mathematical integration variables mapped to the final solution
         if abs(p2 - p1) < 1e-9:  # Logic handling strictly critically damped scenarios
             A = 0.5
             B = 0.5
@@ -900,7 +891,6 @@ class SCRJump(GFMCalculator):
         # Aggregated solution resolves as an exponentially decaying sinusoidal wave
         delta_p_base = peak_power * -1 * (exp_term * cos_term + sin_coeff * exp_term * sin_term)
 
-        # Calculate bounding limitations tracing the decay amplitude logic
         amplitude_envelope = np.sqrt(1 + sin_coeff**2)
         delta_p_max_env = np.abs(amplitude_envelope * peak_power * exp_term)
         delta_p_min_env = -1 * delta_p_max_env

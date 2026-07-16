@@ -47,7 +47,6 @@ def test_create_map_all_keys_present():
     assert isinstance(table, list)
     # There should be 7 main checks + 5 simple times + 3 composed times = 18 rows
     assert len(table) == 15
-    # Check a few representative rows for correct structure and formatting
     assert table[0][0] == "Unit not disconnected by protections"
     assert table[0][2] in ("True", "\\textcolor{red}{ False }")
     assert table[3][0] == "Frequency remains within [49, 51] Hz"

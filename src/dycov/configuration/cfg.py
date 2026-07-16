@@ -435,7 +435,6 @@ def _get_instance() -> Config:
     config_dir = Path.home() / ("AppData/Local/dycov" if os.name == "nt" else ".config/dycov")
     logger.debug(f"Config directory set to: {config_dir}")
 
-    # Initialize ConfigParser objects for different configuration sources
     default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     default_config.optionxform = str
     user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))

@@ -152,7 +152,6 @@ def calculate(
         setpoint_tracking_controlled_magnitude,
     )
 
-    # Get the windows time values
     t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end = _get_windows_times(
         time_values,
         t_fault,
@@ -160,7 +159,6 @@ def calculate(
         exclusion_zones,
     )
 
-    # Get the windows time values for the low-pass filter
     tf_w1_init, tf_w1_end, tf_w2_init, tf_w2_end, tf_w3_init, tf_w3_end = (
         _get_filter_windows_times(time_values, t_fault, fault_duration)
     )

@@ -624,10 +624,6 @@ class GFMParameters(Parameters):
             return config.get_float(self._pcs_section, option, default_value)
         return config.get_float("DEFAULT", option, default_value)
 
-    # -------------------------------------------------------------------------
-    # NEW METHODS FOR HYBRID PARAMETER DETECTION
-    # -------------------------------------------------------------------------
-
     def get_hybrid_parameters(self) -> Optional[Tuple[float, float, float, float]]:
         """
         Evaluates the configuration to retrieve a set of hybrid operational parameters
@@ -682,7 +678,6 @@ class GFMParameters(Parameters):
         Optional[float]
             The successfully parsed floating-point definition if located, otherwise None.
         """
-        # Step 1: Query the primary hierarchical simulation boundaries
         val_str = self.__get_value(option)
 
         # __get_value might return an empty string or default if not found in hierarchy
@@ -692,7 +687,6 @@ class GFMParameters(Parameters):
             except ValueError:
                 pass  # Fallthrough to verify alternative source configuration
 
-        # Step 2: Establish fallback verification probing the base Producer.ini physics parameters
         if self._producer._config.has_option("GFM Parameters", option):
             try:
                 return float(self._producer._config.get("GFM Parameters", option))

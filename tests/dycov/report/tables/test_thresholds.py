@@ -62,7 +62,6 @@ def test_create_map_all_checks_present():
     assert len(result) == 8
     for entry in result:
         assert len(entry) == 10
-    # Check that the first entry matches the expected values for controlled_magnitude
     assert result[0][0] == "CM"
     assert result[0][1:] == [0.11, 0.12, 0.13, 0.21, 0.22, 0.23, 0.31, 0.32, 0.33]
 

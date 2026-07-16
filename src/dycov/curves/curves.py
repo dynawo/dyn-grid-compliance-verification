@@ -86,15 +86,10 @@ class ProducerCurves:
         )
         unit_characteristics = self.get_unit_characteristics()
         if "*" in value_definition:
-            # Split the value definition by '*'
             parts = value_definition.split("*")
-            # The first part is the multiplier
             multiplier = float(parts[0])
-            # The second part is the value to be multiplied
             value = parts[1]
-            # Return the product of the multiplier and the value from unit characteristics
             return multiplier * unit_characteristics.get(value, 0.0)
-        # Return the value from unit characteristics or the value definition itself if not found
         return unit_characteristics.get(value_definition, value_definition)
 
     def complete_unit_characteristics(self, line_Xpu: float) -> None:
@@ -168,21 +163,16 @@ class ProducerCurves:
         float
             Setpoint variation.
         """
-        # Check if there is a high impedance fault or a bolted fault
         if config.get_boolean(pcs_bm_oc_name, "hiz_fault") or config.get_boolean(
             pcs_bm_oc_name, "bolted_fault"
         ):
-            # If either fault is present, return 0.0 as the setpoint variation
             return 0.0
 
-        # Retrieve the setpoint step value from the configuration
         config_key = pcs_bm_oc_name + ".Event"
         setpoint_variation = config.get_value(config_key, "setpoint_step_value")
         if not setpoint_variation:
-            # If no setpoint variation is found, return 0.0
             return 0.0
 
-        # Calculate and return the final setpoint variation value
         producer = self.get_producer()
         return float(self.obtain_value(str(setpoint_variation))) * self._s_nref / producer.s_nom
 

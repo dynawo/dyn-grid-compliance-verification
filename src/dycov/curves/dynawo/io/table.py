@@ -62,14 +62,11 @@ class TableFile(FileVariables):
     def __complete_file(
         self, working_oc_dir: Path, tso_gen: GenInit, event_params: dict, filename: str
     ) -> None:
-        # Retrieve all existing variables from the TXT file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
 
-        # Update event timing variables
         variables_dict["start_event"] = event_params["start_time"]
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
 
-        # Set the initial per-unit voltage for the bus
         variables_dict["bus_u0pu"] = tso_gen.u0
 
         # Adjust bus voltage or frequency based on the event's connection type
@@ -157,7 +154,6 @@ class TableFile(FileVariables):
                 i += 1
                 continue
 
-            # Extract header info
             table_name = m.group(1)
             # original_N = int(m.group(2))     # not used
             ncols = int(m.group(3))
@@ -181,7 +177,6 @@ class TableFile(FileVariables):
                 data_rows.append(ln)
                 i += 1
 
-            # Parse data rows
             parsed = []
             for row in data_rows:
                 parts = row.split()
@@ -242,7 +237,6 @@ class TableFile(FileVariables):
                     new_rows.append(f"{t:.6f} {c2} {v:.6f}")
                 k += 1
 
-            # Write updated header
             out_lines[header_index] = f"double {table_name}({len(new_rows)},{ncols})"
             out_lines.extend(new_rows)
 
@@ -253,7 +247,6 @@ class TableFile(FileVariables):
             if i < n and not lines[i].strip():
                 i += 1
 
-        # Save final result
         file_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
 
     def complete_file(self, working_oc_dir: Path, tso_gen: GenInit, event_params: dict) -> None:

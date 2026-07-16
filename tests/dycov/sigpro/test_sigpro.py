@@ -146,7 +146,6 @@ def test_apply_time_shift():
 
     from dycov.sigpro.sigpro import apply_time_shift
 
-    # Create simple synthetic curve
     t = np.linspace(0, 10, 101)  # 0 → 10 s
     y = np.sin(t)
     curves = pd.DataFrame({"time": t, "signal": y})
@@ -160,7 +159,6 @@ def test_apply_time_shift():
 
     shifted = apply_time_shift(curves, t_event_curves, t_event_reference)
 
-    # Validate shift
     assert np.allclose(shifted["time"], t + expected_shift)
     # Validate that the data is untouched
     assert np.allclose(shifted["signal"], curves["signal"])

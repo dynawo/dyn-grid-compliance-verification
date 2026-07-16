@@ -48,25 +48,21 @@ class TestProducerParFile:
         return ddb_dir
 
     def test_create_par_file_performance_sm_happy_path(self, tmp_path, monkeypatch):
-        # Setup DYD file with one blackBoxModel with parId and lib
         dyd_dir = tmp_path
         dyd_file = dyd_dir / "Producer.dyd"
         bbmodels = [{"id": "BB1", "lib": "libA", "parId": "parA"}]
         self._write_dyd(dyd_file, bbmodels)
 
-        # Setup ddb directory and desc.xml file
         params = [
             {"name": "param1", "type": "double", "defaultValue": "1.0"},
             {"name": "param2", "type": "int", "defaultValue": "2"},
         ]
         ddb_dir = self._setup_ddb(tmp_path, "libA", params)
 
-        # Patch _get_ddb_model_path to return ddb_dir
         from dycov.files import producer_par_file
 
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
 
-        # Create PAR file
         create_producer_par_file(
             launcher_dwo=Path("dummy_launcher"),
             target=dyd_dir,
@@ -74,7 +70,6 @@ class TestProducerParFile:
             template="performance_SM",
         )
 
-        # Check that Producer.par exists and has correct parameters
         par_file = dyd_dir / "Producer.par"
         assert par_file.exists()
         tree = etree.parse(par_file)
@@ -87,29 +82,24 @@ class TestProducerParFile:
         assert {p.get("name"): p.get("value") for p in pars} == {"param1": "1.0", "param2": "2"}
 
     def test_create_par_files_model_ppm_zones_happy_path(self, tmp_path, monkeypatch):
-        # Setup Zone1 and Zone3 directories
         zone1 = tmp_path / "Zone1"
         zone3 = tmp_path / "Zone3"
         zone1.mkdir()
         zone3.mkdir()
-        # DYD files for both zones
         bbmodels = [{"id": "BB1", "lib": "libA", "parId": "parA"}]
         self._write_dyd(zone1 / "Producer.dyd", bbmodels)
         self._write_dyd(zone3 / "Producer.dyd", bbmodels)
-        # ddb and desc.xml
         params = [{"name": "p", "type": "double", "defaultValue": "3.14"}]
         ddb_dir = self._setup_ddb(tmp_path, "libA", params)
         from dycov.files import producer_par_file
 
         monkeypatch.setattr(producer_par_file, "_get_ddb_model_path", lambda _: ddb_dir)
-        # Run
         create_producer_par_file(
             launcher_dwo=Path("dummy_launcher"),
             target=tmp_path,
             topology="S",
             template="model_PPM",
         )
-        # Check both Zone1/Producer.par and Zone3/Producer.par exist
         for zone in [zone1, zone3]:
             par_file = zone / "Producer.par"
             assert par_file.exists()
@@ -124,7 +114,6 @@ class TestProducerParFile:
             assert pars[0].get("value") == "3.14"
 
     def test_check_parameters_all_values_present(self, tmp_path, monkeypatch):
-        # Setup DYD and desc.xml with all default values
         dyd_file = tmp_path / "Producer.dyd"
         bbmodels = [{"id": "BB1", "lib": "libA", "parId": "parA"}]
         self._write_dyd(dyd_file, bbmodels)
@@ -171,7 +160,6 @@ class TestProducerParFile:
         assert len(sets) == 0
 
     def test_check_parameters_with_empty_values(self, tmp_path, monkeypatch):
-        # DYD and desc.xml with one parameter missing defaultValue
         dyd_file = tmp_path / "Producer.dyd"
         bbmodels = [{"id": "BB1", "lib": "libA", "parId": "parA"}]
         self._write_dyd(dyd_file, bbmodels)
@@ -206,7 +194,6 @@ class TestProducerParFile:
         assert "p2" in dummy_logger.logged[0]
 
     def test_blackboxmodel_without_parid(self, tmp_path, monkeypatch):
-        # DYD with one blackBoxModel without parId and one with parId
         dyd_file = tmp_path / "Producer.dyd"
         bbmodels = [
             {"id": "BB1", "lib": "libA", "parId": "parA"},

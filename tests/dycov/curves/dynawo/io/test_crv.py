@@ -56,14 +56,12 @@ def test_create_curves_file_electric_performance_sm():
         xml_path = path / curves_filename
         assert xml_path.exists()
         root = parse_curves_file(xml_path)
-        # Check that expected curve elements exist
         curve_models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
         assert "InfiniteBus" in curve_models
         assert "Measurements" in curve_models
         assert "Gen" in curve_models
-        # Check that dictionary contains expected keys
         assert any("Gen" in k for k in curves_dict)
         assert any("Measurements" in k for k in curves_dict)
 
@@ -93,13 +91,11 @@ def test_create_curves_file_with_all_equipment_types():
         xml_path = path / curves_filename
         assert xml_path.exists()
         root = parse_curves_file(xml_path)
-        # Check that all equipment types are present in the XML
         models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
         assert "Measurements" in models
         assert "Gen" in models
-        # Check that dictionary contains entries for all equipment
         assert any("Measurements" in k for k in curves_dict)
         assert any("Gen" in k for k in curves_dict)
 

@@ -162,7 +162,6 @@ def test_maximum_error_returns_zero_on_empty_arrays():
 
 
 def test_correct_time_lag_calculation():
-    # Setup test data
     time = [1.0, 1.6666666666, 2.6666666666, 4.0, 5.0]
     curve = [10.0, 20.0, 30.0, 40.0, 50.0]
     sim_t_event_start = 4.0
@@ -172,7 +171,6 @@ def test_correct_time_lag_calculation():
     # compared with ideal_time = [2.0, 3.0, 4.0]
     # The max difference should be the maximum absolute difference between these arrays
 
-    # Call the function
     result = common.get_time_lag(time, curve, sim_t_event_start, event_duration)
 
     # Calculate expected result manually
@@ -182,7 +180,6 @@ def test_correct_time_lag_calculation():
     )
     expected = max(abs(np.array(time_slice) - ideal_time))
 
-    # Assert
     assert math.isclose(result, expected), f"Expected time lag {expected}, but got {result}"
 
 

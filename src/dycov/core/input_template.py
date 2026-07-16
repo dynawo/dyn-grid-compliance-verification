@@ -264,16 +264,12 @@ class InputTemplateGenerator:
         manage_files.create_dir(target)
         self._copy_input_templates(target, template)
 
-        # Create and validate DYD file
         self._create_dyd_template(target, topology, template)
 
-        # Create and validate PAR file
         self._create_par_template(launcher_dwo, target, topology, template)
 
-        # Create and validate INI file
         self._create_ini_template(target, topology, template)
 
-        # Create and validate curves files
         self._create_curves_template(target, topology, template)
 
         dycov_logging.get_logger("Input Template Generator").info("Done")

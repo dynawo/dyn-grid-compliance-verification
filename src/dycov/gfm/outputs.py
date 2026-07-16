@@ -213,23 +213,19 @@ def plot_results(
     extra_envelopes : dict[str, np.ndarray], optional
         Supplementary bounding envelopes to be rendered alongside the main signals.
     """
-    # 1. Identify optimal indices to crop uninformative pre- and post-event data
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
 
-    # 2. Slice arrays utilizing the calculated boundaries
     time_trimmed = time_array[start_index:end_index]
     pcc_trimmed = pcc_signal[start_index:end_index]
     down_trimmed = lower_envelope[start_index:end_index]
     up_trimmed = upper_envelope[start_index:end_index]
 
-    # Process supplementary envelopes if provided
     extra_trimmed = {}
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
             extra_trimmed[name] = signal[start_index:end_index]
 
-    # 3. Format disclaimer overlays based on the output backend requirements
     disclaimer_text_mpl = ""
     disclaimer_text_html = ""
     if show_disclaimer:
@@ -523,23 +519,19 @@ def save_ini_dump(
         f.write("GFM SIMULATION DUMP\n")
         f.write("===================\n")
 
-        # 1. Export core validation limits (D, H, system margins, and Epsilon)
         f.write(f"\n{'=' * 30}\n")
         f.write(" Key Validation Values\n")
         f.write(f"{'=' * 30}\n")
         try:
-            # Extract internal validation arrays mapped within the calculator instance
             d_vals = getattr(calculator, "_d_vals", None)
             h_vals = getattr(calculator, "_h_vals", None)
             eps_vals = getattr(calculator, "_epsilon_vals", None)
 
             if d_vals is not None and h_vals is not None:
-                # Iterate and format all validation combinations (Nominal + Variations)
                 for i in range(len(d_vals)):
                     label = "Nominal" if i == 0 else f"Variation {i}"
                     line = f"[{label}] D = {d_vals[i]:.6f}, H = {h_vals[i]:.6f}"
 
-                    # Append Epsilon constraints if defined in the parameters
                     if eps_vals is not None and i < len(eps_vals):
                         line += f", Epsilon = {eps_vals[i]:.6f}"
 
@@ -550,15 +542,12 @@ def save_ini_dump(
         except Exception as e:
             f.write(f"Could not retrieve validation values: {e}\n")
 
-        # 2. Export serialized GFMParameters object state
         if hasattr(parameters, "__dict__"):
             _write_dict(f, "GFMParameters Attributes", parameters.__dict__)
 
-        # 3. Export serialized GFMCalculator object state
         if hasattr(calculator, "__dict__"):
             _write_dict(f, "GFMCalculator Attributes", calculator.__dict__)
 
-        # 4. Reconstruct and export Producer INI Configuration
         f.write(f"\n{'=' * 30}\n")
         f.write(" GFMProducer Configuration (INI)\n")
         f.write(f"{'=' * 30}\n")

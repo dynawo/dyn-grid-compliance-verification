@@ -41,7 +41,6 @@ def test_create_map_with_complete_valid_results():
     table = characteristics_response.create_map(results)
     # There should be 6 rows: 4 time errors + 2 ramp errors
     assert len(table) == 6
-    # Check structure of first row (Reaction time)
     row = table[0]
     assert row[0] == "Reaction time"
     assert isinstance(row[1], str)
@@ -49,7 +48,6 @@ def test_create_map_with_complete_valid_results():
     assert isinstance(row[3], str)
     assert isinstance(row[4], str)
     assert isinstance(row[5], str)
-    # Check that ramp error row is present and formatted
     ramp_row = table[4]
     assert ramp_row[0] == "Ramp time lag"
     assert ramp_row[3] == "0.12"
