@@ -369,17 +369,17 @@ The following roadmap outlines the main development directions currently guiding
 ### Axis 1 — Stabilization and model support
 
 * Ongoing bug fixes and robustness improvements
-* Complete support for WECC and IEC models (PV, wind, BESS)
+* ~~Complete support for WECC and IEC models (PV, wind, BESS)~~ — *available since v1.1.0*
 * Support for multi-generator topologies
 * On-site measurement support for RMS model validation
 
 ### Axis 2 — Ease of use and long-term maintenance
 
-* Windows and Docker installation improvements
-* Migration of initialization layer to pypowsybl
-* Dynamic generation of topology schematics in reports
-* Expanded test coverage and typing enforcement
-* Documentation and tutorials
+* ~~Windows and Docker installation improvements~~ — *available since v1.1.0*
+* ~~Migration of initialization layer to pypowsybl~~ — *postponed — Dynawo release-cycle blocker ([details](docs/design/Dynawo_PyPowsybl_feasibility.md))*
+* ~~Dynamic generation of topology schematics in reports~~ — *postponed — depends on pypowsybl*
+* ~~Expanded test coverage and typing enforcement~~ — *available since v1.1.0*
+* ~~Documentation and tutorials~~ — *available since v1.1.0*
 
 ### Axis 3 — Consistency with DTR updates
 
