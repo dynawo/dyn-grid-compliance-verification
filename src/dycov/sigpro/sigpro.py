@@ -96,6 +96,31 @@ def _find_abc_signal(curves):
     return abc_items, rms_items
 
 
+def _build_fixed_tgrid(uniq_tgrid: np.ndarray, fs_max: float) -> np.ndarray:
+    """Build a fixed-step time grid spanning the original time grid.
+
+    The step is the smallest one present in the original grid, but never smaller than 1/fs_max.
+
+    Parameters
+    ----------
+    uniq_tgrid : np.ndarray
+        Original time grid, without repeated time points.
+    fs_max : float
+        Maximum allowed sampling frequency (in Hz).
+
+    Returns
+    -------
+    np.ndarray
+        Fixed-step time grid.
+    """
+    curve_tsteps = np.diff(uniq_tgrid)
+    min_tstep = np.min(curve_tsteps)
+    new_tstep = max(min_tstep, 1 / fs_max)
+
+    t_start, t_end = uniq_tgrid[0], uniq_tgrid[-1]
+    return np.arange(t_start, t_end, step=new_tstep)
+
+
 def resample_to_fixed_step(curves: pd.DataFrame, fs_max: float = 1000) -> pd.DataFrame:
     """
     Resamples a set of curves to ensure they have a fixed time step.
@@ -124,13 +149,7 @@ def resample_to_fixed_step(curves: pd.DataFrame, fs_max: float = 1000) -> pd.Dat
     uniq_idx = np.unique(orig_tgrid, return_index=True)[1]
     uniq_tgrid = orig_tgrid[uniq_idx]
 
-    # Calculate the new fixed time step.
-    curve_tsteps = np.diff(uniq_tgrid)
-    min_tstep = np.min(curve_tsteps)
-    new_tstep = max(min_tstep, 1 / fs_max)
-
-    t_start, t_end = uniq_tgrid[0], uniq_tgrid[-1]
-    new_tgrid = np.arange(t_start, t_end, step=new_tstep)
+    new_tgrid = _build_fixed_tgrid(uniq_tgrid, fs_max)
 
     # Resample using a monotone interpolator (PCHIP)
     resampled_curve_dict = {}

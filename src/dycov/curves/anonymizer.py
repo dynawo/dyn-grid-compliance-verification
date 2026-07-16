@@ -406,6 +406,34 @@ def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
     return metadata
 
 
+def _get_event_period_indices(
+    df_imported_curve: pd.DataFrame, noise_event_start: float, noise_event_end: float
+) -> tuple[int, int, int]:
+    """Get the number of samples before, during and after the event window.
+
+    Parameters
+    ----------
+    df_imported_curve: pd.DataFrame
+        The DataFrame containing the curve data, including a 'time' column.
+    noise_event_start: float
+        The start time of the event window.
+    noise_event_end: float
+        The end time of the event window.
+
+    Returns
+    -------
+    tuple[int, int, int]
+        Number of samples before, during and after the event window.
+    """
+    time = df_imported_curve["time"]
+    before_event_idx = df_imported_curve[time <= noise_event_start].shape[0]
+    during_event_idx = df_imported_curve[
+        (time > noise_event_start) & (time <= noise_event_end)
+    ].shape[0]
+    after_event_idx = len(df_imported_curve) - before_event_idx - during_event_idx
+    return before_event_idx, during_event_idx, after_event_idx
+
+
 def _apply_noise_to_curves(
     df_imported_curve: pd.DataFrame,
     noisestd: float,
@@ -457,15 +485,9 @@ def _apply_noise_to_curves(
 
         dycov_logging.get_logger("Anonymizer").debug(f"Applying noise to column: {column}")
 
-        # Determine indices for before, during, and after event periods
-        before_event_idx = df_imported_curve[df_imported_curve["time"] <= noise_event_start].shape[
-            0
-        ]
-        during_event_idx = df_imported_curve[
-            (df_imported_curve["time"] > noise_event_start)
-            & (df_imported_curve["time"] <= noise_event_end)
-        ].shape[0]
-        after_event_idx = len(values) - before_event_idx - during_event_idx
+        before_event_idx, during_event_idx, after_event_idx = _get_event_period_indices(
+            df_imported_curve, noise_event_start, noise_event_end
+        )
 
         if ORIGINAL_IMPLEMENTATION:
             median_col = statistics.median(values.tolist())

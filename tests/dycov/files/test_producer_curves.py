@@ -50,52 +50,22 @@ def test_check_curves_all_values_and_files_exist(temp_model_dir):
     assert check_curves(temp_model_dir) is True
 
 
-def test_check_curves_missing_parameter_values(temp_model_dir):
-    # Write CurvesFiles.ini with an empty value
+def test_check_curves_missing_parameter_values(temp_model_dir, capture_error_logs):
     ini_content = "[Curves-Files]\ncurve1 = file1.txt\ncurve2 = \n"
     (temp_model_dir / "CurvesFiles.ini").write_text(ini_content)
     (temp_model_dir / "file1.txt").write_text("dummy")
-    # Patch dycov_logging to capture error logs
-    from dycov.logging import logging as dycov_logging_mod
 
-    logs = []
-
-    class DummyLogger:
-        def error(self, msg):
-            logs.append(msg)
-
-    orig_get_logger = dycov_logging_mod.dycov_logging.get_logger
-    dycov_logging_mod.dycov_logging.get_logger = lambda name: DummyLogger()
-    try:
-        result = check_curves(temp_model_dir)
-        assert result is False
-        assert any("parameters without value" in log for log in logs)
-    finally:
-        dycov_logging_mod.dycov_logging.get_logger = orig_get_logger
+    assert check_curves(temp_model_dir) is False
+    assert any("parameters without value" in log for log in capture_error_logs)
 
 
-def test_check_curves_missing_files(temp_model_dir):
-    # Write CurvesFiles.ini referencing a missing file
+def test_check_curves_missing_files(temp_model_dir, capture_error_logs):
     ini_content = "[Curves-Files]\ncurve1 = file1.txt\ncurve2 = file2.txt\n"
     (temp_model_dir / "CurvesFiles.ini").write_text(ini_content)
     (temp_model_dir / "file1.txt").write_text("dummy")
-    # Patch dycov_logging to capture error logs
-    from dycov.logging import logging as dycov_logging_mod
 
-    logs = []
-
-    class DummyLogger:
-        def error(self, msg):
-            logs.append(msg)
-
-    orig_get_logger = dycov_logging_mod.dycov_logging.get_logger
-    dycov_logging_mod.dycov_logging.get_logger = lambda name: DummyLogger()
-    try:
-        result = check_curves(temp_model_dir)
-        assert result is False
-        assert any("curve files exist" in log for log in logs)
-    finally:
-        dycov_logging_mod.dycov_logging.get_logger = orig_get_logger
+    assert check_curves(temp_model_dir) is False
+    assert any("curve files exist" in log for log in capture_error_logs)
 
 
 def test_create_producer_curves_unknown_template(temp_model_dir):

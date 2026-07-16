@@ -562,6 +562,21 @@ class ModelSetup:
     # Public entry point
     # ------------------------------------------------------------------
 
+    def _sort_stepup_xfmrs_to_generators(self, producer) -> list:
+        """Sort the step-up transformers to match the generator order.
+
+        Returns
+        -------
+        list
+            Step-up transformers sorted by their connected generator.
+        """
+        xfmr_map = {xfmr.id: xfmr for xfmr in producer.stepup_xfmrs}
+        return [
+            xfmr_map[gen.terminals[0].connected_equipment]
+            for gen in producer.generators
+            if gen.terminals[0].connected_equipment in xfmr_map
+        ]
+
     def complete_model(
         self,
         working_oc_dir: Path,
@@ -629,13 +644,7 @@ class ModelSetup:
 
         conn_line = self._get_lines_for_initial_calcs(tso_lines)
 
-        # Sort step-up transformers to match generator order
-        xfmr_map = {xfmr.id: xfmr for xfmr in producer.stepup_xfmrs}
-        sorted_stepup_xfmrs = [
-            xfmr_map[gen.terminals[0].connected_equipment]
-            for gen in producer.generators
-            if gen.terminals[0].connected_equipment in xfmr_map
-        ]
+        sorted_stepup_xfmrs = self._sort_stepup_xfmrs_to_generators(producer)
 
         pdr_load, grid_load = self._get_tso_loads(pcs_name, bm_name, oc_name, u_dim)
         tso_gen = init_calcs(
