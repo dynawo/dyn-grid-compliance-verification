@@ -13,7 +13,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Optional
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def setup_cli_parsers() -> argparse.ArgumentParser:

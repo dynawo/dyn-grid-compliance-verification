@@ -11,7 +11,7 @@
 import configparser
 from pathlib import Path
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def _create_producer_ini_file(

@@ -13,7 +13,7 @@ from typing import Dict, List
 from jinja2 import Environment, FileSystemLoader, Template, meta
 from lxml import etree
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def _get_template(path: Path, template_file: str) -> Template:

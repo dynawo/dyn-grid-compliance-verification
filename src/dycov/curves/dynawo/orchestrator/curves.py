@@ -22,7 +22,7 @@ from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, model_parameters
 from dycov.files.manage_files import ModelFiles, ProducerFiles
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.parameters import DisconnectionModel, SimulationError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks

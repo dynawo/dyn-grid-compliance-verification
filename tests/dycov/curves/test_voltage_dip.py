@@ -62,7 +62,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
     mock_is_stable.side_effect = [(True, 0), (True, 0)]
 
     mock_logger = mocker.MagicMock()
-    mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
+    mocker.patch("dycov.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     result = classify_voltage_dip(
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
@@ -99,7 +99,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
     mock_is_stable.side_effect = [(True, 0), (True, 0)]
 
     mock_logger = mocker.MagicMock()
-    mocker.patch("dycov.logging.logging.dycov_logging.get_logger", return_value=mock_logger)
+    mocker.patch("dycov.logging.dycov_logging.get_logger", return_value=mock_logger)
 
     result = classify_voltage_dip(
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip

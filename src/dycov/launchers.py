@@ -24,7 +24,7 @@ from dycov.cli.command_handlers import (
 )
 from dycov.cli.utils import check_dynawo_launcher_availability, get_dynawo_launcher_name
 from dycov.core.initialization import DycovInitializer
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 class DycovCLI:

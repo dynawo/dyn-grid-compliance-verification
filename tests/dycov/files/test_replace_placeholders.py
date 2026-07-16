@@ -19,7 +19,7 @@ def _patch_dycov_logging(monkeypatch):
         return logging.getLogger(name)
 
     monkeypatch.setattr(
-        "dycov.logging.logging.dycov_logging.get_logger",
+        "dycov.logging.dycov_logging.get_logger",
         _get_logger,
         raising=True,
     )

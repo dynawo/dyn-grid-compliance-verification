@@ -16,7 +16,7 @@ from dycov.configuration.cfg import config
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 @dataclass

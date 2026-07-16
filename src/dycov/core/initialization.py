@@ -19,7 +19,7 @@ from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging, enable_warning_capture
+from dycov.logging import dycov_logging, enable_warning_capture
 
 
 def _get_linux_info() -> str:

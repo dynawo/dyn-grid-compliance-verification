@@ -16,7 +16,7 @@ from pathlib import Path
 from dycov.configuration.cfg import config
 from dycov.files import manage_files
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.pcs import Pcs
 
 

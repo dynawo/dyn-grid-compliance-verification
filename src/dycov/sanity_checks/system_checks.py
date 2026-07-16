@@ -16,7 +16,7 @@ import os
 import shutil
 from pathlib import Path
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def check_launchers(launcher_dwo: Path) -> None:

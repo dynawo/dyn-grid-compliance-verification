@@ -20,7 +20,7 @@ import pandas as pd
 
 import dycov
 from dycov.core.global_variables import CASE_SEPARATOR
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 ModelFiles = namedtuple("ModelFiles", ["model_path", "omega_path", "pcs_path", "benchmark"])
 ProducerFiles = namedtuple("ProducerFiles", ["producer_dyd", "producer_par"])

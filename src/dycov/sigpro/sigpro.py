@@ -16,7 +16,7 @@ from scipy import signal
 from scipy.interpolate import PchipInterpolator
 
 from dycov.configuration.cfg import config
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.sigpro import lp_filters
 
 # For avoiding overflows in PChipInterpolator

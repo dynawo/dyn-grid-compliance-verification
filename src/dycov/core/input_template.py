@@ -16,7 +16,7 @@ from dycov.files.producer_curves import check_curves, create_producer_curves
 from dycov.files.producer_dyd_file import check_dynamic_models, create_producer_dyd_file
 from dycov.files.producer_ini_file import check_ini_parameters, create_producer_ini_file
 from dycov.files.producer_par_file import check_parameters, create_producer_par_file
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 class InputTemplateGenerator:

@@ -58,5 +58,4 @@ def clear_test_context() -> None:
     dycov_logging.clear_test_context()
 
 
-# Root logger for DyCoV
 dycov_logging = _get_instance()

@@ -17,7 +17,7 @@ from typing import Optional
 
 from lxml import etree
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def _compile_model_name(models_path: Path, model_name: str) -> Optional[str]:

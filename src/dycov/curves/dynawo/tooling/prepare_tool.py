@@ -12,7 +12,7 @@ from pathlib import Path
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.runtime.dynawo_precompile import precompile_models
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def _prepare_ddb_path(launcher_dwo: Path, ddb_dir: Path, force: bool) -> bool:

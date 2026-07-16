@@ -51,7 +51,7 @@ class TestDycovInitializer:
         # Mock the logger for initialization tests
         self._mock_logger = mocker.MagicMock()
         mocker.patch(
-            "dycov.logging.logging.dycov_logging.get_logger", return_value=self._mock_logger
+            "dycov.logging.dycov_logging.get_logger", return_value=self._mock_logger
         )
 
         self._mock_get_project_path = mocker.patch(
@@ -278,7 +278,7 @@ class TestDycovInitializer:
         """
         Tests that _initialize_logger sets log levels to DEBUG when debug is True.
         """
-        mock_init_handlers = mocker.patch("dycov.logging.logging.dycov_logging.init_handlers")
+        mock_init_handlers = mocker.patch("dycov.logging.dycov_logging.init_handlers")
 
         dycov_initializer._initialize_logger(debug=True)
 

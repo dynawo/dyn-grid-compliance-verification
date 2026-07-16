@@ -13,7 +13,7 @@ import os
 import shutil
 import sys
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.sanity_checks import system_checks
 
 

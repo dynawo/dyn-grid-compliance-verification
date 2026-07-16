@@ -9,7 +9,7 @@
 #
 import pytest
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 @pytest.fixture

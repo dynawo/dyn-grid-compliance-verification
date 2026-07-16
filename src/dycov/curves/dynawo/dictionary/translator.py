@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams
 
 
