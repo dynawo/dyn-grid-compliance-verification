@@ -89,10 +89,8 @@ def test_create_html_success():
         html_dir = output_path / "HTML"
         html_dir.mkdir()
 
-        # Create dummy plotly.min.js
         (html_dir / "plotly.min.js").write_text("// plotly js dummy")
 
-        # Create dummy template
         templates_dir = Path(__file__).resolve().parent / "templates"
         templates_dir.mkdir(exist_ok=True)
         template_path = templates_dir / "template.html"
@@ -234,7 +232,6 @@ def test_create_html_missing_template():
         html_dir = output_path / "HTML"
         html_dir.mkdir()
 
-        # Remove template if exists
         templates_dir = Path(__file__).resolve().parent / "templates"
         template_path = templates_dir / "template.html"
         if template_path.exists():

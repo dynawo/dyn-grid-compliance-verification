@@ -213,7 +213,6 @@ class RoCoF(GFMCalculator):
         wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total))
         epsilon = D / (4 * H * wn)
 
-        # Select the evaluation function depending on the damping threshold
         calc_func = (
             self._get_overdamped_delta_p_base
             if epsilon >= self._EPSILON_THRESHOLD
@@ -223,17 +222,14 @@ class RoCoF(GFMCalculator):
         # A finite duration RoCoF event is modeled by superimposing two independent step responses
         rocof_stop_time = event_time + self._rocof_duration
 
-        # 1. Calculate the direct step-on response starting at the event initiation
         time_event_start = time_array - event_time
         p1, p_peak, t_response = calc_func(D, H, x_total, time_event_start)
         p1 = np.where(time_array < event_time, 0, p1)
 
-        # 2. Calculate the inverse step-off response starting at the event termination
         time_event_stop = time_array - rocof_stop_time
         p2, _, _ = calc_func(D, H, x_total, time_event_stop)
         p2 = np.where(time_array < rocof_stop_time, 0, p2)
 
-        # 3. The final synthesized response is derived from the difference between the two steps
         delta_p = p1 - p2
 
         return delta_p, p_peak, t_response

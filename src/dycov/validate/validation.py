@@ -268,16 +268,13 @@ class Validation:
             (parameters, pcs_name, producer_name, path_latex_files).
         """
         pcs_list = []
-        # Get all producer files regardless of zone initially
         all_producer_files = self._parameters.get_producer().get_filenames()
         dycov_logging.get_logger("Validation").debug(
             f"Producer files: {' '.join(all_producer_files)}"
         )
 
         if self._parameters.get_sim_type() > MODEL_VALIDATION:
-            # For MODEL_VALIDATION types, iterate through zones
             for zone in [1, 3]:
-                # Get producers specific to the current zone
                 producers_in_zone = self._parameters.get_producer().get_filenames(zone=zone)
                 dycov_logging.get_logger("Validation").debug(
                     f"Zone{zone} files: {' '.join(producers_in_zone)}"

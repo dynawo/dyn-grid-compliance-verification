@@ -121,7 +121,7 @@ class Translator:
         if generator.lib in self._family_map:
             family = self._family_map[generator.lib]["family"]
             return family
-        return ""  # Return empty if family is not found
+        return ""
 
     def get_generator_parameters(
         self, generator: GenParams, control_mode: str, zone: int

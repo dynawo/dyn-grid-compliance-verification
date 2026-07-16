@@ -368,12 +368,10 @@ def get_event_times(
         etree.XMLParser(remove_blank_text=True),
     )
 
-    # Parse XML
     root = etree_par.getroot()
     ns = etree.QName(root).namespace
     nsmap = {"ns": ns}
 
-    # XPath queries
     tbegin_parameters = root.xpath("//ns:par[@name='fault_tBegin']", namespaces=nsmap)
     tevent_parameters = root.xpath("//ns:par[@name='event_tEvent']", namespaces=nsmap)
     tstep_parameters = root.xpath("//ns:par[@name='step_tStep']", namespaces=nsmap)
@@ -492,14 +490,12 @@ def extract_defined_value(
                 f"Parameter name mismatch: expected '{parameter}', got '{param_name}'"
             )
 
-        # Multiplier: if present, parse; otherwise default to 1.0.
         multiplier = float(multiplier_str) if multiplier_str is not None else 1.0
 
         # Compose: explicit sign from the definition × parsed multiplier × base value.
         raw_value = explicit_sign * multiplier * base_value
         return sign * raw_value  # Apply final convention
 
-    # Step 4: No valid form matched.
     raise ValueError(f"Invalid format for {parameter}: '{value_definition}'")
 
 

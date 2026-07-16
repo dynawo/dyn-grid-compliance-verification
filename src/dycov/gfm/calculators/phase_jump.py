@@ -191,7 +191,6 @@ class PhaseJump(GFMCalculator):
         p_peak_array: list[float] = []
         epsilon_array: list[float] = []
 
-        # Generate fundamental response traces for each permutation
         for i in range(len(d_array)):
             delta_p, p_peak, epsilon = self._calculate_delta_p_for_damping(
                 d_array[i], h_array[i], Xeff, time_array, event_time, epsilon_initial_check[i]
@@ -270,7 +269,6 @@ class PhaseJump(GFMCalculator):
 
         list_of_arrays: list[np.ndarray] = delta_p_array + [delta_p_min, delta_p_max]
 
-        # Extract theoretically unbound maximum capabilities from superimposed arrays
         lower_env_unlimited, upper_env_unlimited = self._calculate_unlimited_power_envelopes(
             list_of_arrays, tunnel_time_dep
         )

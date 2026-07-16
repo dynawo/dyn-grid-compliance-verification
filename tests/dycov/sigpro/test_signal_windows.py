@@ -49,7 +49,6 @@ def test_calculate_returns_expected_windows():
         time_values, t_fault, fault_duration, setpoint_tracking_controlled_magnitude
     )
 
-    # Validate window boundaries
     validate = result["validate"]
     assert "before" in validate and "during" in validate and "after" in validate
     during = validate["during"]
@@ -148,7 +147,6 @@ def test_get_preserves_dataframe_structure():
     result = signal_windows.get(df, t_from, t_to)
     expected = df[(df["time"] >= t_from) & (df["time"] < t_to)].reset_index(drop=True)
     pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
-    # Check dtypes
     for col in df.columns:
         assert result[col].dtype == df[col].dtype
 

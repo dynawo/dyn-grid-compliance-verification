@@ -42,7 +42,6 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         If any of the required .dyd, .par, or .ini files are missing,
         or if their base names do not match.
     """
-    # Define regular expressions for .dyd, .par, and .ini files
     dyd_pattern = re.compile(rf".*{filename}.[dD][yY][dD]")
     par_pattern = re.compile(rf".*{filename}.[pP][aA][rR]")
     ini_pattern = re.compile(rf".*{filename}.[iI][nN][iI]")
@@ -50,7 +49,6 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
     has_dyd = None
     has_par = None
     has_ini = None
-    # Iterate through files in the model path to find required Dynawo input files
     for file in model_path.resolve().iterdir():
         if dyd_pattern.match(str(file)):
             has_dyd = file.stem
@@ -59,7 +57,6 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         if ini_pattern.match(str(file)):
             has_ini = file.stem
 
-    # Check if the .dyd file is present; raise FileNotFoundError if not
     if not has_dyd:
         dycov_logging.get_logger("Sanity Checks").error(
             f"The dynawo model must contain a {filename}.dyd file with the model definition."
@@ -67,7 +64,6 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         raise FileNotFoundError(
             errno.ENOENT, os.strerror(errno.ENOENT), f"Model {filename}.dyd file not found."
         )
-    # Check if the .par file is present; raise FileNotFoundError if not
     if not has_par:
         dycov_logging.get_logger("Sanity Checks").error(
             f"The dynawo model must contain a {filename}.par file with the model parameters."
@@ -75,7 +71,6 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         raise FileNotFoundError(
             errno.ENOENT, os.strerror(errno.ENOENT), f"Model {filename}.par file not found."
         )
-    # Check if the .ini file is present; raise FileNotFoundError if not
     if not has_ini:
         dycov_logging.get_logger("Sanity Checks").error(
             f"The dynawo model must contain a {filename}.ini file with the model configuration."
@@ -131,11 +126,9 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
     FileNotFoundError
         If `CurvesFiles.ini` is not found and cannot be created.
     """
-    # If no curves path is provided, there's nothing to check
     if not curves_path:
         return
 
-    # Check if 'CurvesFiles.ini' exists in the curves_path
     if not (curves_path / "CurvesFiles.ini").exists():
         message = ""
         # If a model path is provided, try to create the producer curves file
@@ -180,7 +173,6 @@ def check_performance_curves(curves_path: Path) -> None:
     FileNotFoundError
         If any configuration file or its corresponding curve directory is missing.
     """
-    # Check if any .ini configuration file exists in the curves path
     if not any(curves_path.glob("*.[iI][nN][iI]")):
         dycov_logging.get_logger("Sanity Checks").error(
             "Configuration file is not present in the curves path."
@@ -191,7 +183,6 @@ def check_performance_curves(curves_path: Path) -> None:
             "Configuration file is not present in the curves path.",
         )
 
-    # For each .ini file found, check if its corresponding directory of curves exists
     for ini_file in curves_path.glob("*.[iI][nN][iI]"):
         if not (curves_path / ini_file.stem).exists():
             dycov_logging.get_logger("Sanity Checks").error(
@@ -224,9 +215,7 @@ def check_zone_curves_and_references(
     FileNotFoundError
         If the zone directory or its configuration files are missing in the curves path.
     """
-    # Construct the full path for the specific zone within curves_path
     zone_path = curves_path / zone_name
-    # Check if the zone directory exists
     if not zone_path.is_dir():
         dycov_logging.get_logger("Sanity Checks").error(
             f"{zone_name} configuration files are not present in the curves path."
@@ -235,7 +224,6 @@ def check_zone_curves_and_references(
             errno.ENOENT, os.strerror(errno.ENOENT), f"{zone_name} configuration files not found."
         )
 
-    # Check if any .ini file exists within the zone directory
     has_ini_file = any(zone_path.glob("*.[iI][nN][iI]"))
     if not has_ini_file:
         dycov_logging.get_logger("Sanity Checks").error(
@@ -248,7 +236,6 @@ def check_zone_curves_and_references(
     # For each .ini file in the zone, check if its corresponding curves directory and reference
     # curves exist
     for ini_file in zone_path.glob("*.[iI][nN][iI]"):
-        # Check if the curves directory for the .ini file exists
         if not (curves_path / ini_file.stem).exists():
             dycov_logging.get_logger("Sanity Checks").error(
                 f"Curves files for {ini_file.stem} are not present in the curves path."
@@ -258,7 +245,6 @@ def check_zone_curves_and_references(
                 os.strerror(errno.ENOENT),
                 f"Curves files for {ini_file.stem} are not present in the curves path.",
             )
-        # Warn if reference curves for the .ini file's stem are not found in the reference path
         if not (reference_path / ini_file.stem).exists():
             dycov_logging.get_logger("Sanity Checks").warning(
                 f"Reference curves for {ini_file.stem} are not present in the reference path."
@@ -291,7 +277,6 @@ def check_validation_model(
     ValueError
         If the number of Zone3 generators does not match the number of Zone1 files.
     """
-    # Check Dynawo inputs for the Zone3 model
     check_dynawo_model_files(model_path / "Zone3")
     # Verify that the number of Zone3 generators matches the number of Zone1 files
     if z3_generators != len(z1_names):
@@ -299,11 +284,9 @@ def check_validation_model(
             "The number of Zone3 generators must match the number of Zone1 files."
         )
         raise ValueError("Zone3 generators and Zone1 files count mismatch.")
-    # Check Dynawo inputs for each Zone1 model
     for z1_name in z1_names:
         check_dynawo_model_files(model_path / "Zone1", z1_name)
 
-    # Iterate through directories in the reference path
     for file in reference_path.resolve().iterdir():
         if not file.is_dir():
             continue
@@ -327,7 +310,5 @@ def check_validation_curves(curves_path: Path, reference_path: Path) -> None:
     reference_path : Path
         Path to the reference curves directory.
     """
-    # Check curves and references for Zone1
     check_zone_curves_and_references("Zone1", curves_path, reference_path)
-    # Check curves and references for Zone3
     check_zone_curves_and_references("Zone3", curves_path, reference_path)

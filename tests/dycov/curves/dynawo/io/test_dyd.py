@@ -59,7 +59,7 @@ def working_oc_dir(tmp_path):
 
 @pytest.fixture
 def dummy_event_params():
-    # 'connect_to' no longer affects DydFile; kept to ensure it doesn't break anything
+    # 'connect_to' is ignored by DydFile; included to verify it is handled gracefully
     return {"connect_to": "connect_event", "start_time": 10.0}
 
 

@@ -219,7 +219,7 @@ def _add_bus_curves(curves_root: etree.Element, curves_dict: dict) -> None:
     sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
         "InfiniteBus", "NetworkFrequencyPu"
     )
-    if dynawo_variable:  # Check if dynawo_variable is not empty
+    if dynawo_variable:
         _add_curve_to_file(
             curves_root,
             "InfiniteBus",
@@ -279,7 +279,7 @@ def _add_tso_loads_curves(curves_root: etree.Element, tso_loads: list, curves_di
     for load in tso_loads:
         for variable in load_variables:
             sign, dynawo_variable = dynawo_translator.get_dynawo_variable(load.lib, variable)
-            if dynawo_variable:  # Check if dynawo_variable is not empty
+            if dynawo_variable:
                 _add_curve_to_file(
                     curves_root, load.id, variable, "LOAD", sign, dynawo_variable, curves_dict
                 )
@@ -303,7 +303,7 @@ def _add_tso_generators_curves(
     for generator in tso_generators:
         for variable in generator_variables:
             sign, dynawo_variable = dynawo_translator.get_dynawo_variable(generator.lib, variable)
-            if dynawo_variable:  # Check if dynawo_variable is not empty
+            if dynawo_variable:
                 _add_curve_to_file(
                     curves_root, generator.id, variable, "GEN", sign, dynawo_variable, curves_dict
                 )
@@ -325,7 +325,7 @@ def _add_xfmrs_curves(curves_root: etree.Element, xfmrs: list, curves_dict: dict
     for xfmr in xfmrs:
         for variable in xfmr_variables:
             sign, dynawo_variable = dynawo_translator.get_dynawo_variable(xfmr.lib, variable)
-            if dynawo_variable:  # Check if dynawo_variable is not empty
+            if dynawo_variable:
                 _add_curve_to_file(
                     curves_root, xfmr.id, variable, "XFMR", sign, dynawo_variable, curves_dict
                 )
@@ -362,11 +362,10 @@ def _is_composed_setpoint(
     elif control_mode == "QSetpoint":
         control_variable = "ReactivePowerSetpointPu"
     else:
-        return False  # If the control mode is not one of those affected, False is returned.
+        return False
 
     if tool_variable == control_variable:
-        return False  # If the input variable is the complementary variable to the control mode,
-        # False is returned.
+        return False
 
     # If the model defines different variables for the Q and V setpoints, False is returned.
     # The comparison should be with the dynawo variable obtained from the generator_lib and

@@ -658,7 +658,6 @@ def test_calc_pimodel_with_current():
         s1=None,
     )
 
-    # rama trivial: copia valores
     assert v2 == v1
     assert i2 == i1
     assert s2 == v1 * i1.conjugate()
@@ -674,7 +673,7 @@ def test_calc_twobus_pf():
     ysh1 = 0 + 0j
     ysh2 = 0 + 0j
     v1 = complex(1, 0)
-    s2 = complex(0.1, 0)  # 👈 más pequeño
+    s2 = complex(0.1, 0)
 
     i1, v2, i2 = _calc_twobus_pf(ytr, ysh1, ysh2, v1, s2)
 
@@ -691,7 +690,6 @@ def test_calc_twobus_pf():
 def test_init_calcs_zero_imp_grid_line(monkeypatch):
     from dycov.model.parameters import GenParams, PdrParams, Terminal
 
-    # dummy gen
     gen = GenParams(
         id=None,
         lib=None,

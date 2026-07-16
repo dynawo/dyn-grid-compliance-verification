@@ -57,12 +57,10 @@ class SolversFile(FileVariables):
         working_oc_dir: Path
             The working directory where the 'solvers.par' file is located.
         """
-        # Retrieve all existing variables from the 'solvers.par' file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "solvers.par")
 
         # Complete the parameters. For 'solvers.par', additional event_params are not
         # directly supplied here, so an empty dictionary is passed.
         self.complete_parameters(variables_dict, dict())
 
-        # Dump the updated variables back into the 'solvers.par' file, replacing placeholders
         replace_placeholders.dump_file(working_oc_dir, "solvers.par", variables_dict)

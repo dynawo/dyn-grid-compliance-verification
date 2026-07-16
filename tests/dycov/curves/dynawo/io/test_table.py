@@ -52,7 +52,6 @@ class DummyProducerCurves(ProducerCurves):
 
 @pytest.fixture
 def working_dir(tmp_path):
-    # Create a dummy TableInfiniteBus.txt file
     file_path = tmp_path / "TableInfiniteBus.txt"
     file_path.write_text(
         "start_event={{ start_event }}\n"

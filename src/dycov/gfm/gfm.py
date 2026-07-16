@@ -19,7 +19,6 @@ from dycov.gfm.outputs import plot_results, save_ini_dump, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging.logging import dycov_logging
 
-# Initialize logger for the Grid Forming module
 LOGGER = dycov_logging.get_logger(__name__)
 
 
@@ -61,14 +60,12 @@ class GridForming:
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
 
-        # Retrieve common effective parameters and instantiate the correct calculator strategy
         x_eff = parameters.get_effective_reactance()
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
 
         time_array, event_time = self._get_time(calculator_name)
 
-        # Retrieve the initial list of parameters targeted for the plotting UI
         params_list = calculator.get_plot_parameter_names() if calculator else None
 
         # Determine the execution path: Hybrid (Merged) Mode vs Standard Mode
@@ -133,7 +130,6 @@ class GridForming:
             pcc_signal = pcc_over
             magnitude_name = mag_name
 
-            # Store individual boundary curves if the detailed output configuration is enabled
             if parameters.should_save_all_envelopes():
                 extra_envelopes = {
                     "upper_overdamped": up_over,

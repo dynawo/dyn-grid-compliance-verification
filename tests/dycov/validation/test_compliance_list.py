@@ -17,7 +17,6 @@ class DummyConfig:
         self.mapping = mapping
 
     def get_list(self, section, key):
-        # Simulate the config.get_list interface
         return self.mapping.get((section, key), [])
 
 

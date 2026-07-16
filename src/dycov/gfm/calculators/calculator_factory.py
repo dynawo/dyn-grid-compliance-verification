@@ -49,5 +49,4 @@ def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculat
     if name == "SCRJump":
         return SCRJump(gfm_params=gfm_params)
 
-    # Return None if no matching calculator is found
     return None

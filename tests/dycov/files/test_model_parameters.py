@@ -21,7 +21,6 @@ def create_simple_dyd_and_par(
     # DYD XML
     ns = "http://www.rte-france.com/dynawo"
     dyd_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
-    # Generator
     etree.SubElement(
         dyd_root,
         f"{{{ns}}}blackBoxModel",
@@ -29,23 +28,18 @@ def create_simple_dyd_and_par(
         lib="WTG4AWeccCurrentSource",
         parId="parGen",
     )
-    # Transformer
     etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=xfmr_id, lib="XfmrLib", parId="parXfmr"
     )
-    # Load
     etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=load_id, lib="LoadLib", parId="parLoad"
     )
-    # Line
     etree.SubElement(
         dyd_root, f"{{{ns}}}blackBoxModel", id=line_id, lib="LineLib", parId="parLine"
     )
-    # Connections
     etree.SubElement(dyd_root, f"{{{ns}}}connect", id1=gen_id, id2=xfmr_id)
     etree.SubElement(dyd_root, f"{{{ns}}}connect", id1=load_id, id2=xfmr_id)
     etree.SubElement(dyd_root, f"{{{ns}}}connect", id1=line_id, id2="BusPDR")
-    # Write DYD
     dyd_path = tmp_path / "producer.dyd"
     etree.ElementTree(dyd_root).write(
         str(dyd_path), pretty_print=True, xml_declaration=True, encoding="utf-8"
@@ -80,7 +74,6 @@ def create_simple_dyd_and_par(
     etree.SubElement(set_line, f"{{{ns}}}par", name="ReactancePu", value="0.01")
     etree.SubElement(set_line, f"{{{ns}}}par", name="SusceptancePu", value="0.1")
     etree.SubElement(set_line, f"{{{ns}}}par", name="ConductancePu", value="0.3")
-    # Write PAR
     par_path = tmp_path / "producer.par"
     etree.ElementTree(par_root).write(
         str(par_path), pretty_print=True, xml_declaration=True, encoding="utf-8"
@@ -115,7 +108,6 @@ def test_missing_or_malformed_par_values(tmp_path):
     assert t1 != t1  # NaN
     assert t2 != t2  # NaN
 
-    # Test extract_defined_value with None value_definition
     with pytest.raises(ValueError):
         model_parameters.extract_defined_value(None, "pmax", 90)
 
@@ -155,7 +147,6 @@ def test_extract_defined_value_with_placeholders():
 
 
 def test_generator_control_mode_selection_and_application(tmp_path, monkeypatch):
-    # Setup dummy config and translator
     class DummyConfig:
         def has_key(self, section, key):
             return section == "USetpoint_IEC_" and key == "control_option"

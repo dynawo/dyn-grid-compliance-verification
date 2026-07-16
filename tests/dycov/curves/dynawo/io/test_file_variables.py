@@ -56,9 +56,7 @@ class DummyConfig:
 
 @pytest.fixture(autouse=True)
 def patch_org_modules(monkeypatch):
-    # Patch config and generator_variables for all tests
     yield
-    # No teardown needed
 
 
 def test_tool_variables_are_not_updated(monkeypatch):

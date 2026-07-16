@@ -37,7 +37,6 @@ class TestDycovLogger:
             assert any(
                 isinstance(h, logging.handlers.RotatingFileHandler) for h in logger.handlers
             )
-            # Check formatters
             stream_handler = next(
                 h for h in logger.handlers if isinstance(h, logging.StreamHandler)
             )

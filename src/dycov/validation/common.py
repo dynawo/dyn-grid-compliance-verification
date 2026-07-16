@@ -121,7 +121,6 @@ def is_invalid_test(
         f"Start values: V: {voltage[0]}, P: {active[0]}, Q: {reactive[0]}"
     )
 
-    # Get the steady-state value right before the event
     v_init = voltage[idx_t_event]
     p_init = active[idx_t_event]
     q_init = reactive[idx_t_event]
@@ -129,7 +128,6 @@ def is_invalid_test(
         f"Steady-state values: V: {v_init}, P: {p_init}, Q: {q_init}"
     )
 
-    # Get max diff between values after event vs the steady-state value right before
     v_max_diff = max(abs(np.array(voltage[idx_t_event:]) - v_init))
     p_max_diff = max(abs(np.array(active[idx_t_event:]) - p_init))
     q_max_diff = max(abs(np.array(reactive[idx_t_event:]) - q_init))
@@ -137,7 +135,6 @@ def is_invalid_test(
         f"Max diff: V: {v_max_diff}, P: {p_max_diff}, Q: {q_max_diff}"
     )
 
-    # Check if this max diff is smaller than the tolerances
     rtol = thr_ss_tol  # i.e., 0.2% relative error
     atol = 0.1 * rtol  # i.e., when magnitudes are near 0.01, switch to abs error
     v_flat = math.isclose(v_max_diff, 0.0, rel_tol=rtol, abs_tol=atol)
@@ -213,7 +210,6 @@ def theta_pi(time: list, curve: list) -> bool:
     bool
         True if the stabilization is reached, False otherwise
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -225,7 +221,6 @@ def theta_pi(time: list, curve: list) -> bool:
             pi_value = False
             break
 
-    # returns true if the stabilization is reached
     return pi_value
 
 
@@ -274,7 +269,6 @@ def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: f
     float
         Time when the percent is reached after the event
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -292,7 +286,6 @@ def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: f
         if curve[pos] < mean_val_min or curve[pos] > mean_val_max:
             break
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_end:
         ret_val = 0
     else:
@@ -319,7 +312,6 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     float
         Time when the percent is reached after the event
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -332,7 +324,6 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
         if curve[pos] < mean_val_min or curve[pos] > mean_val_max:
             break
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_end:
         ret_val = 0
     else:
@@ -373,7 +364,6 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
         if curve[pos] < mean_val_min:
             break
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_end:
         ret_val = 0
     else:
@@ -400,7 +390,6 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
     float
         Time when the percent is reached after the event
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -419,7 +408,6 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
     if pos == len(curve):
         pos = len(curve) - 1
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_end:
         ret_val = 0
     else:
@@ -710,7 +698,6 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
     float
         Time when the percent is reached after the event
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -734,7 +721,6 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
     if pos < 0:
         pos = 0
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_start:
         ret_val = 0
     else:
@@ -771,7 +757,6 @@ def get_settling_time(
     float
         First value in the tolerance tube
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -784,7 +769,6 @@ def get_settling_time(
         if curve[pos] < mean_val_min or curve[pos] > mean_val_max:
             break
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_start:
         ret_val = 0
     else:
@@ -816,7 +800,6 @@ def get_reached_time(
     float
         Target value
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
@@ -847,7 +830,6 @@ def get_reached_time(
     if pos == len(curve):
         pos = len(curve) - 1
 
-    # Returns the time when the percent is reached after the event
     if time[pos] < sim_t_event_start:
         ret_val = 0
     else:
@@ -944,7 +926,6 @@ def get_time_lag(
     float
         Ramp time error of the curve
     """
-    # Get curves file and stable time
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 

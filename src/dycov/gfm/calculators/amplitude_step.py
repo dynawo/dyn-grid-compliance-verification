@@ -97,7 +97,6 @@ class AmplitudeStep(GFMCalculator):
             - np.ndarray: The array representing the upper reactive current envelope constraint.
             - np.ndarray: The array representing the lower reactive current envelope constraint.
         """
-        # Initialize tracking logger and register initial boundary states for debugging
         logger = dycov_logging.get_logger("AmplitudeStep")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         logger.debug(
@@ -108,7 +107,6 @@ class AmplitudeStep(GFMCalculator):
             f"QMax={self._max_reactive_power}"
         )
 
-        # Step 1: Compute the foundational delta_iq deviation curves (base, min, and max limits)
         (
             delta_iq_base,
             delta_iq_min,
@@ -121,7 +119,6 @@ class AmplitudeStep(GFMCalculator):
             event_time=event_time,
         )
 
-        # Step 2: Synthesize the definitive operational envelopes referencing plant saturation
         # capabilities
         q_pcc, q_up, q_down = self._get_envelopes(
             delta_iq_base=delta_iq_base,
@@ -130,7 +127,6 @@ class AmplitudeStep(GFMCalculator):
             Xeff=Xeff,
         )
 
-        # Step 3: Enforce temporal delays applicable strictly to Electro-Magnetic Transient (EMT)
         # simulations
         if self._is_emt_flag:
             # Robust extraction of initial steady-state values handling both vector arrays and
@@ -192,7 +188,6 @@ class AmplitudeStep(GFMCalculator):
         # sidestepping D and H variations for this specific grid event archetype.
         delta_iq_base = self._calculate_delta_iq_base(Xeff, time_array)
 
-        # Formulate operational bounds mathematically constrained by defined tolerance tunnels
         delta_iq_min = self._get_delta_iq_min(Xeff, time_array)
         delta_iq_max = self._get_delta_iq_max(Xeff, time_array)
 
@@ -233,18 +228,14 @@ class AmplitudeStep(GFMCalculator):
             - np.ndarray: The absolute minimum (lower) reactive power envelope constraint.
         """
 
-        # Step 1: Resolve prerequisite transformation parameters
 
         # Calculate the localized voltage step projected at the Point of Common Coupling (PCC)
         volt_step_upcc = (self._voltage_step / 100.0) * Xeff / (Xeff + self._Xgrid)
 
-        # Extract the vector direction (sign) of the incoming voltage disturbance
         sign_K = np.sign(volt_step_upcc)
 
-        # Derive the static tolerance margin (tunnel) outlining the operational band
         tunnel = self._get_tunnel(Xeff)
 
-        # Step 2: Formulate the lower analytical boundary (Qmin) applying hardware clipping logic
         q_down = np.maximum(
             np.minimum(
                 self._initial_reactive_power - sign_K * delta_iq_min, self._max_reactive_power
@@ -252,7 +243,6 @@ class AmplitudeStep(GFMCalculator):
             -self._max_reactive_power,
         )
 
-        # Step 3: Formulate the upper analytical boundary (Qmax) scaling with the tolerance tunnel
         q_up = np.maximum(
             np.minimum(
                 self._initial_reactive_power - sign_K * delta_iq_max,
@@ -261,21 +251,17 @@ class AmplitudeStep(GFMCalculator):
             -self._max_reactive_power - tunnel,
         )
 
-        # 4. Calculate the expected reactive power curve (Qexpected)
         # This is the base curve, saturated by the plant's Qmax/Qmin limits.
         # Formula: MAX(MIN(Q0 - SIGN(Vstep) * delta_iq_base, Qmax), -Qmax)
 
         # Derive the unconstrained nominal trajectory based on vector direction
-        # Derive the unconstrained nominal trajectory based on vector direction
         q_expected_unclamped = self._initial_reactive_power - sign_K * delta_iq_base
 
-        # Apply absolute plant saturation clipping to enforce real-world mechanical limitations
         q_expected = np.maximum(
             np.minimum(q_expected_unclamped, self._max_reactive_power),
             -self._max_reactive_power,
         )
 
-        # Step 5: Export the securely bounded operational arrays (conversion handling deferred to
         # caller)
         return q_expected, q_up, q_down
 
@@ -357,7 +343,6 @@ class AmplitudeStep(GFMCalculator):
         # reduction
         base_curve = 0.9 * self._get_delta_iq_base(Xeff, time_array)
 
-        # Step 2: Establish the steady-state asymptote acting as the absolute ceiling
         tunnel = self._get_tunnel(Xeff)
         voltage_step_pu = self._voltage_step / 100.0
 
@@ -367,11 +352,9 @@ class AmplitudeStep(GFMCalculator):
         # Define the structural ceiling specific to this lower boundary trace
         lower_envelope_limit = max_delta_iq - tunnel
 
-        # Step 3: Enforce clipping to guarantee the baseline curve remains strictly beneath the
         # limit
         delta_iq_lower = np.minimum(base_curve, lower_envelope_limit)
 
-        # Step 4: Constrain execution logic rendering the output completely inert prior to the 90%
         # rise mark
         delta_iq_lower = np.where(time_array < self._time_to_90, 0.0, delta_iq_lower)
 
@@ -398,28 +381,24 @@ class AmplitudeStep(GFMCalculator):
             The mathematically projected maximum delta_iq constraint boundary.
         """
 
-        # Step 1: Derive structural baseline components regulating the magnitude limits
         tunnel = self._get_tunnel(Xeff)
         voltage_step_pu = self._voltage_step / 100.0
 
         # Formulate the asymptotic absolute magnitude of the reactive current shift
         max_delta_iq = np.abs(voltage_step_pu / (Xeff + self._Xgrid))
 
-        # Step 2: Define the foundational static ceiling supporting the transient components
         steady_state_upper_limit = tunnel + max_delta_iq
 
         # Step 3: Compute the decaying transient boost representing initial capacitive/inductive
         # inertia
         # This exponential modifier is strictly constrained to the early operational window.
 
-        # Generate a boolean evaluation mask activating the transient strictly within the tunnel
         # timeframe
         transient_condition = time_array < self._time_for_tunnel
 
         # Establish the specific exponential decay constant structuring the transient drop-off
         time_constant_transient = self._time_for_tunnel / 3.0
 
-        # Initialize the transient boost modifier to zero
         transient_boost_value = 0.0
 
         # Guard against division by zero by verifying the time constant is physically meaningful
@@ -430,7 +409,6 @@ class AmplitudeStep(GFMCalculator):
             # decay
             transient_boost_value = self._margin_high * max_delta_iq * exponential_decay
 
-        # Step 4: Superimpose the conditional transient spike onto the stable maximum ceiling
         # plateau
         delta_iq_upper = steady_state_upper_limit + np.where(
             transient_condition, transient_boost_value, 0.0

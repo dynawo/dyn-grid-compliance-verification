@@ -563,7 +563,7 @@ def _process_curves(
         if ORIGINAL_IMPLEMENTATION:
             fault_duration = (
                 float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
-            )  # Add 5.0 as per original script's logic
+            )
         else:
             fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
 
@@ -582,14 +582,14 @@ def _process_curves(
 
             if compression is not None:
                 original_len = len(df_imported_curve)
-                df_imported_curve = _simplify_curves(  # renamed
+                df_imported_curve = _simplify_curves(
                     df_imported_curve,
                     event_time=event_time,
                     event_duration=fault_duration,
                     compression=compression,
                 )
                 dycov_logging.get_logger("Anonymizer").debug(
-                    f"Simplified {curves_path.stem}: "  # updated log message
+                    f"Simplified {curves_path.stem}: "
                     f"{original_len} → {len(df_imported_curve)} points "
                     f"({100 * len(df_imported_curve) / original_len:.1f}%)"
                 )

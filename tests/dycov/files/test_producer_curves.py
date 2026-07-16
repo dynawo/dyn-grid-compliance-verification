@@ -43,7 +43,6 @@ def temp_model_dir():
 
 
 def test_check_curves_all_values_and_files_exist(temp_model_dir):
-    # Write CurvesFiles.ini with all values and create referenced files
     ini_content = "[Curves-Files]\ncurve1 = file1.txt\ncurve2 = file2.txt\n"
     (temp_model_dir / "CurvesFiles.ini").write_text(ini_content)
     (temp_model_dir / "file1.txt").write_text("dummy")

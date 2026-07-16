@@ -151,10 +151,8 @@ def test_create_map_with_complete_results():
     assert len(table[0]) == 11
     # Check structure of a row without 'during' (second row)
     assert len(table[1]) == 8
-    # Check that the check value is formatted as expected
     assert table[0][-1] == "{ True }"
     assert table[1][-1] == "\\textcolor{red}{ False }"
-    # Check that a value is formatted as string
     assert table[0][1] == "0.123"
     # Check that a value with failed check is colored red
     assert table[1][1].startswith("\\textcolor{red}{ ")
@@ -196,7 +194,6 @@ def test_setpoint_tracking_error_with_all_keys():
     assert row[6].startswith("\\textcolor{red}{ ")
     # after_mxe_tc_test_check is False, so value is colored red
     assert row[7].startswith("\\textcolor{red}{ ")
-    # Check value is formatted as True
     assert row[-1] == "{ True }"
 
 

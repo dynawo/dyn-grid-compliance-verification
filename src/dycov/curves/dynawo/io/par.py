@@ -90,15 +90,12 @@ class ParFile(FileVariables):
         pmax: float
             The maximum power value for the plant.
         """
-        # Retrieve all existing variables from the TSOModel.par file
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.par")
 
-        # Update line parameters
         variables_dict["line_XPu"] = line_xpu
         variables_dict["line_RPu"] = line_rpu
 
-        # Update generator initialization parameters. Note: 'infiniteBus_U0Pu' and 'gen_U0Pu'
-        # intentionally use 'tso_gen.U0' as per original script's logic.
+        # 'infiniteBus_U0Pu' and 'gen_U0Pu' intentionally share 'tso_gen.u0'.
         variables_dict["infiniteBus_U0Pu"] = tso_gen.u0
         variables_dict["gen_P0Pu"] = tso_gen.p0
         variables_dict["gen_Q0Pu"] = tso_gen.q0
@@ -107,17 +104,14 @@ class ParFile(FileVariables):
         variables_dict["gen_UNom"] = unom
         variables_dict["bus_UNom"] = unom
 
-        # Update event parameters
         variables_dict["event_start"] = event_params["start_time"]
         variables_dict["event_end"] = event_params["start_time"] + event_params["duration_time"]
         variables_dict["event_pre_value"] = event_params["pre_value"]
         variables_dict["event_step_value"] = event_params["step_value"]
 
-        # Update inertial grid nominal power
         variables_dict["inertialGrid_SNom"] = pmax
 
         # Complete other parameters using the inherited method from FileVariables
         self.complete_parameters(variables_dict, event_params)
 
-        # Dump the updated variables back into the PAR file, replacing placeholders
         replace_placeholders.dump_file(working_oc_dir, "TSOModel.par", variables_dict)

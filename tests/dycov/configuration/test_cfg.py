@@ -17,12 +17,10 @@ from dycov.configuration.cfg import Config
 
 @pytest.fixture
 def config_with_priority(tmp_path):
-    # Create three config parsers with different priorities
     default_config = configparser.ConfigParser()
     user_config = configparser.ConfigParser()
     pcs_config = configparser.ConfigParser()
 
-    # Add sections and keys
     default_config.add_section("section")
     default_config.set("section", "key", "default_value")
     pcs_config.add_section("section")
@@ -30,9 +28,7 @@ def config_with_priority(tmp_path):
     user_config.add_section("section")
     user_config.set("section", "key", "user_value")
 
-    # Add a key only in pcs_config
     pcs_config.set("section", "pcs_only", "pcs_only_value")
-    # Add a key only in default_config
     default_config.set("section", "default_only", "default_only_value")
 
     return Config(tmp_path, default_config, user_config, pcs_config)
@@ -53,7 +49,6 @@ def test_load_pcs_config_updates_parser(tmp_path):
     default_config = configparser.ConfigParser()
     config_dir = tmp_path
 
-    # Write a pcs config file
     pcs_file = tmp_path / "pcs.ini"
     with pcs_file.open("w") as f:
         f.write("[pcs_section]\nfoo=bar\n")
