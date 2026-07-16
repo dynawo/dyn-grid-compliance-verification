@@ -15,7 +15,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
 from dycov.validation.checks import (

@@ -14,7 +14,7 @@ from typing import Union
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.core.parameters import Parameters
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.benchmark import Benchmark
 from dycov.model.producer import Producer
 

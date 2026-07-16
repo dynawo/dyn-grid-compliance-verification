@@ -32,7 +32,7 @@ from dycov.core.global_variables import (
 )
 from dycov.core.graceful_shutdown import terminate_all_children
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.pcs import Pcs
 from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException

@@ -24,7 +24,7 @@ class DummyLogger:
 
 def patch_dycov_logging(monkeypatch):
     dummy_logger = DummyLogger()
-    monkeypatch.setattr("dycov.logging.logging.dycov_logging", dummy_logger)
+    monkeypatch.setattr("dycov.logging.dycov_logging", dummy_logger)
     return dummy_logger
 
 

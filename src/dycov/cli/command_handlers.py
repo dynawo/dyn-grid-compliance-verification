@@ -20,7 +20,7 @@ from dycov.curves import anonymizer
 from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
 

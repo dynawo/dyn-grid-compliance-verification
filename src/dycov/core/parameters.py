@@ -21,7 +21,7 @@ from typing import Optional
 from dycov.configuration.cfg import config
 from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 
 

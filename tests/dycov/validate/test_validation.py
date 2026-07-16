@@ -53,7 +53,7 @@ def _patch_report_logger(monkeypatch):
         return _Logger(name)
 
     monkeypatch.setattr(
-        "dycov.logging.logging.dycov_logging.get_logger",
+        "dycov.logging.dycov_logging.get_logger",
         _get_logger,
         raising=True,
     )

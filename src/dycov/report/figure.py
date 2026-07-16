@@ -19,7 +19,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
 
 from dycov.configuration.cfg import config
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_decorations import (
     _COLOR_REFERENCE,

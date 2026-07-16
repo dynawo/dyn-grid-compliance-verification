@@ -20,7 +20,7 @@ from lxml import etree
 
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.parameters import (
     GenParams,
     LineParams,

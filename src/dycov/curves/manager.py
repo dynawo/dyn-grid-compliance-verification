@@ -16,7 +16,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.curves import curves_factory
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.parameters import (
     CurvesAvailability,
     CurvesCheckResult,

@@ -20,7 +20,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.files.producer_curves import create_producer_curves
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:

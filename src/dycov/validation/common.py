@@ -13,7 +13,7 @@ import math
 import numpy as np
 
 from dycov.configuration.cfg import config
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 # when magnitudes are smaller than atol, switch to absolute error
 ATOL = 1.0e-6

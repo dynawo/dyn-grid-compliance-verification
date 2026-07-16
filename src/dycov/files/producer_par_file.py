@@ -14,7 +14,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 def _get_bbmodels_info(dyd_file: Path) -> dict:

@@ -13,7 +13,7 @@ import numpy as np
 from dycov.gfm import constants
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 
 class PhaseJump(GFMCalculator):

@@ -14,7 +14,7 @@ from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.file_variables import FileVariables
 from dycov.files import replace_placeholders
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.parameters import GenInit
 
 

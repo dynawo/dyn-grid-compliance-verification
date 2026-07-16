@@ -18,7 +18,7 @@ import pandas as pd
 
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.sigpro.sigpro import lowpass_filter
 
 NOISE_DAMPING = 100

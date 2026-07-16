@@ -17,7 +17,7 @@ import time
 from collections import namedtuple
 from pathlib import Path
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 ProcessOutcome = namedtuple("ProcessOutcome", "completed_successfully stderr elapsed_seconds")
 

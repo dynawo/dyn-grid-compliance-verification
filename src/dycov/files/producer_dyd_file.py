@@ -12,7 +12,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 
 PERFORMANCE_SM = 1
 PERFORMANCE_PPM = 2

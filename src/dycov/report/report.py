@@ -33,7 +33,7 @@ from dycov.core.global_variables import (
     REPORT_NAME,
 )
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.tables import (

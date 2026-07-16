@@ -22,7 +22,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
 )
 from dycov.files import model_parameters
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 

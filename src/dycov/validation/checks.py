@@ -9,7 +9,7 @@
 #
 import pandas as pd
 
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.validation import common, threshold_variables
 
 
