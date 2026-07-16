@@ -60,11 +60,8 @@ except ImportError:  # pragma: no cover
     sys.exit("This tool requires pypowsybl (extra 'dynawo-pypowsybl'): "
              "pip install 'pypowsybl>=1.7,<2.0'")
 
-try:
-    from dycov.curves.dynawo.pypowsybl.network_builder import PypowsyblNetworkBuilder
-except ImportError:  # allow running from a checkout without an editable install
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from network_builder import PypowsyblNetworkBuilder  # type: ignore
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from network_builder import PypowsyblNetworkBuilder  # type: ignore
 
 NS = "{http://www.rte-france.com/dynawo}"
 SNREF = 100.0                      # MVA — Dynawo default pu base for impedances

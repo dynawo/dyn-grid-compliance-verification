@@ -5,6 +5,18 @@ as a dependency to initialize the equivalent network?** If DyCoV's own internal
 (closed-form, ad-hoc) initialization is already as good as an independent AC load flow,
 the dependency is not worth the maintenance cost.
 
+## Why this exists
+
+This tool is the narrowed remainder of a broader investigation. The original goal was to
+run Dynawo *through* PyPowsybl as an alternative backend (see `../pypowsybl-vs-native/`),
+which turned out to be infeasible against DyCoV's Dynawo build. That left one part of
+PyPowsybl still potentially useful on its own: **OpenLoadFlow**, a static AC load flow
+native to `powsybl-core` that does not involve Dynawo at all. So the question shrank from
+"replace the whole backend" to "is PyPowsybl worth adopting *just* to initialize the
+tests?" — and this tool collects the evidence to answer it. It reuses `network_builder.py`
+(co-located here, moved out of the `dycov` package), which was originally written for the
+backend attempt.
+
 ## What it does
 
 For each bundled reference case, `compare_init.py`:

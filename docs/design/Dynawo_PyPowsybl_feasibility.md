@@ -16,9 +16,10 @@ Companion docs: design intent [`Dynawo_PyPowsybl_Backend.md`](Dynawo_PyPowsybl_B
 reproducible demos [`tools/pypowsybl-vs-native/`](../../tools/pypowsybl-vs-native).
 
 **Code & where it lives (pypowsybl branch):**
-- `src/dycov/curves/dynawo/pypowsybl/network_builder.py` — `PypowsyblNetworkBuilder`: structural
-  IIDM only; keyword-only wrappers over `pypowsybl.network.create_*`. Standalone (only its own test
-  uses it); targets pypowsybl 1.14 semantics.
+- `tools/olf_init_check/network_builder.py` — `PypowsyblNetworkBuilder`: structural
+  IIDM only; keyword-only wrappers over `pypowsybl.network.create_*`. Standalone; moved out of the
+  `dycov` package (formerly `src/dycov/curves/dynawo/pypowsybl/`) while the integration is undecided,
+  and co-located with its only consumer (`compare_init.py`) and test. Targets pypowsybl 1.14 semantics.
 - Dependency: optional extra `dynawo-pypowsybl = ["pypowsybl>=1.7,<2.0"]` (`pyproject.toml`).
 - Would-be seam: `DynawoSimulator.run_base()` / `run_simple()` (`runtime/dynawo_simulator.py`); retry
   and bisection are backend-agnostic (see the CLI flow in `DyCoV_architecture_map.md`).
