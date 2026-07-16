@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <!--PDR parameters: U=1.0, UPhase=-0.1929850266360457, S=(0.00333+0.00108j), P=0.00333, Q=0.00108-->
+  <set id="InfiniteBus">
+    <par type="DOUBLE" name="infiniteBus_UPu" value="1.1144204801759352"/>
+    <par type="DOUBLE" name="infiniteBus_UPhase" value="0"/>
+    <par type="DOUBLE" name="infiniteBus_UNom" value="225.0"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="6.633581268066595"/>
+    <par type="DOUBLE" name="line_XPu" value="66.33581268066595"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="225.0"/>
+  </set>
+  <!-- For each generator defined in the producer's input files, a definition for its 
+  setpoint model will be added, followed by a set of parameters specific to that setpoint 
+  model. -->
+  <set id="SetPoint_Bess">
+    <par type="DOUBLE" name="step_tStep" value="20.0"/>
+    <par type="DOUBLE" name="step_Value0" value="-0.665998884767677"/>
+    <par type="DOUBLE" name="step_Height" value="0.0333"/>
+  </set>
+</parametersSet>

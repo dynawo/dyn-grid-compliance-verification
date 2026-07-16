@@ -197,6 +197,8 @@ and assume more knowledge of Dynamic grid Compliance Verification.
    development/addmodel
    development/GFM_module
    development/configuration
+   development/pypowsybl_backend
+   development/olf_initialization
 
 
 

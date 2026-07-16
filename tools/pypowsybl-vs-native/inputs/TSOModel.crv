@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<curvesInput xmlns="http://www.rte-france.com/dynawo">
+  <curve model="Measurements" variable="measurements_UPu"/>
+  <curve model="Measurements" variable="measurements_PPu"/>
+  <curve model="Measurements" variable="measurements_QPu"/>
+  <curve model="StepUp_Xfmr" variable="transformer_tap_value"/>
+  <curve model="Wind_Turbine" variable="WTG3_injector_PInjPu"/>
+  <curve model="Wind_Turbine" variable="WTG3_injector_QInjPu"/>
+  <curve model="Wind_Turbine" variable="WTG3_injector_terminal_V_re"/>
+  <curve model="Wind_Turbine" variable="WTG3_injector_terminal_V_im"/>
+  <curve model="Wind_Turbine" variable="WTG3_PRefPu"/>
+  <curve model="Wind_Turbine" variable="WTG3_QRefPu"/>
+  <curve model="Wind_Turbine" variable="WTG3_URefPu"/>
+  <curve model="Wind_Turbine" variable="WTG3_wecc_repc_QVCtrlErr_y"/>
+  <curve model="Wind_Turbine" variable="WTG3_wecc_repc_omegaPu"/>
+</curvesInput>
