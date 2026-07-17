@@ -344,7 +344,7 @@ class BisectionEngine:
             Fault duration.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        fault_xpu = BOLTED_FAULT_XPU
+        fault_xpu = BOLTED_FAULT_XPU if self._producer.generators[0].s_nom > 20.0 else 1e-1
         fault_rpu = self._fault_rpu_from_xpu(fault_xpu, fault_r_factor)
         self._modify_fault(working_oc_dir, fault_start, fault_duration, fault_xpu, fault_rpu)
 
