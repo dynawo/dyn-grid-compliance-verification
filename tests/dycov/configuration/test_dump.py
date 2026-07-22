@@ -61,27 +61,6 @@ def test_get_effective_value_fallback_to_pcs():
     assert src == "pcs"
 
 
-def test_get_effective_value_fallback_to_pcs():
-    from dycov.configuration.dump import _get_effective_value_with_source
-
-    class DummyCfg:
-        def __init__(self):
-            import configparser
-            self._user_config = configparser.ConfigParser()
-            self._pcs_config = configparser.ConfigParser()
-            self._default_config = configparser.ConfigParser()
-
-            self._pcs_config.add_section("A")
-            self._pcs_config.set("A", "k", "pcs_val")
-
-        def _is_valid_value(self, v):
-            return True
-
-    val, src = _get_effective_value_with_source(DummyCfg(), "A", "k")
-
-    assert src == "pcs"
-
-
 def test_dump_effective_config_no_non_default(monkeypatch):
     from dycov.configuration.dump import dump_effective_config
 
