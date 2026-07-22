@@ -241,6 +241,19 @@ HiZ fault bisection:
 * ``minimum_hiz_fault`` — minimum impedance value.
 * ``hiz_fault_rel_tol`` — relative tolerance for bisection convergence.
 
+Bolted fault search:
+
+* ``maximum_bolted_fault`` — maximum impedance value for the bolted fault search.
+* ``minimum_bolted_fault`` — minimum impedance value (the most severe fault, tried
+  first; larger values are searched by bisection only on non-convergence).
+* ``bolted_fault_rel_tol`` — relative tolerance for search convergence.
+* ``bolted_fault_max_voltage_small`` / ``bolted_fault_max_voltage_large`` — maximum
+  residual voltage at the PDR bus (pu) for a fault to qualify as bolted, for the
+  small and large reference generators. The applicable threshold is interpolated
+  linearly on the producer's SNom and clamped outside the reference range.
+* ``bolted_fault_snom_small`` / ``bolted_fault_snom_large`` — SNom (MVA) of the
+  small and large reference generators anchoring the interpolation.
+
 Initialization:
 
 * ``skip_voltage_droop_adjustment`` — when True, skips voltage droop parameter

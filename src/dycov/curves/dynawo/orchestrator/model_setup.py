@@ -9,6 +9,7 @@
 #
 import math
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
@@ -558,6 +559,34 @@ class ModelSetup:
         )
         event_params["pre_value"] = pre_value
 
+    def _apply_reference_event_start_time(
+        self, event_params: dict, reference_event_start_time: Optional[float]
+    ) -> None:
+        """
+        Overrides the configured event start time with the one measured in the
+        reference curves, when available and different. A None value means the
+        reference curves could not be imported, so the configured time is kept.
+
+        Parameters
+        ----------
+        event_params : dict
+            Event parameters dict to update in-place.
+        reference_event_start_time : Optional[float]
+            Instant of time when the event is triggered in the reference curves.
+        """
+        if (
+            reference_event_start_time is None
+            or event_params["start_time"] == reference_event_start_time
+        ):
+            return
+
+        dycov_logging.get_logger("ModelSetup").warning(
+            f"The simulation will use the 'sim_t_event_start' value present in the Reference "
+            f"Curves ({reference_event_start_time}), instead of the value configured "
+            f"({event_params['start_time']}).",
+        )
+        event_params["start_time"] = reference_event_start_time
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
@@ -664,17 +693,7 @@ class ModelSetup:
             f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
         event_params = self._get_event_parameters(pcs_name, bm_name, oc_name, pdr)
-
-        if (
-            reference_event_start_time is not None
-            and event_params["start_time"] != reference_event_start_time
-        ):
-            dycov_logging.get_logger("ModelSetup").warning(
-                f"The simulation will use the 'sim_t_event_start' value present in the Reference "
-                f"Curves ({reference_event_start_time}), instead of the value configured "
-                f"({event_params['start_time']}).",
-            )
-            event_params["start_time"] = reference_event_start_time
+        self._apply_reference_event_start_time(event_params, reference_event_start_time)
 
         section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
