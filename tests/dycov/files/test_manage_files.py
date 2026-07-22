@@ -236,28 +236,6 @@ def test_copy_curve_files_by_name(tmp_path):
     assert (dst / "curve.csv").exists()
 
 
-# =========================
-# Curves copy
-# =========================
-
-def test_copy_curve_files_by_name(tmp_path):
-    src = tmp_path / "src"
-    dst = tmp_path / "dst"
-
-    src.mkdir()
-    dst.mkdir()
-
-    (src / "curve.csv").write_text("x")
-    (src / "curve.dict").write_text("x")
-
-    from dycov.files.manage_files import _copy_curve_files_by_name
-
-    res = _copy_curve_files_by_name(src, dst, "curve")
-
-    assert len(res) == 2
-    assert (dst / "curve.csv").exists()
-
-
 def test_copy_base_curves_files_fail(tmp_path):
     src = tmp_path / "src"
     dst = tmp_path / "dst"

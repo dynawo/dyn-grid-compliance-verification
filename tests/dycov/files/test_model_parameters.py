@@ -167,7 +167,7 @@ def test_find_output_dir(tmp_path):
     etree.SubElement(root, f"{{{ns}}}outputs", directory="outdir")
 
     f = tmp_path / "file.jobs"
-    etree.ElementTree(root).write(str(tmp_path / "file.jobs"))
+    etree.ElementTree(root).write(str(f))
 
     res = model_parameters.find_output_dir(tmp_path, "file")
 

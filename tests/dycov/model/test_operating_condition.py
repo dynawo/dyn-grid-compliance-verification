@@ -47,8 +47,8 @@ class DummyValidator:
 
 
 def _make_oc(monkeypatch, working_dir):
-    from dycov.model.operating_condition import OperatingCondition
     from dycov.configuration.cfg import Config
+    from dycov.model.operating_condition import OperatingCondition
 
     monkeypatch.setattr(Config, "get_float", lambda *args, **kwargs: 0.002)
 
