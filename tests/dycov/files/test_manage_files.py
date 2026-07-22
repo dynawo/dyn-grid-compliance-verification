@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+"""Tests for the file management helpers (copy, versions, reports, curves)."""
 
 import re
 from pathlib import Path
@@ -15,9 +16,13 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from dycov.files.manage_files import (
+    _copy_curve_files_by_name,
+    check_output_dir,
     clone_as_subdirectory,
+    copy_base_curves_files,
     copy_file,
     copy_from_path,
+    create_config_file,
     create_dir,
     get_dynawo_version,
     get_latex_version,
@@ -30,9 +35,9 @@ from dycov.files.manage_files import (
     should_copy,
 )
 
-# =========================
+# ---------------------------------------------------------------------------
 # Versions
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_get_dynawo_version_ok():
     mock_result = Mock(returncode=0, stdout="Dynawo 1.0\nother")
@@ -68,9 +73,9 @@ def test_get_uv_version_fail():
     assert res == "not found"
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Basic file helpers
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_should_copy(tmp_path):
     f = tmp_path / "file.txt"
@@ -110,9 +115,9 @@ def test_create_and_remove_dir(tmp_path):
     assert not d.exists()
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Directory helpers
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_list_directories(tmp_path):
     (tmp_path / "d1").mkdir()
@@ -164,9 +169,9 @@ def test_clone_as_subdirectory(tmp_path):
     assert (res / "a.txt").exists()
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Reports
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_move_report_pdf(tmp_path):
     src = tmp_path / "src"
@@ -200,9 +205,9 @@ def test_move_report_log(tmp_path):
     assert (dst / "case.log").exists()
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Read curves
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_read_curves(tmp_path):
     f = tmp_path / "data.csv"
@@ -214,9 +219,9 @@ def test_read_curves(tmp_path):
     assert "time" in df.columns
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Curves copy
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_copy_curve_files_by_name(tmp_path):
     src = tmp_path / "src"
@@ -227,8 +232,6 @@ def test_copy_curve_files_by_name(tmp_path):
 
     (src / "curve.csv").write_text("x")
     (src / "curve.dict").write_text("x")
-
-    from dycov.files.manage_files import _copy_curve_files_by_name
 
     res = _copy_curve_files_by_name(src, dst, "curve")
 
@@ -243,24 +246,20 @@ def test_copy_base_curves_files_fail(tmp_path):
     src.mkdir()
     dst.mkdir()
 
-    from dycov.files.manage_files import copy_base_curves_files
-
     res = copy_base_curves_files(src, dst, "test")
 
     assert res is False
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Config file
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_create_config_file(tmp_path):
     src = tmp_path / "config.ini"
     dst = tmp_path / "out.ini"
 
     src.write_text("[section]\nvalue=1\nother=2\n")
-
-    from dycov.files.manage_files import create_config_file
 
     create_config_file(src, dst)
 
@@ -270,16 +269,14 @@ def test_create_config_file(tmp_path):
     assert "# other=2" in content
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Output dir
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_check_output_dir_overwrite(tmp_path):
     d = tmp_path / "out"
     d.mkdir()
     (d / "file.txt").write_text("x")
-
-    from dycov.files.manage_files import check_output_dir
 
     with patch("builtins.input", return_value="y"):
         res = check_output_dir(d)
@@ -291,8 +288,6 @@ def test_check_output_dir_no_overwrite(tmp_path):
     d = tmp_path / "out"
     d.mkdir()
     (d / "file.txt").write_text("x")
-
-    from dycov.files.manage_files import check_output_dir
 
     with patch("builtins.input", return_value="n"):
         res = check_output_dir(d)
