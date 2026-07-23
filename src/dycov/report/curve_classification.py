@@ -9,6 +9,8 @@
 #
 from dataclasses import dataclass
 
+from dycov.curves.naming import get_bus_label
+
 _BUS_PREFIX = "BusPDR_BUS_"
 _GEN_SUFFIX = "_GEN_"
 _SYNCCOND_SUFFIX = "_GEN_TSO_"
@@ -163,13 +165,16 @@ def get_variable_label(variable_name: str) -> str:
     return variable_name.replace(_BUS_PREFIX, "")
 
 
-def get_equipment_label(curve_name: str) -> str:
+def get_equipment_label(curve_name: str, zone: int = 0) -> str:
     """Determine a human-readable label for the equipment associated with a curve based on its
     internal name.
 
     Parameters
     ----------
     curve_name: str
+        Full internal curve name
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
 
     Returns
     -------
@@ -185,11 +190,13 @@ def get_equipment_label(curve_name: str) -> str:
     if _XFMR_SUFFIX in curve_name:
         return curve_name.split(_XFMR_SUFFIX)[0]
     if curve_name.startswith(_BUS_PREFIX):
-        return "PDR Bus"
+        return get_bus_label(zone)
     return ""
 
 
-def build_curve_label(curve_name: str, role: str, show_equipment: bool = False) -> str:
+def build_curve_label(
+    curve_name: str, role: str, show_equipment: bool = False, zone: int = 0
+) -> str:
     """Build a human-readable legend label for a curve.
 
     Parameters
@@ -200,6 +207,8 @@ def build_curve_label(curve_name: str, role: str, show_equipment: bool = False) 
         Curve role: "calculated", "reference", "setpoint"
     show_equipment: bool
         Whether to include the equipment id in the label
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
 
     Returns
     -------
@@ -209,13 +218,13 @@ def build_curve_label(curve_name: str, role: str, show_equipment: bool = False) 
     """
     variable_label = get_variable_label(curve_name)
     if show_equipment:
-        equipment = get_equipment_label(curve_name)
+        equipment = get_equipment_label(curve_name, zone)
         if equipment:
             return f"{variable_label} — {equipment} {role}"
     return f"{variable_label} {role}"
 
 
-def build_figure_title(variables: str | list[dict]) -> str:
+def build_figure_title(variables: str | list[dict], zone: int = 0) -> str:
     """Build a human-readable figure title from FigureDescription.variables.
 
     Parameters
@@ -223,6 +232,8 @@ def build_figure_title(variables: str | list[dict]) -> str:
     variables: str | list[dict]
         The variables field from FigureDescription, which can be a single variable name or a list
         of dicts with "variable" and "type" keys.
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
 
     Returns
     -------
@@ -230,7 +241,7 @@ def build_figure_title(variables: str | list[dict]) -> str:
         A human-readable figure title (e.g., "Active Power — GEN", "Voltage — PDR Bus")
     """
     if isinstance(variables, str):
-        return f"{get_variable_label(variables)} — PDR Bus"
+        return f"{get_variable_label(variables)} — {get_bus_label(zone)}"
 
     variable_labels = list(
         dict.fromkeys(
@@ -243,7 +254,7 @@ def build_figure_title(variables: str | list[dict]) -> str:
 
     equipment_type = variables[0]["type"]
     if equipment_type == "bus":
-        equipment = "PDR Bus"
+        equipment = get_bus_label(zone)
     elif equipment_type == "sync_condenser":
         equipment = "Synchronous Condenser"
     else:

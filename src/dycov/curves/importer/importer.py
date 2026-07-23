@@ -16,6 +16,7 @@ from typing import Optional
 
 import pandas as pd
 
+from dycov.curves import naming
 from dycov.curves.importer.reader import get_curves_reader
 
 
@@ -115,6 +116,13 @@ class CurvesImporter:
                 if value != ""
             }
         )
+
+        # Zone 1 outputs name the connection bus "InternalNode1"; accept that naming
+        # in the dictionaries by translating it back to the internal bus name
+        if zone == 1:
+            curves_dict = {
+                channel: naming.to_internal_name(name) for channel, name in curves_dict.items()
+            }
         return curves_dict
 
     @property

@@ -15,7 +15,7 @@ import pandas as pd
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
-from dycov.curves import curves_factory
+from dycov.curves import curves_factory, naming
 from dycov.logging import dycov_logging
 from dycov.model.parameters import (
     CurvesAvailability,
@@ -186,7 +186,7 @@ class CurvesManager:
             )
 
     def __save_curve(self, curves: pd.DataFrame, path: Path, precision: int = 9):
-        curves_to_save = curves.copy()
+        curves_to_save = naming.rename_columns_for_output(curves, self._producer.get_zone()).copy()
 
         if "time" in curves_to_save:
             curves_to_save["time"] = pd.to_numeric(curves_to_save["time"], errors="coerce").map(
