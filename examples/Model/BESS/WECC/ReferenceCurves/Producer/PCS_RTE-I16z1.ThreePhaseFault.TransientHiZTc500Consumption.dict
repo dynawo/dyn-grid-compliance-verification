@@ -12,15 +12,15 @@ frequency_sampling = 15
 [Curves-Dictionary]
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
 # and the suffixes _a, _b and _c must be added as in the following example:
-#    BusPDR_BUS_Voltage_a =
-#    BusPDR_BUS_Voltage_b =
-#    BusPDR_BUS_Voltage_c =
+#    SignalName_a =
+#    SignalName_b =
+#    SignalName_c =
 time = time
-BusPDR_BUS_ActivePower = BusPDR_BUS_ActivePower
-BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
-BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
-BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
-BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
+InternalNode1_BUS_ActivePower = InternalNode1_BUS_ActivePower
+InternalNode1_BUS_ReactivePower = InternalNode1_BUS_ReactivePower
+InternalNode1_BUS_ActiveCurrent = InternalNode1_BUS_ActiveCurrent
+InternalNode1_BUS_ReactiveCurrent = InternalNode1_BUS_ReactiveCurrent
+InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage
 Bess_GEN_IpInjTerminal = Bess_GEN_IpInjTerminal 
 Bess_GEN_IqInjTerminal = Bess_GEN_IqInjTerminal 
 Bess_GEN_UPuInjTerminal = Bess_GEN_UPuInjTerminal 

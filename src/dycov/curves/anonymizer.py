@@ -250,9 +250,9 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
                 "the affected signal must be tripled\n"
                 "# and the suffixes _a, _b and _c must be added as in the "
                 "following example:\n"
-                "#    BusPDR_BUS_Voltage_a =\n"
-                "#    BusPDR_BUS_Voltage_b =\n"
-                "#    BusPDR_BUS_Voltage_c =",
+                "#    SignalName_a =\n"
+                "#    SignalName_b =\n"
+                "#    SignalName_c =",
             )
         ],
         "Curves-Dictionary-Zone1": [],
@@ -351,9 +351,9 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
             "the affected signal must be tripled\n"
             "# and the suffixes _a, _b and _c must be added as in the "
             "following example:\n"
-            "#    BusPDR_BUS_Voltage_a =\n"
-            "#    BusPDR_BUS_Voltage_b =\n"
-            "#    BusPDR_BUS_Voltage_c =\n"
+            "#    SignalName_a =\n"
+            "#    SignalName_b =\n"
+            "#    SignalName_c =\n"
         )
 
         try:

@@ -251,6 +251,51 @@ def test_create_html_missing_template():
             html.__file__ = orig_file
 
 
+def test_plotly_figures_zone1_uses_internalnode1_labels():
+    figure_description = FigureDescription(
+        name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel="Power [pu]"
+    )
+    calculated_curves = pd.DataFrame(
+        {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
+    )
+    reference_curves = pd.DataFrame({"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.4, 0.9]})
+    results = {}
+
+    curve_names, _, html_out = html.plotly_figures(
+        figure_description,
+        calculated_curves,
+        reference_curves,
+        results,
+        zone=1,
+    )
+
+    assert curve_names == ["BusPDR_BUS_ActivePower"]
+    assert "InternalNode1" in html_out
+    assert "PDR Bus" not in html_out
+
+
+def test_plotly_figures_zone3_uses_pdr_labels():
+    figure_description = FigureDescription(
+        name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel="Power [pu]"
+    )
+    calculated_curves = pd.DataFrame(
+        {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
+    )
+    reference_curves = pd.DataFrame({"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.4, 0.9]})
+    results = {}
+
+    _, _, html_out = html.plotly_figures(
+        figure_description,
+        calculated_curves,
+        reference_curves,
+        results,
+        zone=3,
+    )
+
+    assert "PDR Bus" in html_out
+    assert "InternalNode1" not in html_out
+
+
 def test_plotly_all_curves_skips_plotted_and_time():
     calculated_curves = pd.DataFrame(
         {
