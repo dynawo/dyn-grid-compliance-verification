@@ -411,6 +411,7 @@ def _generate_figures(
     operating_condition: str,
     xmin: float,
     xmax: float,
+    zone: int = 0,
 ) -> tuple[list, list]:
     plotted_curves = list()
     figures = list()
@@ -453,6 +454,7 @@ def _generate_figures(
                 reference_curves,
                 oc_results,
                 band_ref_val=iq_last_val,
+                zone=zone,
             )
             plotted_curves.extend(html_curves)
             if html_figure:
@@ -533,10 +535,15 @@ def _create_full_tex(
             operating_condition,
             xmin,
             xmax,
+            zone=pcs_results.get("zone", 0),
         )
         try:
             if config.get_boolean("Debug", "plot_all_curves_in_html", False):
-                figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
+                figures.extend(
+                    html.plotly_all_curves(
+                        plotted_curves, oc_results, zone=pcs_results.get("zone", 0)
+                    )
+                )
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
         except Exception as e:
             dycov_logging.get_logger("Report").error(
