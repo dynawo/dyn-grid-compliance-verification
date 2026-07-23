@@ -1,4 +1,4 @@
-time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;Bess_GEN_UPuInjTerminal;Bess_GEN_IpInjTerminal;Bess_GEN_IqInjTerminal;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;Bess_GEN_ActivePowerSetpointPu;Bess_GEN_ReactivePowerSetpointPu
+time;InternalNode1_BUS_Voltage;InternalNode1_BUS_ActivePower;InternalNode1_BUS_ReactivePower;InternalNode1_BUS_ActiveCurrent;InternalNode1_BUS_ReactiveCurrent;Bess_GEN_UPuInjTerminal;Bess_GEN_IpInjTerminal;Bess_GEN_IqInjTerminal;Measurements_BUS_Voltage;Measurements_BUS_ActivePower;Measurements_BUS_ReactivePower;Bess_GEN_ActivePowerSetpointPu;Bess_GEN_ReactivePowerSetpointPu
 0.000000000;1.000e+00;-6.660e-01;-2.160e-01;-6.660e-01;-2.160e-01;9.999e-01;-6.660e-01;-2.158e-01;1.000e+00;-3.330e-03;-1.080e-03;-6.660e-01;-2.159e-01
 0.000001000;1.000e+00;-6.660e-01;-2.160e-01;-6.660e-01;-2.160e-01;9.999e-01;-6.660e-01;-2.158e-01;1.000e+00;-3.330e-03;-1.080e-03;-6.660e-01;-2.159e-01
 19.999996000;1.000e+00;-6.660e-01;-2.160e-01;-6.660e-01;-2.160e-01;9.999e-01;-6.660e-01;-2.158e-01;1.000e+00;-3.330e-03;-1.080e-03;-6.660e-01;-2.159e-01
