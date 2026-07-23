@@ -174,6 +174,11 @@ RMS model validation checks that the dynamic response of a PPM model matches
 a set of reference curves within the tolerances defined in PCS I16. It always
 runs two independent perimeters: Zone 1 (unit-level) and Zone 3 (plant-level).
 
+In Zone 1 the unit under test connects at an internal node of the aggregated
+plant model, named **InternalNode1** in DyCoV outputs (the node called *Node1*
+in the DTR). The name *PDR* is reserved for the real connection point of the
+complete installation to RTE's grid, which is the point used in Zone 3.
+
 Reference curves are always required. The producer response can come from
 Dynawo simulations or from producer-provided curves.
 

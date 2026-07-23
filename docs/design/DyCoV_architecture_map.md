@@ -64,3 +64,8 @@ working_oc_dir/outputs/  logs/ (dynawo.log)  curves/ (curves.csv)  timeLine/  co
 The Results tree (`-o` output dir: `<Results>/…/Producer/<PCS>/<benchmark>/<oc>/`) mirrors
 this layout — DyCoV copies selected files/dirs from the working dir into it, then adds its
 post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`.
+
+Output naming (`curves/naming.py`): internals use `BusPDR_BUS_*` everywhere, but Zone 1
+outputs (saved CSVs, report/figure labels) rename the bus to `InternalNode1` — PDR is
+reserved for the real connection point (issue #275). The importer accepts both namings
+in Zone 1 reference-curve dictionaries.

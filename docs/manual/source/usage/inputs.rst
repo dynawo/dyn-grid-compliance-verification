@@ -63,6 +63,16 @@ while Zone 3 should represent the complete installation at the PDR, including
 plant-level control. For the precise definition of these zones, refer to
 PCS I16 in the RTE DTR.
 
+.. note::
+   The name *PDR* always refers to the real connection point of the complete
+   installation to RTE's grid. The connection node of the Zone 1 unit model is
+   an internal node of the aggregated plant model, named **InternalNode1** in
+   DyCoV outputs (reports, figures, and curve signal names such as
+   ``InternalNode1_BUS_Voltage``) — it corresponds to the node called *Node1*
+   in the DTR. In the DYD/PAR files the connection bus keeps its internal id
+   ``BusPDR`` for both zones, and reference-curve dictionaries for Zone 1
+   accept both namings.
+
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.
 
@@ -311,7 +321,8 @@ Available Topologies
 
 DyCoV currently supports eight topologies to represent the producer model.
 The topology is declared in the ``Producer.ini`` file and determines how
-DyCoV connects the producer's equipment to the PDR bus internally.
+DyCoV connects the producer's equipment to the connection bus internally
+(the PDR bus — or InternalNode1 for Zone 1 of the RMS model validation).
 
 .. figure:: figs_topologies/s.png
     :width: 600px

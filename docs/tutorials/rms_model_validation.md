@@ -57,6 +57,11 @@ Both zones must be validated as part of RMS model validation.
 Zone 1 validates the **intrinsic dynamic behavior of the generating or storage
 unit**, without any plant‑level control.
 
+The unit under test connects at an internal node of the aggregated plant model,
+named **InternalNode1** in DyCoV outputs (reports, figures and curve signal
+names) — the node called *Node1* in the DTR. The name *PDR* is reserved for the
+real connection point of the complete installation to RTE's grid (see Zone 3).
+
 Examples:
 - turbine and converter for PPM,
 - storage element and converter for BESS.
