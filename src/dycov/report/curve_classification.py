@@ -9,7 +9,7 @@
 #
 from dataclasses import dataclass
 
-from dycov.curves.naming import get_bus_label
+from dycov.curves.naming import ZONE1_INJECTOR_NODE_LABEL, get_bus_label
 
 _BUS_PREFIX = "BusPDR_BUS_"
 _GEN_SUFFIX = "_GEN_"
@@ -257,7 +257,13 @@ def build_figure_title(variables: str | list[dict], zone: int = 0) -> str:
         equipment = get_bus_label(zone)
     elif equipment_type == "sync_condenser":
         equipment = "Synchronous Condenser"
+    elif zone == 1 and _is_injector_terminal_figure(variables):
+        equipment = ZONE1_INJECTOR_NODE_LABEL
     else:
         equipment = equipment_type.capitalize()
 
     return f"{magnitude} — {equipment}"
+
+
+def _is_injector_terminal_figure(variables: list[dict]) -> bool:
+    return all("InjTerminal" in v["variable"] for v in variables)
