@@ -220,24 +220,38 @@ class TestBoltedFaultMaxResidualVoltage:
         engine = self._engine_with_config(mock_config, s_nom=500.0)
         assert engine._bolted_fault_max_residual_voltage() == pytest.approx(0.005)
 
-    def _engine_with_degenerate_config(self, config_mock, s_nom):
+    def _engine_with_degenerate_config(self, config_mock, s_nom, snom_small=50.0, snom_large=50.0):
         config_mock.get_float.side_effect = lambda section, key, default=None: {
             ("Global", "bolted_fault_max_voltage_small"): 0.01,
             ("Global", "bolted_fault_max_voltage_large"): 0.005,
-            ("Global", "bolted_fault_snom_small"): 50.0,
-            ("Global", "bolted_fault_snom_large"): 50.0,
+            ("Global", "bolted_fault_snom_small"): snom_small,
+            ("Global", "bolted_fault_snom_large"): snom_large,
         }.get((section, key), default)
         engine = _make_engine()
         engine._producer.s_nom = s_nom
         return engine
 
+    @patch("dycov.curves.dynawo.orchestrator.bisection.dycov_logging")
     @patch("dycov.curves.dynawo.orchestrator.bisection.config")
-    def test_equal_references_pick_side_by_snom(self, mock_config):
-        engine = self._engine_with_degenerate_config(mock_config, s_nom=100.0)
+    def test_equal_references_fall_back_to_stricter_threshold(self, mock_config, mock_logging):
+        for s_nom in (100.0, 10.0):
+            engine = self._engine_with_degenerate_config(mock_config, s_nom=s_nom)
+            assert engine._bolted_fault_max_residual_voltage() == pytest.approx(0.005)
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.dycov_logging")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_inverted_references_fall_back_to_stricter_threshold(self, mock_config, mock_logging):
+        engine = self._engine_with_degenerate_config(
+            mock_config, s_nom=10.0, snom_small=90.0, snom_large=4.0
+        )
         assert engine._bolted_fault_max_residual_voltage() == pytest.approx(0.005)
 
+    @patch("dycov.curves.dynawo.orchestrator.bisection.dycov_logging")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_inconsistent_references_log_warning(self, mock_config, mock_logging):
         engine = self._engine_with_degenerate_config(mock_config, s_nom=10.0)
-        assert engine._bolted_fault_max_residual_voltage() == pytest.approx(0.01)
+        engine._bolted_fault_max_residual_voltage()
+        mock_logging.get_logger.return_value.warning.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -251,8 +265,8 @@ class TestFindBoltedFault:
     def _engine_with_config(self, config_mock):
         config_mock.get_float.side_effect = lambda section, key, default=None: {
             ("GridCode", "fault_r_factor"): 10.0,
-            ("Global", "maximum_bolted_fault"): 1.0,
-            ("Global", "minimum_bolted_fault"): 1e-5,
+            ("Global", "bolted_fault_max_impedance"): 1.0,
+            ("Global", "bolted_fault_min_impedance"): 1e-5,
             ("Global", "bolted_fault_rel_tol"): 1e-5,
             ("Global", "bolted_fault_max_voltage_small"): 0.01,
             ("Global", "bolted_fault_max_voltage_large"): 0.005,
@@ -417,8 +431,8 @@ class TestFindHizFault:
     def _engine_with_config(self, config_mock):
         config_mock.get_float.side_effect = lambda section, key, default=None: {
             ("GridCode", "fault_r_factor"): 10.0,
-            ("Global", "maximum_hiz_fault"): 10.0,
-            ("Global", "minimum_hiz_fault"): 1e-10,
+            ("Global", "hiz_fault_max_impedance"): 10.0,
+            ("Global", "hiz_fault_min_impedance"): 1e-10,
             ("Global", "hiz_fault_rel_tol"): 1e-5,
         }.get((section, key), default)
         return _make_engine()

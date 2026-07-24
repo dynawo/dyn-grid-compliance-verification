@@ -236,15 +236,15 @@ Parallel execution:
 
 HiZ fault bisection:
 
-* ``maximum_hiz_fault`` — maximum impedance value for the HiZ fault bisection
+* ``hiz_fault_max_impedance`` — maximum impedance value for the HiZ fault bisection
   method.
-* ``minimum_hiz_fault`` — minimum impedance value.
+* ``hiz_fault_min_impedance`` — minimum impedance value.
 * ``hiz_fault_rel_tol`` — relative tolerance for bisection convergence.
 
 Bolted fault search:
 
-* ``maximum_bolted_fault`` — maximum impedance value for the bolted fault search.
-* ``minimum_bolted_fault`` — minimum impedance value (the most severe fault, tried
+* ``bolted_fault_max_impedance`` — maximum impedance value for the bolted fault search.
+* ``bolted_fault_min_impedance`` — minimum impedance value (the most severe fault, tried
   first; larger values are searched by bisection only on non-convergence).
 * ``bolted_fault_rel_tol`` — relative tolerance for search convergence.
 * ``bolted_fault_max_voltage_small`` / ``bolted_fault_max_voltage_large`` — maximum

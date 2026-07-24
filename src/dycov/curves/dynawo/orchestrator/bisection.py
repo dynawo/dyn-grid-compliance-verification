@@ -230,8 +230,8 @@ class BisectionEngine:
             voltage dip cannot be achieved within the bisection tolerance.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        max_val = config.get_float("Global", "maximum_hiz_fault", 100.0)
-        min_val = config.get_float("Global", "minimum_hiz_fault", 1e-10)
+        max_val = config.get_float("Global", "hiz_fault_max_impedance", 100.0)
+        min_val = config.get_float("Global", "hiz_fault_min_impedance", 1e-10)
         last_fault_xpu = min_val
         bisection_success = False
         hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 1e-5)
@@ -333,13 +333,24 @@ class BisectionEngine:
         Returns the maximum residual PDR voltage (pu) that still qualifies as a
         bolted fault, interpolated linearly on the producer SNom between the small
         and large reference generators (clamped outside the reference range).
+
+        If the configured SNom anchors are inconsistent (snom_large <= snom_small),
+        logs a warning and falls back to the stricter (lower) voltage threshold.
         """
         v_small = config.get_float("Global", "bolted_fault_max_voltage_small", 0.01)
         v_large = config.get_float("Global", "bolted_fault_max_voltage_large", 0.005)
         snom_small = config.get_float("Global", "bolted_fault_snom_small", 4.0)
         snom_large = config.get_float("Global", "bolted_fault_snom_large", 90.0)
         if snom_large <= snom_small:
-            return v_large if self._producer.s_nom >= snom_large else v_small
+            stricter_voltage = min(v_small, v_large)
+            dycov_logging.get_logger("Bisection").warning(
+                "Inconsistent bolted-fault SNom anchors "
+                f"(bolted_fault_snom_small={snom_small}, "
+                f"bolted_fault_snom_large={snom_large}): bolted_fault_snom_large must be "
+                "greater than bolted_fault_snom_small. Falling back to the stricter "
+                f"residual-voltage threshold ({stricter_voltage} pu)."
+            )
+            return stricter_voltage
         position = (self._producer.s_nom - snom_small) / (snom_large - snom_small)
         return v_small + min(1.0, max(0.0, position)) * (v_large - v_small)
 
@@ -356,11 +367,11 @@ class BisectionEngine:
         reset_solver_fn: callable,
     ) -> None:
         """
-        Determines and applies a bolted-fault impedance that both converges and keeps
-        the residual PDR voltage under an SNom-dependent threshold (see
-        `_bolted_fault_max_residual_voltage`). The most severe impedance
-        (minimum_bolted_fault) is tried first, so the impedance is only relaxed — by
-        bisection — when the simulation fails to converge. Modifies
+        Determines and applies a "sufficient" bolted-fault impedance X: one that both
+        converges and keeps the residual PDR voltage under an SNom-dependent threshold
+        (see `_bolted_fault_max_residual_voltage`). Starts at `bolted_fault_min_impedance`
+        (the most severe impedance), resolving the common case in a single simulation,
+        and raises X by bisection only when the simulation fails to converge. Modifies
         working_oc_dir/TSOModel.par in-place with the result.
 
         Parameters
@@ -395,8 +406,8 @@ class BisectionEngine:
         if self._producer.get_zone() != 1:
             return
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        max_val = config.get_float("Global", "maximum_bolted_fault", 1.0)
-        min_val = config.get_float("Global", "minimum_bolted_fault", 1e-5)
+        max_val = config.get_float("Global", "bolted_fault_max_impedance", 1.0)
+        min_val = config.get_float("Global", "bolted_fault_min_impedance", 1e-5)
         rel_tol = config.get_float("Global", "bolted_fault_rel_tol", 1e-5)
         max_residual_voltage = self._bolted_fault_max_residual_voltage()
         bisection_success = False
