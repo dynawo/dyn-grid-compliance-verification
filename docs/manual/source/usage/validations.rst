@@ -179,6 +179,15 @@ plant model, named **InternalNode1** in DyCoV outputs (the node called *Node1*
 in the DTR). The name *PDR* is reserved for the real connection point of the
 complete installation to RTE's grid, which is the point used in Zone 3.
 
+The injector-terminal figures of the Zone 1 reports (currents Ip and Iq and the
+voltage magnitude at the converter output) are measured at **InternalNode2**,
+the node between the unit and its transformer (the node called *Node2* in the
+DTR). Both nodes are labeled in the network schema of each report. The
+injector-terminal currents are computed as P/U and Q/U at InternalNode2; if
+that voltage ever falls below the 2e-4 pu numerical guard, the currents are
+zeroed at those samples and DyCoV emits a warning both in the logs and in the
+report, since this normally reveals a transformer with near-zero impedance.
+
 Reference curves are always required. The producer response can come from
 Dynawo simulations or from producer-provided curves.
 
