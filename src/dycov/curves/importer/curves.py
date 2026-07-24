@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -230,10 +231,12 @@ class ImportedCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         curves: Path,
-    ) -> tuple[float, pd.DataFrame]:
-        event_params, _, _, curves_df = self._obtain_curves(
+    ) -> tuple[Optional[float], pd.DataFrame]:
+        event_params, _, has_imported_curves, curves_df = self._obtain_curves(
             working_oc_dir, producer_name, pcs_name, bm_name, oc_name, curves, is_reference=True
         )
+        if not has_imported_curves:
+            return None, curves_df
         return event_params["start_time"], curves_df
 
     def obtain_simulated_curve(

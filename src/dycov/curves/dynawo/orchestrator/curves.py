@@ -389,10 +389,16 @@ class DynawoCurves(ProducerCurves):
                     reset_solver_fn=self.__reset_solver,
                 )
             elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
-                self._bisection.apply_bolted_fault(
+                self._bisection.find_bolted_fault(
+                    output_dir,
                     working_oc_dir,
+                    jobs_output_dir,
                     event_params["start_time"],
                     event_params["duration_time"],
+                    bm_name,
+                    oc_name,
+                    simulate_fn=self.__simulate,
+                    reset_solver_fn=self.__reset_solver,
                 )
             outcome = self.__simulate(
                 output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name

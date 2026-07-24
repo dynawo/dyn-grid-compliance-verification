@@ -3,12 +3,17 @@
 #
 # (c) 2026 RTE
 # Developed by Grupo AIA
-# marinjl@aia.es
-# omsg@aia.es
-# demiguelm@aia.es
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
 #
+"""Tests for the OperatingCondition validation orchestration."""
 
 import logging
+
+from dycov.configuration.cfg import Config
+from dycov.model import operating_condition as oc_module
+from dycov.model.operating_condition import OperatingCondition
 
 
 class DummyProducer:
@@ -47,12 +52,17 @@ class DummyValidator:
 
 
 def _make_oc(monkeypatch, working_dir):
-    from dycov.model.operating_condition import OperatingCondition
-    from dycov.configuration.cfg import Config
-
     monkeypatch.setattr(Config, "get_float", lambda *args, **kwargs: 0.002)
 
     return OperatingCondition(DummyParams(working_dir), "PCS", "Bench", "OC")
+
+
+def _set_logger_level(monkeypatch, level):
+    """Force the module logger to a fixed level (results.json is only written above DEBUG)."""
+    logger = logging.getLogger(f"test-oc-{level}")
+    logger.setLevel(level)
+
+    monkeypatch.setattr(oc_module.dycov_logging, "get_logger", lambda name: logger)
 
 
 def test_initialize(monkeypatch, tmp_path):
@@ -66,16 +76,7 @@ def test_initialize(monkeypatch, tmp_path):
 
 
 def test_validate_with_simulated_curves(monkeypatch, tmp_path):
-    import dycov.model.operating_condition as oc_module
-
-    # Force a non-DEBUG level so __validate writes the results.json file.
-    monkeypatch.setattr(
-        oc_module.dycov_logging,
-        "get_logger",
-        lambda name: logging.getLogger("test-oc-info"),
-    )
-    logging.getLogger("test-oc-info").setLevel(logging.INFO)
-
+    _set_logger_level(monkeypatch, logging.INFO)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(u_dim=2.0)
 
@@ -94,16 +95,7 @@ def test_validate_with_simulated_curves(monkeypatch, tmp_path):
 
 
 def test_validate_without_validations(monkeypatch, tmp_path):
-    import dycov.model.operating_condition as oc_module
-
-    # DEBUG level skips writing the results.json file.
-    monkeypatch.setattr(
-        oc_module.dycov_logging,
-        "get_logger",
-        lambda name: logging.getLogger("test-oc-debug"),
-    )
-    logging.getLogger("test-oc-debug").setLevel(logging.DEBUG)
-
+    _set_logger_level(monkeypatch, logging.DEBUG)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(has_validations=False)
 
@@ -137,8 +129,6 @@ def test_validate_without_simulated_curves(monkeypatch, tmp_path):
 
 
 def test_generate(monkeypatch, tmp_path):
-    import dycov.model.operating_condition as oc_module
-
     calls = {}
 
     class DummyGridForming:

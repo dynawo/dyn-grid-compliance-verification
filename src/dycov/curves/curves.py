@@ -9,7 +9,7 @@
 #
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -211,7 +211,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         curves: Path,
-    ) -> tuple[float, pd.DataFrame]:
+    ) -> tuple[Optional[float], pd.DataFrame]:
         """Obtain the reference curves.
 
         Parameters
@@ -231,8 +231,9 @@ class ProducerCurves:
 
         Returns
         -------
-        float
-            Instant of time when the event is triggered
+        Optional[float]
+            Instant of time when the event is triggered, or None if the reference
+            curves could not be imported
         DataFrame
            Curves imported from the file
         """

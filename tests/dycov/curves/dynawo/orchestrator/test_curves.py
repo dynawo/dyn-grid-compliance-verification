@@ -18,7 +18,7 @@ collaborators correctly, not from complex logic.  We therefore:
 
 from collections import namedtuple
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -72,52 +72,6 @@ def _make_producer_mock():
     producer.s_nom = 100.0
     producer.stepup_xfmrs = []
     return producer
-
-
-@patch(f"{_MODULE}.parameter_checks")
-@patch(f"{_MODULE}.ModelSetup")
-@patch(f"{_MODULE}.BisectionEngine")
-@patch(f"{_MODULE}.config")
-def _make_curves(mock_config, mock_be_cls, mock_ms_cls, mock_pc, **overrides):
-    """
-    Construct a DynawoCurves instance with all heavy deps mocked.
-    Returns (instance, mock_config, mock_bisection_instance, mock_setup_instance).
-    """
-    from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
-
-    mock_config.get_value.side_effect = _cfg_get_value
-    mock_config.get_float.side_effect = _cfg_get_float
-    mock_config.get_int.side_effect = _cfg_get_int
-
-    mock_ms_instance = MagicMock()
-    mock_ms_instance.curves_dict = {}
-    mock_ms_cls.return_value = mock_ms_instance
-
-    mock_be_instance = MagicMock()
-    mock_be_cls.return_value = mock_be_instance
-
-    parameters = MagicMock()
-    parameters.get_output_dir.return_value = Path("/output")
-    parameters.get_launcher_dwo.return_value = "/path/dynawo"
-
-    producer = overrides.pop("producer", _make_producer_mock())
-
-    with patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None):
-        with patch.object(DynawoCurves, "get_producer", return_value=producer):
-            instance = DynawoCurves(
-                parameters=parameters,
-                producer=producer,
-                pcs_name="PCS1",
-                model_path=Path("/model"),
-                omega_path=Path("/omega"),
-                pcs_path=Path("/pcs"),
-                job_name="job1",
-                thr_ss_tol=5.0,
-            )
-            instance._producer = producer
-            instance.get_producer = MagicMock(return_value=producer)
-
-    return instance, mock_config, mock_be_instance, mock_ms_instance
 
 
 # ---------------------------------------------------------------------------
@@ -242,7 +196,7 @@ class TestGetDisconnectionModel:
     @patch(f"{_MODULE}.BisectionEngine")
     @patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None)
     def test_assembles_disconnection_model(self, mock_init, mock_be, mock_ms, mock_pc, mock_cfg):
-        from dycov.curves.dynawo.orchestrator.curves import DisconnectionModel, DynawoCurves
+        from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
 
         mock_cfg.get_value.side_effect = _cfg_get_value
         mock_cfg.get_float.side_effect = _cfg_get_float
@@ -512,7 +466,31 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(Path("/work"), "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        be.apply_bolted_fault.assert_called_once()
+        be.find_bolted_fault.assert_called_once()
+
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_not_applicable_returns_without_simulating(self, mc, mock_mvd):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_boolean.return_value = False
+
+        curves, ms, be, outcome, _ = self._prepare()
+        ms.complete_model.return_value = (False, {"start_time": 1.0})
+        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
+            _, _, result, curves_df = curves.obtain_simulated_curve(
+                Path("/work"), "prod", "PCS1", "BM1", "OC1", 1.0
+            )
+
+        assert result.appicable is False
+        curves._DynawoCurves__simulate.assert_not_called()
+        assert curves_df.empty
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.config")
@@ -609,3 +587,149 @@ class TestGetTimeCct:
         curves.get_time_cct(Path("/work"), Path("/jobs"), 0.1, "BM1", "OC1")
 
         assert curves._bisection.sim_time == 45.0
+
+
+# ---------------------------------------------------------------------------
+# Real __init__ / __reset_solver / __prepare_oc_validation / __simulate
+# ---------------------------------------------------------------------------
+
+
+def _make_real_curves(solver_lib="dynawo_SolverIDA"):
+    """Construct a DynawoCurves running its real __init__, with heavy deps mocked."""
+    from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
+
+    cfg_values = dict(_CONFIG_VALUES)
+    cfg_values[("Dynawo", "solver_lib")] = solver_lib
+
+    def get_value(section, key, default=None):
+        return cfg_values.get((section, key), default)
+
+    def get_float(section, key, default=None):
+        v = cfg_values.get((section, key))
+        return float(v) if v is not None else (default if default is not None else 0.0)
+
+    producer = _make_producer_mock()
+    with (
+        patch(f"{_MODULE}.config") as mc,
+        patch(f"{_MODULE}.parameter_checks"),
+        patch(f"{_MODULE}.ModelSetup") as ms_cls,
+        patch(f"{_MODULE}.BisectionEngine") as be_cls,
+        patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None),
+        patch.object(DynawoCurves, "get_producer", return_value=producer),
+        patch.object(DynawoCurves, "get_snref", return_value=100.0),
+    ):
+        mc.get_value.side_effect = get_value
+        mc.get_float.side_effect = get_float
+
+        parameters = MagicMock()
+        parameters.get_output_dir.return_value = Path("/output")
+        parameters.get_launcher_dwo.return_value = "/dynawo"
+
+        instance = DynawoCurves(
+            parameters=parameters,
+            producer=producer,
+            pcs_name="PCS1",
+            model_path=Path("/model"),
+            omega_path=Path("/omega"),
+            pcs_path=Path("/pcs"),
+            job_name="job1",
+            thr_ss_tol=5.0,
+        )
+
+    instance.get_producer = MagicMock(return_value=producer)
+    instance.get_snref = MagicMock(return_value=100.0)
+    return instance, ms_cls.return_value, be_cls.return_value
+
+
+class TestConstructorWiring:
+    def test_init_wires_ida_solver_and_collaborators(self):
+        curves, ms, be = _make_real_curves()
+
+        assert curves._solver_id == "IDA"
+        assert curves._relAccuracy == pytest.approx(1e-4)
+        assert curves._minimum_time_step == pytest.approx(1e-6)
+        assert curves._setup is ms
+        assert curves._bisection is be
+        assert curves._voltage_dip is None
+
+    def test_init_sim_solver_drops_rel_accuracy(self):
+        curves, _, _ = _make_real_curves(solver_lib="dynawo_SolverSIM")
+
+        assert curves._solver_id == "SIM"
+        assert not hasattr(curves, "_relAccuracy")
+        assert curves._absAccuracy == pytest.approx(1e-4)
+
+    def test_get_voltage_dip_returns_none_before_simulation(self):
+        curves, _, _ = _make_real_curves()
+        assert curves.get_voltage_dip() is None
+
+    def test_obtain_gen_value_maps_sign_conventions(self):
+        curves, _, _ = _make_real_curves()
+        gen = MagicMock(p0=-0.5, q0=0.1, u0=1.02)
+
+        assert curves._obtain_gen_value(gen, "P0") == pytest.approx(0.5)
+        assert curves._obtain_gen_value(gen, "Q0") == pytest.approx(-0.1)
+        assert curves._obtain_gen_value(gen, "U0") == pytest.approx(1.02)
+        assert curves._obtain_gen_value(gen, "AnythingElse") == 0.0
+
+
+class TestPrepareOcValidation:
+    @patch(f"{_MODULE}.model_parameters")
+    @patch(f"{_MODULE}.manage_files")
+    def test_copies_base_case_and_resolves_output_dirs(self, mock_mf, mock_mp):
+        curves, _, _ = _make_real_curves()
+        mock_mp.find_output_dir.return_value = Path("outputs")
+
+        output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
+            Path("/work"), "PCS1", "BM1", "OC1"
+        )
+
+        mock_mf.copy_base_case_files.assert_called_once()
+        assert jobs_output_dir == Path("outputs")
+        assert output_dir == Path("/output") / "PCS1" / "BM1" / "OC1"
+
+
+class TestSimulateOutcomeAssembly:
+    def _simulate(self, curves, result, working_dir=Path("/work")):
+        with (
+            patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
+            patch(f"{_MODULE}.RetrySettings"),
+            patch(f"{_MODULE}.config") as mc,
+        ):
+            mc.get_float.side_effect = _cfg_get_float
+            strat_cls.return_value.run.return_value = result
+            outcome = curves._DynawoCurves__simulate(
+                Path("/out"), working_dir, Path("outputs"), "BM1", "OC1"
+            )
+        return outcome
+
+    def test_success_outcome_within_time(self):
+        curves, _, _ = _make_real_curves()
+        result = MagicMock(succeeded=True, sim_time=10.0, curves=pd.DataFrame(), log="")
+
+        outcome = self._simulate(curves, result)
+
+        assert outcome.succeeded is True
+        assert outcome.time_exceeds is False
+        assert outcome.has_curves is False
+
+    def test_failure_outcome_exceeding_time(self):
+        curves, _, _ = _make_real_curves()
+        result = MagicMock(succeeded=False, sim_time=50.0, curves=pd.DataFrame(), log="boom")
+
+        outcome = self._simulate(curves, result)
+
+        assert outcome.succeeded is False
+        assert outcome.time_exceeds is True
+        assert outcome.has_curves is False
+
+    def test_has_curves_when_csv_exists(self, tmp_path):
+        curves, _, _ = _make_real_curves()
+        csv_dir = tmp_path / "outputs" / "curves"
+        csv_dir.mkdir(parents=True)
+        (csv_dir / "curves.csv").write_text("time;\n")
+        result = MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
+
+        outcome = self._simulate(curves, result, working_dir=tmp_path)
+
+        assert outcome.has_curves is True
