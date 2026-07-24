@@ -71,7 +71,11 @@ PCS I16 in the RTE DTR.
    ``InternalNode1_BUS_Voltage``) — it corresponds to the node called *Node1*
    in the DTR. In the DYD/PAR files the connection bus keeps its internal id
    ``BusPDR`` for both zones, and reference-curve dictionaries for Zone 1
-   accept both namings.
+   accept both namings. The converter-output node of the Zone 1 unit model,
+   between the unit and its transformer, is named **InternalNode2** (the node
+   called *Node2* in the DTR); the injector-terminal signals
+   (``*_GEN_IpInjTerminal``, ``*_GEN_IqInjTerminal``, ``*_GEN_UPuInjTerminal``)
+   are measured there.
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.

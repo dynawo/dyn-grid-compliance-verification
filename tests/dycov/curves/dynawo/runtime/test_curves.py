@@ -13,6 +13,9 @@ import pandas as pd
 import pytest
 
 from dycov.curves.dynawo.runtime._curves import (
+    ABS_TOLERANCE_FACTOR,
+    VOLTAGE_DIP_THRESHOLD,
+    _get_injector_terminal_curves,
     _get_magnitude_controlled_by_avr,
     _get_modulus,
     create_curves,
@@ -216,3 +219,51 @@ def test_get_modulus_correct_calculation():
     complex_list = [complex(3, 4), complex(5, 12)]
     result = _get_modulus(complex_list)
     assert result == [5.0, 13.0]
+
+
+def test_injector_terminal_currents_divided_by_terminal_voltage():
+    class Generator:
+        def __init__(self, id_):
+            self.id = id_
+
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_UPuInjTerminal": [complex(0.8, 0.6), complex(0.5, 0.0)],
+            "GEN1_GEN_IpInjTerminal": [0.5, 1.0],
+            "GEN1_GEN_IqInjTerminal": [0.25, 0.5],
+        }
+    )
+    curves_dict = {}
+
+    _get_injector_terminal_curves(90.0, 45.0, [Generator("GEN1")], df_curves, curves_dict)
+
+    assert curves_dict["GEN1_GEN_UPuInjTerminal"] == pytest.approx([1.0, 0.5])
+    assert curves_dict["GEN1_GEN_IpInjTerminal"] == pytest.approx([1.0, 4.0])
+    assert curves_dict["GEN1_GEN_IqInjTerminal"] == pytest.approx([0.5, 2.0])
+    assert "GEN1_GEN_IpInjTerminal" not in df_curves.columns
+    assert "GEN1_GEN_IqInjTerminal" not in df_curves.columns
+    assert "GEN1_GEN_UPuInjTerminal" not in df_curves.columns
+
+
+def test_injector_terminal_currents_zeroed_below_voltage_guard():
+    class Generator:
+        def __init__(self, id_):
+            self.id = id_
+
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_UPuInjTerminal": [complex(1e-4, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_IpInjTerminal": [1.0, 1.0],
+            "GEN1_GEN_IqInjTerminal": [0.5, 0.5],
+        }
+    )
+    curves_dict = {}
+
+    _get_injector_terminal_curves(100.0, 100.0, [Generator("GEN1")], df_curves, curves_dict)
+
+    assert curves_dict["GEN1_GEN_IpInjTerminal"] == pytest.approx([0.0, 1.0])
+    assert curves_dict["GEN1_GEN_IqInjTerminal"] == pytest.approx([0.0, 0.5])
+
+
+def test_voltage_guard_matches_documented_value():
+    assert ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD == pytest.approx(2e-4)

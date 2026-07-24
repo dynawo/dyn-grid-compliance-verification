@@ -17,12 +17,11 @@ import numpy as np
 import pandas as pd
 
 from dycov.configuration.cfg import config
+from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
 from dycov.logging import dycov_logging
 from dycov.validation.common import is_stable
 
-VOLTAGE_DIP_THRESHOLD = 0.002
 NO_FAULT_SENTINEL = 9999.0
-ABS_TOLERANCE_FACTOR = 0.1
 TIME_EPSILON = 1e-4
 
 
