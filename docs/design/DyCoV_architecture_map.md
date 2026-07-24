@@ -41,8 +41,10 @@ build network structure dynamically. Custom Modelica in `src/dycov/model_lib/mod
 - **Bisection** (`orchestrator/bisection.py`): `find_hiz_fault`, `find_bolted_fault`, `find_cct`.
   Per-iteration isolated working dir via `_isolated_copy` (temp dir). Mutates fault R/X/duration in
   `TSOModel.par` via `replace_placeholders.fault_par_file` / `fault_time`. CCT reads `curves/curves.csv` directly.
-  Bolted: tries `minimum_bolted_fault` first and relaxes X by bisection only on non-convergence, until the
-  residual PDR voltage is under an SNom-interpolated threshold (`bolted_fault_*` config keys).
+  Bolted: searches by bisection for a "sufficient" fault impedance X — one that both converges and
+  leaves the residual PDR voltage under an SNom-interpolated threshold (`bolted_fault_*` config keys).
+  Starts at `bolted_fault_min_impedance`, resolving the common case in one simulation, and raises X only
+  when the simulation fails to converge.
 
 `replace_placeholders.*` (XML/placeholder writers): `src/dycov/files/replace_placeholders.py`.
 
