@@ -9,15 +9,35 @@
   <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
   <dyn:blackBoxModel id="StepUp_Xfmr_1" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr_1"/>
   <!--Replace the placeholder: 'PPM_DYNAMIC_MODEL', available_options: ['WTG3WeccCurrentSource1', 'WTG3WeccCurrentSource2', 'WTG4AWeccCurrentSource', 'WTG4BWeccCurrentSource', 'PhotovoltaicsWeccCurrentSource', 'PhotovoltaicsWeccVoltageSource1', 'PhotovoltaicsWeccVoltageSource2', 'PhotovoltaicsWeccVoltageSource3', 'PhotovoltaicsWeccVoltageSource4', 'IECWPP4ACurrentSource2015', 'IECWPP4BCurrentSource2015', 'IECWPP4ACurrentSource2020', 'IECWPP4BCurrentSource2020', 'WeccWT3CurrentSource1', 'WeccWT3CurrentSource2', 'WT4AWeccCurrentSource', 'WT4BWeccCurrentSource', 'PhotovoltaicsWeccVoltageSource1NoPlantControl', 'PhotovoltaicsWeccVoltageSource2NoPlantControl', 'PhotovoltaicsWeccVoltageSource3NoPlantControl', 'PhotovoltaicsWeccVoltageSource4NoPlantControl', 'PhotovoltaicsWeccCurrentSourceNoPlantControl', 'IECWT4ACurrentSource2015', 'IECWT4BCurrentSource2015', 'IECWT4ACurrentSource2020', 'IECWT4BCurrentSource2020']-->
-  <dyn:blackBoxModel id="Power_Park_1" lib="PPM_DYNAMIC_MODEL" parFile="Producer.par" parId="Power_Park_1"/>
+  <dyn:blackBoxModel id="Wind_Turbine_1" lib="PPM_DYNAMIC_MODEL" parFile="Producer.par" parId="Wind_Turbine_1"/>
   <dyn:blackBoxModel id="StepUp_Xfmr_2" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr_2"/>
-  <dyn:blackBoxModel id="Power_Park_2" lib="PPM_DYNAMIC_MODEL" parFile="Producer.par" parId="Power_Park_2"/>
+  <dyn:blackBoxModel id="Wind_Turbine_2" lib="PPM_DYNAMIC_MODEL" parFile="Producer.par" parId="Wind_Turbine_2"/>
+
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="IntNetwork_Line" var2="line_terminal1"/>
   <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="Main_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="StepUp_Xfmr_1" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
+
+  <!--Replace '{MODEL_PREFIX}' with the model's prefix (one find-replace fills the terminal and all remote-control ports). Available: ['photovoltaics', 'WTG3', 'WTG4A', 'WTG4B', 'WT3', 'WT4A', 'WT4B', 'WPP', 'WT']-->
+  <dyn:connect id1="Wind_Turbine_1" var1="{MODEL_PREFIX}_terminal" id2="StepUp_Xfmr_1" var2="transformer_terminal1"/>
   <dyn:connect id1="StepUp_Xfmr_2" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
-  <!--Replace the placeholder: 'PPM_TERMINAL', available_options: ['WPP_terminal', 'WT_terminal', 'WTG4A_terminal', 'WTG4B_terminal', 'WT4A_terminal', 'WT4B_terminal', 'photovoltaics_terminal']-->
-  <dyn:connect id1="Power_Park_1" var1="PPM_TERMINAL" id2="StepUp_Xfmr_1" var2="transformer_terminal1"/>
-  <dyn:connect id1="Power_Park_2" var1="PPM_TERMINAL" id2="StepUp_Xfmr_2" var2="transformer_terminal1"/>
+  <dyn:connect id1="Wind_Turbine_2" var1="{MODEL_PREFIX}_terminal" id2="StepUp_Xfmr_2" var2="transformer_terminal1"/>
+
+  <!--Remote voltage control: connect the plant's monitored voltage (UPcc) to the PDR bus-->
+  <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine_1" var2="{MODEL_PREFIX}_uPccPu_re"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine_1" var2="{MODEL_PREFIX}_uPccPu_im"/>
+
+  <!--Remote P/Q control: connect the plant's monitored flows (PPcc, QPcc) to the PDR bus-->
+  <!--(note this is done through a "measurements" object that is connected to the PDR bus)-->
+  <dyn:connect id1="Measurements" var1="measurements_PPu" id2="Wind_Turbine_1" var2="{MODEL_PREFIX}_PPccPu"/>
+  <dyn:connect id1="Measurements" var1="measurements_QPu" id2="Wind_Turbine_1" var2="{MODEL_PREFIX}_QPccPu"/>
+
+  <!--Remote voltage control: connect the plant's monitored voltage (UPcc) to the PDR bus-->
+  <dyn:connect id1="BusPDR" var1="bus_terminal_V_re" id2="Wind_Turbine_2" var2="{MODEL_PREFIX}_uPccPu_re"/>
+  <dyn:connect id1="BusPDR" var1="bus_terminal_V_im" id2="Wind_Turbine_2" var2="{MODEL_PREFIX}_uPccPu_im"/>
+
+  <!--Remote P/Q control: connect the plant's monitored flows (PPcc, QPcc) to the PDR bus-->
+  <!--(note this is done through a "measurements" object that is connected to the PDR bus)-->
+  <dyn:connect id1="Measurements" var1="measurements_PPu" id2="Wind_Turbine_2" var2="{MODEL_PREFIX}_PPccPu"/>
+  <dyn:connect id1="Measurements" var1="measurements_QPu" id2="Wind_Turbine_2" var2="{MODEL_PREFIX}_QPccPu"/>
 </dyn:dynamicModelsArchitecture>
