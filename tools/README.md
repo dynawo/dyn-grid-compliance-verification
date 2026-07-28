@@ -32,6 +32,16 @@ tools/
 │       └── fill_wecc_example.py
 │       (tests live in tests/tools/test_dynawo_par.py)
 │
+├── dynawo_inputs/
+│   ├── generate_inputs.py
+│   ├── parse.py
+│   ├── electrical.py
+│   ├── README.md
+│   └── examples/
+│       ├── WECCSample_full.xlsx
+│       └── build_sample.py
+│       (tests live in tests/tools/test_dynawo_inputs_*.py)
+│
 ├── pypowsybl-vs-native/
 │   ├── list_supported_models.py
 │   ├── run_native_vs_pypowsybl.py
@@ -121,6 +131,27 @@ It only extracts and formats parameters — no validation or model
 interpretation. Uses the standard library only (no third-party dependency).
 See `tools/dynawo_par/README.md` and
 `docs/design/Dynawo_par_generation_from_excel_design.md` for details.
+
+---
+
+## dynawo_inputs/
+
+Standalone tool that reads a WECC Excel model specification and generates a
+**complete** DyCoV `Model` input set — `Producer.{dyd,par,ini}` for both
+`Zone1` (turbine) and `Zone3` (plant) — by reusing DyCoV's own per-topology
+builders.
+
+```bash
+python tools/dynawo_inputs/generate_inputs.py --excel input.xlsx --outdir DIR
+```
+
+Where `dynawo_par` emits PAR *fragments*, this tool produces the full triad:
+it resolves the model from the Excel's `Model Map` sheet (install-independent),
+computes the electrical values, and fills the wiring. The core is
+standard-agnostic; only the WECC front-end is family-specific. Currently covers
+the single-generator topologies (`S`, `S+Aux`, `S+i`, `S+Aux+i`); `M` is
+deferred. See `tools/dynawo_inputs/README.md` and
+`docs/design/DyCoV_input_generation_from_excel_design.md` for details.
 
 ---
 
