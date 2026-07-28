@@ -97,6 +97,74 @@ def test_create_producer_dyd_file_invalid_template():
         assert "Unsupported template name" in str(excinfo.value)
 
 
+def _connects(dyd_path):
+    root = etree.parse(str(dyd_path)).getroot()
+    ns = etree.QName(root).namespace
+    return [
+        (c.get("id1"), c.get("var1"), c.get("id2"), c.get("var2"))
+        for c in root.iterfind(f"{{{ns}}}connect")
+    ]
+
+
+def test_performance_ppm_has_remote_control():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        target = Path(tmpdir)
+        create_producer_dyd_file(target, "S", "performance_PPM")
+        conns = _connects(target / "Producer.dyd")
+        assert any(i1 == "Measurements" and "PPccPu" in (v2 or "") for i1, _, _, v2 in conns)
+        assert any(i1 == "Measurements" and "QPccPu" in (v2 or "") for i1, _, _, v2 in conns)
+        assert any(i1 == "BusPDR" and "uPccPu_re" in (v2 or "") for i1, _, _, v2 in conns)
+        assert any(i1 == "BusPDR" and "uPccPu_im" in (v2 or "") for i1, _, _, v2 in conns)
+        assert check_dynamic_models(target, "performance_PPM") is True
+
+
+def test_performance_sm_has_no_remote_control():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        target = Path(tmpdir)
+        create_producer_dyd_file(target, "S", "performance_SM")
+        conns = _connects(target / "Producer.dyd")
+        assert not any(i1 == "Measurements" for i1, _, _, _ in conns)
+
+
+def test_model_ppm_remote_control_only_in_zone3():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        target = Path(tmpdir)
+        (target / "Zone1").mkdir()
+        (target / "Zone3").mkdir()
+        create_producer_dyd_file(target, "S", "model_PPM")
+        z1 = _connects(target / "Zone1" / "Producer.dyd")
+        z3 = _connects(target / "Zone3" / "Producer.dyd")
+        assert not any(i1 == "Measurements" for i1, _, _, _ in z1)
+        assert any(i1 == "Measurements" for i1, _, _, _ in z3)
+
+
+def test_fill_producer_dyd_injects_libs_and_terminal():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        target = Path(tmpdir)
+        create_producer_dyd_file(target, "S", "performance_PPM")
+        dyd_path = target / "Producer.dyd"
+        gen = producer_dyd_file.PPM_ID
+        producer_dyd_file.fill_producer_dyd(
+            dyd_path,
+            libs={
+                "StepUp_Xfmr": "TransformerRatioTapChanger",
+                gen: "PhotovoltaicsWeccCurrentSource",
+            },
+            terminals={gen: "photovoltaics_terminal"},
+        )
+        root = etree.parse(str(dyd_path)).getroot()
+        ns = etree.QName(root).namespace
+        libs = {b.get("id"): b.get("lib") for b in root.iterfind(f"{{{ns}}}blackBoxModel")}
+        assert libs["StepUp_Xfmr"] == "TransformerRatioTapChanger"
+        assert libs[gen] == "PhotovoltaicsWeccCurrentSource"
+        conns = _connects(dyd_path)
+        # terminal placeholder replaced, and the remote-control ports derived from it
+        assert any(v == "photovoltaics_terminal" for _, v, _, _ in conns)
+        assert any(v2 == "photovoltaics_uPccPu_re" for _, _, _, v2 in conns)
+        assert any(v2 == "photovoltaics_PPccPu" for _, _, _, v2 in conns)
+        assert not any("PPM_" in (v2 or "") for _, _, _, v2 in conns)
+
+
 def test_check_dynamic_models_with_unsupported_models():
     with tempfile.TemporaryDirectory() as tmpdir:
         target = Path(tmpdir)
