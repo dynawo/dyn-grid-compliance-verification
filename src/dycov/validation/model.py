@@ -23,6 +23,7 @@ from dycov.validation.checks import (
     calculate_errors,
     check_measurement,
     complete_setpoint_tracking,
+    get_injector_voltage_guard_warnings,
     save_measurement_errors,
 )
 
@@ -850,6 +851,8 @@ class ModelValidator(Validator):
                 'clear_exclusion_window_start': float, exclusion time start 2.
                 'clear_exclusion_window_end': float, exclusion time duration 2.
                 'incomplete_curves': bool, present and True when reference curves are missing.
+                'warnings': list, present in Zone 1: messages emitted when an injector
+                    terminal voltage falls below the numerical guard.
             }
         """
 
@@ -880,6 +883,15 @@ class ModelValidator(Validator):
             model_results,
             event_params["connect_to"],
         )
+
+        if self._producer.get_zone() == 1:
+            warnings = get_injector_voltage_guard_warnings(
+                self._get_calculated_curves(),
+                self._get_reference_curves(),
+            )
+            for warning in warnings:
+                dycov_logging.get_logger("Model Validator").warning(warning)
+            results["warnings"] = warnings
 
         exclusion_windows = self._get_exclusion_windows()
         results["event_exclusion_window_start"] = exclusion_windows.event_start
