@@ -592,18 +592,22 @@ class ModelSetup:
     # ------------------------------------------------------------------
 
     def _sort_stepup_xfmrs_to_generators(self, producer) -> list:
-        """Sort the step-up transformers to match the generator order.
+        """Align each generator with the step-up transformer it is connected to.
 
         Returns
         -------
         list
-            Step-up transformers sorted by their connected generator.
+            One entry per generator, in generator order: the StepUp_Xfmr the
+            generator's terminal is connected to, or None when it has none.
         """
         xfmr_map = {xfmr.id: xfmr for xfmr in producer.stepup_xfmrs}
+        # Keep a None placeholder for generators with no step-up transformer: the
+        # index of each entry must match its generator so downstream consumers pair
+        # them positionally. Filtering the None out would shift the alignment and
+        # assign a generator the transformer of another.
         return [
-            xfmr_map[gen.terminals[0].connected_equipment]
+            xfmr_map.get(gen.terminals[0].connected_equipment)
             for gen in producer.generators
-            if gen.terminals[0].connected_equipment in xfmr_map
         ]
 
     def complete_model(

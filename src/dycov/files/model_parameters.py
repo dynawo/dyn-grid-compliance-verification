@@ -13,6 +13,7 @@ from __future__ import annotations
 import configparser
 import math
 import re
+from itertools import zip_longest
 from pathlib import Path
 from typing import Optional
 
@@ -543,16 +544,17 @@ def adjust_producer_init(
     producer_par_root = producer_par_tree.getroot()
 
     is_test_applicable = True
-    for generator, xfmr in zip(generators, xfmrs):
-        _adjust_transformer(
-            producer_par_root,
-            xfmr,
-            xfmr.terminals[0].p0,
-            xfmr.terminals[0].q0,
-            xfmr.terminals[0].u0,
-            xfmr.terminals[0].u_phase0,
-            xfmr.terminals[1].u0,
-        )
+    for generator, xfmr in zip_longest(generators, xfmrs):
+        if xfmr is not None:
+            _adjust_transformer(
+                producer_par_root,
+                xfmr,
+                xfmr.terminals[0].p0,
+                xfmr.terminals[0].q0,
+                xfmr.terminals[0].u0,
+                xfmr.terminals[0].u_phase0,
+                xfmr.terminals[1].u0,
+            )
         is_control_mode_valid = _adjust_generator(
             producer_par_root,
             generator,

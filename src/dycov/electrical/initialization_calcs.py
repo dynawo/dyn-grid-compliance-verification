@@ -9,6 +9,7 @@
 #
 
 import cmath
+from itertools import zip_longest
 from math import sqrt
 
 from dycov.electrical.pimodel_parameters import line_pimodel, xfmr_pimodel
@@ -213,8 +214,11 @@ def _solve_gen_circuits(
         tot_P += gen.p
         tot_Q += gen.q
 
-    for gen, gen_xfmr in zip(gens, gen_xfmrs):
+    for gen, gen_xfmr in zip_longest(gens, gen_xfmrs):
         s_int_share = complex(s_int.real * gen.p / tot_P, s_int.imag * gen.q / tot_Q)
+        if gen_xfmr is None:
+            _init_gen_at_node(gen, v_int, s_int_share)
+            continue
         xfmr = xfmr_pimodel(gen_xfmr)
         gen_on_terminal1 = gen_xfmr.terminals[0].connected_equipment == gen.id
         if gen_on_terminal1:
@@ -249,6 +253,18 @@ def _solve_gen_circuits(
             gen_xfmr.terminals[1].u_phase0 = cmath.phase(v_gen)
             gen_xfmr.terminals[1].p0 = -s_gen.real
             gen_xfmr.terminals[1].q0 = -s_gen.imag
+
+
+def _init_gen_at_node(gen: mp.GenParams, v_int: complex, s_int_share: complex) -> None:
+    """Initialize a generator referenced directly at the internal node.
+
+    Used when the generator has no external step-up transformer: node 1 coincides
+    with the generator terminal, so its voltage and power are those of the node.
+    """
+    gen.terminals[0].u0 = abs(v_int)
+    gen.terminals[0].u_phase0 = cmath.phase(v_int)
+    gen.terminals[0].p0 = s_int_share.real
+    gen.terminals[0].q0 = s_int_share.imag
 
 
 def _calc_pimodel(
