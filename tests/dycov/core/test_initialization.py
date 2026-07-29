@@ -264,6 +264,36 @@ class TestDycovInitializer:
         assert not user_config_file.exists()
         assert (self.mock_config.get_config_dir.return_value / "config.ini.OLD.1").is_file()
 
+    def test_write_updated_config_no_duplicates(self, dycov_initializer):
+        """Updating the config must not duplicate options (regression).
+
+        The [dycov] metadata takes the template value (version advances), while a
+        user override in any other section is preserved, each written exactly once.
+        """
+        config_dir = self.mock_config.get_config_dir.return_value
+        (config_dir / "config.ini_BASIC").write_text(
+            "[dycov]\nversion = 1.1.0\ntype = basic\n\n[Global]\nfile_log_level = 20\n"
+        )
+        user_config = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
+        user_config.read_string(
+            "[dycov]\nversion = 1.0.0.RC\ntype = basic\n[Global]\nfile_log_level = 40\n"
+        )
+
+        dycov_initializer._write_updated_config(config_dir / "config.ini", user_config)
+
+        # A strict parse would raise on any duplicated option.
+        written = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        written.read(config_dir / "config.ini")
+        assert written.get("dycov", "version") == "1.1.0"
+        assert written.get("Global", "file_log_level") == "40"
+
+    def test_is_valid_config_file_malformed_returns_false(self, dycov_initializer, tmp_path):
+        """A malformed config (duplicated option) is treated as invalid, not a crash."""
+        config_file = tmp_path / "dup_config.ini"
+        config_file.write_text("[dycov]\nversion = 1.1.0\nversion = 1.0.0.RC\n")
+
+        assert dycov_initializer._is_valid_config_file(config_file) is False
+
     def test_setup_templates(self, dycov_initializer, tool_path_fixture, mocker):
         """
         Tests that _setup_templates orchestrates the setup of templates.
