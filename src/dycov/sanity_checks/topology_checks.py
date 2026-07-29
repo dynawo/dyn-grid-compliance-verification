@@ -127,7 +127,17 @@ def _check_topology_components(
 
     # Validate step-up transformers
     if expected_xfmr_count == "single":
-        if len(transformers) != 1:
+        # Only topology 'S' (Zone 1) may omit the external StepUp_Xfmr, and only when
+        # the converter reaches node 1 through its internal transformer
+        # (ConverterLVControl=False); the rest of the single-generator family requires it.
+        stepup_optional = (
+            topology_name.casefold() == "s"
+            and bool(generators)
+            and not generators[0].converter_lv_control
+        )
+        if stepup_optional and not transformers:
+            pass
+        elif len(transformers) != 1:
             add_error("A transformer with id 'StepUp_Xfmr' is expected.")
         elif not _is_valid_stepup_xfmr(transformers, generators):
             add_error("Invalid step-up transformer configuration.")

@@ -172,3 +172,61 @@ def test_find_output_dir(tmp_path):
     res = model_parameters.find_output_dir(tmp_path, "file")
 
     assert res == "outdir"
+
+
+def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
+    """A generator without a step-up transformer must still get its init written.
+
+    Regression for the S/ConverterLVControl=False topology: with an empty xfmrs
+    list the generator must not be skipped (the transformer step is simply not
+    applied).
+    """
+    from dycov.model.parameters import GenParams, Terminal
+
+    ns = "http://www.rte-france.com/dynawo"
+    par_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
+    producer_par = tmp_path / "Producer.par"
+    etree.ElementTree(par_root).write(
+        str(producer_par), pretty_print=True, xml_declaration=True, encoding="utf-8"
+    )
+
+    calls = {"gen": 0, "xfmr": 0}
+
+    def fake_adjust_generator(*args, **kwargs):
+        calls["gen"] += 1
+        return True
+
+    def fake_adjust_transformer(*args, **kwargs):
+        calls["xfmr"] += 1
+
+    monkeypatch.setattr(model_parameters, "_adjust_generator", fake_adjust_generator)
+    monkeypatch.setattr(model_parameters, "_adjust_transformer", fake_adjust_transformer)
+
+    gen = GenParams(
+        id="Gen1",
+        lib="IEC",
+        par_id="parGen",
+        terminals=(Terminal(connected_equipment=None),),
+        s_nom=90,
+        i_max=None,
+        p=1,
+        q=1,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+
+    is_test_applicable = model_parameters.adjust_producer_init(
+        tmp_path,
+        producer_par,
+        [gen],
+        [],
+        None,
+        None,
+        "USetpoint",
+        False,
+        1,
+    )
+
+    assert is_test_applicable is True
+    assert calls["gen"] == 1
+    assert calls["xfmr"] == 0

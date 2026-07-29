@@ -230,6 +230,42 @@ def test_initialize_topo_s():
     assert _is_equal(gen.terminals[0].q0, -0.5124200670122216)
 
 
+def test_initialize_topo_s_without_stepup():
+    """Topology 'S' with ConverterLVControl=False: no step-up transformer.
+
+    The generator is referenced directly at the internal node (which coincides
+    with the PDR bus here, as there is no internal line nor plant transformer),
+    so its terminal voltage and power are exactly the node values.
+    """
+    gen, _ = _make_gen_and_xfmr()
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    grid_line = line_pimodel(_make_grid_line())
+
+    grid_init = init_calcs(
+        gens=[gen],
+        gen_xfmrs=[],
+        aux_load=None,
+        auxload_xfmr=None,
+        ppm_xfmr=None,
+        int_line=None,
+        pdr=pdr,
+        grid_line=grid_line,
+        grid_load=None,
+    )
+
+    # Grid side matches the plain topology 'S' case (solved before the generator).
+    assert _is_equal(grid_init.u0, 1.1009193919758402)
+    assert _is_equal(grid_init.u_phase0, 0.0)
+    assert _is_equal(grid_init.p0, 4.567)
+    assert _is_equal(grid_init.q0, -1.522032981081081)
+
+    # The generator sits directly at the node: its terminal equals the PDR bus.
+    assert _is_equal(gen.terminals[0].u0, abs(pdr.u))
+    assert _is_equal(gen.terminals[0].u_phase0, pdr.u_phase)
+    assert _is_equal(gen.terminals[0].p0, pdr.p)
+    assert _is_equal(gen.terminals[0].q0, pdr.q)
+
+
 def test_initialize_topo_s_i():
     """Topology 'S+i': topology 'S' plus an internal network line."""
     gen, gen_xfmr = _make_gen_and_xfmr()
