@@ -5,13 +5,24 @@
   font={\fontsize{7pt}{7}\selectfont}}
 \begin{document}
 \begin{tikzpicture}
-    \draw   (0.2,0) to [vsourcesin,l=Group] (1,0)
-    to [draw,voosource,align=center,l={Group\\ transformer}]  node[above,yshift=0.5cm] {CB1} (5,0)
+    \BLOCK{ if hasstepup }
+    \draw   (0.2,0) to [vsourcesin,l_=Group] (1,0)
+    to [draw,voosource,align=center,l_={Group\\ transformer}] (5,0)
     to [generic,l=Zc] (6.5,0) to (6.5,0)
     to  (6.5,0) to  (8.0,0) node[draw,thick,circle,minimum width=9mm,fill=white]{$\infty$};
+    \node at (1.8,0.7) {InternalNode2};
+    \node at (4.2,0.7) {InternalNode1};
     \draw (1.8,0.5) to (1.8,-0.5);
     \draw (4.2,0.5) to (4.2,-0.5);
     \draw (7.0,0.5) to (7.0,-0.5);
+    \BLOCK{ else }
+    \draw   (0.2,0) to [vsourcesin,l=Group] (1,0)
+    to [short] node[above,yshift=0.5cm] {InternalNode1} (5,0)
+    to [generic,l=Zc] (6.5,0) to (6.5,0)
+    to  (6.5,0) to  (8.0,0) node[draw,thick,circle,minimum width=9mm,fill=white]{$\infty$};
+    \draw (4.2,0.5) to (4.2,-0.5);
+    \draw (7.0,0.5) to (7.0,-0.5);
+    \BLOCK{ endif }
     \draw (5.0,-2.0) node[ground]{~$$} to [generic,l_=Z] (5.0,-0.8) to (5.0, 0);
 \end{tikzpicture}
 \end{document}
