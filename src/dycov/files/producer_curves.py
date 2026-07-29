@@ -58,9 +58,9 @@ def _get_sm_curves_template(xfmrs: list, gen_sms: list) -> str:
         "# To represent a signal that is in raw abc three-phase form, the affected signal must "
         "be tripled \n"
         "# and the suffixes _a, _b and _c must be added as in the following example: \n"
-        "#    BusPDR_BUS_Voltage_a = \n"
-        "#    BusPDR_BUS_Voltage_b = \n"
-        "#    BusPDR_BUS_Voltage_c = \n"
+        "#    SignalName_a = \n"
+        "#    SignalName_b = \n"
+        "#    SignalName_c = \n"
     )
     return curves_dictionary
 
@@ -120,9 +120,9 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
         "# To represent a signal that is in raw abc three-phase form, the affected signal must "
         "be tripled \n"
         "# and the suffixes _a, _b and _c must be added as in the following example: \n"
-        "#    BusPDR_BUS_Voltage_a = \n"
-        "#    BusPDR_BUS_Voltage_b = \n"
-        "#    BusPDR_BUS_Voltage_c = \n"
+        "#    SignalName_a = \n"
+        "#    SignalName_b = \n"
+        "#    SignalName_c = \n"
     )
     return curves_dictionary
 
@@ -225,30 +225,32 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
     curves_dictionary = (
         "[Curves-Dictionary] \n"
         "time = \n"
-        "BusPDR_BUS_Voltage = \n"
-        "BusPDR_BUS_ActivePower = \n"
-        "BusPDR_BUS_ReactivePower = \n"
-        "BusPDR_BUS_ActiveCurrent = \n"
-        "BusPDR_BUS_ReactiveCurrent = \n"
-    )
-
-    curves_dictionary += (
         "NetworkFrequencyPu = \n"
         "# To represent a signal that is in raw abc three-phase form, the affected signal must "
         "be tripled \n"
         "# and the suffixes _a, _b and _c must be added as in the following example: \n"
-        "#    BusPDR_BUS_Voltage_a = \n"
-        "#    BusPDR_BUS_Voltage_b = \n"
-        "#    BusPDR_BUS_Voltage_c = \n"
+        "#    SignalName_a = \n"
+        "#    SignalName_b = \n"
+        "#    SignalName_c = \n"
     )
 
     if zone == "Zone1":
         curves_dictionary += (
             "\n\n# Wind Turbines or PV Arrays in Zone1 \n[Curves-Dictionary-Zone1] \n"
+            "InternalNode1_BUS_Voltage = \n"
+            "InternalNode1_BUS_ActivePower = \n"
+            "InternalNode1_BUS_ReactivePower = \n"
+            "InternalNode1_BUS_ActiveCurrent = \n"
+            "InternalNode1_BUS_ReactiveCurrent = \n"
         )
     else:
         curves_dictionary += (
             "\n\n# Wind Turbines or PV Arrays in Zone3 \n[Curves-Dictionary-Zone3] \n"
+            "BusPDR_BUS_Voltage = \n"
+            "BusPDR_BUS_ActivePower = \n"
+            "BusPDR_BUS_ReactivePower = \n"
+            "BusPDR_BUS_ActiveCurrent = \n"
+            "BusPDR_BUS_ReactiveCurrent = \n"
         )
         for xfmr in xfmrs:
             curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"

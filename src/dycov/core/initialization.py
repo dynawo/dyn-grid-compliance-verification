@@ -47,7 +47,7 @@ class DycovInitializer:
     _DYCOV_CONFIG_SECTION = "dycov"
     _DYCOV_CONFIG_TYPE_KEY = "type"
     _DYCOV_CONFIG_VERSION_KEY = "version"
-    _DYCOV_TOOL_VERSION = "1.0.0.RC"
+    _DYCOV_TOOL_VERSION = "1.1.0"
 
     def init(self, user_config_path: Optional[Path], launcher_dwo: Path, debug: bool) -> None:
         """

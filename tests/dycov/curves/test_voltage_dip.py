@@ -11,7 +11,13 @@
 import pandas as pd
 import pytest
 
-from dycov.curves.voltage_dip import TrimmedCurves, _trim_curves, classify_voltage_dip
+from dycov.curves.voltage_dip import (
+    TrimmedCurves,
+    VoltDipResult,
+    _trim_curves,
+    classify_residual_voltage,
+    classify_voltage_dip,
+)
 
 # -------------------------------------------------------------------
 # STABILITY TESTS
@@ -58,7 +64,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
         ),
     )
 
-    mock_is_stable = mocker.patch("dycov.validation.common.is_stable")
+    mock_is_stable = mocker.patch("dycov.curves.voltage_dip.is_stable")
     mock_is_stable.side_effect = [(True, 0), (True, 0)]
 
     mock_logger = mocker.MagicMock()
@@ -68,7 +74,7 @@ def test_voltage_dip_equals_expected_dip_within_tolerance(mocker):
         "PCS", "BM", "OC", curves, fault_start, fault_duration, expected_dip
     )
 
-    assert result == 0
+    assert result == VoltDipResult.DIP_CORRECT
 
 
 def test_fault_duration_exceeds_simulation_time(mocker):
@@ -95,7 +101,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
         ),
     )
 
-    mock_is_stable = mocker.patch("dycov.validation.common.is_stable")
+    mock_is_stable = mocker.patch("dycov.curves.voltage_dip.is_stable")
     mock_is_stable.side_effect = [(True, 0), (True, 0)]
 
     mock_logger = mocker.MagicMock()
@@ -113,7 +119,7 @@ def test_fault_duration_exceeds_simulation_time(mocker):
     assert args[2] == fault_start
     assert args[3] == approx(0.5 - fault_start)
 
-    assert result == 0
+    assert result == VoltDipResult.DIP_CORRECT
 
 
 def test_correct_identification_of_pre_and_post_fault_values():
@@ -138,3 +144,41 @@ def test_empty_input_lists():
     assert result.post_time == []
     assert result.pre_voltage == []
     assert result.post_voltage == []
+
+
+# -------------------------------------------------------------------
+# RESIDUAL VOLTAGE TESTS
+# -------------------------------------------------------------------
+
+
+def _residual_curves(residual_voltage: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "time": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+            "BusPDR_BUS_Voltage": [1.0, 1.0] + [residual_voltage] * 4,
+        }
+    )
+
+
+def test_residual_voltage_below_threshold_is_correct():
+    result = classify_residual_voltage(
+        "PCS", "BM", "OC", _residual_curves(0.004), 0.15, 0.3, max_residual=0.005
+    )
+
+    assert result == VoltDipResult.DIP_CORRECT
+
+
+def test_residual_voltage_above_threshold_is_too_small():
+    result = classify_residual_voltage(
+        "PCS", "BM", "OC", _residual_curves(0.02), 0.15, 0.3, max_residual=0.005
+    )
+
+    assert result == VoltDipResult.DIP_TOO_SMALL
+
+
+def test_residual_voltage_column_missing():
+    curves = pd.DataFrame({"time": [0.0, 0.1, 0.2]})
+
+    result = classify_residual_voltage("PCS", "BM", "OC", curves, 0.15, 0.3, max_residual=0.005)
+
+    assert result == VoltDipResult.COLUMN_MISSING
