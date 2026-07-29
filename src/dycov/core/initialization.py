@@ -322,7 +322,12 @@ class DycovInitializer:
             return False
 
         cfg_parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        cfg_parser.read(config_file)
+        try:
+            cfg_parser.read(config_file)
+        except configparser.Error:
+            # A malformed file (e.g. duplicated options) is treated as invalid so it
+            # gets rebuilt instead of crashing the tool on start-up.
+            return False
         if not cfg_parser.has_option(self._DYCOV_CONFIG_SECTION, self._DYCOV_CONFIG_VERSION_KEY):
             return False
 
@@ -361,7 +366,9 @@ class DycovInitializer:
         """
         tool_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         tool_config.read(tool_config_file)
-        user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        # strict=False so an already-duplicated user file can still be read (last value
+        # wins) and then rewritten cleanly, instead of raising on the duplicate.
+        user_config = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
         user_config.read(user_config_file)
 
         deprecated_parameters = self._find_deprecated_parameters(tool_config, user_config)
@@ -438,13 +445,20 @@ class DycovInitializer:
             with open(config.get_config_dir() / "config.ini", "w") as output_file:
                 current_section = ""
                 for line in input_file:
-                    output_file.write(line)
-                    if line.strip().startswith("[") and line.strip().endswith("]"):
-                        current_section = line.strip()[1:-1]
-                    elif (
-                        "=" in line and "#" not in line.split("=")[0]
-                    ):  # Only consider lines with assignment, ignoring commented-out lines
+                    stripped = line.strip()
+                    if stripped.startswith("[") and stripped.endswith("]"):
+                        current_section = stripped[1:-1]
+                    elif "=" in line and "#" not in line.split("=")[0]:
+                        # Assignment line (commented-out ones ignored): substitute the
+                        # user's value in place of the template default. Writing both the
+                        # template line and the user value would duplicate the option.
+                        # The [dycov] metadata (version/type) is excluded so it always
+                        # takes the template value: version must advance to the current
+                        # one, and type is already carried by the chosen source template.
                         key = line.split("=")[0].strip()
-                        if user_config.has_option(current_section, key):
-                            # Overwrite with user's existing value if present.
+                        if current_section != self._DYCOV_CONFIG_SECTION and user_config.has_option(
+                            current_section, key
+                        ):
                             output_file.write(f"{key} = {user_config.get(current_section, key)}\n")
+                            continue
+                    output_file.write(line)
