@@ -249,6 +249,8 @@ def _pcs_replace(
     #  eliminating potentially problematic characters and unnecessary information.
     producer_name = pcs_results["producer"].replace("_", "")
 
+    _render_zone1_circuits(working_path, producer)
+
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
     }
@@ -353,6 +355,21 @@ def _get_template(path, template_file):
     template = latex_jinja_env.get_template(template_file)
 
     return template
+
+
+def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
+    """Render the Zone-1 circuit schematics, hiding the StepUp_Xfmr when absent.
+
+    The 'S' topology may omit the external step-up transformer (ConverterLVControl
+    =False): the converter's internal transformer already reaches node 1, so the
+    schematic must not draw an external transformer.
+    """
+    stepup_xfmrs = getattr(producer, "stepup_xfmrs", None)
+    has_stepup = stepup_xfmrs is None or len(stepup_xfmrs) > 0
+    for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
+        if (working_path / tikz_name).exists():
+            tikz_template = _get_template(working_path, tikz_name)
+            tikz_template.stream(hasstepup=has_stepup).dump(str(working_path / tikz_name))
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:
