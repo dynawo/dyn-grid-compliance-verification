@@ -87,6 +87,41 @@ def test_build_figure_title_generator_variables_ignores_zone():
     assert title.endswith("— Generator")
 
 
+def test_build_figure_title_injector_terminal_currents_zone1():
+    variables = [
+        {"variable": "IpInjTerminal", "type": "generator"},
+        {"variable": "IqInjTerminal", "type": "generator"},
+    ]
+
+    assert build_figure_title(variables, zone=1) == "Ip / Iq — InternalNode2"
+
+
+def test_build_figure_title_injector_terminal_voltage_zone1():
+    variables = [{"variable": "UPuInjTerminal", "type": "generator"}]
+
+    assert build_figure_title(variables, zone=1) == "Voltage — InternalNode2"
+
+
+def test_build_figure_title_injector_terminal_currents_zone3_keeps_generator():
+    variables = [
+        {"variable": "IpInjTerminal", "type": "generator"},
+        {"variable": "IqInjTerminal", "type": "generator"},
+    ]
+
+    assert build_figure_title(variables, zone=3) == "Ip / Iq — Generator"
+
+
+def test_build_figure_title_mixed_generator_variables_zone1_keeps_generator():
+    variables = [
+        {"variable": "MagnitudeControlledByAVRPu", "type": "generator"},
+        {"variable": "VoltageSetpointPu", "type": "generator"},
+    ]
+
+    title = build_figure_title(variables, zone=1)
+
+    assert title.endswith("— Generator")
+
+
 def test_get_variable_label_strips_bus_prefix():
     assert get_variable_label("BusPDR_BUS_ActivePower") == "Active Power"
 

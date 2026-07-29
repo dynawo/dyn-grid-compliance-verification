@@ -61,6 +61,10 @@ The unit under test connects at an internal node of the aggregated plant model,
 named **InternalNode1** in DyCoV outputs (reports, figures and curve signal
 names) — the node called *Node1* in the DTR. The name *PDR* is reserved for the
 real connection point of the complete installation to RTE's grid (see Zone 3).
+The converter output of the unit — the node between the unit and its
+transformer — is named **InternalNode2** (the DTR's *Node2*); the
+injector-terminal curves (Ip, Iq and the voltage magnitude) shown in the Zone 1
+reports are measured there.
 
 Examples:
 - turbine and converter for PPM,
