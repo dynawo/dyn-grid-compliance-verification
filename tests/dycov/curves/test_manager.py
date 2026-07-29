@@ -8,9 +8,15 @@
 #     demiguelm@aia.es
 #
 
-def test_fix_after_windows():
-    from dycov.curves.manager import _fix_after_windows
+from types import SimpleNamespace
 
+import pandas as pd
+
+from dycov.curves.manager import CurvesManager, _fix_after_windows
+from dycov.model.parameters import CurvesAvailability
+
+
+def test_fix_after_windows():
     calc = {
         "validate": {"after": (0, 10)},
         "sigpro": {"after": (0, 8)},
@@ -27,8 +33,6 @@ def test_fix_after_windows():
 
 
 def test_get_missed_curves():
-    from dycov.curves.manager import CurvesManager
-
     cm = CurvesManager.__new__(CurvesManager)
     cm._missed_curves = {"calculated": ["a"], "reference": []}
 
@@ -36,10 +40,6 @@ def test_get_missed_curves():
 
 
 def test_get_curves_empty():
-    import pandas as pd
-
-    from dycov.curves.manager import CurvesManager
-
     cm = CurvesManager.__new__(CurvesManager)
     cm._curves = {"calculated": pd.DataFrame()}
 
@@ -49,10 +49,7 @@ def test_get_curves_empty():
 
 
 def test_get_exclusion_windows():
-    from dycov.curves.manager import CurvesManager
-
     cm = CurvesManager.__new__(CurvesManager)
-
     cm._windows = {
         "calculated": {
             "validate": {
@@ -68,47 +65,31 @@ def test_get_exclusion_windows():
     assert res.event_start == 1
 
 
-def test_wrappers(monkeypatch):
-    from dycov.curves.manager import CurvesManager
-
-    class DummyGen:
-        def get_voltage_dip(self): return 0.5
-        def get_generators_imax(self): return {"g": 1}
-
+def test_wrappers():
     cm = CurvesManager.__new__(CurvesManager)
-    cm._producer_curves_generator = DummyGen()
+    cm._producer_curves_generator = SimpleNamespace(
+        get_voltage_dip=lambda: 0.5,
+        get_generators_imax=lambda: {"g": 1},
+    )
 
     assert cm.get_voltage_dip() == 0.5
     assert cm.get_generators_imax()["g"] == 1
 
 
 def test_has_required_curves_all(monkeypatch, tmp_path):
-    from types import SimpleNamespace
-
-    import pandas as pd
-
-    from dycov.curves.manager import CurvesManager
-    from dycov.model.parameters import CurvesAvailability
-
     cm = CurvesManager.__new__(CurvesManager)
-
     cm._curves = {
         "calculated": pd.DataFrame({"a": [1]}),
         "reference": pd.DataFrame({"a": [1]}),
     }
-
     cm._missed_curves = {"calculated": [], "reference": []}
     cm.get_curves = lambda x: cm._curves[x]
-
     cm._producer = SimpleNamespace(
         is_dynawo_model=lambda: False,
         has_reference_curves_path=lambda: True,
+        get_zone=lambda: 0,
     )
-
     cm._working_dir = tmp_path
-
-    tmp_path.mkdir(parents=True, exist_ok=True)
-
     dummy_sim = SimpleNamespace(
         success=True,
         time_exceeds=False,
@@ -116,7 +97,6 @@ def test_has_required_curves_all(monkeypatch, tmp_path):
         appicable=True,
         has_simulated_curves=True,
     )
-
     monkeypatch.setattr(
         cm,
         "_CurvesManager__obtain_curve",
@@ -126,3 +106,49 @@ def test_has_required_curves_all(monkeypatch, tmp_path):
     res = cm.has_required_curves(["a"], "bm", "oc")
 
     assert res.availability == CurvesAvailability.ALL
+
+
+def _manager_with_curves(zone: int) -> CurvesManager:
+    cm = CurvesManager.__new__(CurvesManager)
+    cm._producer = SimpleNamespace(get_zone=lambda: zone)
+    cm._curves = {
+        "calculated": pd.DataFrame(
+            {
+                "time": [0.0, 1.0],
+                "BusPDR_BUS_Voltage": [1.0, 0.9],
+                "Wind_Turbine_GEN_InjectedActiveCurrent": [0.5, 0.6],
+            }
+        ),
+        "reference": pd.DataFrame(
+            {
+                "time": [0.0, 1.0],
+                "BusPDR_BUS_Voltage": [1.0, 0.95],
+            }
+        ),
+    }
+    cm.get_curves = lambda x: cm._curves[x]
+    return cm
+
+
+def test_save_curves_zone1_renames_bus_columns(tmp_path):
+    cm = _manager_with_curves(zone=1)
+
+    cm._CurvesManager__save_curves(tmp_path)
+
+    calculated = pd.read_csv(tmp_path / "curves_calculated.csv", sep=";")
+    reference = pd.read_csv(tmp_path / "curves_reference.csv", sep=";")
+    assert "InternalNode1_BUS_Voltage" in calculated.columns
+    assert "BusPDR_BUS_Voltage" not in calculated.columns
+    assert "Wind_Turbine_GEN_InjectedActiveCurrent" in calculated.columns
+    assert "InternalNode1_BUS_Voltage" in reference.columns
+    assert list(cm._curves["calculated"].columns)[1] == "BusPDR_BUS_Voltage"
+
+
+def test_save_curves_zone3_keeps_bus_columns(tmp_path):
+    cm = _manager_with_curves(zone=3)
+
+    cm._CurvesManager__save_curves(tmp_path)
+
+    calculated = pd.read_csv(tmp_path / "curves_calculated.csv", sep=";")
+    assert "BusPDR_BUS_Voltage" in calculated.columns
+    assert "InternalNode1_BUS_Voltage" not in calculated.columns
