@@ -486,3 +486,36 @@ def test_converter_lv_control_warning_only_for_affected_generator(caplog):
 
     assert "Wind_Turbine1 → StepUp_Xfmr1" in caplog.text
     assert "Wind_Turbine2" not in caplog.text
+
+
+# -------------------------
+# Tests: S topology StepUp tied to ConverterLVControl (Zone 1)
+# -------------------------
+
+
+def test_check_topology_S_no_stepup_when_lv_control_false():
+    """S with ConverterLVControl=False accepts a model without a StepUp_Xfmr."""
+    generators = make_generator("S", converter_lv_control=False)
+
+    topology_checks.check_topology("S", generators, [], None, None, None, None)
+
+
+def test_check_topology_S_no_stepup_fails_when_lv_control_true():
+    """S with ConverterLVControl=True still requires the StepUp_Xfmr."""
+    generators = make_generator("S", converter_lv_control=True)
+
+    with pytest.raises(ValueError) as e:
+        topology_checks.check_topology("S", generators, [], None, None, None, None)
+
+    _assert_error_contains(e, "S")
+
+
+def test_check_topology_Si_no_stepup_fails_even_when_lv_control_false():
+    """The optional StepUp is limited to 'S'; S+i still requires it, even with False."""
+    generators = make_generator("S", converter_lv_control=False)
+    internal_line = make_internal_line()
+
+    with pytest.raises(ValueError) as e:
+        topology_checks.check_topology("S+i", generators, [], None, None, None, internal_line)
+
+    _assert_error_contains(e, "S+i")
