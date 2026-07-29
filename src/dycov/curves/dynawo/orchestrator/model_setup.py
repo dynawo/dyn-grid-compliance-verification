@@ -9,6 +9,7 @@
 #
 import math
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
@@ -558,23 +559,55 @@ class ModelSetup:
         )
         event_params["pre_value"] = pre_value
 
+    def _apply_reference_event_start_time(
+        self, event_params: dict, reference_event_start_time: Optional[float]
+    ) -> None:
+        """
+        Overrides the configured event start time with the one measured in the
+        reference curves, when available and different. A None value means the
+        reference curves could not be imported, so the configured time is kept.
+
+        Parameters
+        ----------
+        event_params : dict
+            Event parameters dict to update in-place.
+        reference_event_start_time : Optional[float]
+            Instant of time when the event is triggered in the reference curves.
+        """
+        if (
+            reference_event_start_time is None
+            or event_params["start_time"] == reference_event_start_time
+        ):
+            return
+
+        dycov_logging.get_logger("ModelSetup").warning(
+            f"The simulation will use the 'sim_t_event_start' value present in the Reference "
+            f"Curves ({reference_event_start_time}), instead of the value configured "
+            f"({event_params['start_time']}).",
+        )
+        event_params["start_time"] = reference_event_start_time
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
 
     def _sort_stepup_xfmrs_to_generators(self, producer) -> list:
-        """Sort the step-up transformers to match the generator order.
+        """Align each generator with the step-up transformer it is connected to.
 
         Returns
         -------
         list
-            Step-up transformers sorted by their connected generator.
+            One entry per generator, in generator order: the StepUp_Xfmr the
+            generator's terminal is connected to, or None when it has none.
         """
         xfmr_map = {xfmr.id: xfmr for xfmr in producer.stepup_xfmrs}
+        # Keep a None placeholder for generators with no step-up transformer: the
+        # index of each entry must match its generator so downstream consumers pair
+        # them positionally. Filtering the None out would shift the alignment and
+        # assign a generator the transformer of another.
         return [
-            xfmr_map[gen.terminals[0].connected_equipment]
+            xfmr_map.get(gen.terminals[0].connected_equipment)
             for gen in producer.generators
-            if gen.terminals[0].connected_equipment in xfmr_map
         ]
 
     def complete_model(
@@ -664,17 +697,7 @@ class ModelSetup:
             f"Event definition for '{get_cfg_oc_name(pcs_name, bm_name, oc_name)}':",
         )
         event_params = self._get_event_parameters(pcs_name, bm_name, oc_name, pdr)
-
-        if (
-            reference_event_start_time is not None
-            and event_params["start_time"] != reference_event_start_time
-        ):
-            dycov_logging.get_logger("ModelSetup").warning(
-                f"The simulation will use the 'sim_t_event_start' value present in the Reference "
-                f"Curves ({reference_event_start_time}), instead of the value configured "
-                f"({event_params['start_time']}).",
-            )
-            event_params["start_time"] = reference_event_start_time
+        self._apply_reference_event_start_time(event_params, reference_event_start_time)
 
         section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")

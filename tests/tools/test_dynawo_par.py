@@ -21,7 +21,6 @@ sys.path.insert(0, str(_TOOL_DIR))
 
 import generate_par as gp  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Minimal .xlsx builder (inline strings, no shared-strings table)
 # ---------------------------------------------------------------------------
@@ -61,9 +60,11 @@ def make_xlsx(path: Path, sheets: dict[str, list[list[str | None]]]) -> None:
     content_types = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="rels" '
+        'ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/workbook.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
         + "".join(
             f'<Override PartName="/xl/worksheets/sheet{i}.xml" '
             'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
@@ -75,7 +76,8 @@ def make_xlsx(path: Path, sheets: dict[str, list[list[str | None]]]) -> None:
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
         '<Relationship Id="rId1" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        'Type="http://schemas.openxmlformats.org/officeDocument'
+        '/2006/relationships/officeDocument" '
         'Target="xl/workbook.xml"/></Relationships>'
     )
     workbook = (

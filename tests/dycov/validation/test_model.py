@@ -70,7 +70,7 @@ def test_get_measurement_name():
 # Calculation (ModelValidator)
 # =========================
 
-def test_calculate_executes():
+def test_calculate_executes(monkeypatch):
     validator = _make_validator()
 
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
@@ -97,12 +97,12 @@ def test_calculate_executes():
     )
 
     import dycov.validation.common as common
-    common.is_invalid_test = Mock(return_value=False)
-    common.get_reached_time = Mock(return_value=(1.0, 1.0))
-    common.get_response_time = Mock(return_value=1.0)
-    common.get_settling_time = Mock(return_value=(1.0, 0, 0, 0, 1.0))
-    common.get_overshoot = Mock(return_value=0.1)
-    common.mean_absolute_error = Mock(return_value=0.01)
+    monkeypatch.setattr(common, "is_invalid_test", Mock(return_value=False))
+    monkeypatch.setattr(common, "get_reached_time", Mock(return_value=(1.0, 1.0)))
+    monkeypatch.setattr(common, "get_response_time", Mock(return_value=1.0))
+    monkeypatch.setattr(common, "get_settling_time", Mock(return_value=(1.0, 0, 0, 0, 1.0)))
+    monkeypatch.setattr(common, "get_overshoot", Mock(return_value=0.1))
+    monkeypatch.setattr(common, "mean_absolute_error", Mock(return_value=0.01))
 
     with patch("dycov.validation.model.calculate_errors", return_value={}), \
          patch("dycov.validation.model.calculate_curves_errors"):
@@ -144,7 +144,7 @@ def test_check_executes():
     assert isinstance(res, dict)
 
 
-def test_check_times_executes():
+def test_check_times_executes(monkeypatch):
     validator = _make_validator(validations=["reaction_time"])
 
     results = {"compliance": True}
@@ -155,7 +155,7 @@ def test_check_times_executes():
     }
 
     import dycov.validation.common as common
-    common.check_time = Mock(return_value=(0.0, True))
+    monkeypatch.setattr(common, "check_time", Mock(return_value=(0.0, True)))
 
     validator._ModelValidator__check_times(results, compliance_values)
 
@@ -238,7 +238,7 @@ def test_validate_executes():
 # MAE calculation (heavy block)
 # =========================
 
-def test_calculate_mean_absolute_error_executes():
+def test_calculate_mean_absolute_error_executes(monkeypatch):
     validator = _make_validator(validations=["mean_absolute_error_voltage"])
 
     df_calc = pd.DataFrame({
@@ -253,9 +253,9 @@ def test_calculate_mean_absolute_error_executes():
 
     import dycov.validation.common as common
 
-    common.get_settling_time = Mock(return_value=(1.0, 1, 0, 0, 1.0))
-    common.mean_absolute_error = Mock(return_value=0.01)
-    common.is_stable = Mock(return_value=(True, 1))
+    monkeypatch.setattr(common, "get_settling_time", Mock(return_value=(1.0, 1, 0, 0, 1.0)))
+    monkeypatch.setattr(common, "mean_absolute_error", Mock(return_value=0.01))
+    monkeypatch.setattr(common, "is_stable", Mock(return_value=(True, 1)))
 
     results = {}
 
@@ -273,7 +273,7 @@ def test_calculate_mean_absolute_error_executes():
 # MAE extended branches
 # =========================
 
-def test_calculate_mean_absolute_error_power_branches():
+def test_calculate_mean_absolute_error_power_branches(monkeypatch):
     validator = _make_validator(validations=["mean_absolute_error_power_1P"])
 
     df_calc = pd.DataFrame({
@@ -290,9 +290,9 @@ def test_calculate_mean_absolute_error_power_branches():
 
     import dycov.validation.common as common
 
-    common.get_settling_time = Mock(return_value=(1.0, 1, 0, 0, 1.0))
-    common.mean_absolute_error = Mock(return_value=0.01)
-    common.is_stable = Mock(return_value=(True, 1))
+    monkeypatch.setattr(common, "get_settling_time", Mock(return_value=(1.0, 1, 0, 0, 1.0)))
+    monkeypatch.setattr(common, "mean_absolute_error", Mock(return_value=0.01))
+    monkeypatch.setattr(common, "is_stable", Mock(return_value=(True, 1)))
 
     results = {}
 
@@ -307,7 +307,7 @@ def test_calculate_mean_absolute_error_power_branches():
     assert "mae_reactive_power_1P" in results
 
 
-def test_calculate_mean_absolute_error_injection_branches():
+def test_calculate_mean_absolute_error_injection_branches(monkeypatch):
     validator = _make_validator(validations=["mean_absolute_error_injection_1P"])
 
     df_calc = pd.DataFrame({
@@ -324,9 +324,9 @@ def test_calculate_mean_absolute_error_injection_branches():
 
     import dycov.validation.common as common
 
-    common.get_settling_time = Mock(return_value=(1.0, 1, 0, 0, 1.0))
-    common.mean_absolute_error = Mock(return_value=0.01)
-    common.is_stable = Mock(return_value=(True, 1))
+    monkeypatch.setattr(common, "get_settling_time", Mock(return_value=(1.0, 1, 0, 0, 1.0)))
+    monkeypatch.setattr(common, "mean_absolute_error", Mock(return_value=0.01))
+    monkeypatch.setattr(common, "is_stable", Mock(return_value=(True, 1)))
 
     results = {}
 
@@ -471,14 +471,14 @@ def test_validate_without_reference():
 # Calculation - active power recovery
 # =========================
 
-def test_active_power_recovery_executes():
+def test_active_power_recovery_executes(monkeypatch):
     validator = _make_validator(validations=["active_power_recovery"])
 
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
     validator._get_reference_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
-    common.get_reached_time = Mock(return_value=(1.0, 1.0))
+    monkeypatch.setattr(common, "get_reached_time", Mock(return_value=(1.0, 1.0)))
 
     results = {}
 
@@ -495,14 +495,14 @@ def test_active_power_recovery_executes():
 # Calculation - event times
 # =========================
 
-def test_compare_event_times_executes():
+def test_compare_event_times_executes(monkeypatch):
     validator = _make_validator(validations=["reaction_time", "rise_time"])
 
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
     validator._get_reference_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
-    common.get_reached_time = Mock(return_value=(1.0, 1.0))
+    monkeypatch.setattr(common, "get_reached_time", Mock(return_value=(1.0, 1.0)))
 
     results = {}
 
@@ -521,14 +521,14 @@ def test_compare_event_times_executes():
 # Calculation - ramp
 # =========================
 
-def test_compare_ideal_ramp_executes():
+def test_compare_ideal_ramp_executes(monkeypatch):
     validator = _make_validator(validations=["ramp_time_lag"])
 
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
-    common.get_time_lag = Mock(return_value=0.1)
-    common.get_value_error = Mock(return_value=0.1)
+    monkeypatch.setattr(common, "get_time_lag", Mock(return_value=0.1))
+    monkeypatch.setattr(common, "get_value_error", Mock(return_value=0.1))
 
     results = {}
 
@@ -561,7 +561,7 @@ def test_get_ss_tolerance_non_zero_branch():
 # Check - full time branches
 # =========================
 
-def test_check_times_all_branches():
+def test_check_times_all_branches(monkeypatch):
     validator = _make_validator(validations=[
         "reaction_time",
         "rise_time",
@@ -586,7 +586,7 @@ def test_check_times_all_branches():
     }
 
     import dycov.validation.common as common
-    common.check_time = Mock(return_value=(0.0, True))
+    monkeypatch.setattr(common, "check_time", Mock(return_value=(0.0, True)))
 
     validator._ModelValidator__check_times(results, compliance_values)
 
@@ -638,3 +638,112 @@ def test_validate_frequency_branch():
             },
             has_reference=True,
         )
+
+
+# =========================
+# Validate - injector voltage guard warnings
+# =========================
+
+def _make_zone_validator(zone, calculated_curves, reference_curves):
+    producer = Mock()
+    producer.get_zone = Mock(return_value=zone)
+
+    validator = ModelValidator(
+        curves_manager=Mock(),
+        pcs_bm_name="test",
+        producer=producer,
+        validations=[],
+        is_field_measurements=False,
+        pcs_name="test",
+        bm_name="test",
+    )
+
+    validator._curves_manager.apply_signal_processing = Mock()
+    validator._get_calculated_curves = Mock(return_value=calculated_curves)
+    validator._get_reference_curves = Mock(return_value=reference_curves)
+    validator._get_exclusion_windows = Mock(
+        return_value=Mock(event_start=0.0, event_end=1.0, clear_start=0.0, clear_end=0.0)
+    )
+    return validator
+
+
+def _guard_event_params():
+    return {
+        "start_time": 0.0,
+        "duration_time": 1.0,
+        "connect_to": "ActivePowerSetpointPu",
+        "step_value": 0.1,
+    }
+
+
+class _RecordingLogger:
+    def __init__(self):
+        self.warnings = []
+
+    def get_logger(self, name):
+        return self
+
+    def warning(self, msg):
+        self.warnings.append(msg)
+
+
+def test_validate_zone1_warns_when_injector_voltage_below_guard(monkeypatch):
+    calculated = pd.DataFrame({"time": [0.0, 1.0], "WT_GEN_UPuInjTerminal": [1e-5, 1.0]})
+    validator = _make_zone_validator(1, calculated, pd.DataFrame())
+    logger = _RecordingLogger()
+    monkeypatch.setattr("dycov.validation.model.dycov_logging", logger)
+    monkeypatch.setattr(
+        validator,
+        "_ModelValidator__calculate",
+        lambda *a, **k: {"t_event_start": 0.0, "is_invalid_test": False},
+    )
+    monkeypatch.setattr(
+        validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True}
+    )
+
+    results = validator.validate(
+        "oc", Path("/tmp"), "out", _guard_event_params(), has_reference=True
+    )
+
+    assert len(results["warnings"]) == 1
+    assert "InternalNode2" in results["warnings"][0]
+    assert "calculated" in results["warnings"][0]
+    assert logger.warnings == results["warnings"]
+
+
+def test_validate_zone1_without_guard_violation_has_empty_warnings(monkeypatch):
+    calculated = pd.DataFrame({"time": [0.0, 1.0], "WT_GEN_UPuInjTerminal": [0.9, 1.0]})
+    validator = _make_zone_validator(1, calculated, pd.DataFrame())
+    monkeypatch.setattr(
+        validator,
+        "_ModelValidator__calculate",
+        lambda *a, **k: {"t_event_start": 0.0, "is_invalid_test": False},
+    )
+    monkeypatch.setattr(
+        validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True}
+    )
+
+    results = validator.validate(
+        "oc", Path("/tmp"), "out", _guard_event_params(), has_reference=True
+    )
+
+    assert results["warnings"] == []
+
+
+def test_validate_zone3_does_not_report_guard_warnings(monkeypatch):
+    calculated = pd.DataFrame({"time": [0.0, 1.0], "WT_GEN_UPuInjTerminal": [1e-5, 1.0]})
+    validator = _make_zone_validator(3, calculated, pd.DataFrame())
+    monkeypatch.setattr(
+        validator,
+        "_ModelValidator__calculate",
+        lambda *a, **k: {"t_event_start": 0.0, "is_invalid_test": False},
+    )
+    monkeypatch.setattr(
+        validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True}
+    )
+
+    results = validator.validate(
+        "oc", Path("/tmp"), "out", _guard_event_params(), has_reference=True
+    )
+
+    assert "warnings" not in results

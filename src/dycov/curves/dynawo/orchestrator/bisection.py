@@ -19,7 +19,11 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoSimulator
-from dycov.curves.voltage_dip import VoltDipResult, classify_voltage_dip
+from dycov.curves.voltage_dip import (
+    VoltDipResult,
+    classify_residual_voltage,
+    classify_voltage_dip,
+)
 from dycov.files import manage_files, replace_placeholders
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
@@ -27,7 +31,6 @@ from dycov.validation import common
 
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
-BOLTED_FAULT_XPU = 1e-5
 CCT_REL_TOL = 0.0001
 
 _TSO_PAR = "TSOModel.par"
@@ -36,8 +39,8 @@ _CURVES_CSV = "curves/curves.csv"
 
 class BisectionEngine:
     """
-    Implements iterative bisection algorithms for fault impedance search (HIZ),
-    bolted fault setup, and Critical Clearing Time (CCT) calculation.
+    Implements iterative bisection algorithms for fault impedance search (HIZ and
+    bolted) and Critical Clearing Time (CCT) calculation.
 
     This class is stateless with respect to the Dynawo model — it receives all
     required context (producer, launcher, curves_dict, etc.) at construction time
@@ -227,8 +230,8 @@ class BisectionEngine:
             voltage dip cannot be achieved within the bisection tolerance.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        max_val = config.get_float("Global", "maximum_hiz_fault", 100.0)
-        min_val = config.get_float("Global", "minimum_hiz_fault", 1e-10)
+        max_val = config.get_float("Global", "hiz_fault_max_impedance", 100.0)
+        min_val = config.get_float("Global", "hiz_fault_min_impedance", 1e-10)
         last_fault_xpu = min_val
         bisection_success = False
         hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 1e-5)
@@ -325,28 +328,177 @@ class BisectionEngine:
     # Bolted fault
     # ------------------------------------------------------------------
 
-    def apply_bolted_fault(
+    def _bolted_fault_max_residual_voltage(self) -> float:
+        """
+        Returns the maximum residual PDR voltage (pu) that still qualifies as a
+        bolted fault, interpolated linearly on the producer SNom between the small
+        and large reference generators (clamped outside the reference range).
+
+        If the configured SNom anchors are inconsistent (snom_large <= snom_small),
+        logs a warning and falls back to the stricter (lower) voltage threshold.
+        """
+        v_small = config.get_float("Global", "bolted_fault_max_voltage_small", 0.01)
+        v_large = config.get_float("Global", "bolted_fault_max_voltage_large", 0.005)
+        snom_small = config.get_float("Global", "bolted_fault_snom_small", 4.0)
+        snom_large = config.get_float("Global", "bolted_fault_snom_large", 90.0)
+        if snom_large <= snom_small:
+            stricter_voltage = min(v_small, v_large)
+            dycov_logging.get_logger("Bisection").warning(
+                "Inconsistent bolted-fault SNom anchors "
+                f"(bolted_fault_snom_small={snom_small}, "
+                f"bolted_fault_snom_large={snom_large}): bolted_fault_snom_large must be "
+                "greater than bolted_fault_snom_small. Falling back to the stricter "
+                f"residual-voltage threshold ({stricter_voltage} pu)."
+            )
+            return stricter_voltage
+        position = (self._producer.s_nom - snom_small) / (snom_large - snom_small)
+        return v_small + min(1.0, max(0.0, position)) * (v_large - v_small)
+
+    def find_bolted_fault(
         self,
+        output_dir: Path,
         working_oc_dir: Path,
+        jobs_output_dir: Path,
         fault_start: float,
         fault_duration: float,
+        bm_name: str,
+        oc_name: str,
+        simulate_fn: callable,
+        reset_solver_fn: callable,
     ) -> None:
         """
-        Applies a bolted fault (near-zero impedance) to TSOModel.par.
+        Determines and applies a "sufficient" bolted-fault impedance X: one that both
+        converges and keeps the residual PDR voltage under an SNom-dependent threshold
+        (see `_bolted_fault_max_residual_voltage`). Starts at `bolted_fault_min_impedance`
+        (the most severe impedance), resolving the common case in a single simulation,
+        and raises X by bisection only when the simulation fails to converge. Modifies
+        working_oc_dir/TSOModel.par in-place with the result.
 
         Parameters
         ----------
+        output_dir : Path
+            Output directory for simulation results.
         working_oc_dir : Path
-            Working directory.
+            Working directory for the simulation.
+        jobs_output_dir : Path
+            Output directory specified in the job file.
         fault_start : float
             Fault start time.
         fault_duration : float
             Fault duration.
+        bm_name : str
+            Benchmark name.
+        oc_name : str
+            Operating Condition name.
+        simulate_fn : callable
+            Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
+            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency.
+        reset_solver_fn : callable
+            Callable () → None, provided by DynawoCurves to restore solver defaults
+            after each search step.
+
+        Raises
+        ------
+        ValueError
+            If no fault value yields a successful simulation, or if no converging
+            impedance keeps the residual voltage under the threshold.
         """
+        if self._producer.get_zone() != 1:
+            return
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
-        fault_xpu = BOLTED_FAULT_XPU
-        fault_rpu = self._fault_rpu_from_xpu(fault_xpu, fault_r_factor)
-        self._modify_fault(working_oc_dir, fault_start, fault_duration, fault_xpu, fault_rpu)
+        max_val = config.get_float("Global", "bolted_fault_max_impedance", 1.0)
+        min_val = config.get_float("Global", "bolted_fault_min_impedance", 1e-5)
+        rel_tol = config.get_float("Global", "bolted_fault_rel_tol", 1e-5)
+        max_residual_voltage = self._bolted_fault_max_residual_voltage()
+        bisection_success = False
+        accepted_fault_xpu = None
+        residual_classification = None
+
+        fault_xpu = min_val
+        while True:
+            with self._isolated_copy(working_oc_dir) as working_oc_dir_fault:
+                fault_rpu = self._fault_rpu_from_xpu(fault_xpu, fault_r_factor)
+                dycov_logging.get_logger("Bisection").debug(
+                    f"Bolted fault search between {max_val} and {min_val}"
+                )
+                dycov_logging.get_logger("Bisection").debug(f"Fault XPU in {fault_xpu}")
+                self._modify_fault(
+                    working_oc_dir_fault,
+                    fault_start,
+                    fault_duration,
+                    fault_xpu,
+                    fault_rpu,
+                )
+                fault_outcome = simulate_fn(
+                    output_dir,
+                    working_oc_dir_fault,
+                    jobs_output_dir,
+                    bm_name,
+                    oc_name,
+                    disable_retry_logs=True,
+                )
+                reset_solver_fn()
+                if fault_outcome.succeeded:
+                    bisection_success = True
+                    residual_classification = classify_residual_voltage(
+                        self._pcs_name,
+                        bm_name,
+                        oc_name,
+                        fault_outcome.curves,
+                        fault_start,
+                        fault_duration,
+                        max_residual_voltage,
+                    )
+                if dycov_logging.get_logger("Bisection").getEffectiveLevel() == logging.DEBUG:
+                    target_dir_name = (
+                        "bisection_last_success"
+                        if fault_outcome.succeeded
+                        else "bisection_last_failure"
+                    )
+                    manage_files.rename_path(
+                        working_oc_dir_fault, working_oc_dir / target_dir_name
+                    )
+                if fault_outcome.succeeded:
+                    if residual_classification == VoltDipResult.DIP_CORRECT:
+                        accepted_fault_xpu = fault_xpu
+                        break
+                    if residual_classification == VoltDipResult.COLUMN_MISSING:
+                        break
+                    # Residual voltage above the threshold: the fault is weaker than a
+                    # bolted fault allows, so search below this impedance.
+                    max_val = fault_xpu
+                else:
+                    dycov_logging.get_logger("Bisection").debug("Simulation fails")
+                    min_val = fault_xpu
+                if self._is_bisection_complete(max_val, min_val, rel_tol, bm_name, oc_name):
+                    break
+            fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
+
+        if not bisection_success:
+            dycov_logging.get_logger("Bisection").error(
+                "The simulation fails with any value for the fault"
+            )
+            raise ValueError("Fault simulation fails")
+        if residual_classification == VoltDipResult.COLUMN_MISSING:
+            dycov_logging.get_logger("Bisection").error(
+                "The expected voltage curve is missing in the simulation output"
+            )
+            raise ValueError("Voltage curve missing")
+        if accepted_fault_xpu is None:
+            dycov_logging.get_logger("Bisection").error(
+                "No converging fault impedance keeps the residual voltage under "
+                f"{max_residual_voltage} pu"
+            )
+            raise ValueError("Fault dip unachievable")
+
+        accepted_fault_rpu = self._fault_rpu_from_xpu(accepted_fault_xpu, fault_r_factor)
+        self._modify_fault(
+            working_oc_dir,
+            fault_start,
+            fault_duration,
+            accepted_fault_xpu,
+            accepted_fault_rpu,
+        )
 
     # ------------------------------------------------------------------
     # CCT bisection
