@@ -646,3 +646,50 @@ class TestGetPdr:
         setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
         assert "Qmax" in calls
+
+
+# ---------------------------------------------------------------------------
+# _sort_stepup_xfmrs_to_generators
+# ---------------------------------------------------------------------------
+
+
+class TestSortStepupXfmrsToGenerators:
+    @staticmethod
+    def _gen(connected_to):
+        terminal = MagicMock()
+        terminal.connected_equipment = connected_to
+        gen = MagicMock()
+        gen.terminals = [terminal]
+        return gen
+
+    @staticmethod
+    def _producer(generators, xfmr_ids):
+        producer = MagicMock()
+        producer.generators = generators
+        producer.stepup_xfmrs = [MagicMock(id=xfmr_id) for xfmr_id in xfmr_ids]
+        return producer
+
+    def test_generator_paired_with_its_connected_xfmr(self):
+        producer = self._producer([self._gen("X0")], ["X0"])
+
+        result = _make_setup()._sort_stepup_xfmrs_to_generators(producer)
+
+        assert len(result) == 1
+        assert result[0].id == "X0"
+
+    def test_generator_without_xfmr_gets_none(self):
+        producer = self._producer([self._gen("")], [])
+
+        result = _make_setup()._sort_stepup_xfmrs_to_generators(producer)
+
+        assert result == [None]
+
+    def test_alignment_preserved_when_a_generator_has_no_xfmr(self):
+        # g0 has no step-up, g1 is connected to X1: X1 must stay aligned to g1
+        # (index 1) and index 0 must be None, never shifting X1 onto g0.
+        producer = self._producer([self._gen("nothing"), self._gen("X1")], ["X1"])
+
+        result = _make_setup()._sort_stepup_xfmrs_to_generators(producer)
+
+        assert result[0] is None
+        assert result[1].id == "X1"
