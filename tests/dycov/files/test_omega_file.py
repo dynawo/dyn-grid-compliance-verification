@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+"""Tests for the omega DYD/PAR completion helpers."""
 
 from unittest.mock import Mock, patch
 
@@ -38,9 +39,9 @@ def _make_generator():
     return g
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Connect helpers
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_connect_generator():
     root, ns = _make_root()
@@ -99,9 +100,9 @@ def test_connect_generator_to_dynmodelomegaref():
     assert len(root) == 3
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Dispatcher
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_connect_generator_by_lib_none():
     root, ns = _make_root()
@@ -109,7 +110,8 @@ def test_connect_generator_by_lib_none():
 
     with patch("dycov.files.omega_file._connect_generator_to_infinitebus") as f:
         _connect_generator_by_lib(root, ns, None, g, 0)
-        f.assert_called_once()
+
+    f.assert_called_once()
 
 
 def test_connect_generator_by_lib_dynmodel():
@@ -118,7 +120,8 @@ def test_connect_generator_by_lib_dynmodel():
 
     with patch("dycov.files.omega_file._connect_generator_to_dynmodelomegaref") as f:
         _connect_generator_by_lib(root, ns, "DYNModelOmegaRef", g, 1)
-        f.assert_called_once()
+
+    f.assert_called_once()
 
 
 def test_connect_generator_by_lib_setpoint():
@@ -127,7 +130,8 @@ def test_connect_generator_by_lib_setpoint():
 
     with patch("dycov.files.omega_file._connect_generator_to_setpoint") as f:
         _connect_generator_by_lib(root, ns, "SetPoint", g, 1)
-        f.assert_called_once()
+
+    f.assert_called_once()
 
 
 def test_connect_generator_by_lib_ramp():
@@ -136,12 +140,13 @@ def test_connect_generator_by_lib_ramp():
 
     with patch("dycov.files.omega_file._connect_generator_to_ramp") as f:
         _connect_generator_by_lib(root, ns, "Ramp", g, 1)
-        f.assert_called_once()
+
+    f.assert_called_once()
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Weight
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_add_generator_weight_none():
     root, ns = _make_root()
@@ -161,9 +166,9 @@ def test_add_generator_weight_valid():
     assert len(root) == 1
 
 
-# =========================
+# ---------------------------------------------------------------------------
 # Complete omega
-# =========================
+# ---------------------------------------------------------------------------
 
 def test_complete_omega_executes(tmp_path):
     dyd_content = """
@@ -186,13 +191,9 @@ def test_complete_omega_executes(tmp_path):
     dyd_file.write_text(dyd_content)
     par_file.write_text(par_content)
 
-    g = Mock()
-    g.id = "gen1"
-    g.lib = "lib"
-
-    generators = [g]
+    generators = [_make_generator()]
 
     with patch("dycov.files.omega_file._connect_generator_by_lib") as f:
         complete_omega(tmp_path, "file.dyd", "file.par", generators)
 
-        f.assert_called()
+    f.assert_called()

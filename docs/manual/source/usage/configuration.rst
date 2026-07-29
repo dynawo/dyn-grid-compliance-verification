@@ -161,9 +161,12 @@ Modifying the initial conditions of a test
 To override the initial operating point of a specific test, create a section
 named ``PCS.Benchmark.OperatingCondition.Model`` and set the desired values:
 
-* ``pdr_P`` — initial active power flow at the PDR bus
-* ``pdr_Q`` — initial reactive power flow at the PDR bus
-* ``pdr_U`` — initial voltage at the PDR bus
+* ``pdr_P`` — initial active power flow at the connection bus
+* ``pdr_Q`` — initial reactive power flow at the connection bus
+* ``pdr_U`` — initial voltage at the connection bus
+
+The connection bus is the PDR bus, or InternalNode1 for Zone 1 of the RMS
+model validation (the ``pdr_`` key prefix is kept for both zones).
 
 .. code-block::
 

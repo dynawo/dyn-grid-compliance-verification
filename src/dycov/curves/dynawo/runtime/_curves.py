@@ -16,8 +16,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ABS_TOLERANCE_FACTOR = 0.1
-VOLTAGE_DIP_THRESHOLD = 0.002
+from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
 
 _FREQUENCY_PATTERNS = [
     r".*NetworkFrequencyPu$",

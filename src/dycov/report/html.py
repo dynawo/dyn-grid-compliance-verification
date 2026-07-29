@@ -15,6 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from jinja2 import Template
 
+from dycov.curves.naming import to_output_name
 from dycov.report.curve_classification import (
     build_curve_label,
     build_figure_title,
@@ -87,6 +88,7 @@ def _plotly_figures(
     reference_curves,
     results,
     band_ref_val: float | None = None,
+    zone: int = 0,
 ):
     renderer = PlotlyRenderer(fig)
     is_iq_curve = "IqInjTerminal" in curve_name
@@ -109,8 +111,8 @@ def _plotly_figures(
     curve_style = get_curve_style(curve_name)
     role = "setpoint" if "VoltageSetpointPu" in curve_name else "calculated"
     show_equipment = not isinstance(figure_description.variables, str)
-    label = build_curve_label(curve_name, role, show_equipment)
-    ref_label = build_curve_label(curve_name, "reference", show_equipment)
+    label = build_curve_label(curve_name, role, show_equipment, zone)
+    ref_label = build_curve_label(curve_name, "reference", show_equipment, zone)
 
     draw_reference_curve(renderer, curve_name, reference_curves, ref_label)
 
@@ -156,6 +158,7 @@ def plotly_figures(
     reference_curves: pd.DataFrame,
     results: dict,
     band_ref_val: float | None = None,
+    zone: int = 0,
 ) -> tuple[list, str, str]:
     """Create plotly figures for the curves.
 
@@ -169,6 +172,8 @@ def plotly_figures(
         DataFrame with the reference curves
     results: dict
         Dictionary with the results of the simulation
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
 
     Returns
     -------
@@ -191,10 +196,11 @@ def plotly_figures(
             reference_curves,
             results,
             band_ref_val=band_ref_val,
+            zone=zone,
         )
 
     if curve_names:
-        title = build_figure_title(figure_description.variables)
+        title = build_figure_title(figure_description.variables, zone)
         _update_layout(fig, title, figure_description.ylabel)
         return (
             curve_names,
@@ -210,6 +216,7 @@ def plotly_figures(
 def plotly_all_curves(
     plotted_curves: list,
     results: dict,
+    zone: int = 0,
 ) -> list:
     """Create plotly figures for all curves.
 
@@ -219,6 +226,8 @@ def plotly_all_curves(
         List of curves to be plotted
     results: dict
         Dictionary with the results of the simulation
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
 
     Returns
     -------
@@ -243,9 +252,15 @@ def plotly_all_curves(
             ylabel="Magnitude",
         )
         _plotly_figures(
-            fig, curve_name, empty_description, calculated_curves, reference_curves, results
+            fig,
+            curve_name,
+            empty_description,
+            calculated_curves,
+            reference_curves,
+            results,
+            zone=zone,
         )
-        _update_layout(fig, curve_name, "Magnitude")
+        _update_layout(fig, to_output_name(curve_name, zone), "Magnitude")
         figures.append(
             (
                 curve_name,

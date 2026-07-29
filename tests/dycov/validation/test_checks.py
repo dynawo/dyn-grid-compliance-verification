@@ -443,3 +443,81 @@ def test_functions_with_nested_or_incorrectly_structured_input():
     assert isinstance(results["before_mae_BusPDR_BUS_ActivePower_value"], dict) or isinstance(
         results["before_mae_BusPDR_BUS_ActivePower_value"], (list, type(None))
     )
+
+
+def _terminal_frame(voltages):
+    return pd.DataFrame(
+        {
+            "time": np.linspace(0, 1, len(voltages)),
+            "Wind_Turbine_GEN_UPuInjTerminal": voltages,
+        }
+    )
+
+
+def test_guard_warnings_with_empty_frames():
+    warnings = checks.get_injector_voltage_guard_warnings(pd.DataFrame(), pd.DataFrame())
+
+    assert warnings == []
+
+
+def test_guard_warnings_with_healthy_voltages():
+    warnings = checks.get_injector_voltage_guard_warnings(
+        _terminal_frame([0.9, 1.0]), _terminal_frame([0.95, 1.0])
+    )
+
+    assert warnings == []
+
+
+def test_guard_warnings_with_calculated_voltage_below_guard():
+    warnings = checks.get_injector_voltage_guard_warnings(
+        _terminal_frame([1e-5, 1.0]), _terminal_frame([0.95, 1.0])
+    )
+
+    assert len(warnings) == 1
+    assert "calculated" in warnings[0]
+    assert "InternalNode2" in warnings[0]
+    assert "2.0e-04" in warnings[0]
+    assert "transformer impedance" in warnings[0]
+
+
+def test_guard_warnings_with_reference_voltage_below_guard():
+    warnings = checks.get_injector_voltage_guard_warnings(
+        _terminal_frame([0.9, 1.0]), _terminal_frame([0.0, 1.0])
+    )
+
+    assert len(warnings) == 1
+    assert "reference" in warnings[0]
+
+
+def test_guard_warnings_with_both_voltages_below_guard():
+    warnings = checks.get_injector_voltage_guard_warnings(
+        _terminal_frame([0.0, 1.0]), _terminal_frame([1e-6, 1.0])
+    )
+
+    assert len(warnings) == 2
+    assert "calculated" in warnings[0]
+    assert "reference" in warnings[1]
+
+
+def test_guard_warnings_at_the_guard_value():
+    warnings = checks.get_injector_voltage_guard_warnings(
+        _terminal_frame([2e-4, 1.0]), pd.DataFrame()
+    )
+
+    assert len(warnings) == 1
+
+
+def test_guard_warnings_ignores_non_finite_samples():
+    warnings = checks.get_injector_voltage_guard_warnings(
+        _terminal_frame([np.nan, 0.9]), _terminal_frame([np.inf, 1.0])
+    )
+
+    assert warnings == []
+
+
+def test_guard_warnings_without_terminal_columns():
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [0.0, 1.0]})
+
+    warnings = checks.get_injector_voltage_guard_warnings(curves, curves)
+
+    assert warnings == []

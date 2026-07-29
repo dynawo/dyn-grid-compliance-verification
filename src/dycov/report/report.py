@@ -242,6 +242,32 @@ def _create_pcs_figures(
     )
 
 
+def _build_notice_block(color: str, title: str, items: list) -> str:
+    escaped_items = [item.replace("_", r"\_") for item in items]
+    item_lines = "\n".join(
+        f"    \\item \\textcolor{{{color}}}{{{item}}}" for item in escaped_items
+    )
+    return (
+        f"\\noindent\\textcolor{{{color}}}{{{title}}}\n"
+        "\\begin{itemize}\n"
+        f"{item_lines}\n"
+        "\\end{itemize}\n"
+    )
+
+
+def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
+    """Builds the notices block (missing curves and warnings) and the watermark command
+    of an operating-condition report page. Only missing curves invalidate the page."""
+    notices = ""
+    watermark = r"\SetWatermarkText{}"
+    if oc_results["missed_columns"]:
+        notices += _build_notice_block("red", "Missing curves:", oc_results["missed_columns"])
+        watermark = r"\SetWatermarkText{INVALID}"
+    if oc_results.get("warnings"):
+        notices += _build_notice_block("orange", "Warnings:", oc_results["warnings"])
+    return notices, watermark
+
+
 def _pcs_replace(
     working_path: Path, pcs_results: dict, report_name: str, producer: ModelProducer
 ) -> int:
@@ -304,23 +330,9 @@ def _pcs_replace(
                 subreports.append(f"\\input{{{oc_report_name.replace('.tex', '')}}}")
 
             oc_subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
-            if not oc_results["missed_columns"]:
-                oc_subst_dict2 |= {"missedColumns": ""}
-                oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{}"}
-            else:
-                missed_columns = [col.replace("_", r"\_") for col in oc_results["missed_columns"]]
-                missed_list = "\n".join(
-                    f"    \\item \\textcolor{{red}}{{{col}}}" for col in missed_columns
-                )
-                oc_subst_dict2 |= {
-                    "missedColumns": (
-                        "\\noindent\\textcolor{red}{Missing curves:}\n"
-                        "\\begin{itemize}\n"
-                        f"{missed_list}\n"
-                        "\\end{itemize}\n"
-                    )
-                }
-                oc_subst_dict2 |= {"waterMarkText": r"\SetWatermarkText{INVALID}"}
+            notices_block, watermark = _build_oc_notices(oc_results)
+            oc_subst_dict2 |= {"missedColumns": notices_block}
+            oc_subst_dict2 |= {"waterMarkText": watermark}
 
             oc_template = _get_template(working_path, oc_report_name)
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
@@ -428,6 +440,7 @@ def _generate_figures(
     operating_condition: str,
     xmin: float,
     xmax: float,
+    zone: int = 0,
 ) -> tuple[list, list]:
     plotted_curves = list()
     figures = list()
@@ -470,6 +483,7 @@ def _generate_figures(
                 reference_curves,
                 oc_results,
                 band_ref_val=iq_last_val,
+                zone=zone,
             )
             plotted_curves.extend(html_curves)
             if html_figure:
@@ -550,10 +564,15 @@ def _create_full_tex(
             operating_condition,
             xmin,
             xmax,
+            zone=pcs_results.get("zone", 0),
         )
         try:
             if config.get_boolean("Debug", "plot_all_curves_in_html", False):
-                figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
+                figures.extend(
+                    html.plotly_all_curves(
+                        plotted_curves, oc_results, zone=pcs_results.get("zone", 0)
+                    )
+                )
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
         except Exception as e:
             dycov_logging.get_logger("Report").error(
