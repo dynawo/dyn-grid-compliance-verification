@@ -38,9 +38,13 @@ build network structure dynamically. Custom Modelica in `src/dycov/model_lib/mod
   `_add_parameters_small_networks` → `_flip_solver` (SIM↔IDA). Persists via
   `replace_placeholders.modify_par_file` / `add_parameters` (`solvers.par`) and `modify_jobs_file` (`TSOModel.jobs`).
   In-memory state carried in the `SolverParams` dataclass (`runtime/run_types.py`).
-- **Bisection** (`orchestrator/bisection.py`): `find_hiz_fault`, `apply_bolted_fault`, `find_cct`.
+- **Bisection** (`orchestrator/bisection.py`): `find_hiz_fault`, `find_bolted_fault`, `find_cct`.
   Per-iteration isolated working dir via `_isolated_copy` (temp dir). Mutates fault R/X/duration in
   `TSOModel.par` via `replace_placeholders.fault_par_file` / `fault_time`. CCT reads `curves/curves.csv` directly.
+  Bolted: searches by bisection for a "sufficient" fault impedance X — one that both converges and
+  leaves the residual PDR voltage under an SNom-interpolated threshold (`bolted_fault_*` config keys).
+  Starts at `bolted_fault_min_impedance`, resolving the common case in one simulation, and raises X only
+  when the simulation fails to converge.
 
 `replace_placeholders.*` (XML/placeholder writers): `src/dycov/files/replace_placeholders.py`.
 

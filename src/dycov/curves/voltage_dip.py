@@ -138,6 +138,58 @@ def classify_voltage_dip(
     return VoltDipResult.DIP_TOO_SMALL
 
 
+def classify_residual_voltage(
+    pcs_name: str,
+    bm_name: str,
+    oc_name: str,
+    curves: pd.DataFrame,
+    fault_start: float,
+    fault_duration: float,
+    max_residual: float,
+) -> VoltDipResult:
+    """Classifies the during-fault residual voltage against a maximum threshold.
+
+    Parameters
+    ----------
+    pcs_name : str
+        Power System Case name for logging.
+    bm_name : str
+        Benchmark name for logging.
+    oc_name : str
+        Operating Condition name for logging.
+    curves : pd.DataFrame
+        DataFrame containing the curves, specifically "BusPDR_BUS_Voltage".
+    fault_start : float
+        The start time of the fault in seconds.
+    fault_duration : float
+        The duration of the fault in seconds.
+    max_residual : float
+        Maximum residual voltage (pu) allowed during the fault.
+
+    Returns
+    -------
+    VoltDipResult
+        Classification of the residual voltage:
+        - COLUMN_MISSING: Required column not found in curves
+        - DIP_TOO_SMALL: Residual voltage above the threshold (decrease fault impedance)
+        - DIP_CORRECT: Residual voltage at or below the threshold
+    """
+    voltages = _compute_pre_post_voltages(
+        pcs_name, bm_name, oc_name, curves, fault_start, fault_duration
+    )
+    if voltages is None:
+        return VoltDipResult.COLUMN_MISSING
+
+    _, residual_voltage = voltages
+    dycov_logging.get_logger("VoltageDip").debug(
+        f"Residual voltage during fault: {residual_voltage:.4f}, "
+        f"maximum allowed: {max_residual:.4f}"
+    )
+    if residual_voltage > max_residual:
+        return VoltDipResult.DIP_TOO_SMALL
+    return VoltDipResult.DIP_CORRECT
+
+
 def _is_flat_after_event(time, voltage, fault_start):
     thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
 
@@ -169,6 +221,26 @@ def _compute_voltage_dip(
     if _is_flat_after_event(time_values, voltage_values, fault_start):
         return 0.0
 
+    pre_fault_voltage, post_fault_voltage = _compute_pre_post_voltages(
+        pcs_name, bm_name, oc_name, curves, fault_start, fault_duration
+    )
+    return pre_fault_voltage - post_fault_voltage
+
+
+def _compute_pre_post_voltages(
+    pcs_name: str,
+    bm_name: str,
+    oc_name: str,
+    curves: pd.DataFrame,
+    fault_start: float,
+    fault_duration: float,
+) -> tuple[float, float] | None:
+    bus_pdr_voltage_column = "BusPDR_BUS_Voltage"
+    if bus_pdr_voltage_column not in curves.columns:
+        return None
+
+    time_values = curves["time"].tolist()
+    voltage_values = curves[bus_pdr_voltage_column].tolist()
     clamped_duration = _clamp_fault_duration(
         pcs_name, bm_name, oc_name, fault_start, fault_duration, time_values
     )
@@ -183,7 +255,7 @@ def _compute_voltage_dip(
 
     pre_fault_voltage = trimmed.pre_voltage[pre_stable_idx] if trimmed.pre_voltage else 0.0
     post_fault_voltage = trimmed.post_voltage[post_stable_idx] if trimmed.post_voltage else 0.0
-    return pre_fault_voltage - post_fault_voltage
+    return pre_fault_voltage, post_fault_voltage
 
 
 def _clamp_fault_duration(

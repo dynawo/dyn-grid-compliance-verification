@@ -60,10 +60,10 @@ class TestDycovInitializer:
         )
         (tmp_path / "project_root" / "configuration").mkdir(parents=True, exist_ok=True)
         (tmp_path / "project_root" / "configuration" / "config.ini").write_text(
-            "[dycov]\nversion = 1.0.0.RC\n"
+            "[dycov]\nversion = 1.1.0\n"
         )
         (tmp_path / "project_root" / "configuration" / "defaultConfig.ini").write_text(
-            "[dycov]\nversion = 1.0.0.RC\n"
+            "[dycov]\nversion = 1.1.0\n"
         )
 
     @pytest.fixture
