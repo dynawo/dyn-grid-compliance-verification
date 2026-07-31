@@ -185,7 +185,7 @@ def test_internal_lines():
     assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
-        == "The reactance and admittance of the internal line must be greater than zero."
+        == "The resistance and reactance of the internal line must be greater than zero."
     )
 
 
