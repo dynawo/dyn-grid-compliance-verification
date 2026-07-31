@@ -180,6 +180,21 @@ model validation (the ``pdr_`` key prefix is kept for both zones).
     pdr_Q = Qmax
     pdr_U = Udim
 
+Each quantity is written as a *value definition*: a bare number (in per-unit), a
+base magnitude, or ``multiplier*BaseMagnitude`` (an optional sign is allowed,
+e.g. ``-0.5*Pmax``). The accepted base magnitudes are:
+
+* active/apparent power: ``Pmax``, ``Snom``
+* reactive power: ``Qmax``, ``Qmin`` (plus ``Pmax``/``Snom``)
+* voltage: ``Udim``, ``Unom``
+
+``Snom`` and ``Unom`` use the same base as the HTML and report figures (powers in
+per-unit of :math:`S_{nom}`, voltage in per-unit of :math:`U_{nom}`), so the
+initial point can be entered exactly as it is read off the plots — for example
+``pdr_P = 0.8*Snom`` or ``pdr_U = 1.05*Unom``. The same value definitions (and the
+same set of base magnitudes) apply to every other multiplier-based key read from
+``PCSDescription.ini`` — ``setpoint_step_value``, ``reference_step_size``, the
+islanding ``step_event_PPu``/``step_event_QPu``, and the TSO-load initial values.
 
 Parameter Precedence and Restriction Rules
 ------------------------------------------

@@ -163,6 +163,21 @@ Under ``[PCSName.BenchmarkName.OCName.Model]``:
 * ``SCR`` — Short-Circuit Ratio. Optional.
 * ``pdr_P``, ``pdr_Q``, ``pdr_U`` — initial P, Q, and voltage at the PDR.
 
+Every multiplier-based value read from ``PCSDescription.ini`` is written as a
+*value definition*: a bare number (per-unit), a base magnitude, or
+``multiplier*BaseMagnitude`` (an optional leading sign is allowed). This covers
+``pdr_P``/``pdr_Q``/``pdr_U``, ``setpoint_step_value``, ``reference_step_size``,
+the islanding ``step_event_PPu``/``step_event_QPu``, and the TSO-load initial
+values. All of them resolve against a single registry
+(``model_parameters.unit_characteristics``) via ``resolve_value_definition``:
+``Pmax``/``PmaxInjection``/``PmaxConsumption``, ``Snom`` for power; ``Qmax``,
+``Qmin``; and ``Udim``, ``Unom`` for voltage. ``Snom`` and ``Unom`` share the
+base used in the report figures (:math:`S_{nom}` and :math:`U_{nom}`). Adding a
+new base magnitude is a matter of adding an entry to that registry — no per-key
+parsing code changes. (GFM keys and ``line_XPu``, whose base is a DTR
+reactance-table entry, use their own resolution and are not part of this
+registry.)
+
 The infinite bus table configuration also lives in this section. The tool
 replaces placeholders found in the ``TableInfiniteBus.txt`` file with the
 values defined here. If a value depends on the generator type, append the
