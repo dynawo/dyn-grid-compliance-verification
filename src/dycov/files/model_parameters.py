@@ -500,6 +500,96 @@ def extract_defined_value(
     raise ValueError(f"Invalid format for {parameter}: '{value_definition}'")
 
 
+def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[str, float]:
+    """Registry of base magnitudes that a value definition may reference.
+
+    Each entry is already expressed in its target per-unit (powers in per-unit of
+    ``s_nref``, voltages in per-unit of ``Unom``), so a definition such as ``0.5*Snom``
+    or ``Unom`` resolves directly to the value used elsewhere. Recognizing a new base
+    is a matter of adding an entry here; no caller needs to change.
+
+    Parameters
+    ----------
+    producer :
+        Producer model exposing ``p_max_pu``, ``q_max_pu``, ``q_min_pu``, ``s_nom_pu``
+        and ``u_nom``.
+    u_dim : float
+        Dimensioning voltage (kV) of the generator.
+    line_Xpu : float
+        Connection line reactance in per-unit.
+
+    Returns
+    -------
+    dict[str, float]
+        Base magnitude name to its per-unit value.
+    """
+    return {
+        "Pmax": producer.p_max_pu,
+        "PmaxInjection": producer.p_max_pu,
+        "PmaxConsumption": producer.p_max_pu,
+        "Qmax": producer.q_max_pu,
+        "Qmin": producer.q_min_pu,
+        "Snom": producer.s_nom_pu,
+        "Udim": u_dim / producer.u_nom,
+        "Unom": 1.0,
+        "line_XPu": line_Xpu,
+    }
+
+
+def resolve_value_definition(
+    value_definition: str, characteristics: dict[str, float], sign: int = 1
+) -> float:
+    """Evaluate a value definition against a registry of base magnitudes.
+
+    Supported forms mirror :func:`extract_defined_value`, but the referenced name is
+    looked up in ``characteristics`` instead of being fixed by the caller:
+      - Pure numeric: ``"1.2"``, ``"-0.5"``, ``".75"``
+      - Name only: ``"Snom"``, ``"-Unom"``
+      - Multiplier * name: ``"0.5*Snom"``, ``"-0.05*Pmax"``
+
+    Parameters
+    ----------
+    value_definition : str
+        The configuration string that defines the value.
+    characteristics : dict[str, float]
+        Base magnitudes keyed by name (see :func:`unit_characteristics`).
+    sign : int
+        Final sign conversion to match the downstream convention (e.g. -1 to flip).
+
+    Returns
+    -------
+    float
+        The computed value after applying the definition and the final ``sign``.
+    """
+    if value_definition is None:
+        raise ValueError("Value definition not defined.")
+
+    s = value_definition.strip()
+    if not s:
+        raise ValueError("Value definition not defined (empty).")
+
+    explicit_sign = 1
+    if s[0] in "+-":
+        explicit_sign = -1 if s[0] == "-" else 1
+        s = s[1:].strip()
+
+    num_candidate = ("-" if explicit_sign == -1 else "") + s
+    if NUMERIC_PATTERN.fullmatch(num_candidate):
+        return sign * float(num_candidate)
+
+    m = MULTIPLIER_PATTERN.fullmatch(s)
+    if m:
+        name = m.group("name")
+        if name not in characteristics:
+            raise ValueError(
+                f"Unknown magnitude '{name}' in value definition '{value_definition}'"
+            )
+        multiplier = float(m.group("mul")) if m.group("mul") is not None else 1.0
+        return sign * explicit_sign * multiplier * characteristics[name]
+
+    raise ValueError(f"Invalid value definition: '{value_definition}'")
+
+
 def adjust_producer_init(
     path: Path,
     producer_par: Path,
