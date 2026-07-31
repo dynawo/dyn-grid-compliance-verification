@@ -181,9 +181,9 @@ Other elements: **`Main_Xfmr`** (`TransformerRatioTapChanger` from `Zone3`'s `Z_
 `LoadAlphaBeta` from `P_A/Q_A/alpha/beta` + `AuxLoad_Xfmr` from `Z_cc_TA/r_TA/Sn_A`. Converter
 `SNom` = `SnZone`.
 
-> The tool honors `ConverterLVControl` (it is Excel data). When `False` it drops the `StepUp_Xfmr`
-> block. Making DyCoV's core **accept** a no-`StepUp` `S` model (`topology_checks` / `init_calcs`)
-> is a separate, Excel-agnostic change; the tool does not wait for it.
+> The tool honors `ConverterLVControl`: when `False` it emits no `StepUp_Xfmr` (the internal `LvTr`
+> alone carries the step-up), and DyCoV's `topology_checks` / `init_calcs` accept an `S` model with
+> or without one.
 
 ---
 
