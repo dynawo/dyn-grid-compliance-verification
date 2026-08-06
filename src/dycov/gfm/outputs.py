@@ -25,21 +25,16 @@ def save_results_to_csv(
     upper_envelope: np.ndarray,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """
-    Exports the generated mathematical envelopes and signals into a CSV format.
-    If the system operates in hybrid mode and generates extra envelopes,
-    they are dynamically appended as subsequent columns in the dataset.
-    """
+    """Exports the generated mathematical envelopes and signals into a CSV format."""
     data = {
         "Time (s)": time_array,
         f"{magnitude} PGU (pu)": pcc_signal,
         f"{magnitude} lower (pu)": lower_envelope,
         f"{magnitude} upper (pu)": upper_envelope,
     }
-    # Append extra envelopes if requested (provides detailed output for hybrid mode)
+
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
-            # Format the column name appropriately for the CSV header
             col_name = f"{magnitude} {name} (pu)"
             data[col_name] = signal
 
@@ -56,10 +51,11 @@ def find_start_trim_index(
 ) -> int:
     """Identifies the ideal index to trim leading stable, non-informative data."""
     for i in range(len(pcc_signal) - 1):
-        pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
-        down_changed = abs(lower_envelope[i + 1] - lower_envelope[i]) > tolerance
-        up_changed = abs(upper_envelope[i + 1] - upper_envelope[i]) > tolerance
-        if pcc_changed or down_changed or up_changed:
+        if (
+            abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
+            or abs(lower_envelope[i + 1] - lower_envelope[i]) > tolerance
+            or abs(upper_envelope[i + 1] - upper_envelope[i]) > tolerance
+        ):
             return max(0, i - buffer_points)
     return 0
 
@@ -73,10 +69,11 @@ def find_end_trim_index(
 ) -> int:
     """Identifies the ideal index to trim trailing stable, non-informative data."""
     for i in range(len(pcc_signal) - 1, 0, -1):
-        pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
-        down_changed = abs(lower_envelope[i] - lower_envelope[i - 1]) > tolerance
-        up_changed = abs(upper_envelope[i] - upper_envelope[i - 1]) > tolerance
-        if pcc_changed or down_changed or up_changed:
+        if (
+            abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
+            or abs(lower_envelope[i] - lower_envelope[i - 1]) > tolerance
+            or abs(upper_envelope[i] - upper_envelope[i - 1]) > tolerance
+        ):
             return min(i + buffer_points, len(pcc_signal))
     return len(pcc_signal)
 
@@ -97,10 +94,7 @@ def plot_results(
     disclaimer_message: str = None,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """
-    Renders and exports the simulation results graphically, automatically trimming stable data.
-    Generates both an interactive HTML file and a static PNG image depending on the requested format.
-    """
+    """Renders and exports the simulation results graphically, automatically trimming stable data."""
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
 
@@ -128,7 +122,6 @@ def plot_results(
     except importlib.metadata.PackageNotFoundError:
         watermark_text = "dycov v(unknown)"
 
-    # --- Static Plot Generation via Matplotlib (PNG) ---
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
         if extra_trimmed:
@@ -204,7 +197,6 @@ def plot_results(
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
-    # --- Interactive Plot Generation via Plotly (HTML) ---
     if "html" in output_format:
         fig = go.Figure()
         fig.add_trace(
@@ -331,9 +323,7 @@ def plot_results(
 def save_ini_dump(
     path: Path, parameters: Any, producer_config: configparser.ConfigParser, calculator: Any
 ) -> None:
-    """
-    Serializes and exports all internal attributes from the simulation entities into a text file.
-    """
+    """Serializes and exports all internal attributes from the simulation entities into a text file."""
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
         f.write(f"\n{'=' * 30}\n {title}\n{'=' * 30}\n")
@@ -346,7 +336,6 @@ def save_ini_dump(
             "GFM SIMULATION DUMP\n===================\n\n==============================\n Key Validation Values\n==============================\n"
         )
         try:
-            # Safely request the values using the new properties
             d_vals = calculator.d_vals
             h_vals = calculator.h_vals
             eps_vals = calculator.epsilon_vals

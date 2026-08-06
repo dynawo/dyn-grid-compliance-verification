@@ -23,6 +23,7 @@ class GFMParameters(Parameters):
 
     def __init__(
         self,
+        launcher_dwo: Path,
         producer_ini: Path,
         selected_pcs: str,
         output_dir: Path,
@@ -30,7 +31,7 @@ class GFMParameters(Parameters):
         emt: bool,
     ) -> None:
         """Initializes the GFMParameters configuration instance."""
-        super().__init__(None, selected_pcs, output_dir, only_dtr)
+        super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
         self._emt = emt
         self._producer = GFMProducer(producer_ini)
 
@@ -52,9 +53,7 @@ class GFMParameters(Parameters):
         """Retrieves the designated calculator strategy name for the current PCS and benchmark."""
         return self.__get_value("calculator")
 
-    # --- ENCAPSULATION FIXES ---
-    # Safe retrieval of parameters using the public getter get_config() instead of private variables.
-
+    # Safe retrieval of parameters using the public getter get_config()
     def get_effective_reactance(self) -> float:
         return float(self._producer.get_config().get("GFM Parameters", "Xeff"))
 
@@ -93,8 +92,6 @@ class GFMParameters(Parameters):
             float(self._producer.get_config().get("DEFAULT", "q_max"))
             / self.get_nominal_apparent_power()
         )
-
-    # ---------------------------
 
     def get_initial_active_power(self) -> float:
         """Retrieves the initial steady-state active power (P0)."""
@@ -162,6 +159,7 @@ class GFMParameters(Parameters):
         return delta_rad * 180 / np.pi
 
     def get_voltage_step_at_grid(self) -> float:
+        """Calculates and retrieves the defined voltage step magnitude explicitly at the grid."""
         value_definition = self.__get_value("VoltageStepAtGrid")
         if "*" in value_definition:
             parts = value_definition.split("*")
@@ -240,6 +238,7 @@ class GFMParameters(Parameters):
         return config.get_float("DEFAULT", option, default_value)
 
     def get_hybrid_parameters(self) -> Optional[Tuple[float, float, float, float]]:
+        """Attempts to retrieve the hybrid parameters (Overdamped/Underdamped)."""
         d_over = self._get_optional_float("D_Overdamped")
         h_over = self._get_optional_float("H_Overdamped")
         d_under = self._get_optional_float("D_Underdamped")
@@ -249,6 +248,7 @@ class GFMParameters(Parameters):
         return None
 
     def get_standard_parameters(self) -> Optional[Tuple[float, float]]:
+        """Attempts to retrieve the standard parameters D and H."""
         d = self._get_optional_float("D")
         h = self._get_optional_float("H")
         if d is not None and h is not None:
@@ -263,7 +263,6 @@ class GFMParameters(Parameters):
             except ValueError:
                 pass
 
-        # Fixed encapsulation by using get_config() here as well
         if self._producer.get_config().has_option("GFM Parameters", option):
             try:
                 return float(self._producer.get_config().get("GFM Parameters", option))
@@ -272,6 +271,7 @@ class GFMParameters(Parameters):
         return None
 
     def should_save_all_envelopes(self) -> bool:
+        """Checks if 'save_all_envelopes' is set to True in the Producer.ini."""
         if self._producer.get_config().has_option("GFM Parameters", "save_all_envelopes"):
             try:
                 return self._producer.get_config().getboolean(
@@ -282,6 +282,7 @@ class GFMParameters(Parameters):
         return False
 
     def get_emt_initial_delay(self) -> float:
+        """Gets the initial delay for EMT simulations from the producer configuration."""
         if self._producer.get_config().has_option("GFM Parameters", "emt_initial_delay"):
             try:
                 return float(

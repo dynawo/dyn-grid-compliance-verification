@@ -7,25 +7,24 @@
 #     demiguelm@aia.es
 
 import numpy as np
+from dycov.gfm import constants
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging import dycov_logging
+from dycov.logging.logging import dycov_logging
 
 
 class RoCoF(GFMCalculator):
     """
-    Calculator class dedicated to handling the GFM response to a RoCoF (Rate of Change of Frequency) event.
-    This class performs all core calculations for active power envelopes,
-    mathematically differentiating between overdamped and underdamped system responses.
+    Class to calculate the GFM response to a RoCoF (Rate of Change of Frequency) event.
+    This class handles all core calculations for active power envelopes,
+    differentiating between overdamped and underdamped system responses.
     """
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the RoCoF calculator with the specified Grid Forming parameters."""
         super().__init__(gfm_params=gfm_params)
         self._rocof_value = gfm_params.get_change_frequency()
         self._rocof_duration = gfm_params.get_change_frequency_duration()
         self._t_pll = gfm_params.get_pll_time_constant()
-
         self._initial_active_power = gfm_params.get_initial_active_power()
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
@@ -33,16 +32,11 @@ class RoCoF(GFMCalculator):
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves the list of parameter names relevant for rendering RoCoF plots."""
         return ["P0", "Q0", "Frequency0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Calculates the active power deviation (delta_p) and its bounding envelopes
-        (PCC, upper, and lower) evaluated across the event timeframe.
-        """
         dycov_logging.get_logger("RoCoF").debug(f"Input Params D={D} H={H} Xeff={Xeff}")
 
         delta_p_array, p_peak_array, t_response_array = self._get_delta_p(
@@ -57,7 +51,6 @@ class RoCoF(GFMCalculator):
             event_time=event_time,
         )
 
-        # Apply a final uniform delay if the simulation utilizes the EMT engine (DRY logic)
         pcc_signal, upper_envelope, lower_envelope = self.apply_emt_delay_to_envelopes(
             time_array, p_pcc, p_up, p_down
         )
@@ -67,7 +60,6 @@ class RoCoF(GFMCalculator):
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list, list, list]:
-        """Computes the delta_p sequences across nominal, minimum, and maximum parameter variations."""
         x_total = Xeff + 1 / self._scr
         d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
         h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
@@ -89,7 +81,6 @@ class RoCoF(GFMCalculator):
             p_peak_array.append(p_peak)
             t_response_array.append(t_response)
 
-        # Store the computed variations internally for potential data dumps
         self._d_vals = d_array
         self._h_vals = h_array
         self._epsilon_vals = np.array(epsilon_vals)
@@ -99,10 +90,6 @@ class RoCoF(GFMCalculator):
     def _calculate_delta_p_for_damping(
         self, D: float, H: float, x_total: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """
-        Evaluates the appropriate mathematical strategy (overdamped vs. underdamped)
-        and applies the superposition principle to model the finite duration of the event.
-        """
         u_prod = self._initial_voltage * self._grid_voltage
         wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total))
         epsilon = D / (4 * H * wn)
@@ -113,7 +100,6 @@ class RoCoF(GFMCalculator):
             else self._get_underdamped_delta_p_base
         )
 
-        # A finite duration RoCoF event is modeled by superimposing two independent step responses
         rocof_stop_time = event_time + self._rocof_duration
 
         time_event_start = time_array - event_time
@@ -130,7 +116,6 @@ class RoCoF(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, x_total: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Analytically solves the differential equations governing an overdamped system step response."""
         u_prod = self._initial_voltage * self._grid_voltage
         wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total))
         epsilon = D / (4 * H * wn)
@@ -171,7 +156,6 @@ class RoCoF(GFMCalculator):
         delta_p[time_array >= 0] = delta_p_rel
 
         p_peak = abs(-self._rocof_value * (2 * H + D * self._t_pll))
-        # The theoretical response time is approximated as 4x the slowest time constant
         t_response = 4 * max(1 / alpha1, 1 / alpha2, self._t_pll)
 
         return -delta_p, p_peak, t_response
@@ -179,7 +163,6 @@ class RoCoF(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, x_total: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Analytically solves the differential equations governing an underdamped system step response."""
         u_prod = self._initial_voltage * self._grid_voltage
         wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total))
         epsilon = D / (4 * H * wn)
@@ -221,7 +204,6 @@ class RoCoF(GFMCalculator):
 
         R_coeff = np.sqrt(C_coeff**2 + ((D_coeff - C_coeff * epsilon * wn) / wd) ** 2)
         p_peak = abs(A_coeff + B_coeff / self._t_pll + R_coeff)
-        # Theoretical response time approximated as 4x the decay time constant
         t_response = 4 / (epsilon * wn)
 
         return -delta_p, p_peak, t_response
@@ -234,23 +216,21 @@ class RoCoF(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Computes the final active power envelopes by sequentially applying specific RoCoF boundary logic."""
         p_pcc = self._initial_active_power + delta_p_array[self._ORIGINAL_PARAMS_IDX]
         tunnel_val = self._get_tunnel(p_peak_array)
         sign = np.sign(self._rocof_value)
 
-        # Rule 1: Determine initial unconstrained envelopes using min/max response traces
         dp_min_trace = np.minimum.reduce(delta_p_array)
         dp_max_trace = np.maximum.reduce(delta_p_array)
 
-        if sign > 0:  # Positive RoCoF -> Active Power decreases
+        if sign > 0:
             p_up_unlimited = (
                 self._initial_active_power + dp_max_trace * (1 - self._margin_high) + tunnel_val
             )
             p_down_unlimited = (
                 self._initial_active_power + dp_min_trace * (1 + self._margin_low) - tunnel_val
             )
-        else:  # Negative RoCoF -> Active Power increases
+        else:
             p_up_unlimited = (
                 self._initial_active_power + dp_max_trace * (1 + self._margin_high) + tunnel_val
             )
@@ -258,7 +238,6 @@ class RoCoF(GFMCalculator):
                 self._initial_active_power + dp_min_trace * (1 - self._margin_low) - tunnel_val
             )
 
-        # Rule 2: Constrain envelopes to steady-state values after transient response time
         t_response = t_response_array[self._ORIGINAL_PARAMS_IDX]
         clamp_start_time = event_time + t_response
         rocof_stop_time = event_time + self._rocof_duration
@@ -269,7 +248,6 @@ class RoCoF(GFMCalculator):
             p_up_unlimited = np.where(mask, pcc_steady_value + tunnel_val, p_up_unlimited)
             p_down_unlimited = np.where(mask, pcc_steady_value - tunnel_val, p_down_unlimited)
 
-        # Rule 3: Prevent uncharacteristic dips/overshoots during system recovery phase
         indices_before_recovery = np.where(time_array < rocof_stop_time)[0]
         if len(indices_before_recovery) > 0:
             idx_before_recovery = indices_before_recovery[-1]
@@ -285,7 +263,6 @@ class RoCoF(GFMCalculator):
                     mask_post_recovery, np.minimum(p_up_unlimited, clamp_val), p_up_unlimited
                 )
 
-        # Rule 4: Apply saturation limit protection (MoisTunnel logic)
         p_down_unlimited = np.where(
             p_down_unlimited > self._pmax_mois_tunnel, self._pmax_mois_tunnel, p_down_unlimited
         )
@@ -293,13 +270,11 @@ class RoCoF(GFMCalculator):
             p_up_unlimited < self._pmin_mois_tunnel, self._pmin_mois_tunnel, p_up_unlimited
         )
 
-        # Final hardware limits clip
         p_up_limited = np.clip(p_up_unlimited, self._min_active_power, self._max_active_power)
         p_down_limited = np.clip(p_down_unlimited, self._min_active_power, self._max_active_power)
 
         return p_pcc, p_up_limited, p_down_limited
 
     def _get_tunnel(self, p_peak_array: list[float]) -> float:
-        """Calculates the static tolerance margin 'tunnel' value."""
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
         return max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
