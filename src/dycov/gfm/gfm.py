@@ -31,15 +31,36 @@ class GridForming:
         up_under: np.ndarray,
         low_under: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Merges overdamped and underdamped envelopes applying Min/Max boundary logic."""
+        """
+        Merges overdamped and underdamped envelopes applying Min/Max boundary logic.
+
+        Parameters
+        ----------
+        up_over : np.ndarray
+            The upper envelope calculated for the overdamped condition.
+        low_over : np.ndarray
+            The lower envelope calculated for the overdamped condition.
+        up_under : np.ndarray
+            The upper envelope calculated for the underdamped condition.
+        low_under : np.ndarray
+            The lower envelope calculated for the underdamped condition.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            A tuple containing the final merged upper and lower envelopes.
+        """
+        # Synthesize maximum allowable boundaries evaluating both damping profiles
         upper_envelope1 = np.maximum(up_over, up_under)
         lower_envelope1 = np.minimum(low_over, low_under)
+
+        # Cross-reference profiles to map the absolute worst-case scenario
         upper_envelope2 = np.maximum(low_over, low_under)
         lower_envelope2 = np.minimum(up_over, up_under)
 
+        # Output strictly constrained final envelopes
         upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
         lower_envelope = np.minimum(lower_envelope1, lower_envelope2)
-
         return upper_envelope, lower_envelope
 
     def generate(
@@ -50,16 +71,37 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """Executes the primary pipeline for GFM simulation results generation."""
+        """
+        Executes the primary pipeline for GFM simulation results generation.
+
+        This method orchestrates the calculation of envelopes, CSV data exports,
+        and plotting. It detects if "Hybrid" parameters are defined to generate
+        and merge dual damping conditions, otherwise it uses standard parameters.
+
+        Parameters
+        ----------
+        working_path : Path
+            The base directory path designated for saving the generated output files.
+        parameters : GFMParameters
+            The loaded parameter configuration object guiding the simulation.
+        pcs_name : str
+            The identifier name of the specific Power Conversion System (PCS).
+        bm_name : str
+            The identifier name of the Benchmark applied.
+        oc_name : str
+            The identifier name of the specific Operating Condition.
+        """
         parameters.set_section(pcs_name, bm_name, oc_name)
         x_eff = parameters.get_effective_reactance()
+
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
         time_array, event_time = self._get_time(calculator_name)
-        params_list = calculator.get_plot_parameter_names() if calculator else None
 
+        params_list = calculator.get_plot_parameter_names() if calculator else None
         hybrid_params = parameters.get_hybrid_parameters()
         standard_params = parameters.get_standard_parameters()
+
         magnitude_name = ""
         pcc_signal = np.array([])
         upper_envelope = np.array([])
@@ -73,34 +115,38 @@ class GridForming:
             )
             d_over, h_over, d_under, h_under = hybrid_params
 
+            # Phase 1: Retrieve and record overdamped performance
             mag_name, pcc_over, up_over, low_over = self._calculate_envelopes(
                 calculator, time_array, event_time, d_over, h_over, x_eff
             )
             producer = parameters.get_producer()
             producer_config = producer.get_config() if producer else None
             save_ini_dump(
-                working_path / f"{title}_ini_dump_overdamped.txt",
-                parameters,
-                producer_config,
-                calculator,
+                path=working_path / f"{title}_ini_dump_overdamped.txt",
+                parameters=parameters,
+                producer_config=producer_config,
+                calculator=calculator,
             )
 
+            # Phase 2: Retrieve and record underdamped performance
             _, pcc_under, up_under, low_under = self._calculate_envelopes(
                 calculator, time_array, event_time, d_under, h_under, x_eff
             )
             save_ini_dump(
-                working_path / f"{title}_ini_dump_underdamped.txt",
-                parameters,
-                producer_config,
-                calculator,
+                path=working_path / f"{title}_ini_dump_underdamped.txt",
+                parameters=parameters,
+                producer_config=producer_config,
+                calculator=calculator,
             )
 
+            # Merge both conditions to find absolute boundaries
             upper_envelope, lower_envelope = self._merge_hybrid_envelopes(
                 up_over, low_over, up_under, low_under
             )
             pcc_signal = pcc_over
             magnitude_name = mag_name
 
+            # Package intermediate mathematical traces for detailed plotting if enabled
             if parameters.should_save_all_envelopes():
                 extra_envelopes = {
                     "upper_overdamped": up_over,
@@ -108,6 +154,8 @@ class GridForming:
                     "upper_underdamped": up_under,
                     "lower_underdamped": low_under,
                 }
+
+            # Filter standard constraints from legends for hybrid mode
             if params_list:
                 params_list = [p for p in params_list if p not in ["D", "H"]]
 
@@ -124,6 +172,7 @@ class GridForming:
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
+        # Interrogate calculator state securely via properties
         is_inconsistent = calculator.is_inconsistent
         disclaimer_msg = calculator.disclaimer_message
 
@@ -137,14 +186,13 @@ class GridForming:
             upper_envelope,
             extra_envelopes=extra_envelopes,
         )
-
         if not hybrid_params:
             producer = parameters.get_producer()
             save_ini_dump(
-                working_path / f"{title}_ini_dump.txt",
-                parameters,
-                producer.get_config() if producer else None,
-                calculator,
+                path=working_path / f"{title}_ini_dump.txt",
+                parameters=parameters,
+                producer_config=producer.get_config() if producer else None,
+                calculator=calculator,
             )
 
         self._plot(
@@ -165,6 +213,20 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
+        """
+        Generates the simulation time array and determines the precise event time.
+
+        Parameters
+        ----------
+        calculator_name : str
+            The specific identifier string of the active calculator strategy.
+
+        Returns
+        -------
+        tuple[np.ndarray, float]
+            A tuple containing the complete time array and the calculated event time.
+        """
+        # Pre-event initialization required explicitly for frequency and SCR deviations
         start_time = (
             constants.SIMULATION_START_TIME_EXTENDED
             if calculator_name in ["SCRJump", "RoCoF"]
@@ -184,6 +246,29 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Computes the analytical response envelopes using the active calculation strategy.
+
+        Parameters
+        ----------
+        calculator : GFMCalculator
+            The instantiated envelope calculator object.
+        time_array : np.ndarray
+            The X-axis time array mapped for the simulation.
+        event_time : float
+            The absolute point in time where the grid event is triggered.
+        damping_constant : float
+            The system damping constant value (D).
+        inertia_constant : float
+            The system inertia constant value (H).
+        x_eff : float
+            The effective reactance of the system (Xeff).
+
+        Returns
+        -------
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
+            A tuple containing the magnitude name, PCC signal, upper envelope, and lower envelope.
+        """
         return calculator.calculate_envelopes(
             D=damping_constant,
             H=inertia_constant,
@@ -203,19 +288,37 @@ class GridForming:
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
     ) -> None:
+        """Marshals the generated mathematical signals and exports them to a structured CSV format."""
         save_results_to_csv(
-            csv_path / f"{title}.csv",
-            magnitude_name,
-            time_array,
-            pcc_signal,
-            lower_envelope,
-            upper_envelope,
+            path=csv_path / f"{title}.csv",
+            magnitude=magnitude_name,
+            time_array=time_array,
+            pcc_signal=pcc_signal,
+            lower_envelope=lower_envelope,
+            upper_envelope=upper_envelope,
             extra_envelopes=extra_envelopes,
         )
 
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
+        """
+        Extracts and formats key simulation variables into human-readable strings for UI rendering.
+
+        Parameters
+        ----------
+        parameters : GFMParameters
+            The central configuration object queried for parameter values.
+        params_list : list
+            A filter list of string identifiers specifying which parameters should be extracted.
+        calculator : GFMCalculator
+            The calculator providing internal runtime variables.
+
+        Returns
+        -------
+        list[str]
+            A comprehensive list of cleanly formatted strings representing parameters and values.
+        """
         if not params_list:
             return []
         text_params_info = []
@@ -275,19 +378,20 @@ class GridForming:
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
     ) -> None:
+        """Dispatches the internal variables to render and export the final visual plots."""
         plot_results(
-            png_path / f"{title}.png",
-            title,
-            magnitude_name,
-            time_array,
-            event_time,
-            0,
-            pcc_signal,
-            lower_envelope,
-            upper_envelope,
-            "png&html",
-            self._get_params_plot_info(parameters, params_list, calculator),
-            is_inconsistent,
-            disclaimer_msg,
+            path=png_path / f"{title}.png",
+            title=title,
+            magnitude=magnitude_name,
+            time_array=time_array,
+            event_time=event_time,
+            shift_time=0,
+            pcc_signal=pcc_signal,
+            lower_envelope=lower_envelope,
+            upper_envelope=upper_envelope,
+            output_format="png&html",
+            params_list=self._get_params_plot_info(parameters, params_list, calculator),
+            show_disclaimer=is_inconsistent,
+            disclaimer_message=disclaimer_msg,
             extra_envelopes=extra_envelopes,
         )

@@ -25,7 +25,29 @@ def save_results_to_csv(
     upper_envelope: np.ndarray,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """Exports the generated mathematical envelopes and signals into a CSV format."""
+    """
+    Exports the generated mathematical envelopes and signals into a CSV format.
+
+    If the system operates in hybrid mode and generates extra envelopes,
+    they are dynamically appended as subsequent columns in the dataset.
+
+    Parameters
+    ----------
+    path : Path
+        The absolute or relative destination path for the output CSV file.
+    magnitude : str
+        The physical magnitude being analyzed (e.g., 'P', 'Iq').
+    time_array : np.ndarray
+        Array containing all time steps used in the simulation.
+    pcc_signal : np.ndarray
+        The recorded system signal at the Point of Common Coupling.
+    lower_envelope : np.ndarray
+        The array corresponding to the lower bound of the calculated envelope.
+    upper_envelope : np.ndarray
+        The array corresponding to the upper bound of the calculated envelope.
+    extra_envelopes : dict[str, np.ndarray], optional
+        A dictionary containing additional data series for detailed hybrid outputs.
+    """
     data = {
         "Time (s)": time_array,
         f"{magnitude} PGU (pu)": pcc_signal,
@@ -33,6 +55,7 @@ def save_results_to_csv(
         f"{magnitude} upper (pu)": upper_envelope,
     }
 
+    # Inject intermediate debugging arrays if hybrid logging is enabled
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
             col_name = f"{magnitude} {name} (pu)"
@@ -49,7 +72,28 @@ def find_start_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """Identifies the ideal index to trim leading stable, non-informative data."""
+    """
+    Identifies the ideal index to trim leading stable, non-informative data.
+
+    Parameters
+    ----------
+    pcc_signal : np.ndarray
+        The recorded system signal array.
+    lower_envelope : np.ndarray
+        The lower bounded envelope array.
+    upper_envelope : np.ndarray
+        The upper bounded envelope array.
+    tolerance : float, optional
+        The absolute difference threshold to trigger a detection.
+    buffer_points : int, optional
+        The number of historical points to preserve prior to the detected change.
+
+    Returns
+    -------
+    int
+        The integer index representing the recommended starting point for analysis.
+    """
+    # Finds the first index breaking steady-state variance to trim trailing empty history
     for i in range(len(pcc_signal) - 1):
         if (
             abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
@@ -67,7 +111,28 @@ def find_end_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """Identifies the ideal index to trim trailing stable, non-informative data."""
+    """
+    Identifies the ideal index to trim trailing stable, non-informative data.
+
+    Parameters
+    ----------
+    pcc_signal : np.ndarray
+        The recorded system signal array.
+    lower_envelope : np.ndarray
+        The lower bounded envelope array.
+    upper_envelope : np.ndarray
+        The upper bounded envelope array.
+    tolerance : float, optional
+        The absolute difference threshold to trigger a detection.
+    buffer_points : int, optional
+        The number of historical points to preserve after the detected change.
+
+    Returns
+    -------
+    int
+        The integer index representing the recommended ending point for analysis.
+    """
+    # Reverses through the array to discard unnecessary post-event flatlines
     for i in range(len(pcc_signal) - 1, 0, -1):
         if (
             abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
@@ -94,7 +159,42 @@ def plot_results(
     disclaimer_message: str = None,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """Renders and exports the simulation results graphically, automatically trimming stable data."""
+    """
+    Renders and exports the simulation results graphically, automatically trimming stable data.
+    Generates both an interactive HTML file and a static PNG image.
+
+    Parameters
+    ----------
+    path : Path
+        The base file path for the output plots (extensions will be appended automatically).
+    title : str
+        The descriptive title rendered on the plot.
+    magnitude : str
+        The physical magnitude being graphed (e.g., 'P', 'Iq').
+    time_array : np.ndarray
+        The complete time array corresponding to the simulation.
+    event_time : float
+        The absolute time coordinate indicating the start of the event.
+    shift_time : float
+        An optional temporal shift applied to the event marker line.
+    pcc_signal : np.ndarray
+        The main calculated signal from the Point of Common Coupling.
+    lower_envelope : np.ndarray
+        The array corresponding to the lower bound envelope.
+    upper_envelope : np.ndarray
+        The array corresponding to the upper bound envelope.
+    output_format : str
+        String specifying the desired output format(s), such as 'png&html'.
+    params_list : list, optional
+        A list of formatted text strings detailing simulation parameters for the legend.
+    show_disclaimer : bool, optional
+        If True, renders a warning disclaimer overlay on the plot.
+    disclaimer_message : str | None, optional
+        Custom detailed text for the disclaimer overlay.
+    extra_envelopes : dict[str, np.ndarray], optional
+        Supplementary bounding envelopes to be rendered alongside the main signals.
+    """
+    # 1. Clean the visual window to focus strictly on event transients
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
 
@@ -108,6 +208,7 @@ def plot_results(
         for name, signal in extra_envelopes.items():
             extra_trimmed[name] = signal[start_index:end_index]
 
+    # 2. Configure multi-format disclaimer alerts (Matplotlib vs Plotly)
     disclaimer_text_mpl = ""
     disclaimer_text_html = ""
     if show_disclaimer:
@@ -122,6 +223,7 @@ def plot_results(
     except importlib.metadata.PackageNotFoundError:
         watermark_text = "dycov v(unknown)"
 
+    # --- Static PNG Generation (Matplotlib) ---
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
         if extra_trimmed:
@@ -197,8 +299,11 @@ def plot_results(
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
+    # --- Interactive HTML Generation (Plotly) ---
     if "html" in output_format:
         fig = go.Figure()
+
+        # Reverse and concatenate arrays to create a closed polygon for fill area
         fig.add_trace(
             go.Scatter(
                 x=np.concatenate([time_trimmed, time_trimmed[::-1]]),
@@ -323,11 +428,25 @@ def plot_results(
 def save_ini_dump(
     path: Path, parameters: Any, producer_config: configparser.ConfigParser, calculator: Any
 ) -> None:
-    """Serializes and exports all internal attributes from the simulation entities into a text file."""
+    """
+    Serializes and exports all internal attributes from the simulation entities into a text file.
+
+    Parameters
+    ----------
+    path : Path
+        The absolute or relative path (including filename) destination for the dump file.
+    parameters : GFMParameters
+        The parameter configuration object guiding the simulation.
+    producer_config : configparser.ConfigParser
+        The parsed producer configuration object representing INI settings.
+    calculator : GFMCalculator
+        The instantiated calculator object containing current evaluation state.
+    """
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
         f.write(f"\n{'=' * 30}\n {title}\n{'=' * 30}\n")
         for key, value in sorted(data_dict.items()):
+            # Exclude functions and methods from serialized state
             if not callable(value):
                 f.write(f"{key} = {value}\n")
 
@@ -336,6 +455,7 @@ def save_ini_dump(
             "GFM SIMULATION DUMP\n===================\n\n==============================\n Key Validation Values\n==============================\n"
         )
         try:
+            # Safe access utilizing configured @properties to respect encapsulation
             d_vals = calculator.d_vals
             h_vals = calculator.h_vals
             eps_vals = calculator.epsilon_vals

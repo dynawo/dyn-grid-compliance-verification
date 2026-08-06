@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# (c) 2025 RTE
-# Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 import configparser
 import re
@@ -21,27 +16,15 @@ class GFMProducer(Producer):
     """
 
     def __init__(self, producer_ini: Path) -> None:
-        """
-        Initializes the GFMProducer with the path to the producer INI file.
-
-        Parameters
-        ----------
-        producer_ini : Path
-            The absolute or relative path pointing to the producer INI file.
-        """
+        """Initializes the GFMProducer with the path to the producer INI file."""
         super().__init__(None, producer_ini)
         self._config = self.__read_producer_ini()
 
     def get_producer_path(self) -> Path:
-        """Retrieves the base path to the producer INI file."""
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
-        """
-        Retrieves the filenames associated with the producer model.
-        This method scans the producer path for INI files and returns a sorted
-        list of their stem names (filenames without extensions).
-        """
+        # Filter files ending in .ini (case-insensitive)
         pattern = re.compile(r".*\.[iI][nN][iI]")
         return sorted(
             [
@@ -52,25 +35,17 @@ class GFMProducer(Producer):
         )
 
     def get_sim_type_str(self) -> str:
-        """Retrieves a string identifier representing the type of validation being executed."""
         return "gfm"
 
     def set_zone(self, zone: int, filename: str) -> None:
-        """Dummy method to satisfy interface requirements."""
         pass
 
     def get_config(self) -> configparser.ConfigParser:
-        """Retrieves the loaded producer settings required for GFM calculations."""
         return self._config
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
-        """
-        Reads and parses the producer INI file.
-        This private method handles the internal logic of locating the INI file
-        matching the specific pattern and loading it into a ConfigParser object.
-        """
-
         def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
+            # Recursively find the first configuration file matching the pattern
             for file in path.resolve().iterdir():
                 if pattern.match(str(file)):
                     return path.resolve() / file
@@ -79,6 +54,7 @@ class GFMProducer(Producer):
         pattern_ini = re.compile(r".*\.[iI][nN][iI]")
         producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
 
+        # Force ConfigParser to treat '#' strictly as comments, not data
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(producer_ini_path)
         return producer_config
