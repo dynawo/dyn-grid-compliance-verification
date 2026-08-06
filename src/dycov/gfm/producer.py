@@ -33,9 +33,7 @@ class GFMProducer(Producer):
         self._config = self.__read_producer_ini()
 
     def get_producer_path(self) -> Path:
-        """
-        Retrieves the base path to the producer INI file.
-        """
+        """Retrieves the base path to the producer INI file."""
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
@@ -54,21 +52,15 @@ class GFMProducer(Producer):
         )
 
     def get_sim_type_str(self) -> str:
-        """
-        Retrieves a string identifier representing the type of validation being executed.
-        """
+        """Retrieves a string identifier representing the type of validation being executed."""
         return "gfm"
 
     def set_zone(self, zone: int, filename: str) -> None:
-        """
-        Dummy method to satisfy interface requirements.
-        """
+        """Dummy method to satisfy interface requirements."""
         pass
 
     def get_config(self) -> configparser.ConfigParser:
-        """
-        Retrieves the loaded producer settings required for GFM calculations.
-        """
+        """Retrieves the loaded producer settings required for GFM calculations."""
         return self._config
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
@@ -84,11 +76,9 @@ class GFMProducer(Producer):
                     return path.resolve() / file
             raise FileNotFoundError("Producer INI file not found.")
 
-        # Compile pattern to match files with .ini or .INI extensions
         pattern_ini = re.compile(r".*\.[iI][nN][iI]")
         producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
 
-        # Initialize ConfigParser, ensuring '#' is recognized as an inline comment prefix
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(producer_ini_path)
         return producer_config

@@ -17,24 +17,22 @@ from dycov.gfm.parameters import GFMParameters
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
     """
-    Factory method to instantiate and return a specific GFMCalculator subclass.
-    This function maps string identifiers to their corresponding Grid Forming (GFM)
-    calculator classes, ensuring they are initialized with the provided parameters.
+    Returns an instance of a GFMCalculator subclass based on the provided name.
+    This factory function maps string names to corresponding GFM calculator classes
+    and instantiates them with the given GFM parameters.
 
     Parameters
     ----------
     name : str
-        The identifier name of the calculator to retrieve
-        (e.g., "PhaseJump", "AmplitudeStep", "RoCoF", "SCRJump").
+        The name of the calculator to retrieve (e.g., "PhaseJump", "AmplitudeStep").
     gfm_params : GFMParameters
-        An object containing all necessary grid forming parameters required
-        for the calculation instance.
+        An object containing all necessary parameters for the GFM calculation.
 
     Returns
     -------
     Optional[GFMCalculator]
-        An instantiated object of the requested GFMCalculator subclass if the
-        name is recognized. Returns None if the calculator name is unknown.
+        An instance of the specified GFMCalculator subclass if the name is
+        recognized, otherwise None.
     """
     if name == "PhaseJump":
         return PhaseJump(gfm_params=gfm_params)
@@ -44,5 +42,4 @@ def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculat
         return RoCoF(gfm_params=gfm_params)
     if name == "SCRJump":
         return SCRJump(gfm_params=gfm_params)
-
     return None

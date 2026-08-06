@@ -13,7 +13,7 @@ from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import plot_results, save_ini_dump, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging import dycov_logging
+from dycov.logging.logging import dycov_logging
 
 LOGGER = dycov_logging.get_logger(__name__)
 
@@ -31,14 +31,11 @@ class GridForming:
         up_under: np.ndarray,
         low_under: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Merges overdamped and underdamped envelopes applying Min/Max boundary logic.
-        Calculates the absolute outermost bounds.
-        """
+        """Merges overdamped and underdamped envelopes applying Min/Max boundary logic."""
         upper_envelope1 = np.maximum(up_over, up_under)
         lower_envelope1 = np.minimum(low_over, low_under)
         upper_envelope2 = np.maximum(low_over, low_under)
-        lower_envelope2 = np.minimum(up_over, up_under)  # Bug fixed: was lower_envelop2
+        lower_envelope2 = np.minimum(up_over, up_under)
 
         upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
         lower_envelope = np.minimum(lower_envelope1, lower_envelope2)
@@ -53,10 +50,7 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """
-        Executes the primary pipeline for GFM simulation results generation,
-        including data calculations, CSV data exports, and plotting.
-        """
+        """Executes the primary pipeline for GFM simulation results generation."""
         parameters.set_section(pcs_name, bm_name, oc_name)
         x_eff = parameters.get_effective_reactance()
         calculator_name = parameters.get_calculator_name()
@@ -79,7 +73,6 @@ class GridForming:
             )
             d_over, h_over, d_under, h_under = hybrid_params
 
-            # Execution Phase 1: Overdamped Parameters
             mag_name, pcc_over, up_over, low_over = self._calculate_envelopes(
                 calculator, time_array, event_time, d_over, h_over, x_eff
             )
@@ -92,7 +85,6 @@ class GridForming:
                 calculator,
             )
 
-            # Execution Phase 2: Underdamped Parameters
             _, pcc_under, up_under, low_under = self._calculate_envelopes(
                 calculator, time_array, event_time, d_under, h_under, x_eff
             )
@@ -103,7 +95,6 @@ class GridForming:
                 calculator,
             )
 
-            # Clean envelope merging logic extraction
             upper_envelope, lower_envelope = self._merge_hybrid_envelopes(
                 up_over, low_over, up_under, low_under
             )
@@ -133,7 +124,6 @@ class GridForming:
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Retrieve calculator operational flags utilizing safe properties
         is_inconsistent = calculator.is_inconsistent
         disclaimer_msg = calculator.disclaimer_message
 
@@ -175,7 +165,6 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """Generates the simulation time array and determines the precise event time."""
         start_time = (
             constants.SIMULATION_START_TIME_EXTENDED
             if calculator_name in ["SCRJump", "RoCoF"]
@@ -227,7 +216,6 @@ class GridForming:
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
-        """Extracts and formats key simulation variables into human-readable strings for UI rendering."""
         if not params_list:
             return []
         text_params_info = []

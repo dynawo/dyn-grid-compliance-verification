@@ -20,19 +20,12 @@ class GFMCalculator:
     used for damping profile classification.
     """
 
-    # Constants representing the indices for parameter variation arrays
     _ORIGINAL_PARAMS_IDX = 0
     _MINIMUM_PARAMS_IDX = 1
     _MAXIMUM_PARAMS_IDX = 2
-
-    # Threshold defining the boundary between underdamped (< 1.0) and overdamped (>= 1.0) systems.
-    # Note: Critically damped systems (exactly 1.0) are mathematically grouped with the overdamped logic.
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """
-        Initializes the foundational GFMCalculator state using provided system parameters.
-        """
         self._scr = gfm_params.get_scr()
         self._min_ratio = gfm_params.get_min_ratio()
         self._max_ratio = gfm_params.get_max_ratio()
@@ -48,12 +41,10 @@ class GFMCalculator:
         self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
-        # Internal attributes designated for INI dump state validation and tracking
         self._d_vals = None
         self._h_vals = None
         self._epsilon_vals = None
 
-    # --- ENCAPSULATION PROPERTIES ---
     @property
     def d_vals(self) -> np.ndarray:
         return self._d_vals
@@ -78,20 +69,12 @@ class GFMCalculator:
     def disclaimer_message(self) -> str:
         return getattr(self, "_disclaimer_message", None)
 
-    # --------------------------------
-
     def get_plot_parameter_names(self) -> list[str]:
-        """
-        Abstract method to retrieve the list of parameter names relevant for UI plotting.
-        """
         raise NotImplementedError
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Abstract method defining the core execution pipeline for calculating response envelopes.
-        """
         raise NotImplementedError
 
     def apply_emt_delay_to_envelopes(
@@ -101,10 +84,7 @@ class GFMCalculator:
         upper_envelope: np.ndarray,
         lower_envelope: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Applies a uniform delay translation if utilizing the Electro-Magnetic Transients (EMT) engine.
-        Consolidates duplicated logic from child calculators.
-        """
+        """Applies a uniform delay translation if utilizing the Electro-Magnetic Transients (EMT) engine."""
         if not self._is_emt_flag:
             return pcc_signal, upper_envelope, lower_envelope
 
@@ -128,9 +108,6 @@ class GFMCalculator:
         signal: np.ndarray,
         start_time: float = 0.0,
     ) -> np.ndarray:
-        """
-        Applies a temporal right-shift delay to a specified signal starting at a given coordinate.
-        """
         dt = time_array[1] - time_array[0]
         delay_samples = int(delay_time / dt) + 1
         if start_time > time_array[-1]:
@@ -143,7 +120,6 @@ class GFMCalculator:
         return combined_signal[: len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
-        """Enforces absolute boundary constraints by clipping signal values."""
         signal = np.where(signal < value_min, value_min, signal)
         signal = np.where(signal > value_max, value_max, signal)
         return signal
@@ -151,10 +127,6 @@ class GFMCalculator:
     def _calculate_epsilon_initial_check(
         self, D: np.ndarray, H: np.ndarray, x_total_initial: float
     ) -> np.ndarray:
-        """
-        Computes the dimensionless damping ratio (epsilon) to mathematically classify
-        the system's dynamic response archetype (overdamped vs. underdamped).
-        """
         return (
             D
             / 2
@@ -173,9 +145,6 @@ class GFMCalculator:
     def _get_time_tunnel(
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """
-        Generates a dynamic, time-dependent tolerance band ("tunnel") mapped to the response.
-        """
         t_val = max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
         tunnel_exp = 1 - np.exp(
             (-time_array + constants.TIME_TUNNEL_START_OFFSET) / constants.TIME_TUNNEL_EXP_TAU
@@ -186,9 +155,6 @@ class GFMCalculator:
     def _calculate_unlimited_power_envelopes(
         self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Synthesizes the theoretical absolute bounding envelopes before hardware constraints are applied.
-        """
         lower_env = np.minimum.reduce(list_of_arrays) - tunnel
         upper_env = np.maximum.reduce(list_of_arrays) + tunnel
         return np.minimum(lower_env, upper_env), np.maximum(lower_env, upper_env)
@@ -204,15 +170,10 @@ class GFMCalculator:
         sign: int,
         use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Executes the final operational constraint logic, strictly mapping the theoretical
-        envelopes to definitive hardware and software saturation boundaries.
-        """
         limit_max = self._pmax_mois_tunnel
         limit_min = self._pmin_mois_tunnel
 
         if use_opposite_signs:
-            # Execution branch applying divergent clipping dependent on trajectory vs steady-state opposition
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.minimum(
                     np.maximum(initial_power - sign * lower_envelope_unlimited, limit_min),
@@ -232,7 +193,6 @@ class GFMCalculator:
                     limit_max,
                 )
         else:
-            # Standard unified execution branch handling symmetrical capability bounding
             lower_envelope_limited = np.minimum(
                 np.maximum(initial_power - sign * lower_envelope_unlimited, limit_min), limit_max
             )
