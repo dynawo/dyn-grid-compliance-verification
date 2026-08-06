@@ -1,40 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2025 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import numpy as np
-
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging.logging import dycov_logging
-from dycov.gfm import constants
+from dycov.logging import dycov_logging
 
 
 class AmplitudeStep(GFMCalculator):
     """
-    Class to calculate the GFM amplitude step response.
-
-    This class handles all core calculations for delta_iq and reactive current
-    envelopes.
+    Calculator class dedicated to handling the GFM amplitude step response.
+    This module mathematically performs all core calculations for reactive current
+    deviations (delta_iq) and synthesizes the corresponding bounding envelopes
+    triggered by voltage amplitude variations within the grid.
     """
 
-    def __init__(
-        self,
-        gfm_params: GFMParameters,
-    ) -> None:
+    def __init__(self, gfm_params: GFMParameters) -> None:
         """
-        Initializes the AmplitudeStep calculator with GFM parameters.
-
-        Parameters
-        ----------
-        gfm_params : GFMParameters
-            An object containing all necessary parameters for GFM calculations.
+        Initializes the AmplitudeStep calculator with the specified Grid Forming parameters.
         """
         super().__init__(gfm_params=gfm_params)
         self._voltage_step = gfm_params.get_voltage_step_at_grid()
@@ -43,9 +31,10 @@ class AmplitudeStep(GFMCalculator):
         self._max_reactive_power = gfm_params.get_max_reactive_power()
         self._time_for_tunnel = gfm_params.get_time_for_tunnel()
         self._time_to_90 = gfm_params.get_time_to_90()
+        self._Xgrid = gfm_params.get_grid_reactance()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Returns the list of parameter names relevant for AmplitudeStep plots."""
+        """Retrieves the list of parameter names relevant for rendering AmplitudeStep plots."""
         return [
             "P0",
             "Q0",
@@ -62,45 +51,17 @@ class AmplitudeStep(GFMCalculator):
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates the change in current (delta_iq) and reactive current
-        envelopes (PCC, upper, and lower) for an amplitude step event.
-
-        Parameters
-        ----------
-        D : float
-            Damping factor.
-        H : float
-            Inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.ndarray
-            Array of time points for simulation.
-        event_time : float
-            The time (in seconds) at which the amplitude step event occurs.
-
-        Returns
-        -------
-        tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing:
-            - magnitude_name: The name of the calculated magnitude ("Iq").
-            - pcc_signal: The final calculated reactive current at the PCC.
-            - upper_envelope: The final upper reactive current envelope.
-            - lower_envelope: The final lower reactive current envelope.
+        Calculates the reactive current deviation (delta_iq) and its bounding envelopes
+        (PCC, upper, and lower) evaluated across an amplitude step event timeframe.
         """
         logger = dycov_logging.get_logger("AmplitudeStep")
-        logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
+        logger.debug(f"Input Params D={D} H={H} Xeff={Xeff}")
         logger.debug(
-            f"Input Params ΔVoltage={self._voltage_step} "
-            f"SCR={self._scr} "
-            f"Q0={self._initial_reactive_power} "
-            f"QMin={self._min_reactive_power} "
-            f"QMax={self._max_reactive_power}"
+            f"Input Params Voltage={self._voltage_step} SCR={self._scr} "
+            f"Q0={self._initial_reactive_power} QMin={self._min_reactive_power} QMax={self._max_reactive_power}"
         )
-        (
-            delta_iq_array,
-            delta_iq_min,
-            delta_iq_max,
-        ) = self._get_delta_iq(
+
+        delta_iq_base, delta_iq_min, delta_iq_max = self._get_delta_iq(
             D=D,
             H=H,
             Xeff=Xeff,
@@ -108,221 +69,143 @@ class AmplitudeStep(GFMCalculator):
             event_time=event_time,
         )
 
-        if self._is_emt_flag:
-            upper_env = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, delta_iq_min[0], time_array, delta_iq_min
-            )
-            lower_env = self._apply_delay(
-                constants.EMT_FINAL_DELAY_S, delta_iq_max[0], time_array, delta_iq_max
-            )
-        else:
-            upper_env = delta_iq_min
-            lower_env = delta_iq_max
+        # Retrieve the final unshifted physical capabilities
+        q_pcc, q_up, q_down = self._get_envelopes(
+            delta_iq_base=delta_iq_base,
+            delta_iq_min=delta_iq_min,
+            delta_iq_max=delta_iq_max,
+            Xeff=Xeff,
+        )
 
-        pcc_signal = delta_iq_array[self._ORIGINAL_PARAMS_IDX]
-        magnitude_name = "Iq"
+        # Apply EMT delay using the clean DRY logic from the base class
+        iq_pcc_final, iq_up_final, iq_down_final = self.apply_emt_delay_to_envelopes(
+            time_array, q_pcc, q_up, q_down
+        )
 
-        return magnitude_name, pcc_signal, upper_env, lower_env
+        return "Iq", iq_pcc_final, iq_up_final, iq_down_final
 
     def _get_delta_iq(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
-    ) -> tuple[list, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates the change in reactive current (delta_iq), considering
-        variations for nominal, minimum, and maximum parameters.
-
-        Parameters
-        ----------
-        D : float
-            Nominal damping factor.
-        H : float
-            Nominal inertia constant.
-        Xeff : float
-            Effective reactance.
-        time_array : np.ndarray
-            Array of time points for simulation.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        tuple[list, np.ndarray, np.ndarray]
-            A tuple containing a list of delta_iq variations, the min envelope,
-            and the max envelope.
+        Derives the reactive current deviations (delta_iq) and their extreme boundary conditions.
+        The analytical formulas governing the amplitude step rely intrinsically on Xeff,
+        sidestepping D and H variations for this specific grid event archetype.
         """
-        d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
-        h_array = np.array([H, H / self._min_ratio, H / self._max_ratio])
+        delta_iq_base = self._calculate_delta_iq_base(Xeff, time_array)
+        delta_iq_min = self._get_delta_iq_min(Xeff, time_array)
+        delta_iq_max = self._get_delta_iq_max(Xeff, time_array)
 
-        delta_iq_array = []
+        return delta_iq_base, delta_iq_min, delta_iq_max
 
-        for i in range(len(d_array)):
-            delta_iq = self._calculate_delta_iq(
-                d_array[i], h_array[i], Xeff, time_array, event_time
-            )
-            delta_iq_array.append(delta_iq)
-
-        delta_iq_min = self._get_delta_iq_min(Xeff, time_array, event_time)
-        delta_iq_max = self._get_delta_iq_max(Xeff, time_array, event_time)
-
-        return (
-            delta_iq_array,
-            delta_iq_min,
-            delta_iq_max,
-        )
-
-    def _calculate_delta_iq(
+    def _get_envelopes(
         self,
-        D: float,
-        H: float,
+        delta_iq_base: np.ndarray,
+        delta_iq_min: np.ndarray,
+        delta_iq_max: np.ndarray,
         Xeff: float,
-        time_array: np.ndarray,
-        event_time: float,
-    ) -> np.ndarray:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Calculates delta_iq for a first-order system response, ensuring that
-        the values are zero before the specified event time.
+        Translates raw reactive current derivations into final physical limits, applying
+        saturation algorithms based on the plant's absolute operational boundaries.
+        """
+        # Calculate the localized voltage step projected at the Point of Common Coupling (PCC)
+        volt_step_upcc = (self._voltage_step / 100.0) * Xeff / (Xeff + self._Xgrid)
+        sign_K = np.sign(volt_step_upcc)
+        tunnel = self._get_tunnel(Xeff)
 
-        Parameters
-        ----------
-        D : float, H: float, Xeff: float
-            System parameters for the variation.
-        time_array : np.ndarray
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
+        q_down = np.maximum(
+            np.minimum(
+                self._initial_reactive_power - sign_K * delta_iq_min, self._max_reactive_power
+            ),
+            -self._max_reactive_power,
+        )
 
-        Returns
-        -------
-        np.ndarray
-            The delta_iq array for the system, with pre-event values zeroed.
+        q_up = np.maximum(
+            np.minimum(
+                self._initial_reactive_power - sign_K * delta_iq_max,
+                self._max_reactive_power + tunnel,
+            ),
+            -self._max_reactive_power - tunnel,
+        )
+
+        # Derive the unconstrained nominal trajectory based on vector direction
+        q_expected_unclamped = self._initial_reactive_power - sign_K * delta_iq_base
+        q_expected = np.maximum(
+            np.minimum(q_expected_unclamped, self._max_reactive_power),
+            -self._max_reactive_power,
+        )
+
+        return q_expected, q_up, q_down
+
+    def _get_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
+        """
+        Mathematically resolves the fundamental delta_iq trajectory utilizing a standard
+        first-order exponential response equation.
         """
         voltage_step = self._voltage_step / 100.0
-        delta_iq = voltage_step / (Xeff + 1 / self._scr)
+        # Formulate the asymptotic theoretical limit of the reactive current shift
+        delta_iq_final = np.abs(voltage_step / (Xeff + self._Xgrid))
 
+        # Calculate the requisite time constant (tau) aligning to the 90% rise-time requirement
         tau = -self._time_to_90 / np.log(0.1)
+        exponential_part = delta_iq_final * (1 - np.exp(-time_array / tau))
 
-        # Create a relative time that starts at 0 at the 'event_time'
-        relative_time = np.maximum(0, time_array - event_time)
+        return exponential_part
 
-        # This directly implements: DeltaIQ * (1 - EXP(-time/tau))
-        calculated_delta_iq = delta_iq * (1 - np.exp(-relative_time / tau))
+    def _calculate_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
+        """A structural wrapper executing the base delta_iq waveform generation process."""
+        return self._get_delta_iq_base(Xeff, time_array)
 
-        # Ensure that pre-event values are zero
-        delta_iq_base = np.where(time_array < event_time, 0, calculated_delta_iq)
-
-        return delta_iq_base
-
-    def _get_delta_iq_min(
-        self, Xeff: float, time_array: np.ndarray, event_time: float
-    ) -> np.ndarray:
+    def _get_delta_iq_min(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
         """
-        Calculates the minimum delta_iq envelope, applying margins and tunnel.
-
-        Parameters
-        ----------
-        Xeff : float
-            Effective reactance.
-        time_array : np.ndarray
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        np.ndarray
-            The minimum delta_iq envelope array.
+        Synthesizes the specific delta_iq bounding array designated for the lower envelope.
+        This mechanism scales the foundational base curve and strictly clips it against
+        an upper limitation defined by the steady-state maximum minus the tolerance tunnel.
         """
-        voltage_step = self._voltage_step / 100
-        delta_iq = voltage_step / (Xeff + 1 / self._scr)
+        base_curve = 0.9 * self._get_delta_iq_base(Xeff, time_array)
         tunnel = self._get_tunnel(Xeff)
-        tau = -self._time_to_90 / np.log(0.1)
-        ttunnel = self._time_for_tunnel
-        margin_high = self._margin_high
-        relative_time = np.maximum(0, time_array - event_time)
+        voltage_step_pu = self._voltage_step / 100.0
 
-        # Path A: if Vstep is positive (voltage_step > 0)
-        growth_curve = delta_iq * (1 - np.exp(-relative_time / tau))
-        ceiling = delta_iq - tunnel
-        result_if_positive_vstep = np.minimum(growth_curve, ceiling)
+        # Calculate the ultimate theoretical maximum reactive shift magnitude
+        max_delta_iq = np.abs(voltage_step_pu / (Xeff + self._Xgrid))
+        lower_envelope_limit = max_delta_iq - tunnel
 
-        # Path B: if Vstep is NOT positive (voltage_step <= 0)
-        decay_curve = (
-            delta_iq + margin_high * delta_iq * np.exp(-relative_time / (ttunnel / 3.0)) + tunnel
-        )
-        constant_value = delta_iq + tunnel
-        result_if_negative_vstep = np.where(relative_time < ttunnel, decay_curve, constant_value)
+        delta_iq_lower = np.minimum(base_curve, lower_envelope_limit)
+        # Apply the pre-response zero constraint prior to the 90% rise mark
+        delta_iq_lower = np.where(time_array < self._time_to_90, 0.0, delta_iq_lower)
 
-        # Combine Path A and Path B based on the primary condition
-        calculated_delta_iq = np.where(
-            voltage_step > 0, result_if_positive_vstep, result_if_negative_vstep
-        )
+        return delta_iq_lower
 
-        # Ensure all pre-event values are zero
-        delta_iq_min = np.where(time_array < event_time, 0, calculated_delta_iq)
-
-        return delta_iq_min
-
-    def _get_delta_iq_max(
-        self, Xeff: float, time_array: np.ndarray, event_time: float
-    ) -> np.ndarray:
+    def _get_delta_iq_max(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
         """
-        Calculates the maximum delta_iq envelope, applying margins and tunnel.
-
-        Parameters
-        ----------
-        Xeff : float
-            Effective reactance.
-        time_array : np.ndarray
-            Array of time points.
-        event_time : float
-            The time at which the event occurs.
-
-        Returns
-        -------
-        np.ndarray
-            The maximum delta_iq envelope array.
+        Synthesizes the specific delta_iq bounding array designated for the upper envelope.
+        This algorithm establishes a static steady-state plateau and introduces a decaying
+        transient "boost" mapped to the initial reaction phase, simulating brief reactive power spikes.
         """
-        voltage_step = self._voltage_step / 100.0
-        delta_iq = voltage_step / (Xeff + 1 / self._scr)
         tunnel = self._get_tunnel(Xeff)
-        ttunnel = self._time_for_tunnel
-        margin_high = self._margin_high
+        voltage_step_pu = self._voltage_step / 100.0
 
-        relative_time = np.maximum(0, time_array - event_time)
+        max_delta_iq = np.abs(voltage_step_pu / (Xeff + self._Xgrid))
+        steady_state_upper_limit = tunnel + max_delta_iq
 
-        # Value if 'relative_time < ttunnel' (Exponential Decay Phase)
-        decay_curve = (
-            delta_iq + margin_high * delta_iq * np.exp(-relative_time / (ttunnel / 3.0)) + tunnel
+        # Compute the decaying transient boost representing initial capacitive/inductive inertia
+        transient_condition = time_array < self._time_for_tunnel
+        time_constant_transient = self._time_for_tunnel / 3.0
+        transient_boost_value = 0.0
+
+        # Guard against division by zero by verifying the time constant is physically meaningful
+        if time_constant_transient > 1e-9:
+            exponential_decay = np.exp(-time_array / time_constant_transient)
+            transient_boost_value = self._margin_high * max_delta_iq * exponential_decay
+
+        delta_iq_upper = steady_state_upper_limit + np.where(
+            transient_condition, transient_boost_value, 0.0
         )
-
-        # Value if 'relative_time >= ttunnel' (Constant Phase)
-        constant_value = delta_iq + tunnel
-
-        calculated_delta_iq = np.where(relative_time < ttunnel, decay_curve, constant_value)
-
-        # Ensure that pre-event values are zero
-        delta_iq_max = np.where(time_array < event_time, 0, calculated_delta_iq)
-
-        return delta_iq_max
+        return delta_iq_upper
 
     def _get_tunnel(self, Xeff: float) -> float:
-        """
-        Calculates a constant "tunnel" value.
-
-        Parameters
-        ----------
-        Xeff : float
-            Effective reactance.
-
-        Returns
-        -------
-        float
-            The calculated constant tunnel value.
-        """
+        """Calculates and maps the mathematical static tolerance margin ('tunnel')."""
         voltage_step = self._voltage_step / 100.0
-        delta_iq = voltage_step / (Xeff + 1 / self._scr)
-
-        return max(
-            self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * delta_iq,
-        )
+        delta_iq = np.abs(voltage_step / (Xeff + self._Xgrid))
+        return max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * delta_iq)

@@ -1,29 +1,49 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2025 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 from pathlib import Path
-
 import numpy as np
-
+from dycov.gfm import constants
 from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
-from dycov.gfm.outputs import plot_results, save_results_to_csv
+from dycov.gfm.outputs import plot_results, save_ini_dump, save_results_to_csv
 from dycov.gfm.parameters import GFMParameters
-from dycov.gfm import constants
+from dycov.logging import dycov_logging
+
+LOGGER = dycov_logging.get_logger(__name__)
 
 
 class GridForming:
     """
-    A class to handle the generation and analysis of Grid Forming (GFM)
-    model results for a single simulation case.
+    Core orchestrator class designed to handle the generation and analysis of
+    Grid Forming (GFM) model results for single simulation scenarios.
     """
+
+    def _merge_hybrid_envelopes(
+        self,
+        up_over: np.ndarray,
+        low_over: np.ndarray,
+        up_under: np.ndarray,
+        low_under: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Merges overdamped and underdamped envelopes applying Min/Max boundary logic.
+        Calculates the absolute outermost bounds.
+        """
+        upper_envelope1 = np.maximum(up_over, up_under)
+        lower_envelope1 = np.minimum(low_over, low_under)
+        upper_envelope2 = np.maximum(low_over, low_under)
+        lower_envelope2 = np.minimum(up_over, up_under)  # Bug fixed: was lower_envelop2
+
+        upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
+        lower_envelope = np.minimum(lower_envelope1, lower_envelope2)
+
+        return upper_envelope, lower_envelope
 
     def generate(
         self,
@@ -34,40 +54,89 @@ class GridForming:
         oc_name: str,
     ) -> None:
         """
-        Generates the GFM simulation results, including calculations,
-        CSV export, and plotting.
-
-        Parameters
-        ----------
-        working_path : Path
-            The base path for saving results.
-        parameters : GFMParameters
-            An object containing the GFM simulation parameters.
-        pcs_name : str
-            The name of the PCS (Power Conversion System).
-        bm_name : str
-            The name of the benchmark.
-        oc_name : str
-            The name of the operating condition.
+        Executes the primary pipeline for GFM simulation results generation,
+        including data calculations, CSV data exports, and plotting.
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
-        damping_constant = parameters.get_damping_constant()
-        inertia_constant = parameters.get_inertia_constant()
         x_eff = parameters.get_effective_reactance()
-
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
-
         time_array, event_time = self._get_time(calculator_name)
-
-        # OCP implemented: Get plot parameters directly from the calculator.
         params_list = calculator.get_plot_parameter_names() if calculator else None
 
-        magnitude_name, pcc_signal, upper_envelope, lower_envelope = self._calculate_envelopes(
-            calculator, time_array, event_time, damping_constant, inertia_constant, x_eff
-        )
-
+        hybrid_params = parameters.get_hybrid_parameters()
+        standard_params = parameters.get_standard_parameters()
+        magnitude_name = ""
+        pcc_signal = np.array([])
+        upper_envelope = np.array([])
+        lower_envelope = np.array([])
+        extra_envelopes = None
         title = f"{pcs_name}.{bm_name}.{oc_name}"
+
+        if hybrid_params:
+            LOGGER.info(
+                f"Hybrid parameters detected for {pcs_name}. Running Merged Envelope generation."
+            )
+            d_over, h_over, d_under, h_under = hybrid_params
+
+            # Execution Phase 1: Overdamped Parameters
+            mag_name, pcc_over, up_over, low_over = self._calculate_envelopes(
+                calculator, time_array, event_time, d_over, h_over, x_eff
+            )
+            producer = parameters.get_producer()
+            producer_config = producer.get_config() if producer else None
+            save_ini_dump(
+                working_path / f"{title}_ini_dump_overdamped.txt",
+                parameters,
+                producer_config,
+                calculator,
+            )
+
+            # Execution Phase 2: Underdamped Parameters
+            _, pcc_under, up_under, low_under = self._calculate_envelopes(
+                calculator, time_array, event_time, d_under, h_under, x_eff
+            )
+            save_ini_dump(
+                working_path / f"{title}_ini_dump_underdamped.txt",
+                parameters,
+                producer_config,
+                calculator,
+            )
+
+            # Clean envelope merging logic extraction
+            upper_envelope, lower_envelope = self._merge_hybrid_envelopes(
+                up_over, low_over, up_under, low_under
+            )
+            pcc_signal = pcc_over
+            magnitude_name = mag_name
+
+            if parameters.should_save_all_envelopes():
+                extra_envelopes = {
+                    "upper_overdamped": up_over,
+                    "lower_overdamped": low_over,
+                    "upper_underdamped": up_under,
+                    "lower_underdamped": low_under,
+                }
+            if params_list:
+                params_list = [p for p in params_list if p not in ["D", "H"]]
+
+        elif standard_params:
+            LOGGER.debug(f"Standard parameters (D, H) detected for {pcs_name}.")
+            d_val, h_val = standard_params
+            magnitude_name, pcc_signal, upper_envelope, lower_envelope = self._calculate_envelopes(
+                calculator, time_array, event_time, d_val, h_val, x_eff
+            )
+        else:
+            error_msg = (
+                f"Configuration Error in {pcs_name}: Parameters D, H or hybrid not defined."
+            )
+            LOGGER.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Retrieve calculator operational flags utilizing safe properties
+        is_inconsistent = calculator.is_inconsistent
+        disclaimer_msg = calculator.disclaimer_message
+
         self._export_csv(
             working_path,
             title,
@@ -76,7 +145,18 @@ class GridForming:
             pcc_signal,
             lower_envelope,
             upper_envelope,
+            extra_envelopes=extra_envelopes,
         )
+
+        if not hybrid_params:
+            producer = parameters.get_producer()
+            save_ini_dump(
+                working_path / f"{title}_ini_dump.txt",
+                parameters,
+                producer.get_config() if producer else None,
+                calculator,
+            )
+
         self._plot(
             working_path,
             title,
@@ -88,35 +168,23 @@ class GridForming:
             upper_envelope,
             parameters,
             params_list,
+            calculator,
+            is_inconsistent,
+            disclaimer_msg,
+            extra_envelopes=extra_envelopes,
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """
-        Generates the time array and defines the event time for the simulation.
-
-        Note: SCRJump and RoCoF start earlier to establish a clear steady-state.
-
-        Parameters
-        ----------
-        calculator_name : str
-            The name of the calculator being used.
-
-        Returns
-        -------
-        tuple[np.ndarray, float]
-            A tuple containing the time array and the event time (float).
-        """
-        if calculator_name in ["SCRJump", "RoCoF"]:
-            start_time = constants.SIMULATION_START_TIME_EXTENDED
-        else:
-            start_time = constants.SIMULATION_START_TIME_DEFAULT
-
-        end_time = constants.SIMULATION_END_TIME
-        event_time = constants.SIMULATION_EVENT_TIME
-        nb_points = constants.SIMULATION_POINTS
-        time_array = np.linspace(start_time, end_time, nb_points)
-
-        return time_array, event_time
+        """Generates the simulation time array and determines the precise event time."""
+        start_time = (
+            constants.SIMULATION_START_TIME_EXTENDED
+            if calculator_name in ["SCRJump", "RoCoF"]
+            else constants.SIMULATION_START_TIME_DEFAULT
+        )
+        time_array = np.linspace(
+            start_time, constants.SIMULATION_END_TIME, constants.SIMULATION_POINTS
+        )
+        return time_array, constants.SIMULATION_EVENT_TIME
 
     def _calculate_envelopes(
         self,
@@ -127,44 +195,13 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Calculates the response envelopes using the provided calculator.
-
-        Parameters
-        ----------
-        calculator : GFMCalculator
-            The envelopes calculator object.
-        time_array : np.ndarray
-            The time array for the simulation.
-        event_time : float
-            The time of the event.
-        damping_constant : float
-            The damping constant (D).
-        inertia_constant : float
-            The inertia constant (H).
-        x_eff : float
-            The effective reactance (Xeff).
-
-        Returns
-        -------
-        tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing:
-            - str: The name of the plot magnitude (e.g., "P", "Iq").
-            - np.ndarray: The PCC signal data.
-            - np.ndarray: The upper envelope data.
-            - np.ndarray: The lower envelope data.
-        """
-        magnitude_name, pcc_signal, upper_envelope, lower_envelope = (
-            calculator.calculate_envelopes(
-                D=damping_constant,
-                H=inertia_constant,
-                Xeff=x_eff,
-                time_array=time_array,
-                event_time=event_time,
-            )
+        return calculator.calculate_envelopes(
+            D=damping_constant,
+            H=inertia_constant,
+            Xeff=x_eff,
+            time_array=time_array,
+            event_time=event_time,
         )
-
-        return magnitude_name, pcc_signal, upper_envelope, lower_envelope
 
     def _export_csv(
         self,
@@ -175,118 +212,62 @@ class GridForming:
         pcc_signal: np.ndarray,
         lower_envelope: np.ndarray,
         upper_envelope: np.ndarray,
+        extra_envelopes: dict = None,
     ) -> None:
-        """
-        Exports the simulation results to a CSV file.
-
-        Parameters
-        ----------
-        csv_path : Path
-            The base path for saving the CSV file.
-        title : str
-            The title to be used for the CSV filename.
-        magnitude_name : str
-            The name of the magnitude being saved.
-        time_array : np.ndarray
-            The time array data.
-        pcc_signal : np.ndarray
-            The PCC signal data.
-        lower_envelope : np.ndarray
-            The lower envelope data.
-        upper_envelope : np.ndarray
-            The upper envelope data.
-        """
         save_results_to_csv(
-            path=csv_path / f"{title}.csv",
-            magnitude=magnitude_name,
-            time_array=time_array,
-            pcc_signal=pcc_signal,
-            lower_envelope=lower_envelope,
-            upper_envelope=upper_envelope,
+            csv_path / f"{title}.csv",
+            magnitude_name,
+            time_array,
+            pcc_signal,
+            lower_envelope,
+            upper_envelope,
+            extra_envelopes=extra_envelopes,
         )
 
-    def _get_params_plot_info(self, parameters: GFMParameters, params_list: list) -> list[str]:
-        """
-        Generates a list of formatted strings with parameter information for plots.
-
-        Parameters
-        ----------
-        parameters : GFMParameters
-            The GFM parameters object to query for values.
-        params_list : list
-            A list of strings specifying which parameters to extract.
-
-        Returns
-        -------
-        list[str]
-            A list of formatted strings, each representing a parameter and its value.
-        """
-        if params_list is None:
+    def _get_params_plot_info(
+        self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
+    ) -> list[str]:
+        """Extracts and formats key simulation variables into human-readable strings for UI rendering."""
+        if not params_list:
             return []
-
         text_params_info = []
-
-        if "P0" in params_list:
-            value = parameters.get_initial_active_power()
-            text_params_info.append(f"P0 = {value:.2f} pu")
-        if "Q0" in params_list:
-            value = parameters.get_initial_reactive_power()
-            text_params_info.append(f"Q0 = {value:.2f} pu")
-        if "TimeTo90" in params_list:
-            value = parameters.get_time_to_90()
-            text_params_info.append(f"t_90% = {value:.2f} s")
-        if "Pmax" in params_list:
-            value = parameters.get_max_active_power()
-            text_params_info.append(f"Pmax = {value:.2f} pu")
-        if "Qmax" in params_list:
-            value = parameters.get_max_reactive_power()
-            text_params_info.append(f"Qmax = {value:.2f} pu")
-        if "Pmin" in params_list:
-            value = parameters.get_min_active_power()
-            text_params_info.append(f"Pmin = {value:.2f} pu")
-        if "Qmin" in params_list:
-            value = parameters.get_min_reactive_power()
-            text_params_info.append(f"Qmin = {value:.2f} pu")
-        if "DeltaPhase" in params_list:
-            value = parameters.get_delta_phase()
-            text_params_info.append(f"Δθ = {value:.2f}°")
-        if "SCR" in params_list:
-            value = parameters.get_scr()
-            text_params_info.append(f"SCR = {value:.2f}")
-        if "VoltageStepAtGrid" in params_list:
-            value = parameters.get_voltage_step_at_grid()
-            text_params_info.append(f"ΔV_Grid = {value / 100:.2f} pu")
-        if "VoltageStepAtPDR" in params_list:
-            value = parameters.get_voltage_step_at_pdr()
-            text_params_info.append(f"ΔV_PCC = {value / 100:.2f} pu")
-        if "AngleStepAtPDR" in params_list:
-            value = parameters.get_delta_step()
-            text_params_info.append(f"Δθ_PCC = {value:.2f}°")
-        if "SCRinitial" in params_list:
-            value = parameters.get_initial_scr()
-            text_params_info.append(f"SCR_initial = {value:.2f}")
-        if "SCRfinal" in params_list:
-            value = parameters.get_final_scr()
-            text_params_info.append(f"SCR_final = {value:.2f}")
-        if "Frequency0" in params_list:
-            value = parameters.get_initial_frequency()
-            text_params_info.append(f"f0 = {(value * 50):.2f} Hz")
-        if "RoCoF" in params_list:
-            value = parameters.get_change_frequency()
-            text_params_info.append(f"RoCoF = {(value * 50):.2f} Hz/s")
-        if "RoCoFDuration" in params_list:
-            value = parameters.get_change_frequency_duration()
-            text_params_info.append(f"RoCoF Duration = {value:.2f} s")
-        if "Xeff" in params_list:
-            value = parameters.get_effective_reactance()
-            text_params_info.append(f"Xeff = {value:.2f} pu")
-        if "D" in params_list:
-            value = parameters.get_damping_constant()
-            text_params_info.append(f"D = {value:.2f}")
-        if "H" in params_list:
-            value = parameters.get_inertia_constant()
-            text_params_info.append(f"H = {value:.2f} s")
-
+        param_mapping = {
+            "P0": (parameters.get_initial_active_power, "P0 = {:.3f} pu"),
+            "Q0": (parameters.get_initial_reactive_power, "Q0 = {:.3f} pu"),
+            "TimeTo90": (lambda: parameters.get_time_to_90() * 1000, "t_90% = {:.3f} ms"),
+            "Pmax": (parameters.get_max_active_power, "Pmax = {:.3f} pu"),
+            "Qmax": (parameters.get_max_reactive_power, "Qmax = {:.3f} pu"),
+            "Pmin": (parameters.get_min_active_power, "Pmin = {:.3f} pu"),
+            "Qmin": (parameters.get_min_reactive_power, "Qmin = {:.3f} pu"),
+            "DeltaPhase": (parameters.get_delta_phase, "Phase = {:.3f} deg"),
+            "SCR": (parameters.get_scr, "SCR = {:.3f}"),
+            "VoltageStepAtGrid": (
+                lambda: parameters.get_voltage_step_at_grid() / 100,
+                "V_Grid = {:.3f} pu",
+            ),
+            "VoltageStepAtPDR": (
+                lambda: parameters.get_voltage_step_at_pdr() / 100,
+                "V_PGU = {:.3f} pu",
+            ),
+            "AngleStepAtPDR": (parameters.get_delta_step, "Angle = {:.3f} deg"),
+            "SCRinitial": (parameters.get_initial_scr, "SCR_initial = {:.3f}"),
+            "SCRfinal": (parameters.get_final_scr, "SCR_final = {:.3f}"),
+            "Frequency0": (lambda: parameters.get_initial_frequency() * 50, "f0 = {:.3f} Hz"),
+            "RoCoF": (lambda: parameters.get_change_frequency() * 50, "RoCoF = {:.3f} Hz/s"),
+            "RoCoFDuration": (
+                lambda: parameters.get_change_frequency_duration() * 1000,
+                "RoCoF Duration = {:.3f} ms",
+            ),
+            "Xeff": (parameters.get_effective_reactance, "Xeff = {:.3f} pu"),
+            "D": (parameters.get_damping_constant, "D = {:.3f}"),
+            "H": (parameters.get_inertia_constant, "H = {:.3f} s"),
+        }
+        for param in params_list:
+            if param in param_mapping:
+                func, fmt = param_mapping[param]
+                text_params_info.append(fmt.format(func()))
+            elif param == "Epsilon":
+                text_params_info.append(f"Epsilon = {calculator.epsilon:.3f}")
         return text_params_info
 
     def _plot(
@@ -301,43 +282,24 @@ class GridForming:
         upper_envelope: np.ndarray,
         parameters: GFMParameters,
         params_list: list,
+        calculator: GFMCalculator,
+        is_inconsistent: bool = False,
+        disclaimer_msg: str = None,
+        extra_envelopes: dict = None,
     ) -> None:
-        """
-        Generates and saves a plot of the simulation results.
-
-        Parameters
-        ----------
-        png_path : Path
-            The base path for saving the plot image.
-        title : str
-            The title for the plot and image filename.
-        magnitude_name : str
-            The name of the magnitude being plotted.
-        time_array : np.ndarray
-            The time array data.
-        event_time : float
-            The time of the event, used to mark on the plot.
-        pcc_signal : np.ndarray
-            The PCC signal data to be plotted.
-        lower_envelope : np.ndarray
-            The lower envelope data to be plotted.
-        upper_envelope : np.ndarray
-            The upper envelope data to be plotted.
-        parameters : GFMParameters
-            The GFM parameters object.
-        params_list : list
-            The list of parameter names to display on the plot.
-        """
         plot_results(
-            path=png_path / f"{title}.png",
-            title=title,
-            magnitude=magnitude_name,
-            time_array=time_array,
-            event_time=event_time,
-            shift_time=0,  # This parameter might represent a y-axis offset or reference.
-            pcc_signal=pcc_signal,
-            lower_envelope=lower_envelope,
-            upper_envelope=upper_envelope,
-            output_format="png&html",
-            params_list=self._get_params_plot_info(parameters, params_list),
+            png_path / f"{title}.png",
+            title,
+            magnitude_name,
+            time_array,
+            event_time,
+            0,
+            pcc_signal,
+            lower_envelope,
+            upper_envelope,
+            "png&html",
+            self._get_params_plot_info(parameters, params_list, calculator),
+            is_inconsistent,
+            disclaimer_msg,
+            extra_envelopes=extra_envelopes,
         )

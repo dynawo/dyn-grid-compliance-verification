@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2025 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 from typing import Optional
-
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.calculators.phase_jump import PhaseJump
@@ -20,23 +17,24 @@ from dycov.gfm.parameters import GFMParameters
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
     """
-    Returns an instance of a GFMCalculator subclass based on the provided name.
-
-    This factory function maps string names to corresponding GFM calculator classes
-    and instantiates them with the given GFM parameters.
+    Factory method to instantiate and return a specific GFMCalculator subclass.
+    This function maps string identifiers to their corresponding Grid Forming (GFM)
+    calculator classes, ensuring they are initialized with the provided parameters.
 
     Parameters
     ----------
     name : str
-        The name of the calculator to retrieve (e.g., "PhaseJump", "AmplitudeStep").
+        The identifier name of the calculator to retrieve
+        (e.g., "PhaseJump", "AmplitudeStep", "RoCoF", "SCRJump").
     gfm_params : GFMParameters
-        An object containing all necessary parameters for the GFM calculation.
+        An object containing all necessary grid forming parameters required
+        for the calculation instance.
 
     Returns
     -------
     Optional[GFMCalculator]
-        An instance of the specified GFMCalculator subclass if the name is
-        recognized, otherwise None.
+        An instantiated object of the requested GFMCalculator subclass if the
+        name is recognized. Returns None if the calculator name is unknown.
     """
     if name == "PhaseJump":
         return PhaseJump(gfm_params=gfm_params)
