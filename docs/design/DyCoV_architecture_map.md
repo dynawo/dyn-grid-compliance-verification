@@ -32,6 +32,17 @@ All extend `FileVariables` (`io/file_variables.py`); fill template placeholders 
 Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills placeholders** — it does NOT
 build network structure dynamically. Custom Modelica in `src/dycov/model_lib/modelica_models/`.
 
+**Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
+not per-key. `model_parameters.unit_characteristics(producer, u_dim)` is the single registry of base
+magnitudes (`Pmax`/`Snom`/`Qmax`/`Qmin`/`Udim`/`Unom=1.0`, powers in s_nref pu, voltage in Unom pu);
+`resolve_value_definition(defn, chars, sign)` evaluates `[±mult*]Name`|numeric against it. Every
+non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
+resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_characteristics`/`obtain_value`
+(`curves.py`, backing `setpoint_step_value` and the `{{step_event_*}}` TSO placeholders), and the report
+`reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
+registry entry. Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
+and `line_XPu` (DTR reactance-table base `a`/`b`).
+
 ## Numerical layer (mutated many times, persisted to disk)
 
 - **Retry** (`runtime/retry_strategy.py`): `_reduce_min_step` → `_increase_accuracy` →

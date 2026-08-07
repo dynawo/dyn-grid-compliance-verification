@@ -240,33 +240,10 @@ class ModelSetup:
         dycov_logging.get_logger("ModelSetup").debug(f"\tpdr_U={pdr_u_cfg}")
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
-        ini_pdr_p = model_parameters.extract_defined_value(
-            pdr_p_cfg, "Pmax", producer.p_max_pu, -1
-        )
-
-        if "Qmin" in pdr_q_cfg:
-            ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, "Qmin", producer.q_min_pu, -1
-            )
-        elif "Qmax" in pdr_q_cfg:
-            ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, "Qmax", producer.q_max_pu, -1
-            )
-        else:
-            ini_pdr_q = model_parameters.extract_defined_value(
-                pdr_q_cfg, "Pmax", producer.p_max_pu, -1
-            )
-
-        if "Udim" in pdr_u_cfg:
-            base_value = u_dim
-            parameter_name = "Udim"
-        else:
-            base_value = producer.u_nom
-            parameter_name = "Unom"
-        ini_pdr_u = (
-            model_parameters.extract_defined_value(pdr_u_cfg, parameter_name, base_value)
-            / producer.u_nom
-        )
+        characteristics = model_parameters.unit_characteristics(producer, u_dim)
+        ini_pdr_p = model_parameters.resolve_value_definition(pdr_p_cfg, characteristics, -1)
+        ini_pdr_q = model_parameters.resolve_value_definition(pdr_q_cfg, characteristics, -1)
+        ini_pdr_u = model_parameters.resolve_value_definition(pdr_u_cfg, characteristics)
         return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def _get_tso_loads(
@@ -342,23 +319,24 @@ class ModelSetup:
         list[LoadInit]
         """
         producer = self._owner.get_producer()
+        power_chars = model_parameters.unit_characteristics(producer, u_dim)
+        # Load voltages are normalized by u_nom afterwards, so their bases stay in kV here.
+        voltage_chars = {**power_chars, "Udim": u_dim, "Unom": producer.u_nom}
 
-        def _get_load_value(param_name: str, default_key: str, default_value: float) -> float:
+        def _get_load_value(param_name: str, characteristics: dict) -> float:
             try:
                 return float(param_name)
             except ValueError:
                 cfg_value = config.get_value(config_section, param_name)
                 dycov_logging.get_logger("ModelSetup").debug(f"\t{param_name}={cfg_value}")
-                return model_parameters.extract_defined_value(
-                    cfg_value, default_key, default_value
-                )
+                return model_parameters.resolve_value_definition(cfg_value, characteristics)
 
         loads = []
         for load in self.tso_loads:
-            p = _get_load_value(load.p, "pmax", producer.p_max_pu)
-            q = _get_load_value(load.q, "pmax", producer.p_max_pu)
-            u = _get_load_value(load.u, "udim", u_dim) / producer.u_nom
-            uphase = _get_load_value(load.u_phase, "NA", 1.0)
+            p = _get_load_value(load.p, power_chars)
+            q = _get_load_value(load.q, power_chars)
+            u = _get_load_value(load.u, voltage_chars) / producer.u_nom
+            uphase = _get_load_value(load.u_phase, power_chars)
             loads.append(LoadInit(load.id, "", p, q, u, uphase))
         return loads
 
