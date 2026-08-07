@@ -283,7 +283,7 @@ def check_auxiliary_load(load: LoadParams) -> None:
 
 def check_internal_line(line: LineParams) -> None:
     """Check whether the user-supplied internal line parameters are consistent:
-    * The reactance and admittance of the internal line must be greater than zero.
+    * The resistance and reactance of the internal line must be greater than zero.
 
     Parameters
     ----------
@@ -292,7 +292,7 @@ def check_internal_line(line: LineParams) -> None:
     """
     if line and (line.r <= 0 or line.x <= 0):
         raise ValueError(
-            "The reactance and admittance of the internal line must be greater than zero."
+            "The resistance and reactance of the internal line must be greater than zero."
         )
 
 
