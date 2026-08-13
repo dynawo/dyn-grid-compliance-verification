@@ -435,6 +435,21 @@ def _add_testing_argument(parser: argparse.ArgumentParser) -> None:
         help_msg=argparse.SUPPRESS,  # Suppress help message for testing purposes
     )
 
+def _add_functional_testing_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--functional_tests' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-t",
+        "--functional_tests",
+        arg_type=str,
+        help_msg="Path to the baseline directory containing verified CSVs to compare against the output.",
+    )
 
 def _add_dynamic_model_argument(parser: argparse.ArgumentParser) -> None:
     """Adds the '--dynamic-model' argument to the given parser.
@@ -545,6 +560,7 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
     _add_output_argument(envelops)
     _add_pcs_argument(envelops)
     _add_only_dtr_argument(envelops)
+    _add_functional_testing_argument(envelops)
     _LOGGER.debug("Added 'generateEnvelopes' subparser.")
 
 
