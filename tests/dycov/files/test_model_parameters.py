@@ -72,6 +72,13 @@ def test_no_matching_equipment_models(tmp_path):
     assert intline is None
 
 
+def test_get_parset_missing_id_raises():
+    par_root = _make_root()
+
+    with pytest.raises(ValueError, match="parameter set with id='missing' was not found"):
+        model_parameters._get_parset(par_root, "missing", {"ns": _NS})
+
+
 def test_extract_defined_value_with_placeholders():
     assert model_parameters.extract_defined_value("2*b", "b", 0.2) == pytest.approx(0.4)
     assert model_parameters.extract_defined_value("pmax", "pmax", 90) == pytest.approx(90)
