@@ -47,29 +47,3 @@ def compare_csv_directories(baseline_dir: Path, output_dir: Path) -> Tuple[bool,
             return False, f"Data Mismatch Error in file '{relative_path}':\n{e}"
 
     return True, ""
-
-
-# ==========================================
-# Example usage within a pytest framework
-# ==========================================
-
-
-def test_dynamic_directory_output_generation(tmp_path):
-    """
-    Executes the generation lifecycle and dynamically compares the nested output directories.
-    """
-    # In your actual test, this path should point to your reference baseline folder
-    baseline_directory = Path("tests/baselines")
-
-    # Example: 'tmp_path' is provided by pytest as a secure, temporary output folder.
-    # Here is where your script would output the new generated folders and files.
-    output_directory = tmp_path / "simulation_results"
-
-    # --- RUN YOUR GENERATION CODE HERE ---
-    # e.g., gfm_generation.generate(output_directory, ...)
-    # -------------------------------------
-
-    # Validate that the entire output structure and data match the baseline
-    # Uncomment the following line when your generation step is successfully integrated:
-
-    # compare_csv_directories(baseline_dir=baseline_directory, output_dir=output_directory)
