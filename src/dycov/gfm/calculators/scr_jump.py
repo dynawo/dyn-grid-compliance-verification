@@ -87,7 +87,6 @@ class SCRJump(GFMCalculator):
         """
         damping_variations = np.array([D, D * self._max_ratio, D * self._min_ratio])
         inertia_variations = np.array([H, H * self._min_ratio, H * self._max_ratio])
-
         num_variations = len(damping_variations)
         num_time_points = len(time_array)
 
@@ -117,14 +116,21 @@ class SCRJump(GFMCalculator):
         self._epsilon_vals = epsilon_results
 
         is_overdamped = epsilon_results >= 1
-        # Raise graphical rendering flags if evaluated conditions drift beyond single damping profiles
         if not np.all(is_overdamped == is_overdamped[0]):
             eps_str = np.array2string(epsilon_results, precision=2)
+
+            d_str = np.array2string(damping_variations, precision=2)
+            h_str = np.array2string(inertia_variations, precision=2)
+
             msg = (
                 f"Inconsistent damping behavior across parameter variations.\n"
                 f"Epsilon values: {eps_str}.\n"
-                f"Variations must maintain the same damping type."
+                f"Is Overdamped (>=1): {is_overdamped}.\n"
+                f"D values: {d_str}. H values: {h_str}.\n"
+                f"Variations must maintain the same damping type "
+                f"(all overdamped or all underdamped)."
             )
+
             logger.warning(msg)
             self._is_inconsistent = True
             self._disclaimer_message = msg
@@ -460,7 +466,7 @@ class SCRJump(GFMCalculator):
             damping_ratio = float("inf")
         else:
             alpha = D / (2 * H)
-            betha = base_angular_freq / (2 * H * total_reactance)
+            betha = base_angular_freq * voltage_product / (2 * H * total_reactance)
             if (alpha**2 - 4 * betha) < 0:
                 natural_frequency = np.sqrt(
                     base_angular_freq * voltage_product / (2 * H * total_reactance)
@@ -519,7 +525,13 @@ class SCRJump(GFMCalculator):
         """
         total_reactance, epsilon, _, peak_power = self._calculate_common_params(D, H, Xeff)
         alpha_coeff = D / (2 * H)
-        beta_coeff = self._base_angular_frequency / (2 * H * total_reactance)
+        beta_coeff = (
+            self._base_angular_frequency
+            * self._initial_voltage
+            * self._grid_voltage
+            / (2 * H * total_reactance)
+        )
+
         sqrt_term_val = max(0, alpha_coeff**2 - 4 * beta_coeff)
 
         # Determine specific operational roots analyzing second-order physical boundaries

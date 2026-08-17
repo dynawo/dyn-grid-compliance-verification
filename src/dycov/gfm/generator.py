@@ -139,7 +139,7 @@ class GFMGeneration:
                 _generate_pcs(pcs_args=pcs_tuple)
 
         for _, pcs_name, producer_name in self._pcs_list:
-            src_dir = self._parameters.get_working_dir() / producer_name
+            src_dir = self._parameters.get_working_dir() / producer_name / pcs_name
             dst_dir = self._parameters.get_output_dir() / pcs_name
 
             if src_dir.exists():
