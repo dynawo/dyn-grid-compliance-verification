@@ -61,6 +61,7 @@ def handle_generate_envelopes_command(
         emt=emt,
         user_pcs=args.pcs,
         only_dtr=args.only_dtr,
+        functional_tests=args.functional_tests,
     )
 
     if result_code == -1:
@@ -429,6 +430,7 @@ def _generate_envelopes(
     emt: bool,
     user_pcs: bool,
     only_dtr: bool,
+    functional_tests: str = None
 ):
     dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
     try:
@@ -456,9 +458,42 @@ def _generate_envelopes(
             f"Generation completed in {end_time - start_time:.2f} seconds."
         )
 
+        if functional_tests:
+            dycov_logging.get_logger("CommandHandlers").info(f"Running Functional Tests comparing Output '{output_dir}' against Baseline '{functional_tests}'...")
+            
+            # We import the logic from our testing module dynamically so we don't pollute the production imports
+            import sys
+            # Assuming functional_tests.py is in tests/ folder relative to the execution or project root.
+            # However, we can execute the core logic directly here or import it if the package structure allows.
+            try:
+                # We will import the function we defined to avoid subprocessing pytest.
+                from dycov.gfm.tests.functional_tests import compare_csv_directories
+                
+                baseline_path = Path(functional_tests)
+                if not baseline_path.exists():
+                    dycov_logging.get_logger("CommandHandlers").error(f"Baseline directory not found: {baseline_path}")
+                    return 1
+
+                # Execute the direct comparison
+                success, error_msg = compare_csv_directories(baseline_dir=baseline_path, output_dir=output_dir)
+                if success:
+                    dycov_logging.get_logger("CommandHandlers").info("SUCCESS: All functional tests passed. Output matches baseline perfectly.")
+                    print("\n✅ SUCCESS: All functional tests passed. Output matches baseline perfectly.")
+                else:
+                    dycov_logging.get_logger("CommandHandlers").error(f"Functional test failed: {error_msg}")
+                    print(f"\n❌ FAILED: Functional tests found discrepancies.\n{error_msg}")
+                    return 1 # Return error code if tests fail
+            except ImportError:
+                 dycov_logging.get_logger("CommandHandlers").error("Could not import 'compare_csv_directories' from 'tests.functional_tests'. Make sure the module exists and is in the PYTHONPATH.")
+                 return 1
+            except Exception as e:
+                 dycov_logging.get_logger("CommandHandlers").exception(f"Unexpected error during functional testing: {e}")
+                 return 1
+        
         # SUCCESS: always delete the temporary directory
         params.cleanup_working_dir()
         return 0
+
 
     except Exception as e:
         if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
