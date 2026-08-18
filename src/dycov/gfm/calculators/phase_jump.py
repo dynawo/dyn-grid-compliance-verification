@@ -19,7 +19,6 @@ class PhaseJump(GFMCalculator):
     """Handles the GFM response to a phase jump event."""
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the PhaseJump calculator with GFM parameters."""
         super().__init__(gfm_params=gfm_params)
         self._delta_phase = gfm_params.get_delta_phase()
         self._initial_active_power = gfm_params.get_initial_active_power()
@@ -27,13 +26,11 @@ class PhaseJump(GFMCalculator):
         self._max_active_power = gfm_params.get_max_active_power()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves parameters relevant for rendering PhaseJump plots."""
         return ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H", "Epsilon"]
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates the active power deviation and bounding envelopes."""
         logger = dycov_logging.get_logger("PhaseJump")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         logger.debug(
@@ -67,13 +64,11 @@ class PhaseJump(GFMCalculator):
             lower_envelope = p_down
             pcc_signal = p_pcc
 
-        magnitude_name = "Ip"
-        return magnitude_name, pcc_signal, upper_envelope, lower_envelope
+        return "Ip", pcc_signal, upper_envelope, lower_envelope
 
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]:
-        """Computes the delta_p sequences across parameter variations."""
         x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
 
@@ -85,9 +80,7 @@ class PhaseJump(GFMCalculator):
         )
         dycov_logging.get_logger("PhaseJump").debug(f"Epsilon={epsilon_initial_check}")
 
-        delta_p_array: list[np.ndarray] = []
-        p_peak_array: list[float] = []
-        epsilon_array: list[float] = []
+        delta_p_array, p_peak_array, epsilon_array = [], [], []
 
         for i in range(len(d_array)):
             delta_p, p_peak, epsilon = self._calculate_delta_p_for_damping(
@@ -119,7 +112,6 @@ class PhaseJump(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Consolidates traces to calculate and limit final power envelopes."""
         delta_p = delta_p_array[self._ORIGINAL_PARAMS_IDX]
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
         sign = np.sign(self._delta_phase)
@@ -150,7 +142,6 @@ class PhaseJump(GFMCalculator):
     def _calculate_common_params(
         self, D: float, H: float, Xeff: float
     ) -> tuple[float, float, float, float]:
-        """Derives fundamental mechanical and electrical parameters."""
         x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
         u_prod = self._initial_voltage * self._grid_voltage
@@ -174,7 +165,6 @@ class PhaseJump(GFMCalculator):
         event_time: float,
         epsilon_initial_check: float,
     ) -> tuple[np.ndarray, float, float]:
-        """Routes delta_p logic mathematically based on the damping state."""
         if epsilon_initial_check > self._EPSILON_THRESHOLD:
             return self._get_overdamped_delta_p(D, H, Xeff, time_array, event_time)
         else:
@@ -183,7 +173,6 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Resolves the fundamental delta_p waveform for an overdamped system."""
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(epsilon**2 - 1)
 
@@ -203,7 +192,6 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """Enforces zero-state stability before event initiation."""
         delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p = np.where(time_array < event_time, 0, delta_p1)
         return delta_p, p_peak, epsilon
@@ -211,7 +199,6 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_min(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Derives the minimum acceptable delta_p for an overdamped system."""
         delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p1_margined = (1 + self._margin_low) * delta_p1
         return np.where(time_array < event_time, 0, delta_p1_margined)
@@ -219,7 +206,6 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_max(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Derives the maximum acceptable delta_p for an overdamped system."""
         delta_p, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p_margined = self._margin_high * delta_p
         delta_p_delayed = self._apply_delay(
@@ -230,7 +216,6 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Resolves the fundamental delta_p waveform for an underdamped response."""
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(1 - epsilon**2)
 
@@ -244,7 +229,6 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """Enforces zero-state stability before the event trigger."""
         delta_p1, p_peak, epsilon = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p = np.where(time_array < event_time, 0, delta_p1)
         return delta_p, p_peak, epsilon
@@ -252,7 +236,6 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_min(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Synthesizes the minimum bounding delta_p for an underdamped system."""
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)
         delta_p_margined = p_peak * (1 - self._margin_low) * np.exp(-sigma * time_array)
@@ -264,7 +247,6 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_max(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Synthesizes the maximum bounding delta_p for an underdamped system."""
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)
         delta_p_margined = p_peak * (1 + self._margin_high) * np.exp(-sigma * time_array)
@@ -274,9 +256,5 @@ class PhaseJump(GFMCalculator):
         return np.where(time_array < event_time, 0, delta_p_delayed)
 
     def _get_tunnel(self, p_peak_array: list[float]) -> float:
-        """Derives the static tolerance margin 'tunnel'."""
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
-        return max(
-            self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * p_peak,
-        )
+        return max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
