@@ -3,9 +3,6 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 import numpy as np
 
@@ -19,10 +16,12 @@ class GFMCalculator:
     _ORIGINAL_PARAMS_IDX = 0
     _MINIMUM_PARAMS_IDX = 1
     _MAXIMUM_PARAMS_IDX = 2
+
+    # Threshold defining the boundary between underdamped (< 1.0) and overdamped (>= 1.0) systems.
+    # Note: Critically damped systems (exactly 1.0) are mathematically grouped with the overdamped logic[cite: 2].
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the GFMCalculator state."""
         self._scr = gfm_params.get_scr()
         self._min_ratio = gfm_params.get_min_ratio()
         self._max_ratio = gfm_params.get_max_ratio()
@@ -62,9 +61,11 @@ class GFMCalculator:
         dt = time_array[1] - time_array[0]
         delay_samples = int(delay_time / dt) + 1
 
+        # Safety Check: If the requested start time exceeds the simulation horizon, abort modification[cite: 2]
         if start_time > time_array[-1]:
             return signal
 
+        # Isolate the precise index corresponding to the delay initiation threshold[cite: 2]
         start_idx = np.argmax(time_array >= start_time)
         pre_delay_signal = signal[:start_idx]
         delay_block = np.full(delay_samples, delayed_value)
@@ -100,10 +101,7 @@ class GFMCalculator:
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """Generates a dynamic, time-dependent tolerance band ('tunnel')."""
-        t_val = max(
-            self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * p_peak,
-        )
+        t_val = max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
         tunnel_exp = 1 - np.exp(
             (-time_array + constants.TIME_TUNNEL_START_OFFSET) / constants.TIME_TUNNEL_EXP_TAU
         )
@@ -134,6 +132,7 @@ class GFMCalculator:
         limit_min = self._pmin_mois_tunnel
 
         if use_opposite_signs:
+            # Execution branch applying divergent clipping dependent on trajectory vs steady-state opposition[cite: 2]
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.clip(
                     initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
@@ -149,6 +148,7 @@ class GFMCalculator:
                     initial_power - sign * upper_envelope_unlimited, limit_min, limit_max
                 )
         else:
+            # Standard unified execution branch handling symmetrical capability bounding[cite: 2]
             lower_envelope_limited = np.clip(
                 initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
             )

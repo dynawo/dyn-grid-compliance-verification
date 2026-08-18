@@ -3,9 +3,6 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 from typing import Optional
 
