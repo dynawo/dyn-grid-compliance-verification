@@ -22,13 +22,7 @@ class GFMCalculator:
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the GFMCalculator state.
-
-        Parameters
-        ----------
-        gfm_params : GFMParameters
-            Parsed configuration parameters needed for GFM calculations.
-        """
+        """Initializes the GFMCalculator state."""
         self._scr = gfm_params.get_scr()
         self._min_ratio = gfm_params.get_min_ratio()
         self._max_ratio = gfm_params.get_max_ratio()
@@ -49,32 +43,11 @@ class GFMCalculator:
         self._epsilon_vals = None
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves the list of parameter names relevant for UI plotting."""
         raise NotImplementedError
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates response envelopes based on specific event mathematics.
-
-        Parameters
-        ----------
-        D : float
-            System damping factor.
-        H : float
-            System inertia constant.
-        Xeff : float
-            Effective reactance of the system.
-        time_array : np.ndarray
-            Simulation time points.
-        event_time : float
-            Absolute time at which the grid event triggers.
-
-        Returns
-        -------
-        tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            Magnitude identifier, PCC signal, upper envelope, and lower envelope.
-        """
         raise NotImplementedError
 
     def _apply_delay(
@@ -102,9 +75,7 @@ class GFMCalculator:
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
         """Clips signal values that exceed specified operational limits."""
-        signal = np.where(signal < value_min, value_min, signal)
-        signal = np.where(signal > value_max, value_max, signal)
-        return signal
+        return np.clip(signal, value_min, value_max)
 
     def _calculate_epsilon_initial_check(
         self, D: np.ndarray, H: np.ndarray, x_total_initial: float
@@ -158,35 +129,31 @@ class GFMCalculator:
         sign: int,
         use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Executes hardware and software saturation boundary logic."""
+        """Executes hardware and software saturation boundary logic using optimized clipping."""
         limit_max = self._pmax_mois_tunnel
         limit_min = self._pmin_mois_tunnel
 
         if use_opposite_signs:
             if np.sign(initial_power) * sign == -1:
-                lower_envelope_limited = np.minimum(
-                    np.maximum(initial_power - sign * lower_envelope_unlimited, limit_min),
-                    limit_max,
+                lower_envelope_limited = np.clip(
+                    initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
                 )
-                upper_envelope_limited = np.minimum(
-                    np.maximum(initial_power - sign * upper_envelope_unlimited, min_power),
-                    max_power,
+                upper_envelope_limited = np.clip(
+                    initial_power - sign * upper_envelope_unlimited, min_power, max_power
                 )
             else:
-                lower_envelope_limited = np.minimum(
-                    np.maximum(initial_power - sign * lower_envelope_unlimited, min_power),
-                    max_power,
+                lower_envelope_limited = np.clip(
+                    initial_power - sign * lower_envelope_unlimited, min_power, max_power
                 )
-                upper_envelope_limited = np.minimum(
-                    np.maximum(initial_power - sign * upper_envelope_unlimited, limit_min),
-                    limit_max,
+                upper_envelope_limited = np.clip(
+                    initial_power - sign * upper_envelope_unlimited, limit_min, limit_max
                 )
         else:
-            lower_envelope_limited = np.minimum(
-                np.maximum(initial_power - sign * lower_envelope_unlimited, limit_min), limit_max
+            lower_envelope_limited = np.clip(
+                initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
             )
-            upper_envelope_limited = np.minimum(
-                np.maximum(initial_power - sign * upper_envelope_unlimited, min_power), max_power
+            upper_envelope_limited = np.clip(
+                initial_power - sign * upper_envelope_unlimited, min_power, max_power
             )
 
         return lower_envelope_limited, upper_envelope_limited
