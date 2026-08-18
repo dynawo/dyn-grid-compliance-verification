@@ -6,18 +6,12 @@
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
-"""
-Central repository for simulation constants and magic numbers.
 
-This module stores global constants used across the Grid Forming (GFM)
-calculations. It defines simulation timelines, specific delay constants for
-damped responses, and time tunnel calculation variables.
-"""
+"""Central repository for simulation constants and magic numbers."""
 
 # General Simulation Parameters
 SIMULATION_START_TIME_DEFAULT = 0.0
-SIMULATION_START_TIME_EXTENDED = -1.0  # Used for extended events like RoCoF and SCRJump
+SIMULATION_START_TIME_EXTENDED = -1.0
 SIMULATION_END_TIME = 5.0
 SIMULATION_POINTS = 3000
 SIMULATION_EVENT_TIME = 0.0
