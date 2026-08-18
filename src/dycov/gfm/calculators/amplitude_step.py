@@ -18,7 +18,6 @@ class AmplitudeStep(GFMCalculator):
     """Handles the GFM amplitude step response calculations."""
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the AmplitudeStep calculator."""
         super().__init__(gfm_params=gfm_params)
         self._voltage_step = gfm_params.get_voltage_step_at_grid()
         self._initial_reactive_power = gfm_params.get_initial_reactive_power()
@@ -29,7 +28,6 @@ class AmplitudeStep(GFMCalculator):
         self._Xgrid = gfm_params.get_grid_reactance()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves parameters relevant for rendering AmplitudeStep plots."""
         return [
             "P0",
             "Q0",
@@ -45,7 +43,6 @@ class AmplitudeStep(GFMCalculator):
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates the reactive current deviation and its bounding envelopes."""
         logger = dycov_logging.get_logger("AmplitudeStep")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         logger.debug(
@@ -79,17 +76,14 @@ class AmplitudeStep(GFMCalculator):
             iq_down_final = q_down
             iq_pcc_final = q_pcc
 
-        magnitude_name = "Iq"
-        return magnitude_name, iq_pcc_final, iq_up_final, iq_down_final
+        return "Iq", iq_pcc_final, iq_up_final, iq_down_final
 
     def _get_delta_iq(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Derives the reactive current deviations establishing step response foundations."""
         delta_iq_base = self._calculate_delta_iq_base(Xeff, time_array)
         delta_iq_min = self._get_delta_iq_min(Xeff, time_array)
         delta_iq_max = self._get_delta_iq_max(Xeff, time_array)
-
         return delta_iq_base, delta_iq_min, delta_iq_max
 
     def _get_envelopes(
@@ -99,47 +93,39 @@ class AmplitudeStep(GFMCalculator):
         delta_iq_max: np.ndarray,
         Xeff: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Translates raw reactive current derivations into final physical limits."""
         volt_step_upcc = (self._voltage_step / 100.0) * Xeff / (Xeff + self._Xgrid)
         sign_K = np.sign(volt_step_upcc)
         tunnel = self._get_tunnel(Xeff)
 
-        q_down = np.maximum(
-            np.minimum(
-                self._initial_reactive_power - sign_K * delta_iq_min, self._max_reactive_power
-            ),
+        # Applying np.clip for engineering optimization and clean hardware limit boundaries
+        q_down = np.clip(
+            self._initial_reactive_power - sign_K * delta_iq_min,
             -self._max_reactive_power,
+            self._max_reactive_power,
         )
-        q_up = np.maximum(
-            np.minimum(
-                self._initial_reactive_power - sign_K * delta_iq_max,
-                self._max_reactive_power + tunnel,
-            ),
+        q_up = np.clip(
+            self._initial_reactive_power - sign_K * delta_iq_max,
             -self._max_reactive_power - tunnel,
+            self._max_reactive_power + tunnel,
         )
 
         q_expected_unclamped = self._initial_reactive_power - sign_K * delta_iq_base
-        q_expected = np.maximum(
-            np.minimum(q_expected_unclamped, self._max_reactive_power),
-            -self._max_reactive_power,
+        q_expected = np.clip(
+            q_expected_unclamped, -self._max_reactive_power, self._max_reactive_power
         )
 
         return q_expected, q_up, q_down
 
     def _get_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Mathematically resolves the fundamental delta_iq exponential trajectory."""
         voltage_step = self._voltage_step / 100.0
         delta_iq_final = np.abs(voltage_step / (Xeff + self._Xgrid))
         tau = -self._time_to_90 / np.log(0.1)
-        exponential_part = delta_iq_final * (1 - np.exp(-time_array / tau))
-        return exponential_part
+        return delta_iq_final * (1 - np.exp(-time_array / tau))
 
     def _calculate_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Wrapper to execute the base delta_iq waveform generation."""
         return self._get_delta_iq_base(Xeff, time_array)
 
     def _get_delta_iq_min(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Synthesizes the specific delta_iq bounding array for the lower envelope."""
         base_curve = 0.9 * self._get_delta_iq_base(Xeff, time_array)
         tunnel = self._get_tunnel(Xeff)
         voltage_step_pu = self._voltage_step / 100.0
@@ -148,11 +134,9 @@ class AmplitudeStep(GFMCalculator):
         lower_envelope_limit = max_delta_iq - tunnel
 
         delta_iq_lower = np.minimum(base_curve, lower_envelope_limit)
-        delta_iq_lower = np.where(time_array < self._time_to_90, 0.0, delta_iq_lower)
-        return delta_iq_lower
+        return np.where(time_array < self._time_to_90, 0.0, delta_iq_lower)
 
     def _get_delta_iq_max(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
-        """Synthesizes the specific delta_iq bounding array for the upper envelope."""
         tunnel = self._get_tunnel(Xeff)
         voltage_step_pu = self._voltage_step / 100.0
 
@@ -167,16 +151,9 @@ class AmplitudeStep(GFMCalculator):
             exponential_decay = np.exp(-time_array / time_constant_transient)
             transient_boost_value = self._margin_high * max_delta_iq * exponential_decay
 
-        delta_iq_upper = steady_state_upper_limit + np.where(
-            transient_condition, transient_boost_value, 0.0
-        )
-        return delta_iq_upper
+        return steady_state_upper_limit + np.where(transient_condition, transient_boost_value, 0.0)
 
     def _get_tunnel(self, Xeff: float) -> float:
-        """Calculates the static tolerance margin relative to the impedance."""
         voltage_step = self._voltage_step / 100.0
         delta_iq = np.abs(voltage_step / (Xeff + self._Xgrid))
-        return max(
-            self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * delta_iq,
-        )
+        return max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * delta_iq)
