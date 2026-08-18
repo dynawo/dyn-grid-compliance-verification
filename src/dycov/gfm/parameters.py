@@ -432,7 +432,7 @@ class GFMParameters(Parameters):
         elif hasattr(config, "get_options"):
             try:
                 opts = config.get_options(section)
-                return opts is not None and option in opts
+                return opts is not None and any(opt.lower() == option.lower() for opt in opts)
             except Exception:
                 return False
         return False
