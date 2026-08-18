@@ -3,9 +3,6 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 import numpy as np
 
@@ -45,10 +42,6 @@ class AmplitudeStep(GFMCalculator):
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         logger = dycov_logging.get_logger("AmplitudeStep")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
-        logger.debug(
-            f"Input Params  Voltage={self._voltage_step} SCR={self._scr} "
-            f"Q0={self._initial_reactive_power} QMin={self._min_reactive_power} QMax={self._max_reactive_power}"
-        )
 
         delta_iq_base, delta_iq_min, delta_iq_max = self._get_delta_iq(
             D=D, H=H, Xeff=Xeff, time_array=time_array, event_time=event_time
@@ -72,15 +65,15 @@ class AmplitudeStep(GFMCalculator):
             )
             iq_pcc_final = self._apply_delay(self._emt_delay, initial_pcc_val, time_array, q_pcc)
         else:
-            iq_up_final = q_up
-            iq_down_final = q_down
-            iq_pcc_final = q_pcc
+            iq_up_final, iq_down_final, iq_pcc_final = q_up, q_down, q_pcc
 
         return "Iq", iq_pcc_final, iq_up_final, iq_down_final
 
     def _get_delta_iq(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        # The analytical formulas governing the amplitude step rely intrinsically on Xeff,
+        # sidestepping D and H variations for this specific grid event archetype[cite: 2].
         delta_iq_base = self._calculate_delta_iq_base(Xeff, time_array)
         delta_iq_min = self._get_delta_iq_min(Xeff, time_array)
         delta_iq_max = self._get_delta_iq_max(Xeff, time_array)
@@ -93,6 +86,7 @@ class AmplitudeStep(GFMCalculator):
         delta_iq_max: np.ndarray,
         Xeff: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Translates raw reactive current derivations into final physical limits[cite: 2]."""
         volt_step_upcc = (self._voltage_step / 100.0) * Xeff / (Xeff + self._Xgrid)
         sign_K = np.sign(volt_step_upcc)
         tunnel = self._get_tunnel(Xeff)
@@ -119,6 +113,7 @@ class AmplitudeStep(GFMCalculator):
     def _get_delta_iq_base(self, Xeff: float, time_array: np.ndarray) -> np.ndarray:
         voltage_step = self._voltage_step / 100.0
         delta_iq_final = np.abs(voltage_step / (Xeff + self._Xgrid))
+        # Calculate the requisite time constant (tau) aligning to the 90% rise-time requirement[cite: 2]
         tau = -self._time_to_90 / np.log(0.1)
         return delta_iq_final * (1 - np.exp(-time_array / tau))
 
@@ -131,6 +126,7 @@ class AmplitudeStep(GFMCalculator):
         voltage_step_pu = self._voltage_step / 100.0
 
         max_delta_iq = np.abs(voltage_step_pu / (Xeff + self._Xgrid))
+        # Define the structural ceiling specific to this lower boundary trace[cite: 2]
         lower_envelope_limit = max_delta_iq - tunnel
 
         delta_iq_lower = np.minimum(base_curve, lower_envelope_limit)
@@ -143,6 +139,7 @@ class AmplitudeStep(GFMCalculator):
         max_delta_iq = np.abs(voltage_step_pu / (Xeff + self._Xgrid))
         steady_state_upper_limit = tunnel + max_delta_iq
 
+        # Compute the decaying transient boost representing initial capacitive/inductive inertia[cite: 2]
         transient_condition = time_array < self._time_for_tunnel
         time_constant_transient = self._time_for_tunnel / 3.0
         transient_boost_value = 0.0

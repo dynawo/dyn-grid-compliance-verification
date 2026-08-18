@@ -3,12 +3,8 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 from pathlib import Path
-
 import numpy as np
 
 from dycov.gfm import constants
@@ -32,24 +28,7 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """Executes the primary pipeline for GFM simulation results generation.
-
-        Calculates envelopes for both damping conditions and merges them if
-        hybrid parameters are defined. Otherwise, uses standard parameters.
-
-        Parameters
-        ----------
-        working_path : Path
-            Base directory path for saving generated output files.
-        parameters : GFMParameters
-            Parameter configuration object guiding the simulation.
-        pcs_name : str
-            Identifier name of the specific Power Conversion System (PCS).
-        bm_name : str
-            Identifier name of the Benchmark applied.
-        oc_name : str
-            Identifier name of the specific Operating Condition.
-        """
+        """Executes the primary pipeline for GFM simulation results generation."""
         parameters.set_section(pcs_name, bm_name, oc_name)
         x_eff = parameters.get_effective_reactance()
         calculator_name = parameters.get_calculator_name()
@@ -72,12 +51,12 @@ class GridForming:
             )
             d_over, h_over, d_under, h_under = hybrid_params
 
+            # Execution Phase 1: Overdamped Parameters
             mag_name, pcc_over, up_over, low_over = self._calculate_envelopes(
                 calculator, time_array, event_time, d_over, h_over, x_eff
             )
             producer = parameters.get_producer()
             producer_config = producer.get_config() if producer else None
-
             save_ini_dump(
                 path=working_path / f"{title}_ini_dump_overdamped.txt",
                 parameters=parameters,
@@ -85,12 +64,12 @@ class GridForming:
                 calculator=calculator,
             )
 
+            # Execution Phase 2: Underdamped Parameters
             _, pcc_under, up_under, low_under = self._calculate_envelopes(
                 calculator, time_array, event_time, d_under, h_under, x_eff
             )
             producer = parameters.get_producer()
             producer_config = producer.get_config() if producer else None
-
             save_ini_dump(
                 path=working_path / f"{title}_ini_dump_underdamped.txt",
                 parameters=parameters,
@@ -98,13 +77,17 @@ class GridForming:
                 calculator=calculator,
             )
 
+            # Envelope Merging Logic: Calculate the absolute outermost bounds
+            # Maximum of both upper envelopes, Minimum of both lower envelopes
             upper_envelope1 = np.maximum(up_over, up_under)
             lower_envelope1 = np.minimum(low_over, low_under)
             upper_envelope2 = np.maximum(low_over, low_under)
             lower_envelop2 = np.minimum(up_over, up_under)
+
             upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
             lower_envelope = np.minimum(lower_envelope1, lower_envelop2)
 
+            # For the visual PCC signal, the Overdamped trace acts as the primary reference
             pcc_signal = pcc_over
             magnitude_name = mag_name
 
@@ -117,6 +100,7 @@ class GridForming:
                 }
 
             if params_list:
+                # Remove generic D and H labels, as hybrid uses dual configurations
                 params_list = [p for p in params_list if p not in ["D", "H"]]
 
         elif standard_params:
@@ -127,14 +111,13 @@ class GridForming:
             )
         else:
             error_msg = (
-                f"Configuration Error in {pcs_name}: "
-                "Neither standard parameters (D, H) nor hybrid parameters "
-                "(D_Overdamped, H_Overdamped, D_Underdamped, H_Underdamped) are defined "
-                "in the Producer.ini or configuration files."
+                f"Configuration Error in {pcs_name}: Neither standard parameters (D, H) "
+                "nor hybrid parameters are defined in the Producer.ini."
             )
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
+        # Retrieve calculator operational flags (e.g., inconsistent damping triggers)
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
@@ -177,18 +160,7 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """Generates the simulation time array and event time.
-
-        Parameters
-        ----------
-        calculator_name : str
-            Identifier string of the active calculator strategy.
-
-        Returns
-        -------
-        tuple[np.ndarray, float]
-            Simulation time array and event time.
-        """
+        """Generates the simulation time array and event time."""
         if calculator_name in ["SCRJump", "RoCoF"]:
             start_time = constants.SIMULATION_START_TIME_EXTENDED
         else:
@@ -197,9 +169,7 @@ class GridForming:
         end_time = constants.SIMULATION_END_TIME
         event_time = constants.SIMULATION_EVENT_TIME
         nb_points = constants.SIMULATION_POINTS
-        time_array = np.linspace(start_time, end_time, nb_points)
-
-        return time_array, event_time
+        return np.linspace(start_time, end_time, nb_points), event_time
 
     def _calculate_envelopes(
         self,
@@ -210,38 +180,14 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Computes analytical response envelopes.
-
-        Parameters
-        ----------
-        calculator : GFMCalculator
-            Instantiated envelope calculator.
-        time_array : np.ndarray
-            Simulation time array.
-        event_time : float
-            Event trigger time.
-        damping_constant : float
-            System damping constant (D).
-        inertia_constant : float
-            System inertia constant (H).
-        x_eff : float
-            Effective reactance (Xeff).
-
-        Returns
-        -------
-        tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            Magnitude name, PCC signal, upper envelope, and lower envelope.
-        """
-        magnitude_name, pcc_signal, upper_envelope, lower_envelope = (
-            calculator.calculate_envelopes(
-                D=damping_constant,
-                H=inertia_constant,
-                Xeff=x_eff,
-                time_array=time_array,
-                event_time=event_time,
-            )
+        """Computes analytical response envelopes."""
+        return calculator.calculate_envelopes(
+            D=damping_constant,
+            H=inertia_constant,
+            Xeff=x_eff,
+            time_array=time_array,
+            event_time=event_time,
         )
-        return magnitude_name, pcc_signal, upper_envelope, lower_envelope
 
     def _export_csv(
         self,
@@ -254,27 +200,7 @@ class GridForming:
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
     ) -> None:
-        """Exports generated signals to CSV.
-
-        Parameters
-        ----------
-        csv_path : Path
-            Output directory path.
-        title : str
-            Base filename.
-        magnitude_name : str
-            Physical magnitude analyzed.
-        time_array : np.ndarray
-            Evaluated time steps.
-        pcc_signal : np.ndarray
-            Recorded system signal.
-        lower_envelope : np.ndarray
-            Lower envelope boundary.
-        upper_envelope : np.ndarray
-            Upper envelope boundary.
-        extra_envelopes : dict, optional
-            Supplementary data series.
-        """
+        """Exports generated signals to CSV."""
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
             magnitude=magnitude_name,
@@ -288,27 +214,11 @@ class GridForming:
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
-        """Extracts and formats key simulation variables for UI rendering.
-
-        Parameters
-        ----------
-        parameters : GFMParameters
-            Configuration object.
-        params_list : list
-            Filter list of parameter identifiers.
-        calculator : GFMCalculator
-            Calculator providing internal variables.
-
-        Returns
-        -------
-        list[str]
-            Formatted parameter strings.
-        """
+        """Extracts and formats key simulation variables for UI rendering."""
         if params_list is None:
             return []
 
         text_params_info = []
-
         if "P0" in params_list:
             text_params_info.append(f"P0 = {parameters.get_initial_active_power():.3f} pu")
         if "Q0" in params_list:
@@ -377,39 +287,7 @@ class GridForming:
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
     ) -> None:
-        """Dispatches variables to render visual plots.
-
-        Parameters
-        ----------
-        png_path : Path
-            Destination directory for output files.
-        title : str
-            Base title and filename.
-        magnitude_name : str
-            Physical unit being graphed.
-        time_array : np.ndarray
-            X-axis time array.
-        event_time : float
-            Event initialization marker.
-        pcc_signal : np.ndarray
-            Evaluated simulation signal.
-        lower_envelope : np.ndarray
-            Lower threshold series.
-        upper_envelope : np.ndarray
-            Upper threshold series.
-        parameters : GFMParameters
-            Simulation parameter handler.
-        params_list : list
-            Variables to include in the legend.
-        calculator : GFMCalculator
-            Active calculator instance.
-        is_inconsistent : bool, optional
-            Flag for data anomalies.
-        disclaimer_msg : str, optional
-            Specific warning message.
-        extra_envelopes : dict, optional
-            Supplementary graphs for hybrid structures.
-        """
+        """Dispatches variables to render visual plots."""
         plot_results(
             path=png_path / f"{title}.png",
             title=title,

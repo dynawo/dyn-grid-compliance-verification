@@ -3,9 +3,6 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 import numpy as np
 
@@ -34,7 +31,7 @@ class PhaseJump(GFMCalculator):
         logger = dycov_logging.get_logger("PhaseJump")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
         logger.debug(
-            f"Input Params  Phase={self._delta_phase} SCR={self._scr} "
+            f"Input Params Phase={self._delta_phase} SCR={self._scr} "
             f"P0={self._initial_active_power} PMin={self._min_active_power} PMax={self._max_active_power}"
         )
 
@@ -60,9 +57,7 @@ class PhaseJump(GFMCalculator):
             lower_envelope = self._apply_delay(self._emt_delay, p_down[0], time_array, p_down)
             pcc_signal = self._apply_delay(self._emt_delay, p_pcc[0], time_array, p_pcc)
         else:
-            upper_envelope = p_up
-            lower_envelope = p_down
-            pcc_signal = p_pcc
+            upper_envelope, lower_envelope, pcc_signal = p_up, p_down, p_pcc
 
         return "Ip", pcc_signal, upper_envelope, lower_envelope
 
@@ -97,10 +92,7 @@ class PhaseJump(GFMCalculator):
             delta_p_min = self._get_underdamped_delta_p_min(D, H, Xeff, time_array, event_time)
             delta_p_max = self._get_underdamped_delta_p_max(D, H, Xeff, time_array, event_time)
 
-        self._d_vals = d_array
-        self._h_vals = h_array
-        self._epsilon_vals = np.array(epsilon_array)
-
+        self._d_vals, self._h_vals, self._epsilon_vals = d_array, h_array, np.array(epsilon_array)
         return delta_p_array, delta_p_min, delta_p_max, p_peak_array, epsilon_array
 
     def _get_envelopes(
@@ -173,19 +165,25 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
+        """Resolves the fundamental delta_p waveform for an overdamped system."""
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(epsilon**2 - 1)
 
+        # Alpha and Beta mathematically represent the real roots defining the overdamped characteristic equation[cite: 2]
         alpha = epsilon * wn + wd
         beta = epsilon * wn - wd
+
+        # A and B formulate the initial integration constants for the second-order response[cite: 2]
         A = 1 / (beta - alpha)
         B = -A
 
+        # Deconstruct the solution into its elemental exponential decay responses[cite: 2]
         term1 = 2 * H * A * (1 - alpha * np.exp(-alpha * time_array))
         term2 = 2 * H * B * (1 - beta * np.exp(-beta * time_array))
         term3 = D * A * np.exp(-alpha * time_array)
         term4 = D * B * np.exp(-beta * time_array)
 
+        # Synthesize the final aggregated power deviation solution[cite: 2]
         delta_p1 = (p_peak / (2 * H)) * (term1 + term2 + term3 + term4)
         return delta_p1, p_peak, epsilon
 
@@ -216,9 +214,11 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
+        """Resolves the fundamental delta_p waveform capturing oscillatory traits[cite: 2]"""
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
         wd = wn * np.sqrt(1 - epsilon**2)
 
+        # Synthesize components: An exponential decay boundary bounding sinusoidal oscillation[cite: 2]
         term1 = np.exp(-epsilon * wn * time_array)
         term2 = np.cos(wd * time_array)
         term3 = np.sin(wd * time_array)

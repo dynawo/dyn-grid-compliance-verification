@@ -3,13 +3,9 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 from pathlib import Path
 from typing import Optional, Tuple
-
 import numpy as np
 
 from dycov.configuration.cfg import config
@@ -22,14 +18,8 @@ class GFMParameters(Parameters):
     """Configuration entity to define and manage GFM model validation parameters."""
 
     def __init__(
-        self,
-        producer_ini: Path,
-        selected_pcs: str,
-        output_dir: Path,
-        only_dtr: bool,
-        emt: bool,
+        self, producer_ini: Path, selected_pcs: str, output_dir: Path, only_dtr: bool, emt: bool
     ) -> None:
-        """Initializes the GFMParameters configuration instance."""
         super().__init__(None, selected_pcs, output_dir, only_dtr)
         self._emt = emt
         self._producer = GFMProducer(producer_ini)
@@ -39,7 +29,7 @@ class GFMParameters(Parameters):
         self._pcs_section = pcs_name
         self._bm_section = f"{pcs_name}.{bm_name}"
         self._oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
-        # Cache evaluation sections for DRY retrieval
+        # Cache evaluation sections for DRY retrieval[cite: 2]
         self._eval_sections = (self._oc_section, self._bm_section, self._pcs_section)
 
     def is_valid(self) -> bool:
@@ -68,8 +58,9 @@ class GFMParameters(Parameters):
 
     def get_initial_active_power(self) -> float:
         p0_definition = self.__get_value("P0")
-        p_max = self.get_max_active_power()
-        return model_parameters.extract_defined_value(p0_definition, "Pmax", p_max, 1)
+        return model_parameters.extract_defined_value(
+            p0_definition, "Pmax", self.get_max_active_power(), 1
+        )
 
     def get_min_active_power(self) -> float:
         return (
@@ -86,10 +77,12 @@ class GFMParameters(Parameters):
     def get_initial_reactive_power(self) -> float:
         q0_definition = self.__get_value("Q0")
         if "Qmin" in q0_definition:
-            q_min = self.get_min_reactive_power()
-            return model_parameters.extract_defined_value(q0_definition, "Qmin", q_min, 1)
-        q_max = self.get_max_reactive_power()
-        return model_parameters.extract_defined_value(q0_definition, "Qmax", q_max, 1)
+            return model_parameters.extract_defined_value(
+                q0_definition, "Qmin", self.get_min_reactive_power(), 1
+            )
+        return model_parameters.extract_defined_value(
+            q0_definition, "Qmax", self.get_max_reactive_power(), 1
+        )
 
     def get_min_reactive_power(self) -> float:
         return (
@@ -146,6 +139,7 @@ class GFMParameters(Parameters):
         value_definition = self.__get_value("DeltaPhase")
         if "*" in value_definition:
             term1 = float(value_definition.split("*")[0])
+            # Process derived expression combining reactances[cite: 2]
             delta_rad = term1 * (self.get_effective_reactance() + self.get_grid_reactance())
         else:
             delta_rad = float(value_definition)
@@ -155,6 +149,7 @@ class GFMParameters(Parameters):
         value_definition = self.__get_value("VoltageStepAtGrid")
         if "*" in value_definition:
             term1 = float(value_definition.split("*")[0])
+            # Synthesize voltage step deriving through system impedance[cite: 2]
             return term1 * (self.get_effective_reactance() + self.get_grid_reactance()) * 100
         return float(value_definition)
 

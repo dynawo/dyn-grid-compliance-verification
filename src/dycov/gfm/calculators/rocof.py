@@ -3,9 +3,6 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
 
 import numpy as np
 
@@ -99,6 +96,7 @@ class RoCoF(GFMCalculator):
             else self._get_underdamped_delta_p_base
         )
 
+        # A finite duration RoCoF event is modeled by superimposing two independent step responses[cite: 2]
         rocof_stop_time = event_time + self._rocof_duration
 
         p1, p_peak, t_response = calc_func(D, H, x_total, time_array - event_time)
@@ -149,6 +147,7 @@ class RoCoF(GFMCalculator):
         delta_p[time_array >= 0] = A_coeff + term1 - term2 + term3
 
         p_peak = abs(-self._rocof_value * (2 * H + D * self._t_pll))
+        # The theoretical response time is approximated as 4x the slowest time constant of the system[cite: 2]
         t_response = 4 * max(1 / alpha1, 1 / alpha2, self._t_pll)
 
         return -delta_p, p_peak, t_response
@@ -196,6 +195,7 @@ class RoCoF(GFMCalculator):
 
         R_coeff = np.sqrt(C_coeff**2 + ((D_coeff - C_coeff * epsilon * wn) / wd) ** 2)
         p_peak = abs(A_coeff + B_coeff / self._t_pll + R_coeff)
+        # The theoretical response time is approximated as 4x the decay time constant of the oscillation[cite: 2]
         t_response = 4 / (epsilon * wn)
 
         return -delta_p, p_peak, t_response
@@ -230,6 +230,7 @@ class RoCoF(GFMCalculator):
                 self._initial_active_power + dp_min_trace * (1 - self._margin_low) - tunnel_val
             )
 
+        # Rule 2: Constrain envelopes to steady-state values following the completion of the transient response time[cite: 2]
         t_response = t_response_array[self._ORIGINAL_PARAMS_IDX]
         clamp_start_time = event_time + t_response
         rocof_stop_time = event_time + self._rocof_duration
@@ -240,6 +241,7 @@ class RoCoF(GFMCalculator):
             p_up_unlimited = np.where(mask, pcc_steady_value + tunnel_val, p_up_unlimited)
             p_down_unlimited = np.where(mask, pcc_steady_value - tunnel_val, p_down_unlimited)
 
+        # Rule 3: Prevent uncharacteristic dips or overshoots during the system recovery phase[cite: 2]
         indices_before_recovery = np.where(time_array < rocof_stop_time)[0]
         if len(indices_before_recovery) > 0:
             idx_before_recovery = indices_before_recovery[-1]
@@ -255,10 +257,11 @@ class RoCoF(GFMCalculator):
                     mask_post_recovery, np.minimum(p_up_unlimited, clamp_val), p_up_unlimited
                 )
 
-        # Replacing bounds mapping with cleaner limits using np.clip
+        # Rule 4: Apply saturation limit protection (MoisTunnel logic)[cite: 2]
         p_down_unlimited = np.clip(p_down_unlimited, -np.inf, self._pmax_mois_tunnel)
         p_up_unlimited = np.clip(p_up_unlimited, self._pmin_mois_tunnel, np.inf)
 
+        # Apply final clipping restricting signals to operational physical limits[cite: 2]
         p_up_limited = np.clip(p_up_unlimited, self._min_active_power, self._max_active_power)
         p_down_limited = np.clip(p_down_unlimited, self._min_active_power, self._max_active_power)
 
