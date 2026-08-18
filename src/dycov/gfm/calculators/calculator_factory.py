@@ -16,29 +16,16 @@ from dycov.gfm.calculators.rocof import RoCoF
 from dycov.gfm.calculators.scr_jump import SCRJump
 from dycov.gfm.parameters import GFMParameters
 
+# Using a mapping dictionary for O(1) factory lookups
+_CALCULATOR_REGISTRY = {
+    "PhaseJump": PhaseJump,
+    "AmplitudeStep": AmplitudeStep,
+    "RoCoF": RoCoF,
+    "SCRJump": SCRJump,
+}
+
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
-    """Factory method to instantiate a specific GFMCalculator subclass.
-
-    Parameters
-    ----------
-    name : str
-        Identifier name of the calculator (e.g., "PhaseJump", "RoCoF").
-    gfm_params : GFMParameters
-        Grid forming parameters required for the calculation.
-
-    Returns
-    -------
-    Optional[GFMCalculator]
-        Instantiated GFMCalculator subclass, or None if the name is unknown.
-    """
-    if name == "PhaseJump":
-        return PhaseJump(gfm_params=gfm_params)
-    if name == "AmplitudeStep":
-        return AmplitudeStep(gfm_params=gfm_params)
-    if name == "RoCoF":
-        return RoCoF(gfm_params=gfm_params)
-    if name == "SCRJump":
-        return SCRJump(gfm_params=gfm_params)
-
-    return None
+    """Factory method to instantiate a specific GFMCalculator subclass."""
+    calc_class = _CALCULATOR_REGISTRY.get(name)
+    return calc_class(gfm_params=gfm_params) if calc_class else None
