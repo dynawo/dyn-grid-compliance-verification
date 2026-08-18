@@ -357,9 +357,14 @@ class SCRJump(GFMCalculator):
             condition = time_mask & (upper_trace < self._pmin_mois_tunnel)
 
             if is_overdamped:
-                # Artificial flattening constraint bypassed to preserve natural exponential decay
+                upper_trace = self._modify_envelope(
+                    upper_trace, power_at_50_percent, time_array, event_time
+                )
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
-            else:  # Underdamped execution branch
+            else:  # Underdamped case
+                upper_trace = self._modify_envelope(
+                    upper_trace, power_at_50_percent, time_array, event_time
+                )
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
 
         # Enforce hard limits restricting signals to physical hardware capabilities.
