@@ -228,7 +228,6 @@ class AmplitudeStep(GFMCalculator):
             - np.ndarray: The absolute minimum (lower) reactive power envelope constraint.
         """
 
-
         # Calculate the localized voltage step projected at the Point of Common Coupling (PCC)
         volt_step_upcc = (self._voltage_step / 100.0) * Xeff / (Xeff + self._Xgrid)
 
