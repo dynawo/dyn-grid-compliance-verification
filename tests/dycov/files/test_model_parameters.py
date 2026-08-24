@@ -79,6 +79,29 @@ def test_get_parset_missing_id_raises():
         model_parameters._get_parset(par_root, "missing", {"ns": _NS})
 
 
+def test_adjust_load_missing_parset_raises():
+    par_root = _make_root()
+
+    with pytest.raises(ValueError, match="parameter set with id='Aux_Load' was not found"):
+        model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.1, 0.05, 1.0, 0.0)
+
+
+def test_adjust_load_writes_initial_values():
+    par_root = _make_root()
+    etree.SubElement(par_root, f"{{{_NS}}}set", id="Aux_Load")
+
+    model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.1, 0.05, 1.0, 0.2)
+
+    parset = par_root.xpath("//ns:set[@id='Aux_Load']", namespaces={"ns": _NS})[0]
+    written = {par.get("name"): float(par.get("value")) for par in parset}
+    assert written == {
+        "load_P0Pu": 0.1,
+        "load_Q0Pu": 0.05,
+        "load_U0Pu": 1.0,
+        "load_UPhase0": 0.2,
+    }
+
+
 def test_extract_defined_value_with_placeholders():
     assert model_parameters.extract_defined_value("2*b", "b", 0.2) == pytest.approx(0.4)
     assert model_parameters.extract_defined_value("pmax", "pmax", 90) == pytest.approx(90)
