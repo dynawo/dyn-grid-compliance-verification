@@ -481,7 +481,10 @@ def _add_functional_testing_argument(parser: argparse.ArgumentParser) -> None:
         "-t",
         "--functional_tests",
         arg_type=str,
-        help_msg="Path to the baseline directory containing verified CSVs to compare against the output.",
+        help_msg=(
+            "Path to the baseline directory containing verified CSVs "
+            "to compare against the output."
+        ),
     )
 
 
