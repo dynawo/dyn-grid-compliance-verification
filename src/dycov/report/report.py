@@ -32,7 +32,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.files import manage_files
+from dycov.files import manage_files, model_parameters
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
@@ -537,12 +537,10 @@ def _create_full_tex(
         if oc_results["curves"] is None:
             continue
 
-        unit_characteristics = {
-            "Pmax": producer.p_max_pu,
-            "Qmax": producer.q_max_pu,
-            "Udim": oc_results["udim"] / producer.u_nom,
-            "Unom": producer.u_nom,
-        }
+        unit_characteristics = model_parameters.unit_characteristics(
+            producer, oc_results["udim"]
+        )
+        unit_characteristics["Unom"] = producer.u_nom
 
         xmin, xmax = figure.get_common_time_range(
             operating_condition,
