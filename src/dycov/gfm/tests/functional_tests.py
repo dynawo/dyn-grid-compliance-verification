@@ -1,6 +1,7 @@
-import pandas as pd
 from pathlib import Path
 from typing import Tuple
+
+import pandas as pd
 
 
 def compare_csv_directories(baseline_dir: Path, output_dir: Path) -> Tuple[bool, str]:
