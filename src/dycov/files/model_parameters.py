@@ -500,6 +500,124 @@ def extract_defined_value(
     raise ValueError(f"Invalid format for {parameter}: '{value_definition}'")
 
 
+def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[str, float]:
+    """Registry of base magnitudes that a value definition may reference.
+
+    Every entry is already expressed in the per-unit Dynawo uses for the network —
+    base SnRef (``s_nref``) for powers and impedances, ``Unom`` for voltages — so a
+    definition such as ``0.5*Snom`` or ``Unom`` resolves directly to the value used
+    elsewhere. Recognizing a new base is a matter of adding an entry here; no caller
+    needs to change.
+
+    Parameters
+    ----------
+    producer :
+        Producer model exposing ``p_max_pu``, ``q_max_pu``, ``q_min_pu``, ``s_nom_pu``
+        and ``u_nom``.
+    u_dim : float
+        Dimensioning voltage (kV) of the generator.
+    line_Xpu : float
+        Connection line reactance in pu.
+
+    Returns
+    -------
+    dict[str, float]
+        Base magnitude name to its per-unit value.
+    """
+    return {
+        "Pmax": producer.p_max_pu,
+        "PmaxInjection": producer.p_max_pu,
+        "PmaxConsumption": producer.p_max_pu,
+        "Qmax": producer.q_max_pu,
+        "Qmin": producer.q_min_pu,
+        "Snom": producer.s_nom_pu,
+        "Udim": u_dim / producer.u_nom,
+        "Unom": 1.0,
+        "line_XPu": line_Xpu,
+    }
+
+
+def resolve_value_definition(
+    value_definition: str,
+    characteristics: dict[str, float],
+    sign: int = 1,
+    origin: Optional[tuple[str, str]] = None,
+) -> float:
+    """Evaluate a value definition against a registry of base magnitudes.
+
+    Supported forms mirror :func:`extract_defined_value`, but the referenced name is
+    looked up in ``characteristics`` instead of being fixed by the caller:
+      - Pure numeric: ``"1.2"``, ``"-0.5"``, ``".75"``
+      - Name only: ``"Snom"``, ``"-Unom"``
+      - Multiplier * name: ``"0.5*Snom"``, ``"-0.05*Pmax"``
+
+    Parameters
+    ----------
+    value_definition : str
+        The configuration string that defines the value.
+    characteristics : dict[str, float]
+        Base magnitudes keyed by name (see :func:`unit_characteristics`).
+    sign : int
+        Final sign conversion to match the downstream convention (e.g. -1 to flip).
+    origin : Optional[tuple[str, str]]
+        (section, key) of the configuration option the definition was read from, used
+        to point the user to the offending file and line when the definition is
+        rejected.
+
+    Returns
+    -------
+    float
+        The computed value after applying the definition and the final ``sign``.
+    """
+    location = _describe_config_option(origin)
+    if value_definition is None or not value_definition.strip():
+        raise ValueError(
+            f"Empty value definition.{location} Expected a number, a base magnitude "
+            f"name, or 'multiplier*Name' (e.g. '0.5*Snom')."
+        )
+
+    s = value_definition.strip()
+    explicit_sign = 1
+    if s[0] in "+-":
+        explicit_sign = -1 if s[0] == "-" else 1
+        s = s[1:].strip()
+
+    num_candidate = ("-" if explicit_sign == -1 else "") + s
+    if NUMERIC_PATTERN.fullmatch(num_candidate):
+        return sign * float(num_candidate)
+
+    m = MULTIPLIER_PATTERN.fullmatch(s)
+    if m:
+        name = m.group("name")
+        if name not in characteristics:
+            raise ValueError(
+                f"Unknown magnitude '{name}' in value definition '{value_definition}'."
+                f"{location} Please check the spelling, the available magnitudes are "
+                f"(all case-sensitive): {_available_magnitudes(characteristics)}."
+            )
+        multiplier = float(m.group("mul")) if m.group("mul") is not None else 1.0
+        return sign * explicit_sign * multiplier * characteristics[name]
+
+    raise ValueError(
+        f"Invalid value definition '{value_definition}'.{location} Expected a number, "
+        f"a base magnitude name, or 'multiplier*Name' (e.g. '0.5*Snom'), where the "
+        f"magnitude is one of (all case-sensitive): "
+        f"{_available_magnitudes(characteristics)}."
+    )
+
+
+def _describe_config_option(origin: Optional[tuple[str, str]]) -> str:
+    """Sentence locating the configuration option a value definition was read from."""
+    if origin is None:
+        return ""
+
+    return f" Defined by {config.describe_option(*origin)}."
+
+
+def _available_magnitudes(characteristics: dict[str, float]) -> str:
+    return ", ".join(sorted(characteristics))
+
+
 def adjust_producer_init(
     path: Path,
     producer_par: Path,
@@ -696,7 +814,7 @@ def _get_connected_equipment_by_terminal(dyd_root, gen_id, terminal):
 
 def _get_parset(par_root, par_id, nsmap):
     parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
-    if parset is None:
+    if not parset:
         raise ValueError(f"The parameter set with id='{par_id}' was not found")
     return parset
 
@@ -1014,8 +1132,6 @@ def _adjust_transformer(
 ):
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, transformer.par_id, nsmap)
-    if parset is None:
-        return
 
     _set_transformer_power(parset, nsmap, transformer.lib, transformer_p10pu, transformer_q10pu)
     _set_transformer_voltage_phase(
@@ -1059,8 +1175,6 @@ def _adjust_generator(
 ) -> int:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, generator.par_id, nsmap)
-    if parset is None:
-        return False
 
     _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
     _set_initial_pcc_power(parset, nsmap, generator.lib, pdr)
@@ -1285,9 +1399,7 @@ def _adjust_load(
     load_uphase0: float,
 ) -> None:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
-    parset = producer_par_root.xpath(f"//ns:set[@id='{load_id}']", namespaces=nsmap)
-    if parset is None:
-        return
+    parset = _get_parset(producer_par_root, load_id, nsmap)
 
     sign, active_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ActivePower0")
     _set_parameter(parset, nsmap, active_power0, sign, load_p0pu, create_if_missing=True)
