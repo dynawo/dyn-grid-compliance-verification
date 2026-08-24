@@ -11,6 +11,7 @@
 
 import configparser
 import math
+from types import SimpleNamespace
 
 import pytest
 from lxml import etree
@@ -88,6 +89,109 @@ def test_extract_defined_value_errors():
     for invalid in (None, "", "abc", "2*x"):
         with pytest.raises(ValueError):
             model_parameters.extract_defined_value(invalid, "p", 1)
+
+
+def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0):
+    return SimpleNamespace(
+        p_max_pu=p_max_pu,
+        q_max_pu=q_max_pu,
+        q_min_pu=q_min_pu,
+        s_nom_pu=s_nom_pu,
+        u_nom=u_nom,
+    )
+
+
+_OPTION_LOCATION = "'pdr_P' in section [PCS.Model] of '/etc/PCSDescription.ini', line 7"
+
+
+def _config_stub():
+    return SimpleNamespace(describe_option=lambda section, key: _OPTION_LOCATION)
+
+
+def test_unit_characteristics_exposes_power_and_voltage_bases():
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=21.0, line_Xpu=0.05)
+
+    assert chars["Pmax"] == pytest.approx(0.8)
+    assert chars["Snom"] == pytest.approx(1.8)
+    assert chars["Qmax"] == pytest.approx(0.5)
+    assert chars["Qmin"] == pytest.approx(-0.5)
+    assert chars["Udim"] == pytest.approx(21.0 / 20.0)
+    assert chars["Unom"] == pytest.approx(1.0)
+    assert chars["line_XPu"] == pytest.approx(0.05)
+
+
+def test_unit_characteristics_pmax_aliases_track_active_mode():
+    chars = model_parameters.unit_characteristics(_producer(p_max_pu=-0.3), u_dim=20.0)
+
+    assert chars["PmaxInjection"] == pytest.approx(-0.3)
+    assert chars["PmaxConsumption"] == pytest.approx(-0.3)
+
+
+def test_resolve_value_definition_numeric():
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    assert model_parameters.resolve_value_definition("1.25", chars) == pytest.approx(1.25)
+    assert model_parameters.resolve_value_definition("-0.5", chars) == pytest.approx(-0.5)
+    assert model_parameters.resolve_value_definition(".75", chars) == pytest.approx(0.75)
+
+
+def test_resolve_value_definition_named_and_multiplier():
+    chars = model_parameters.unit_characteristics(_producer(s_nom_pu=1.8), u_dim=20.0)
+
+    assert model_parameters.resolve_value_definition("Snom", chars) == pytest.approx(1.8)
+    assert model_parameters.resolve_value_definition("0.5*Snom", chars) == pytest.approx(0.9)
+    assert model_parameters.resolve_value_definition("-Snom", chars) == pytest.approx(-1.8)
+
+
+def test_resolve_value_definition_applies_final_sign():
+    chars = model_parameters.unit_characteristics(_producer(s_nom_pu=1.8), u_dim=20.0)
+
+    value = model_parameters.resolve_value_definition("0.5*Snom", chars, sign=-1)
+
+    assert value == pytest.approx(-0.9)
+
+
+def test_resolve_value_definition_unknown_name_raises():
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    with pytest.raises(ValueError):
+        model_parameters.resolve_value_definition("0.5*Foobar", chars)
+
+
+def test_resolve_value_definition_invalid_forms_raise():
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    for invalid in (None, "", "  ", "-", "2*", "*Snom", "2*3", "Snom*2", "Snom+Unom"):
+        with pytest.raises(ValueError):
+            model_parameters.resolve_value_definition(invalid, chars)
+
+
+def test_resolve_value_definition_unknown_name_lists_the_available_magnitudes():
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    with pytest.raises(ValueError) as error:
+        model_parameters.resolve_value_definition("0.5*snom", chars)
+
+    message = str(error.value)
+    assert "Unknown magnitude 'snom'" in message
+    assert "case-sensitive" in message
+    assert "Defined by" not in message
+    for magnitude in chars:
+        assert magnitude in message
+
+
+def test_resolve_value_definition_errors_point_to_the_configuration_option(monkeypatch):
+    monkeypatch.setattr(model_parameters, "config", _config_stub())
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    for invalid in (None, "0.5*Foobar", "Snom*2"):
+        with pytest.raises(ValueError) as error:
+            model_parameters.resolve_value_definition(
+                invalid, chars, origin=("PCS.Model", "pdr_P")
+            )
+
+        assert _OPTION_LOCATION in str(error.value)
+
 
 
 def test_apply_control_mode_with_valid_parameters(monkeypatch):

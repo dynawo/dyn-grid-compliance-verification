@@ -16,6 +16,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
+from dycov.files import model_parameters
 from dycov.model.parameters import DisconnectionModel, SimulationResult
 from dycov.model.producer import Producer
 
@@ -78,12 +79,6 @@ class ProducerCurves:
         Union[str, float]
             Final value.
         """
-        # Ensure the PmaxConsumption and PmaxInjection are treated as Pmax for consistency
-        value_definition = (
-            value_definition
-            .replace("PmaxConsumption", "Pmax")
-            .replace("PmaxInjection", "Pmax")
-        )
         unit_characteristics = self.get_unit_characteristics()
         if "*" in value_definition:
             parts = value_definition.split("*")
@@ -110,14 +105,9 @@ class ProducerCurves:
         dict[str, float]
             set of unit characteristics.
         """
-        producer = self.get_producer()
-        return {
-            "Pmax": producer.p_max_pu,
-            "Qmax": producer.q_max_pu,
-            "Udim": self.get_generator_u_dim() / producer.u_nom,
-            "Unom": producer.u_nom / producer.u_nom,
-            "line_XPu": self._line_Xpu,
-        }
+        return model_parameters.unit_characteristics(
+            self.get_producer(), self.get_generator_u_dim(), self._line_Xpu
+        )
 
     def get_snref(self) -> float:
         """Get the reference power (S_nref).

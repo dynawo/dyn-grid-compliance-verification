@@ -56,6 +56,7 @@ def _make_producer(
     producer = MagicMock()
     producer.u_nom = u_nom
     producer.s_nom = s_nom
+    producer.s_nom_pu = s_nom / 100.0
     producer.p_max_pu = p_max_pu
     producer.q_min_pu = q_min_pu
     producer.q_max_pu = q_max_pu
@@ -583,72 +584,113 @@ class TestGetPdr:
             "pdr_U": u_cfg,
         }.get(k, d)
 
-    @patch(f"{_MS}.model_parameters")
     @patch(f"{_MS}.config")
-    def test_returns_pdr_params(self, mock_config, mock_mp):
+    def test_returns_pdr_params(self, mock_config):
         setup = _make_setup()
         self._config_for_pdr(mock_config)
-        mock_mp.extract_defined_value.return_value = 1.0
 
         result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
-        from dycov.model.parameters import PdrParams
-
         assert isinstance(result, PdrParams)
 
-    @patch(f"{_MS}.model_parameters")
     @patch(f"{_MS}.config")
-    def test_pmax_consumption_sets_consumption_flag(self, mock_config, mock_mp):
+    def test_pmax_consumption_sets_consumption_flag(self, mock_config):
         producer = _make_producer()
-        owner = _make_owner(producer)
-        setup = _make_setup(owner)
+        setup = _make_setup(_make_owner(producer))
         self._config_for_pdr(mock_config, p_cfg="PmaxConsumption")
-        mock_mp.extract_defined_value.return_value = 1.0
 
         setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
         producer.set_consumption.assert_called_once_with(True)
 
-    @patch(f"{_MS}.model_parameters")
     @patch(f"{_MS}.config")
-    def test_pmax_injection_does_not_set_consumption(self, mock_config, mock_mp):
+    def test_pmax_injection_does_not_set_consumption(self, mock_config):
         producer = _make_producer()
-        owner = _make_owner(producer)
-        setup = _make_setup(owner)
+        setup = _make_setup(_make_owner(producer))
         self._config_for_pdr(mock_config, p_cfg="PmaxInjection")
-        mock_mp.extract_defined_value.return_value = 1.0
 
         setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
         producer.set_consumption.assert_called_once_with(False)
 
-    @patch(f"{_MS}.model_parameters")
     @patch(f"{_MS}.config")
-    def test_qmin_key_used_when_present(self, mock_config, mock_mp):
-        setup = _make_setup()
-        self._config_for_pdr(mock_config, q_cfg="Qmin*0.5")
-        calls = []
-        mock_mp.extract_defined_value.side_effect = lambda cfg, key, val, sign=1: (
-            calls.append(key) or 0.0
-        )
+    def test_active_power_uses_pmax_with_pdr_sign(self, mock_config):
+        producer = _make_producer(p_max_pu=0.8)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, p_cfg="0.5*Pmax")
 
-        setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
-        assert "Qmin" in calls
+        assert result.p == pytest.approx(-0.4)
 
-    @patch(f"{_MS}.model_parameters")
     @patch(f"{_MS}.config")
-    def test_qmax_key_used_when_present(self, mock_config, mock_mp):
+    def test_active_power_accepts_snom(self, mock_config):
+        producer = _make_producer(s_nom=180.0)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, p_cfg="0.5*Snom")
+
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+
+        # s_nom_pu = 180 / 100 = 1.8; the PDR convention flips the sign
+        assert result.p == pytest.approx(-0.9)
+
+    @patch(f"{_MS}.config")
+    def test_reactive_power_accepts_snom(self, mock_config):
+        producer = _make_producer(s_nom=180.0)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, q_cfg="0.5*Snom")
+
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+
+        assert result.q == pytest.approx(-0.9)
+
+    @patch(f"{_MS}.config")
+    def test_reactive_power_uses_qmin(self, mock_config):
+        producer = _make_producer(q_min_pu=-0.3)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, q_cfg="Qmin")
+
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+
+        assert result.q == pytest.approx(0.3)
+
+    @patch(f"{_MS}.config")
+    def test_reactive_power_uses_qmax(self, mock_config):
+        producer = _make_producer(q_max_pu=0.5)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, q_cfg="0.5*Qmax")
+
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+
+        assert result.q == pytest.approx(-0.25)
+
+    @patch(f"{_MS}.config")
+    def test_voltage_accepts_unom(self, mock_config):
+        producer = _make_producer(u_nom=20.0)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, u_cfg="0.95*Unom")
+
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+
+        assert result.u == pytest.approx(0.95)
+
+    @patch(f"{_MS}.config")
+    def test_voltage_uses_udim_relative_to_unom(self, mock_config):
+        producer = _make_producer(u_nom=20.0)
+        setup = _make_setup(_make_owner(producer))
+        self._config_for_pdr(mock_config, u_cfg="Udim")
+
+        result = setup._get_pdr("PCS1", "BM1", "OC1", u_dim=21.0)
+
+        assert result.u == pytest.approx(21.0 / 20.0)
+
+    @patch(f"{_MS}.config")
+    def test_unknown_magnitude_raises(self, mock_config):
         setup = _make_setup()
-        self._config_for_pdr(mock_config, q_cfg="Qmax*0.5")
-        calls = []
-        mock_mp.extract_defined_value.side_effect = lambda cfg, key, val, sign=1: (
-            calls.append(key) or 0.0
-        )
+        self._config_for_pdr(mock_config, p_cfg="Foobar")
 
-        setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
-
-        assert "Qmax" in calls
+        with pytest.raises(ValueError):
+            setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
 
 # ---------------------------------------------------------------------------
@@ -937,19 +979,39 @@ class TestCompleteLoads:
         assert load_init.u0 == pytest.approx(1.0)  # 20.0 / u_nom 20.0
         assert load_init.u_phase0 == pytest.approx(0.5)
 
-    @patch(f"{_MS}.model_parameters")
     @patch(f"{_MS}.config")
-    def test_symbolic_load_values_resolved_from_config(self, mock_config, mock_mp):
-        setup = _make_setup()
-        load = MagicMock(id="L1", p="P0", q="0.1", u="20.0", u_phase="0.0")
+    def test_symbolic_power_value_resolved_from_config(self, mock_config):
+        setup = _make_setup(_make_owner(_make_producer(p_max_pu=0.8)))
+        load = MagicMock(id="L1", p="P0", q="0.0", u="20.0", u_phase="0.0")
         setup.tso_loads = [load]
-        mock_config.get_value.return_value = "pmax*0.5"
-        mock_mp.extract_defined_value.return_value = 0.7
+        mock_config.get_value.return_value = "0.5*Pmax"
 
         result = setup._complete_loads("SEC", "BM1", "OC1", u_dim=20.0)
 
-        assert result[0].p0 == pytest.approx(0.7)
-        mock_mp.extract_defined_value.assert_called_once_with("pmax*0.5", "pmax", 1.0)
+        assert result[0].p0 == pytest.approx(0.4)
+
+    @patch(f"{_MS}.config")
+    def test_power_value_accepts_snom(self, mock_config):
+        setup = _make_setup(_make_owner(_make_producer(s_nom=180.0)))
+        load = MagicMock(id="L1", p="P0", q="0.0", u="20.0", u_phase="0.0")
+        setup.tso_loads = [load]
+        mock_config.get_value.return_value = "0.5*Snom"
+
+        result = setup._complete_loads("SEC", "BM1", "OC1", u_dim=20.0)
+
+        # s_nom_pu = 180 / 100 = 1.8
+        assert result[0].p0 == pytest.approx(0.9)
+
+    @patch(f"{_MS}.config")
+    def test_voltage_value_accepts_unom(self, mock_config):
+        setup = _make_setup(_make_owner(_make_producer(u_nom=20.0)))
+        load = MagicMock(id="L1", p="0.0", q="0.0", u="U0", u_phase="0.0")
+        setup.tso_loads = [load]
+        mock_config.get_value.return_value = "0.95*Unom"
+
+        result = setup._complete_loads("SEC", "BM1", "OC1", u_dim=20.0)
+
+        assert result[0].u0 == pytest.approx(0.95)
 
 
 # ---------------------------------------------------------------------------
