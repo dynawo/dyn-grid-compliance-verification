@@ -241,9 +241,15 @@ class ModelSetup:
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
         characteristics = model_parameters.unit_characteristics(producer, u_dim)
-        ini_pdr_p = model_parameters.resolve_value_definition(pdr_p_cfg, characteristics, -1)
-        ini_pdr_q = model_parameters.resolve_value_definition(pdr_q_cfg, characteristics, -1)
-        ini_pdr_u = model_parameters.resolve_value_definition(pdr_u_cfg, characteristics)
+        ini_pdr_p = model_parameters.resolve_value_definition(
+            pdr_p_cfg, characteristics, -1, (config_section, "pdr_P")
+        )
+        ini_pdr_q = model_parameters.resolve_value_definition(
+            pdr_q_cfg, characteristics, -1, (config_section, "pdr_Q")
+        )
+        ini_pdr_u = model_parameters.resolve_value_definition(
+            pdr_u_cfg, characteristics, origin=(config_section, "pdr_U")
+        )
         return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
 
     def _get_tso_loads(
@@ -329,7 +335,9 @@ class ModelSetup:
             except ValueError:
                 cfg_value = config.get_value(config_section, param_name)
                 dycov_logging.get_logger("ModelSetup").debug(f"\t{param_name}={cfg_value}")
-                return model_parameters.resolve_value_definition(cfg_value, characteristics)
+                return model_parameters.resolve_value_definition(
+                    cfg_value, characteristics, origin=(config_section, param_name)
+                )
 
         loads = []
         for load in self.tso_loads:
