@@ -218,5 +218,6 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
         "dycov.validate.validation.Pcs",
         lambda producer, name, params: make_valid_pcs(producer, name, params),
     )
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         Validation(parameters)
+    assert exc_info.value.code == 1
