@@ -458,7 +458,7 @@ class Config:
 
 def _user_config_path(config_dir: Path) -> Path:
     """Path of the user configuration file."""
-    return config_dir / ("config.ini" if os.name != "nt" else "")
+    return config_dir / "config.ini"
 
 
 def _default_config_path() -> Path:
