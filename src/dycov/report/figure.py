@@ -95,7 +95,9 @@ def _get_xrange_for_curve(
     else:
         graph_scale = abs(
             model_parameters.resolve_value_definition(
-                str(reference_step_size), unit_characteristics
+                str(reference_step_size),
+                unit_characteristics,
+                origin=(operating_condition, "reference_step_size"),
             )
         )
     graph_rel_tol = config.get_float("Global", "graph_rel_tol", 0.002)
