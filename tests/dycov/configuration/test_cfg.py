@@ -12,7 +12,7 @@ import configparser
 
 import pytest
 
-from dycov.configuration.cfg import Config
+from dycov.configuration.cfg import Config, _user_config_path
 
 
 @pytest.fixture
@@ -138,6 +138,10 @@ def empty_parsers():
         configparser.ConfigParser(),
         configparser.ConfigParser(),
     )
+
+
+def test_user_config_path_does_not_depend_on_the_platform(tmp_path):
+    assert _user_config_path(tmp_path) == tmp_path / "config.ini"
 
 
 def test_describe_option_reports_user_config_file_and_line(tmp_path, empty_parsers):
