@@ -15,9 +15,6 @@ from dycov.curves.naming import ZONE1_INJECTOR_NODE_LABEL
 from dycov.logging import dycov_logging
 from dycov.validation import common, threshold_variables
 
-# Reported when a magnitude is absent from the curves, so its check cannot be computed
-NOT_COMPUTABLE = "N/A"
-
 
 def _get_measurement_name(
     modified_setpoint: str,
@@ -43,13 +40,9 @@ def _check_measure_curve_error(
     measurement: str,
     error_type: str,
     threshold: float,
-) -> tuple[float, bool, float, bool] | None:
-    """Returns None when the measurement is missing from the window: its error is then not
-    computable, which is a different outcome from computable and out of threshold.
-    """
+) -> tuple[float, bool, float, bool]:
     if measurement not in compliance_values:
-        return None
-
+        return None, None, None, None
     error_value = compliance_values[measurement][error_type]
     if threshold:
         error_check = _check_value_by_threshold(error_value, threshold)
@@ -70,85 +63,86 @@ def _check_measure_curve_error_by_event(
     measure: str,
     error: str,
     window_thresholds: dict,
-) -> tuple[float, bool, float, bool] | None:
-    return _check_measure_curve_error(
+) -> tuple[float, bool, float, bool]:
+    curve_value_error, curve_check_error, curve_terror, curve_yerror = _check_measure_curve_error(
         compliance_values,
         measure,
         error,
         threshold=window_thresholds[error],
     )
-
-
-def _aggregate_check(results: dict, key: str, check: bool | str | None) -> None:
-    if check is None:
-        return
-
-    if NOT_COMPUTABLE in (check, results[key]):
-        results[key] = NOT_COMPUTABLE
-        return
-
-    results[key] &= check
+    return curve_value_error, curve_check_error, curve_terror, curve_yerror
 
 
 def _check_setpoint_tracking_by_window(
     compliance_values: dict,
     measure: str,
     error: str,
-) -> dict:
-    """Returns the error of every applicable window. The "during" window is absent from the
-    result when the event has no such window; a window mapped to None holds a measurement whose
-    error is not computable.
-    """
+) -> tuple[float, bool, list, float, bool, list, float, bool, list]:
     windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values()
-    windows = {
-        window: _check_measure_curve_error_by_event(
-            compliance_values[window],
-            measure=measure,
-            error=error,
-            window_thresholds=windows_thresholds[window],
-        )
-        for window in ("before", "after")
-    }
-    if compliance_values["during"]:
-        windows["during"] = _check_measure_curve_error_by_event(
+    (
+        before_value,
+        before_check,
+        before_t,
+        before_y,
+    ) = _check_measure_curve_error_by_event(
+        compliance_values["before"],
+        measure=measure,
+        error=error,
+        window_thresholds=windows_thresholds["before"],
+    )
+
+    if not compliance_values["during"]:
+        during_value = None
+        during_check = None
+        during_t = None
+        during_y = None
+    else:
+        (
+            during_value,
+            during_check,
+            during_t,
+            during_y,
+        ) = _check_measure_curve_error_by_event(
             compliance_values["during"],
             measure=measure,
             error=error,
             window_thresholds=windows_thresholds["during"],
         )
-    return windows
+
+    (
+        after_value,
+        after_check,
+        after_t,
+        after_y,
+    ) = _check_measure_curve_error_by_event(
+        compliance_values["after"],
+        measure=measure,
+        error=error,
+        window_thresholds=windows_thresholds["after"],
+    )
+    return (
+        before_value,
+        before_check,
+        [before_t, before_y],
+        during_value,
+        during_check,
+        [during_t, during_y],
+        after_value,
+        after_check,
+        [after_t, after_y],
+    )
 
 
 def _check_setpoint_tracking(
     compliance_values: dict,
     modified_setpoint: str,
     error: str,
-) -> dict:
+):
     return _check_setpoint_tracking_by_window(
         compliance_values,
         _get_measurement_name(modified_setpoint),
         error,
     )
-
-
-def _complete_setpoint_tracking_by_window(
-    window_error: tuple | None,
-    prefix: str,
-    tracking_check: str,
-    results: dict,
-) -> None:
-    if window_error is None:
-        results[prefix + "_check"] = NOT_COMPUTABLE
-        results[tracking_check] = NOT_COMPUTABLE
-        results["compliance"] = False
-        return
-
-    error_value, error_check, terror, yerror = window_error
-    results[prefix + "_value"] = error_value
-    results[prefix + "_check"] = error_check
-    results[prefix + "_position"] = [terror, yerror]
-    _aggregate_check(results, tracking_check, error_check)
-    _aggregate_check(results, "compliance", error_check)
 
 
 def _complete_setpoint_tracking_by_error(
@@ -158,24 +152,42 @@ def _complete_setpoint_tracking_by_error(
     error: str,
     results: dict,
 ) -> None:
-    windows = _check_setpoint_tracking(
+    (
+        before_value,
+        before_check,
+        before_position,
+        during_value,
+        during_check,
+        during_position,
+        after_value,
+        after_check,
+        after_position,
+    ) = _check_setpoint_tracking(
         compliance_values,
         modified_setpoint=modified_setpoint,
         error=error,
     )
-    tracking_check = "setpoint_tracking_" + measurement + "_check"
-    results.setdefault(tracking_check, True)
+    if "setpoint_tracking_" + measurement + "_check" not in results:
+        results["setpoint_tracking_" + measurement + "_check"] = True
 
-    for window in ("before", "after", "during"):
-        if window not in windows:
-            continue
+    results["before_" + error + "_tc_" + measurement + "_value"] = before_value
+    results["before_" + error + "_tc_" + measurement + "_check"] = before_check
+    results["before_" + error + "_tc_" + measurement + "_position"] = before_position
+    results["setpoint_tracking_" + measurement + "_check"] &= before_check
+    results["compliance"] &= before_check
 
-        _complete_setpoint_tracking_by_window(
-            windows[window],
-            f"{window}_{error}_tc_{measurement}",
-            tracking_check,
-            results,
-        )
+    results["after_" + error + "_tc_" + measurement + "_value"] = after_value
+    results["after_" + error + "_tc_" + measurement + "_check"] = after_check
+    results["after_" + error + "_tc_" + measurement + "_position"] = after_position
+    results["setpoint_tracking_" + measurement + "_check"] &= after_check
+    results["compliance"] &= after_check
+
+    if during_value is not None:
+        results["during_" + error + "_tc_" + measurement + "_value"] = during_value
+        results["during_" + error + "_tc_" + measurement + "_check"] = during_check
+        results["during_" + error + "_tc_" + measurement + "_position"] = during_position
+        results["setpoint_tracking_" + measurement + "_check"] &= during_check
+        results["compliance"] &= during_check
 
 
 def _check_voltage_dips(
@@ -183,26 +195,62 @@ def _check_voltage_dips(
     measure: str,
     error: str,
     is_field_measurements: bool = True,
-) -> tuple[float, bool, list, float, bool, list, float, bool, list]:
+) -> tuple[float, bool, float, bool, float, bool]:
     windows_thresholds = threshold_variables.get_voltage_dip_threshold_values(
         measure, is_field_measurements
     )
-    checked_windows = []
-    for window in ("before", "during", "after"):
-        if compliance_values[window]:
-            window_error = _check_measure_curve_error_by_event(
-                compliance_values[window],
-                measure=measure,
-                error=error,
-                window_thresholds=windows_thresholds[window],
-            )
-        else:
-            window_error = None
+    (
+        before_value,
+        before_check,
+        before_t,
+        before_y,
+    ) = _check_measure_curve_error_by_event(
+        compliance_values["before"],
+        measure=measure,
+        error=error,
+        window_thresholds=windows_thresholds["before"],
+    )
 
-        error_value, error_check, terror, yerror = window_error or (None, None, None, None)
-        checked_windows += [error_value, error_check, [terror, yerror]]
+    if not compliance_values["during"]:
+        during_value = None
+        during_check = None
+        during_t = None
+        during_y = None
+    else:
+        (
+            during_value,
+            during_check,
+            during_t,
+            during_y,
+        ) = _check_measure_curve_error_by_event(
+            compliance_values["during"],
+            measure=measure,
+            error=error,
+            window_thresholds=windows_thresholds["during"],
+        )
 
-    return tuple(checked_windows)
+    (
+        after_value,
+        after_check,
+        after_t,
+        after_y,
+    ) = _check_measure_curve_error_by_event(
+        compliance_values["after"],
+        measure=measure,
+        error=error,
+        window_thresholds=windows_thresholds["after"],
+    )
+    return (
+        before_value,
+        before_check,
+        [before_t, before_y],
+        during_value,
+        during_check,
+        [during_t, during_y],
+        after_value,
+        after_check,
+        [after_t, after_y],
+    )
 
 
 def _calculate_curve_errors(
@@ -320,18 +368,20 @@ def _check_measurement_by_error_window(
     window: str,
     results: dict,
 ) -> None:
-    check_key = window + "_" + error + "_" + measurement + "_check"
-    dips_check = "voltage_dips_" + measurement + "_check"
-    if check_key not in compliance_values:
-        results[check_key] = NOT_COMPUTABLE
-        results[dips_check] = NOT_COMPUTABLE
+    if window + "_" + error + "_" + measurement + "_check" not in compliance_values:
+        results[window + "_" + error + "_" + measurement + "_check"] = "N/A"
+        results["voltage_dips_" + measurement + "_check"] = "N/A"
         results["compliance"] = False
         return
 
-    if compliance_values[check_key] is not None:
-        results[check_key] = compliance_values[check_key]
-        _aggregate_check(results, dips_check, results[check_key])
-        _aggregate_check(results, "compliance", results[check_key])
+    if compliance_values[window + "_" + error + "_" + measurement + "_check"] is not None:
+        results[window + "_" + error + "_" + measurement + "_check"] = compliance_values[
+            window + "_" + error + "_" + measurement + "_check"
+        ]
+        results["voltage_dips_" + measurement + "_check"] &= results[
+            window + "_" + error + "_" + measurement + "_check"
+        ]
+        results["compliance"] &= results[window + "_" + error + "_" + measurement + "_check"]
 
 
 def calculate_errors(
@@ -379,16 +429,13 @@ def calculate_errors(
             dycov_logging.error(f"Curve {key} not found in simulation results.")
             continue
 
-        error_position = common.maximum_error_position(
+        tmxe, ymxe, yref = common.maximum_error_position(
             calculated_curves["time"],
             calculated_curves[key],
             reference_curves[key],
             key,
         )
-        if error_position is None:
-            continue
 
-        tmxe, ymxe, yref = error_position
         results[key] = {
             "me": common.mean_error(
                 calculated_curves[key],
