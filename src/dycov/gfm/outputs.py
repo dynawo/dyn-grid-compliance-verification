@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
+#
 
 import configparser
 import importlib.metadata
@@ -27,15 +28,27 @@ def save_results_to_csv(
     upper_envelope: np.ndarray,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """Exports envelopes and signals to a CSV file."""
+    """
+    Exports envelopes and signals to a CSV file.
+
+    Args:
+        path (Path): Destination path for the CSV file.
+        magnitude (str): Name of the magnitude being recorded.
+        time_array (np.ndarray): Array of time steps.
+        pcc_signal (np.ndarray): Array of Point of Common Coupling signal values.
+        lower_envelope (np.ndarray): Array of lower envelope values.
+        upper_envelope (np.ndarray): Array of upper envelope values.
+        extra_envelopes (dict[str, np.ndarray], optional): Additional envelopes to save. Defaults to None.
+
+    Returns:
+        None
+    """
     data = {
         "Time (s)": time_array,
         f"{magnitude} PGU (pu)": pcc_signal,
         f"{magnitude} lower (pu)": lower_envelope,
         f"{magnitude} upper (pu)": upper_envelope,
     }
-
-    # Append extra envelopes if requested (provides detailed output for hybrid mode)
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
             data[f"{magnitude} {name} (pu)"] = signal
@@ -51,14 +64,24 @@ def find_start_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """Finds the starting index to trim leading stable data."""
+    """
+    Finds the starting index to trim leading stable data.
+
+    Args:
+        pcc_signal (np.ndarray): The main signal array.
+        lower_envelope (np.ndarray): The lower envelope array.
+        upper_envelope (np.ndarray): The upper envelope array.
+        tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
+        buffer_points (int, optional): Number of safety points to keep before the change. Defaults to 10.
+
+    Returns:
+        int: The calculated starting index.
+    """
     for i in range(len(pcc_signal) - 1):
         pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
         down_changed = abs(lower_envelope[i + 1] - lower_envelope[i]) > tolerance
         up_changed = abs(upper_envelope[i + 1] - upper_envelope[i]) > tolerance
-
         if pcc_changed or down_changed or up_changed:
-            # First significant variation detected. Return index including the safety buffer.
             return max(0, i - buffer_points)
     return 0
 
@@ -70,14 +93,24 @@ def find_end_trim_index(
     tolerance: float = 1e-5,
     buffer_points: int = 10,
 ) -> int:
-    """Finds the ending index to trim trailing stable data."""
+    """
+    Finds the ending index to trim trailing stable data.
+
+    Args:
+        pcc_signal (np.ndarray): The main signal array.
+        lower_envelope (np.ndarray): The lower envelope array.
+        upper_envelope (np.ndarray): The upper envelope array.
+        tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
+        buffer_points (int, optional): Number of safety points to keep after the change. Defaults to 10.
+
+    Returns:
+        int: The calculated ending index.
+    """
     for i in range(len(pcc_signal) - 1, 0, -1):
         pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
         down_changed = abs(lower_envelope[i] - lower_envelope[i - 1]) > tolerance
         up_changed = abs(upper_envelope[i] - upper_envelope[i - 1]) > tolerance
-
         if pcc_changed or down_changed or up_changed:
-            # Last significant variation detected. Return index including the safety buffer.
             return min(i + buffer_points, len(pcc_signal))
     return len(pcc_signal)
 
@@ -98,10 +131,30 @@ def plot_results(
     disclaimer_message: str = None,
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
-    """Renders and exports simulation results graphically."""
+    """
+    Renders and exports simulation results graphically.
+
+    Args:
+        path (Path): Destination path for the plot file.
+        title (str): Title of the plot.
+        magnitude (str): The physical magnitude being plotted.
+        time_array (np.ndarray): The time steps array.
+        event_time (float): The timestamp of the main simulation event.
+        shift_time (float): Time shift in milliseconds to adjust the vertical event line.
+        pcc_signal (np.ndarray): Main signal data to plot.
+        lower_envelope (np.ndarray): Lower bounds data.
+        upper_envelope (np.ndarray): Upper bounds data.
+        output_format (str): The desired output formats (e.g., 'png&html').
+        params_list (list, optional): List of parameter strings to display on the plot. Defaults to None.
+        show_disclaimer (bool, optional): Whether to display a warning disclaimer. Defaults to False.
+        disclaimer_message (str, optional): Custom disclaimer text. Defaults to None.
+        extra_envelopes (dict[str, np.ndarray], optional): Additional signals to plot. Defaults to None.
+
+    Returns:
+        None
+    """
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
-
     time_trimmed = time_array[start_index:end_index]
     pcc_trimmed = pcc_signal[start_index:end_index]
     down_trimmed = lower_envelope[start_index:end_index]
@@ -114,7 +167,6 @@ def plot_results(
 
     disclaimer_text_mpl = ""
     disclaimer_text_html = ""
-
     if show_disclaimer:
         default_msg = "Inconsistent damping. Envelopes may be unreliable."
         disclaimer_text_mpl = "Disclaimer:\n" + (disclaimer_message or default_msg)
@@ -146,15 +198,16 @@ def plot_results(
                     alpha=0.7,
                     label=name.replace("_", " ").title(),
                 )
-
         plt.plot(time_trimmed, pcc_trimmed, label=f"{magnitude} at PGU", linewidth=3)
         plt.plot(
             time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
         )
         plt.plot(time_trimmed, up_trimmed, linewidth=2, color="red")
+
         plt.xlabel("Time (s)")
         plt.ylabel(f"{magnitude} (pu)")
         plt.title(title)
+
         plt.axvline(
             x=event_time + shift_time / 1000, color="black", linestyle="--", label="Event Time"
         )
@@ -170,7 +223,6 @@ def plot_results(
                 horizontalalignment="right",
                 bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
             )
-
         if show_disclaimer:
             plt.text(
                 0.02,
@@ -216,7 +268,6 @@ def plot_results(
                 showlegend=False,
             )
         )
-
         if extra_trimmed:
             colors = {"overdamped": "purple", "underdamped": "orange"}
             for name, signal in extra_trimmed.items():
@@ -286,7 +337,6 @@ def plot_results(
                 bgcolor="rgba(245, 222, 179, 0.7)",
                 borderpad=10,
             )
-
         if show_disclaimer:
             fig.add_annotation(
                 xref="paper",
@@ -303,7 +353,6 @@ def plot_results(
                 borderwidth=1,
                 borderpad=10,
             )
-
         fig.add_annotation(
             xref="paper",
             yref="paper",
@@ -316,7 +365,6 @@ def plot_results(
             xanchor="right",
             yanchor="bottom",
         )
-
         fig.update_layout(
             title_text=title,
             xaxis_title="Time (s)",
@@ -331,7 +379,18 @@ def plot_results(
 def save_ini_dump(
     path: Path, parameters: Any, producer_config: configparser.ConfigParser, calculator: Any
 ) -> None:
-    """Serializes simulation entity attributes to a text file."""
+    """
+    Serializes simulation entity attributes to a text file for debugging.
+
+    Args:
+        path (Path): Destination path for the text dump file.
+        parameters (Any): The simulation parameters object.
+        producer_config (configparser.ConfigParser): The parsed INI configuration.
+        calculator (Any): The instantiated calculator object.
+
+    Returns:
+        None
+    """
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
         f.write(f"\n{'=' * 30}\n {title}\n{'=' * 30}\n")
@@ -347,7 +406,6 @@ def save_ini_dump(
             d_vals = getattr(calculator, "_d_vals", None)
             h_vals = getattr(calculator, "_h_vals", None)
             eps_vals = getattr(calculator, "_epsilon_vals", None)
-
             if d_vals is not None and h_vals is not None:
                 for i in range(len(d_vals)):
                     label = "Nominal" if i == 0 else f"Variation {i}"
