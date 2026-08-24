@@ -52,7 +52,7 @@ def test_trafos():
     assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
-        == "The admittance of the transformer Xfmr must be greater than zero."
+        == "The reactance of the transformer Xfmr must be greater than zero."
     )
 
 
