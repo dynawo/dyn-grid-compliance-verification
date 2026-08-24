@@ -1281,9 +1281,7 @@ def _adjust_load(
     load_uphase0: float,
 ) -> None:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
-    parset = producer_par_root.xpath(f"//ns:set[@id='{load_id}']", namespaces=nsmap)
-    if parset is None:
-        return
+    parset = _get_parset(producer_par_root, load_id, nsmap)
 
     sign, active_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ActivePower0")
     _set_parameter(parset, nsmap, active_power0, sign, load_p0pu, create_if_missing=True)
