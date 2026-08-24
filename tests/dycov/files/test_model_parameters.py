@@ -101,6 +101,13 @@ def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.
     )
 
 
+_OPTION_LOCATION = "'pdr_P' in section [PCS.Model] of '/etc/PCSDescription.ini', line 7"
+
+
+def _config_stub():
+    return SimpleNamespace(describe_option=lambda section, key: _OPTION_LOCATION)
+
+
 def test_unit_characteristics_exposes_power_and_voltage_bases():
     chars = model_parameters.unit_characteristics(_producer(), u_dim=21.0, line_Xpu=0.05)
 
@@ -154,9 +161,37 @@ def test_resolve_value_definition_unknown_name_raises():
 def test_resolve_value_definition_invalid_forms_raise():
     chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
 
-    for invalid in (None, "", "2*", "*Snom"):
+    for invalid in (None, "", "  ", "-", "2*", "*Snom", "2*3", "Snom*2", "Snom+Unom"):
         with pytest.raises(ValueError):
             model_parameters.resolve_value_definition(invalid, chars)
+
+
+def test_resolve_value_definition_unknown_name_lists_the_available_magnitudes():
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    with pytest.raises(ValueError) as error:
+        model_parameters.resolve_value_definition("0.5*snom", chars)
+
+    message = str(error.value)
+    assert "Unknown magnitude 'snom'" in message
+    assert "case-sensitive" in message
+    assert "Defined by" not in message
+    for magnitude in chars:
+        assert magnitude in message
+
+
+def test_resolve_value_definition_errors_point_to_the_configuration_option(monkeypatch):
+    monkeypatch.setattr(model_parameters, "config", _config_stub())
+    chars = model_parameters.unit_characteristics(_producer(), u_dim=20.0)
+
+    for invalid in (None, "0.5*Foobar", "Snom*2"):
+        with pytest.raises(ValueError) as error:
+            model_parameters.resolve_value_definition(
+                invalid, chars, origin=("PCS.Model", "pdr_P")
+            )
+
+        assert _OPTION_LOCATION in str(error.value)
+
 
 
 def test_apply_control_mode_with_valid_parameters(monkeypatch):
