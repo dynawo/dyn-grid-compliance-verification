@@ -348,7 +348,7 @@ class DycovInitializer:
         """
         is_aborted = precompile(launcher_dwo)
         if is_aborted:
-            sys.exit()
+            sys.exit(1)
 
     def _check_config_file(self, tool_config_file: Path, user_config_file: Path):
         """
