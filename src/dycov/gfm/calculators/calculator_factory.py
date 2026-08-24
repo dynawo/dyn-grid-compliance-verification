@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 
 from typing import Optional
 
@@ -13,7 +17,6 @@ from dycov.gfm.calculators.rocof import RoCoF
 from dycov.gfm.calculators.scr_jump import SCRJump
 from dycov.gfm.parameters import GFMParameters
 
-# Using a mapping dictionary for O(1) factory lookups
 _CALCULATOR_REGISTRY = {
     "PhaseJump": PhaseJump,
     "AmplitudeStep": AmplitudeStep,
@@ -23,6 +26,14 @@ _CALCULATOR_REGISTRY = {
 
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
-    """Factory method to instantiate a specific GFMCalculator subclass."""
+    """Factory method to instantiate a specific GFMCalculator subclass.
+
+    Args:
+        name (str): The string identifier of the target calculator.
+        gfm_params (GFMParameters): The shared configuration parameters to pass.
+
+    Returns:
+        Optional[GFMCalculator]: An instance of the requested calculator, or None if not found.
+    """
     calc_class = _CALCULATOR_REGISTRY.get(name)
     return calc_class(gfm_params=gfm_params) if calc_class else None

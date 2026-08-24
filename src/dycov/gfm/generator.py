@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 
 import logging
 import sys
@@ -17,7 +21,12 @@ from dycov.model.pcs import Pcs
 
 
 def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
-    """Worker function that generates envelopes for a specific PCS."""
+    """Worker function that generates envelopes for a specific PCS.
+
+    Args:
+        pcs_args (tuple[GFMParameters, str, str]): A tuple containing the
+            simulation parameters, the PCS name, and the producer name.
+    """
     parameters, pcs_name, producer_name = pcs_args
     pcs = Pcs(producer_name, pcs_name, parameters)
 
@@ -26,7 +35,6 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
             dycov_logging.get_logger("GFMGeneration").error(f"{pcs.get_name()} is not a valid PCS")
             return
         pcs.generate()
-
     except (FileNotFoundError, IOError, ValueError) as e:
         if dycov_logging.get_logger("GFMGeneration").getEffectiveLevel() == logging.DEBUG:
             dycov_logging.get_logger("GFMGeneration").exception(
@@ -42,6 +50,11 @@ class GFMGeneration:
     """Orchestrator class to manage Grid Forming (GFM) envelopes generation."""
 
     def __init__(self, parameters: GFMParameters) -> None:
+        """Initializes the generation orchestrator.
+
+        Args:
+            parameters (GFMParameters): The configuration parameters for the GFM run.
+        """
         self._parameters = parameters
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self.__initialize_working_environment()
@@ -49,33 +62,45 @@ class GFMGeneration:
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
+        """Sets up the working and output directories for the simulation.
+
+        Raises:
+            SystemExit: If the output directory already exists and risks being overwritten.
+        """
         manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
             dycov_logging.get_logger("GFMGeneration").warning(
                 "Exiting. Please rename your current Results directory, otherwise it will be erased."
             )
             sys.exit(1)
-
         manage_files.create_dir(self._parameters.get_output_dir())
 
     def __get_validation_pcs(self) -> list[str]:
+        """Gathers and returns a sorted list of validation PCS elements.
+
+        Returns:
+            list[str]: A sorted list of unique PCS validation strings.
+        """
         dycov_logging.get_logger("GFMGeneration").info("DyCoV Envelopes Generation")
         validation_pcs: set[str] = set()
-
         if self._parameters.get_selected_pcs():
             validation_pcs.add(self._parameters.get_selected_pcs())
-
         self.__populate_validation_pcs(validation_pcs, "gridforming_pcs", "gfm")
         return sorted(list(validation_pcs))
 
     def __populate_validation_pcs(
         self, validation_pcs: set[str], validation_key: str, validation_path: str
     ) -> None:
-        tool_path = Path(__file__).resolve().parent.parent
+        """Populates the validation set based on configured global paths.
 
+        Args:
+            validation_pcs (set[str]): The set of PCS names to populate.
+            validation_key (str): The configuration key to look up.
+            validation_path (str): The directory path for template validation.
+        """
+        tool_path = Path(__file__).resolve().parent.parent
         if not validation_pcs:
             validation_pcs.update(config.get_list("Global", validation_key))
-
         if not validation_pcs:
             if not self._parameters.get_only_dtr():
                 validation_pcs.update(
@@ -86,12 +111,17 @@ class GFMGeneration:
             validation_pcs.update(
                 manage_files.list_directories(tool_path / self._templates_path / validation_path)
             )
-
         for item in list(validation_pcs):
             if "aliases" in item:
                 validation_pcs.remove(item)
 
     def __prepare_pcs_list(self) -> list[tuple[GFMParameters, str, str]]:
+        """Prepares a list of configuration tuples for execution.
+
+        Returns:
+            list[tuple[GFMParameters, str, str]]: A list of tuples containing
+                (parameters, pcs_name, producer_name).
+        """
         return [
             (self._parameters, pcs_name, producer_name)
             for producer_name in self._parameters.get_producer().get_filenames()
@@ -99,6 +129,12 @@ class GFMGeneration:
         ]
 
     def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
+        """Executes the envelope generation process for all configured PCS.
+
+        Args:
+            use_parallel (bool, optional): Whether to run using multiprocessing. Defaults to False.
+            num_processes (int, optional): Number of CPU cores to utilize. Defaults to 4.
+        """
         if use_parallel:
             dycov_logging.get_logger("GFMGeneration").info(
                 f"Generating envelopes in parallel using {num_processes} processes."
@@ -116,5 +152,4 @@ class GFMGeneration:
                 self._parameters.get_output_dir(),
                 pcs_name,
             )
-
         manage_files.remove_dir(self._parameters.get_working_dir())

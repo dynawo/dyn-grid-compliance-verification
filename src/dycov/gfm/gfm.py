@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 
 from pathlib import Path
 import numpy as np
@@ -28,11 +32,20 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """Executes the primary pipeline for GFM simulation results generation."""
+        """Executes the primary pipeline for GFM simulation results generation.
+
+        Args:
+            working_path (Path): The directory path for intermediate and final outputs.
+            parameters (GFMParameters): The parsed parameter configuration object.
+            pcs_name (str): The name of the Point of Connection (PCS).
+            bm_name (str): The Base Model identifier.
+            oc_name (str): The Operating Condition identifier.
+        """
         parameters.set_section(pcs_name, bm_name, oc_name)
         x_eff = parameters.get_effective_reactance()
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
+
         time_array, event_time = self._get_time(calculator_name)
         params_list = calculator.get_plot_parameter_names() if calculator else None
 
@@ -77,13 +90,11 @@ class GridForming:
                 calculator=calculator,
             )
 
-            # Envelope Merging Logic: Calculate the absolute outermost bounds
-            # Maximum of both upper envelopes, Minimum of both lower envelopes
+            # Envelope Merging Logic
             upper_envelope1 = np.maximum(up_over, up_under)
             lower_envelope1 = np.minimum(low_over, low_under)
             upper_envelope2 = np.maximum(low_over, low_under)
             lower_envelop2 = np.minimum(up_over, up_under)
-
             upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
             lower_envelope = np.minimum(lower_envelope1, lower_envelop2)
 
@@ -100,7 +111,6 @@ class GridForming:
                 }
 
             if params_list:
-                # Remove generic D and H labels, as hybrid uses dual configurations
                 params_list = [p for p in params_list if p not in ["D", "H"]]
 
         elif standard_params:
@@ -117,7 +127,6 @@ class GridForming:
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Retrieve calculator operational flags (e.g., inconsistent damping triggers)
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
@@ -160,12 +169,19 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """Generates the simulation time array and event time."""
+        """Generates the simulation time array and event time based on calculator type.
+
+        Args:
+            calculator_name (str): The name identifier of the calculator in use.
+
+        Returns:
+            tuple[np.ndarray, float]: The numpy array containing simulation time steps
+                and the float value of the event time.
+        """
         if calculator_name in ["SCRJump", "RoCoF"]:
             start_time = constants.SIMULATION_START_TIME_EXTENDED
         else:
             start_time = constants.SIMULATION_START_TIME_DEFAULT
-
         end_time = constants.SIMULATION_END_TIME
         event_time = constants.SIMULATION_EVENT_TIME
         nb_points = constants.SIMULATION_POINTS
@@ -180,7 +196,20 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Computes analytical response envelopes."""
+        """Computes analytical response envelopes delegating to the specific calculator.
+
+        Args:
+            calculator (GFMCalculator): The instantiated calculator object.
+            time_array (np.ndarray): The simulation time vector.
+            event_time (float): The timestamp of the grid event.
+            damping_constant (float): The system damping parameter (D).
+            inertia_constant (float): The system inertia parameter (H).
+            x_eff (float): The effective reactance.
+
+        Returns:
+            tuple[str, np.ndarray, np.ndarray, np.ndarray]: The magnitude identifier,
+                power signal, upper envelope, and lower envelope arrays.
+        """
         return calculator.calculate_envelopes(
             D=damping_constant,
             H=inertia_constant,
@@ -200,7 +229,18 @@ class GridForming:
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
     ) -> None:
-        """Exports generated signals to CSV."""
+        """Exports generated signals to a CSV file.
+
+        Args:
+            csv_path (Path): The directory path to save the CSV.
+            title (str): The file name for the CSV (without extension).
+            magnitude_name (str): The descriptive name of the physical magnitude.
+            time_array (np.ndarray): The time array vector.
+            pcc_signal (np.ndarray): The main signal value array.
+            lower_envelope (np.ndarray): The computed lower limit array.
+            upper_envelope (np.ndarray): The computed upper limit array.
+            extra_envelopes (dict, optional): Additional debugging envelopes to append.
+        """
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
             magnitude=magnitude_name,
@@ -214,11 +254,20 @@ class GridForming:
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
-        """Extracts and formats key simulation variables for UI rendering."""
+        """Extracts and formats key simulation variables for UI rendering.
+
+        Args:
+            parameters (GFMParameters): The main parameter configuration object.
+            params_list (list): The list of parameter names requested by the calculator.
+            calculator (GFMCalculator): The instantiated calculator object to query.
+
+        Returns:
+            list[str]: A list of formatted string lines for display on plots.
+        """
         if params_list is None:
             return []
-
         text_params_info = []
+
         if "P0" in params_list:
             text_params_info.append(f"P0 = {parameters.get_initial_active_power():.3f} pu")
         if "Q0" in params_list:
@@ -234,19 +283,19 @@ class GridForming:
         if "Qmin" in params_list:
             text_params_info.append(f"Qmin = {parameters.get_min_reactive_power():.3f} pu")
         if "DeltaPhase" in params_list:
-            text_params_info.append(f"∆_grid = {parameters.get_delta_phase():.3f}º")
+            text_params_info.append(f"Δθ_grid = {parameters.get_delta_phase():.3f}°")
         if "SCR" in params_list:
             text_params_info.append(f"SCR = {parameters.get_scr():.3f}")
         if "VoltageStepAtGrid" in params_list:
             text_params_info.append(
-                f"∆V_Grid = {parameters.get_voltage_step_at_grid() / 100:.3f} pu"
+                f"ΔV_Grid = {parameters.get_voltage_step_at_grid() / 100:.3f} pu"
             )
         if "VoltageStepAtPDR" in params_list:
             text_params_info.append(
-                f"∆V_PGU = {parameters.get_voltage_step_at_pdr() / 100:.3f} pu"
+                f"ΔV_PGU = {parameters.get_voltage_step_at_pdr() / 100:.3f} pu"
             )
         if "AngleStepAtPDR" in params_list:
-            text_params_info.append(f"∆_PGU = {parameters.get_delta_step():.3f}º")
+            text_params_info.append(f"Δθ_PGU = {parameters.get_delta_step():.3f}°")
         if "SCRinitial" in params_list:
             text_params_info.append(f"SCR_initial = {parameters.get_initial_scr():.3f}")
         if "SCRfinal" in params_list:
@@ -287,7 +336,24 @@ class GridForming:
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
     ) -> None:
-        """Dispatches variables to render visual plots."""
+        """Dispatches variables to render visual plots in PNG and HTML format.
+
+        Args:
+            png_path (Path): The directory path to save the visual plots.
+            title (str): The title of the plot and filename.
+            magnitude_name (str): The physical magnitude measured (e.g., P, Iq).
+            time_array (np.ndarray): The simulation time vector.
+            event_time (float): The timestamp when the grid event happens.
+            pcc_signal (np.ndarray): The primary physical signal array.
+            lower_envelope (np.ndarray): The calculated lower boundary array.
+            upper_envelope (np.ndarray): The calculated upper boundary array.
+            parameters (GFMParameters): The simulation parameter configuration.
+            params_list (list): The list of variables to print on the plot legend.
+            calculator (GFMCalculator): The calculator instance used for simulation.
+            is_inconsistent (bool, optional): Whether to display a warning flag on the plot.
+            disclaimer_msg (str, optional): A custom text to display if inconsistencies exist.
+            extra_envelopes (dict, optional): Extra boundary arrays for UI rendering.
+        """
         plot_results(
             path=png_path / f"{title}.png",
             title=title,
