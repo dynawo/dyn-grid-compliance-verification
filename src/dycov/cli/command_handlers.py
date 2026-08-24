@@ -20,6 +20,7 @@ from dycov.curves import anonymizer
 from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.verification.functional_tests import compare_csv_directories
 from dycov.logging import dycov_logging
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
@@ -464,8 +465,6 @@ def _generate_envelopes(
                 f"against Baseline '{functional_tests}'..."
             )
             try:
-                from dycov.gfm.tests.functional_tests import compare_csv_directories
-
                 baseline_path = Path(functional_tests)
                 if not baseline_path.exists():
                     dycov_logging.get_logger("CommandHandlers").error(
@@ -491,12 +490,6 @@ def _generate_envelopes(
                     )
                     print(f"\n❌ FAILED: Functional tests found discrepancies.\n{error_msg}")
                     return 1
-            except ImportError:
-                dycov_logging.get_logger("CommandHandlers").error(
-                    "Could not import 'compare_csv_directories' from "
-                    "'dycov.gfm.tests.functional_tests'; make sure the module is installed."
-                )
-                return 1
             except Exception as e:
                 dycov_logging.get_logger("CommandHandlers").exception(
                     f"Unexpected error during functional testing: {e}"
