@@ -49,15 +49,15 @@ classifiers = [
 
 # Required packages: here we declare only the direct dependencies.
 dependencies = [
-    "comtrade>=0.0.10",		# MIT License
-    "Jinja2>=3.1.2",		# BSD License
-    "lxml>=4.6.3",		    # BSD License
-    "matplotlib>=3.4.0",	# Python Software Foundation License
-    "numpy>=1.21.0",		# BSD License
-    "pandas>=1.3.0",		# BSD License
-    "plotly>=5.20.0",		# MIT License
-    "SciPy>=1.9.3",		    # BSD License
-    "colorama>=0.4.6",		# BSD License
+    "comtrade>=0.0.10", # MIT License
+    "Jinja2>=3.1.2", # BSD License
+    "lxml>=4.6.3", # BSD License
+    "matplotlib>=3.4.0", # Python Software Foundation License
+    "numpy>=1.21.0", # BSD License
+    "pandas>=1.3.0", # BSD License
+    "plotly>=5.20.0", # MIT License
+    "SciPy>=1.9.3", # BSD License
+    "colorama>=0.4.6", # BSD License
 ]
 
 # Optional dependencies for development and testing.
