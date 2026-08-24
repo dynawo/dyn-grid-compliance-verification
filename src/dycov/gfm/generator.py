@@ -100,7 +100,7 @@ class GFMGeneration:
                 "Exiting. Please rename your current Results directory, "
                 "otherwise it will be erased and a new one will be created."
             )
-            sys.exit()
+            sys.exit(1)
 
         # Create a fresh output directory once safety is confirmed
         manage_files.create_dir(self._parameters.get_output_dir())

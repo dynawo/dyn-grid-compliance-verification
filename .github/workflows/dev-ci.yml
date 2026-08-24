@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.13"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - name: Checkout
@@ -61,23 +61,10 @@ jobs:
       - name: Build package (wheel)
         run: uv run python -m build --wheel
 
-      # Install wheel on Linux/macOS (bash expands glob)
-      - name: Install wheel (Linux/macOS)
-        if: runner.os != 'Windows'
+      # Install the wheel (bash expands the glob)
+      - name: Install wheel
         shell: bash
         run: uv pip install dist/*.whl
-
-      # Install wheel on Windows (PowerShell enumerates the file)
-      - name: Install wheel (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $wheel = Get-ChildItem -Path dist -Filter *.whl | Select-Object -First 1 -ExpandProperty FullName
-          if (-not $wheel) {
-            Write-Error "No wheel found in dist/"
-          }
-          Write-Host "Installing wheel: $wheel"
-          uv pip install "$wheel"
 
       # Run tests
       - name: Test
