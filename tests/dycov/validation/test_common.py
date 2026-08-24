@@ -224,6 +224,59 @@ def test_maximum_error_position_raises_value_error_on_length_mismatch():
         common.maximum_error_position(time, signal, reference, "")
 
 
+class _RecordingLogger:
+    """Captures the warnings emitted through dycov_logging."""
+
+    def __init__(self):
+        self.warnings = []
+
+    def get_logger(self, name):
+        return self
+
+    def warning(self, msg):
+        self.warnings.append(msg)
+
+
+@pytest.fixture
+def logged_warnings(monkeypatch):
+    logger = _RecordingLogger()
+    monkeypatch.setattr("dycov.validation.common.dycov_logging", logger)
+    return logger.warnings
+
+
+def test_maximum_error_position_locates_the_largest_deviation():
+    time = pd.Series([0.0, 0.5, 1.0])
+    signal = pd.Series([1.0, 3.0, 1.0])
+    reference = pd.Series([1.0, 1.0, 1.0])
+
+    position = common.maximum_error_position(time, signal, reference, "BusPDR_BUS_ActivePower")
+
+    assert position == (0.5, 3.0, 1.0)
+
+
+def test_maximum_error_position_without_reference_values_is_not_computable(logged_warnings):
+    """Issue #373: an all-NaN reference used to return a two-element tuple, which broke the
+    three-value unpacking done by the caller; it is now a single "not computable" answer."""
+    time = pd.Series([0.0, 0.5, 1.0])
+    signal = pd.Series([1.0, 3.0, 1.0])
+    reference = pd.Series([np.nan, np.nan, np.nan])
+
+    position = common.maximum_error_position(time, signal, reference, "BusPDR_BUS_Voltage")
+
+    assert position is None
+    assert logged_warnings == ["No reference values in BusPDR_BUS_Voltage"]
+
+
+def test_maximum_error_position_of_empty_curves_is_not_computable(logged_warnings):
+    """Issue #373: empty curves used to return the bare scalar 0 instead of a tuple."""
+    empty = pd.Series([], dtype=float)
+
+    position = common.maximum_error_position(empty, empty, empty, "BusPDR_BUS_Voltage")
+
+    assert position is None
+    assert logged_warnings == ["No reference values in BusPDR_BUS_Voltage"]
+
+
 def test_get_reached_time_returns_correct_time_and_value():
     # Curve starts at 2, ends at 10, 50% of the way is 2 + 0.5*(10-2) = 6
     time = [0, 1, 2, 3, 4, 5]
