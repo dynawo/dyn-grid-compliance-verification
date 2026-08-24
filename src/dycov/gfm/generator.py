@@ -54,7 +54,8 @@ class GFMGeneration:
             dycov_logging.get_logger("GFMGeneration").warning(
                 "Exiting. Please rename your current Results directory, otherwise it will be erased."
             )
-            sys.exit()
+            sys.exit(1)
+
         manage_files.create_dir(self._parameters.get_output_dir())
 
     def __get_validation_pcs(self) -> list[str]:
