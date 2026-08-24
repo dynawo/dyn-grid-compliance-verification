@@ -814,7 +814,7 @@ def _get_connected_equipment_by_terminal(dyd_root, gen_id, terminal):
 
 def _get_parset(par_root, par_id, nsmap):
     parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
-    if parset is None:
+    if not parset:
         raise ValueError(f"The parameter set with id='{par_id}' was not found")
     return parset
 
@@ -1132,8 +1132,6 @@ def _adjust_transformer(
 ):
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, transformer.par_id, nsmap)
-    if parset is None:
-        return
 
     _set_transformer_power(parset, nsmap, transformer.lib, transformer_p10pu, transformer_q10pu)
     _set_transformer_voltage_phase(
@@ -1177,8 +1175,6 @@ def _adjust_generator(
 ) -> int:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = _get_parset(producer_par_root, generator.par_id, nsmap)
-    if parset is None:
-        return False
 
     _set_initial_power(parset, nsmap, generator.lib, generator_p0pu, generator_q0pu)
     _set_initial_pcc_power(parset, nsmap, generator.lib, pdr)
@@ -1403,9 +1399,7 @@ def _adjust_load(
     load_uphase0: float,
 ) -> None:
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
-    parset = producer_par_root.xpath(f"//ns:set[@id='{load_id}']", namespaces=nsmap)
-    if parset is None:
-        return
+    parset = _get_parset(producer_par_root, load_id, nsmap)
 
     sign, active_power0 = dynawo_translator.get_dynawo_variable(load_lib, "ActivePower0")
     _set_parameter(parset, nsmap, active_power0, sign, load_p0pu, create_if_missing=True)
