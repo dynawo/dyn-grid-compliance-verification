@@ -7,442 +7,424 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+"""Unit tests for the curve error metrics and their compliance checks."""
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from dycov.validation import checks
 
+CHECKS_MODULE = "dycov.validation.checks"
 
-class DummyLogger:
+WINDOWS = ("before", "during", "after")
+ERRORS = ("mae", "me", "mxe")
+
+
+class RecordingLogger:
+    """Logger stand-in collecting the emitted errors."""
+
     def __init__(self):
-        self.logged = []
+        self.errors = []
 
-    def error(self, msg):
-        self.logged.append(msg)
+    def error(self, message: str) -> None:
+        self.errors.append(message)
 
 
-def patch_dycov_logging(monkeypatch):
-    dummy_logger = DummyLogger()
-    monkeypatch.setattr("dycov.logging.dycov_logging", dummy_logger)
-    return dummy_logger
+def _make_window_errors(measurement, value=0.001):
+    """Error metrics of one measurement in one window, with their positions."""
+    errors = {error: value for error in ERRORS}
+    errors.update({f"t{error}": 0.5 for error in ERRORS})
+    errors.update({f"y{error}": 1.5 for error in ERRORS})
+    return {measurement: errors}
+
+
+def _make_compliance_values(measurement, values=None):
+    """Per-window error metrics of one measurement, one value per window."""
+    values = values or {window: 0.001 for window in WINDOWS}
+    return {
+        window: _make_window_errors(measurement, values[window]) if values[window] else {}
+        for window in WINDOWS
+    }
+
+
+def _make_saved_errors(measurement, value=0.1, windows=WINDOWS):
+    saved = {}
+    for window in windows:
+        for error in ERRORS:
+            saved[f"{window}_{error}_{measurement}_value"] = value
+            saved[f"{window}_{error}_{measurement}_position"] = [0.5, 1.5]
+    return saved
+
+
+def _make_window_checks(measurement, failing_window=None, windows=WINDOWS):
+    return {
+        f"{window}_{error}_{measurement}_check": window != failing_window
+        for window in windows
+        for error in ERRORS
+    }
 
 
 @pytest.fixture
-def valid_curves():
-    time = np.linspace(0, 1, 5)
-    data = {
-        "time": time,
-        "BusPDR_BUS_ActivePower": np.array([1, 2, 3, 4, 5]),
-        "BusPDR_BUS_ReactivePower": np.array([2, 3, 4, 5, 6]),
-        "BusPDR_BUS_ActiveCurrent": np.array([3, 4, 5, 6, 7]),
-        "BusPDR_BUS_ReactiveCurrent": np.array([4, 5, 6, 7, 8]),
-        "BusPDR_BUS_Voltage": np.array([5, 6, 7, 8, 9]),
-        "NetworkFrequencyPu": np.array([6, 7, 8, 9, 10]),
-    }
-    ref_data = {
-        "time": time,
-        "BusPDR_BUS_ActivePower": np.array([1, 2, 2, 4, 5]),
-        "BusPDR_BUS_ReactivePower": np.array([2, 2, 4, 5, 6]),
-        "BusPDR_BUS_ActiveCurrent": np.array([3, 4, 4, 6, 7]),
-        "BusPDR_BUS_ReactiveCurrent": np.array([4, 5, 5, 7, 8]),
-        "BusPDR_BUS_Voltage": np.array([5, 6, 6, 8, 9]),
-        "NetworkFrequencyPu": np.array([6, 7, 7, 9, 10]),
-    }
-    return pd.DataFrame(data), pd.DataFrame(ref_data)
-
-
-def test_calculate_errors_with_valid_curves(valid_curves):
-    calculated, reference = valid_curves
-    step_magnitude = 1.0
-    results = checks.calculate_errors((calculated, reference), step_magnitude)
-    assert "BusPDR_BUS_ActivePower" in results
-    assert "me" in results["BusPDR_BUS_ActivePower"]
-    assert "mae" in results["BusPDR_BUS_ActivePower"]
-    assert "mxe" in results["BusPDR_BUS_ActivePower"]
-    assert isinstance(results["BusPDR_BUS_ActivePower"]["me"], float)
-    assert isinstance(results["BusPDR_BUS_ActivePower"]["mae"], float)
-    assert isinstance(results["BusPDR_BUS_ActivePower"]["mxe"], float)
-
-
-def test_complete_setpoint_tracking_populates_results():
-    compliance_values = {
-        "before": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.01,
-                "me": 0.01,
-                "mxe": 0.01,
-                "tmae": 0.1,
-                "ymae": 1.1,
-                "tme": 0.2,
-                "yme": 1.2,
-                "tmxe": 0.3,
-                "ymxe": 1.3,
-            }
-        },
-        "during": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.02,
-                "me": 0.02,
-                "mxe": 0.02,
-                "tmae": 0.4,
-                "ymae": 1.4,
-                "tme": 0.5,
-                "yme": 1.5,
-                "tmxe": 0.6,
-                "ymxe": 1.6,
-            }
-        },
-        "after": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.03,
-                "me": 0.03,
-                "mxe": 0.03,
-                "tmae": 0.7,
-                "ymae": 1.7,
-                "tme": 0.8,
-                "yme": 1.8,
-                "tmxe": 0.9,
-                "ymxe": 1.9,
-            }
-        },
-    }
-    results = {"compliance": True}
-    checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results
+def step_curves():
+    """Calculated and reference curves differing by 1.0 in a single sample."""
+    time = [0.0, 0.25, 0.5, 0.75, 1.0]
+    calculated = pd.DataFrame(
+        {
+            "time": time,
+            "BusPDR_BUS_ActivePower": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "BusPDR_BUS_ReactivePower": [1.0, 1.0, 1.0, 1.0, 1.0],
+        }
     )
-    assert "before_mae_tc_BusPDR_BUS_ActivePower_value" in results
-    assert "during_mae_tc_BusPDR_BUS_ActivePower_value" in results
-    assert "after_mae_tc_BusPDR_BUS_ActivePower_value" in results
-    assert results["before_mae_tc_BusPDR_BUS_ActivePower_value"] == 0.01
-    assert results["during_mae_tc_BusPDR_BUS_ActivePower_value"] == 0.02
-    assert results["after_mae_tc_BusPDR_BUS_ActivePower_value"] == 0.03
+    reference = pd.DataFrame(
+        {
+            "time": time,
+            "BusPDR_BUS_ActivePower": [1.0, 2.0, 2.0, 4.0, 5.0],
+            "BusPDR_BUS_ReactivePower": [1.0, 1.0, 1.0, 1.0, 1.0],
+        }
+    )
+    return calculated, reference
 
 
-def test_calculate_errors_with_empty_curves():
-    calculated = pd.DataFrame({"time": []})
-    reference = pd.DataFrame({"time": []})
-    step_magnitude = 1.0
-    results = checks.calculate_errors((calculated, reference), step_magnitude)
+# ---------------------------------------------------------------------------
+# Setpoint name mapping
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "modified_setpoint, expected",
+    [
+        ("ActivePowerSetpointPu", "BusPDR_BUS_ActivePower"),
+        ("ReactivePowerSetpointPu", "BusPDR_BUS_ReactivePower"),
+        ("VoltageSetpointPu", "BusPDR_BUS_Voltage"),
+        ("NetworkFrequencyPu", "NetworkFrequencyPu"),
+        ("UnknownSetpoint", "BusPDR_BUS_ReactivePower"),
+    ],
+)
+def test_get_measurement_name_maps_every_setpoint(modified_setpoint, expected):
+    assert checks._get_measurement_name(modified_setpoint) == expected
+
+
+def test_check_value_by_threshold_is_strict():
+    assert checks._check_value_by_threshold(0.001, 0.01) is True
+    assert checks._check_value_by_threshold(0.01, 0.01) is False
+
+
+# ---------------------------------------------------------------------------
+# Error metrics
+# ---------------------------------------------------------------------------
+
+
+def test_calculate_errors_computes_every_metric(step_curves):
+    results = checks.calculate_errors(step_curves, 1.0)
+
+    # A single sample deviates by 1.0 out of the five compared.
+    active_power = results["BusPDR_BUS_ActivePower"]
+    assert active_power["me"] == pytest.approx(0.2)
+    assert active_power["mae"] == pytest.approx(0.2)
+    assert active_power["mxe"] == pytest.approx(1.0)
+    assert active_power["tmxe"] == pytest.approx(0.5)
+    assert active_power["ymxe"] == pytest.approx(3.0)
+    assert active_power["yref"] == pytest.approx(2.0)
+
+
+def test_calculate_errors_normalizes_by_the_step_magnitude(step_curves):
+    results = checks.calculate_errors(step_curves, 2.0)
+
+    active_power = results["BusPDR_BUS_ActivePower"]
+    assert active_power["me"] == pytest.approx(0.1)
+    assert active_power["mae"] == pytest.approx(0.1)
+    assert active_power["mxe"] == pytest.approx(0.5)
+
+
+def test_calculate_errors_of_identical_curves_is_zero(step_curves):
+    results = checks.calculate_errors(step_curves, 1.0)
+
+    reactive_power = results["BusPDR_BUS_ReactivePower"]
+    assert reactive_power["me"] == pytest.approx(0.0)
+    assert reactive_power["mae"] == pytest.approx(0.0)
+    assert reactive_power["mxe"] == pytest.approx(0.0)
+
+
+def test_calculate_errors_without_samples_returns_no_metrics():
+    empty = pd.DataFrame({"time": []})
+
+    results = checks.calculate_errors((empty, empty), 1.0)
+
     assert results == {}
 
 
-def test_setpoint_tracking_with_missing_during_window():
-    compliance_values = {
-        "before": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.01,
-                "me": 0.01,
-                "mxe": 0.01,
-                "tmae": 0.1,
-                "ymae": 1.1,
-                "tme": 0.2,
-                "yme": 1.2,
-                "tmxe": 0.3,
-                "ymxe": 1.3,
-            }
-        },
-        "during": None,
-        "after": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.03,
-                "me": 0.03,
-                "mxe": 0.03,
-                "tmae": 0.7,
-                "ymae": 1.7,
-                "tme": 0.8,
-                "yme": 1.8,
-                "tmxe": 0.9,
-                "ymxe": 1.9,
-            }
-        },
-    }
+def test_calculate_errors_ignores_curves_outside_the_measurement_list(step_curves):
+    calculated, reference = step_curves
+    calculated["Wind_Turbine_GEN_InternalAngle"] = [0.1, 0.1, 0.1, 0.1, 0.1]
+    reference["Wind_Turbine_GEN_InternalAngle"] = [0.2, 0.2, 0.2, 0.2, 0.2]
+
+    results = checks.calculate_errors((calculated, reference), 1.0)
+
+    assert set(results) == {"BusPDR_BUS_ActivePower", "BusPDR_BUS_ReactivePower"}
+
+
+def test_calculate_errors_reports_a_measurement_missing_from_the_simulation(
+    monkeypatch, step_curves
+):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{CHECKS_MODULE}.dycov_logging", logger)
+    calculated, reference = step_curves
+    reference["BusPDR_BUS_Voltage"] = [1.0, 1.0, 1.0, 1.0, 1.0]
+
+    results = checks.calculate_errors((calculated, reference), 1.0)
+
+    assert "BusPDR_BUS_Voltage" not in results
+    assert logger.errors == ["Curve BusPDR_BUS_Voltage not found in simulation results."]
+
+
+# ---------------------------------------------------------------------------
+# Setpoint tracking
+# ---------------------------------------------------------------------------
+
+
+def test_complete_setpoint_tracking_within_the_thresholds_is_compliant():
+    compliance_values = _make_compliance_values("BusPDR_BUS_ActivePower")
     results = {"compliance": True}
+
     checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results
+        compliance_values, "ActivePowerSetpointPu", "active_power", results
     )
-    assert "during_mae_tc_BusPDR_BUS_ActivePower_value" not in results
+
+    assert results["setpoint_tracking_active_power_check"] is True
+    assert results["compliance"] is True
+    for window in WINDOWS:
+        assert results[f"{window}_mae_tc_active_power_value"] == pytest.approx(0.001)
+        assert results[f"{window}_mae_tc_active_power_check"] is True
+        assert results[f"{window}_mae_tc_active_power_position"] == [0.5, 1.5]
 
 
-def test_save_measurement_errors_with_missing_error_metrics():
-    compliance_values = {
-        "before_mae_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mae_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mae_BusPDR_BUS_ActivePower_value": None,
-        "after_mae_BusPDR_BUS_ActivePower_position": None,
-        "during_mae_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mae_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_me_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_me_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_me_BusPDR_BUS_ActivePower_value": None,
-        "after_me_BusPDR_BUS_ActivePower_position": None,
-        "during_me_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_me_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_mxe_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mxe_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mxe_BusPDR_BUS_ActivePower_value": None,
-        "after_mxe_BusPDR_BUS_ActivePower_position": None,
-        "during_mxe_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mxe_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-    }
-    results = {}
-    checks.save_measurement_errors(compliance_values, "BusPDR_BUS_ActivePower", results)
-    assert results["before_mae_BusPDR_BUS_ActivePower_value"] == 0.1
-    assert "after_mae_BusPDR_BUS_ActivePower_value" not in results
-
-
-def test_voltage_dip_threshold_selection():
-    compliance_values = {
-        "before": {"BusPDR_BUS_ActivePower": {"mae": 0.07, "me": 0.03, "mxe": 0.09}},
-        "during": {"BusPDR_BUS_ActivePower": {"mae": 0.08, "me": 0.04, "mxe": 0.10}},
-        "after": {"BusPDR_BUS_ActivePower": {"mae": 0.07, "me": 0.03, "mxe": 0.09}},
-    }
-    # Field measurements: thresholds are higher
-    before_value, before_check, _, during_value, during_check, _, after_value, after_check, _ = (
-        checks._check_voltage_dips(
-            compliance_values, "BusPDR_BUS_ActivePower", "mae", is_field_measurements=True
-        )
+def test_complete_setpoint_tracking_above_a_threshold_fails():
+    compliance_values = _make_compliance_values(
+        "BusPDR_BUS_ActivePower", {"before": 0.001, "during": 0.5, "after": 0.001}
     )
-    assert before_check is True or before_check is False
-    # Simulation: thresholds are lower
-    before_value2, before_check2, _, _, _, _, _, _, _ = checks._check_voltage_dips(
-        compliance_values, "BusPDR_BUS_ActivePower", "mae", is_field_measurements=False
-    )
-    assert before_check2 is True or before_check2 is False
-
-
-def test_get_measurement_name_mapping():
-    assert checks._get_measurement_name("ActivePowerSetpointPu") == "BusPDR_BUS_ActivePower"
-    assert checks._get_measurement_name("ReactivePowerSetpointPu") == "BusPDR_BUS_ReactivePower"
-    assert checks._get_measurement_name("VoltageSetpointPu") == "BusPDR_BUS_Voltage"
-    assert checks._get_measurement_name("NetworkFrequencyPu") == "NetworkFrequencyPu"
-    assert checks._get_measurement_name("UnknownSetpoint") == "BusPDR_BUS_ReactivePower"
-
-
-def test_compliance_aggregation_updates_results():
-    compliance_values = {
-        "before_mae_BusPDR_BUS_ActivePower_check": True,
-        "after_mae_BusPDR_BUS_ActivePower_check": True,
-        "during_mae_BusPDR_BUS_ActivePower_check": False,
-        "before_me_BusPDR_BUS_ActivePower_check": True,
-        "after_me_BusPDR_BUS_ActivePower_check": True,
-        "during_me_BusPDR_BUS_ActivePower_check": True,
-        "before_mxe_BusPDR_BUS_ActivePower_check": True,
-        "after_mxe_BusPDR_BUS_ActivePower_check": True,
-        "during_mxe_BusPDR_BUS_ActivePower_check": True,
-    }
     results = {"compliance": True}
-    checks.check_measurement(compliance_values, "BusPDR_BUS_ActivePower", results)
-    assert results["voltage_dips_BusPDR_BUS_ActivePower_check"] is False
+
+    checks.complete_setpoint_tracking(
+        compliance_values, "ActivePowerSetpointPu", "active_power", results
+    )
+
+    assert results["during_mae_tc_active_power_check"] is False
+    assert results["setpoint_tracking_active_power_check"] is False
     assert results["compliance"] is False
 
 
-def test_functions_with_unexpected_data_types():
-    compliance_values = {
-        "before_mae_BusPDR_BUS_ActivePower_value": [0.1, 0.2],  # list instead of float
-        "before_mae_BusPDR_BUS_ActivePower_position": "not_a_position",  # str instead of list
-        "after_mae_BusPDR_BUS_ActivePower_value": None,
-        "after_mae_BusPDR_BUS_ActivePower_position": None,
-        "during_mae_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mae_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_me_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_me_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_me_BusPDR_BUS_ActivePower_value": None,
-        "after_me_BusPDR_BUS_ActivePower_position": None,
-        "during_me_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_me_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_mxe_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mxe_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mxe_BusPDR_BUS_ActivePower_value": None,
-        "after_mxe_BusPDR_BUS_ActivePower_position": None,
-        "during_mxe_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mxe_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-    }
-    results = {}
-    # Should not raise
-    checks.save_measurement_errors(compliance_values, "BusPDR_BUS_ActivePower", results)
-    assert isinstance(results["before_mae_BusPDR_BUS_ActivePower_value"], list)
-
-
-def test_calculate_errors_returns_error_positions(valid_curves):
-    calculated, reference = valid_curves
-    step_magnitude = 1.0
-    results = checks.calculate_errors((calculated, reference), step_magnitude)
-    assert "tmxe" in results["BusPDR_BUS_ActivePower"]
-    assert "ymxe" in results["BusPDR_BUS_ActivePower"]
-    assert isinstance(results["BusPDR_BUS_ActivePower"]["tmxe"], (float, np.floating))
-    assert isinstance(results["BusPDR_BUS_ActivePower"]["ymxe"], (int, np.int64))
-
-
-def test_functions_with_extra_unexpected_keys():
-    compliance_values = {
-        "before_mae_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mae_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mae_BusPDR_BUS_ActivePower_value": 0.2,
-        "after_mae_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "during_mae_BusPDR_BUS_ActivePower_value": 0.3,
-        "during_mae_BusPDR_BUS_ActivePower_position": [0.3, 1.3],
-        "before_me_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_me_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_me_BusPDR_BUS_ActivePower_value": None,
-        "after_me_BusPDR_BUS_ActivePower_position": None,
-        "during_me_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_me_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_mxe_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mxe_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mxe_BusPDR_BUS_ActivePower_value": None,
-        "after_mxe_BusPDR_BUS_ActivePower_position": None,
-        "during_mxe_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mxe_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "extra_key": "should_be_ignored",
-    }
-    results = {}
-    checks.save_measurement_errors(compliance_values, "BusPDR_BUS_ActivePower", results)
-    assert "extra_key" not in results
-
-
-def test_save_measurement_errors_with_complete_compliance_values():
-    compliance_values = {
-        "before_mae_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mae_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mae_BusPDR_BUS_ActivePower_value": 0.2,
-        "after_mae_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "during_mae_BusPDR_BUS_ActivePower_value": 0.3,
-        "during_mae_BusPDR_BUS_ActivePower_position": [0.3, 1.3],
-        "before_me_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_me_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_me_BusPDR_BUS_ActivePower_value": None,
-        "after_me_BusPDR_BUS_ActivePower_position": None,
-        "during_me_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_me_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_mxe_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mxe_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mxe_BusPDR_BUS_ActivePower_value": None,
-        "after_mxe_BusPDR_BUS_ActivePower_position": None,
-        "during_mxe_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mxe_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-    }
-    results = {}
-    checks.save_measurement_errors(compliance_values, "BusPDR_BUS_ActivePower", results)
-    assert results["before_mae_BusPDR_BUS_ActivePower_value"] == 0.1
-    assert results["after_mae_BusPDR_BUS_ActivePower_value"] == 0.2
-    assert results["during_mae_BusPDR_BUS_ActivePower_value"] == 0.3
-
-
-def test_threshold_checks_and_compliance_status_for_all_measurements():
-    compliance_values = {
-        "before": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.01,
-                "me": 0.01,
-                "mxe": 0.01,
-                "tmae": 0.1,
-                "ymae": 1.1,
-                "tme": 0.2,
-                "yme": 1.2,
-                "tmxe": 0.3,
-                "ymxe": 1.3,
-            },
-            "BusPDR_BUS_ReactivePower": {
-                "mae": 0.01,
-                "me": 0.01,
-                "mxe": 0.01,
-                "tmae": 0.1,
-                "ymae": 1.1,
-                "tme": 0.2,
-                "yme": 1.2,
-                "tmxe": 0.3,
-                "ymxe": 1.3,
-            },
-        },
-        "during": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.0002,
-                "me": 0.002,
-                "mxe": 0.0002,
-                "tmae": 0.4,
-                "ymae": 1.4,
-                "tme": 0.5,
-                "yme": 1.5,
-                "tmxe": 0.6,
-                "ymxe": 1.6,
-            },
-            "BusPDR_BUS_ReactivePower": {
-                "mae": 0.002,
-                "me": 0.0002,
-                "mxe": 0.002,
-                "tmae": 0.4,
-                "ymae": 1.4,
-                "tme": 0.5,
-                "yme": 1.5,
-                "tmxe": 0.6,
-                "ymxe": 1.6,
-            },
-        },
-        "after": {
-            "BusPDR_BUS_ActivePower": {
-                "mae": 0.001,
-                "me": 0.001,
-                "mxe": 0.0001,
-                "tmae": 0.7,
-                "ymae": 1.7,
-                "tme": 0.8,
-                "yme": 1.8,
-                "tmxe": 0.9,
-                "ymxe": 1.9,
-            },
-            "BusPDR_BUS_ReactivePower": {
-                "mae": 0.0003,
-                "me": 0.003,
-                "mxe": 0.003,
-                "tmae": 0.7,
-                "ymae": 1.7,
-                "tme": 0.8,
-                "yme": 1.8,
-                "tmxe": 0.9,
-                "ymxe": 1.9,
-            },
-        },
-    }
+def test_complete_setpoint_tracking_without_the_during_window_skips_it():
+    compliance_values = _make_compliance_values(
+        "BusPDR_BUS_ActivePower", {"before": 0.001, "during": None, "after": 0.001}
+    )
     results = {"compliance": True}
+
     checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results
+        compliance_values, "ActivePowerSetpointPu", "active_power", results
     )
-    print(results)
-    checks.complete_setpoint_tracking(
-        compliance_values, "ReactivePowerSetpointPu", "BusPDR_BUS_ReactivePower", results
-    )
-    print(results)
+
+    assert "during_mae_tc_active_power_value" not in results
+    assert results["setpoint_tracking_active_power_check"] is True
     assert results["compliance"] is True
 
 
-def test_functions_with_nested_or_incorrectly_structured_input():
-    compliance_values = {
-        "before_mae_BusPDR_BUS_ActivePower_value": {"unexpected": "dict"},
-        "before_mae_BusPDR_BUS_ActivePower_position": [{"nested": "dict"}],
-        "after_mae_BusPDR_BUS_ActivePower_value": [[0.2, 1.2]],
-        "after_mae_BusPDR_BUS_ActivePower_position": None,
-        "during_mae_BusPDR_BUS_ActivePower_value": None,
-        "during_mae_BusPDR_BUS_ActivePower_position": None,
-        "before_me_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_me_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_me_BusPDR_BUS_ActivePower_value": None,
-        "after_me_BusPDR_BUS_ActivePower_position": None,
-        "during_me_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_me_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-        "before_mxe_BusPDR_BUS_ActivePower_value": 0.1,
-        "before_mxe_BusPDR_BUS_ActivePower_position": [0.1, 1.1],
-        "after_mxe_BusPDR_BUS_ActivePower_value": None,
-        "after_mxe_BusPDR_BUS_ActivePower_position": None,
-        "during_mxe_BusPDR_BUS_ActivePower_value": 0.2,
-        "during_mxe_BusPDR_BUS_ActivePower_position": [0.2, 1.2],
-    }
-    results = {}
-    # Should not raise
-    checks.save_measurement_errors(compliance_values, "BusPDR_BUS_ActivePower", results)
-    assert isinstance(results["before_mae_BusPDR_BUS_ActivePower_value"], dict) or isinstance(
-        results["before_mae_BusPDR_BUS_ActivePower_value"], (list, type(None))
+# ---------------------------------------------------------------------------
+# Voltage dip thresholds
+# ---------------------------------------------------------------------------
+
+
+def test_check_voltage_dips_uses_the_simulation_thresholds():
+    compliance_values = _make_compliance_values(
+        "BusPDR_BUS_ActivePower", {"before": 0.075, "during": 0.075, "after": 0.075}
     )
+
+    before_check, during_check, after_check = (
+        checks._check_voltage_dips(
+            compliance_values, "BusPDR_BUS_ActivePower", "mae", is_field_measurements=False
+        )[index]
+        for index in (1, 4, 7)
+    )
+
+    # Simulation thresholds are 0.03 before/after and 0.07 during.
+    assert before_check is False
+    assert during_check is False
+    assert after_check is False
+
+
+def test_check_voltage_dips_uses_the_field_measurement_thresholds():
+    compliance_values = _make_compliance_values(
+        "BusPDR_BUS_ActivePower", {"before": 0.06, "during": 0.075, "after": 0.06}
+    )
+
+    before_check, during_check, after_check = (
+        checks._check_voltage_dips(
+            compliance_values, "BusPDR_BUS_ActivePower", "mae", is_field_measurements=True
+        )[index]
+        for index in (1, 4, 7)
+    )
+
+    # Field measurement thresholds are 0.07 before/after and 0.08 during.
+    assert before_check is True
+    assert during_check is True
+    assert after_check is True
+
+
+def test_check_voltage_dips_without_the_during_window_returns_no_during_metrics():
+    compliance_values = _make_compliance_values(
+        "BusPDR_BUS_ActivePower", {"before": 0.001, "during": None, "after": 0.001}
+    )
+
+    (
+        _,
+        before_check,
+        _,
+        during_value,
+        during_check,
+        during_position,
+        _,
+        after_check,
+        _,
+    ) = checks._check_voltage_dips(
+        compliance_values, "BusPDR_BUS_ActivePower", "mae", is_field_measurements=False
+    )
+
+    assert before_check is True
+    assert after_check is True
+    assert during_value is None
+    assert during_check is None
+    assert during_position == [None, None]
+
+
+def test_calculate_curves_errors_in_zone1_excludes_the_frequency():
+    results = _make_compliance_values("BusPDR_BUS_ActivePower")
+
+    checks.calculate_curves_errors(1, False, results)
+
+    assert results["before_mae_active_power_value"] == pytest.approx(0.001)
+    assert results["before_mae_active_power_check"] is True
+    assert results["before_me_active_power_check"] is True
+    assert results["before_mxe_active_power_check"] is True
+    assert "before_mae_frequency_value" not in results
+
+
+def test_calculate_curves_errors_in_zone3_includes_the_frequency():
+    results = _make_compliance_values("NetworkFrequencyPu")
+
+    checks.calculate_curves_errors(3, False, results)
+
+    assert results["before_mae_frequency_value"] == pytest.approx(0.001)
+    # The network frequency has no configured voltage dip threshold.
+    assert results["before_mae_frequency_check"] is None
+
+
+def test_calculate_curves_errors_without_the_during_window():
+    results = _make_compliance_values(
+        "BusPDR_BUS_ActivePower", {"before": 0.001, "during": None, "after": 0.001}
+    )
+
+    checks.calculate_curves_errors(1, False, results)
+
+    assert results["during_mae_active_power_value"] is None
+    assert results["during_me_active_power_value"] is None
+    assert results["during_mxe_active_power_value"] is None
+    assert results["after_mae_active_power_check"] is True
+
+
+# ---------------------------------------------------------------------------
+# Saved error metrics
+# ---------------------------------------------------------------------------
+
+
+def test_save_measurement_errors_copies_every_window_and_error():
+    compliance_values = _make_saved_errors("active_power")
+    results = {}
+
+    checks.save_measurement_errors(compliance_values, "active_power", results)
+
+    for window in WINDOWS:
+        for error in ERRORS:
+            assert results[f"{window}_{error}_active_power_value"] == pytest.approx(0.1)
+            assert results[f"{window}_{error}_active_power_position"] == [0.5, 1.5]
+
+
+def test_save_measurement_errors_skips_the_windows_without_a_value():
+    compliance_values = _make_saved_errors("active_power")
+    compliance_values["after_mae_active_power_value"] = None
+    compliance_values["after_mae_active_power_position"] = None
+    results = {}
+
+    checks.save_measurement_errors(compliance_values, "active_power", results)
+
+    assert "after_mae_active_power_value" not in results
+    assert "after_mae_active_power_position" not in results
+    assert results["before_mae_active_power_value"] == pytest.approx(0.1)
+
+
+def test_save_measurement_errors_ignores_the_absent_windows():
+    compliance_values = _make_saved_errors("active_power", windows=("before",))
+    results = {}
+
+    checks.save_measurement_errors(compliance_values, "active_power", results)
+
+    assert set(results) == {
+        f"before_{error}_active_power_{field}"
+        for error in ERRORS
+        for field in ("value", "position")
+    }
+
+
+# ---------------------------------------------------------------------------
+# Measurement compliance check
+# ---------------------------------------------------------------------------
+
+
+def test_check_measurement_with_every_window_within_the_thresholds():
+    compliance_values = _make_window_checks("active_power")
+    results = {"compliance": True}
+
+    checks.check_measurement(compliance_values, "active_power", results)
+
+    assert results["voltage_dips_active_power_check"] is True
+    assert results["compliance"] is True
+
+
+def test_check_measurement_aggregates_a_failing_window():
+    compliance_values = _make_window_checks("active_power", failing_window="during")
+    results = {"compliance": True}
+
+    checks.check_measurement(compliance_values, "active_power", results)
+
+    assert results["during_mae_active_power_check"] is False
+    assert results["voltage_dips_active_power_check"] is False
+    assert results["compliance"] is False
+
+
+def test_check_measurement_without_the_window_checks_reports_not_available():
+    results = {"compliance": True}
+
+    checks.check_measurement({}, "active_power", results)
+
+    assert results["before_mae_active_power_check"] == "N/A"
+    assert results["voltage_dips_active_power_check"] == "N/A"
+    assert results["compliance"] is False
+
+
+def test_check_measurement_ignores_the_windows_without_a_check():
+    compliance_values = _make_window_checks("active_power")
+    compliance_values["during_mae_active_power_check"] = None
+    results = {"compliance": True}
+
+    checks.check_measurement(compliance_values, "active_power", results)
+
+    assert "during_mae_active_power_check" not in results
+    assert results["voltage_dips_active_power_check"] is True
+    assert results["compliance"] is True
+
+
+# ---------------------------------------------------------------------------
+# Injector voltage guard warnings
+# ---------------------------------------------------------------------------
 
 
 def _terminal_frame(voltages):
