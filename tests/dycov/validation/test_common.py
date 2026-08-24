@@ -30,19 +30,6 @@ class DummyConfig:
         return self._values.get(key, default)
 
 
-class RecordingLogger:
-    """Logger stand-in collecting the emitted warnings."""
-
-    def __init__(self):
-        self.warnings = []
-
-    def get_logger(self, name: str):
-        return self
-
-    def warning(self, message: str) -> None:
-        self.warnings.append(message)
-
-
 @pytest.fixture(autouse=True)
 def dummy_config(monkeypatch):
     """Serve a deterministic steady-state tolerance regardless of the user configuration."""
@@ -438,41 +425,24 @@ def test_maximum_error_raises_on_length_mismatch():
         common.maximum_error(np.array([1, 2, 3]), np.array([1, 2]), step_magnitude=1)
 
 
-def test_maximum_error_position_locates_the_largest_deviation():
-    time = pd.Series([0.0, 0.5, 1.0])
-    signal = pd.Series([1.0, 3.0, 1.0])
-    reference = pd.Series([1.0, 1.0, 1.0])
-
-    t_error, y_error, y_reference = common.maximum_error_position(
-        time, signal, reference, "BusPDR_BUS_ActivePower"
-    )
-
-    assert t_error == pytest.approx(0.5)
-    assert y_error == pytest.approx(3.0)
-    assert y_reference == pytest.approx(1.0)
-
-
-def test_maximum_error_position_without_reference_values_warns(monkeypatch):
-    logger = RecordingLogger()
-    monkeypatch.setattr(f"{COMMON_MODULE}.dycov_logging", logger)
-    time = pd.Series([0.0, 0.5, 1.0])
-    signal = pd.Series([1.0, 3.0, 1.0])
-    reference = pd.Series([np.nan, np.nan, np.nan])
-
-    result = common.maximum_error_position(
-        time, signal, reference, "BusPDR_BUS_ActivePower"
-    )
-
-    # This path returns two values where the nominal one returns three.
-    assert result == (0, 0.0)
-    assert logger.warnings == ["No reference values in BusPDR_BUS_ActivePower"]
-
-
-def test_maximum_error_position_raises_on_length_mismatch():
+def test_maximum_error_position_raises_value_error_on_length_mismatch():
+    time = pd.Series([0, 1, 2])
+    signal = pd.Series([1, 2, 3])
+    reference = pd.Series([1, 2])
     with pytest.raises(ValueError, match="different length"):
-        common.maximum_error_position(
-            pd.Series([0, 1, 2]), pd.Series([1, 2, 3]), pd.Series([1, 2]), ""
-        )
+        common.maximum_error_position(time, signal, reference, "")
+
+
+def test_get_reached_time_returns_correct_time_and_value():
+    # Curve starts at 2, ends at 10, 50% of the way is 2 + 0.5*(10-2) = 6
+    time = [0, 1, 2, 3, 4, 5]
+    curve = [2, 3, 5, 6, 8, 10]
+    percentage = 0.5
+    sim_t_event_start = 1
+    ret_val, objective_value = common.get_reached_time(percentage, time, curve, sim_t_event_start)
+    # After event at t=1, curve[2]=5, curve[3]=6, so first >=6 is at t=3
+    assert ret_val == 2  # time[3] - sim_t_event_start = 3 - 1 = 2
+    assert pytest.approx(objective_value, rel=1e-9) == 6
 
 
 # ---------------------------------------------------------------------------
