@@ -472,6 +472,11 @@ class ModelProducer(Producer):
         else:
             self.p_max_pu = self.p_max_injection_pu
 
+    @property
+    def s_nom_pu(self) -> float:
+        """Nominal apparent power in per-unit of s_nref."""
+        return self.s_nom / self._s_nref
+
     def get_element(self, id: str) -> tuple[str | None, str | None]:
         """Get element information by id
 
