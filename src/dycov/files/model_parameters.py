@@ -503,10 +503,11 @@ def extract_defined_value(
 def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[str, float]:
     """Registry of base magnitudes that a value definition may reference.
 
-    Each entry is already expressed in its target per-unit (powers in per-unit of
-    ``s_nref``, voltages in per-unit of ``Unom``), so a definition such as ``0.5*Snom``
-    or ``Unom`` resolves directly to the value used elsewhere. Recognizing a new base
-    is a matter of adding an entry here; no caller needs to change.
+    Every entry is already expressed in the per-unit Dynawo uses for the network —
+    base SnRef (``s_nref``) for powers and impedances, ``Unom`` for voltages — so a
+    definition such as ``0.5*Snom`` or ``Unom`` resolves directly to the value used
+    elsewhere. Recognizing a new base is a matter of adding an entry here; no caller
+    needs to change.
 
     Parameters
     ----------
@@ -516,7 +517,7 @@ def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[
     u_dim : float
         Dimensioning voltage (kV) of the generator.
     line_Xpu : float
-        Connection line reactance in per-unit.
+        Connection line reactance in pu.
 
     Returns
     -------
@@ -537,7 +538,10 @@ def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[
 
 
 def resolve_value_definition(
-    value_definition: str, characteristics: dict[str, float], sign: int = 1
+    value_definition: str,
+    characteristics: dict[str, float],
+    sign: int = 1,
+    origin: Optional[tuple[str, str]] = None,
 ) -> float:
     """Evaluate a value definition against a registry of base magnitudes.
 
@@ -555,19 +559,24 @@ def resolve_value_definition(
         Base magnitudes keyed by name (see :func:`unit_characteristics`).
     sign : int
         Final sign conversion to match the downstream convention (e.g. -1 to flip).
+    origin : Optional[tuple[str, str]]
+        (section, key) of the configuration option the definition was read from, used
+        to point the user to the offending file and line when the definition is
+        rejected.
 
     Returns
     -------
     float
         The computed value after applying the definition and the final ``sign``.
     """
-    if value_definition is None:
-        raise ValueError("Value definition not defined.")
+    location = _describe_config_option(origin)
+    if value_definition is None or not value_definition.strip():
+        raise ValueError(
+            f"Empty value definition.{location} Expected a number, a base magnitude "
+            f"name, or 'multiplier*Name' (e.g. '0.5*Snom')."
+        )
 
     s = value_definition.strip()
-    if not s:
-        raise ValueError("Value definition not defined (empty).")
-
     explicit_sign = 1
     if s[0] in "+-":
         explicit_sign = -1 if s[0] == "-" else 1
@@ -582,12 +591,31 @@ def resolve_value_definition(
         name = m.group("name")
         if name not in characteristics:
             raise ValueError(
-                f"Unknown magnitude '{name}' in value definition '{value_definition}'"
+                f"Unknown magnitude '{name}' in value definition '{value_definition}'."
+                f"{location} Please check the spelling, the available magnitudes are "
+                f"(all case-sensitive): {_available_magnitudes(characteristics)}."
             )
         multiplier = float(m.group("mul")) if m.group("mul") is not None else 1.0
         return sign * explicit_sign * multiplier * characteristics[name]
 
-    raise ValueError(f"Invalid value definition: '{value_definition}'")
+    raise ValueError(
+        f"Invalid value definition '{value_definition}'.{location} Expected a number, "
+        f"a base magnitude name, or 'multiplier*Name' (e.g. '0.5*Snom'), where the "
+        f"magnitude is one of (all case-sensitive): "
+        f"{_available_magnitudes(characteristics)}."
+    )
+
+
+def _describe_config_option(origin: Optional[tuple[str, str]]) -> str:
+    """Sentence locating the configuration option a value definition was read from."""
+    if origin is None:
+        return ""
+
+    return f" Defined by {config.describe_option(*origin)}."
+
+
+def _available_magnitudes(characteristics: dict[str, float]) -> str:
+    return ", ".join(sorted(characteristics))
 
 
 def adjust_producer_init(
