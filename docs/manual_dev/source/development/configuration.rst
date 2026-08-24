@@ -171,12 +171,20 @@ the islanding ``step_event_PPu``/``step_event_QPu``, and the TSO-load initial
 values. All of them resolve against a single registry
 (``model_parameters.unit_characteristics``) via ``resolve_value_definition``:
 ``Pmax``/``PmaxInjection``/``PmaxConsumption``, ``Snom`` for power; ``Qmax``,
-``Qmin``; and ``Udim``, ``Unom`` for voltage. ``Snom`` and ``Unom`` share the
-base used in the report figures (:math:`S_{nom}` and :math:`U_{nom}`). Adding a
-new base magnitude is a matter of adding an entry to that registry — no per-key
-parsing code changes. (GFM keys and ``line_XPu``, whose base is a DTR
-reactance-table entry, use their own resolution and are not part of this
-registry.)
+``Qmin``; ``Udim``, ``Unom`` for voltage; and ``line_XPu`` for the connection line
+reactance. Every magnitude in the registry is in the per-unit Dynawo uses for the
+network — base SnRef (``s_nref``) for powers and impedances, ``Unom`` for voltages
+— which is also the base used in the report figures. Adding a new base magnitude
+is a matter of adding an entry to that registry — no per-key parsing code changes.
+(GFM keys and the ``line_XPu`` *key*, whose base is a DTR reactance-table entry,
+use their own resolution and are not part of this registry.)
+
+A definition that cannot be resolved — empty, misspelled magnitude, or malformed
+— raises a ``ValueError`` naming the offending option, the configuration file it
+was read from and its line number, plus the magnitudes accepted at that point
+(``Config.describe_option`` performs the lookup). Callers pass the
+``(section, key)`` pair of the option as the ``origin`` argument of
+``resolve_value_definition`` to enable that message.
 
 The infinite bus table configuration also lives in this section. The tool
 replaces placeholders found in the ``TableInfiniteBus.txt`` file with the
