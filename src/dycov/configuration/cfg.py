@@ -10,7 +10,8 @@
 
 import configparser
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -36,12 +37,16 @@ class Config:
         Parser for the user-specific configuration.
     _pcs_config: configparser.ConfigParser
         Parser for the Performance Checking Sheet (PCS) configuration.
+    _pcs_files: list[str]
+        Paths of the PCS configuration files read so far, used to locate an option
+        in its source file when reporting errors.
     """
 
     _config_dir: Path
     _default_config: configparser.ConfigParser
     _user_config: configparser.ConfigParser
     _pcs_config: configparser.ConfigParser
+    _pcs_files: list[str] = field(default_factory=list)
 
     def _is_valid_value(self, value: str) -> bool:
         """Internal helper to validate if a string value is not None or empty.
@@ -132,6 +137,7 @@ class Config:
         dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", pcs_path)
         try:
             self._pcs_config.read(pcs_path, encoding="utf-8")
+            self._pcs_files.append(str(pcs_path))
 
             single_pcs_config = configparser.ConfigParser()
             single_pcs_config.read(pcs_path, encoding="utf-8")
@@ -198,6 +204,37 @@ class Config:
             or self._pcs_config.has_option(section, key)
             or self._default_config.has_option(section, key)
         )
+
+    def describe_option(self, section: str, key: str) -> str:
+        """Locates an option in the configuration files, to point the user to its origin.
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Key within the section.
+
+        Returns
+        -------
+        str
+            Human-readable location of the option, naming the source file and line
+            number when they can be determined.
+        """
+        for path in self._option_files():
+            line = _find_option_line(path, section, key)
+            if line is not None:
+                return f"'{key}' in section [{section}] of '{path}', line {line}"
+
+        return f"'{key}' in section [{section}]"
+
+    def _option_files(self) -> list[Path]:
+        """Configuration files that may define an option, in precedence order."""
+        return [
+            _user_config_path(self._config_dir),
+            *(Path(pcs_file) for pcs_file in self._pcs_files),
+            _default_config_path(),
+        ]
 
     def set_value(self, section: str, key: str, value: str) -> None:
         """Sets (or overrides) a configuration value at runtime using the same
@@ -419,6 +456,35 @@ class Config:
         return []
 
 
+def _user_config_path(config_dir: Path) -> Path:
+    """Path of the user configuration file."""
+    return config_dir / ("config.ini" if os.name != "nt" else "")
+
+
+def _default_config_path() -> Path:
+    """Path of the default configuration file shipped with the package."""
+    return Path(__file__).resolve().parent / "defaultConfig.ini"
+
+
+def _find_option_line(path: Path, section: str, key: str) -> Optional[int]:
+    """Line number at which an option is defined in an INI file, None if absent."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    option_pattern = re.compile(rf"^\s*{re.escape(key)}\s*[:=]")
+    current_section = None
+    for number, line in enumerate(lines, start=1):
+        header = re.match(r"^\s*\[(?P<name>[^]]+)\]", line)
+        if header:
+            current_section = header.group("name").strip()
+        elif current_section == section and option_pattern.match(line):
+            return number
+
+    return None
+
+
 def _get_instance() -> Config:
     """Internal function to create and return a singleton Config instance.
 
@@ -443,7 +509,7 @@ def _get_instance() -> Config:
     pcs_config.optionxform = str
 
     # Load default configuration from the package
-    default_config_path = Path(__file__).resolve().parent / "defaultConfig.ini"
+    default_config_path = _default_config_path()
     logger.info(f"Loading default configuration from: {default_config_path}")
     try:
         if not default_config_path.exists():
@@ -455,9 +521,7 @@ def _get_instance() -> Config:
         raise
 
     # Load user configuration
-    user_config_file = config_dir / (
-        "config.ini" if os.name != "nt" else ""
-    )  # Adjusted for Windows not needing /config.ini suffix
+    user_config_file = _user_config_path(config_dir)
     logger.info(f"Loading user configuration from: {user_config_file}")
     try:
         if not user_config_file.exists():
