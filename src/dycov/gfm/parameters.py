@@ -712,7 +712,7 @@ class GFMParameters(Parameters):
                 return False
         return False
 
-    def get_emt_initial_delay(self) -> float:
+    def get_emt_delay(self) -> float:
         """
         Retrieves the requisite initial delay specifically mapped for EMT simulation frameworks.
 
@@ -724,12 +724,12 @@ class GFMParameters(Parameters):
         float
             The evaluated EMT initial delay parameter, measured in seconds (s).
         """
-        if self._producer._config.has_option("GFM Parameters", "emt_initial_delay"):
+        if self._producer._config.has_option("GFM Parameters", "emt_delay"):
             try:
-                return float(self._producer._config.get("GFM Parameters", "emt_initial_delay"))
+                return float(self._producer._config.get("GFM Parameters", "emt_delay"))
             except ValueError:
                 pass
 
         from dycov.gfm import constants
 
-        return constants.EMT_FINAL_DELAY_S
+        return constants.EMT_DELAY_S
