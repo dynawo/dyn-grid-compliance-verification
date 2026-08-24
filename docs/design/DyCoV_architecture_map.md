@@ -35,7 +35,9 @@ build network structure dynamically. Custom Modelica in `src/dycov/model_lib/mod
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `model_parameters.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`Snom`/`Qmax`/`Qmin`/`Udim`/`Unom=1.0`, powers in s_nref pu, voltage in Unom pu);
-`resolve_value_definition(defn, chars, sign)` evaluates `[±mult*]Name`|numeric against it. Every
+`resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|numeric against it;
+`origin=(section, key)` makes a rejected definition name its config file+line
+(`config.describe_option`). Every
 non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
 resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_characteristics`/`obtain_value`
 (`curves.py`, backing `setpoint_step_value` and the `{{step_event_*}}` TSO placeholders), and the report
