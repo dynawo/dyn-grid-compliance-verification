@@ -135,15 +135,11 @@ class AmplitudeStep(GFMCalculator):
             initial_lower_val = q_down[0] if not np.isscalar(q_down) else q_down
             initial_pcc_val = q_pcc[0] if not np.isscalar(q_pcc) else q_pcc
 
-            iq_up_final = self._apply_delay(
-                self._emt_initial_delay, initial_upper_val, time_array, q_up
-            )
+            iq_up_final = self._apply_delay(self._emt_delay, initial_upper_val, time_array, q_up)
             iq_down_final = self._apply_delay(
-                self._emt_initial_delay, initial_lower_val, time_array, q_down
+                self._emt_delay, initial_lower_val, time_array, q_down
             )
-            iq_pcc_final = self._apply_delay(
-                self._emt_initial_delay, initial_pcc_val, time_array, q_pcc
-            )
+            iq_pcc_final = self._apply_delay(self._emt_delay, initial_pcc_val, time_array, q_pcc)
         else:
             iq_up_final = q_up
             iq_down_final = q_down
@@ -227,7 +223,6 @@ class AmplitudeStep(GFMCalculator):
             - np.ndarray: The absolute maximum (upper) reactive power envelope constraint.
             - np.ndarray: The absolute minimum (lower) reactive power envelope constraint.
         """
-
 
         # Calculate the localized voltage step projected at the Point of Common Coupling (PCC)
         volt_step_upcc = (self._voltage_step / 100.0) * Xeff / (Xeff + self._Xgrid)

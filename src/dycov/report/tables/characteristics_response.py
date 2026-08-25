@@ -115,15 +115,11 @@ def create_map(results: dict) -> list:
     footnote_defined = _time_error(
         results, "Reaction time", "reaction_time", errors_map, footnote_defined
     )
-    footnote_defined = _time_error(
-        results, "Rise time", "rise_time", errors_map, footnote_defined
-    )
+    footnote_defined = _time_error(results, "Rise time", "rise_time", errors_map, footnote_defined)
     footnote_defined = _time_error(
         results, "Settling time", "settling_time", errors_map, footnote_defined
     )
-    footnote_defined = _time_error(
-        results, "Overshoot", "overshoot", errors_map, footnote_defined
-    )
+    footnote_defined = _time_error(results, "Overshoot", "overshoot", errors_map, footnote_defined)
     _ramp_error(
         results, "Ramp time lag", "ramp_time_lag", "ramp_time_thr", "ramp_time_check", errors_map
     )

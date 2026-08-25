@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 import configparser
+from pathlib import Path
 
 import pytest
 
@@ -50,9 +51,7 @@ class TestDycovInitializer:
 
         # Mock the logger for initialization tests
         self._mock_logger = mocker.MagicMock()
-        mocker.patch(
-            "dycov.logging.dycov_logging.get_logger", return_value=self._mock_logger
-        )
+        mocker.patch("dycov.logging.dycov_logging.get_logger", return_value=self._mock_logger)
 
         self._mock_get_project_path = mocker.patch(
             "dycov.validate.validation.Validation.get_project_path",
@@ -94,9 +93,7 @@ class TestDycovInitializer:
             for category in ["performance", "model"]:
                 for model in ["SM", "PPM", "BESS"]:
                     dummy_sample_dir = template_dir / category / model / ".DummySample"
-                    dummy_sample_dir.mkdir(
-                        parents=True, exist_ok=True
-                    )
+                    dummy_sample_dir.mkdir(parents=True, exist_ok=True)
                     (dummy_sample_dir / "dummy.txt").write_text(
                         f"dummy sample for {template}/{category}/{model}"
                     )
@@ -324,3 +321,14 @@ class TestDycovInitializer:
             ),  # console_formatter from mock_config
             self.mock_config.get_config_dir.return_value / "log",  # log_dir
         )
+
+    def test_prepare_dynawo_models_exits_on_aborted_precompile(self, dycov_initializer, mocker):
+        """
+        Tests that _prepare_dynawo_models exits with code 1 when precompile aborts.
+        """
+        mocker.patch("dycov.core.initialization.precompile", return_value=True)
+
+        with pytest.raises(SystemExit) as exc_info:
+            dycov_initializer._prepare_dynawo_models(Path("dynawo"))
+
+        assert exc_info.value.code == 1
