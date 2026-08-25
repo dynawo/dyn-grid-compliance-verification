@@ -12,6 +12,7 @@
 # _get_input
 # =========================
 
+
 def test_get_input(monkeypatch):
     from dycov.core.input_template import InputTemplateGenerator
 
@@ -25,6 +26,7 @@ def test_get_input(monkeypatch):
 # =========================
 # _create_and_validate_file
 # =========================
+
 
 def test_create_and_validate_file(monkeypatch, tmp_path):
     from dycov.core.input_template import InputTemplateGenerator
@@ -78,6 +80,7 @@ def test_create_and_validate_file_par():
 # _create_dyd_template
 # =========================
 
+
 def test_create_dyd_template(monkeypatch, tmp_path):
     from dycov.core.input_template import InputTemplateGenerator
 
@@ -109,6 +112,7 @@ def test_create_dyd_template(monkeypatch, tmp_path):
 # =========================
 # create_input_template
 # =========================
+
 
 def test_create_input_template_existing(tmp_path):
     from dycov.core.input_template import InputTemplateGenerator

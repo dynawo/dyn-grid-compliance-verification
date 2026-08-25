@@ -15,15 +15,27 @@ def test_initialize_validations(monkeypatch):
     from dycov.model.benchmark import Benchmark
 
     class DummyParams:
-        def get_working_dir(self): return Path("/tmp")
-        def get_output_dir(self): return Path("/tmp")
-        def get_producer(self): return DummyProducer()
+        def get_working_dir(self):
+            return Path("/tmp")
+
+        def get_output_dir(self):
+            return Path("/tmp")
+
+        def get_producer(self):
+            return DummyProducer()
 
     class DummyProducer:
-        def get_sim_type(self): return 0
-        def is_gfm(self): return False
-        def is_dynawo_model(self): return False
-        def is_user_curves(self): return True
+        def get_sim_type(self):
+            return 0
+
+        def is_gfm(self):
+            return False
+
+        def is_dynawo_model(self):
+            return False
+
+        def is_user_curves(self):
+            return True
 
     from dycov.configuration.cfg import Config
 
@@ -47,6 +59,7 @@ def test_initialize_validations(monkeypatch):
 
     assert bm.get_name() == "Bench"
 
+
 def test_compliance_for_missing_curves():
     from dycov.model.benchmark import _compliance_for_missing_curves
     from dycov.model.parameters import CurvesAvailability
@@ -59,15 +72,26 @@ def test_get_figures_description(monkeypatch):
     from dycov.model.benchmark import Benchmark
 
     class DummyParams:
-        def get_working_dir(self): return Path("/tmp")
-        def get_output_dir(self): return Path("/tmp")
-        def get_producer(self): return DummyProducer()
+        def get_working_dir(self):
+            return Path("/tmp")
+
+        def get_output_dir(self):
+            return Path("/tmp")
+
+        def get_producer(self):
+            return DummyProducer()
 
     class DummyProducer:
-        def get_sim_type(self): return 0
-        def is_gfm(self): return True
+        def get_sim_type(self):
+            return 0
+
+        def is_gfm(self):
+            return True
+
         s_nom = 100
-        def is_dynawo_model(self): return False
+
+        def is_dynawo_model(self):
+            return False
 
     from dycov.configuration.cfg import Config
 
