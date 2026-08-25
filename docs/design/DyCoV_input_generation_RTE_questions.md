@@ -23,3 +23,14 @@ Points from designing the WECC Excel → DyCoV input generator. Design detail:
   model, and duplicating a `Zone1<x>` copies only electrical data — so the Excel cannot yet say which
   model each generator is (they may differ, e.g. `WECC4` mixes `WTG4A`+`WTG4B`). This **blocks `M`**.
 - **Possible new scope:** electrical validations of the user-entered values (RTE is open to it).
+
+### Template fixes (found 2026-08-25, filling the template with a WECC4B case and checking the Dynawo descriptors)
+
+- **REGC parameter names:** the rows `Iqrmax`, `Iqrmin`, `Rrpwr` don't match the Dynawo names
+  `IqrMaxPu`, `IqrMinPu`, `RrpwrPu`. Names are written verbatim to the PAR, so these rows would
+  never bind (Dynawo ignores them).
+- **REGC_A missing rows:** `KpPLL`, `KiPLL`, `OmegaMaxPu`, `OmegaMinPu` exist only in the `REGC_C`
+  column, but the `REGC_A`-based models define them too.
+- **`PPCLocal` has no row.** It is a parameter of the plant-side model only (e.g. `WTG4B` has it,
+  the `WT4B` turbine doesn't). To decide: a template row (in `REPC`, `Zone3`-only) or a value the
+  tool derives, like `ConverterLVControl`.
