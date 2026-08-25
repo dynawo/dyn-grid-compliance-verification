@@ -431,7 +431,7 @@ def _generate_envelopes(
     emt: bool,
     user_pcs: bool,
     only_dtr: bool,
-    functional_tests: str = None
+    functional_tests: str = None,
 ):
     dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
     try:
@@ -477,8 +477,7 @@ def _generate_envelopes(
                 )
                 if success:
                     dycov_logging.get_logger("CommandHandlers").info(
-                        "SUCCESS: All functional tests passed. "
-                        "Output matches baseline perfectly."
+                        "SUCCESS: All functional tests passed. Output matches baseline perfectly."
                     )
                     print(
                         "\n✅ SUCCESS: All functional tests passed. "
@@ -499,7 +498,6 @@ def _generate_envelopes(
         # SUCCESS: always delete the temporary directory
         params.cleanup_working_dir()
         return 0
-
 
     except Exception as e:
         if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):

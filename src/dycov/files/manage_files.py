@@ -376,7 +376,6 @@ def _copy_curve_files_by_name(source_path: Path, target_path: Path, base_name: s
                 and file.stem.lower() == base_name.lower()
                 and file.suffix.lower() in supported_exts
             ):
-
                 target_name = f"{base_name}{file.suffix.lower()}"
                 target_file = target_path / target_name
 

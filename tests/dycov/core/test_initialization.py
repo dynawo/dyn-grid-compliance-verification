@@ -51,9 +51,7 @@ class TestDycovInitializer:
 
         # Mock the logger for initialization tests
         self._mock_logger = mocker.MagicMock()
-        mocker.patch(
-            "dycov.logging.dycov_logging.get_logger", return_value=self._mock_logger
-        )
+        mocker.patch("dycov.logging.dycov_logging.get_logger", return_value=self._mock_logger)
 
         self._mock_get_project_path = mocker.patch(
             "dycov.validate.validation.Validation.get_project_path",
@@ -95,9 +93,7 @@ class TestDycovInitializer:
             for category in ["performance", "model"]:
                 for model in ["SM", "PPM", "BESS"]:
                     dummy_sample_dir = template_dir / category / model / ".DummySample"
-                    dummy_sample_dir.mkdir(
-                        parents=True, exist_ok=True
-                    )
+                    dummy_sample_dir.mkdir(parents=True, exist_ok=True)
                     (dummy_sample_dir / "dummy.txt").write_text(
                         f"dummy sample for {template}/{category}/{model}"
                     )
