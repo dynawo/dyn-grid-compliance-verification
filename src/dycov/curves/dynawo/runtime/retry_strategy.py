@@ -102,16 +102,14 @@ class SolverRetryStrategy:
             )
 
         if result.sim_time > (max_sim_time or float("inf")):
-            self._warn(
-                f"Simulation time exceeds the maximum allowed ({max_sim_time})"
-            )
+            self._warn(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
         return result
 
-    # --- attempt helper ---
     def _warn(self, message: str) -> None:
         if not self.settings.disable_retry_logs:
             dycov_logging.get_logger("SolverRetryStrategy").warning(message)
 
+    # --- attempt helper ---
     def _attempt(
         self,
         run: DynawoRunInputs,
