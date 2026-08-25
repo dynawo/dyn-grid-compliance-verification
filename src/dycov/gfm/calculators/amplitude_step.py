@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import numpy as np
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
@@ -19,7 +17,6 @@ class AmplitudeStep(GFMCalculator):
 
     def __init__(self, gfm_params: GFMParameters) -> None:
         """Initializes the AmplitudeStep calculator with GFM parameters.
-
         Args:
             gfm_params (GFMParameters): The shared configuration parameters.
         """
@@ -34,7 +31,6 @@ class AmplitudeStep(GFMCalculator):
 
     def get_plot_parameter_names(self) -> list[str]:
         """Retrieves parameters relevant for rendering Amplitude Step plots.
-
         Returns:
             list[str]: A list of parameter names to be displayed.
         """
@@ -54,14 +50,12 @@ class AmplitudeStep(GFMCalculator):
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """Calculates the reactive current deviation and bounding envelopes.
-
         Args:
             D (float): The damping constant.
             H (float): The inertia constant.
             Xeff (float): The effective reactance.
             time_array (np.ndarray): The simulation time vector.
             event_time (float): The timestamp when the grid event occurs.
-
         Returns:
             tuple[str, np.ndarray, np.ndarray, np.ndarray]: A tuple containing the
                 magnitude name ("Iq"), the main signal, the upper envelope, and the lower envelope.
@@ -69,6 +63,7 @@ class AmplitudeStep(GFMCalculator):
         logger = dycov_logging.get_logger("AmplitudeStep")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
+        # Compute baseline and boundary reactive current deviations
         delta_iq_base, delta_iq_min, delta_iq_max = self._get_delta_iq(
             D=D, H=H, Xeff=Xeff, time_array=time_array, event_time=event_time
         )
@@ -81,6 +76,7 @@ class AmplitudeStep(GFMCalculator):
         )
 
         if self._is_emt_flag:
+            # Apply time shift delays for EMT simulation parity
             initial_upper_val = q_up[0] if not np.isscalar(q_up) else q_up
             initial_lower_val = q_down[0] if not np.isscalar(q_down) else q_down
             initial_pcc_val = q_pcc[0] if not np.isscalar(q_pcc) else q_pcc

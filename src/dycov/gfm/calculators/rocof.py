@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import numpy as np
-
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging import dycov_logging
@@ -140,17 +137,19 @@ class RoCoF(GFMCalculator):
         wn = np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total))
         epsilon = D / (4 * H * wn)
 
+        # Select evaluation solver function based on calculated damping threshold
         calc_func = (
             self._get_overdamped_delta_p_base
             if epsilon >= self._EPSILON_THRESHOLD
             else self._get_underdamped_delta_p_base
         )
-
         rocof_stop_time = event_time + self._rocof_duration
 
+        # Compute trace for event start and shift it to the event timestamp
         p1, p_peak, t_response = calc_func(D, H, x_total, time_array - event_time)
         p1 = np.where(time_array < event_time, 0, p1)
 
+        # Compute subtractive trace for event termination
         p2, _, _ = calc_func(D, H, x_total, time_array - rocof_stop_time)
         p2 = np.where(time_array < rocof_stop_time, 0, p2)
 
@@ -197,15 +196,14 @@ class RoCoF(GFMCalculator):
 
         alpha1 = wn * (epsilon + np.sqrt(epsilon**2 - 1))
         alpha2 = wn * (epsilon - np.sqrt(epsilon**2 - 1))
-
         t_rel = time_array[time_array >= 0]
+
         term1 = (B_coeff * alpha1 - C_coeff) * np.exp(-alpha1 * t_rel) / (alpha1 - alpha2)
         term2 = (B_coeff * alpha2 - C_coeff) * np.exp(-alpha2 * t_rel) / (alpha1 - alpha2)
         term3 = (D_coeff / self._t_pll) * np.exp(-t_rel / self._t_pll)
 
         delta_p = np.zeros_like(time_array)
         delta_p[time_array >= 0] = A_coeff + term1 - term2 + term3
-
         p_peak = abs(-self._rocof_value * (2 * H + D * self._t_pll))
         t_response = 4 * max(1 / alpha1, 1 / alpha2, self._t_pll)
 
@@ -251,6 +249,7 @@ class RoCoF(GFMCalculator):
         ) / common_denom
 
         t_rel = time_array[time_array >= 0]
+
         term_pll = (B_coeff / self._t_pll) * np.exp(-t_rel / self._t_pll)
         term_cos = np.exp(-epsilon * wn * t_rel) * np.cos(wd * t_rel)
         term_sin = np.exp(-epsilon * wn * t_rel) * np.sin(wd * t_rel)
@@ -322,6 +321,8 @@ class RoCoF(GFMCalculator):
             p_down_unlimited = np.where(mask, pcc_steady_value - tunnel_val, p_down_unlimited)
 
         indices_before_recovery = np.where(time_array < rocof_stop_time)[0]
+
+        # Enforce steady-state signal hold logic after transient recovery
         if len(indices_before_recovery) > 0:
             idx_before_recovery = indices_before_recovery[-1]
             mask_post_recovery = time_array >= rocof_stop_time

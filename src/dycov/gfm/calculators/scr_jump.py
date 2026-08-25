@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 from typing import Optional
+
 import numpy as np
 
 from dycov.gfm import constants
@@ -29,19 +28,24 @@ class SCRJump(GFMCalculator):
             gfm_params (GFMParameters): The shared configuration parameters.
         """
         super().__init__(gfm_params=gfm_params)
+
         initial_scr = gfm_params.get_initial_scr()
         self._final_scr = gfm_params.get_final_scr()
         self._delta_impedance = 1 / self._final_scr - 1 / initial_scr
+
         self._initial_active_power = gfm_params.get_initial_active_power()
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
+
         self._base_angular_frequency = gfm_params.get_base_angular_frequency()
         self._initial_voltage = gfm_params.get_initial_voltage()
         self._grid_voltage = gfm_params.get_grid_voltage()
+
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
         self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
+
         self._is_inconsistent = False
         self._disclaimer_message: Optional[str] = None
 
@@ -71,10 +75,12 @@ class SCRJump(GFMCalculator):
         """
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
+        # Compute base power deviation and its boundary variations
         delta_p_results, min_envelope_results, max_envelope_results, peak_power_results, _ = (
             self._get_delta_p(D=D, H=H, Xeff=Xeff, time_array=time_array, event_time=event_time)
         )
 
+        # Construct physical limit traces based on raw deviations
         power_at_pcc, upper_envelope, lower_envelope = self._get_envelopes(
             delta_p_array=delta_p_results,
             delta_p_min_env_array=min_envelope_results,
@@ -83,8 +89,8 @@ class SCRJump(GFMCalculator):
             time_array=time_array,
             event_time=event_time,
         )
-
         magnitude_name = "Ip"
+
         return magnitude_name, power_at_pcc, upper_envelope, lower_envelope
 
     def _get_delta_p(
@@ -103,8 +109,10 @@ class SCRJump(GFMCalculator):
             tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: A tuple with
                 delta_p arrays, min envelope arrays, max envelope arrays, peak powers, and epsilon values.
         """
+        # Evaluate variations for D and H across defined minimum and maximum ratios
         damping_variations = np.array([D, D * self._max_ratio, D * self._min_ratio])
         inertia_variations = np.array([H, H * self._min_ratio, H * self._max_ratio])
+
         num_variations = len(damping_variations)
         num_time_points = len(time_array)
 
@@ -120,6 +128,7 @@ class SCRJump(GFMCalculator):
                     damping_variations[i], inertia_variations[i], Xeff, time_array, event_time
                 )
             )
+
             delta_p_results[i, :] = delta_p
             peak_power_results[i] = p_peak
             epsilon_results[i] = epsilon
@@ -133,6 +142,7 @@ class SCRJump(GFMCalculator):
         self._h_vals = inertia_variations
         self._epsilon_vals = epsilon_results
 
+        # Validate damping consistency across all parameter variations
         is_overdamped = epsilon_results >= 1
         if not np.all(is_overdamped == is_overdamped[0]):
             eps_str = np.array2string(epsilon_results, precision=2)
@@ -175,10 +185,12 @@ class SCRJump(GFMCalculator):
         Returns:
             np.ndarray: The modified envelope signal.
         """
+        # Anchor signal to targeted threshold within the post-event modification window
         modification_mask = (time_array >= event_time) & (
             time_array <= event_time + constants.SCRJUMP_MODIFY_ENVELOPE_S
         )
         modified_signal = np.where(modification_mask, power_at_50_percent, envelope_signal)
+
         modified_signal = np.where(
             modified_signal * modification_mask < self._min_active_power,
             self._min_active_power + 0.2,
@@ -215,6 +227,7 @@ class SCRJump(GFMCalculator):
         Returns:
             tuple[np.ndarray, np.ndarray]: The upper and lower trace arrays.
         """
+        # Compute upper and lower margins factoring in power deviation directionality
         if delta_p_at_event > 0:
             upper_trace = (
                 self._initial_active_power + delta_p * (1 + self._margin_high) + tunnel_value
@@ -226,11 +239,13 @@ class SCRJump(GFMCalculator):
                 time_array >= event_time, delta_p_base * 0.5 + 0.005, delta_p
             )
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
+
             condition = time_mask & (lower_trace > self._pmax_mois_tunnel)
             lower_trace = self._modify_envelope(
                 lower_trace, power_at_50_percent, time_array, event_time
             )
             lower_trace = np.where(condition, self._pmax_mois_tunnel, lower_trace)
+
         else:
             upper_trace = (
                 self._initial_active_power + delta_p * (1 - self._margin_high) + tunnel_value
@@ -242,6 +257,7 @@ class SCRJump(GFMCalculator):
                 time_array >= event_time, delta_p_base * 0.5 + 0.005, delta_p
             )
             time_mask = (time_array >= event_time) & (time_array <= constants.SIMULATION_END_TIME)
+
             condition = time_mask & (upper_trace < self._pmin_mois_tunnel)
             upper_trace = self._modify_envelope(
                 upper_trace, power_at_50_percent, time_array, event_time
@@ -272,10 +288,12 @@ class SCRJump(GFMCalculator):
         Returns:
             tuple[np.ndarray, np.ndarray]: The constrained upper and lower envelope arrays.
         """
+        # Enforce strict tunnel limitation directly following the event trigger
         event_index = np.searchsorted(time_array, event_time + 0.01, side="right")
         delta_p_at_event = (
             delta_p_nominal[event_index] if event_index < len(delta_p_nominal) else 0
         )
+
         limit_mask = (time_array >= event_time) & (
             time_array <= event_time + constants.SCRJUMP_INITIAL_LIMITING_S
         )
@@ -294,6 +312,7 @@ class SCRJump(GFMCalculator):
             upper_envelope = np.where(
                 limit_condition, self._initial_active_power + tunnel_value, upper_envelope
             )
+
         return upper_envelope, lower_envelope
 
     def _limit_signal(self, signal: np.ndarray) -> np.ndarray:
@@ -343,6 +362,7 @@ class SCRJump(GFMCalculator):
             delta_p_nominal[event_index] if event_index < len(delta_p_nominal) else 0
         )
 
+        # Collect traces across all variations
         for i in range(delta_p_array.shape[0]):
             current_delta_p = delta_p_array[i, :]
             current_peak_power = p_peak_array[i]
@@ -392,6 +412,7 @@ class SCRJump(GFMCalculator):
             + np.where(time_array >= time_array[0], current_delta_p * 0.5, current_delta_p)
         )
 
+        # Evaluate and merge traces from both nominal and underdamped boundaries
         if np.isnan(delta_p_max_env_array[i, 0]):
             upper_matrix = np.vstack(upper_trace_candidates)
             combined_upper_envelope = np.nanmax(upper_matrix, axis=0)
@@ -407,11 +428,12 @@ class SCRJump(GFMCalculator):
             lower_matrix = np.vstack(
                 (lower_trace_candidates, [power_at_50_percent], lower_traces_from_min_env)
             )
-        combined_lower_envelope = np.nanmin(lower_matrix, axis=0)
 
+        combined_lower_envelope = np.nanmin(lower_matrix, axis=0)
         upper_envelope = combined_upper_envelope
         lower_envelope = combined_lower_envelope
 
+        # Delay the envelopes correctly considering EMT execution shifts
         if (self._initial_active_power > 0 and delta_p_at_event > 0) or (
             self._initial_active_power < 0 and delta_p_at_event > 0
         ):
@@ -495,12 +517,14 @@ class SCRJump(GFMCalculator):
         voltage_product = self._initial_voltage * self._grid_voltage
         base_angular_freq = self._base_angular_frequency
 
+        # Solve for natural frequency and damping ratio accounting for total reactance limits
         if H <= 0 or total_reactance <= 0:
             natural_frequency = 0
             damping_ratio = float("inf")
         else:
             alpha = D / (2 * H)
             betha = base_angular_freq / (2 * H * total_reactance)
+
             if (alpha**2 - 4 * betha) < 0:
                 natural_frequency = np.sqrt(
                     base_angular_freq * voltage_product / (2 * H * total_reactance)
@@ -522,6 +546,7 @@ class SCRJump(GFMCalculator):
             if total_reactance > 0
             else 0
         )
+
         self._epsilon = damping_ratio
         return total_reactance, damping_ratio, natural_frequency, peak_power_change
 
@@ -544,6 +569,7 @@ class SCRJump(GFMCalculator):
         """
         _, damping_ratio, _, _ = self._calculate_common_params(D, H, Xeff)
 
+        # Branch execution based on damping ratio (overdamped >= 1 vs underdamped)
         if damping_ratio >= 1:
             delta_p, p_peak, calculated_epsilon = self._get_overdamped_delta_p(
                 D, H, Xeff, time_array, event_time
@@ -570,6 +596,7 @@ class SCRJump(GFMCalculator):
             tuple[np.ndarray, float, float]: The baseline power deviation, peak power, and epsilon.
         """
         total_reactance, epsilon, _, peak_power = self._calculate_common_params(D, H, Xeff)
+
         alpha_coeff = D / (2 * H)
         beta_coeff = self._base_angular_frequency / (2 * H * total_reactance)
 
@@ -581,6 +608,7 @@ class SCRJump(GFMCalculator):
         p1 = (alpha_coeff - np.sqrt(sqrt_term_val)) / 2
         p2 = (alpha_coeff + np.sqrt(sqrt_term_val)) / 2
 
+        # Solve the differential equation for the overdamped mode
         if abs(p2 - p1) < 1e-9:
             A = 0.5
             B = 0.5
@@ -590,6 +618,7 @@ class SCRJump(GFMCalculator):
 
         term1 = A * np.exp(-p1 * time_array)
         term2 = B * np.exp(-p2 * time_array)
+
         delta_p_base = peak_power * (term1 + term2)
         return delta_p_base, peak_power, epsilon
 
@@ -631,8 +660,8 @@ class SCRJump(GFMCalculator):
                 max bounds, peak power, and epsilon value.
         """
         _, epsilon, natural_frequency, peak_power = self._calculate_common_params(D, H, Xeff)
-        damped_frequency = natural_frequency * np.sqrt(1 - epsilon**2)
 
+        damped_frequency = natural_frequency * np.sqrt(1 - epsilon**2)
         exp_term = np.exp(-epsilon * natural_frequency * time_array)
         cos_term = np.cos(damped_frequency * time_array)
         sin_term = np.sin(damped_frequency * time_array)
@@ -643,6 +672,7 @@ class SCRJump(GFMCalculator):
             else 0
         )
 
+        # Solve the differential equation for the underdamped oscillatory mode
         delta_p_base = peak_power * -1 * (exp_term * cos_term + sin_coeff * exp_term * sin_term)
         amplitude_envelope = np.sqrt(1 + sin_coeff**2)
         delta_p_max_env = np.abs(amplitude_envelope * peak_power * exp_term)
@@ -670,6 +700,7 @@ class SCRJump(GFMCalculator):
         delta_p_base, min_env_base, max_env_base, p_peak, epsilon = (
             self._get_underdamped_delta_p_base(D, H, Xeff, time_since_event)
         )
+
         delta_p = np.where(time_array < event_time, 0, delta_p_base)
         delta_p_min_env = np.where(time_array < event_time, 0, min_env_base)
         delta_p_max_env = np.where(time_array < event_time, 0, max_env_base)
