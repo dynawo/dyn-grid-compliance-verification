@@ -124,7 +124,7 @@ def dump_effective_config(config) -> None:
     # ------------------------------------------------------------------
     # 2) FULL EFFECTIVE CONFIG (forensic)
     # ------------------------------------------------------------------
-    logger.debug("===== DYCOV EFFECTIVE CONFIGURATION " "(precedence: user > pcs > default) =====")
+    logger.debug("===== DYCOV EFFECTIVE CONFIGURATION (precedence: user > pcs > default) =====")
 
     for section in sorted(effective):
         logger.debug("--- %s %s", section, "-" * max(1, 60 - len(section)))

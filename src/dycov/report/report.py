@@ -537,9 +537,7 @@ def _create_full_tex(
         if oc_results["curves"] is None:
             continue
 
-        unit_characteristics = model_parameters.unit_characteristics(
-            producer, oc_results["udim"]
-        )
+        unit_characteristics = model_parameters.unit_characteristics(producer, oc_results["udim"])
         unit_characteristics["Unom"] = producer.u_nom
 
         xmin, xmax = figure.get_common_time_range(

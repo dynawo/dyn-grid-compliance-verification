@@ -31,8 +31,9 @@ class DummyParams:
 class DummyBenchmark:
     instances = []
 
-    def __init__(self, pcs_name, pcs_id, pcs_zone, producer_name, report_name,
-                 bm_name, parameters, producer):
+    def __init__(
+        self, pcs_name, pcs_id, pcs_zone, producer_name, report_name, bm_name, parameters, producer
+    ):
         self._name = bm_name
         self.generated = False
         DummyBenchmark.instances.append(self)
