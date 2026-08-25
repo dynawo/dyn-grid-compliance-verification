@@ -7,6 +7,7 @@
 #     demiguelm@aia.es
 
 import numpy as np
+
 from dycov.gfm import constants
 from dycov.gfm.parameters import GFMParameters
 
@@ -85,7 +86,9 @@ class GFMCalculator:
             delayed_value (float): The constant value applied during the delay period.
             time_array (np.ndarray): The simulation time vector.
             signal (np.ndarray): The original signal to be delayed.
-            start_time (float, optional): The time at which delay logic initiates. Defaults to 0.0.
+            start_time (
+                float,
+                optional): The time at which delay logic initiates. Defaults to 0.0.
 
         Returns:
             np.ndarray: The resulting time-shifted array.

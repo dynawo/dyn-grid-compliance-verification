@@ -7,6 +7,7 @@
 #     demiguelm@aia.es
 
 import numpy as np
+
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging import dycov_logging
@@ -58,7 +59,11 @@ class AmplitudeStep(GFMCalculator):
             event_time (float): The timestamp when the grid event occurs.
         Returns:
             tuple[str, np.ndarray, np.ndarray, np.ndarray]: A tuple containing the
-                magnitude name ("Iq"), the main signal, the upper envelope, and the lower envelope.
+                magnitude name (
+                    "Iq"),
+                    the main signal,
+                    the upper envelope,
+                    and the lower envelope.
         """
         logger = dycov_logging.get_logger("AmplitudeStep")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")

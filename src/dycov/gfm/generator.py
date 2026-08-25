@@ -130,7 +130,9 @@ class GFMGeneration:
     def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
         """Executes the envelope generation process for all configured PCS.
         Args:
-            use_parallel (bool, optional): Whether to run using multiprocessing. Defaults to False.
+            use_parallel (
+                bool,
+                optional): Whether to run using multiprocessing. Defaults to False.
             num_processes (int, optional): Number of CPU cores to utilize. Defaults to 4.
         """
         if use_parallel:

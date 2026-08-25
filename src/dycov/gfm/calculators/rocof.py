@@ -7,6 +7,7 @@
 #     demiguelm@aia.es
 
 import numpy as np
+
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging import dycov_logging

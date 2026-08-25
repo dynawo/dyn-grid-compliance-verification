@@ -35,7 +35,10 @@ def save_results_to_csv(
         pcc_signal (np.ndarray): Array of Point of Common Coupling signal values.
         lower_envelope (np.ndarray): Array of lower envelope values.
         upper_envelope (np.ndarray): Array of upper envelope values.
-        extra_envelopes (dict[str, np.ndarray], optional): Additional envelopes to save. Defaults to None.
+        extra_envelopes (
+            dict[str,
+            np.ndarray],
+            optional): Additional envelopes to save. Defaults to None.
     Returns:
         None
     """
@@ -70,7 +73,9 @@ def find_start_trim_index(
         lower_envelope (np.ndarray): The lower envelope array.
         upper_envelope (np.ndarray): The upper envelope array.
         tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
-        buffer_points (int, optional): Number of safety points to keep before the change. Defaults to 10.
+        buffer_points (
+            int,
+            optional): Number of safety points to keep before the change. Defaults to 10.
     Returns:
         int: The calculated starting index.
     """
@@ -100,7 +105,9 @@ def find_end_trim_index(
         lower_envelope (np.ndarray): The lower envelope array.
         upper_envelope (np.ndarray): The upper envelope array.
         tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
-        buffer_points (int, optional): Number of safety points to keep after the change. Defaults to 10.
+        buffer_points (
+            int,
+            optional): Number of safety points to keep after the change. Defaults to 10.
     Returns:
         int: The calculated ending index.
     """
@@ -145,10 +152,17 @@ def plot_results(
         lower_envelope (np.ndarray): Lower bounds data.
         upper_envelope (np.ndarray): Upper bounds data.
         output_format (str): The desired output formats (e.g., 'png&html').
-        params_list (list, optional): List of parameter strings to display on the plot. Defaults to None.
-        show_disclaimer (bool, optional): Whether to display a warning disclaimer. Defaults to False.
+        params_list (
+            list,
+            optional): List of parameter strings to display on the plot. Defaults to None.
+        show_disclaimer (
+            bool,
+            optional): Whether to display a warning disclaimer. Defaults to False.
         disclaimer_message (str, optional): Custom disclaimer text. Defaults to None.
-        extra_envelopes (dict[str, np.ndarray], optional): Additional signals to plot. Defaults to None.
+        extra_envelopes (
+            dict[str,
+            np.ndarray],
+            optional): Additional signals to plot. Defaults to None.
     Returns:
         None
     """
