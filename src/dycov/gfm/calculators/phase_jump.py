@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import numpy as np
-
 from dycov.gfm import constants
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.parameters import GFMParameters
@@ -66,6 +63,7 @@ class PhaseJump(GFMCalculator):
         self._h_val = H
         _, self._epsilon, _, _ = self._calculate_common_params(D, H, Xeff)
 
+        # Compute power deviation traces and mathematical bounds
         delta_p_array, delta_p_min, delta_p_max, p_peak_array, _ = self._get_delta_p(
             D=D, H=H, Xeff=Xeff, time_array=time_array, event_time=event_time
         )
@@ -80,6 +78,7 @@ class PhaseJump(GFMCalculator):
         )
 
         if self._is_emt_flag:
+            # Shift boundaries for EMT time delays
             upper_envelope = self._apply_delay(self._emt_delay, p_up[0], time_array, p_up)
             lower_envelope = self._apply_delay(self._emt_delay, p_down[0], time_array, p_down)
             pcc_signal = self._apply_delay(self._emt_delay, p_pcc[0], time_array, p_pcc)
@@ -110,6 +109,7 @@ class PhaseJump(GFMCalculator):
         d_array = np.array([D, D * self._min_ratio, D * self._max_ratio])
         h_array = np.array([H, H * self._min_ratio, H * self._max_ratio])
 
+        # Evaluate initial damping ratio to properly route the execution solver
         epsilon_initial_check = self._calculate_epsilon_initial_check(
             d_array, h_array, x_total_initial
         )
@@ -166,14 +166,14 @@ class PhaseJump(GFMCalculator):
         tunnel_time_dep = self._get_time_tunnel(
             p_peak=p_peak, time_array=time_array, event_time=event_time
         )
-
         p_pcc = self._initial_active_power + delta_p * -(sign)
+
         list_of_arrays: list[np.ndarray] = delta_p_array + [delta_p_min, delta_p_max]
 
+        # Merge traces to extract mathematical boundaries prior to physical clipping
         lower_env_unlimited, upper_env_unlimited = self._calculate_unlimited_power_envelopes(
             list_of_arrays, tunnel_time_dep
         )
-
         lower_envelope, upper_envelope = self._limit_power_envelopes(
             lower_env_unlimited,
             upper_env_unlimited,
@@ -258,11 +258,10 @@ class PhaseJump(GFMCalculator):
             tuple[np.ndarray, float, float]: The base power response array, peak power, and epsilon.
         """
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
-        wd = wn * np.sqrt(epsilon**2 - 1)
 
+        wd = wn * np.sqrt(epsilon**2 - 1)
         alpha = epsilon * wn + wd
         beta = epsilon * wn - wd
-
         A = 1 / (beta - alpha)
         B = -A
 
@@ -272,6 +271,7 @@ class PhaseJump(GFMCalculator):
         term4 = D * B * np.exp(-beta * time_array)
 
         delta_p1 = (p_peak / (2 * H)) * (term1 + term2 + term3 + term4)
+
         return delta_p1, p_peak, epsilon
 
     def _get_overdamped_delta_p(
@@ -349,13 +349,14 @@ class PhaseJump(GFMCalculator):
             tuple[np.ndarray, float, float]: The baseline power response array, peak power, and epsilon.
         """
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
-        wd = wn * np.sqrt(1 - epsilon**2)
 
+        wd = wn * np.sqrt(1 - epsilon**2)
         term1 = np.exp(-epsilon * wn * time_array)
         term2 = np.cos(wd * time_array)
         term3 = np.sin(wd * time_array)
 
         delta_p1 = term1 * (term2 - (epsilon * wn - 1) / wd * term3) * p_peak
+
         return delta_p1, p_peak, epsilon
 
     def _get_underdamped_delta_p(

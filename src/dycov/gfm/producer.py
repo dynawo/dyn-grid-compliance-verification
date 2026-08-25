@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import configparser
 import re
 from pathlib import Path
+
 from dycov.model.producer import Producer
 
 
@@ -19,7 +18,6 @@ class GFMProducer(Producer):
 
     def __init__(self, producer_ini: Path) -> None:
         """Initializes the GFMProducer with the given configuration file.
-
         Args:
             producer_ini (Path): The file path to the producer's INI configuration.
         """
@@ -28,7 +26,6 @@ class GFMProducer(Producer):
 
     def get_producer_path(self) -> Path:
         """Retrieves the absolute path to the producer's INI file.
-
         Returns:
             Path: The absolute path to the INI file.
         """
@@ -36,13 +33,12 @@ class GFMProducer(Producer):
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """Returns a list of INI filenames found in the producer's directory.
-
         Args:
             zone (int, optional): The network zone identifier. Defaults to 0.
-
         Returns:
             list[str]: A sorted list of configuration filename stems.
         """
+        # Case-insensitive regex to capture both .ini and .INI extensions
         pattern = re.compile(r".*\.[iI][nN][iI]")
         return sorted(
             [
@@ -54,7 +50,6 @@ class GFMProducer(Producer):
 
     def get_sim_type_str(self) -> str:
         """Retrieves the simulation type identifier.
-
         Returns:
             str: The simulation string identifier (e.g., "gfm").
         """
@@ -62,7 +57,6 @@ class GFMProducer(Producer):
 
     def set_zone(self, zone: int, filename: str) -> None:
         """Sets the active zone and filename.
-
         Args:
             zone (int): The zone identifier.
             filename (str): The name of the file to associate.
@@ -71,7 +65,6 @@ class GFMProducer(Producer):
 
     def get_config(self) -> configparser.ConfigParser:
         """Retrieves the parsed configuration object.
-
         Returns:
             configparser.ConfigParser: The loaded configuration parser instance.
         """
@@ -79,10 +72,8 @@ class GFMProducer(Producer):
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """Locates and parses the producer's INI configuration file.
-
         Returns:
             configparser.ConfigParser: The populated configuration parser.
-
         Raises:
             FileNotFoundError: If the INI file cannot be located in the directory.
         """
@@ -95,6 +86,9 @@ class GFMProducer(Producer):
 
         pattern_ini = re.compile(r".*\.[iI][nN][iI]")
         producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
+
+        # Allow inline comments starting with '#' in the INI file
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(producer_ini_path)
+
         return producer_config

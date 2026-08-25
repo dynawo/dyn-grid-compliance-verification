@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import configparser
 import importlib.metadata
@@ -30,7 +28,6 @@ def save_results_to_csv(
 ) -> None:
     """
     Exports envelopes and signals to a CSV file.
-
     Args:
         path (Path): Destination path for the CSV file.
         magnitude (str): Name of the magnitude being recorded.
@@ -39,21 +36,23 @@ def save_results_to_csv(
         lower_envelope (np.ndarray): Array of lower envelope values.
         upper_envelope (np.ndarray): Array of upper envelope values.
         extra_envelopes (dict[str, np.ndarray], optional): Additional envelopes to save. Defaults to None.
-
     Returns:
         None
     """
+    # Map core signals to their respective CSV column headers
     data = {
         "Time (s)": time_array,
         f"{magnitude} PGU (pu)": pcc_signal,
         f"{magnitude} lower (pu)": lower_envelope,
         f"{magnitude} upper (pu)": upper_envelope,
     }
+
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
             data[f"{magnitude} {name} (pu)"] = signal
 
     df = pd.DataFrame(data)
+    # Use scientific notation to preserve precision for sensitive envelope bounds
     df.to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
@@ -66,23 +65,24 @@ def find_start_trim_index(
 ) -> int:
     """
     Finds the starting index to trim leading stable data.
-
     Args:
         pcc_signal (np.ndarray): The main signal array.
         lower_envelope (np.ndarray): The lower envelope array.
         upper_envelope (np.ndarray): The upper envelope array.
         tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
         buffer_points (int, optional): Number of safety points to keep before the change. Defaults to 10.
-
     Returns:
         int: The calculated starting index.
     """
+    # Scan forward to bypass initial flatlines until a significant variation is detected
     for i in range(len(pcc_signal) - 1):
         pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
         down_changed = abs(lower_envelope[i + 1] - lower_envelope[i]) > tolerance
         up_changed = abs(upper_envelope[i + 1] - upper_envelope[i]) > tolerance
+
         if pcc_changed or down_changed or up_changed:
             return max(0, i - buffer_points)
+
     return 0
 
 
@@ -95,23 +95,24 @@ def find_end_trim_index(
 ) -> int:
     """
     Finds the ending index to trim trailing stable data.
-
     Args:
         pcc_signal (np.ndarray): The main signal array.
         lower_envelope (np.ndarray): The lower envelope array.
         upper_envelope (np.ndarray): The upper envelope array.
         tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
         buffer_points (int, optional): Number of safety points to keep after the change. Defaults to 10.
-
     Returns:
         int: The calculated ending index.
     """
+    # Scan backward from the end to strip trailing stable data
     for i in range(len(pcc_signal) - 1, 0, -1):
         pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
         down_changed = abs(lower_envelope[i] - lower_envelope[i - 1]) > tolerance
         up_changed = abs(upper_envelope[i] - upper_envelope[i - 1]) > tolerance
+
         if pcc_changed or down_changed or up_changed:
             return min(i + buffer_points, len(pcc_signal))
+
     return len(pcc_signal)
 
 
@@ -133,7 +134,6 @@ def plot_results(
 ) -> None:
     """
     Renders and exports simulation results graphically.
-
     Args:
         path (Path): Destination path for the plot file.
         title (str): Title of the plot.
@@ -149,12 +149,13 @@ def plot_results(
         show_disclaimer (bool, optional): Whether to display a warning disclaimer. Defaults to False.
         disclaimer_message (str, optional): Custom disclaimer text. Defaults to None.
         extra_envelopes (dict[str, np.ndarray], optional): Additional signals to plot. Defaults to None.
-
     Returns:
         None
     """
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
+
+    # Slice all arrays to focus only on the active transient event window
     time_trimmed = time_array[start_index:end_index]
     pcc_trimmed = pcc_signal[start_index:end_index]
     down_trimmed = lower_envelope[start_index:end_index]
@@ -173,6 +174,7 @@ def plot_results(
         html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
         disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
 
+    # Attempt to watermark plots with the currently installed package version
     try:
         software_version = importlib.metadata.version("dycov")
         watermark_text = f"dycov v{software_version}"
@@ -181,6 +183,7 @@ def plot_results(
 
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
+
         if extra_trimmed:
             colors = {"overdamped": "purple", "underdamped": "orange"}
             for name, signal in extra_trimmed.items():
@@ -198,6 +201,7 @@ def plot_results(
                     alpha=0.7,
                     label=name.replace("_", " ").title(),
                 )
+
         plt.plot(time_trimmed, pcc_trimmed, label=f"{magnitude} at PGU", linewidth=3)
         plt.plot(
             time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
@@ -208,6 +212,7 @@ def plot_results(
         plt.ylabel(f"{magnitude} (pu)")
         plt.title(title)
 
+        # Shift event time from ms to seconds for correct vertical line placement
         plt.axvline(
             x=event_time + shift_time / 1000, color="black", linestyle="--", label="Event Time"
         )
@@ -223,6 +228,7 @@ def plot_results(
                 horizontalalignment="right",
                 bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
             )
+
         if show_disclaimer:
             plt.text(
                 0.02,
@@ -257,6 +263,8 @@ def plot_results(
 
     if "html" in output_format:
         fig = go.Figure()
+
+        # Create a shaded area between the upper and lower envelopes
         fig.add_trace(
             go.Scatter(
                 x=np.concatenate([time_trimmed, time_trimmed[::-1]]),
@@ -268,6 +276,7 @@ def plot_results(
                 showlegend=False,
             )
         )
+
         if extra_trimmed:
             colors = {"overdamped": "purple", "underdamped": "orange"}
             for name, signal in extra_trimmed.items():
@@ -337,6 +346,7 @@ def plot_results(
                 bgcolor="rgba(245, 222, 179, 0.7)",
                 borderpad=10,
             )
+
         if show_disclaimer:
             fig.add_annotation(
                 xref="paper",
@@ -353,6 +363,7 @@ def plot_results(
                 borderwidth=1,
                 borderpad=10,
             )
+
         fig.add_annotation(
             xref="paper",
             yref="paper",
@@ -365,6 +376,7 @@ def plot_results(
             xanchor="right",
             yanchor="bottom",
         )
+
         fig.update_layout(
             title_text=title,
             xaxis_title="Time (s)",
@@ -381,13 +393,11 @@ def save_ini_dump(
 ) -> None:
     """
     Serializes simulation entity attributes to a text file for debugging.
-
     Args:
         path (Path): Destination path for the text dump file.
         parameters (Any): The simulation parameters object.
         producer_config (configparser.ConfigParser): The parsed INI configuration.
         calculator (Any): The instantiated calculator object.
-
     Returns:
         None
     """
@@ -395,6 +405,7 @@ def save_ini_dump(
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
         f.write(f"\n{'=' * 30}\n {title}\n{'=' * 30}\n")
         for key, value in sorted(data_dict.items()):
+            # Filter out callable methods to serialize only attributes/properties
             if not callable(value):
                 f.write(f"{key} = {value}\n")
 
@@ -402,10 +413,13 @@ def save_ini_dump(
         f.write(
             "GFM SIMULATION DUMP\n===================\n\n{'=' * 30}\n Key Validation Values\n{'=' * 30}\n"
         )
+
+        # Extract internal validation arrays safely across calculator instances
         try:
             d_vals = getattr(calculator, "_d_vals", None)
             h_vals = getattr(calculator, "_h_vals", None)
             eps_vals = getattr(calculator, "_epsilon_vals", None)
+
             if d_vals is not None and h_vals is not None:
                 for i in range(len(d_vals)):
                     label = "Nominal" if i == 0 else f"Variation {i}"

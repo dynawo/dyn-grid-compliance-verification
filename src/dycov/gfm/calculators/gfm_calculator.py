@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
 # (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import numpy as np
 from dycov.gfm import constants
@@ -41,6 +39,7 @@ class GFMCalculator:
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
         self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
+
         self._d_vals = None
         self._h_vals = None
         self._epsilon_vals = None
@@ -91,15 +90,20 @@ class GFMCalculator:
         Returns:
             np.ndarray: The resulting time-shifted array.
         """
+        # Calculate the discrete number of samples to shift based on time resolution
         dt = time_array[1] - time_array[0]
         delay_samples = int(delay_time / dt) + 1
+
         if start_time > time_array[-1]:
             return signal
 
         start_idx = np.argmax(time_array >= start_time)
         pre_delay_signal = signal[:start_idx]
+
+        # Inject the delayed constant value block
         delay_block = np.full(delay_samples, delayed_value)
         post_delay_signal = signal[start_idx:]
+
         combined_signal = np.concatenate((pre_delay_signal, delay_block, post_delay_signal))
         return combined_signal[: len(time_array)]
 
@@ -158,6 +162,8 @@ class GFMCalculator:
             np.ndarray: An array representing the dynamic tunnel values over time.
         """
         t_val = max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
+
+        # Calculate dynamic margin decaying exponentially over time
         tunnel_exp = 1 - np.exp(
             (-time_array + constants.TIME_TUNNEL_START_OFFSET) / constants.TIME_TUNNEL_EXP_TAU
         )
@@ -209,6 +215,7 @@ class GFMCalculator:
         limit_max = self._pmax_mois_tunnel
         limit_min = self._pmin_mois_tunnel
 
+        # Apply boundary constraints conditionally based on transient directionality
         if use_opposite_signs:
             if np.sign(initial_power) * sign == -1:
                 lower_envelope_limited = np.clip(
