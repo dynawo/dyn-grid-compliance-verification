@@ -114,9 +114,7 @@ def test_get_setpoint_tracking_threshold_values_returns_the_dtr_defaults():
 
 
 def test_get_setpoint_tracking_threshold_values_honours_the_configuration(monkeypatch):
-    monkeypatch.setattr(
-        f"{THRESHOLD_MODULE}.config", DummyConfig(thr_reftrack_mae_after=0.42)
-    )
+    monkeypatch.setattr(f"{THRESHOLD_MODULE}.config", DummyConfig(thr_reftrack_mae_after=0.42))
 
     result = get_setpoint_tracking_threshold_values()
 
