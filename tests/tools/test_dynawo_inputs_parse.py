@@ -18,9 +18,18 @@ sys.path.insert(0, str(_TOOL_DIR))
 import parse as P  # noqa: E402
 
 
-def _general(*choices):
-    rows = [["Type de bloc", "Choix"]]
-    rows += [[block, choice] for block, choice in choices]
+def _general(*choices, key=None):
+    """A ``Général`` grid: block table (with its ``Zone`` column) plus the horizontal derived
+    table, whose first column holds the Excel-cached Model-Map key. The key header is
+    deliberately not named ``Key`` — the parser anchors on ``Zone3 lib`` and never reads it."""
+    rows = [["Type de bloc", "Choix", "Zone", None,
+             "Combinaison sélectionnée (clé Model Map)", "Zone3 lib", "Zone3 prefix",
+             "Zone1 lib", "Zone1 prefix"]]
+    for i, (block, choice) in enumerate(choices):
+        row = [block, choice, "Zone3" if block == "REPC" else "Zone1;Zone3"]
+        if i == 0:
+            row += [None, key]
+        rows.append(row)
     return rows
 
 
@@ -50,16 +59,24 @@ def _workbook(general):
     return {"Général": general, "Model Map": _MODEL_MAP}
 
 
-def test_build_key_orders_blocks():
-    config_wb = _workbook(
-        _general(
-            ("REPC", "REPC_A"), ("REEC", "REEC_B"), ("REGC", "REGC_A"),
-            ("WTGT", "Aucun"), ("WTGP", "Aucun"), ("WTGA", "Aucun"), ("WTGQ", "Aucun"),
-        )
-    )
-    import generate_par as dp
+def test_read_selected_key_is_read_not_rebuilt():
+    # The key is the Excel-cached cell under the derived-table header, read verbatim: the tool
+    # knows nothing of the blocks that form it (here it even disagrees with the selection).
+    wb = _workbook(_general(("REPC", "REPC_A"), key="Whatever|Excel|Computed"))
+    assert P.read_selected_key(wb) == "Whatever|Excel|Computed"
 
-    assert P.build_key(dp.parse_config(config_wb)) == "REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"
+
+def test_read_selected_key_empty_cell_asks_for_excel_save():
+    # A workbook saved without cached formula values (non-Excel writer) must fail clearly.
+    wb = _workbook(_general(("REPC", "REPC_A"), key=None))
+    with pytest.raises(ValueError, match="Excel and save"):
+        P.read_selected_key(wb)
+
+
+def test_read_selected_key_without_derived_table_raises():
+    wb = _workbook([["Type de bloc", "Choix"], ["REPC", "REPC_A"]])
+    with pytest.raises(ValueError, match="derived-model table"):
+        P.read_selected_key(wb)
 
 
 def test_resolve_models_pv():
@@ -67,6 +84,7 @@ def test_resolve_models_pv():
         _general(
             ("REPC", "REPC_A"), ("REEC", "REEC_B"), ("REGC", "REGC_A"),
             ("WTGT", "Aucun"), ("WTGP", "Aucun"), ("WTGA", "Aucun"), ("WTGQ", "Aucun"),
+            key="REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun",
         )
     )
     resolved = P.resolve_models(wb)
@@ -78,13 +96,21 @@ def test_resolve_models_pv():
 
 def test_resolve_models_unknown_combination_raises():
     wb = _workbook(
-        _general(
-            ("REPC", "REPC_A"), ("REEC", "REEC_A"), ("REGC", "REGC_A"),
-            ("WTGT", "Aucun"), ("WTGP", "WTGP_B"), ("WTGA", "Aucun"), ("WTGQ", "Aucun"),
-        )
+        _general(("REPC", "REPC_A"), key="REGC_A|REEC_A|Aucun|WTGP_B|Aucun|Aucun")
     )
     with pytest.raises(ValueError, match="not found in 'Model Map'"):
         P.resolve_models(wb)
+
+
+def test_model_map_key_header_name_is_free():
+    # The map key column is located as the column left of 'Zone3_lib', whatever its header says.
+    renamed = [list(row) for row in _MODEL_MAP]
+    renamed[1] = ["Combinaison"] + renamed[1][1:]
+    wb = {
+        "Général": _general(("REPC", "REPC_A"), key="REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"),
+        "Model Map": renamed,
+    }
+    assert P.resolve_models(wb)["zone3_lib"] == "PhotovoltaicsWeccCurrentSource"
 
 
 def test_technology_and_template():
@@ -141,8 +167,8 @@ def test_parse_control_params_maps_type_and_carries_comments():
             ["tIq", "double", "0.02", "s", ""],
         ],
     }
-    [(block, variant, params)] = P.parse_control_params(wb)
-    assert (block, variant) == ("REEC", "REEC_B")
+    params = P.parse_control_params(wb)
+    assert [p["block"] for p in params] == ["REEC", "REEC", "REEC"]
     # first valued parameter heads the section (design 8.3: sheet + table | variant)
     assert params[0]["comments"][:2] == ["REEC", "Electrical Control | REEC_B"]
     # Excel type mapped to the Dynawo convention; per-param comment / base unit merged
@@ -150,3 +176,25 @@ def test_parse_control_params_maps_type_and_carries_comments():
     assert {p["name"]: p["type"] for p in params}["QFlag"] == "BOOL"
     assert params[1]["comments"][-1] == "reactive flag"
     assert params[2]["comments"][-1] == "Base unit: s"
+
+
+def test_parse_control_params_flat_list_preserves_workbook_order():
+    # Two selected blocks: the flat list follows the sheet order (REEC before REGC here) with
+    # the block only as a provenance label — 'Général' listing REGC first must not reorder it.
+    def _sheet(table, variant, rows):
+        return [[table], [variant], ["Parameter", "Type", "Value"]] + rows
+
+    wb = {
+        "Général": _general(("REGC", "REGC_A"), ("REEC", "REEC_B")),
+        "REEC": _sheet("Electrical Control", "REEC_B",
+                       [["Kqp", "double", "1.0"], ["QFlag", "boolean", "true"]]),
+        "REGC": _sheet("Generator Converter", "REGC_A", [["tG", "double", "0.02"]]),
+    }
+    params = P.parse_control_params(wb)
+    assert [(p["block"], p["name"]) for p in params] == [
+        ("REEC", "Kqp"), ("REEC", "QFlag"), ("REGC", "tG"),
+    ]
+    # each variant's first param carries its section header, the following ones do not
+    assert params[0]["comments"] == ["REEC", "Electrical Control | REEC_B"]
+    assert params[1]["comments"] == []
+    assert params[2]["comments"] == ["REGC", "Generator Converter | REGC_A"]
