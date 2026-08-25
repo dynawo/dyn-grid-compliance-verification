@@ -680,9 +680,7 @@ def test_check_voltage_dips_without_the_during_window_returns_no_during_metrics(
 
 def test_check_measurement_with_an_absent_window_is_not_computable():
     compliance_values = {
-        f"{window}_{error}_active_power_check": True
-        for window in WINDOWS
-        for error in ERRORS
+        f"{window}_{error}_active_power_check": True for window in WINDOWS for error in ERRORS
     }
     del compliance_values["after_mxe_active_power_check"]
     results = {"compliance": True}
@@ -696,9 +694,7 @@ def test_check_measurement_with_an_absent_window_is_not_computable():
 
 def test_check_measurement_ignores_windows_without_threshold():
     compliance_values = {
-        f"{window}_{error}_active_power_check": None
-        for window in WINDOWS
-        for error in ERRORS
+        f"{window}_{error}_active_power_check": None for window in WINDOWS for error in ERRORS
     }
     results = {"compliance": True}
 
