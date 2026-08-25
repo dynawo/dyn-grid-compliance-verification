@@ -306,9 +306,7 @@ def test_check_theta_stability_of_an_unstable_internal_angle(monkeypatch):
     logger = RecordingLogger()
     monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
     validator = _make_validator(
-        calculated=_make_pdr_curves(
-            Synch_Gen_InternalAngle=[0.5, 0.5, 0.5, 0.5, float("nan")]
-        )
+        calculated=_make_pdr_curves(Synch_Gen_InternalAngle=[0.5, 0.5, 0.5, 0.5, float("nan")])
     )
 
     stable_theta, first_stable_pos_theta, pass_pi = validator._check_theta_stability(THR_SS_TOL)
@@ -368,9 +366,7 @@ def test_calculate_composed_times_measures_the_power_and_voltage_instants():
 
 
 def test_calculate_composed_times_for_the_power_floor_at_85_percent_voltage():
-    validator = _make_validator(
-        validations=["time_10Pfloor_85U"], calculated=_make_pdr_curves()
-    )
+    validator = _make_validator(validations=["time_10Pfloor_85U"], calculated=_make_pdr_curves())
     compliance_values = {}
 
     validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0)
@@ -380,9 +376,7 @@ def test_calculate_composed_times_for_the_power_floor_at_85_percent_voltage():
 
 
 def test_calculate_times_covers_the_simple_and_the_composed_instants():
-    validator = _make_validator(
-        validations=["time_5U", "time_5P"], calculated=_make_pdr_curves()
-    )
+    validator = _make_validator(validations=["time_5U", "time_5P"], calculated=_make_pdr_curves())
     compliance_values = {}
 
     validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
@@ -433,9 +427,7 @@ def test_calculate_avr_of_generators_tracking_their_setpoint():
 def test_calculate_avr_reports_the_generator_losing_its_setpoint():
     validator = _make_validator(
         validations=["AVR_5"],
-        calculated=_make_avr_curves(
-            [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 2.0, 1.0, 1.0]
-        ),
+        calculated=_make_avr_curves([1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 2.0, 1.0, 1.0]),
     )
     compliance_values = {}
 
@@ -501,9 +493,7 @@ def test_calculate_others_reports_a_flat_test_as_invalid():
 def test_calculate_others_keeps_the_worst_static_difference():
     validator = _make_validator(
         validations=["static_diff"],
-        calculated=_make_avr_curves(
-            [1.0, 1.0, 1.0, 1.0, 1.001], [1.0, 1.0, 1.0, 1.0, 1.002]
-        ),
+        calculated=_make_avr_curves([1.0, 1.0, 1.0, 1.0, 1.001], [1.0, 1.0, 1.0, 1.0, 1.002]),
     )
     compliance_values = {}
 
@@ -571,9 +561,7 @@ def test_calculate_gathers_every_enabled_validation():
 def test_create_results_without_a_critical_clearing_time():
     validator = _make_validator()
 
-    results = validator._PerformanceValidator__create_results(
-        1.0, {"is_invalid_test": False}
-    )
+    results = validator._PerformanceValidator__create_results(1.0, {"is_invalid_test": False})
 
     assert results["sim_t_event_start"] == 1.0
     assert results["compliance"] is True
@@ -585,9 +573,7 @@ def test_create_results_reports_the_critical_clearing_time():
     validator = _make_validator()
     validator.set_time_cct(0.15)
 
-    results = validator._PerformanceValidator__create_results(
-        1.0, {"is_invalid_test": False}
-    )
+    results = validator._PerformanceValidator__create_results(1.0, {"is_invalid_test": False})
 
     assert results["time_cct"] == pytest.approx(0.15)
 
@@ -610,15 +596,11 @@ def test_create_results_reports_the_critical_clearing_time():
         ("time_10P", "time_10p", 6.0, False),
     ],
 )
-def test_check_simple_times_against_their_thresholds(
-    validation, magnitude, value, expected_check
-):
+def test_check_simple_times_against_their_thresholds(validation, magnitude, value, expected_check):
     validator = _make_validator(validations=[validation])
     results = {"compliance": True}
 
-    validator._PerformanceValidator__check_simple_times(
-        results, 1.0, 2.0, {magnitude: value}
-    )
+    validator._PerformanceValidator__check_simple_times(results, 1.0, 2.0, {magnitude: value})
 
     assert results[validation] == pytest.approx(value)
     assert results[f"{validation}_check"] is expected_check
@@ -632,9 +614,7 @@ def test_check_simple_times_after_the_fault_clearing(validation, magnitude):
     validator = _make_validator(validations=[validation])
     results = {"compliance": True}
 
-    validator._PerformanceValidator__check_simple_times(
-        results, 1.0, 2.0, {magnitude: 3.0}
-    )
+    validator._PerformanceValidator__check_simple_times(results, 1.0, 2.0, {magnitude: 3.0})
 
     # The instants are measured from the end of the event.
     assert results["t_event_start"] == 2.0
@@ -848,9 +828,7 @@ def test_check_disconnections_without_an_auxiliary_load_transformer(monkeypatch,
 
 
 def test_check_disconnections_skipped_without_a_dynamic_model(tmp_path):
-    validator = _make_validator(
-        validations=["no_disconnection_gen", "no_disconnection_load"]
-    )
+    validator = _make_validator(validations=["no_disconnection_gen", "no_disconnection_load"])
     results = {"compliance": True}
 
     validator._PerformanceValidator__check_disconnections(results, tmp_path, False)
@@ -898,9 +876,7 @@ def test_check_others_stabilized_of_a_synchronous_machine_requires_the_internal_
     validator = _make_validator(validations=["stabilized"])
     results = {"compliance": True}
 
-    validator._PerformanceValidator__check_others(
-        results, _make_stability(theta=False), False, {}
-    )
+    validator._PerformanceValidator__check_others(results, _make_stability(theta=False), False, {})
 
     assert results["stabilized"] is False
     assert results["compliance"] is False
@@ -983,9 +959,7 @@ def test_validate_a_power_park_module(tmp_path):
 
 
 def test_validate_a_model_validation_power_park_module(tmp_path):
-    validator = _make_validator(
-        calculated=_make_pdr_curves(), sim_type=MODEL_VALIDATION_PPM
-    )
+    validator = _make_validator(calculated=_make_pdr_curves(), sim_type=MODEL_VALIDATION_PPM)
 
     results = validator.validate("oc", tmp_path, "outputs", VALIDATE_EVENT_PARAMS)
 

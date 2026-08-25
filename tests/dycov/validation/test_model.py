@@ -391,12 +391,8 @@ def test_check_ramp_only_checks_the_enabled_validations():
 def _make_step_manager():
     """Calculated active power steps 1 s after the event, the reference one 2 s after."""
     time = [0.0, 1.0, 2.0, 3.0, 4.0]
-    calculated = pd.DataFrame(
-        {"time": time, "BusPDR_BUS_ActivePower": [0.0, 0.0, 1.0, 1.0, 1.0]}
-    )
-    reference = pd.DataFrame(
-        {"time": time, "BusPDR_BUS_ActivePower": [0.0, 0.0, 0.0, 1.0, 1.0]}
-    )
+    calculated = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [0.0, 0.0, 1.0, 1.0, 1.0]})
+    reference = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [0.0, 0.0, 0.0, 1.0, 1.0]})
     return DummyCurvesManager(calculated=calculated, reference=reference)
 
 
@@ -449,12 +445,8 @@ def test_compare_event_times_computes_response_and_settling_times():
 def test_compare_event_times_computes_overshoot():
     time = [0.0, 1.0, 2.0, 3.0]
     curves_manager = DummyCurvesManager(
-        calculated=pd.DataFrame(
-            {"time": time, "BusPDR_BUS_ActivePower": [0.0, 1.25, 1.0, 1.0]}
-        ),
-        reference=pd.DataFrame(
-            {"time": time, "BusPDR_BUS_ActivePower": [0.0, 1.10, 1.0, 1.0]}
-        ),
+        calculated=pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [0.0, 1.25, 1.0, 1.0]}),
+        reference=pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [0.0, 1.10, 1.0, 1.0]}),
     )
     validator = _make_validator(validations=["overshoot"], curves_manager=curves_manager)
     results = {}

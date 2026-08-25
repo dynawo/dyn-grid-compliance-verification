@@ -43,6 +43,7 @@ def _make_generator():
 # Connect helpers
 # ---------------------------------------------------------------------------
 
+
 def test_connect_generator():
     root, ns = _make_root()
 
@@ -104,6 +105,7 @@ def test_connect_generator_to_dynmodelomegaref():
 # Dispatcher
 # ---------------------------------------------------------------------------
 
+
 def test_connect_generator_by_lib_none():
     root, ns = _make_root()
     g = _make_generator()
@@ -148,6 +150,7 @@ def test_connect_generator_by_lib_ramp():
 # Weight
 # ---------------------------------------------------------------------------
 
+
 def test_add_generator_weight_none():
     root, ns = _make_root()
 
@@ -169,6 +172,7 @@ def test_add_generator_weight_valid():
 # ---------------------------------------------------------------------------
 # Complete omega
 # ---------------------------------------------------------------------------
+
 
 def test_complete_omega_executes(tmp_path):
     dyd_content = """

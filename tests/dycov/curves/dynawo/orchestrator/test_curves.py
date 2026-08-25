@@ -88,7 +88,6 @@ class TestResetSolver:
             patch(f"{_MODULE}.BisectionEngine"),
             patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None),
         ):
-
             from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
 
             mc.get_value.side_effect = _cfg_get_value
@@ -120,7 +119,6 @@ class TestResetSolver:
 
     def test_sim_solver_removes_rel_accuracy(self):
         with patch(f"{_MODULE}.config") as mc, patch(f"{_MODULE}.parameter_checks"):
-
             mc.get_value.side_effect = lambda s, k, d=None: (
                 "dynawo_SolverSIM" if k == "solver_lib" else d
             )
@@ -154,7 +152,6 @@ class TestSimulationProperties:
             patch(f"{_MODULE}.BisectionEngine"),
             patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None),
         ):
-
             from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
 
             mc.get_value.side_effect = _cfg_get_value
@@ -339,7 +336,6 @@ class TestObtainSimulatedCurve:
             patch(f"{_MODULE}.BisectionEngine") as be_cls,
             patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None),
         ):
-
             mc.get_value.side_effect = _cfg_get_value
             mc.get_float.side_effect = _cfg_get_float
 
