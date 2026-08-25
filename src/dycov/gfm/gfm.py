@@ -58,7 +58,8 @@ class GridForming:
         extra_envelopes = None
         title = f"{pcs_name}.{bm_name}.{oc_name}"
 
-        # Branch execution based on the presence of hybrid parameters (overdamped vs underdamped limits)
+        # Branch execution based on the presence of hybrid parameters (overdamped vs 
+        # underdamped limits)
         if hybrid_params:
             LOGGER.info(
                 f"Hybrid parameters detected for {pcs_name}. Running Merged Envelope generation."
@@ -112,7 +113,8 @@ class GridForming:
                     "lower_underdamped": low_under,
                 }
 
-            # Filter out raw D and H values from the legend since they are bifurcated in hybrid mode
+            # Filter out raw D and H values from the legend since they are bifurcated in hybrid 
+            # mode
             if params_list:
                 params_list = [p for p in params_list if p not in ["D", "H"]]
 
