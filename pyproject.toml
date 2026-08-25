@@ -69,7 +69,7 @@ test = [
     "pytest-mock",
 ]
 dev = [
-    "ruff",
+    "ruff==0.15.22",
     "sphinx",
 ]
 dynawo-pypowsybl = [
