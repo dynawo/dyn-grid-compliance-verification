@@ -86,9 +86,9 @@ def test_dycov_raises_when_dynawo_not_available(mocker):
         "dycov.launchers.check_dynawo_launcher_availability",
         side_effect=RuntimeError("Dynawo launcher not found"),
     )
-    mocker.patch("dycov.launchers.setup_cli_parsers").return_value.parse_args.return_value = (
-        _fake_args("generate")
-    )
+    mocker.patch(
+        "dycov.launchers.setup_cli_parsers"
+    ).return_value.parse_args.return_value = _fake_args("generate")
 
     from dycov.launchers import dycov
 

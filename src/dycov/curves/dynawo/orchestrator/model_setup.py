@@ -284,13 +284,9 @@ class ModelSetup:
         """
         config_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Model")
         init_loads = self._complete_loads(config_section, bm_name, oc_name, u_dim)
-        connected_to = {
-            load.id: load.terminals[0].connected_equipment for load in self.tso_loads
-        }
+        connected_to = {load.id: load.terminals[0].connected_equipment for load in self.tso_loads}
         pdr_bus_equipment = ("BusPDR", "Measurements")
-        pdr_loads = [
-            load for load in init_loads if connected_to.get(load.id) in pdr_bus_equipment
-        ]
+        pdr_loads = [load for load in init_loads if connected_to.get(load.id) in pdr_bus_equipment]
         grid_loads = [
             load for load in init_loads if connected_to.get(load.id) not in pdr_bus_equipment
         ]
@@ -502,9 +498,7 @@ class ModelSetup:
                 str(config.get_value(config_section, "setpoint_step_value"))
             )
             if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
-                step_value = [
-                    step_value * self._s_nref / gen.s_nom for gen in producer.generators
-                ]
+                step_value = [step_value * self._s_nref / gen.s_nom for gen in producer.generators]
         dycov_logging.get_logger("ModelSetup").debug(f"\tsetpoint_step_value={step_value}")
 
         return {
@@ -591,10 +585,7 @@ class ModelSetup:
         # index of each entry must match its generator so downstream consumers pair
         # them positionally. Filtering the None out would shift the alignment and
         # assign a generator the transformer of another.
-        return [
-            xfmr_map.get(gen.terminals[0].connected_equipment)
-            for gen in producer.generators
-        ]
+        return [xfmr_map.get(gen.terminals[0].connected_equipment) for gen in producer.generators]
 
     def complete_model(
         self,
