@@ -107,7 +107,7 @@ class SCRJump(GFMCalculator):
 
         Returns:
             tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: A tuple with
-                delta_p arrays, min envelope arrays, max envelope arrays, peak powers, 
+                delta_p arrays, min envelope arrays, max envelope arrays, peak powers,
                 and epsilon values.
         """
         # Evaluate variations for D and H across defined minimum and maximum ratios
@@ -694,7 +694,7 @@ class SCRJump(GFMCalculator):
             event_time (float): The event trigger timestamp.
 
         Returns:
-            tuple[np.ndarray, np.ndarray, np.ndarray, float, float]: The aligned base array, 
+            tuple[np.ndarray, np.ndarray, np.ndarray, float, float]: The aligned base array,
             min array,
                 max array, peak power, and epsilon value.
         """

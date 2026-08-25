@@ -104,7 +104,7 @@ class PhaseJump(GFMCalculator):
 
         Returns:
             tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]: A tuple
-                containing the delta_p arrays, min boundary, max boundary, peak powers, 
+                containing the delta_p arrays, min boundary, max boundary, peak powers,
                 and epsilons.
         """
         x_gr = 1 / self._scr
@@ -240,7 +240,7 @@ class PhaseJump(GFMCalculator):
             epsilon_initial_check (float): The calculated damping ratio.
 
         Returns:
-            tuple[np.ndarray, float, float]: The calculated power deviation array, 
+            tuple[np.ndarray, float, float]: The calculated power deviation array,
                 peak power, and epsilon.
         """
         if epsilon_initial_check > self._EPSILON_THRESHOLD:
@@ -260,7 +260,7 @@ class PhaseJump(GFMCalculator):
             time_array (np.ndarray): The relative simulation time vector.
 
         Returns:
-            tuple[np.ndarray, float, float]: The base power response array, peak power, 
+            tuple[np.ndarray, float, float]: The base power response array, peak power,
                 and epsilon.
         """
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
@@ -293,7 +293,7 @@ class PhaseJump(GFMCalculator):
             event_time (float): The event trigger timestamp.
 
         Returns:
-            tuple[np.ndarray, float, float]: The aligned power response array, peak power, 
+            tuple[np.ndarray, float, float]: The aligned power response array, peak power,
                 and epsilon.
         """
         delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
@@ -353,7 +353,7 @@ class PhaseJump(GFMCalculator):
             time_array (np.ndarray): The relative simulation time vector.
 
         Returns:
-            tuple[np.ndarray, float, float]: The baseline power response array, peak power, 
+            tuple[np.ndarray, float, float]: The baseline power response array, peak power,
                 and epsilon.
         """
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
@@ -380,7 +380,7 @@ class PhaseJump(GFMCalculator):
             event_time (float): The event timestamp.
 
         Returns:
-            tuple[np.ndarray, float, float]: The aligned power response array, peak power, 
+            tuple[np.ndarray, float, float]: The aligned power response array, peak power,
                 and epsilon.
         """
         delta_p1, p_peak, epsilon = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)

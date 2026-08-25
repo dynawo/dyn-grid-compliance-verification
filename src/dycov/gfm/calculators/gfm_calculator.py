@@ -183,7 +183,7 @@ class GFMCalculator:
             tunnel (np.ndarray): The computed dynamic tunnel array.
 
         Returns:
-            tuple[np.ndarray, np.ndarray]: A tuple containing the unlimited lower and upper 
+            tuple[np.ndarray, np.ndarray]: A tuple containing the unlimited lower and upper
             envelopes.
         """
         lower_env = np.minimum.reduce(list_of_arrays) - tunnel
@@ -214,7 +214,7 @@ class GFMCalculator:
             use_opposite_signs (bool): Flag indicating if divergent boundary bounding applies.
 
         Returns:
-            tuple[np.ndarray, np.ndarray]: The finalized, hardware-limited lower and upper 
+            tuple[np.ndarray, np.ndarray]: The finalized, hardware-limited lower and upper
             envelopes.
         """
         limit_max = self._pmax_mois_tunnel
