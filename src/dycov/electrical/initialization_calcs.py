@@ -138,9 +138,7 @@ def init_calcs(
         # terminal 1 side. When the known bus faces terminal 2, the pi must be
         # solved as seen from side 2, i.e. with its shunts swapped.
         if ppm_xfmr.terminals[0].connected_equipment in int_id:
-            v_int, _, s_int = _calc_pimodel(
-                xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int
-            )
+            v_int, _, s_int = _calc_pimodel(xfmr.y_tr, xfmr.y_sh1, xfmr.y_sh2, v_int, None, s_int)
             ppm_xfmr.terminals[0].u0 = abs(v_int_)
             ppm_xfmr.terminals[0].u_phase0 = cmath.phase(v_int_)
             ppm_xfmr.terminals[0].p0 = s_int_.real
@@ -150,9 +148,7 @@ def init_calcs(
             ppm_xfmr.terminals[1].p0 = -s_int.real
             ppm_xfmr.terminals[1].q0 = -s_int.imag
         else:
-            v_int, _, s_int = _calc_pimodel(
-                xfmr.y_tr, xfmr.y_sh2, xfmr.y_sh1, v_int, None, s_int
-            )
+            v_int, _, s_int = _calc_pimodel(xfmr.y_tr, xfmr.y_sh2, xfmr.y_sh1, v_int, None, s_int)
             ppm_xfmr.terminals[1].u0 = abs(v_int_)
             ppm_xfmr.terminals[1].u_phase0 = cmath.phase(v_int_)
             ppm_xfmr.terminals[1].p0 = s_int_.real
