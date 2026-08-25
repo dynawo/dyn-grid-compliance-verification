@@ -41,20 +41,29 @@ python tools/dynawo_inputs/generate_inputs.py --excel input.xlsx --outdir DIR
   (required).
 
 The command also prints a **submodel report**: the resolved Zone3/Zone1 `lib` +
-prefix and which control submodels (`REPC`, `REEC`, `REGC`, `WTGT`, `WTGP`,
-`WTGA`, `WTGQ`) are present or missing.
+prefix and, for every block listed in `Général`, whether its parameter sheet
+contributed a selected variant (present/missing).
 
 ## Expected Excel structure
 
-The workbook is the single source of truth. The tool reads:
+The workbook is the single source of truth — the tool carries **no knowledge of
+the model family** (which blocks exist, which zones they belong to, or how the
+`Model Map` key is formed). It reads:
 
-- **`Général`** — the block variant selection (`Type de bloc | Choix`), the same
-  table `dynawo_par` uses.
-- **`Model Map`** — a table mapping the variant combination to the Dynawo model:
-  `Key | Zone3_lib | Zone3_prefix | Zone1_lib | Zone1_prefix`, where `Key` is
-  `REGC|REEC|WTGT|WTGP|WTGA|WTGQ`. This makes model resolution
-  **install-independent** (RTE decision Q1, path *b*): the tool reads the `lib`s
-  from the sheet rather than from a Dynawo installation.
+- **`Général`** — the block variant selection (`Type de bloc | Choix | Zone`).
+  `Zone` declares, per block, which zone(s) the block's parameters go to
+  (`;`-separated, e.g. `Zone1;Zone3`; the plant controller declares `Zone3`
+  only). Next to it, a horizontal derived table computed by Excel holds the
+  `Model Map` lookup key and the resolved libs; the tool reads the **key cell**
+  (located as the column left of the `Zone3 lib` header) verbatim — it never
+  reconstructs the key. A workbook saved without cached formula values (by a
+  non-Excel writer) is rejected with a message asking to re-save it in Excel.
+- **`Model Map`** — a table mapping the key to the Dynawo model:
+  `Key | Zone3_lib | Zone3_prefix | Zone1_lib | Zone1_prefix` (the key column is
+  located as the column left of `Zone3_lib`, so its header name is free). This
+  makes model resolution **install-independent** (RTE decision Q1, path *b*):
+  the tool reads the `lib`s from the sheet rather than from a Dynawo
+  installation.
 - **`Zone1a`** — the generator, its internal `LvTr` (`Z_cc_LvTr`,
   `R_cc_LvTr / X_cc_LvTr`) and its external step-up transformer (`Z_cc_TG`,
   `r_TG`), plus `ConverterLVControl`, `Un1`, `Un2`, `SnZone1`, …; name in col A,
@@ -75,7 +84,11 @@ The workbook is the single source of truth. The tool reads:
   each separated by a blank line.
 - **PAR** — written directly from the Excel (no Dynawo install read): control
   parameters (prefixed), the converter, and the network elements with their
-  per-unit values on `SnRef = 100 MVA` (see design §9). Per Zone1 unit it emits
+  per-unit values on `SnRef = 100 MVA` (see design §9). Each zone's PAR carries
+  the control parameters of the blocks that declare that zone in `Général`'s
+  `Zone` column, **in the workbook's own order** (sheet → table → parameter), so
+  the output is reproducible and diffs stay stable; a run where no block
+  declares `Zone1` is refused rather than emitting an incomplete `Zone1`. Per Zone1 unit it emits
   **two** transformers from separate `Zone1a` fields — the converter's internal
   `LvTr` (`RLvTrPu`/`XLvTrPu` from `Z_cc_LvTr`) and the external `StepUp_Xfmr`
   (`TransformerFixedRatio` from `Z_cc_TG`/`r_TG`). `ConverterLVControl` sets the

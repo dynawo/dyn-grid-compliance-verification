@@ -54,11 +54,11 @@ python generate_inputs.py --excel model.xlsx --outdir <path>
 
 | Sheet | Role |
 | :--- | :--- |
-| `Général` | Block selection (`REPC/REEC/REGC/WTGT/WTGP/WTGA/WTGQ` → variant or `Aucun`) and the `Model Map` lookup cells. |
+| `Général` | Block selection (`Type de bloc \| Choix \| Zone`: block → variant or `Aucun`, plus the `;`-separated zones the block's parameters go to) and the Excel-computed `Model Map` lookup key (derived table; the tool reads the cached key cell verbatim). |
 | `Model Map` | Variant tuple → Dynawo `lib` + prefix, per zone (§6). |
 | `Zone1<x>` (`Zone1a`, …) | One sheet per generator. Zone-1 data: `SnZone1`, `N_Zone1`, `ConverterLVControl`, `Un1`, `Un2`, internal `LvTr` (`Z_cc_LvTr`, `R_cc_LvTr / X_cc_LvTr`), external step-up (`r_TG`, `Z_cc_TG`, `R_cc_TG / X_cc_TG`), `Pmax_injection_z1`, `Pmax_soutirage_z1`, `Qmax_z1`, `Qmin_z1`, `P_share`, `Q_share`. |
 | `Zone3` | Exactly one. `Topologie`, `SnZone3`, `Un_PDR`, `Pmax_PDR`, `Qmax_PDR`, `Qmin_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`), aux load (`+Aux`), collector (`+i`). |
-| `REPC` / `REEC` / `REGC` / `Mechanical Part` | Control-block parameters, one column group per variant (`Parameter | Type | Value`, optional `Base unit` / `Comment`). |
+| `REPC` / `REEC` / `REGC` / `Mechanical Part` | Control-block parameters, one column group per variant (header triplet `Paramètres \| Types \| Valeurs` — the template's French or the English spelling, accent-insensitive; optional `Bases…`/`Base unit`, `Commentaires`/`Comment` columns). |
 | `Signaux zone 1/3`, separator sheets | Ignored. |
 
 **Layout.** The two zone sheets use different column layouts, so the parser locates the header row
@@ -85,9 +85,12 @@ prefix; parameter type/value come from the Excel (§6):
   blocks and the `connect` lines. The converter terminal is `<prefix>terminal`. Zone3 uses the
   **plant** lib, Zone1 its **turbine** sibling (§6).
 - **Producer.par** — one `set` per id: the converter parameters from the Excel (name = prefix +
-  Excel bare name) + network element parameters (computed, §7). Empty Excel cells are omitted
-  (Dynawo defaults). Initialization / power-flow parameters (`i0Pu`, `u0Pu`, `PInj0Pu`, …) are not
-  in the Excel and are injected by DyCoV at simulation setup.
+  Excel bare name) + network element parameters (computed, §7). Each zone's PAR carries the blocks
+  that declare that zone in `Général`'s `Zone` column, in the **workbook's own order** (sheet →
+  table → parameter) — the Excel alone determines the PAR order, so diffs stay stable; a selection
+  where no block declares `Zone1` is refused (never a silently incomplete `Zone1`). Empty Excel
+  cells are omitted (Dynawo defaults). Initialization / power-flow parameters (`i0Pu`, `u0Pu`,
+  `PInj0Pu`, …) are not in the Excel and are injected by DyCoV at simulation setup.
 
 Each `<par>` carries the Excel-derived origin comments of the `dynawo_par` format
 ([design §8.3](Dynawo_par_generation_from_excel_design.md)); files are laid out (blank-line groups)
@@ -119,10 +122,16 @@ generate_inputs.py                       CLI + orchestration
 
 ### 6. Model resolution and parameters
 
-**The model is resolved in the Excel.** A `Model Map` sheet maps the variant selection to the exact
-Dynawo `lib` and its **prefix**, per zone (Zone3 plant + Zone1 turbine); the tool reads those cells,
-so **no Dynawo install is needed at generation time**. AIA builds/maintains the `Model Map` from the
-Dynawo `ddb` offline, in sync with the simulation Dynawo version.
+**The model is resolved in the Excel.** `Général` carries a derived table where Excel itself
+computes the `Model Map` lookup key from the block selection; the tool reads that cached cell
+verbatim (locating it as the column left of the `Zone3 lib` header) and **never reconstructs it**,
+so it has no knowledge of which blocks form the key. A `Model Map` sheet then maps the key to the
+exact Dynawo `lib` and its **prefix**, per zone (Zone3 plant + Zone1 turbine); its key column is
+located the same way, so the key header's name is free. The tool reads those cells, so **no Dynawo
+install is needed at generation time**. AIA builds/maintains the `Model Map` from the Dynawo `ddb`
+offline, in sync with the simulation Dynawo version. A workbook whose key cell is empty (saved by a
+non-Excel writer, hence without cached formula values) is rejected with a message asking to open
+and save it in Excel.
 
 **Parameter names carry the model prefix.** The Excel holds bare names (`Kqp`); each WECC model is a
 compiled composite whose descriptor flattens every parameter to `<prefix>_<Param>`
@@ -131,9 +140,9 @@ name, so the tool **prepends the resolved prefix** to every converter parameter 
 (`photovoltaics_Kqp`) and the DYD (`photovoltaics_terminal`). Parameter **type and value** are the
 only data taken verbatim from the Excel (`type` mapped to the Dynawo convention, `double → DOUBLE`).
 
-**Resolution is unambiguous (injective).** The variant tuple `(REPC, REGC, REEC, WTGT, WTGP, WTGA,
-WTGQ)` determines one model, so no separate model field is needed and technology (PV/BESS/Wind) is
-derived. Observed Zone3 (plant-control) map:
+**Resolution is unambiguous (injective).** The variant selection determines one model, so no
+separate model field is needed and technology (PV/BESS/Wind) is derived from the resolved `lib`.
+Observed Zone3 (plant-control) map (maintained in the Excel, not in the tool):
 
 | Model (Zone3 `lib`) | tech | REGC | REEC | WTGT/WTGP/WTGA/WTGQ |
 | :--- | :-- | :-- | :-- | :-- |
@@ -190,8 +199,9 @@ Other elements: **`Main_Xfmr`** (`TransformerRatioTapChanger` from `Zone3`'s `Z_
 ### 8. Submodel report (no parameter validation)
 
 The tool does not police parameter values. Per run it reports, at the submodel level: the resolved
-model (or "unresolved" if the variant tuple matches none); which control submodels (`REPC`, `REEC`,
-`REGC`, `WTGT/WTGP/WTGA/WTGQ`) are present or missing; and the observed variant→model map.
+model (or "unresolved" if the key matches no `Model Map` row) and, for every block listed in
+`Général` (no fixed family list), whether its parameter sheet contributed a selected variant with
+values (present/missing).
 
 ---
 
