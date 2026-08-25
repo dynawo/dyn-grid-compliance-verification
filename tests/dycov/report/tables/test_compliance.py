@@ -120,9 +120,7 @@ def test_create_map_repeated_non_compliant_time_note_reuses_footnote():
     freq_row = next(row for row in table if row[0] == "Frequency remains within [49, 51] Hz")
     avr_row = next(row for row in table if row[0].startswith("Stator voltage"))
     imax_row = next(row for row in table if row[0].startswith("Reactive inj."))
-    assert freq_row[1].startswith(
-        "\\footnote{If non-compliant, time at which this happens.}"
-    )
+    assert freq_row[1].startswith("\\footnote{If non-compliant, time at which this happens.}")
     assert avr_row[1].startswith("\\footnotemark[\\value{footnote}]")
     assert imax_row[1].startswith("\\footnotemark[\\value{footnote}]")
 
