@@ -117,10 +117,10 @@ def make_xlsx(path: Path, sheets: dict[str, list[list[str | None]]]) -> None:
 
 def _sample_sheets() -> dict[str, list[list[str | None]]]:
     general = [
-        ["Type de bloc", "Choix"],
-        ["REPC", "REPC_A"],
-        ["REEC", "REEC_C"],
-        ["WTGP", "Aucun"],
+        ["Type de bloc", "Choix", "Zone"],
+        ["REPC", "REPC_A", "Zone3"],
+        ["REEC", "REEC_C", "Zone1;Zone3"],
+        ["WTGP", "Aucun", ""],
         [],
         ["Grandeur", "Description", "Valeur", "Unite"],
         ["SnZone1", "converter base", "100", "MVA"],
@@ -163,6 +163,8 @@ def test_full_pipeline(tmp_path: Path) -> None:
 
     # --- configuration -----------------------------------------------------
     assert config.selections == [("REPC", "REPC_A"), ("REEC", "REEC_C"), ("WTGP", "Aucun")]
+    # per-block zone declarations (';'-separated; an empty cell declares no zone)
+    assert config.zones == {"REPC": ["Zone3"], "REEC": ["Zone1", "Zone3"], "WTGP": []}
     assert config.sn_zone1 == "100"
     assert config.n_converters == "4"
     assert config.sn_zone3 == "25"
@@ -205,6 +207,30 @@ def test_full_pipeline(tmp_path: Path) -> None:
     assert z3.read_text(encoding="utf-8") == zone3
 
 
+def test_french_template_headers_are_recognized() -> None:
+    """The RTE template writes the header triplet in French (Paramètres | Types | Valeurs);
+    a 'Paramètres' NOT followed by Types|Valeurs (the zone sheets' electrical tables, which
+    carry Descriptions in between) must not be taken for a variant table."""
+    repc = [
+        ["Contrôleur de parc"],
+        ["REPC_A"],
+        ["Paramètres", "Types", "Valeurs", "Unités", "Bases pour les pu", "Commentaires"],
+        ["Kp", "double", "1.5", "-", "SnZone3", "gain"],
+    ]
+    zone1a = [
+        ["Le schéma de base pour la zone 1 est le suivant :"],
+        ["Paramètres", "Descriptions", "Valeurs", "Unités"],
+        ["SnZone1", "puissance", "90", "MVA"],
+    ]
+    variants = gp.parse_variants({"REPC": repc, "Zone1a": zone1a})
+    assert set(variants) == {"REPC_A"}
+    assert variants["REPC_A"].table == "Contrôleur de parc"
+    param = variants["REPC_A"].parameters[0]
+    assert (param.name, param.type, param.value) == ("Kp", "double", "1.5")
+    # the French extra columns feed the same comment merge ('base'/'comment' prefixes)
+    assert (param.base_unit, param.comment) == ("SnZone3", "gain")
+
+
 def test_missing_variant_raises(tmp_path: Path) -> None:
     sheets = _sample_sheets()
     sheets["Général"][1] = ["REPC", "REPC_Z"]  # variant that does not exist
@@ -216,7 +242,10 @@ def test_missing_variant_raises(tmp_path: Path) -> None:
     try:
         gp.build_zone3(config, variants)
     except ValueError as exc:
-        assert "REPC_Z" in str(exc)
+        # names the missing table (not a sheet), its block, and the tables that were found
+        assert "'REPC_Z'" in str(exc) and "no parameter table" in str(exc)
+        assert "typically in the 'REPC' sheet" in str(exc)
+        assert "REEC_C" in str(exc)  # the parsed variant tables are listed
     else:  # pragma: no cover
         raise AssertionError("expected a ValueError for the missing variant")
 
@@ -317,6 +346,7 @@ def test_output_follows_workbook_order(tmp_path: Path) -> None:
     workbook = gp.read_workbook(xlsx)
     variants = gp.parse_variants(workbook)
     config = gp.parse_config(workbook)
+    assert config.zones == {}  # no 'Zone' column in this workbook
 
     for text in (gp.build_zone1(config, variants), gp.build_zone3(config, variants)):
         # Sheet1/V1 (P1) must precede Sheet2/V2 (P2), despite Général listing V2 first.
@@ -328,6 +358,7 @@ if __name__ == "__main__":
 
     with tempfile.TemporaryDirectory() as d:
         test_full_pipeline(Path(d))
+    test_french_template_headers_are_recognized()
     with tempfile.TemporaryDirectory() as d:
         test_missing_variant_raises(Path(d))
     with tempfile.TemporaryDirectory() as d:
