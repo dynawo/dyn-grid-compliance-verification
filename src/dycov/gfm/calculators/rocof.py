@@ -132,7 +132,7 @@ class RoCoF(GFMCalculator):
             event_time (float): The timestamp of the event.
 
         Returns:
-            tuple[np.ndarray, float, float]: The calculated delta_p array, peak power, 
+            tuple[np.ndarray, float, float]: The calculated delta_p array, peak power,
             and response time.
         """
         u_prod = self._initial_voltage * self._grid_voltage
@@ -169,7 +169,7 @@ class RoCoF(GFMCalculator):
             time_array (np.ndarray): The relative simulation time vector.
 
         Returns:
-            tuple[np.ndarray, float, float]: The power response array, peak power, 
+            tuple[np.ndarray, float, float]: The power response array, peak power,
             and response time.
         """
         u_prod = self._initial_voltage * self._grid_voltage
@@ -224,7 +224,7 @@ class RoCoF(GFMCalculator):
             time_array (np.ndarray): The relative simulation time vector.
 
         Returns:
-            tuple[np.ndarray, float, float]: The power response array, peak power, 
+            tuple[np.ndarray, float, float]: The power response array, peak power,
             and response time.
         """
         u_prod = self._initial_voltage * self._grid_voltage
