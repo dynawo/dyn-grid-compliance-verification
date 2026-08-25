@@ -872,9 +872,7 @@ class TestGetLineBranches:
     @patch(f"{_MS}.config")
     def test_zcc_branch_derives_impedance_from_scc(self, mock_config, mock_gcn, mock_gv):
         mock_config.has_option.side_effect = lambda s, k: k == "Zcc"
-        mock_config.get_float.side_effect = lambda s, k, d=None: (
-            2.0 if k == "Ztanphi" else d
-        )
+        mock_config.get_float.side_effect = lambda s, k, d=None: 2.0 if k == "Ztanphi" else d
         mock_gv.get_scc.return_value = 1000.0
         mock_gv.get_generator_u_dim.return_value = 20.0
         setup = _make_setup()

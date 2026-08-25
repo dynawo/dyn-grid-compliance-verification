@@ -36,6 +36,7 @@ def _get_resources_path():
 # Helpers
 # =========================
 
+
 def test_check_compliance_updates_results_with_scaled_value():
     results = {"compliance": True}
 
@@ -109,6 +110,7 @@ def test_timeline_with_disconnection_events():
 # =========================
 # PerformanceValidator
 # =========================
+
 
 def _make_validator(validations=None):
     return PerformanceValidator(
@@ -187,6 +189,7 @@ def test_calculate_executes():
     validator._get_calculated_curves = Mock(return_value={})
 
     import dycov.validation.common as common
+
     common.get_txu_relative = Mock(return_value=1.0)
     common.get_txp = Mock(return_value=1.0)
     common.get_txu = Mock(return_value=1.0)
@@ -205,6 +208,7 @@ def test_calculate_executes():
 # =========================
 # Disconnection helpers (extra branches)
 # =========================
+
 
 def test_iec_protection_disconnection_returns_true():
     event = etree.Element("event")
@@ -234,6 +238,7 @@ def test_timeline_load_disconnection_collects_model_names():
 # _check_theta_stability
 # =========================
 
+
 def test_check_theta_stability_stable():
     validator = _make_validator()
     validator._get_calculated_curves = Mock(
@@ -241,12 +246,11 @@ def test_check_theta_stability_stable():
     )
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
-    with patch("dycov.validation.common.is_stable", return_value=(True, 1)), patch(
-        "dycov.validation.common.theta_pi", return_value=True
+    with (
+        patch("dycov.validation.common.is_stable", return_value=(True, 1)),
+        patch("dycov.validation.common.theta_pi", return_value=True),
     ):
-        stable_theta, first_pos, pass_pi = validator._check_theta_stability(
-            1.0
-        )
+        stable_theta, first_pos, pass_pi = validator._check_theta_stability(1.0)
 
     assert stable_theta is True
     assert pass_pi is True
@@ -259,12 +263,11 @@ def test_check_theta_stability_unstable():
     )
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
-    with patch("dycov.validation.common.is_stable", return_value=(False, 0)), patch(
-        "dycov.validation.common.theta_pi", return_value=False
+    with (
+        patch("dycov.validation.common.is_stable", return_value=(False, 0)),
+        patch("dycov.validation.common.theta_pi", return_value=False),
     ):
-        stable_theta, first_pos, pass_pi = validator._check_theta_stability(
-            1.0
-        )
+        stable_theta, first_pos, pass_pi = validator._check_theta_stability(1.0)
 
     assert stable_theta is False
     assert pass_pi is False
@@ -273,6 +276,7 @@ def test_check_theta_stability_unstable():
 # =========================
 # __calculate_avr / __calculate_frequency
 # =========================
+
 
 def test_calculate_avr_populates_compliance_values():
     validator = _make_validator(validations=["AVR_5"])
@@ -292,9 +296,7 @@ def test_calculate_avr_populates_compliance_values():
 
 def test_calculate_frequency_populates_compliance_values():
     validator = _make_validator(validations=["freq_1"])
-    validator._get_calculated_curves = Mock(
-        return_value={"g1_GEN_NetworkFrequencyPu": [1.0]}
-    )
+    validator._get_calculated_curves = Mock(return_value={"g1_GEN_NetworkFrequencyPu": [1.0]})
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
     compliance_values = {}
@@ -309,6 +311,7 @@ def test_calculate_frequency_populates_compliance_values():
 # __calculate_others
 # =========================
 
+
 def test_calculate_others_static_diff_and_invalid_test():
     validator = _make_validator(validations=["static_diff"])
     validator._get_calculated_curves = Mock(
@@ -317,8 +320,9 @@ def test_calculate_others_static_diff_and_invalid_test():
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
     compliance_values = {}
-    with patch("dycov.validation.common.is_invalid_test", return_value=False), patch(
-        "dycov.validation.common.get_static_diff", return_value=0.05
+    with (
+        patch("dycov.validation.common.is_invalid_test", return_value=False),
+        patch("dycov.validation.common.get_static_diff", return_value=0.05),
     ):
         validator._PerformanceValidator__calculate_others(compliance_values, 0.0)
 
@@ -347,8 +351,9 @@ def test_calculate_others_imax_reac():
     validator._get_calculated_curve_by_name = Mock(side_effect=_curve)
 
     compliance_values = {}
-    with patch("dycov.validation.common.is_invalid_test", return_value=False), patch(
-        "dycov.validation.common.check_generator_imax", return_value=(0.5, False)
+    with (
+        patch("dycov.validation.common.is_invalid_test", return_value=False),
+        patch("dycov.validation.common.check_generator_imax", return_value=(0.5, False)),
     ):
         validator._PerformanceValidator__calculate_others(compliance_values, 0.0)
 
@@ -359,6 +364,7 @@ def test_calculate_others_imax_reac():
 # =========================
 # __check_composed_times
 # =========================
+
 
 def test_check_composed_times_5p_85u():
     validator = _make_validator(validations=["time_5P_85U"])
@@ -390,6 +396,7 @@ def test_check_composed_times_10pfloor_clear():
 # =========================
 # __check_disconnections
 # =========================
+
 
 def _make_disconnection_model():
     gen_intline = Mock()
@@ -440,6 +447,7 @@ def test_check_disconnections_skipped_without_dynamic_model():
 # __check_others (remaining branches)
 # =========================
 
+
 def test_check_others_stabilized_sm():
     validator = _make_validator(validations=["stabilized"])
     results = {"compliance": True}
@@ -484,6 +492,7 @@ def test_check_others_imax_avr_freq():
 # validate (end-to-end orchestration)
 # =========================
 
+
 def _setup_validate_validator(sim_type):
     validator = _make_validator(validations=[])
     validator._time_cct = None
@@ -499,8 +508,9 @@ def test_validate_ppm():
     validator = _setup_validate_validator(ELECTRIC_PERFORMANCE_PPM)
     event_params = {"start_time": 0.5, "duration_time": 0.1}
 
-    with patch("dycov.validation.common.is_stable", return_value=(True, 0)), patch(
-        "dycov.validation.common.is_invalid_test", return_value=False
+    with (
+        patch("dycov.validation.common.is_stable", return_value=(True, 0)),
+        patch("dycov.validation.common.is_invalid_test", return_value=False),
     ):
         results = validator.validate(
             "oc", Path("/tmp"), "outputs", event_params, has_reference=False
@@ -515,14 +525,14 @@ def test_validate_ppm():
 
 def test_validate_sm_includes_theta_and_reference():
     validator = _setup_validate_validator(ELECTRIC_PERFORMANCE_SM)
-    validator._get_reference_curves = Mock(
-        return_value=pd.DataFrame({"time": [0, 1, 2]})
-    )
+    validator._get_reference_curves = Mock(return_value=pd.DataFrame({"time": [0, 1, 2]}))
     event_params = {"start_time": 0.5, "duration_time": 0.1}
 
-    with patch("dycov.validation.common.is_stable", return_value=(True, 0)), patch(
-        "dycov.validation.common.theta_pi", return_value=True
-    ), patch("dycov.validation.common.is_invalid_test", return_value=False):
+    with (
+        patch("dycov.validation.common.is_stable", return_value=(True, 0)),
+        patch("dycov.validation.common.theta_pi", return_value=True),
+        patch("dycov.validation.common.is_invalid_test", return_value=False),
+    ):
         results = validator.validate(
             "oc", Path("/tmp"), "outputs", event_params, has_reference=True
         )
@@ -538,6 +548,7 @@ def test_run_common_tests_executes():
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
+
     common.is_stable = Mock(return_value=(True, 1))
     common.theta_pi = Mock(return_value=True)
 
@@ -555,11 +566,10 @@ def test_check_theta_stability_executes():
     validator = _make_validator()
 
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
-    validator._get_calculated_curves = Mock(
-        return_value={"gen1_InternalAngle": [0, 1, 2]}
-    )
+    validator._get_calculated_curves = Mock(return_value={"gen1_InternalAngle": [0, 1, 2]})
 
     import dycov.validation.common as common
+
     common.is_stable = Mock(return_value=(True, 1))
     common.theta_pi = Mock(return_value=True)
 
@@ -589,6 +599,7 @@ def test_calculate_times_executes():
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
+
     common.get_txu_relative = Mock(return_value=1.0)
 
     compliance_values = {}
