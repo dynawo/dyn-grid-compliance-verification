@@ -52,8 +52,38 @@ def test_trafos():
     assert pytest_wrapped_e.type is ValueError
     assert (
         pytest_wrapped_e.value.args[0]
-        == "The admittance of the transformer Xfmr must be greater than zero."
+        == "The reactance of the transformer Xfmr must be greater than zero."
     )
+
+
+def test_trafo_with_a_non_zero_alpha():
+    xfmr = XfmrParams(
+        id="Xfmr",
+        lib=None,
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=1.0,
+        par_id="",
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        parameter_checks.check_trafo(xfmr)
+    assert pytest_wrapped_e.type is ValueError
+    assert (
+        pytest_wrapped_e.value.args[0]
+        == "The alphaTfo parameter of the transformer Xfmr must be equal to zero."
+    )
+
+
+def test_check_trafo_none():
+    """Test check_trafo with None transformer."""
+    parameter_checks.check_trafo(None)
 
 
 def test_auxiliary_loads():
