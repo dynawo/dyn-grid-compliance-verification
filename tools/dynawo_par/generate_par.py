@@ -96,6 +96,9 @@ class Config:
 
     # Ordered list of (block type, chosen variant), e.g. ("REEC", "REEC_A").
     selections: list[tuple[str, str]] = field(default_factory=list)
+    # Zones each block declares, e.g. {"REEC": ["Zone1", "Zone3"]}; empty when
+    # the sheet has no ``Zone`` column.
+    zones: dict[str, list[str]] = field(default_factory=dict)
     sn_zone1: str | None = None
     sn_zone3: str | None = None
     n_converters: str | None = None
@@ -283,22 +286,42 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
     return variants
 
 
+# A variant column group is recognized by its header triplet, in the template's French
+# spelling or the English one (accent-insensitive): Paramètres | Types | Valeurs.
+_PARAM_HEADERS = {"parameter", "parametre", "parametres"}
+_TYPE_HEADERS = {"type", "types"}
+_VALUE_HEADERS = {"value", "values", "valeur", "valeurs"}
+
+
+def _heads_column_group(row: list, col: int) -> bool:
+    """True when *col* starts a ``Parameter | Type | Value`` header triplet in *row*.
+
+    Requiring the full triplet keeps non-table uses of the word out (e.g. the zone
+    sheets' ``Paramètres | Descriptions | Valeurs`` electrical tables).
+    """
+    def _norm(c: int) -> str:
+        value = row[c] if 0 <= c < len(row) else None
+        return _strip_accents(value) if isinstance(value, str) else ""
+
+    return (
+        _norm(col) in _PARAM_HEADERS
+        and _norm(col + 1) in _TYPE_HEADERS
+        and _norm(col + 2) in _VALUE_HEADERS
+    )
+
+
 def _find_header_row(grid: Grid) -> int | None:
-    """Return the first row index that contains a ``Parameter`` header cell."""
+    """Return the first row index that starts a variant column group."""
     for row_idx, row in enumerate(grid):
-        for value in row:
-            if isinstance(value, str) and value.strip().lower() == "parameter":
-                return row_idx
+        if any(_heads_column_group(row, col) for col in range(len(row))):
+            return row_idx
     return None
 
 
 def _find_column_groups(grid: Grid, header_row: int) -> list[int]:
-    """Return the column index of every ``Parameter`` cell in the header row."""
-    return [
-        col
-        for col, value in enumerate(grid[header_row])
-        if isinstance(value, str) and value.strip().lower() == "parameter"
-    ]
+    """Return the column index of every column group in the header row."""
+    row = grid[header_row]
+    return [col for col in range(len(row)) if _heads_column_group(row, col)]
 
 
 def _find_extra_columns(grid: Grid, header_row: int, prefix: str) -> list[int]:
@@ -397,33 +420,47 @@ def parse_config(workbook: dict[str, Grid]) -> Config:
     for sheet_name, grid in workbook.items():
         if _strip_accents(sheet_name).startswith(_CONFIG_SHEET):
             config = Config()
-            config.selections = _parse_block_selection(grid)
+            config.selections, config.zones = _parse_block_selection(grid)
             _parse_globals(grid, config)
             return config
     raise ValueError("Configuration sheet 'Général' not found in the workbook.")
 
 
-def _parse_block_selection(grid: Grid) -> list[tuple[str, str]]:
-    """Read the ``Type de bloc | Choix`` table into ordered (block, choice)."""
+def _header_column(row: list, name: str) -> int | None:
+    """Column of the header cell matching *name* (accent/case-insensitive)."""
+    return next(
+        (c for c, v in enumerate(row) if isinstance(v, str) and _strip_accents(v) == name),
+        None,
+    )
+
+
+def _parse_block_selection(
+    grid: Grid,
+) -> tuple[list[tuple[str, str]], dict[str, list[str]]]:
+    """Read the ``Type de bloc | Choix`` table into ordered (block, choice).
+
+    Also returns the per-block zone declarations from the optional ``Zone``
+    column (``;``-separated, e.g. ``"Zone1;Zone3"``); when the column is
+    absent the zones mapping is empty.
+    """
     for row_idx, row in enumerate(grid):
         normalized = [_strip_accents(c) for c in row if isinstance(c, str)]
         if "type de bloc" in normalized and "choix" in normalized:
-            block_col = next(
-                c for c, v in enumerate(row)
-                if isinstance(v, str) and _strip_accents(v) == "type de bloc"
-            )
-            choice_col = next(
-                c for c, v in enumerate(row)
-                if isinstance(v, str) and _strip_accents(v) == "choix"
-            )
+            block_col = _header_column(row, "type de bloc")
+            choice_col = _header_column(row, "choix")
+            zone_col = _header_column(row, "zone")
             selections: list[tuple[str, str]] = []
+            zones: dict[str, list[str]] = {}
             for r in range(row_idx + 1, len(grid)):
                 block = _cell(grid, r, block_col)
                 if not block:
                     break
                 choice = _cell(grid, r, choice_col) or ""
                 selections.append((block, choice))
-            return selections
+                if zone_col is not None:
+                    declared = _cell(grid, r, zone_col) or ""
+                    zones[block] = [z.strip() for z in declared.split(";") if z.strip()]
+            return selections, zones
     raise ValueError(
         "Block-selection table ('Type de bloc' | 'Choix') not found in 'Général'."
     )
@@ -513,10 +550,11 @@ def _selected_variants(
         if _strip_accents(choice) in _NO_BLOCK:
             continue
         if choice not in variants:
+            found = ", ".join(sorted(variants)) or "(none — the parameter sheets look unfilled)"
             raise ValueError(
-                f"Selected variant '{choice}' (block '{block}') is not present "
-                f"in any parameter sheet. Available variants: "
-                f"{', '.join(sorted(variants)) or '(none)'}."
+                f"Selected variant '{choice}' (block '{block}') has no parameter table in the "
+                f"workbook: expected '{choice}' right above a 'Parameter' column header, "
+                f"typically in the '{block}' sheet. Variant tables found: {found}."
             )
         block_of[choice] = block
     return [
