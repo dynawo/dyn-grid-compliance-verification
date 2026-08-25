@@ -223,7 +223,6 @@ def test_resolve_value_definition_errors_point_to_the_configuration_option(monke
         assert _OPTION_LOCATION in str(error.value)
 
 
-
 def test_apply_control_mode_with_valid_parameters(monkeypatch):
     class DummyDynawoTranslator:
         def get_generator_parameters(self, generator, control_mode, zone):

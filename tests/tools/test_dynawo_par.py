@@ -47,9 +47,7 @@ def _sheet_xml(rows: list[list[str | None]]) -> str:
             if value is None or value == "":
                 continue
             ref = f"{_col_letter(c)}{r}"
-            out.append(
-                f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>'
-            )
+            out.append(f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>')
         out.append("</row>")
     out.append("</sheetData></worksheet>")
     return "".join(out)
@@ -142,7 +140,7 @@ def _sample_sheets() -> dict[str, list[list[str | None]]]:
         ["REEC_A", None, None, "REEC_C", None, None, None],
         ["Parameter", "Type", "Value", "Parameter", "Type", "Value", "Base unit"],
         ["VDipPu", "double", "0.9", "VDipPu", "double", "0.85", "Un"],
-        ["PFlag", "boolean", "true", None, "boolean", None, None],   # A only
+        ["PFlag", "boolean", "true", None, "boolean", None, None],  # A only
         [None, "double", None, "tBattery", "double", "0.01", None],  # C only
     ]
     return {"Général": general, "REPC": repc, "REEC": reec}
@@ -171,8 +169,8 @@ def test_full_pipeline(tmp_path: Path) -> None:
     assert set(variants) == {"REPC_A", "REEC_A", "REEC_C"}
     reec_a = [p.name for p in variants["REEC_A"].parameters]
     reec_c = [p.name for p in variants["REEC_C"].parameters]
-    assert reec_a == ["VDipPu", "PFlag"]          # C-only row skipped
-    assert reec_c == ["VDipPu", "tBattery"]       # A-only row skipped
+    assert reec_a == ["VDipPu", "PFlag"]  # C-only row skipped
+    assert reec_c == ["VDipPu", "tBattery"]  # A-only row skipped
     assert variants["REEC_A"].table == "Electrical Controller"
 
     # base unit shared down the column for both variants
@@ -183,7 +181,7 @@ def test_full_pipeline(tmp_path: Path) -> None:
     # --- Zone 1: excludes REPC, computes nothing for SnZone1 header --------
     zone1 = gp.build_zone1(config, variants)
     assert "SnZone1 = 100" in zone1
-    assert "REPC_A" not in zone1            # REPC excluded from Zone 1
+    assert "REPC_A" not in zone1  # REPC excluded from Zone 1
     assert "REEC_C" in zone1
 
     # --- Zone 3: includes REPC, SnZone3 = 25 * 4 = 100 ---------------------
@@ -194,10 +192,10 @@ def test_full_pipeline(tmp_path: Path) -> None:
     # --- type mapping, value filtering, comment / base-unit merge ----------
     assert '<par type="BOOL" name="VCompFlag" value="true"/>' in zone3
     assert '<par type="DOUBLE" name="Kp" value="1.5"/>' in zone3
-    assert "<!-- reactive droop flag -->" in zone3          # comment only
+    assert "<!-- reactive droop flag -->" in zone3  # comment only
     assert "<!-- reactive power limit | Base unit: SnZone3 -->" in zone3  # merged
     assert "QMaxPu" in zone3
-    assert "Empty" not in zone3             # parameter without value is dropped
+    assert "Empty" not in zone3  # parameter without value is dropped
 
     # --- end-to-end file writing ------------------------------------------
     z1, z3 = gp.generate(xlsx, tmp_path / "out")
@@ -243,16 +241,20 @@ def test_real_example_import(tmp_path: Path) -> None:
 
     # Configuration: full wind-turbine case.
     assert config.selections == [
-        ("REPC", "REPC_A"), ("REEC", "REEC_A"), ("REGC", "REGC_A"),
-        ("WTGT", "WTGT_B"), ("WTGP", "WTGP_A"), ("WTGA", "WTGA_A"), ("WTGQ", "WTGQ_A"),
+        ("REPC", "REPC_A"),
+        ("REEC", "REEC_A"),
+        ("REGC", "REGC_A"),
+        ("WTGT", "WTGT_B"),
+        ("WTGP", "WTGP_A"),
+        ("WTGA", "WTGA_A"),
+        ("WTGQ", "WTGQ_A"),
     ]
     assert config.sn_zone1 == "4"
     assert config.n_converters == "20"
     assert config.sn_zone3 == "4.5"
 
     # Every selected variant was parsed with its full parameter set.
-    valued = {name: sum(p.value is not None for p in v.parameters)
-              for name, v in variants.items()}
+    valued = {name: sum(p.value is not None for p in v.parameters) for name, v in variants.items()}
     assert valued["REPC_A"] == 27
     assert valued["REEC_A"] == 50
     assert valued["REGC_A"] == 9
@@ -285,12 +287,17 @@ def test_real_example_import(tmp_path: Path) -> None:
     names_a = [p.name for p in variants["REEC_A"].parameters]
     names_c = [p.name for p in variants["REEC_C"].parameters]
     assert [n for n in names_a if n not in names_c] == [
-        "PFlag", "VRef1Pu", "IqFrzPu", "tHoldIq", "tHoldIpMax",
+        "PFlag",
+        "VRef1Pu",
+        "IqFrzPu",
+        "tHoldIq",
+        "tHoldIpMax",
     ]
     assert names_c[-4:] == ["tBattery", "SOC0Pu", "SOCMaxPu", "SOCMinPu"]
     # Order is preserved across the gaps (no reordering, no early stop).
-    assert names_c == sorted(names_c, key=lambda n: names_a.index(n)
-                             if n in names_a else len(names_a))
+    assert names_c == sorted(
+        names_c, key=lambda n: names_a.index(n) if n in names_a else len(names_a)
+    )
 
 
 def test_output_follows_workbook_order(tmp_path: Path) -> None:
@@ -303,7 +310,7 @@ def test_output_follows_workbook_order(tmp_path: Path) -> None:
     sheets = {
         "Général": [
             ["Type de bloc", "Choix"],
-            ["B2", "V2"],   # selection order is reversed vs. the sheet order
+            ["B2", "V2"],  # selection order is reversed vs. the sheet order
             ["B1", "V1"],
             [],
             ["Grandeur", "Description", "Valeur", "Unite"],

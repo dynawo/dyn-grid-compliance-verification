@@ -113,8 +113,7 @@ def test_create_map_not_applicable_defines_footnote_once():
     ]
     result = create_map(summary_list)
     assert result[0][4] == (
-        "\\textcolor{red}{Not applicable test}"
-        "\\footnote{Not executed: incompatible control mode.}"
+        "\\textcolor{red}{Not applicable test}\\footnote{Not executed: incompatible control mode.}"
     )
 
 
