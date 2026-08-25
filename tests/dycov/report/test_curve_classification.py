@@ -38,17 +38,13 @@ def test_get_equipment_label_unknown():
 
 
 def test_build_curve_label_zone1_bus():
-    label = build_curve_label(
-        "BusPDR_BUS_ActivePower", "calculated", show_equipment=True, zone=1
-    )
+    label = build_curve_label("BusPDR_BUS_ActivePower", "calculated", show_equipment=True, zone=1)
 
     assert label == "Active Power — InternalNode1 calculated"
 
 
 def test_build_curve_label_zone3_bus():
-    label = build_curve_label(
-        "BusPDR_BUS_ActivePower", "reference", show_equipment=True, zone=3
-    )
+    label = build_curve_label("BusPDR_BUS_ActivePower", "reference", show_equipment=True, zone=3)
 
     assert label == "Active Power — PDR Bus reference"
 

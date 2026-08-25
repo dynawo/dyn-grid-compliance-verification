@@ -7,9 +7,7 @@ def test_format_time_error():
     assert value == f"{2.468392}"
     assert footnote_defined is False
 
-    value, footnote_defined = printable.format_time_error(
-        results, "test1", apply_formatter=True
-    )
+    value, footnote_defined = printable.format_time_error(results, "test1", apply_formatter=True)
     assert value == f"{2.468392:.3g}"
     assert footnote_defined is False
 

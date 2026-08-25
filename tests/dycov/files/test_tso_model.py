@@ -39,6 +39,7 @@ def _make_generator():
 # Creation helpers
 # =========================
 
+
 def test_create_model():
     root, ns = _make_root()
 
@@ -63,6 +64,7 @@ def test_connect_generator():
 # =========================
 # Setpoint helpers
 # =========================
+
 
 def test_connect_generator_to_setpoint():
     root, ns = _make_root()
@@ -101,6 +103,7 @@ def test_add_setpoint_parameters():
 # =========================
 # Complete setpoint
 # =========================
+
 
 def test_complete_setpoint_executes(tmp_path):
     dyd_content = """
@@ -168,8 +171,7 @@ def test_complete_setpoint_per_generator_step_value(tmp_path):
 
     par_root = etree.parse(par_file).getroot()
     heights = {
-        parset.get("id"): parset.xpath("./*[@name='step_Height']/@value")[0]
-        for parset in par_root
+        parset.get("id"): parset.xpath("./*[@name='step_Height']/@value")[0] for parset in par_root
     }
     assert heights == {"SetPoint_gen1": "0.8", "SetPoint_gen2": "0.6"}
 

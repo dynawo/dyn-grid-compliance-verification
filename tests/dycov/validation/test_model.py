@@ -37,6 +37,7 @@ def _make_validator(validations=None):
 # Helpers
 # =========================
 
+
 def test_zero_setpoint_variation():
     assert get_ss_tolerance(0.0) == 0.005
 
@@ -70,6 +71,7 @@ def test_get_measurement_name():
 # Calculation (ModelValidator)
 # =========================
 
+
 def test_calculate_executes(monkeypatch):
     validator = _make_validator()
 
@@ -77,26 +79,31 @@ def test_calculate_executes(monkeypatch):
     validator._get_reference_curve_by_name = Mock(return_value=[0, 1, 2])
     validator._get_curves_by_windows = Mock(
         return_value=(
-            pd.DataFrame({
-                "time": [0, 1, 2],
-                "BusPDR_BUS_Voltage": [1, 1, 1],
-                "BusPDR_BUS_ActivePower": [1, 1, 1],
-                "BusPDR_BUS_ReactivePower": [1, 1, 1],
-                "BusPDR_BUS_ActiveCurrent": [1, 1, 1],
-                "BusPDR_BUS_ReactiveCurrent": [1, 1, 1],
-            }),
-            pd.DataFrame({
-                "time": [0, 1, 2],
-                "BusPDR_BUS_Voltage": [1, 1, 1],
-                "BusPDR_BUS_ActivePower": [1, 1, 1],
-                "BusPDR_BUS_ReactivePower": [1, 1, 1],
-                "BusPDR_BUS_ActiveCurrent": [1, 1, 1],
-                "BusPDR_BUS_ReactiveCurrent": [1, 1, 1],
-            }),
+            pd.DataFrame(
+                {
+                    "time": [0, 1, 2],
+                    "BusPDR_BUS_Voltage": [1, 1, 1],
+                    "BusPDR_BUS_ActivePower": [1, 1, 1],
+                    "BusPDR_BUS_ReactivePower": [1, 1, 1],
+                    "BusPDR_BUS_ActiveCurrent": [1, 1, 1],
+                    "BusPDR_BUS_ReactiveCurrent": [1, 1, 1],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "time": [0, 1, 2],
+                    "BusPDR_BUS_Voltage": [1, 1, 1],
+                    "BusPDR_BUS_ActivePower": [1, 1, 1],
+                    "BusPDR_BUS_ReactivePower": [1, 1, 1],
+                    "BusPDR_BUS_ActiveCurrent": [1, 1, 1],
+                    "BusPDR_BUS_ReactiveCurrent": [1, 1, 1],
+                }
+            ),
         )
     )
 
     import dycov.validation.common as common
+
     monkeypatch.setattr(common, "is_invalid_test", Mock(return_value=False))
     monkeypatch.setattr(common, "get_reached_time", Mock(return_value=(1.0, 1.0)))
     monkeypatch.setattr(common, "get_response_time", Mock(return_value=1.0))
@@ -104,9 +111,10 @@ def test_calculate_executes(monkeypatch):
     monkeypatch.setattr(common, "get_overshoot", Mock(return_value=0.1))
     monkeypatch.setattr(common, "mean_absolute_error", Mock(return_value=0.01))
 
-    with patch("dycov.validation.model.calculate_errors", return_value={}), \
-         patch("dycov.validation.model.calculate_curves_errors"):
-
+    with (
+        patch("dycov.validation.model.calculate_errors", return_value={}),
+        patch("dycov.validation.model.calculate_curves_errors"),
+    ):
         res = validator._ModelValidator__calculate(
             zone=1,
             start_event=0.0,
@@ -124,6 +132,7 @@ def test_calculate_executes(monkeypatch):
 # Check (ModelValidator)
 # =========================
 
+
 def test_check_executes():
     validator = _make_validator()
 
@@ -132,10 +141,11 @@ def test_check_executes():
         "is_invalid_test": False,
     }
 
-    with patch("dycov.validation.model.save_measurement_errors"), \
-         patch("dycov.validation.model.check_measurement"), \
-         patch("dycov.validation.model.complete_setpoint_tracking"):
-
+    with (
+        patch("dycov.validation.model.save_measurement_errors"),
+        patch("dycov.validation.model.check_measurement"),
+        patch("dycov.validation.model.complete_setpoint_tracking"),
+    ):
         res = validator._ModelValidator__check(
             compliance_values,
             modified_setpoint="ActivePowerSetpointPu",
@@ -155,6 +165,7 @@ def test_check_times_executes(monkeypatch):
     }
 
     import dycov.validation.common as common
+
     monkeypatch.setattr(common, "check_time", Mock(return_value=(0.0, True)))
 
     validator._ModelValidator__check_times(results, compliance_values)
@@ -192,6 +203,7 @@ def test_check_mae_executes():
 # Validate (orchestration)
 # =========================
 
+
 def test_validate_executes():
     producer = Mock()
     producer.get_zone = Mock(return_value=1)
@@ -213,11 +225,14 @@ def test_validate_executes():
         return_value=Mock(event_start=0.0, event_end=1.0, clear_start=0.0, clear_end=0.0)
     )
 
-    with patch.object(validator, "_ModelValidator__calculate", return_value={
-        "t_event_start": 0.0,
-        "is_invalid_test": False
-    }), patch.object(validator, "_ModelValidator__check", return_value={"compliance": True}):
-
+    with (
+        patch.object(
+            validator,
+            "_ModelValidator__calculate",
+            return_value={"t_event_start": 0.0, "is_invalid_test": False},
+        ),
+        patch.object(validator, "_ModelValidator__check", return_value={"compliance": True}),
+    ):
         res = validator.validate(
             "oc",
             Path("/tmp"),
@@ -238,18 +253,23 @@ def test_validate_executes():
 # MAE calculation (heavy block)
 # =========================
 
+
 def test_calculate_mean_absolute_error_executes(monkeypatch):
     validator = _make_validator(validations=["mean_absolute_error_voltage"])
 
-    df_calc = pd.DataFrame({
-        "time": [0, 1, 2, 3],
-        "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0, 1.0],
-    })
+    df_calc = pd.DataFrame(
+        {
+            "time": [0, 1, 2, 3],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0, 1.0],
+        }
+    )
 
-    df_ref = pd.DataFrame({
-        "time": [0, 1, 2, 3],
-        "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0, 1.0],
-    })
+    df_ref = pd.DataFrame(
+        {
+            "time": [0, 1, 2, 3],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0, 1.0],
+        }
+    )
 
     import dycov.validation.common as common
 
@@ -273,20 +293,25 @@ def test_calculate_mean_absolute_error_executes(monkeypatch):
 # MAE extended branches
 # =========================
 
+
 def test_calculate_mean_absolute_error_power_branches(monkeypatch):
     validator = _make_validator(validations=["mean_absolute_error_power_1P"])
 
-    df_calc = pd.DataFrame({
-        "time": [0, 1, 2, 3],
-        "BusPDR_BUS_ActivePower": [1, 1, 1, 1],
-        "BusPDR_BUS_ReactivePower": [1, 1, 1, 1],
-    })
+    df_calc = pd.DataFrame(
+        {
+            "time": [0, 1, 2, 3],
+            "BusPDR_BUS_ActivePower": [1, 1, 1, 1],
+            "BusPDR_BUS_ReactivePower": [1, 1, 1, 1],
+        }
+    )
 
-    df_ref = pd.DataFrame({
-        "time": [0, 1, 2, 3],
-        "BusPDR_BUS_ActivePower": [1, 1, 1, 1],
-        "BusPDR_BUS_ReactivePower": [1, 1, 1, 1],
-    })
+    df_ref = pd.DataFrame(
+        {
+            "time": [0, 1, 2, 3],
+            "BusPDR_BUS_ActivePower": [1, 1, 1, 1],
+            "BusPDR_BUS_ReactivePower": [1, 1, 1, 1],
+        }
+    )
 
     import dycov.validation.common as common
 
@@ -310,17 +335,21 @@ def test_calculate_mean_absolute_error_power_branches(monkeypatch):
 def test_calculate_mean_absolute_error_injection_branches(monkeypatch):
     validator = _make_validator(validations=["mean_absolute_error_injection_1P"])
 
-    df_calc = pd.DataFrame({
-        "time": [0, 1, 2, 3],
-        "BusPDR_BUS_ActiveCurrent": [1, 1, 1, 1],
-        "BusPDR_BUS_ReactiveCurrent": [1, 1, 1, 1],
-    })
+    df_calc = pd.DataFrame(
+        {
+            "time": [0, 1, 2, 3],
+            "BusPDR_BUS_ActiveCurrent": [1, 1, 1, 1],
+            "BusPDR_BUS_ReactiveCurrent": [1, 1, 1, 1],
+        }
+    )
 
-    df_ref = pd.DataFrame({
-        "time": [0, 1, 2, 3],
-        "BusPDR_BUS_ActiveCurrent": [1, 1, 1, 1],
-        "BusPDR_BUS_ReactiveCurrent": [1, 1, 1, 1],
-    })
+    df_ref = pd.DataFrame(
+        {
+            "time": [0, 1, 2, 3],
+            "BusPDR_BUS_ActiveCurrent": [1, 1, 1, 1],
+            "BusPDR_BUS_ReactiveCurrent": [1, 1, 1, 1],
+        }
+    )
 
     import dycov.validation.common as common
 
@@ -344,6 +373,7 @@ def test_calculate_mean_absolute_error_injection_branches(monkeypatch):
 # =========================
 # Calculation - edge branches
 # =========================
+
 
 def test_calculate_handles_value_error():
     validator = _make_validator()
@@ -369,6 +399,7 @@ def test_calculate_handles_value_error():
 # Check - advanced branches
 # =========================
 
+
 def test_check_active_power_recovery_branch():
     validator = _make_validator(validations=["active_power_recovery"])
 
@@ -379,10 +410,11 @@ def test_check_active_power_recovery_branch():
         "t_P90_ref": 1.0,
     }
 
-    with patch("dycov.validation.model.save_measurement_errors"), \
-         patch("dycov.validation.model.check_measurement"), \
-         patch("dycov.validation.model.complete_setpoint_tracking"):
-
+    with (
+        patch("dycov.validation.model.save_measurement_errors"),
+        patch("dycov.validation.model.check_measurement"),
+        patch("dycov.validation.model.complete_setpoint_tracking"),
+    ):
         res = validator._ModelValidator__check(
             compliance_values,
             "ActivePowerSetpointPu",
@@ -395,22 +427,26 @@ def test_check_active_power_recovery_branch():
 # Check - setpoint tracking branches
 # =========================
 
+
 def test_check_setpoint_tracking_branches():
-    validator = _make_validator(validations=[
-        "setpoint_tracking_controlled_magnitude",
-        "setpoint_tracking_active_power",
-        "setpoint_tracking_reactive_power",
-    ])
+    validator = _make_validator(
+        validations=[
+            "setpoint_tracking_controlled_magnitude",
+            "setpoint_tracking_active_power",
+            "setpoint_tracking_reactive_power",
+        ]
+    )
 
     compliance_values = {
         "t_event_start": 0.0,
         "is_invalid_test": False,
     }
 
-    with patch("dycov.validation.model.save_measurement_errors"), \
-         patch("dycov.validation.model.check_measurement"), \
-         patch("dycov.validation.model.complete_setpoint_tracking"):
-
+    with (
+        patch("dycov.validation.model.save_measurement_errors"),
+        patch("dycov.validation.model.check_measurement"),
+        patch("dycov.validation.model.complete_setpoint_tracking"),
+    ):
         res = validator._ModelValidator__check(
             compliance_values,
             "VoltageSetpointPu",
@@ -424,6 +460,7 @@ def test_check_setpoint_tracking_branches():
 # =========================
 # Validate - extra branches
 # =========================
+
 
 def test_validate_without_reference():
     producer = Mock()
@@ -446,11 +483,14 @@ def test_validate_without_reference():
         return_value=Mock(event_start=0.0, event_end=1.0, clear_start=0.0, clear_end=0.0)
     )
 
-    with patch.object(validator, "_ModelValidator__calculate", return_value={
-        "t_event_start": 0.0,
-        "is_invalid_test": False
-    }), patch.object(validator, "_ModelValidator__check", return_value={"compliance": True}):
-
+    with (
+        patch.object(
+            validator,
+            "_ModelValidator__calculate",
+            return_value={"t_event_start": 0.0, "is_invalid_test": False},
+        ),
+        patch.object(validator, "_ModelValidator__check", return_value={"compliance": True}),
+    ):
         res = validator.validate(
             "oc",
             Path("/tmp"),
@@ -471,6 +511,7 @@ def test_validate_without_reference():
 # Calculation - active power recovery
 # =========================
 
+
 def test_active_power_recovery_executes(monkeypatch):
     validator = _make_validator(validations=["active_power_recovery"])
 
@@ -478,6 +519,7 @@ def test_active_power_recovery_executes(monkeypatch):
     validator._get_reference_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
+
     monkeypatch.setattr(common, "get_reached_time", Mock(return_value=(1.0, 1.0)))
 
     results = {}
@@ -495,6 +537,7 @@ def test_active_power_recovery_executes(monkeypatch):
 # Calculation - event times
 # =========================
 
+
 def test_compare_event_times_executes(monkeypatch):
     validator = _make_validator(validations=["reaction_time", "rise_time"])
 
@@ -502,6 +545,7 @@ def test_compare_event_times_executes(monkeypatch):
     validator._get_reference_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
+
     monkeypatch.setattr(common, "get_reached_time", Mock(return_value=(1.0, 1.0)))
 
     results = {}
@@ -521,12 +565,14 @@ def test_compare_event_times_executes(monkeypatch):
 # Calculation - ramp
 # =========================
 
+
 def test_compare_ideal_ramp_executes(monkeypatch):
     validator = _make_validator(validations=["ramp_time_lag"])
 
     validator._get_calculated_curve_by_name = Mock(return_value=[0, 1, 2])
 
     import dycov.validation.common as common
+
     monkeypatch.setattr(common, "get_time_lag", Mock(return_value=0.1))
     monkeypatch.setattr(common, "get_value_error", Mock(return_value=0.1))
 
@@ -548,6 +594,7 @@ def test_compare_ideal_ramp_executes(monkeypatch):
 # Calculation - ss tolerance branch
 # =========================
 
+
 def test_get_ss_tolerance_zero_variation_branch():
     with patch("dycov.configuration.cfg.Config.get_float", return_value=0.01):
         assert get_ss_tolerance(0.0) == 0.01
@@ -557,17 +604,21 @@ def test_get_ss_tolerance_non_zero_branch():
     with patch("dycov.configuration.cfg.Config.get_float", return_value=0.01):
         assert get_ss_tolerance(0.2) == 0.002
 
+
 # =========================
 # Check - full time branches
 # =========================
 
+
 def test_check_times_all_branches(monkeypatch):
-    validator = _make_validator(validations=[
-        "reaction_time",
-        "rise_time",
-        "settling_time",
-        "overshoot",
-    ])
+    validator = _make_validator(
+        validations=[
+            "reaction_time",
+            "rise_time",
+            "settling_time",
+            "overshoot",
+        ]
+    )
 
     results = {"compliance": True}
     compliance_values = {
@@ -586,6 +637,7 @@ def test_check_times_all_branches(monkeypatch):
     }
 
     import dycov.validation.common as common
+
     monkeypatch.setattr(common, "check_time", Mock(return_value=(0.0, True)))
 
     validator._ModelValidator__check_times(results, compliance_values)
@@ -599,6 +651,7 @@ def test_check_times_all_branches(monkeypatch):
 # =========================
 # Validate - frequency branch
 # =========================
+
 
 def test_validate_frequency_branch():
     producer = Mock()
@@ -621,11 +674,14 @@ def test_validate_frequency_branch():
         return_value=Mock(event_start=0.0, event_end=1.0, clear_start=0.0, clear_end=0.0)
     )
 
-    with patch.object(validator, "_ModelValidator__calculate", return_value={
-        "t_event_start": 0.0,
-        "is_invalid_test": False
-    }), patch.object(validator, "_ModelValidator__check", return_value={"compliance": True}):
-
+    with (
+        patch.object(
+            validator,
+            "_ModelValidator__calculate",
+            return_value={"t_event_start": 0.0, "is_invalid_test": False},
+        ),
+        patch.object(validator, "_ModelValidator__check", return_value={"compliance": True}),
+    ):
         validator.validate(
             "oc",
             Path("/tmp"),
@@ -643,6 +699,7 @@ def test_validate_frequency_branch():
 # =========================
 # Validate - injector voltage guard warnings
 # =========================
+
 
 def _make_zone_validator(zone, calculated_curves, reference_curves):
     producer = Mock()
@@ -697,9 +754,7 @@ def test_validate_zone1_warns_when_injector_voltage_below_guard(monkeypatch):
         "_ModelValidator__calculate",
         lambda *a, **k: {"t_event_start": 0.0, "is_invalid_test": False},
     )
-    monkeypatch.setattr(
-        validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True}
-    )
+    monkeypatch.setattr(validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True})
 
     results = validator.validate(
         "oc", Path("/tmp"), "out", _guard_event_params(), has_reference=True
@@ -719,9 +774,7 @@ def test_validate_zone1_without_guard_violation_has_empty_warnings(monkeypatch):
         "_ModelValidator__calculate",
         lambda *a, **k: {"t_event_start": 0.0, "is_invalid_test": False},
     )
-    monkeypatch.setattr(
-        validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True}
-    )
+    monkeypatch.setattr(validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True})
 
     results = validator.validate(
         "oc", Path("/tmp"), "out", _guard_event_params(), has_reference=True
@@ -738,9 +791,7 @@ def test_validate_zone3_does_not_report_guard_warnings(monkeypatch):
         "_ModelValidator__calculate",
         lambda *a, **k: {"t_event_start": 0.0, "is_invalid_test": False},
     )
-    monkeypatch.setattr(
-        validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True}
-    )
+    monkeypatch.setattr(validator, "_ModelValidator__check", lambda *a, **k: {"compliance": True})
 
     results = validator.validate(
         "oc", Path("/tmp"), "out", _guard_event_params(), has_reference=True
