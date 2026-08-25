@@ -7,6 +7,7 @@
 #     demiguelm@aia.es
 
 from typing import Optional
+
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.calculators.phase_jump import PhaseJump
