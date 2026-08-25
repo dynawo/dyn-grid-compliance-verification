@@ -55,7 +55,11 @@ jobs:
       - name: Lint with Ruff
         run: |
           uv run ruff --version
-          uv run ruff check src --output-format=github
+          uv run ruff check src tests --output-format=github
+
+      # Check formatting with Ruff (consistent with your pyproject.toml)
+      - name: Check format with Ruff
+        run: uv run ruff format --check src tests
 
       # Build the wheel
       - name: Build package (wheel)
