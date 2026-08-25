@@ -583,9 +583,7 @@ def _process_curves(
 
         event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
         if ORIGINAL_IMPLEMENTATION:
-            fault_duration = (
-                float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
-            )
+            fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
         else:
             fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
 
