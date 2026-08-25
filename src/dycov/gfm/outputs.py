@@ -425,7 +425,11 @@ def save_ini_dump(
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(
-            "GFM SIMULATION DUMP\n===================\n\n{'=' * 30}\n Key Validation Values\n{'=' * 30}\n"
+            "GFM SIMULATION DUMP\n"
+            "===================\n\n"
+            f"{'=' * 30}\n"
+            " Key Validation Values\n"
+            f"{'=' * 30}\n"
         )
 
         # Extract internal validation arrays safely across calculator instances

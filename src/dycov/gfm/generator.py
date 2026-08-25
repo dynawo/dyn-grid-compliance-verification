@@ -66,7 +66,8 @@ class GFMGeneration:
         manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
             dycov_logging.get_logger("GFMGeneration").warning(
-                "Exiting. Please rename your current Results directory, otherwise it will be erased."
+                "Exiting. Please rename your current Results directory, otherwise it will" \
+                " be erased."
             )
             sys.exit(1)
         manage_files.create_dir(self._parameters.get_output_dir())

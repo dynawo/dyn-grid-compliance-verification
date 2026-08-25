@@ -107,7 +107,8 @@ class SCRJump(GFMCalculator):
 
         Returns:
             tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: A tuple with
-                delta_p arrays, min envelope arrays, max envelope arrays, peak powers, and epsilon values.
+                delta_p arrays, min envelope arrays, max envelope arrays, peak powers, 
+                and epsilon values.
         """
         # Evaluate variations for D and H across defined minimum and maximum ratios
         damping_variations = np.array([D, D * self._max_ratio, D * self._min_ratio])
@@ -693,7 +694,8 @@ class SCRJump(GFMCalculator):
             event_time (float): The event trigger timestamp.
 
         Returns:
-            tuple[np.ndarray, np.ndarray, np.ndarray, float, float]: The aligned base array, min array,
+            tuple[np.ndarray, np.ndarray, np.ndarray, float, float]: The aligned base array, 
+            min array,
                 max array, peak power, and epsilon value.
         """
         time_since_event = np.maximum(0, time_array - event_time)
