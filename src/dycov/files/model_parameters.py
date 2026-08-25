@@ -1428,11 +1428,15 @@ def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value, create_
     if not create_if_missing:
         return
 
-    new_par = etree.Element("par")
-    new_par.set("name", parameter_name)
-    new_par.set("type", "DOUBLE")
-    new_par.set("value", str(sign * parameter_value))
-    ps.append(new_par)
+    etree.SubElement(
+        ps,
+        etree.QName(nsmap["ns"], "par"),
+        attrib={
+            "name": parameter_name,
+            "type": "DOUBLE",
+            "value": str(sign * parameter_value),
+        },
+    )
 
 
 def _get_parameter(parset, nsmap, lib, parameter_name):
