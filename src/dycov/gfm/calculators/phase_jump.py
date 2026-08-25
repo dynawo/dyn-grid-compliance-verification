@@ -131,11 +131,9 @@ class PhaseJump(GFMCalculator):
         # Apply a uniform delay translation if utilizing the Electro-Magnetic Transients (EMT)
         # engine
         if self._is_emt_flag:
-            upper_envelope = self._apply_delay(self._emt_initial_delay, p_up[0], time_array, p_up)
-            lower_envelope = self._apply_delay(
-                self._emt_initial_delay, p_down[0], time_array, p_down
-            )
-            pcc_signal = self._apply_delay(self._emt_initial_delay, p_pcc[0], time_array, p_pcc)
+            upper_envelope = self._apply_delay(self._emt_delay, p_up[0], time_array, p_up)
+            lower_envelope = self._apply_delay(self._emt_delay, p_down[0], time_array, p_down)
+            pcc_signal = self._apply_delay(self._emt_delay, p_pcc[0], time_array, p_pcc)
         else:
             upper_envelope = p_up
             lower_envelope = p_down

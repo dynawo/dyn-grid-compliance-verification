@@ -178,7 +178,7 @@ class Validation:
                 "Exiting. Please rename your current Results directory, otherwise it will be "
                 "erased and a new one will be created."
             )
-            sys.exit()
+            sys.exit(1)
 
     def __get_validation_pcs(self) -> list:
         """Determines the list of PCS to be validated based on simulation type and configuration.

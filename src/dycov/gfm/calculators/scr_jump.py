@@ -357,9 +357,14 @@ class SCRJump(GFMCalculator):
             condition = time_mask & (upper_trace < self._pmin_mois_tunnel)
 
             if is_overdamped:
-                # Artificial flattening constraint bypassed to preserve natural exponential decay
+                upper_trace = self._modify_envelope(
+                    upper_trace, power_at_50_percent, time_array, event_time
+                )
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
-            else:  # Underdamped execution branch
+            else:  # Underdamped case
+                upper_trace = self._modify_envelope(
+                    upper_trace, power_at_50_percent, time_array, event_time
+                )
                 upper_trace = np.where(condition, self._pmin_mois_tunnel, upper_trace)
 
         # Enforce hard limits restricting signals to physical hardware capabilities.
@@ -594,16 +599,16 @@ class SCRJump(GFMCalculator):
                 )
 
                 upper_envelope = self._apply_delay(
-                    self._emt_initial_delay, initial_upper_val, time_array, upper_envelope
+                    self._emt_delay, initial_upper_val, time_array, upper_envelope
                 )
                 lower_envelope = self._apply_delay(
-                    self._emt_initial_delay + constants.SCR_BOUND_DELAY_S,
+                    self._emt_delay + constants.SCR_BOUND_DELAY_S,
                     initial_lower_val,
                     time_array,
                     lower_envelope,
                 )
                 power_at_pcc = self._apply_delay(
-                    self._emt_initial_delay, initial_pcc_val, time_array, power_at_pcc
+                    self._emt_delay, initial_pcc_val, time_array, power_at_pcc
                 )
             else:
                 initial_lower_val = (
@@ -629,16 +634,16 @@ class SCRJump(GFMCalculator):
                 )
 
                 upper_envelope = self._apply_delay(
-                    self._emt_initial_delay + constants.SCR_BOUND_DELAY_S,
+                    self._emt_delay + constants.SCR_BOUND_DELAY_S,
                     initial_upper_val,
                     time_array,
                     upper_envelope,
                 )
                 lower_envelope = self._apply_delay(
-                    self._emt_initial_delay, initial_lower_val, time_array, lower_envelope
+                    self._emt_delay, initial_lower_val, time_array, lower_envelope
                 )
                 power_at_pcc = self._apply_delay(
-                    self._emt_initial_delay, initial_pcc_val, time_array, power_at_pcc
+                    self._emt_delay, initial_pcc_val, time_array, power_at_pcc
                 )
             else:
                 initial_upper_val = (
