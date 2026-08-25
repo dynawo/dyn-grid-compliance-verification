@@ -65,7 +65,9 @@ class SolverRetryStrategy:
             return result
 
         # 2) Reduce min step
-        self._warn("Retry: reducing minimum time step")
+        dycov_logging.get_logger("SolverRetryStrategy").warning(
+            "Retry: reducing minimum time step"
+        )
         self._reduce_min_step(solver, working_oc_dir)
         result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -74,7 +76,9 @@ class SolverRetryStrategy:
             return result
 
         # 3) Increase required accuracy
-        self._warn("Retry: increasing required accuracy")
+        dycov_logging.get_logger("SolverRetryStrategy").warning(
+            "Retry: increasing required accuracy"
+        )
         self._increase_accuracy(solver, working_oc_dir)
         result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -83,7 +87,9 @@ class SolverRetryStrategy:
             return result
 
         if self.settings.add_parameters_small_network:
-            self._warn("Retry: adding parameters for small networks")
+            dycov_logging.get_logger("SolverRetryStrategy").warning(
+                "Retry: adding parameters for small networks"
+            )
             self._add_parameters_small_networks(solver, working_oc_dir)
             result = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -92,7 +98,9 @@ class SolverRetryStrategy:
                 return result
 
         if self.settings.enable_solver_flip:
-            self._warn("Retry: flipping solver type SIM <-> IDA")
+            dycov_logging.get_logger("SolverRetryStrategy").warning(
+                "Retry: flipping solver type SIM <-> IDA"
+            )
             self._flip_solver(solver)
             replace_placeholders.modify_jobs_file(
                 working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
@@ -102,16 +110,12 @@ class SolverRetryStrategy:
             )
 
         if result.sim_time > (max_sim_time or float("inf")):
-            self._warn(
+            dycov_logging.get_logger("SolverRetryStrategy").warning(
                 f"Simulation time exceeds the maximum allowed ({max_sim_time})"
             )
         return result
 
     # --- attempt helper ---
-    def _warn(self, message: str) -> None:
-        if not self.settings.disable_retry_logs:
-            dycov_logging.get_logger("SolverRetryStrategy").warning(message)
-
     def _attempt(
         self,
         run: DynawoRunInputs,
