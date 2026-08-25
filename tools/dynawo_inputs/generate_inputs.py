@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import zipfile
 from pathlib import Path
 
 from lxml import etree
@@ -161,17 +162,48 @@ def collector_line_par_set(par_id: str, zone3: dict) -> tuple:
 # ---------------------------------------------------------------------------
 
 
-def submodel_report(resolved: dict, control_params: list) -> str:
-    present = {block for block, _variant, _params in control_params}
+def submodel_report(resolved: dict, selections: list, control_params: list) -> str:
+    """Report the blocks declared in ``Général`` and whether their parameter sheet contributed
+    a selected variant with values (``present``) or not (``missing``)."""
+    present = {p["block"] for p in control_params}
     lines = [
         "Submodel report",
         f"  Zone3 (plant)   : {resolved['zone3_lib']}  (prefix {resolved['zone3_prefix']})",
         f"  Zone1 (turbine) : {resolved['zone1_lib']}  (prefix {resolved['zone1_prefix']})",
         "  Control submodels:",
     ]
-    for block in ("REPC", "REEC", "REGC", "WTGT", "WTGP", "WTGA", "WTGQ"):
+    for block, _choice in selections:
         lines.append(f"    {block:5} : {'present' if block in present else 'missing'}")
     return "\n".join(lines)
+
+
+def zone_control_params(control_params: list, zones: dict, zone: str) -> list:
+    """Control params whose block declares *zone* in ``Général``, in the same (workbook) order;
+    the provenance ``block`` label is dropped before emission. A block with no declared zone
+    enters no zone's PAR."""
+    return [
+        {k: v for k, v in p.items() if k != "block"}
+        for p in control_params
+        if zone in zones.get(p["block"], [])
+    ]
+
+
+def _empty_zone1_reason(config) -> str:
+    """Why Zone1 came out without control parameters — never generate it silently incomplete."""
+    declared = [
+        block for block, choice in config.selections
+        if dp._strip_accents(choice) not in dp._NO_BLOCK
+        and "Zone1" in config.zones.get(block, [])
+    ]
+    if not declared:
+        return (
+            "no selected control block declares Zone1 (see the 'Zone' column in 'Général'); "
+            "refusing to generate an incomplete Zone1."
+        )
+    return (
+        f"the Zone1 control blocks ({', '.join(declared)}) carry no parameter values — the "
+        f"parameter sheets look unfilled; refusing to generate an incomplete Zone1."
+    )
 
 
 def _is_true(value) -> bool:
@@ -224,6 +256,12 @@ def generate(excel: Path, outdir: Path) -> str:
     control = P.parse_control_params(workbook)
     topology = str(zone3["Topologie"]).strip()
 
+    config = dp.parse_config(workbook)
+    z1_control = zone_control_params(control, config.zones, "Zone1")
+    z3_control = zone_control_params(control, config.zones, "Zone3")
+    if not z1_control:
+        raise ValueError(_empty_zone1_reason(config))
+
     root = outdir / "Dynawo"
     (root / "Zone1").mkdir(parents=True, exist_ok=True)
     (root / "Zone3").mkdir(parents=True, exist_ok=True)
@@ -244,10 +282,6 @@ def generate(excel: Path, outdir: Path) -> str:
         terminals={gen_id: f"{resolved['zone3_prefix']}terminal"},
         rename=rename,
     )
-
-    # Zone1 is the turbine (NoPlantControl), so it excludes the REPC plant block.
-    z1_control = [p for block, _v, params in control if block != "REPC" for p in params]
-    z3_control = [p for _block, _v, params in control for p in params]
 
     lv_control = _is_true(zone1.get("ConverterLVControl", "True"))
 
@@ -295,7 +329,7 @@ def generate(excel: Path, outdir: Path) -> str:
         include_consumption=include_consumption,
     )
 
-    return submodel_report(resolved, control)
+    return submodel_report(resolved, config.selections, control)
 
 
 def main(argv=None) -> int:
@@ -305,7 +339,12 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if not args.excel.is_file():
         ap.error(f"Excel not found: {args.excel}")
-    print(generate(args.excel, args.outdir))
+    try:
+        report = generate(args.excel, args.outdir)
+    except (ValueError, zipfile.BadZipFile) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    print(report)
     print(f"\nWrote input tree under: {args.outdir / 'Dynawo'}")
     return 0
 

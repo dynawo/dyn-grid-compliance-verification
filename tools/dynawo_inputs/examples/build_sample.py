@@ -78,7 +78,8 @@ ZONE3 = [
 
 # Control blocks: {sheet: (variant, table name, [(name, type, value, base_unit, comment)])}.
 # Values are the example's PhotovoltaicsWeccCurrentSource Producer.par (bare names; the model prefix
-# is prepended by the tool). REPC is the plant controller (dropped from the Zone1 turbine output).
+# is prepended by the tool). REPC is the plant controller: its 'Zone' cell declares Zone3 only, so
+# it stays out of the Zone1 turbine output.
 CONTROL = {
     "REEC": ("REEC_B", "Electrical Control", [
         ("PfFlag", "boolean", "false", "", "power-factor control flag"),
@@ -164,11 +165,23 @@ def build() -> Path:
 
     gen = wb.active
     gen.title = "Général"
-    gen.append(["Type de bloc", "Choix"])
-    for block, choice in [("REPC", "REPC_A"), ("REEC", "REEC_B"), ("REGC", "REGC_A"),
-                          ("WTGT", "Aucun"), ("WTGP", "Aucun"), ("WTGA", "Aucun"),
-                          ("WTGQ", "Aucun")]:
-        gen.append([block, choice])
+    # Mirrors the RTE template: the block table carries a per-block Zone column, and the
+    # Excel-derived model cells sit in a horizontal table on the same header row (the key
+    # under the first header, values as Excel would cache them — openpyxl writes no formulas).
+    gen.append(["Type de bloc", "Choix", "Zone", None, None,
+                "Combinaison sélectionnée (clé Model Map)", "Zone3 lib", "Zone3 prefix",
+                "Zone1 lib", "Zone1 prefix"])
+    derived = ["REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun", "PhotovoltaicsWeccCurrentSource",
+               "photovoltaics_", "PhotovoltaicsWeccCurrentSourceNoPlantControl", "photovoltaics_"]
+    blocks = [("REPC", "REPC_A", "Zone3"), ("REEC", "REEC_B", "Zone1;Zone3"),
+              ("REGC", "REGC_A", "Zone1;Zone3"), ("WTGT", "Aucun", "Zone1;Zone3"),
+              ("WTGP", "Aucun", "Zone1;Zone3"), ("WTGA", "Aucun", "Zone1;Zone3"),
+              ("WTGQ", "Aucun", "Zone1;Zone3")]
+    for i, (block, choice, zone) in enumerate(blocks):
+        row = [block, choice, zone]
+        if i == 0:
+            row += [None, None, *derived]
+        gen.append(row)
 
     mm = wb.create_sheet("Model Map")
     mm.append(["Key", "Zone3_lib", "Zone3_prefix", "Zone1_lib", "Zone1_prefix"])
@@ -190,8 +203,9 @@ def build() -> Path:
     for sheet, (variant, table, params) in CONTROL.items():
         ws = wb.create_sheet(sheet)
         ws.append([table])  # table name (row N-2)
-        ws.append([variant])  # variant name, above the Parameter column (row N-1)
-        ws.append(["Parameter", "Type", "Value", "Base unit", "Comment"])
+        ws.append([variant])  # variant name, above the Paramètres column (row N-1)
+        # The RTE template's French header triplet (the parser accepts English too).
+        ws.append(["Paramètres", "Types", "Valeurs", "Bases pour les pu", "Commentaires"])
         for name, typ, val, base, comment in params:
             ws.append([name, typ, val, base, comment])
 

@@ -118,15 +118,36 @@ def test_drop_group_transformer_when_no_lv_control(tmp_path):
     assert (gen, "photovoltaics_terminal", "BusPDR", "bus_terminal") in conns
 
 
-def test_submodel_report_lists_present_and_missing():
+def test_submodel_report_lists_general_blocks_present_and_missing():
     resolved = {
         "zone3_lib": "PhotovoltaicsWeccCurrentSource", "zone3_prefix": "photovoltaics_",
         "zone1_lib": "PhotovoltaicsWeccCurrentSourceNoPlantControl", "zone1_prefix": "photovoltaics_",
     }
-    control = [("REPC", "REPC_A", []), ("REEC", "REEC_B", []), ("REGC", "REGC_A", [])]
-    report = G.submodel_report(resolved, control)
+    # The reported blocks come from 'Général' (no fixed family list): an unknown block name is
+    # reported all the same, and only blocks whose sheets contributed params are 'present'.
+    selections = [("REPC", "REPC_A"), ("REEC", "REEC_B"), ("NEWBLK", "Aucun")]
+    control = [
+        {"block": "REPC", "name": "FreqFlag", "type": "BOOL", "value": "true", "comments": []},
+        {"block": "REEC", "name": "Kqp", "type": "DOUBLE", "value": "1", "comments": []},
+    ]
+    report = G.submodel_report(resolved, selections, control)
     assert "REPC  : present" in report
-    assert "WTGT  : missing" in report
+    assert "NEWBLK : missing" in report
+    assert "WTGT" not in report
+
+
+def test_zone_control_params_filters_by_declared_zone_and_drops_label():
+    control = [
+        {"block": "REPC", "name": "FreqFlag", "type": "BOOL", "value": "true", "comments": []},
+        {"block": "REEC", "name": "Kqp", "type": "DOUBLE", "value": "1", "comments": []},
+        {"block": "NOZONE", "name": "X", "type": "DOUBLE", "value": "0", "comments": []},
+    ]
+    zones = {"REPC": ["Zone3"], "REEC": ["Zone1", "Zone3"]}  # NOZONE declares nothing
+    z1 = G.zone_control_params(control, zones, "Zone1")
+    z3 = G.zone_control_params(control, zones, "Zone3")
+    assert [p["name"] for p in z1] == ["Kqp"]
+    assert [p["name"] for p in z3] == ["FreqFlag", "Kqp"]  # a zone-less block enters neither
+    assert all("block" not in p for p in z1 + z3)
 
 
 # ---------------------------------------------------------------------------
@@ -134,9 +155,12 @@ def test_submodel_report_lists_present_and_missing():
 # ---------------------------------------------------------------------------
 
 _GENERAL = [
-    ["Type de bloc", "Choix"],
-    ["REPC", "REPC_A"], ["REEC", "REEC_B"], ["REGC", "REGC_A"],
-    ["WTGT", "Aucun"], ["WTGP", "Aucun"], ["WTGA", "Aucun"], ["WTGQ", "Aucun"],
+    ["Type de bloc", "Choix", "Zone", None, "Combinaison sélectionnée (clé Model Map)",
+     "Zone3 lib", "Zone3 prefix", "Zone1 lib", "Zone1 prefix"],
+    ["REPC", "REPC_A", "Zone3", None, "REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"],
+    ["REEC", "REEC_B", "Zone1;Zone3"], ["REGC", "REGC_A", "Zone1;Zone3"],
+    ["WTGT", "Aucun", "Zone1;Zone3"], ["WTGP", "Aucun", "Zone1;Zone3"],
+    ["WTGA", "Aucun", "Zone1;Zone3"], ["WTGQ", "Aucun", "Zone1;Zone3"],
 ]
 _MODEL_MAP = [
     ["Key", "Zone3_lib", "Zone3_prefix", "Zone1_lib", "Zone1_prefix"],
@@ -197,10 +221,19 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     assert "Aux_Load" in set_ids and "IntNetwork_Line" in set_ids
     names = [p.get("name") for p in par.iter(f"{{{ns}}}par")]
     assert "photovoltaics_Kqp" in names
+    # PAR order is documental: REPC precedes REEC precedes REGC because the sheets do.
+    assert names.index("photovoltaics_FreqFlag") < names.index("photovoltaics_Kqp")
+    assert names.index("photovoltaics_Kqp") < names.index("photovoltaics_Iqrmax")
     # Excel-derived section comments (design 8.3) and the Dynawo type mapping are preserved.
     par_text = (root / "Zone3" / "Producer.par").read_text()
     assert "<!-- REEC -->" in par_text
     assert 'type="BOOL"' in par_text and 'type="boolean"' not in par_text
+
+    # Zone1 PAR: only the blocks declaring Zone1 — the plant control (Zone3-only) is excluded.
+    z1_par = etree.parse(str(root / "Zone1" / "Producer.par")).getroot()
+    z1_names = [p.get("name") for p in z1_par.iter(f"{{{ns}}}par")]
+    assert "photovoltaics_Kqp" in z1_names
+    assert "photovoltaics_FreqFlag" not in z1_names
 
     # Zone3 INI: filled values
     cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -209,3 +242,36 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     assert cp.get("DEFAULT", "topology").strip() == "S+Aux+i"
 
     assert "present" in report
+
+
+def test_generate_fails_when_no_block_declares_zone1(tmp_path, monkeypatch):
+    # Fail safe: with no 'Zone' column at all (or none declaring Zone1), Zone1 would come out
+    # silently incomplete — the tool must refuse instead.
+    wb = _make_workbook()
+    wb["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # strip only the Zone column
+    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: wb)
+    with pytest.raises(ValueError, match="declares Zone1"):
+        G.generate(Path("ignored.xlsx"), tmp_path)
+
+
+def test_main_reports_domain_errors_cleanly(tmp_path, monkeypatch, capsys):
+    # Domain errors exit 1 with an 'ERROR: …' line on stderr (like dynawo_par), no traceback.
+    wb = _make_workbook()
+    wb["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # no Zone column -> ValueError
+    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: wb)
+    excel = tmp_path / "model.xlsx"
+    excel.write_text("stub")
+    assert G.main(["--excel", str(excel), "--outdir", str(tmp_path / "out")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("ERROR: ") and "declares Zone1" in err
+
+
+def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
+    # An unfilled template: the Zone1 blocks exist and declare their zone, but every value
+    # cell is empty — the error must say so instead of blaming the 'Zone' column.
+    wb = _make_workbook()
+    wb["REEC"] = _variant_sheet("REEC_B", [("Kqp", "double", None)])
+    wb["REGC"] = _variant_sheet("REGC_A", [("Iqrmax", "double", None)])
+    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: wb)
+    with pytest.raises(ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"):
+        G.generate(Path("ignored.xlsx"), tmp_path)
