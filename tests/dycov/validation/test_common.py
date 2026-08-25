@@ -302,9 +302,7 @@ def test_check_generator_imax_detects_an_active_current_increase_under_saturatio
 def test_check_generator_imax_resets_when_the_saturation_ends():
     time = [0, 1, 2]
 
-    first_id_value, id_not_increase = common.check_generator_imax(
-        5, time, [5, 1, 5], [1, 1, 5]
-    )
+    first_id_value, id_not_increase = common.check_generator_imax(5, time, [5, 1, 5], [1, 1, 5])
 
     # Leaving saturation drops the reference, so the later increase is not a violation.
     assert id_not_increase is True
@@ -407,9 +405,7 @@ def test_mean_absolute_error_raises_on_length_mismatch():
 
 
 def test_maximum_error_returns_the_largest_deviation():
-    result = common.maximum_error(
-        np.array([1, 2, 3, 4]), np.array([1, 2, 2, 2]), step_magnitude=2
-    )
+    result = common.maximum_error(np.array([1, 2, 3, 4]), np.array([1, 2, 2, 2]), step_magnitude=2)
 
     assert result == pytest.approx(1.0)
 
