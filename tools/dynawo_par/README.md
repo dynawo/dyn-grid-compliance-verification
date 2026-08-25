@@ -48,13 +48,16 @@ The workbook is the single source of truth. Three kinds of sheet are recognised:
   Row N+1+: data rows
   ```
 
-  Variants run in parallel three-column groups (`Parameter | Type | Value`).
-  Optional `Base unit` / `Base` and `Comment` columns (in any order) apply, per
-  row, to every variant in the same table block. Variants are parsed
+  Variants run in parallel three-column groups (`Parameter | Type | Value`,
+  matched accent-insensitively in the RTE template's French spelling
+  `Paramètres | Types | Valeurs` or in English). Optional `Base unit` /
+  `Bases pour les pu` and `Comment` / `Commentaires` columns (in any order)
+  apply, per row, to every variant in the same table block. Variants are parsed
   independently, so sparse rows (a parameter present for only some variants) are
   handled correctly.
 - **Descriptive sheets** (`Topologie …`, `Signaux …`, separators) have no
-  `Parameter | Type | Value` header and are ignored automatically.
+  `Parameter | Type | Value` header triplet and are ignored automatically (the
+  zone sheets' `Paramètres | Descriptions | Valeurs` tables don't match either).
 
 ## Output format
 

@@ -63,7 +63,11 @@ The Excel file contains different types of sheets:
   * Any documentation-oriented content
 
 Descriptive sheets are ignored implicitly: any sheet that does not contain a
-`Parameter | Type | Value` header simply yields no tables.
+`Parameter | Type | Value` header triplet simply yields no tables. The triplet
+is matched accent-insensitively in the template's French spelling
+(`Paramètres | Types | Valeurs`) or in English; requiring all three cells keeps
+non-table uses of the word out (the zone sheets' electrical tables read
+`Paramètres | Descriptions | Valeurs` and are not variant tables).
 
 Only structured parameter sheets and the configuration sheet are used.
 
@@ -219,11 +223,12 @@ and several table-name labels on the same sheet yield several tables.
 A block whose selection is `Aucun` (or an empty cell) is **disabled** and
 produces no output.
 
-If a selected variant (other than `Aucun`) is not present in any parameter
-sheet:
+If a selected variant (other than `Aucun`) has no parameter table in the
+workbook — no sheet carries the variant name right above a `Parameter` column
+header (the table usually lives in the block's own sheet):
 
 ```
-→ explicit error
+→ explicit error (naming the variant, its block, and the variant tables found)
 ```
 
 The set of enabled blocks depends on the technology, and is driven entirely by
