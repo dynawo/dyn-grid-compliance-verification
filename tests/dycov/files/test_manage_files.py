@@ -39,6 +39,7 @@ from dycov.files.manage_files import (
 # Versions
 # ---------------------------------------------------------------------------
 
+
 def test_get_dynawo_version_ok():
     mock_result = Mock(returncode=0, stdout="Dynawo 1.0\nother")
 
@@ -76,6 +77,7 @@ def test_get_uv_version_fail():
 # ---------------------------------------------------------------------------
 # Basic file helpers
 # ---------------------------------------------------------------------------
+
 
 def test_should_copy(tmp_path):
     f = tmp_path / "file.txt"
@@ -118,6 +120,7 @@ def test_create_and_remove_dir(tmp_path):
 # ---------------------------------------------------------------------------
 # Directory helpers
 # ---------------------------------------------------------------------------
+
 
 def test_list_directories(tmp_path):
     (tmp_path / "d1").mkdir()
@@ -173,6 +176,7 @@ def test_clone_as_subdirectory(tmp_path):
 # Reports
 # ---------------------------------------------------------------------------
 
+
 def test_move_report_pdf(tmp_path):
     src = tmp_path / "src"
     dst = tmp_path / "dst"
@@ -209,6 +213,7 @@ def test_move_report_log(tmp_path):
 # Read curves
 # ---------------------------------------------------------------------------
 
+
 def test_read_curves(tmp_path):
     f = tmp_path / "data.csv"
     f.write_text("time;value\n0;1\n1;2")
@@ -222,6 +227,7 @@ def test_read_curves(tmp_path):
 # ---------------------------------------------------------------------------
 # Curves copy
 # ---------------------------------------------------------------------------
+
 
 def test_copy_curve_files_by_name(tmp_path):
     src = tmp_path / "src"
@@ -255,6 +261,7 @@ def test_copy_base_curves_files_fail(tmp_path):
 # Config file
 # ---------------------------------------------------------------------------
 
+
 def test_create_config_file(tmp_path):
     src = tmp_path / "config.ini"
     dst = tmp_path / "out.ini"
@@ -272,6 +279,7 @@ def test_create_config_file(tmp_path):
 # ---------------------------------------------------------------------------
 # Output dir
 # ---------------------------------------------------------------------------
+
 
 def test_check_output_dir_overwrite(tmp_path):
     d = tmp_path / "out"
