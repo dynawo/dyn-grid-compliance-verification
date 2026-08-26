@@ -7,7 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import math
+"""Unit tests for the curve measurement helpers shared by every validator."""
 
 import numpy as np
 import pandas as pd
@@ -15,205 +15,410 @@ import pytest
 
 from dycov.validation import common
 
+COMMON_MODULE = "dycov.validation.common"
 
-def test_is_stable_returns_true_when_curve_stabilizes():
-    # Curve stabilizes at value 5 after t=5, thr_ss_tol=3
+THRESHOLDS = {"thr_ss_tol": 0.002}
+
+
+class DummyConfig:
+    """Configuration stand-in serving THRESHOLDS, falling back to the requested default."""
+
+    def __init__(self, **overrides):
+        self._values = dict(THRESHOLDS, **overrides)
+
+    def get_float(self, section: str, key: str, default: float) -> float:
+        return self._values.get(key, default)
+
+
+@pytest.fixture(autouse=True)
+def dummy_config(monkeypatch):
+    """Serve a deterministic steady-state tolerance regardless of the user configuration."""
+    monkeypatch.setattr(f"{COMMON_MODULE}.config", DummyConfig())
+
+
+# ---------------------------------------------------------------------------
+# Steady-state tolerance
+# ---------------------------------------------------------------------------
+
+
+def test_get_ss_tolerance_without_setpoint_variation_returns_the_configured_tolerance():
+    assert common.get_ss_tolerance(0.0) == pytest.approx(0.002)
+
+
+def test_get_ss_tolerance_scales_with_the_setpoint_variation():
+    assert common.get_ss_tolerance(0.1) == pytest.approx(0.0002)
+
+
+# ---------------------------------------------------------------------------
+# Time comparison
+# ---------------------------------------------------------------------------
+
+
+def test_check_time_within_the_tolerances_reports_the_relative_error():
+    error, time_check = common.check_time(10.01, 10.0, 0.1, 0.05)
+
+    assert time_check is True
+    assert error == pytest.approx(0.1)
+
+
+def test_check_time_outside_the_tolerances_fails():
+    error, time_check = common.check_time(12.0, 10.0, 0.1)
+
+    assert time_check is False
+    assert error == pytest.approx(20.0)
+
+
+def test_check_time_against_a_null_reference_reports_no_error():
+    error, time_check = common.check_time(0.0, 0.0, 0.1)
+
+    # A null reference makes the relative error meaningless.
+    assert time_check is True
+    assert error == "-"
+
+
+# ---------------------------------------------------------------------------
+# Flat response detection
+# ---------------------------------------------------------------------------
+
+
+def test_is_invalid_test_with_flat_curves():
+    time = [0, 1, 2, 3, 4, 5]
+
+    result = common.is_invalid_test(time, [1] * 6, [2] * 6, [3] * 6, t_event=2)
+
+    assert result is True
+
+
+def test_is_invalid_test_with_a_responding_curve():
+    time = [0, 1, 2, 3, 4, 5]
+    active = [2, 2, 2, 2.5, 2.5, 2.5]
+
+    result = common.is_invalid_test(time, [1] * 6, active, [3] * 6, t_event=2)
+
+    assert result is False
+
+
+# ---------------------------------------------------------------------------
+# Stabilization
+# ---------------------------------------------------------------------------
+
+
+def test_is_stable_returns_the_first_index_of_the_steady_state():
     time = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     curve = [1, 2, 3, 4, 5, 5, 5, 5, 5]
-    thr_ss_tol = 3
-    stable, idx = common.is_stable(time, curve, thr_ss_tol)
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
     assert stable is True
-    assert idx != -1
+    assert index == 4
 
 
-def test_get_response_time_returns_correct_time():
-    # Curve reaches 10% of final value at t=3 after event at t=1
-    time = [0, 1, 2, 3, 4]
-    curve = [0, 0, 0.9, 1.0, 1.0]
-    percent = 0.1
-    sim_t_event_start = 1
-    result = common.get_response_time(percent, time, curve, sim_t_event_start)
-    # Should be time[2] - sim_t_event_start = 2 - 1 = 1
-    assert result == 1
-
-
-def test_mean_absolute_error_correctness():
-    signal = [1, 2, 3, 4]
-    reference = [1, 2, 2, 2]
-    step_magnitude = 2
-    result = common.mean_absolute_error(signal, reference, step_magnitude)
-    expected = (abs(1 - 1) + abs(2 - 2) + abs(3 - 2) + abs(4 - 2)) / 4 / 2
-    assert pytest.approx(result, rel=1e-9) == expected
-
-
-def test_is_stable_raises_value_error_on_length_mismatch():
+def test_is_stable_with_a_diverged_curve():
     time = [0, 1, 2]
-    curve = [1, 2]
-    thr_ss_tol = 1
+    curve = [0.0, 1.0, float("nan")]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    # A non-finite final value can never be approached.
+    assert stable is False
+    assert index == -1
+
+
+def test_is_stable_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
-        common.is_stable(time, curve, thr_ss_tol)
+        common.is_stable([0, 1, 2], [1, 2], thr_ss_tol=1)
 
 
-def test_get_txu_returns_zero_if_threshold_not_reached():
-    # Curve needs 1s to reach threshold 4 after event at t=2
-    time = [0, 1, 2, 3, 4, 5]
-    curve = [1, 2, 3, 4, 5, 6]
-    threshold = 4
-    sim_t_event_end = 2
-    result = common.get_txu(threshold, time, curve, sim_t_event_end)
-    assert result == 1
+def test_theta_pi_within_the_bounds():
+    assert common.theta_pi([0, 1, 2], [0.0, 1.5, -1.5]) is True
 
 
-def test_maximum_error_returns_zero_on_empty_input():
-    signal = np.array([])
-    reference = np.array([])
-    step_magnitude = 1
-    result = common.maximum_error(signal, reference, step_magnitude)
+def test_theta_pi_outside_the_bounds():
+    assert common.theta_pi([0, 1, 2], [0.0, 3.2, 1.0]) is False
+
+
+def test_theta_pi_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.theta_pi([0, 1, 2], [0, 1])
+
+
+# ---------------------------------------------------------------------------
+# Static difference
+# ---------------------------------------------------------------------------
+
+
+def test_get_static_diff_relative_to_the_setpoint():
+    result = common.get_static_diff([1.0, 1.05, 1.10], [1.0, 1.04, 1.00])
+
+    assert result == pytest.approx(0.10)
+
+
+def test_get_static_diff_against_a_null_setpoint_is_absolute():
+    result = common.get_static_diff([1.0, 0.05], [0.0, 0.0])
+
+    assert result == pytest.approx(0.05)
+
+
+# ---------------------------------------------------------------------------
+# Time to reach a tolerance tube
+# ---------------------------------------------------------------------------
+
+
+def test_get_txu_relative_measures_the_time_after_the_event():
+    time = [0, 1, 2, 3, 4]
+    curve = [0.0, 0.0, 0.5, 1.0, 1.0]
+
+    result = common.get_txu_relative(0.1, time, curve, sim_t_event_end=1)
+
+    # The last sample outside the [0.9, 1.1] tube is at t = 2 s.
+    assert result == pytest.approx(1.0)
+
+
+def test_get_txu_relative_of_a_flat_curve_uses_an_absolute_tube():
+    time = [0, 1, 2, 3, 4]
+    curve = [1.0, 1.0, 1.0, 1.0, 1.0]
+
+    result = common.get_txu_relative(0.1, time, curve, sim_t_event_end=1)
+
+    # The curve never leaves the tube, so the search reaches the first sample.
     assert result == 0
 
 
-def test_check_time_within_tolerances_returns_true_and_correct_error():
-    # calculated_time is within rtol and atol of reference_time
-    calculated_time = 10.01
-    reference_time = 10.0
-    rtol = 0.1  # 0.1%
-    atol = 0.05
-    error, is_within = common.check_time(calculated_time, reference_time, rtol, atol)
-    print(f"Error: {error}, is_within: {is_within}")
-    # Relative error: 100 * abs(10.01 - 10.0) / 10.0 = 0.1%
-    assert is_within is True
-    assert pytest.approx(error, rel=1e-6) == 0.1
-
-
-def test_get_settling_time_raises_value_error_on_length_mismatch():
-    percent = 0.05
-    time = [0, 1, 2]
-    curve = [1, 2]
-    sim_t_event_start = 1
+def test_get_txu_relative_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
-        common.get_settling_time(percent, time, curve, sim_t_event_start)
+        common.get_txu_relative(0.1, [0, 1, 2], [1, 2], sim_t_event_end=1)
 
 
-def test_is_invalid_test_returns_true_for_flat_curves():
-    # All curves are flat after the event
+def test_get_txp_measures_the_time_after_the_event():
+    time = [0, 1, 2, 3]
+    curve = [0.0, 0.0, 1.0, 1.0]
+
+    result = common.get_txp(0.05, time, curve, sim_t_event_end=0.5)
+
+    # The last sample outside the [0.95, 1.05] tube is at t = 1 s.
+    assert result == pytest.approx(0.5)
+
+
+def test_get_txp_of_a_near_zero_target_uses_an_absolute_tube():
+    time = [0, 1, 2, 3]
+    curve = [0.5, 0.01, 0.005, 0.005]
+
+    result = common.get_txp(0.05, time, curve, sim_t_event_end=1)
+
+    # Below 0.01 the tube becomes 0.005 +- 0.02, so only the first sample is outside it.
+    assert result == 0
+
+
+def test_get_txp_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_txp(0.05, [0, 1, 2], [1, 2], sim_t_event_end=1)
+
+
+def test_get_txpfloor_only_considers_the_lower_bound():
+    time = [0, 1, 2, 3]
+    curve = [2.0, 0.5, 1.0, 1.0]
+
+    result = common.get_txpfloor(0.1, time, curve, sim_t_event_end=0.5)
+
+    # The overshoot at t = 0 s is ignored; only the 0.5 sample is below the 0.9 floor.
+    assert result == pytest.approx(0.5)
+
+
+def test_get_txpfloor_of_an_event_after_the_deviation_returns_zero():
+    time = [0, 1, 2]
+    curve = [0.5, 1.0, 1.0]
+
+    result = common.get_txpfloor(0.1, time, curve, sim_t_event_end=1.5)
+
+    # The only sample below the floor precedes the end of the event.
+    assert result == 0
+
+
+def test_get_txpfloor_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_txpfloor(0.1, [0, 1, 2], [1, 2], sim_t_event_end=1)
+
+
+def test_get_txu_measures_the_time_to_reach_the_threshold():
     time = [0, 1, 2, 3, 4, 5]
-    voltage = [1, 1, 1, 1, 1, 1]
-    active = [2, 2, 2, 2, 2, 2]
-    reactive = [3, 3, 3, 3, 3, 3]
-    t_event = 2
-    assert common.is_invalid_test(time, voltage, active, reactive, t_event) is True
+    curve = [1, 2, 3, 4, 5, 6]
+
+    result = common.get_txu(4, time, curve, sim_t_event_end=2)
+
+    assert result == pytest.approx(1.0)
 
 
-def test_get_AVR_x_returns_true_within_tolerance():
-    # curve and target_values are within 5% after event
+def test_get_txu_of_an_unreached_threshold_returns_the_last_instant():
     time = [0, 1, 2, 3, 4]
-    curve = [1.0, 1.05, 1.04, 1.03, 1.02]
-    target_values = [1.0, 1.0, 1.0, 1.0, 1.0]
-    sim_t_event_end = 2
-    result, error_time = common.get_AVR_x(time, curve, target_values, sim_t_event_end)
-    assert result is True
-    assert error_time == -1
+    curve = [0, 0, 0, 0, 0]
+
+    result = common.get_txu(10, time, curve, sim_t_event_end=1)
+
+    assert result == pytest.approx(3.0)
 
 
-def test_check_generator_imax_prioritizes_reactive_support():
-    # After reaching imax, active_current_at_converter does not increase
-    imax = 5
+def test_get_txu_of_a_curve_already_above_the_threshold_returns_zero():
+    time = [0, 1, 2, 3]
+    curve = [5, 5, 5, 5]
+
+    result = common.get_txu(1, time, curve, sim_t_event_end=2)
+
+    # The threshold is already exceeded before the event.
+    assert result == 0
+
+
+def test_get_txu_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_txu(1, [0, 1, 2], [1, 2], sim_t_event_end=1)
+
+
+# ---------------------------------------------------------------------------
+# Generator current limit
+# ---------------------------------------------------------------------------
+
+
+def test_check_generator_imax_prioritizes_the_reactive_current():
     time = [0, 1, 2, 3, 4, 5]
-    current_at_converter = [1, 3, 5, 5, 5, 5]
-    active_current_at_converter = [2, 2, 2, 2, 2, 2]
+
     first_id_value, id_not_increase = common.check_generator_imax(
-        imax, time, current_at_converter, active_current_at_converter
+        5, time, [1, 3, 5, 5, 5, 5], [2, 2, 2, 2, 2, 2]
     )
+
     assert id_not_increase is True
     assert first_id_value == -1
 
 
-def test_theta_pi_raises_value_error_on_length_mismatch():
-    time = [0, 1, 2]
-    curve = [0, 1]
-    with pytest.raises(ValueError, match="different length"):
-        common.theta_pi(time, curve)
+def test_check_generator_imax_detects_an_active_current_increase_under_saturation():
+    time = [0, 1, 2, 3]
 
-
-def test_get_txu_returns_last_time_if_threshold_not_reached():
-    # Threshold is never reached, should return last time - sim_t_event_end
-    time = [0, 1, 2, 3, 4]
-    curve = [0, 0, 0, 0, 0]
-    threshold = 10
-    sim_t_event_end = 1
-    result = common.get_txu(threshold, time, curve, sim_t_event_end)
-    assert result == time[-1] - sim_t_event_end
-
-
-def test_mean_error_raises_value_error_on_length_mismatch():
-    signal = [1, 2, 3]
-    reference = [1, 2]
-    step_magnitude = 1
-    with pytest.raises(ValueError, match="different length"):
-        common.mean_error(signal, reference, step_magnitude)
-
-
-def test_maximum_error_returns_zero_on_empty_arrays():
-    signal = np.array([])
-    reference = np.array([])
-    step_magnitude = 1
-    result = common.maximum_error(signal, reference, step_magnitude)
-    assert result == 0
-
-
-def test_correct_time_lag_calculation():
-    time = [1.0, 1.6666666666, 2.6666666666, 4.0, 5.0]
-    curve = [10.0, 20.0, 30.0, 40.0, 50.0]
-    sim_t_event_start = 4.0
-    event_duration = 2.0
-
-    # Expected: time[1:4] = [1.6666666666, 2.6666666666, 4.0]
-    # compared with ideal_time = [2.0, 3.0, 4.0]
-    # The max difference should be the maximum absolute difference between these arrays
-
-    result = common.get_time_lag(time, curve, sim_t_event_start, event_duration)
-
-    # Calculate expected result manually
-    time_slice = time[1:4]  # Based on the algorithm's logic
-    ideal_time = np.linspace(
-        sim_t_event_start - event_duration, sim_t_event_start, len(time_slice), False
+    first_id_value, id_not_increase = common.check_generator_imax(
+        5, time, [5, 5, 5, 5], [1, 1, 2, 2]
     )
-    expected = max(abs(np.array(time_slice) - ideal_time))
 
-    assert math.isclose(result, expected), f"Expected time lag {expected}, but got {result}"
-
-
-def test_get_static_diff_returns_correct_percentage():
-    primary_voltages = [1.0, 1.05, 1.10]
-    voltage_setpoint = [1.0, 1.04, 1.00]
-    # last values: 1.10 and 1.00, so diff = abs(1.10 - 1.00) / 1.00 = 0.10
-    result = common.get_static_diff(primary_voltages, voltage_setpoint)
-    assert pytest.approx(result, rel=1e-9) == 0.10
+    assert id_not_increase is False
+    assert first_id_value == 2
 
 
-def test_get_overshoot_returns_correct_value():
-    curve = [1.0, 2.0, 3.5, 2.5, 2.0]
-    # peak is 3.5, final value is 2.0, overshoot = 3.5 - 2.0 = 1.5
-    result = common.get_overshoot(curve)
-    assert pytest.approx(result, rel=1e-9) == 1.5
+def test_check_generator_imax_resets_when_the_saturation_ends():
+    time = [0, 1, 2]
+
+    first_id_value, id_not_increase = common.check_generator_imax(5, time, [5, 1, 5], [1, 1, 5])
+
+    # Leaving saturation drops the reference, so the later increase is not a violation.
+    assert id_not_increase is True
+    assert first_id_value == -1
 
 
-def test_check_frequency_within_threshold_returns_true():
-    frequency = [1.0, 1.01, 0.99, 1.0, 1.005]
+def test_check_generator_imax_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="All input lists must have the same length"):
+        common.check_generator_imax(5, [0, 1, 2], [1, 2], [1, 2])
+
+
+# ---------------------------------------------------------------------------
+# AVR tracking
+# ---------------------------------------------------------------------------
+
+
+def test_get_AVR_x_within_the_tolerance():
     time = [0, 1, 2, 3, 4]
-    threshold = 0.02  # All values within 1.0 ± 0.02
-    result, error_time = common.check_frequency(threshold, frequency, time)
-    assert result is True
+    curve = [1.0, 1.05, 1.04, 1.03, 1.02]
+    target_values = [1.0, 1.0, 1.0, 1.0, 1.0]
+
+    pass_check, error_time = common.get_AVR_x(time, curve, target_values, sim_t_event_end=2)
+
+    assert pass_check is True
     assert error_time == -1
 
 
-def test_get_txp_raises_value_error_on_length_mismatch():
-    percent = 0.05
+def test_get_AVR_x_outside_the_tolerance_reports_the_instant():
     time = [0, 1, 2]
-    curve = [1, 2]
-    sim_t_event_end = 1
+    curve = [1.0, 1.0, 2.0]
+    target_values = [1.0, 1.0, 1.0]
+
+    pass_check, error_time = common.get_AVR_x(time, curve, target_values, sim_t_event_end=1)
+
+    assert pass_check is False
+    assert error_time == pytest.approx(1.0)
+
+
+def test_get_AVR_x_against_a_null_target_uses_the_absolute_error():
+    time = [0, 1, 2]
+    curve = [0.0, 0.0, 0.02]
+    target_values = [0.0, 0.0, 0.0]
+
+    pass_check, error_time = common.get_AVR_x(time, curve, target_values, sim_t_event_end=0)
+
+    assert pass_check is True
+    assert error_time == -1
+
+
+# ---------------------------------------------------------------------------
+# Frequency band
+# ---------------------------------------------------------------------------
+
+
+def test_check_frequency_within_the_threshold():
+    frequency = [1.0, 1.01, 0.99, 1.0, 1.005]
+    time = [0, 1, 2, 3, 4]
+
+    pass_test, error_time = common.check_frequency(0.02, frequency, time)
+
+    assert pass_test is True
+    assert error_time == -1
+
+
+def test_check_frequency_outside_the_threshold_reports_the_instant():
+    frequency = [1.0, 1.05, 1.0]
+    time = [0, 1, 2]
+
+    pass_test, error_time = common.check_frequency(0.02, frequency, time)
+
+    assert pass_test is False
+    assert error_time == 1
+
+
+# ---------------------------------------------------------------------------
+# Error metrics
+# ---------------------------------------------------------------------------
+
+
+def test_mean_error_is_signed():
+    result = common.mean_error([1, 2, 3, 4], [1, 2, 2, 2], step_magnitude=2)
+
+    assert result == pytest.approx(0.375)
+
+
+def test_mean_error_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
-        common.get_txp(percent, time, curve, sim_t_event_end)
+        common.mean_error([1, 2, 3], [1, 2], step_magnitude=1)
+
+
+def test_mean_absolute_error_ignores_the_sign():
+    result = common.mean_absolute_error([1, 2, 1, 0], [1, 2, 2, 2], step_magnitude=2)
+
+    assert result == pytest.approx(0.375)
+
+
+def test_mean_absolute_error_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.mean_absolute_error([1, 2, 3], [1, 2], step_magnitude=1)
+
+
+def test_maximum_error_returns_the_largest_deviation():
+    result = common.maximum_error(np.array([1, 2, 3, 4]), np.array([1, 2, 2, 2]), step_magnitude=2)
+
+    assert result == pytest.approx(1.0)
+
+
+def test_maximum_error_of_empty_signals_is_zero():
+    result = common.maximum_error(np.array([]), np.array([]), step_magnitude=1)
+
+    assert result == 0
+
+
+def test_maximum_error_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.maximum_error(np.array([1, 2, 3]), np.array([1, 2]), step_magnitude=1)
 
 
 def test_maximum_error_position_raises_value_error_on_length_mismatch():
@@ -222,6 +427,59 @@ def test_maximum_error_position_raises_value_error_on_length_mismatch():
     reference = pd.Series([1, 2])
     with pytest.raises(ValueError, match="different length"):
         common.maximum_error_position(time, signal, reference, "")
+
+
+class _RecordingLogger:
+    """Captures the warnings emitted through dycov_logging."""
+
+    def __init__(self):
+        self.warnings = []
+
+    def get_logger(self, name):
+        return self
+
+    def warning(self, msg):
+        self.warnings.append(msg)
+
+
+@pytest.fixture
+def logged_warnings(monkeypatch):
+    logger = _RecordingLogger()
+    monkeypatch.setattr("dycov.validation.common.dycov_logging", logger)
+    return logger.warnings
+
+
+def test_maximum_error_position_locates_the_largest_deviation():
+    time = pd.Series([0.0, 0.5, 1.0])
+    signal = pd.Series([1.0, 3.0, 1.0])
+    reference = pd.Series([1.0, 1.0, 1.0])
+
+    position = common.maximum_error_position(time, signal, reference, "BusPDR_BUS_ActivePower")
+
+    assert position == (0.5, 3.0, 1.0)
+
+
+def test_maximum_error_position_without_reference_values_is_not_computable(logged_warnings):
+    """Issue #373: an all-NaN reference used to return a two-element tuple, which broke the
+    three-value unpacking done by the caller; it is now a single "not computable" answer."""
+    time = pd.Series([0.0, 0.5, 1.0])
+    signal = pd.Series([1.0, 3.0, 1.0])
+    reference = pd.Series([np.nan, np.nan, np.nan])
+
+    position = common.maximum_error_position(time, signal, reference, "BusPDR_BUS_Voltage")
+
+    assert position is None
+    assert logged_warnings == ["No reference values in BusPDR_BUS_Voltage"]
+
+
+def test_maximum_error_position_of_empty_curves_is_not_computable(logged_warnings):
+    """Issue #373: empty curves used to return the bare scalar 0 instead of a tuple."""
+    empty = pd.Series([], dtype=float)
+
+    position = common.maximum_error_position(empty, empty, empty, "BusPDR_BUS_Voltage")
+
+    assert position is None
+    assert logged_warnings == ["No reference values in BusPDR_BUS_Voltage"]
 
 
 def test_get_reached_time_returns_correct_time_and_value():
@@ -236,44 +494,205 @@ def test_get_reached_time_returns_correct_time_and_value():
     assert pytest.approx(objective_value, rel=1e-9) == 6
 
 
-def test_mean_error_returns_correct_value():
-    signal = [1, 2, 3, 4]
-    reference = [1, 2, 2, 2]
-    step_magnitude = 2
-    expected = ((1 - 1) + (2 - 2) + (3 - 2) + (4 - 2)) / 4 / 2
-    result = common.mean_error(signal, reference, step_magnitude)
-    assert pytest.approx(result, rel=1e-9) == expected
+# ---------------------------------------------------------------------------
+# Response and settling times
+# ---------------------------------------------------------------------------
 
 
-def test_get_value_error_returns_zero_for_perfect_match():
-    # curve matches ideal ramp exactly, so error should be zero
+def test_get_response_time_measures_the_time_after_the_event():
+    time = [0, 1, 2, 3, 4]
+    curve = [0, 0, 0.9, 1.0, 1.0]
+
+    result = common.get_response_time(0.1, time, curve, sim_t_event_start=1)
+
+    assert result == pytest.approx(1.0)
+
+
+def test_get_response_time_of_a_curve_already_in_the_tube_is_zero():
+    time = [0, 1, 2]
+    curve = [1.0, 1.0, 1.0]
+
+    result = common.get_response_time(0.05, time, curve, sim_t_event_start=0)
+
+    assert result == pytest.approx(0.0)
+
+
+def test_get_response_time_of_an_event_after_the_curve_is_zero():
+    time = [0, 1, 2]
+    curve = [1.0, 1.0, 1.0]
+
+    result = common.get_response_time(0.05, time, curve, sim_t_event_start=5)
+
+    # The event is outside the simulated window.
+    assert result == 0
+
+
+def test_get_response_time_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_response_time(0.05, [0, 1, 2], [1, 2], sim_t_event_start=1)
+
+
+def test_get_settling_time_measures_the_time_and_the_tube():
+    time = [0, 1, 2, 3]
+    curve = [0.0, 0.0, 1.0, 1.0]
+
+    ret_val, pos, tube_min, tube_max, tube_value = common.get_settling_time(
+        0.05, time, curve, sim_t_event_start=0.5
+    )
+
+    assert ret_val == pytest.approx(0.5)
+    assert pos == 1
+    assert tube_min == pytest.approx(0.95)
+    assert tube_max == pytest.approx(1.05)
+    assert tube_value == pytest.approx(0.0)
+
+
+def test_get_settling_time_of_an_event_after_the_curve_is_zero():
+    time = [0, 1, 2]
+    curve = [0.0, 1.0, 1.0]
+
+    ret_val, pos, _, _, _ = common.get_settling_time(0.05, time, curve, sim_t_event_start=5)
+
+    assert ret_val == 0
+    assert pos == 0
+
+
+def test_get_settling_time_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_settling_time(0.05, [0, 1, 2], [1, 2], sim_t_event_start=1)
+
+
+# ---------------------------------------------------------------------------
+# Reached time
+# ---------------------------------------------------------------------------
+
+
+def test_get_reached_time_of_a_rising_curve():
+    time = [0, 1, 2, 3, 4, 5]
+    curve = [2, 3, 5, 6, 8, 10]
+
+    ret_val, objective_value = common.get_reached_time(0.5, time, curve, sim_t_event_start=1)
+
+    # The target is 2 + 0.5 * (10 - 2) = 6, first reached at t = 3 s.
+    assert ret_val == pytest.approx(2.0)
+    assert objective_value == pytest.approx(6.0)
+
+
+def test_get_reached_time_of_a_falling_curve():
+    time = [0, 1, 2, 3]
+    curve = [1.0, 1.0, 0.5, 0.0]
+
+    ret_val, objective_value = common.get_reached_time(0.5, time, curve, sim_t_event_start=1)
+
+    # The target is 1 + 0.5 * (0 - 1) = 0.5, first reached at t = 2 s.
+    assert ret_val == pytest.approx(1.0)
+    assert objective_value == pytest.approx(0.5)
+
+
+def test_get_reached_time_of_a_flat_curve_offsets_the_target():
+    time = [0, 1, 2]
+    curve = [1.0, 1.0, 1.0]
+
+    ret_val, objective_value = common.get_reached_time(0.5, time, curve, sim_t_event_start=1)
+
+    # Without a variation the percentage is applied as an absolute offset.
+    assert ret_val == pytest.approx(0.0)
+    assert objective_value == pytest.approx(1.5)
+
+
+def test_get_reached_time_of_an_unreachable_target_returns_the_last_instant():
+    time = [0, 1, 2]
+    curve = [0.0, 0.5, 1.0]
+
+    ret_val, objective_value = common.get_reached_time(1.5, time, curve, sim_t_event_start=1)
+
+    # A percentage above the whole variation is never reached, so the search is clamped.
+    assert ret_val == pytest.approx(1.0)
+    assert objective_value == pytest.approx(1.5)
+
+
+def test_get_reached_time_of_an_event_after_the_curve_is_zero():
+    time = [0, 1, 2]
+    curve = [0, 1, 2]
+
+    ret_val, _ = common.get_reached_time(0.9, time, curve, sim_t_event_start=5)
+
+    assert ret_val == 0
+
+
+def test_get_reached_time_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_reached_time(0.9, [0, 1, 2], [1, 2], sim_t_event_start=1)
+
+
+# ---------------------------------------------------------------------------
+# Overshoot
+# ---------------------------------------------------------------------------
+
+
+def test_get_overshoot_measures_the_peak_above_the_final_value():
+    result = common.get_overshoot([1.0, 2.0, 3.5, 2.5, 2.0])
+
+    assert result == pytest.approx(1.5)
+
+
+# ---------------------------------------------------------------------------
+# Ideal ramp deviation
+# ---------------------------------------------------------------------------
+
+
+def test_get_value_error_of_a_curve_following_the_ideal_ramp_is_zero():
     time = np.linspace(0, 1, 5)
     curve = np.linspace(0, 1, 5)
-    sim_t_event_start = 1
-    event_duration = 1
-    freq0 = 0
-    freq_peak = 1
-    # The function will cut curve between
-    # time >= sim_t_event_start - event_duration and < sim_t_event_start
-    # For this input, the cut will be the first 4 points
+
     result = common.get_value_error(
-        time, curve, sim_t_event_start, event_duration, freq0, freq_peak
+        time, curve, sim_t_event_start=1, event_duration=1, freq0=0, freq_peak=1
     )
-    assert pytest.approx(result, rel=1e-9) == 0
+
+    assert result == pytest.approx(0.0)
 
 
-def test_check_generator_imax_raises_value_error_on_length_mismatch():
-    imax = 5
-    time = [0, 1, 2]
-    current_at_converter = [1, 2]
-    active_current_at_converter = [1, 2]
-    with pytest.raises(ValueError, match="All input lists must have the same length"):
-        common.check_generator_imax(imax, time, current_at_converter, active_current_at_converter)
+def test_get_value_error_measures_the_deviation_from_the_ideal_ramp():
+    time = [0.0, 1.0, 2.0, 3.0]
+    curve = [1.0, 1.0, 1.1, 1.2]
+
+    result = common.get_value_error(
+        time, curve, sim_t_event_start=3, event_duration=1, freq0=1.0, freq_peak=0.2
+    )
+
+    # Only the sample at t = 2 s belongs to the ramp window, where the ideal value is 1.0 pu.
+    assert result == pytest.approx(0.1)
 
 
-def test_maximum_error_raises_value_error_on_length_mismatch():
-    signal = np.array([1, 2, 3])
-    reference = np.array([1, 2])
-    step_magnitude = 1
+def test_get_time_lag_of_an_evenly_sampled_ramp_is_zero():
+    time = [0.0, 0.5, 1.0, 1.5, 2.0]
+    curve = [1.0, 1.05, 1.10, 1.15, 1.20]
+
+    result = common.get_time_lag(time, curve, sim_t_event_start=2.0, event_duration=2.0)
+
+    assert result == pytest.approx(0.0)
+
+
+def test_get_time_lag_measures_the_sampling_deviation():
+    time = [0.0, 0.5, 1.5, 2.0]
+    curve = [1.0, 1.05, 1.15, 1.20]
+
+    result = common.get_time_lag(time, curve, sim_t_event_start=2.0, event_duration=2.0)
+
+    # The ramp samples are compared against [0, 2/3, 4/3].
+    assert result == pytest.approx(1.5 - 4 / 3)
+
+
+def test_get_time_lag_restricts_the_comparison_to_the_ramp_window():
+    time = [0.0, 1.0, 2.0, 3.0]
+    curve = [1.0, 1.0, 1.1, 1.2]
+
+    result = common.get_time_lag(time, curve, sim_t_event_start=3.0, event_duration=1.0)
+
+    # Only the sample at t = 2 s belongs to the ramp window, and it is evenly sampled.
+    assert result == pytest.approx(0.0)
+
+
+def test_get_time_lag_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
-        common.maximum_error(signal, reference, step_magnitude)
+        common.get_time_lag([0, 1, 2], [1, 2], sim_t_event_start=1, event_duration=1)

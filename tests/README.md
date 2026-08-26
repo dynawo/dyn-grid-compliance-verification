@@ -81,5 +81,7 @@ Pick the mechanism by need — do not mix them gratuitously within a file:
 
 The canon was applied on 2026-07-22 to: `test_dump.py`, `test_manage_files.py`,
 `test_omega_file.py`, `test_model_parameters.py`, `test_operating_condition.py`,
-`test_dynawo_par.py`. The rest of the suite is normalized incrementally: whenever a test file
-is touched, leave it fully conforming.
+`test_dynawo_par.py`; and to `tests/dycov/validation/` except `test_checks.py`
+(`test_model.py`, `test_common.py`, `test_performance.py`, `test_threshold_variables.py`).
+The rest of the suite is normalized incrementally: whenever a test file is touched, leave it
+fully conforming.
