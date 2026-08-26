@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 from pathlib import Path
 
@@ -23,10 +21,7 @@ LOGGER = dycov_logging.get_logger(__name__)
 
 
 class GridForming:
-    """
-    Core orchestrator class designed to handle the generation and analysis of
-    Grid Forming (GFM) model results for single simulation scenarios.
-    """
+    """Core orchestrator class for Grid Forming (GFM) model results generation."""
 
     def generate(
         self,
@@ -37,38 +32,30 @@ class GridForming:
         oc_name: str,
     ) -> None:
         """
-        Executes the primary pipeline for GFM simulation results generation,
-        including data calculations, CSV data exports, and plotting.
-
-        It automatically detects if "Hybrid" parameters (Overdamped/Underdamped conditions)
-        are defined within the configuration. If detected, it calculates envelopes for both
-        damping conditions and merges them (applying Min/Max boundary logic). Otherwise,
-        it proceeds with the standard predefined D and H parameters.
+        Executes the primary pipeline for GFM simulation results generation.
 
         Parameters
         ----------
         working_path : Path
-            The base directory path designated for saving the generated output files.
+            The directory path for intermediate and final outputs.
         parameters : GFMParameters
-            The loaded parameter configuration object guiding the simulation.
+            The parsed parameter configuration object.
         pcs_name : str
-            The identifier name of the specific Power Conversion System (PCS).
+            The name of the Point of Connection (PCS).
         bm_name : str
-            The identifier name of the Benchmark applied.
+            The Base Model identifier.
         oc_name : str
-            The identifier name of the specific Operating Condition.
+            The Operating Condition identifier.
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
-
         x_eff = parameters.get_effective_reactance()
+
         calculator_name = parameters.get_calculator_name()
         calculator = calculator_factory.get_calculator(calculator_name, parameters)
 
         time_array, event_time = self._get_time(calculator_name)
-
         params_list = calculator.get_plot_parameter_names() if calculator else None
 
-        # Determine the execution path: Hybrid (Merged) Mode vs Standard Mode
         hybrid_params = parameters.get_hybrid_parameters()
         standard_params = parameters.get_standard_parameters()
 
@@ -76,11 +63,11 @@ class GridForming:
         pcc_signal = np.array([])
         upper_envelope = np.array([])
         lower_envelope = np.array([])
-
-        # Dictionary to hold supplementary curves if 'save_all_envelopes' is enabled
         extra_envelopes = None
         title = f"{pcs_name}.{bm_name}.{oc_name}"
 
+        # Branch execution based on the presence of hybrid parameters (overdamped vs
+        # underdamped limits)
         if hybrid_params:
             LOGGER.info(
                 f"Hybrid parameters detected for {pcs_name}. Running Merged Envelope generation."
@@ -91,10 +78,8 @@ class GridForming:
             mag_name, pcc_over, up_over, low_over = self._calculate_envelopes(
                 calculator, time_array, event_time, d_over, h_over, x_eff
             )
-
             producer = parameters.get_producer()
             producer_config = producer.get_config() if producer else None
-
             save_ini_dump(
                 path=working_path / f"{title}_ini_dump_overdamped.txt",
                 parameters=parameters,
@@ -106,10 +91,8 @@ class GridForming:
             _, pcc_under, up_under, low_under = self._calculate_envelopes(
                 calculator, time_array, event_time, d_under, h_under, x_eff
             )
-
             producer = parameters.get_producer()
             producer_config = producer.get_config() if producer else None
-
             save_ini_dump(
                 path=working_path / f"{title}_ini_dump_underdamped.txt",
                 parameters=parameters,
@@ -117,12 +100,12 @@ class GridForming:
                 calculator=calculator,
             )
 
-            # Envelope Merging Logic: Calculate the absolute outermost bounds
-            # Maximum of both upper envelopes, Minimum of both lower envelopes
+            # Envelope Merging Logic: Calculate absolute worst-case boundaries from both executions
             upper_envelope1 = np.maximum(up_over, up_under)
             lower_envelope1 = np.minimum(low_over, low_under)
             upper_envelope2 = np.maximum(low_over, low_under)
             lower_envelop2 = np.minimum(up_over, up_under)
+
             upper_envelope = np.maximum(upper_envelope1, upper_envelope2)
             lower_envelope = np.minimum(lower_envelope1, lower_envelop2)
 
@@ -138,9 +121,9 @@ class GridForming:
                     "lower_underdamped": low_under,
                 }
 
-            # Update the plot parameters legend to accurately reflect the hybrid status
+            # Filter out raw D and H values from the legend since they are bifurcated in hybrid
+            # mode
             if params_list:
-                # Remove generic D and H labels, as hybrid uses dual configurations
                 params_list = [p for p in params_list if p not in ["D", "H"]]
 
         elif standard_params:
@@ -151,21 +134,17 @@ class GridForming:
             )
 
         else:
-            # Trigger exception if no valid calculation bounds are defined
             error_msg = (
-                f"Configuration Error in {pcs_name}: "
-                "Neither standard parameters (D, H) nor hybrid parameters "
-                "(D_Overdamped, H_Overdamped, D_Underdamped, H_Underdamped) are defined "
-                "in the Producer.ini or configuration files."
+                f"Configuration Error in {pcs_name}: Neither standard parameters (D, H) "
+                "nor hybrid parameters are defined in the Producer.ini."
             )
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Retrieve calculator operational flags (e.g., inconsistent damping triggers)
+        # Retrieve any integrity warnings triggered during calculator execution
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
-        # Execute data export and rendering routines
         self._export_csv(
             working_path,
             title,
@@ -180,7 +159,6 @@ class GridForming:
         if not hybrid_params:
             producer = parameters.get_producer()
             producer_config = producer.get_config() if producer else None
-
             save_ini_dump(
                 path=working_path / f"{title}_ini_dump.txt",
                 parameters=parameters,
@@ -207,22 +185,20 @@ class GridForming:
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
         """
-        Generates the simulation time array and determines the precise event time.
-
-        Note: Specific calculators like SCRJump and RoCoF require an extended pre-event
-        simulation window to establish a clear steady-state baseline.
+        Generates the simulation time array and event time based on calculator type.
 
         Parameters
         ----------
         calculator_name : str
-            The specific identifier string of the active calculator strategy.
+            The name identifier of the calculator in use.
 
         Returns
         -------
         tuple[np.ndarray, float]
-            A tuple containing the complete time array (np.ndarray) and the
-            calculated event time (float).
+            The numpy array containing simulation time steps
+            and the float value of the event time.
         """
+        # Provide extended pre-event stabilization time for calculators needing it
         if calculator_name in ["SCRJump", "RoCoF"]:
             start_time = constants.SIMULATION_START_TIME_EXTENDED
         else:
@@ -231,9 +207,8 @@ class GridForming:
         end_time = constants.SIMULATION_END_TIME
         event_time = constants.SIMULATION_EVENT_TIME
         nb_points = constants.SIMULATION_POINTS
-        time_array = np.linspace(start_time, end_time, nb_points)
 
-        return time_array, event_time
+        return np.linspace(start_time, end_time, nb_points), event_time
 
     def _calculate_envelopes(
         self,
@@ -245,43 +220,36 @@ class GridForming:
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Computes the analytical response envelopes using the active calculation strategy.
+        Computes analytical response envelopes delegating to the specific calculator.
 
         Parameters
         ----------
         calculator : GFMCalculator
-            The instantiated envelope calculator object.
+            The instantiated calculator object.
         time_array : np.ndarray
-            The X-axis time array mapped for the simulation.
+            The simulation time vector.
         event_time : float
-            The absolute point in time where the grid event is triggered.
+            The timestamp of the grid event.
         damping_constant : float
-            The system damping constant value (D).
+            The system damping parameter (D).
         inertia_constant : float
-            The system inertia constant value (H).
+            The system inertia parameter (H).
         x_eff : float
-            The effective reactance of the system (Xeff).
+            The effective reactance.
 
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing:
-            - str: The symbolic name of the magnitude plotted (e.g., 'P', 'Iq').
-            - np.ndarray: The resulting PCC signal data array.
-            - np.ndarray: The upper bound envelope data array.
-            - np.ndarray: The lower bound envelope data array.
+            The magnitude identifier,
+            power signal, upper envelope, and lower envelope arrays.
         """
-        magnitude_name, pcc_signal, upper_envelope, lower_envelope = (
-            calculator.calculate_envelopes(
-                D=damping_constant,
-                H=inertia_constant,
-                Xeff=x_eff,
-                time_array=time_array,
-                event_time=event_time,
-            )
+        return calculator.calculate_envelopes(
+            D=damping_constant,
+            H=inertia_constant,
+            Xeff=x_eff,
+            time_array=time_array,
+            event_time=event_time,
         )
-
-        return magnitude_name, pcc_signal, upper_envelope, lower_envelope
 
     def _export_csv(
         self,
@@ -295,26 +263,26 @@ class GridForming:
         extra_envelopes: dict = None,
     ) -> None:
         """
-        Marshals the generated mathematical signals and exports them to a structured CSV format.
+        Exports generated signals to a CSV file.
 
         Parameters
         ----------
         csv_path : Path
-            The directory path intended for the output CSV file.
+            The directory path to save the CSV.
         title : str
-            The base filename for the output file.
+            The file name for the CSV (without extension).
         magnitude_name : str
-            The physical magnitude being analyzed (e.g., 'P', 'Iq').
+            The descriptive name of the physical magnitude.
         time_array : np.ndarray
-            Array containing all time steps evaluated.
+            The time array vector.
         pcc_signal : np.ndarray
-            The recorded system signal at the Point of Common Coupling.
+            The main signal value array.
         lower_envelope : np.ndarray
-            The array bounding the lower limit of the response.
+            The computed lower limit array.
         upper_envelope : np.ndarray
-            The array bounding the upper limit of the response.
+            The computed upper limit array.
         extra_envelopes : dict, optional
-            A dictionary appending supplementary data series as additional columns.
+            Additional debugging envelopes to append.
         """
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
@@ -330,90 +298,76 @@ class GridForming:
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
         """
-        Extracts and formats key simulation variables into human-readable strings for UI rendering.
+        Extracts and formats key simulation variables for UI rendering.
 
         Parameters
         ----------
         parameters : GFMParameters
-            The central configuration object queried for parameter values.
+            The main parameter configuration object.
         params_list : list
-            A filter list of string identifiers specifying which parameters should be extracted.
+            The list of parameter names requested by the calculator.
         calculator : GFMCalculator
-            The calculator providing internal runtime variables (e.g., Epsilon).
+            The instantiated calculator object to query.
 
         Returns
         -------
         list[str]
-            A comprehensive list of cleanly formatted strings representing parameters and values.
+            A list of formatted string lines for display on plots.
         """
         if params_list is None:
             return []
 
         text_params_info = []
 
+        # Map backend parameters to standard physical units (pu, Hz, ms) for plot text overlay
         if "P0" in params_list:
-            value = parameters.get_initial_active_power()
-            text_params_info.append(f"P0 = {value:.3f} pu")
+            text_params_info.append(f"P0 = {parameters.get_initial_active_power():.3f} pu")
         if "Q0" in params_list:
-            value = parameters.get_initial_reactive_power()
-            text_params_info.append(f"Q0 = {value:.3f} pu")
+            text_params_info.append(f"Q0 = {parameters.get_initial_reactive_power():.3f} pu")
         if "TimeTo90" in params_list:
-            value = parameters.get_time_to_90()
-            text_params_info.append(f"t_90% = {(value * 1000):.3f} ms")
+            text_params_info.append(f"t_90% = {(parameters.get_time_to_90() * 1000):.3f} ms")
         if "Pmax" in params_list:
-            value = parameters.get_max_active_power()
-            text_params_info.append(f"Pmax = {value:.3f} pu")
+            text_params_info.append(f"Pmax = {parameters.get_max_active_power():.3f} pu")
         if "Qmax" in params_list:
-            value = parameters.get_max_reactive_power()
-            text_params_info.append(f"Qmax = {value:.3f} pu")
+            text_params_info.append(f"Qmax = {parameters.get_max_reactive_power():.3f} pu")
         if "Pmin" in params_list:
-            value = parameters.get_min_active_power()
-            text_params_info.append(f"Pmin = {value:.3f} pu")
+            text_params_info.append(f"Pmin = {parameters.get_min_active_power():.3f} pu")
         if "Qmin" in params_list:
-            value = parameters.get_min_reactive_power()
-            text_params_info.append(f"Qmin = {value:.3f} pu")
+            text_params_info.append(f"Qmin = {parameters.get_min_reactive_power():.3f} pu")
         if "DeltaPhase" in params_list:
-            value = parameters.get_delta_phase()
-            text_params_info.append(f"Δθ_grid = {value:.3f}°")
+            text_params_info.append(f"Δθ_grid = {parameters.get_delta_phase():.3f}°")
         if "SCR" in params_list:
-            value = parameters.get_scr()
-            text_params_info.append(f"SCR = {value:.3f}")
+            text_params_info.append(f"SCR = {parameters.get_scr():.3f}")
         if "VoltageStepAtGrid" in params_list:
-            value = parameters.get_voltage_step_at_grid()
-            text_params_info.append(f"ΔV_Grid = {value / 100:.3f} pu")
+            text_params_info.append(
+                f"ΔV_Grid = {parameters.get_voltage_step_at_grid() / 100:.3f} pu"
+            )
         if "VoltageStepAtPDR" in params_list:
-            value = parameters.get_voltage_step_at_pdr()
-            text_params_info.append(f"ΔV_PGU = {value / 100:.3f} pu")
+            text_params_info.append(
+                f"ΔV_PGU = {parameters.get_voltage_step_at_pdr() / 100:.3f} pu"
+            )
         if "AngleStepAtPDR" in params_list:
-            value = parameters.get_delta_step()
-            text_params_info.append(f"Δθ_PGU = {value:.3f}°")
+            text_params_info.append(f"Δθ_PGU = {parameters.get_delta_step():.3f}°")
         if "SCRinitial" in params_list:
-            value = parameters.get_initial_scr()
-            text_params_info.append(f"SCR_initial = {value:.3f}")
+            text_params_info.append(f"SCR_initial = {parameters.get_initial_scr():.3f}")
         if "SCRfinal" in params_list:
-            value = parameters.get_final_scr()
-            text_params_info.append(f"SCR_final = {value:.3f}")
+            text_params_info.append(f"SCR_final = {parameters.get_final_scr():.3f}")
         if "Frequency0" in params_list:
-            value = parameters.get_initial_frequency()
-            text_params_info.append(f"f0 = {(value * 50):.3f} Hz")
+            text_params_info.append(f"f0 = {(parameters.get_initial_frequency() * 50):.3f} Hz")
         if "RoCoF" in params_list:
-            value = parameters.get_change_frequency()
-            text_params_info.append(f"RoCoF = {(value * 50):.3f} Hz/s")
+            text_params_info.append(f"RoCoF = {(parameters.get_change_frequency() * 50):.3f} Hz/s")
         if "RoCoFDuration" in params_list:
-            value = parameters.get_change_frequency_duration()
-            text_params_info.append(f"RoCoF Duration = {(value * 1000):.3f} ms")
+            text_params_info.append(
+                f"RoCoF Duration = {(parameters.get_change_frequency_duration() * 1000):.3f} ms"
+            )
         if "Xeff" in params_list:
-            value = parameters.get_effective_reactance()
-            text_params_info.append(f"Xeff = {value:.3f} pu")
+            text_params_info.append(f"Xeff = {parameters.get_effective_reactance():.3f} pu")
         if "D" in params_list:
-            value = parameters.get_damping_constant()
-            text_params_info.append(f"D = {value:.3f}")
+            text_params_info.append(f"D = {parameters.get_damping_constant():.3f}")
         if "H" in params_list:
-            value = parameters.get_inertia_constant()
-            text_params_info.append(f"H = {value:.3f} s")
+            text_params_info.append(f"H = {parameters.get_inertia_constant():.3f} s")
         if "Epsilon" in params_list:
-            value = calculator._epsilon
-            text_params_info.append(f"Epsilon = {value:.3f}")
+            text_params_info.append(f"Epsilon = {calculator._epsilon:.3f}")
 
         return text_params_info
 
@@ -435,38 +389,38 @@ class GridForming:
         extra_envelopes: dict = None,
     ) -> None:
         """
-        Dispatches the internal variables to render and export the final visual plots.
+        Dispatches variables to render visual plots in PNG and HTML format.
 
         Parameters
         ----------
         png_path : Path
-            Destination directory intended for the graphical output files.
+            The directory path to save the visual plots.
         title : str
-            The base title rendered onto the graph and used as the filename.
+            The title of the plot and filename.
         magnitude_name : str
-            The specific physical unit or magnitude being graphed (e.g., 'P', 'Iq').
+            The physical magnitude measured (e.g., P, Iq).
         time_array : np.ndarray
-            The complete X-axis time representation array.
+            The simulation time vector.
         event_time : float
-            The specific point marking the event initialization for rendering overlays.
+            The timestamp when the grid event happens.
         pcc_signal : np.ndarray
-            The evaluated signal line derived from the simulation.
+            The primary physical signal array.
         lower_envelope : np.ndarray
-            The continuous lower constraint threshold series.
+            The calculated lower boundary array.
         upper_envelope : np.ndarray
-            The continuous upper constraint threshold series.
+            The calculated upper boundary array.
         parameters : GFMParameters
-            The simulation parameter handler used to populate legend labels.
+            The simulation parameter configuration.
         params_list : list
-            Target variables designated for inclusion within the visual legend.
+            The list of variables to print on the plot legend.
         calculator : GFMCalculator
-            The active calculator instance providing necessary derivation boundaries.
+            The calculator instance used for simulation.
         is_inconsistent : bool, optional
-            Flag to highlight data anomalies via graphical overlays. Defaults to False.
+            Whether to display a warning flag on the plot.
         disclaimer_msg : str, optional
-            Specific warning message overlay injected into the plot.
+            A custom text to display if inconsistencies exist.
         extra_envelopes : dict, optional
-            Supplementary graphs triggered during hybrid evaluation structures.
+            Extra boundary arrays for UI rendering.
         """
         plot_results(
             path=png_path / f"{title}.png",
@@ -474,7 +428,7 @@ class GridForming:
             magnitude=magnitude_name,
             time_array=time_array,
             event_time=event_time,
-            shift_time=0,  # Temporal shift reference indicating y-axis marker offset.
+            shift_time=0,
             pcc_signal=pcc_signal,
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
