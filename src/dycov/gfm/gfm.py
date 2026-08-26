@@ -31,13 +31,21 @@ class GridForming:
         bm_name: str,
         oc_name: str,
     ) -> None:
-        """Executes the primary pipeline for GFM simulation results generation.
-        Args:
-            working_path (Path): The directory path for intermediate and final outputs.
-            parameters (GFMParameters): The parsed parameter configuration object.
-            pcs_name (str): The name of the Point of Connection (PCS).
-            bm_name (str): The Base Model identifier.
-            oc_name (str): The Operating Condition identifier.
+        """
+        Executes the primary pipeline for GFM simulation results generation.
+
+        Parameters
+        ----------
+        working_path : Path
+            The directory path for intermediate and final outputs.
+        parameters : GFMParameters
+            The parsed parameter configuration object.
+        pcs_name : str
+            The name of the Point of Connection (PCS).
+        bm_name : str
+            The Base Model identifier.
+        oc_name : str
+            The Operating Condition identifier.
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
         x_eff = parameters.get_effective_reactance()
@@ -176,12 +184,19 @@ class GridForming:
         )
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
-        """Generates the simulation time array and event time based on calculator type.
-        Args:
-            calculator_name (str): The name identifier of the calculator in use.
-        Returns:
-            tuple[np.ndarray, float]: The numpy array containing simulation time steps
-                and the float value of the event time.
+        """
+        Generates the simulation time array and event time based on calculator type.
+
+        Parameters
+        ----------
+        calculator_name : str
+            The name identifier of the calculator in use.
+
+        Returns
+        -------
+        tuple[np.ndarray, float]
+            The numpy array containing simulation time steps
+            and the float value of the event time.
         """
         # Provide extended pre-event stabilization time for calculators needing it
         if calculator_name in ["SCRJump", "RoCoF"]:
@@ -204,17 +219,29 @@ class GridForming:
         inertia_constant: float,
         x_eff: float,
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Computes analytical response envelopes delegating to the specific calculator.
-        Args:
-            calculator (GFMCalculator): The instantiated calculator object.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The timestamp of the grid event.
-            damping_constant (float): The system damping parameter (D).
-            inertia_constant (float): The system inertia parameter (H).
-            x_eff (float): The effective reactance.
-        Returns:
-            tuple[str, np.ndarray, np.ndarray, np.ndarray]: The magnitude identifier,
-                power signal, upper envelope, and lower envelope arrays.
+        """
+        Computes analytical response envelopes delegating to the specific calculator.
+
+        Parameters
+        ----------
+        calculator : GFMCalculator
+            The instantiated calculator object.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp of the grid event.
+        damping_constant : float
+            The system damping parameter (D).
+        inertia_constant : float
+            The system inertia parameter (H).
+        x_eff : float
+            The effective reactance.
+
+        Returns
+        -------
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
+            The magnitude identifier,
+            power signal, upper envelope, and lower envelope arrays.
         """
         return calculator.calculate_envelopes(
             D=damping_constant,
@@ -235,16 +262,27 @@ class GridForming:
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
     ) -> None:
-        """Exports generated signals to a CSV file.
-        Args:
-            csv_path (Path): The directory path to save the CSV.
-            title (str): The file name for the CSV (without extension).
-            magnitude_name (str): The descriptive name of the physical magnitude.
-            time_array (np.ndarray): The time array vector.
-            pcc_signal (np.ndarray): The main signal value array.
-            lower_envelope (np.ndarray): The computed lower limit array.
-            upper_envelope (np.ndarray): The computed upper limit array.
-            extra_envelopes (dict, optional): Additional debugging envelopes to append.
+        """
+        Exports generated signals to a CSV file.
+
+        Parameters
+        ----------
+        csv_path : Path
+            The directory path to save the CSV.
+        title : str
+            The file name for the CSV (without extension).
+        magnitude_name : str
+            The descriptive name of the physical magnitude.
+        time_array : np.ndarray
+            The time array vector.
+        pcc_signal : np.ndarray
+            The main signal value array.
+        lower_envelope : np.ndarray
+            The computed lower limit array.
+        upper_envelope : np.ndarray
+            The computed upper limit array.
+        extra_envelopes : dict, optional
+            Additional debugging envelopes to append.
         """
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
@@ -259,13 +297,22 @@ class GridForming:
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
     ) -> list[str]:
-        """Extracts and formats key simulation variables for UI rendering.
-        Args:
-            parameters (GFMParameters): The main parameter configuration object.
-            params_list (list): The list of parameter names requested by the calculator.
-            calculator (GFMCalculator): The instantiated calculator object to query.
-        Returns:
-            list[str]: A list of formatted string lines for display on plots.
+        """
+        Extracts and formats key simulation variables for UI rendering.
+
+        Parameters
+        ----------
+        parameters : GFMParameters
+            The main parameter configuration object.
+        params_list : list
+            The list of parameter names requested by the calculator.
+        calculator : GFMCalculator
+            The instantiated calculator object to query.
+
+        Returns
+        -------
+        list[str]
+            A list of formatted string lines for display on plots.
         """
         if params_list is None:
             return []
@@ -341,22 +388,39 @@ class GridForming:
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
     ) -> None:
-        """Dispatches variables to render visual plots in PNG and HTML format.
-        Args:
-            png_path (Path): The directory path to save the visual plots.
-            title (str): The title of the plot and filename.
-            magnitude_name (str): The physical magnitude measured (e.g., P, Iq).
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The timestamp when the grid event happens.
-            pcc_signal (np.ndarray): The primary physical signal array.
-            lower_envelope (np.ndarray): The calculated lower boundary array.
-            upper_envelope (np.ndarray): The calculated upper boundary array.
-            parameters (GFMParameters): The simulation parameter configuration.
-            params_list (list): The list of variables to print on the plot legend.
-            calculator (GFMCalculator): The calculator instance used for simulation.
-            is_inconsistent (bool, optional): Whether to display a warning flag on the plot.
-            disclaimer_msg (str, optional): A custom text to display if inconsistencies exist.
-            extra_envelopes (dict, optional): Extra boundary arrays for UI rendering.
+        """
+        Dispatches variables to render visual plots in PNG and HTML format.
+
+        Parameters
+        ----------
+        png_path : Path
+            The directory path to save the visual plots.
+        title : str
+            The title of the plot and filename.
+        magnitude_name : str
+            The physical magnitude measured (e.g., P, Iq).
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp when the grid event happens.
+        pcc_signal : np.ndarray
+            The primary physical signal array.
+        lower_envelope : np.ndarray
+            The calculated lower boundary array.
+        upper_envelope : np.ndarray
+            The calculated upper boundary array.
+        parameters : GFMParameters
+            The simulation parameter configuration.
+        params_list : list
+            The list of variables to print on the plot legend.
+        calculator : GFMCalculator
+            The calculator instance used for simulation.
+        is_inconsistent : bool, optional
+            Whether to display a warning flag on the plot.
+        disclaimer_msg : str, optional
+            A custom text to display if inconsistencies exist.
+        extra_envelopes : dict, optional
+            Extra boundary arrays for UI rendering.
         """
         plot_results(
             path=png_path / f"{title}.png",

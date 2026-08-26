@@ -18,10 +18,13 @@ class PhaseJump(GFMCalculator):
     """Handles the GFM response to a phase jump event."""
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the PhaseJump calculator.
+        """
+        Initializes the PhaseJump calculator.
 
-        Args:
-            gfm_params (GFMParameters): The shared configuration parameters.
+        Parameters
+        ----------
+        gfm_params : GFMParameters
+            The shared configuration parameters.
         """
         super().__init__(gfm_params=gfm_params)
         self._delta_phase = gfm_params.get_delta_phase()
@@ -30,28 +33,40 @@ class PhaseJump(GFMCalculator):
         self._max_active_power = gfm_params.get_max_active_power()
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves parameters relevant for rendering Phase Jump plots.
+        """
+        Retrieves parameters relevant for rendering Phase Jump plots.
 
-        Returns:
-            list[str]: A list of parameter names to be displayed.
+        Returns
+        -------
+        list[str]
+            A list of parameter names to be displayed.
         """
         return ["P0", "Q0", "DeltaPhase", "AngleStepAtPDR", "SCR", "Xeff", "D", "H", "Epsilon"]
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates the active power deviation and bounding envelopes for a Phase Jump.
+        """
+        Calculates the active power deviation and bounding envelopes for a Phase Jump.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The timestamp of the event.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp of the event.
 
-        Returns:
-            tuple[str, np.ndarray, np.ndarray, np.ndarray]: The magnitude name ("Ip"),
-                main signal, upper envelope, and lower envelope arrays.
+        Returns
+        -------
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
+            The magnitude name ("Ip"),
+            main signal, upper envelope, and lower envelope arrays.
         """
         logger = dycov_logging.get_logger("PhaseJump")
         logger.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
@@ -93,19 +108,28 @@ class PhaseJump(GFMCalculator):
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]:
-        """Computes baseline, minimum, and maximum delta_p variations for Phase Jump.
+        """
+        Computes baseline, minimum, and maximum delta_p variations for Phase Jump.
 
-        Args:
-            D (float): The base damping constant.
-            H (float): The base inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The timestamp of the event.
+        Parameters
+        ----------
+        D : float
+            The base damping constant.
+        H : float
+            The base inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp of the event.
 
-        Returns:
-            tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]: A tuple
-                containing the delta_p arrays, min boundary, max boundary, peak powers,
-                and epsilons.
+        Returns
+        -------
+        tuple[list[np.ndarray], np.ndarray, np.ndarray, list[float], list[float]]
+            A tuple
+            containing the delta_p arrays, min boundary, max boundary, peak powers,
+            and epsilons.
         """
         x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
@@ -149,19 +173,29 @@ class PhaseJump(GFMCalculator):
         time_array: np.ndarray,
         event_time: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Constructs power envelopes bounded by Phase Jump analytical trace logic.
+        """
+        Constructs power envelopes bounded by Phase Jump analytical trace logic.
 
-        Args:
-            delta_p_array (list[np.ndarray]): A list containing all calculated delta_p arrays.
-            delta_p_min (np.ndarray): The minimum boundary trace.
-            delta_p_max (np.ndarray): The maximum boundary trace.
-            p_peak_array (list[float]): A list of calculated peak powers.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The timestamp of the event.
+        Parameters
+        ----------
+        delta_p_array : list[np.ndarray]
+            A list containing all calculated delta_p arrays.
+        delta_p_min : np.ndarray
+            The minimum boundary trace.
+        delta_p_max : np.ndarray
+            The maximum boundary trace.
+        p_peak_array : list[float]
+            A list of calculated peak powers.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp of the event.
 
-        Returns:
-            tuple[np.ndarray, np.ndarray, np.ndarray]: The main power signal, upper envelope,
-                and lower envelope.
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray, np.ndarray]
+            The main power signal, upper envelope,
+            and lower envelope.
         """
         delta_p = delta_p_array[self._ORIGINAL_PARAMS_IDX]
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
@@ -194,16 +228,23 @@ class PhaseJump(GFMCalculator):
     def _calculate_common_params(
         self, D: float, H: float, Xeff: float
     ) -> tuple[float, float, float, float]:
-        """Derives structural parameters (epsilon, natural frequency) for Phase Jump.
+        """
+        Derives structural parameters (epsilon, natural frequency) for Phase Jump.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
 
-        Returns:
-            tuple[float, float, float, float]: Total reactance, epsilon, natural frequency,
-                and peak power calculation.
+        Returns
+        -------
+        tuple[float, float, float, float]
+            Total reactance, epsilon, natural frequency,
+            and peak power calculation.
         """
         x_gr = 1 / self._scr
         x_total_initial = Xeff + x_gr
@@ -229,19 +270,29 @@ class PhaseJump(GFMCalculator):
         event_time: float,
         epsilon_initial_check: float,
     ) -> tuple[np.ndarray, float, float]:
-        """Branches execution logic relative to the system's damping factor.
+        """
+        Branches execution logic relative to the system's damping factor.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The event timestamp.
-            epsilon_initial_check (float): The calculated damping ratio.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The event timestamp.
+        epsilon_initial_check : float
+            The calculated damping ratio.
 
-        Returns:
-            tuple[np.ndarray, float, float]: The calculated power deviation array,
-                peak power, and epsilon.
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            The calculated power deviation array,
+            peak power, and epsilon.
         """
         if epsilon_initial_check > self._EPSILON_THRESHOLD:
             return self._get_overdamped_delta_p(D, H, Xeff, time_array, event_time)
@@ -251,17 +302,25 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Resolves the fundamental delta_p waveform for an overdamped system.
+        """
+        Resolves the fundamental delta_p waveform for an overdamped system.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The relative simulation time vector.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The relative simulation time vector.
 
-        Returns:
-            tuple[np.ndarray, float, float]: The base power response array, peak power,
-                and epsilon.
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            The base power response array, peak power,
+            and epsilon.
         """
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
 
@@ -283,18 +342,27 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """Truncates and aligns the overdamped delta_p mapping to the Phase Jump event time.
+        """
+        Truncates and aligns the overdamped delta_p mapping to the Phase Jump event time.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The absolute simulation time vector.
-            event_time (float): The event trigger timestamp.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The absolute simulation time vector.
+        event_time : float
+            The event trigger timestamp.
 
-        Returns:
-            tuple[np.ndarray, float, float]: The aligned power response array, peak power,
-                and epsilon.
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            The aligned power response array, peak power,
+            and epsilon.
         """
         delta_p1, p_peak, epsilon = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p = np.where(time_array < event_time, 0, delta_p1)
@@ -303,17 +371,26 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_min(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Calculates the lower envelope trace for an overdamped Phase Jump.
+        """
+        Calculates the lower envelope trace for an overdamped Phase Jump.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The absolute simulation time vector.
-            event_time (float): The event timestamp.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The absolute simulation time vector.
+        event_time : float
+            The event timestamp.
 
-        Returns:
-            np.ndarray: The aligned lower trace array.
+        Returns
+        -------
+        np.ndarray
+            The aligned lower trace array.
         """
         delta_p1, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p1_margined = (1 + self._margin_low) * delta_p1
@@ -322,17 +399,26 @@ class PhaseJump(GFMCalculator):
     def _get_overdamped_delta_p_max(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Calculates the upper envelope trace for an overdamped Phase Jump.
+        """
+        Calculates the upper envelope trace for an overdamped Phase Jump.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The absolute simulation time vector.
-            event_time (float): The event timestamp.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The absolute simulation time vector.
+        event_time : float
+            The event timestamp.
 
-        Returns:
-            np.ndarray: The aligned upper trace array.
+        Returns
+        -------
+        np.ndarray
+            The aligned upper trace array.
         """
         delta_p, _, _ = self._get_overdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p_margined = self._margin_high * delta_p
@@ -344,17 +430,25 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_base(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray
     ) -> tuple[np.ndarray, float, float]:
-        """Resolves the fundamental delta_p waveform capturing oscillatory traits.
+        """
+        Resolves the fundamental delta_p waveform capturing oscillatory traits.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The relative simulation time vector.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The relative simulation time vector.
 
-        Returns:
-            tuple[np.ndarray, float, float]: The baseline power response array, peak power,
-                and epsilon.
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            The baseline power response array, peak power,
+            and epsilon.
         """
         _, epsilon, wn, p_peak = self._calculate_common_params(D, H, Xeff)
 
@@ -370,18 +464,27 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[np.ndarray, float, float]:
-        """Truncates and aligns the underdamped delta_p mapping to the Phase Jump event time.
+        """
+        Truncates and aligns the underdamped delta_p mapping to the Phase Jump event time.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The absolute simulation time vector.
-            event_time (float): The event timestamp.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The absolute simulation time vector.
+        event_time : float
+            The event timestamp.
 
-        Returns:
-            tuple[np.ndarray, float, float]: The aligned power response array, peak power,
-                and epsilon.
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            The aligned power response array, peak power,
+            and epsilon.
         """
         delta_p1, p_peak, epsilon = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         delta_p = np.where(time_array < event_time, 0, delta_p1)
@@ -390,17 +493,26 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_min(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Calculates the lower envelope trace for an underdamped Phase Jump.
+        """
+        Calculates the lower envelope trace for an underdamped Phase Jump.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The absolute simulation time vector.
-            event_time (float): The event timestamp.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The absolute simulation time vector.
+        event_time : float
+            The event timestamp.
 
-        Returns:
-            np.ndarray: The aligned minimum trace array.
+        Returns
+        -------
+        np.ndarray
+            The aligned minimum trace array.
         """
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)
@@ -413,17 +525,26 @@ class PhaseJump(GFMCalculator):
     def _get_underdamped_delta_p_max(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Calculates the upper envelope trace for an underdamped Phase Jump.
+        """
+        Calculates the upper envelope trace for an underdamped Phase Jump.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The absolute simulation time vector.
-            event_time (float): The event timestamp.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The absolute simulation time vector.
+        event_time : float
+            The event timestamp.
 
-        Returns:
-            np.ndarray: The aligned maximum trace array.
+        Returns
+        -------
+        np.ndarray
+            The aligned maximum trace array.
         """
         _, p_peak, _ = self._get_underdamped_delta_p_base(D, H, Xeff, time_array)
         sigma = D / (4 * H)
@@ -434,13 +555,18 @@ class PhaseJump(GFMCalculator):
         return np.where(time_array < event_time, 0, delta_p_delayed)
 
     def _get_tunnel(self, p_peak_array: list[float]) -> float:
-        """Calculates the mathematical static tolerance margin ('tunnel') for Phase Jump.
+        """
+        Calculates the mathematical static tolerance margin ('tunnel') for Phase Jump.
 
-        Args:
-            p_peak_array (list[float]): A list of peak power measurements.
+        Parameters
+        ----------
+        p_peak_array : list[float]
+            A list of peak power measurements.
 
-        Returns:
-            float: The calculated tunnel margin in pu.
+        Returns
+        -------
+        float
+            The calculated tunnel margin in pu.
         """
         p_peak = p_peak_array[self._ORIGINAL_PARAMS_IDX]
         return max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)

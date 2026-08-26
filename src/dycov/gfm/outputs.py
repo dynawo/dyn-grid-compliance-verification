@@ -28,19 +28,27 @@ def save_results_to_csv(
 ) -> None:
     """
     Exports envelopes and signals to a CSV file.
-    Args:
-        path (Path): Destination path for the CSV file.
-        magnitude (str): Name of the magnitude being recorded.
-        time_array (np.ndarray): Array of time steps.
-        pcc_signal (np.ndarray): Array of Point of Common Coupling signal values.
-        lower_envelope (np.ndarray): Array of lower envelope values.
-        upper_envelope (np.ndarray): Array of upper envelope values.
-        extra_envelopes (
-            dict[str,
-            np.ndarray],
-            optional): Additional envelopes to save. Defaults to None.
-    Returns:
-        None
+
+    Parameters
+    ----------
+    path : Path
+        Destination path for the CSV file.
+    magnitude : str
+        Name of the magnitude being recorded.
+    time_array : np.ndarray
+        Array of time steps.
+    pcc_signal : np.ndarray
+        Array of Point of Common Coupling signal values.
+    lower_envelope : np.ndarray
+        Array of lower envelope values.
+    upper_envelope : np.ndarray
+        Array of upper envelope values.
+    extra_envelopes : dict[str, np.ndarray], optional
+        Additional envelopes to save. Defaults to None.
+
+    Returns
+    -------
+    None
     """
     # Map core signals to their respective CSV column headers
     data = {
@@ -68,16 +76,24 @@ def find_start_trim_index(
 ) -> int:
     """
     Finds the starting index to trim leading stable data.
-    Args:
-        pcc_signal (np.ndarray): The main signal array.
-        lower_envelope (np.ndarray): The lower envelope array.
-        upper_envelope (np.ndarray): The upper envelope array.
-        tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
-        buffer_points (
-            int,
-            optional): Number of safety points to keep before the change. Defaults to 10.
-    Returns:
-        int: The calculated starting index.
+
+    Parameters
+    ----------
+    pcc_signal : np.ndarray
+        The main signal array.
+    lower_envelope : np.ndarray
+        The lower envelope array.
+    upper_envelope : np.ndarray
+        The upper envelope array.
+    tolerance : float, optional
+        Variation threshold to detect changes. Defaults to 1e-5.
+    buffer_points : int, optional
+        Number of safety points to keep before the change. Defaults to 10.
+
+    Returns
+    -------
+    int
+        The calculated starting index.
     """
     # Scan forward to bypass initial flatlines until a significant variation is detected
     for i in range(len(pcc_signal) - 1):
@@ -100,16 +116,24 @@ def find_end_trim_index(
 ) -> int:
     """
     Finds the ending index to trim trailing stable data.
-    Args:
-        pcc_signal (np.ndarray): The main signal array.
-        lower_envelope (np.ndarray): The lower envelope array.
-        upper_envelope (np.ndarray): The upper envelope array.
-        tolerance (float, optional): Variation threshold to detect changes. Defaults to 1e-5.
-        buffer_points (
-            int,
-            optional): Number of safety points to keep after the change. Defaults to 10.
-    Returns:
-        int: The calculated ending index.
+
+    Parameters
+    ----------
+    pcc_signal : np.ndarray
+        The main signal array.
+    lower_envelope : np.ndarray
+        The lower envelope array.
+    upper_envelope : np.ndarray
+        The upper envelope array.
+    tolerance : float, optional
+        Variation threshold to detect changes. Defaults to 1e-5.
+    buffer_points : int, optional
+        Number of safety points to keep after the change. Defaults to 10.
+
+    Returns
+    -------
+    int
+        The calculated ending index.
     """
     # Scan backward from the end to strip trailing stable data
     for i in range(len(pcc_signal) - 1, 0, -1):
@@ -141,30 +165,41 @@ def plot_results(
 ) -> None:
     """
     Renders and exports simulation results graphically.
-    Args:
-        path (Path): Destination path for the plot file.
-        title (str): Title of the plot.
-        magnitude (str): The physical magnitude being plotted.
-        time_array (np.ndarray): The time steps array.
-        event_time (float): The timestamp of the main simulation event.
-        shift_time (float): Time shift in milliseconds to adjust the vertical event line.
-        pcc_signal (np.ndarray): Main signal data to plot.
-        lower_envelope (np.ndarray): Lower bounds data.
-        upper_envelope (np.ndarray): Upper bounds data.
-        output_format (str): The desired output formats (e.g., 'png&html').
-        params_list (
-            list,
-            optional): List of parameter strings to display on the plot. Defaults to None.
-        show_disclaimer (
-            bool,
-            optional): Whether to display a warning disclaimer. Defaults to False.
-        disclaimer_message (str, optional): Custom disclaimer text. Defaults to None.
-        extra_envelopes (
-            dict[str,
-            np.ndarray],
-            optional): Additional signals to plot. Defaults to None.
-    Returns:
-        None
+
+    Parameters
+    ----------
+    path : Path
+        Destination path for the plot file.
+    title : str
+        Title of the plot.
+    magnitude : str
+        The physical magnitude being plotted.
+    time_array : np.ndarray
+        The time steps array.
+    event_time : float
+        The timestamp of the main simulation event.
+    shift_time : float
+        Time shift in milliseconds to adjust the vertical event line.
+    pcc_signal : np.ndarray
+        Main signal data to plot.
+    lower_envelope : np.ndarray
+        Lower bounds data.
+    upper_envelope : np.ndarray
+        Upper bounds data.
+    output_format : str
+        The desired output formats (e.g., 'png&html').
+    params_list : list, optional
+        List of parameter strings to display on the plot. Defaults to None.
+    show_disclaimer : bool, optional
+        Whether to display a warning disclaimer. Defaults to False.
+    disclaimer_message : str, optional
+        Custom disclaimer text. Defaults to None.
+    extra_envelopes : dict[str, np.ndarray], optional
+        Additional signals to plot. Defaults to None.
+
+    Returns
+    -------
+    None
     """
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
@@ -407,13 +442,21 @@ def save_ini_dump(
 ) -> None:
     """
     Serializes simulation entity attributes to a text file for debugging.
-    Args:
-        path (Path): Destination path for the text dump file.
-        parameters (Any): The simulation parameters object.
-        producer_config (configparser.ConfigParser): The parsed INI configuration.
-        calculator (Any): The instantiated calculator object.
-    Returns:
-        None
+
+    Parameters
+    ----------
+    path : Path
+        Destination path for the text dump file.
+    parameters : Any
+        The simulation parameters object.
+    producer_config : configparser.ConfigParser
+        The parsed INI configuration.
+    calculator : Any
+        The instantiated calculator object.
+
+    Returns
+    -------
+    None
     """
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:

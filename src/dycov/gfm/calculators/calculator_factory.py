@@ -24,12 +24,20 @@ _CALCULATOR_REGISTRY = {
 
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
-    """Factory method to instantiate a specific GFMCalculator subclass.
-    Args:
-        name (str): The string identifier of the target calculator.
-        gfm_params (GFMParameters): The shared configuration parameters to pass.
-    Returns:
-        Optional[GFMCalculator]: An instance of the requested calculator, or None if not found.
+    """
+    Factory method to instantiate a specific GFMCalculator subclass.
+
+    Parameters
+    ----------
+    name : str
+        The string identifier of the target calculator.
+    gfm_params : GFMParameters
+        The shared configuration parameters to pass.
+
+    Returns
+    -------
+    Optional[GFMCalculator]
+        An instance of the requested calculator, or None if not found.
     """
 
     # Retrieve the class definition and instantiate if it exists in the registry

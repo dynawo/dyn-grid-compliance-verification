@@ -19,10 +19,14 @@ from dycov.model.pcs import Pcs
 
 
 def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
-    """Worker function that generates envelopes for a specific PCS.
-    Args:
-        pcs_args (tuple[GFMParameters, str, str]): A tuple containing the
-            simulation parameters, the PCS name, and the producer name.
+    """
+    Worker function that generates envelopes for a specific PCS.
+
+    Parameters
+    ----------
+    pcs_args : tuple[GFMParameters, str, str]
+        A tuple containing the
+        simulation parameters, the PCS name, and the producer name.
     """
     parameters, pcs_name, producer_name = pcs_args
     pcs = Pcs(producer_name, pcs_name, parameters)
@@ -48,9 +52,13 @@ class GFMGeneration:
     """Orchestrator class to manage Grid Forming (GFM) envelopes generation."""
 
     def __init__(self, parameters: GFMParameters) -> None:
-        """Initializes the generation orchestrator.
-        Args:
-            parameters (GFMParameters): The configuration parameters for the GFM run.
+        """
+        Initializes the generation orchestrator.
+
+        Parameters
+        ----------
+        parameters : GFMParameters
+            The configuration parameters for the GFM run.
         """
         self._parameters = parameters
         self._templates_path = Path(config.get_value("Global", "templates_path"))
@@ -59,9 +67,13 @@ class GFMGeneration:
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
-        """Sets up the working and output directories for the simulation.
-        Raises:
-            SystemExit: If the output directory already exists and risks being overwritten.
+        """
+        Sets up the working and output directories for the simulation.
+
+        Raises
+        ------
+        SystemExit
+            If the output directory already exists and risks being overwritten.
         """
         manage_files.create_dir(self._parameters.get_working_dir(), clean_first=False)
         if manage_files.check_output_dir(self._parameters.get_output_dir()):
@@ -73,9 +85,13 @@ class GFMGeneration:
         manage_files.create_dir(self._parameters.get_output_dir())
 
     def __get_validation_pcs(self) -> list[str]:
-        """Gathers and returns a sorted list of validation PCS elements.
-        Returns:
-            list[str]: A sorted list of unique PCS validation strings.
+        """
+        Gathers and returns a sorted list of validation PCS elements.
+
+        Returns
+        -------
+        list[str]
+            A sorted list of unique PCS validation strings.
         """
         dycov_logging.get_logger("GFMGeneration").info("DyCoV Envelopes Generation")
         validation_pcs: set[str] = set()
@@ -90,11 +106,17 @@ class GFMGeneration:
     def __populate_validation_pcs(
         self, validation_pcs: set[str], validation_key: str, validation_path: str
     ) -> None:
-        """Populates the validation set based on configured global paths.
-        Args:
-            validation_pcs (set[str]): The set of PCS names to populate.
-            validation_key (str): The configuration key to look up.
-            validation_path (str): The directory path for template validation.
+        """
+        Populates the validation set based on configured global paths.
+
+        Parameters
+        ----------
+        validation_pcs : set[str]
+            The set of PCS names to populate.
+        validation_key : str
+            The configuration key to look up.
+        validation_path : str
+            The directory path for template validation.
         """
         tool_path = Path(__file__).resolve().parent.parent
 
@@ -117,10 +139,14 @@ class GFMGeneration:
                 validation_pcs.remove(item)
 
     def __prepare_pcs_list(self) -> list[tuple[GFMParameters, str, str]]:
-        """Prepares a list of configuration tuples for execution.
-        Returns:
-            list[tuple[GFMParameters, str, str]]: A list of tuples containing
-                (parameters, pcs_name, producer_name).
+        """
+        Prepares a list of configuration tuples for execution.
+
+        Returns
+        -------
+        list[tuple[GFMParameters, str, str]]
+            A list of tuples containing
+            (parameters, pcs_name, producer_name).
         """
         return [
             (self._parameters, pcs_name, producer_name)
@@ -129,12 +155,15 @@ class GFMGeneration:
         ]
 
     def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
-        """Executes the envelope generation process for all configured PCS.
-        Args:
-            use_parallel (
-                bool,
-                optional): Whether to run using multiprocessing. Defaults to False.
-            num_processes (int, optional): Number of CPU cores to utilize. Defaults to 4.
+        """
+        Executes the envelope generation process for all configured PCS.
+
+        Parameters
+        ----------
+        use_parallel : bool, optional
+            Whether to run using multiprocessing. Defaults to False.
+        num_processes : int, optional
+            Number of CPU cores to utilize. Defaults to 4.
         """
         if use_parallel:
             dycov_logging.get_logger("GFMGeneration").info(
