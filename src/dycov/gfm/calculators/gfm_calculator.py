@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import numpy as np
 
@@ -15,34 +13,21 @@ from dycov.gfm.parameters import GFMParameters
 
 
 class GFMCalculator:
-    """
-    Abstract base class for all Grid Forming (GFM) calculators.
+    """Abstract base class for all Grid Forming (GFM) calculators."""
 
-    This class establishes the foundational attributes and abstract methods required
-    for calculating response envelopes across various GFM events. It defines critical
-    constants for parameter array indexing and establishes the mathematical threshold
-    used for damping profile classification.
-    """
-
-    # Constants representing the indices for parameter variation arrays
     _ORIGINAL_PARAMS_IDX = 0
     _MINIMUM_PARAMS_IDX = 1
     _MAXIMUM_PARAMS_IDX = 2
-
-    # Threshold defining the boundary between underdamped (< 1.0) and overdamped (>= 1.0) systems.
-    # Note: Critically damped systems (exactly 1.0) are mathematically grouped with the overdamped
-    # logic.
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
         """
-        Initializes the foundational GFMCalculator state using provided system parameters.
+        Initializes the base properties for all GFM calculators.
 
         Parameters
         ----------
         gfm_params : GFMParameters
-            An object containing all necessary parameters parsed from the configuration
-            files, required to perform subsequent GFM calculations.
+            The shared configuration parameters.
         """
         self._scr = gfm_params.get_scr()
         self._min_ratio = gfm_params.get_min_ratio()
@@ -59,23 +44,18 @@ class GFMCalculator:
         self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
-        # Internal attributes designated for INI dump state validation and tracking
         self._d_vals = None
         self._h_vals = None
         self._epsilon_vals = None
 
     def get_plot_parameter_names(self) -> list[str]:
         """
-        Abstract method to retrieve the list of parameter names relevant for UI plotting.
-
-        This method establishes a contract and must be explicitly implemented by each
-        concrete calculator subclass (e.g., PhaseJump, RoCoF).
+        Retrieves parameters relevant for rendering plots.
 
         Returns
         -------
         list[str]
-            A predefined list of parameter string identifiers to be displayed on the
-            rendered plots.
+            A list of parameter names to be displayed.
         """
         raise NotImplementedError
 
@@ -83,31 +63,26 @@ class GFMCalculator:
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Abstract method defining the core execution pipeline for calculating response envelopes.
-
-        Must be implemented by subclasses to handle specific event mathematics.
+        Calculates the signal deviation and bounding envelopes.
 
         Parameters
         ----------
         D : float
-            The system damping factor.
+            The damping constant.
         H : float
-            The system inertia constant.
+            The inertia constant.
         Xeff : float
-            The effective reactance of the system.
+            The effective reactance.
         time_array : np.ndarray
-            The continuous array of time points mapping the simulation window.
+            The simulation time vector.
         event_time : float
-            The absolute time (in seconds) at which the grid event triggers.
+            The timestamp when the grid event occurs.
 
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            A tuple containing:
-            - str: The symbolic identifier of the calculated magnitude (e.g., 'P', 'Iq').
-            - np.ndarray: The finalized analytical signal at the Point of Common Coupling (PCC).
-            - np.ndarray: The array representing the upper operational envelope constraint.
-            - np.ndarray: The array representing the lower operational envelope constraint.
+            A tuple containing the
+            magnitude name, the main signal, the upper envelope, and the lower envelope.
         """
         raise NotImplementedError
 
@@ -120,96 +95,82 @@ class GFMCalculator:
         start_time: float = 0.0,
     ) -> np.ndarray:
         """
-        Applies a temporal right-shift delay to a specified signal starting at a given coordinate.
-
-        This mechanism holds the signal in its original state for t < start_time. Upon
-        reaching t = start_time, it forcibly inserts the `delayed_value` for the exact duration
-        of the specified delay, pushing all subsequent original signal values forward in time.
+        Applies a temporal right-shift delay to a signal.
 
         Parameters
         ----------
         delay_time : float
-            The required temporal shift duration (in seconds) to delay the signal.
+            The duration of the delay in seconds.
         delayed_value : float
-            The static placeholder value to maintain throughout the duration of the delay.
+            The constant value applied during the delay period.
         time_array : np.ndarray
-            The foundational time array defining the simulation steps.
+            The simulation time vector.
         signal : np.ndarray
-            The source signal array targeted for the temporal shift.
+            The original signal to be delayed.
         start_time : float, optional
-            The absolute time coordinate where the delay insertion should begin. Defaults to 0.0.
+            The time at which delay logic initiates. Defaults to 0.0.
 
         Returns
         -------
         np.ndarray
-            The processed signal array, strictly truncated to match the original array length.
+            The resulting time-shifted array.
         """
-        # Step 1: Derive the simulation sample step (dt) assuming a uniformly spaced time array
+        # Calculate the discrete number of samples to shift based on time resolution
         dt = time_array[1] - time_array[0]
-
         delay_samples = int(delay_time / dt) + 1
 
-        # Safety Check: If the requested start time exceeds the simulation horizon, abort
-        # modification
         if start_time > time_array[-1]:
             return signal
 
-        # Step 3: Isolate the precise index corresponding to the delay initiation threshold
         start_idx = np.argmax(time_array >= start_time)
-
         pre_delay_signal = signal[:start_idx]
+
+        # Inject the delayed constant value block
         delay_block = np.full(delay_samples, delayed_value)
         post_delay_signal = signal[start_idx:]
 
-        # blocks
         combined_signal = np.concatenate((pre_delay_signal, delay_block, post_delay_signal))
-
         return combined_signal[: len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
         """
-        Enforces absolute boundary constraints by clipping signal values that exceed
-        specified operational limits.
+        Clips signal values that exceed specified operational limits.
 
         Parameters
         ----------
         value_min : float
-            The absolute minimum allowable value threshold.
+            The lower boundary limit.
         signal : np.ndarray
-            The target signal array to be constrained.
+            The array to be clipped.
         value_max : float
-            The absolute maximum allowable value threshold.
+            The upper boundary limit.
 
         Returns
         -------
         np.ndarray
-            The definitively constrained signal array bounded within [value_min, value_max].
+            The clipped signal array.
         """
-        signal = np.where(signal < value_min, value_min, signal)
-        signal = np.where(signal > value_max, value_max, signal)
-        return signal
+        return np.clip(signal, value_min, value_max)
 
     def _calculate_epsilon_initial_check(
         self, D: np.ndarray, H: np.ndarray, x_total_initial: float
     ) -> np.ndarray:
         """
-        Computes the dimensionless damping ratio (epsilon) to mathematically classify
-        the system's dynamic response archetype (overdamped vs. underdamped).
+        Computes the damping ratio (epsilon) to classify the dynamic response.
 
         Parameters
         ----------
         D : np.ndarray
-            An array containing the evaluated system damping factors.
+            Array of damping constant variations.
         H : np.ndarray
-            An array containing the evaluated system inertia constants.
+            Array of inertia constant variations.
         x_total_initial : float
-            The aggregated initial reactance of the total system.
+            The total initial reactance.
 
         Returns
         -------
         np.ndarray
-            An array populated with the calculated damping ratios (epsilon) corresponding
-            to each variation pair.
+            An array of calculated epsilon values.
         """
         return (
             D
@@ -230,31 +191,25 @@ class GFMCalculator:
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
         """
-        Generates a dynamic, time-dependent tolerance band ("tunnel") mapped to the response.
-
-        This mathematical structure dictates a variable operational tolerance margin that
-        remains strictly zero prior to the event, and then expands exponentially towards
-        a predefined asymptotic magnitude threshold post-event.
+        Generates a dynamic, time-dependent tolerance band ('tunnel').
 
         Parameters
         ----------
         p_peak : float
-            The theoretical absolute peak power deviation used to scale the tunnel's final
-            amplitude.
+            The absolute peak power deviation.
         time_array : np.ndarray
-            The continuous time array mapped for the simulation.
+            The simulation time vector.
         event_time : float
-            The absolute coordinate initiating the event and triggering the tunnel expansion.
+            The time the event occurs.
 
         Returns
         -------
         np.ndarray
-            The synthesized, time-dependent tolerance boundary array.
+            An array representing the dynamic tunnel values over time.
         """
-        t_val = max(
-            self._final_allowed_tunnel_pn,
-            self._final_allowed_tunnel_variation * p_peak,
-        )
+        t_val = max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
+
+        # Calculate dynamic margin decaying exponentially over time
         tunnel_exp = 1 - np.exp(
             (-time_array + constants.TIME_TUNNEL_START_OFFSET) / constants.TIME_TUNNEL_EXP_TAU
         )
@@ -265,26 +220,20 @@ class GFMCalculator:
         self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Synthesizes the theoretical absolute bounding envelopes before hardware constraints
-        are applied.
-
-        The process aggregates the minimum and maximum boundaries across all generated
-        delta_p deviation arrays and superimposes the expanding time-dependent tunnel.
+        Synthesizes theoretical bounding envelopes before hardware constraints.
 
         Parameters
         ----------
         list_of_arrays : list[np.ndarray]
-            A list containing all candidate delta_p arrays (e.g., nominal, min/max variations)
-            used to evaluate the extreme bounds of the system response.
+            A list of all signal variations calculated.
         tunnel : np.ndarray
-            The dynamic, time-dependent tunnel margin array.
+            The computed dynamic tunnel array.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
-            A tuple returning:
-            - np.ndarray: The analytically determined unlimited lower boundary trace.
-            - np.ndarray: The analytically determined unlimited upper boundary trace.
+            A tuple containing the unlimited lower and upper
+        envelopes.
         """
         lower_env = np.minimum.reduce(list_of_arrays) - tunnel
         upper_env = np.maximum.reduce(list_of_arrays) + tunnel
@@ -302,94 +251,58 @@ class GFMCalculator:
         use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Executes the final operational constraint logic, strictly mapping the theoretical
-        envelopes to definitive hardware and software saturation boundaries.
-
-        This method shifts the normalized arrays using the initial steady-state power (P0)
-        and securely clips them to predefined capability thresholds.
+        Executes hardware and software saturation boundary logic using optimized clipping.
 
         Parameters
         ----------
         lower_envelope_unlimited : np.ndarray
-            The unconstrained lower boundary, strictly representing relative deviation
-            (not yet shifted by P0).
+            The theoretical lower envelope.
         upper_envelope_unlimited : np.ndarray
-            The unconstrained upper boundary, strictly representing relative deviation
-            (not yet shifted by P0).
+            The theoretical upper envelope.
         tunnel_value : float
-            The static margin value incorporated into the final boundary limitation.
+            The static tolerance margin limit.
         initial_power : float
-            The absolute initial baseline power (active or reactive) characterizing steady state.
+            The pre-event steady-state power.
         max_power : float
-            The absolute maximum physical capability limit of the system.
+            The maximum hardware power capability.
         min_power : float
-            The absolute minimum physical capability limit of the system.
+            The minimum hardware power capability.
         sign : int
-            The directional indicator defining the nature of the disturbance (e.g., phase
-            variation direction).
+            The directional sign of the expected transient.
         use_opposite_signs : bool
-            A flag determining if specialized asymmetrical clipping logic must be applied based
-            on trajectory.
+            Flag indicating if divergent boundary bounding applies.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
-            A tuple returning the securely limited, real-world lower and upper operational
-            envelopes.
+            The finalized, hardware-limited lower and upper
+        envelopes.
         """
-
         limit_max = self._pmax_mois_tunnel
         limit_min = self._pmin_mois_tunnel
 
+        # Apply boundary constraints conditionally based on transient directionality
         if use_opposite_signs:
-            # Execution branch applying divergent clipping dependent on trajectory vs steady-state
-            # opposition
             if np.sign(initial_power) * sign == -1:
-                lower_envelope_limited = np.minimum(
-                    np.maximum(
-                        initial_power - sign * lower_envelope_unlimited,
-                        limit_min,
-                    ),
-                    limit_max,
+                lower_envelope_limited = np.clip(
+                    initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
                 )
-                upper_envelope_limited = np.minimum(
-                    np.maximum(
-                        initial_power - sign * upper_envelope_unlimited,
-                        min_power,
-                    ),
-                    max_power,
+                upper_envelope_limited = np.clip(
+                    initial_power - sign * upper_envelope_unlimited, min_power, max_power
                 )
             else:
-                lower_envelope_limited = np.minimum(
-                    np.maximum(
-                        initial_power - sign * lower_envelope_unlimited,
-                        min_power,
-                    ),
-                    max_power,
+                lower_envelope_limited = np.clip(
+                    initial_power - sign * lower_envelope_unlimited, min_power, max_power
                 )
-                upper_envelope_limited = np.minimum(
-                    np.maximum(
-                        initial_power - sign * upper_envelope_unlimited,
-                        limit_min,
-                    ),
-                    limit_max,
+                upper_envelope_limited = np.clip(
+                    initial_power - sign * upper_envelope_unlimited, limit_min, limit_max
                 )
-
         else:
-            # Standard unified execution branch handling symmetrical capability bounding
-            lower_envelope_limited = np.minimum(
-                np.maximum(
-                    initial_power - sign * lower_envelope_unlimited,
-                    limit_min,
-                ),
-                limit_max,
+            lower_envelope_limited = np.clip(
+                initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
             )
-            upper_envelope_limited = np.minimum(
-                np.maximum(
-                    initial_power - sign * upper_envelope_unlimited,
-                    min_power,
-                ),
-                max_power,
+            upper_envelope_limited = np.clip(
+                initial_power - sign * upper_envelope_unlimited, min_power, max_power
             )
 
         return lower_envelope_limited, upper_envelope_limited

@@ -103,6 +103,7 @@ class ParametersHelper(GFMParameters):
         self._pcs_section = "DEFAULT"
         self._bm_section = "DEFAULT"
         self._oc_section = "DEFAULT"
+        self._eval_sections = (self._oc_section, self._bm_section, self._pcs_section)
 
         config._pcs_config.read_string(config_str)
 

@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import configparser
 import importlib.metadata
@@ -29,29 +27,30 @@ def save_results_to_csv(
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
     """
-    Exports the generated mathematical envelopes and signals into a CSV format.
-
-    If the system operates in hybrid mode and generates extra envelopes,
-    they are dynamically appended as subsequent columns in the dataset.
+    Exports envelopes and signals to a CSV file.
 
     Parameters
     ----------
     path : Path
-        The absolute or relative destination path for the output CSV file.
+        Destination path for the CSV file.
     magnitude : str
-        The physical magnitude being analyzed (e.g., 'P', 'Iq').
+        Name of the magnitude being recorded.
     time_array : np.ndarray
-        Array containing all time steps used in the simulation.
+        Array of time steps.
     pcc_signal : np.ndarray
-        The recorded system signal at the Point of Common Coupling.
+        Array of Point of Common Coupling signal values.
     lower_envelope : np.ndarray
-        The array corresponding to the lower bound of the calculated envelope.
+        Array of lower envelope values.
     upper_envelope : np.ndarray
-        The array corresponding to the upper bound of the calculated envelope.
+        Array of upper envelope values.
     extra_envelopes : dict[str, np.ndarray], optional
-        A dictionary containing additional data series, where keys represent
-        the series names and values are the corresponding data arrays.
+        Additional envelopes to save. Defaults to None.
+
+    Returns
+    -------
+    None
     """
+    # Map core signals to their respective CSV column headers
     data = {
         "Time (s)": time_array,
         f"{magnitude} PGU (pu)": pcc_signal,
@@ -59,14 +58,12 @@ def save_results_to_csv(
         f"{magnitude} upper (pu)": upper_envelope,
     }
 
-    # Append extra envelopes if requested (provides detailed output for hybrid mode)
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
-            # Format the column name appropriately for the CSV header
-            col_name = f"{magnitude} {name} (pu)"
-            data[col_name] = signal
+            data[f"{magnitude} {name} (pu)"] = signal
 
     df = pd.DataFrame(data)
+    # Use scientific notation to preserve precision for sensitive envelope bounds
     df.to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
@@ -78,40 +75,35 @@ def find_start_trim_index(
     buffer_points: int = 10,
 ) -> int:
     """
-    Identifies the ideal index to trim leading stable, non-informative data.
-
-    This function iterates forward from the start of the signals and stops when
-    it detects a significant variation exceeding the predefined tolerance threshold.
+    Finds the starting index to trim leading stable data.
 
     Parameters
     ----------
     pcc_signal : np.ndarray
-        The recorded system signal array.
+        The main signal array.
     lower_envelope : np.ndarray
-        The lower bounded envelope array.
+        The lower envelope array.
     upper_envelope : np.ndarray
-        The upper bounded envelope array.
+        The upper envelope array.
     tolerance : float, optional
-        The absolute difference threshold to trigger a detection. Defaults to 1e-5.
+        Variation threshold to detect changes. Defaults to 1e-5.
     buffer_points : int, optional
-        The number of historical points to preserve prior to the detected change.
-        Defaults to 10.
+        Number of safety points to keep before the change. Defaults to 10.
 
     Returns
     -------
     int
-        The integer index representing the recommended starting point for analysis.
+        The calculated starting index.
     """
+    # Scan forward to bypass initial flatlines until a significant variation is detected
     for i in range(len(pcc_signal) - 1):
         pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
         down_changed = abs(lower_envelope[i + 1] - lower_envelope[i]) > tolerance
         up_changed = abs(upper_envelope[i + 1] - upper_envelope[i]) > tolerance
 
         if pcc_changed or down_changed or up_changed:
-            # First significant variation detected. Return index including the safety buffer.
             return max(0, i - buffer_points)
 
-    # Return 0 if no significant change is identified (no trimming applied).
     return 0
 
 
@@ -123,40 +115,35 @@ def find_end_trim_index(
     buffer_points: int = 10,
 ) -> int:
     """
-    Identifies the ideal index to trim trailing stable, non-informative data.
-
-    This function iterates backward from the end of the signals and stops when
-    it detects the last point where there is a significant variation.
+    Finds the ending index to trim trailing stable data.
 
     Parameters
     ----------
     pcc_signal : np.ndarray
-        The recorded system signal array.
+        The main signal array.
     lower_envelope : np.ndarray
-        The lower bounded envelope array.
+        The lower envelope array.
     upper_envelope : np.ndarray
-        The upper bounded envelope array.
+        The upper envelope array.
     tolerance : float, optional
-        The absolute difference threshold to trigger a detection. Defaults to 1e-5.
+        Variation threshold to detect changes. Defaults to 1e-5.
     buffer_points : int, optional
-        The number of historical points to preserve after the detected change.
-        Defaults to 10.
+        Number of safety points to keep after the change. Defaults to 10.
 
     Returns
     -------
     int
-        The integer index representing the recommended ending point for analysis.
+        The calculated ending index.
     """
+    # Scan backward from the end to strip trailing stable data
     for i in range(len(pcc_signal) - 1, 0, -1):
         pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
         down_changed = abs(lower_envelope[i] - lower_envelope[i - 1]) > tolerance
         up_changed = abs(upper_envelope[i] - upper_envelope[i - 1]) > tolerance
 
         if pcc_changed or down_changed or up_changed:
-            # Last significant variation detected. Return index including the safety buffer.
             return min(i + buffer_points, len(pcc_signal))
 
-    # Return the original array length if no significant change is identified.
     return len(pcc_signal)
 
 
@@ -177,45 +164,47 @@ def plot_results(
     extra_envelopes: dict[str, np.ndarray] = None,
 ) -> None:
     """
-    Renders and exports the simulation results graphically, automatically trimming stable data.
-
-    Generates both an interactive HTML file and a static PNG image depending on the requested
-    format.
+    Renders and exports simulation results graphically.
 
     Parameters
     ----------
     path : Path
-        The base file path for the output plots (extensions will be appended automatically).
+        Destination path for the plot file.
     title : str
-        The descriptive title rendered on the plot.
+        Title of the plot.
     magnitude : str
-        The physical magnitude being graphed (e.g., 'P', 'Iq').
+        The physical magnitude being plotted.
     time_array : np.ndarray
-        The complete time array corresponding to the simulation.
+        The time steps array.
     event_time : float
-        The absolute time coordinate indicating the start of the event.
+        The timestamp of the main simulation event.
     shift_time : float
-        An optional temporal shift applied to the event marker line.
+        Time shift in milliseconds to adjust the vertical event line.
     pcc_signal : np.ndarray
-        The main calculated signal from the Point of Common Coupling.
+        Main signal data to plot.
     lower_envelope : np.ndarray
-        The array corresponding to the lower bound envelope.
+        Lower bounds data.
     upper_envelope : np.ndarray
-        The array corresponding to the upper bound envelope.
+        Upper bounds data.
     output_format : str
-        String specifying the desired output format(s), such as 'png&html'.
+        The desired output formats (e.g., 'png&html').
     params_list : list, optional
-        A list of formatted text strings detailing simulation parameters for the legend.
+        List of parameter strings to display on the plot. Defaults to None.
     show_disclaimer : bool, optional
-        If True, renders a warning disclaimer overlay on the plot. Defaults to False.
-    disclaimer_message : str | None, optional
-        Custom detailed text for the disclaimer overlay.
+        Whether to display a warning disclaimer. Defaults to False.
+    disclaimer_message : str, optional
+        Custom disclaimer text. Defaults to None.
     extra_envelopes : dict[str, np.ndarray], optional
-        Supplementary bounding envelopes to be rendered alongside the main signals.
+        Additional signals to plot. Defaults to None.
+
+    Returns
+    -------
+    None
     """
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
 
+    # Slice all arrays to focus only on the active transient event window
     time_trimmed = time_array[start_index:end_index]
     pcc_trimmed = pcc_signal[start_index:end_index]
     down_trimmed = lower_envelope[start_index:end_index]
@@ -230,33 +219,28 @@ def plot_results(
     disclaimer_text_html = ""
     if show_disclaimer:
         default_msg = "Inconsistent damping. Envelopes may be unreliable."
-        # Configure line breaks for Matplotlib rendering
         disclaimer_text_mpl = "Disclaimer:\n" + (disclaimer_message or default_msg)
-        # Configure HTML tags for Plotly rendering
         html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
         disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
 
-    # Fetch the exact software version for the watermark ---
+    # Attempt to watermark plots with the currently installed package version
     try:
         software_version = importlib.metadata.version("dycov")
         watermark_text = f"dycov v{software_version}"
     except importlib.metadata.PackageNotFoundError:
         watermark_text = "dycov v(unknown)"
 
-    # --- Static Plot Generation via Matplotlib (PNG) ---
     if "png" in output_format:
         plt.figure(figsize=(8, 5))
 
-        # Render supplementary envelopes beneath the main data lines
         if extra_trimmed:
             colors = {"overdamped": "purple", "underdamped": "orange"}
             for name, signal in extra_trimmed.items():
-                style_color = "gray"
-                if "overdamped" in name:
-                    style_color = colors["overdamped"]
-                if "underdamped" in name:
-                    style_color = colors["underdamped"]
-
+                style_color = (
+                    colors.get("overdamped")
+                    if "overdamped" in name
+                    else colors.get("underdamped", "gray")
+                )
                 plt.plot(
                     time_trimmed,
                     signal,
@@ -267,13 +251,7 @@ def plot_results(
                     label=name.replace("_", " ").title(),
                 )
 
-        # Render the primary bounds and PCC signal
-        plt.plot(
-            time_trimmed,
-            pcc_trimmed,
-            label=f"{magnitude} at PGU",
-            linewidth=3,
-        )
+        plt.plot(time_trimmed, pcc_trimmed, label=f"{magnitude} at PGU", linewidth=3)
         plt.plot(
             time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
         )
@@ -283,19 +261,16 @@ def plot_results(
         plt.ylabel(f"{magnitude} (pu)")
         plt.title(title)
 
+        # Shift event time from ms to seconds for correct vertical line placement
         plt.axvline(
-            x=event_time + shift_time / 1000,
-            color="black",
-            linestyle="--",
-            label="Event Time",
+            x=event_time + shift_time / 1000, color="black", linestyle="--", label="Event Time"
         )
 
         if params_list:
-            full_text = "\n".join(params_list)
             plt.text(
                 0.98,
                 0.98,
-                full_text,
+                "\n".join(params_list),
                 transform=plt.gca().transAxes,
                 fontsize=9,
                 verticalalignment="top",
@@ -316,7 +291,6 @@ def plot_results(
                 bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
             )
 
-        # Add watermark text to Matplotlib plot ---
         plt.text(
             0.98,
             0.02,
@@ -324,25 +298,22 @@ def plot_results(
             transform=plt.gca().transAxes,
             fontsize=12,
             color="gray",
-            alpha=0.3,  # Semi-transparent
+            alpha=0.3,
             verticalalignment="bottom",
             horizontalalignment="right",
         )
 
-        # Apply layout adjustments and export
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.xlim(time_trimmed[0], time_trimmed[-1])
-
         plt.tight_layout()
         plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
         plt.close()
 
-    # --- Interactive Plot Generation via Plotly (HTML) ---
     if "html" in output_format:
         fig = go.Figure()
 
-        # Render the shaded region bound by the main envelopes
+        # Create a shaded area between the upper and lower envelopes
         fig.add_trace(
             go.Scatter(
                 x=np.concatenate([time_trimmed, time_trimmed[::-1]]),
@@ -355,16 +326,14 @@ def plot_results(
             )
         )
 
-        # Render supplementary envelopes
         if extra_trimmed:
             colors = {"overdamped": "purple", "underdamped": "orange"}
             for name, signal in extra_trimmed.items():
-                style_color = "gray"
-                if "overdamped" in name:
-                    style_color = colors["overdamped"]
-                if "underdamped" in name:
-                    style_color = colors["underdamped"]
-
+                style_color = (
+                    colors.get("overdamped")
+                    if "overdamped" in name
+                    else colors.get("underdamped", "gray")
+                )
                 fig.add_trace(
                     go.Scatter(
                         x=time_trimmed,
@@ -376,7 +345,6 @@ def plot_results(
                     )
                 )
 
-        # Render primary bounding lines and main signal
         fig.add_trace(
             go.Scatter(
                 x=time_trimmed,
@@ -405,9 +373,8 @@ def plot_results(
             )
         )
 
-        event_time_sec = event_time + shift_time / 1000
         fig.add_vline(
-            x=event_time_sec,
+            x=event_time + shift_time / 1000,
             line_width=2,
             line_dash="dash",
             line_color="black",
@@ -416,13 +383,12 @@ def plot_results(
         )
 
         if params_list:
-            full_text = "<br>".join(params_list)
             fig.add_annotation(
                 xref="paper",
                 yref="paper",
                 x=0.98,
                 y=0.98,
-                text=full_text,
+                text="<br>".join(params_list),
                 showarrow=False,
                 align="right",
                 valign="top",
@@ -447,7 +413,6 @@ def plot_results(
                 borderpad=10,
             )
 
-        # Add watermark annotation to Plotly plot ---
         fig.add_annotation(
             xref="paper",
             yref="paper",
@@ -456,7 +421,7 @@ def plot_results(
             text=watermark_text,
             showarrow=False,
             font=dict(color="gray", size=14),
-            opacity=0.3,  # Semi-transparent
+            opacity=0.3,
             xanchor="right",
             yanchor="bottom",
         )
@@ -469,59 +434,48 @@ def plot_results(
             template="plotly_white",
             margin=dict(r=150),
         )
-
         fig.write_html(path.with_suffix(".html"))
 
 
 def save_ini_dump(
-    path: Path,
-    parameters: Any,
-    producer_config: configparser.ConfigParser,
-    calculator: Any,
+    path: Path, parameters: Any, producer_config: configparser.ConfigParser, calculator: Any
 ) -> None:
     """
-    Serializes and exports all internal attributes from the simulation entities into a text file.
+    Serializes simulation entity attributes to a text file for debugging.
 
     Parameters
     ----------
     path : Path
-        The absolute or relative path (including filename) destination for the dump file.
-    parameters : GFMParameters
-        The parameter configuration object guiding the simulation.
+        Destination path for the text dump file.
+    parameters : Any
+        The simulation parameters object.
     producer_config : configparser.ConfigParser
-        The parsed producer configuration object representing INI settings.
-    calculator : GFMCalculator
-        The instantiated calculator object containing current evaluation state.
+        The parsed INI configuration.
+    calculator : Any
+        The instantiated calculator object.
+
+    Returns
+    -------
+    None
     """
 
     def _write_dict(f: Any, title: str, data_dict: dict) -> None:
-        """
-        Helper method to format and write a dictionary's contents to an open file.
-
-        Parameters
-        ----------
-        f : Any
-            The open file handler with write permissions.
-        title : str
-            The header string to prepend to the serialized dictionary block.
-        data_dict : dict
-            The dictionary payload to format and output.
-        """
-        f.write(f"\n{'=' * 30}\n")
-        f.write(f" {title}\n")
-        f.write(f"{'=' * 30}\n")
+        f.write(f"\n{'=' * 30}\n {title}\n{'=' * 30}\n")
         for key, value in sorted(data_dict.items()):
-            # Isolate standard variables by excluding callable methods
+            # Filter out callable methods to serialize only attributes/properties
             if not callable(value):
                 f.write(f"{key} = {value}\n")
 
     with open(path, "w", encoding="utf-8") as f:
-        f.write("GFM SIMULATION DUMP\n")
-        f.write("===================\n")
+        f.write(
+            "GFM SIMULATION DUMP\n"
+            "===================\n\n"
+            f"{'=' * 30}\n"
+            " Key Validation Values\n"
+            f"{'=' * 30}\n"
+        )
 
-        f.write(f"\n{'=' * 30}\n")
-        f.write(" Key Validation Values\n")
-        f.write(f"{'=' * 30}\n")
+        # Extract internal validation arrays safely across calculator instances
         try:
             d_vals = getattr(calculator, "_d_vals", None)
             h_vals = getattr(calculator, "_h_vals", None)
@@ -531,27 +485,20 @@ def save_ini_dump(
                 for i in range(len(d_vals)):
                     label = "Nominal" if i == 0 else f"Variation {i}"
                     line = f"[{label}] D = {d_vals[i]:.6f}, H = {h_vals[i]:.6f}"
-
                     if eps_vals is not None and i < len(eps_vals):
                         line += f", Epsilon = {eps_vals[i]:.6f}"
-
                     f.write(line + "\n")
             else:
                 f.write("D and H variations data not available in calculator.\n")
-
         except Exception as e:
             f.write(f"Could not retrieve validation values: {e}\n")
 
         if hasattr(parameters, "__dict__"):
             _write_dict(f, "GFMParameters Attributes", parameters.__dict__)
-
         if hasattr(calculator, "__dict__"):
             _write_dict(f, "GFMCalculator Attributes", calculator.__dict__)
 
-        f.write(f"\n{'=' * 30}\n")
-        f.write(" GFMProducer Configuration (INI)\n")
-        f.write(f"{'=' * 30}\n")
-
+        f.write(f"\n{'=' * 30}\n GFMProducer Configuration (INI)\n{'=' * 30}\n")
         if producer_config:
             for section in producer_config.sections():
                 f.write(f"[{section}]\n")
