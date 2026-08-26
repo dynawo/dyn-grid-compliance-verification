@@ -1,8 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% LaTeX documentation for the implementation of the initialization routines for
-%% synchronous generator in DTR Sheets.
+%% LaTeX documentation for the initialization routines of the DyCoV tool.
+%% The calculation is model-agnostic: it does not depend on the type of
+%% generating unit (synchronous machine, WT, PV, or storage).
 %%
-%% (c) 2022 RTE
+%% (c) 2022-2026 RTE
 %% Developed by Grupo AIA
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -66,13 +67,13 @@
 %% The document starts here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{\Dynawo{} Model-Validation Tool: initialization routines for synchronous
-  generators in DTR Sheets}
+\title{DyCoV: initialization routines for the DTR PCS test cases.\\
+  \large A model-agnostic load-flow calculation}
 
 \author{Grupo AIA}
 \date{
   \today
-} 
+}
 
 
 
@@ -81,9 +82,12 @@
 \tableofcontents
 
 \begin{abstract}
-  This document describes in detail the routines within the \Dynawo{} Model-Validation
-  tool that calculate the initialization values for all elements in the various DTR
-  Sheets~\cite{DTRhome}.
+  This document describes in detail the routines within the DyCoV tool that calculate
+  the steady-state initialization values for all elements of the test cases prescribed
+  by the DTR PCSs (fiches)~\cite{DTRhome}. The calculation is \emph{model-agnostic}: it
+  solves analytic load flows over the declared topology and the pi-model equivalents of
+  its branches, so it does not depend on the type of generating unit behind each
+  terminal (synchronous machine, wind turbine, PV array, or storage).
 \end{abstract}
 
 
@@ -92,49 +96,75 @@
 
 \section{Overview}
 
-Although the producer is expected to supply his own model for the generator, he cannot
-be asked to also provide the correct initialization values for all the the case
-scenarios prescribed by the DTR Sheets. Such initialization is dependent on many other
-parameters that vary from sheet to sheet, such as the connection reactances, the values
-of P, Q, or V at the connection point (PDR bus), etc.  Therefore the \Dynawo{}
-Model-Validation tool performs its own internal calculations to find out the correct
-initialization values for the generator, auxiliary load, etc.; on a case-by-case basis.
+Although the producer is expected to supply his own model of the installation, he
+cannot be asked to also provide the correct initialization values for all the case
+scenarios prescribed by the DTR PCSs. Such initialization is dependent on many other
+parameters that vary from PCS to PCS, such as the connection reactances or the values of
+P, Q, V prescribed at the connection point (PDR bus). Therefore the DyCoV tool performs
+its own internal calculations to find out the correct initialization values for the
+generating units, the auxiliary load, the transformers, etc.; on a case-by-case basis.
 
-For the moment being, \emph{the approach consists in assuming that the
-topology on the producer's side is restricted to a small set of
-variants}, which enables us to calculate the quantities analytically
-by means of relatively simple load-flow (LF) formulas. In the future
-we do not rule out some other approach providing greater freedom, such
-as running the cases through one or more passes in
-\emph{DynaFlow}~\cite{Dynawo} until a valid steady state is achieved.
+The approach consists in assuming that \emph{the topology on the producer's side is
+  restricted to a small set of variants}, which enables the tool to calculate the
+quantities analytically, by means of relatively simple load-flow (LF) formulas expressed
+in closed form. Approaches providing greater freedom remain possible in principle, such
+as running the cases through one or more passes of \emph{DynaFlow}~\cite{Dynawo} until a
+valid steady state is achieved, but the analytic approach covers all the topologies
+admitted by the DTR test cases.
+
+The calculation described here is implemented in the function \code{init\_calcs()}
+(module \code{dycov/electrical/initialization\_calcs.py}), with the pi-model equivalent
+parameters provided by \code{dycov/electrical/pimodel\_parameters.py}.
 
 
 \section{Allowed topology variants}
+\label{sec:topologies}
 
-For our analytic LF approach to work, the topology on the producer's side \emph{must} be
+For the analytic LF approach to work, the topology on the producer's side \emph{must} be
 one of these eight variants:
 \begin{description}
-\item[S:] single gen/WT/PV unit
-\item [S+i:] single gen/WT/PV unit + Line (represents an ``internal network'')
-\item [S+Aux:] single gen/WT/PV unit + Aux Load 
-\item [S+Aux+i:] single gen/WT/PV + Aux Load + Line
-\item [M:] multiple WT/PV units
-\item [M+i:] multiple WT/PV units + Line
-\item [M+Aux:] multiple WT/PV units + Aux Load
-\item [M+Aux+i:] multiple WT/PV units + Aux Load + Line
+\item[S:] single unit (synchronous machine, WT, PV, or BESS)
+\item [S+i:] single unit + Line (represents an ``internal network'')
+\item [S+Aux:] single unit + Aux Load
+\item [S+Aux+i:] single unit + Aux Load + Line
+\item [M:] multiple WT/PV/BESS units + plant transformer
+\item [M+i:] multiple WT/PV/BESS units + plant transformer + Line
+\item [M+Aux:] multiple WT/PV/BESS units + plant transformer + Aux Load
+\item [M+Aux+i:] multiple WT/PV/BESS units + plant transformer + Aux Load + Line
 \end{description}
 
-\noindent\textbf{Note for Zone-1 tests:} for the isolated tests of individual WT/PV
-units without plant-level control (i.e., the so-called ``Zone 1'' tests), the only
-allowed topology is \textbf{``S''}.
+There are here two main groups: single-unit vs.\ multiple-unit topologies. Their
+composition rules, which the tool checks before running any calculation, are as follows:
 
-As we can observe, there are here two main groups: single-unit vs.\ multiple-unit
-topologies. Then in each case one may model, if desired, an ``internal network'' via a
-single \code{Line} object, and auxiliary loads via a single \code{Load} object.  These
-topologies are depicted in Figs.~\ref{fig:topoS}--\ref{fig:topoM}. If the producer's
-topology deviates from these assumptions, our analytic LF calculations will result in
-incorrect initialization parameters for the generators and therefore the simulations may
-start at an unstable state.
+\begin{itemize}
+\item In the \textbf{single-unit} family the unit is connected to the rest of the
+  network through its step-up transformer (\code{StepUp\_Xfmr}). Only in topology S, the
+  step-up transformer may be omitted when the unit's dynamic model already includes its
+  own transformer internally (models with \code{ConverterLVControl = false}); in that
+  case the unit connects directly to the connection node. Synchronous machines are
+  admitted only in this family.
+\item In the \textbf{multiple-unit} family each unit has its own step-up transformer,
+  and all of them connect to a common internal bus. This family additionally requires a
+  \emph{plant-level transformer} (\code{Main\_Xfmr}) between the internal bus and the
+  PDR bus (or between the internal bus and the internal line, in the ``+i'' variants).
+\item In each case one may model, if desired, an ``internal network'' via a single
+  \code{Line} object (the ``+i'' variants), and an auxiliary load via a single
+  \code{Load} object behind its own transformer (\code{AuxLoad\_Xfmr}), hanging from the
+  same node as the generation.
+\end{itemize}
+
+These topologies are depicted in Figs.~\ref{fig:topoS}--\ref{fig:topoM}. If the
+producer's topology deviates from these assumptions, the analytic LF calculations will
+result in incorrect initialization parameters for the units and therefore the
+simulations may start at an unstable state.
+
+\medskip
+
+\noindent\textbf{Note for Zone-1 tests:} for the isolated tests of an individual WT/PV/BESS
+unit without plant-level control (i.e., the so-called ``Zone 1'' tests of model
+validation), the only allowed topology is \textbf{``S''}: the unit and its step-up
+transformer (again, the transformer may be omitted for models with
+\code{ConverterLVControl = false}). This is depicted in Fig.~\ref{fig:topoZone1}.
 
 \begin{figure}[ht]
   \centering
@@ -143,8 +173,10 @@ start at an unstable state.
   \hfill
   \includegraphics[width=0.45\textwidth]{topology_S_AuxLoad.png}
   \hfill
-  \caption{Allowed topologies for cases with a single unit.}
-  \label{fig:topoS} 
+  \caption{Allowed topologies for cases with a single unit. The dashed box (``internal
+    network'' line) is present only in the ``+i'' variants; in its absence the node
+    labeled \code{Int\_Bus} coincides with the PDR bus.}
+  \label{fig:topoS}
 \end{figure}
 
 \begin{figure}[ht]
@@ -154,85 +186,87 @@ start at an unstable state.
   \hfill
   \includegraphics[width=0.45\textwidth]{topology_M_AuxLoad.png}
   \hfill
-  \caption{Allowed topologies for cases with multiple units.}
-  \label{fig:topoM} 
+  \caption{Allowed topologies for cases with multiple units. Note the mandatory
+    plant-level transformer \code{Main\_Xfmr} between the internal bus and the PDR bus
+    (or the internal line, when the latter is modeled).}
+  \label{fig:topoM}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.5\textwidth]{topology_Zone1.png}
+  \caption{The only topology allowed for Zone-1 tests: the single unit and its step-up
+    transformer.}
+  \label{fig:topoZone1}
 \end{figure}
 
 
 
 
 \section{Strategy for the calculation}
+\label{sec:strategy}
+
 Looking at the above topologies, and knowing that:
 \begin{itemize}
-\item the topology on RTE's side always contains an Infinite Bus (except Fiche I10, in
-  which there are only loads)
-\item the magnitudes V, P, Q are always prescribed at the PDR bus
+\item the magnitudes V, P, Q are always prescribed at the PDR bus;
+\item the topology on RTE's side consists of the connection line(s) and, behind them, an
+  Infinite Bus in most PCSs. Two variants exist: in PCS I8 the Infinite Bus is replaced
+  by an equivalent generator plus equivalent loads, and in the Islanding PCS (I10) there
+  is no grid at all --- only loads hanging directly from the PDR bus;
 \end{itemize}
-It is easy to see that a general strategy for calculation is as follows:
+a general strategy for the calculation follows:
 \begin{enumerate}
-\item First choose the angle reference (zero) to be at the PDR. Therefore all complex
-  magnitudes V, I, S are known at the PDR bus.
-\item Start by calculating the complex voltage at the Infinite Bus. This is the only
-  initialization value we will need on RTE's side. In addition, we may keep the value of
-  the angle in order to perform a global shift at the end, in case we wanted the
-  Infinite Bus to be the angle reference instead (although this is not really
-  necessary).
-\item We then proceed from the PDR bus towards the other side, section by section. The
-  calculation will vary depending on the topology:
+\item First choose the angle reference (zero) to be at the PDR bus. Therefore all
+  complex magnitudes V, I, S are known at the PDR bus.
+\item Start by calculating the complex voltage at the grid bus, behind the connection
+  line(s). This is the only initialization value needed on RTE's side (plus the PQ
+  injection of the equivalent generator, when one is modeled instead of an Infinite
+  Bus). Once this voltage is known, all angles are shifted globally so that \emph{the
+    grid bus becomes the angle reference} (this is more convenient for analysts when
+  they look at the results). When there is no connection line (the islanding cases), the
+  grid bus coincides with the PDR bus and no shift is needed.
+\item Then proceed from the PDR bus towards the producer's side, section by section:
+  first the internal line (if modeled), then the plant-level transformer (if present),
+  then the auxiliary load circuit (if present), and finally the generating unit(s)
+  behind their step-up transformers. The calculation of each section uses one of two
+  elementary blocks:
   \begin{itemize}
-  \item If there is only a line or a transformer followed by a generator unit, the
-    calculation simply involves the formulas of a pi-model equivalent.
-  \item If there is an auxiliary load, the calculation will involve a second-order
-    algebraic equation (a standard two-bus load-flow), since this load specifies
-    a constant PQ value.
+  \item If the section is a line or a transformer with known voltage and flow on one
+    side, the calculation simply involves the propagation formulas of a pi-model
+    equivalent (Section~\ref{sec:pimodel_lf}).
+  \item If the section feeds a constant-PQ load (the auxiliary load), the calculation
+    involves a proper two-bus load flow, i.e.\ a second-order algebraic equation, solved
+    in closed form (Section~\ref{sec:twobus}).
   \item If there are multiple generating units, the calculation needs one additional
-    input from the user: the sharing fractions of their respective PQ injections (we
-    obtain this from the initialization values given by the user in his
-    \code{Producer.par} file).
+    input from the user: the sharing fractions of their respective PQ injections
+    (Section~\ref{sec:gencircuits}).
   \end{itemize}
 \end{enumerate}
 
+As the calculation progresses, the tool also annotates each element of the network
+(line, transformers, load, units) with the initialization values of its terminals
+(voltage modulus and angle, P and Q flows, with the signs of each side following the
+\Dynawo{} receptor convention); these annotated values are what later gets written into
+the case files.
 
 
 
-\section{LF calculations for Topologies S and S+i}
 
-We start by noticing that the DTR Sheets specify three quantities at the point of
-connection, the PDR bus: voltage modulus and the complex flow $S=P+jQ$. This allows one
-to easily propagate the complex voltage and complex currents on either side of the PDR
-bus, \emph{independently}. Actually, these LFs do not involve any quadratic equation at
-all, as it will be shown now (this will be different in the next sections, when a PQ
-auxiliary load is present).
+\section{Elementary load-flow blocks}
+\label{sec:blocks}
 
-The plan proceeds as follows, in outline mode:
-\begin{itemize}
-\item First LF: calculate the complex voltage at the RTE bus, needed to initialize the
-  Infinite Bus model. We may use this voltage angle to perform a global phase shift, so
-  that this bus becomes the reference (i.e., angle zero).
-\item Second LF (case S+i): calculate the complex voltage and current at the other end
-  of the line representing the producer's ``internal network'', if it is modeled.
-\item Third LF: calculate the complex voltage and current on the low-voltage side of the
-  generator transformer, thus obtaining the generator PQ output as well.
-\end{itemize}
+\subsection{Propagation through a pi-model (voltage and flow known at one end)}
+\label{sec:pimodel_lf}
 
+All branch sections (connection lines, internal line, and transformers) are handled
+through their pi-model equivalent circuit, shown in Fig.~\ref{fig:pimodel_LF}. The
+convention is that terminal 1 always represents the bus where both complex voltage and
+complex current (or, equivalently, complex voltage and P \& Q) are known, and terminal 2
+is where they must be calculated. Appendix~\ref{app:pimodel} shows how to obtain the
+pi-model parameters $\Ytr, \Ysh_1, \Ysh_2$ of each kind of branch from the physical
+parameters found in the \Dynawo{} case files.
 
-
-\subsection{First LF: RTE's side}
-Let us focus first on the problem to the right of the PDR bus in Fig.~\ref{fig:topoS},
-that is, RTE's network side. We start with this side first because, once $V_\infty$ is
-solved for, we can shift phase globally so that $V_\infty$ sets the reference (zero
-angle).  This is not strictly necessary, but it is more convenient for analysts when
-they look at the results. Having in mind the pi-model equivalent of the connection
-line(s) and using current conservation plus the fundamental power equation $S=VI^*$, one
-has:
-\begin{equation*}
-  \Ipdr = \frac{\Spdr^*}{\Vpdr^*} - \Vpdr \Ysh_1
-        = ( \Vpdr - V_\infty ) \Ytr
-\end{equation*}
-
-Since we will be repeating the same sort of calculation to the left of the PDR
-bus, it is useful to make this calculation more general by rewriting it in terms
-of a pi-model equivalent circuit as shown in Fig.~\ref{fig:pimodel_LF}:
+Using current conservation plus the fundamental power equation $S=VI^*$, one has:
 \begin{equation*}
   I_{1\rightarrow 2} = \frac{S_1^*}{V_1^*} - V_1 \Ysh_1
                      = ( V_1 - V_2 ) \Ytr
@@ -240,31 +274,30 @@ of a pi-model equivalent circuit as shown in Fig.~\ref{fig:pimodel_LF}:
 Rearranging this equation,
 \begin{equation*}
   \frac{S_1^*}{V_1^* \Ytr} - V_1 \frac{\Ysh_1}{\Ytr}
-  = V_1 - V_2 \,, 
+  = V_1 - V_2 \,,
 \end{equation*}
 we easily obtain the complex voltage at terminal 2:
 \begin{equation}
   V_2 = V_1 \left(1 + \frac{\Ysh_1}{\Ytr} \right) - \frac{S_1^*}{V_1^* \Ytr}
   \label{eq:complex_V}
 \end{equation}
-
-If instead of an infinite bus we had modeled a real generator on RTE's side (as is the
-case of Fiche I8), we would also need to calculate the PQ injection of the
-generator. For that, we calculate the corresponding current $I_2$. Using again the sign
-conventions indicated by the arrows in Fig.~\ref{fig:pimodel_LF}, this current is:
+The current leaving terminal 2 (with the sign conventions indicated by the arrows in
+Fig.~\ref{fig:pimodel_LF}) is:
 \begin{equation}
   I_2 = ( V_1 - V_2 ) \Ytr - V_2 \Ysh_2 \,
   \label{eq:complex_I}
 \end{equation}
-so that the total complex injection at the bus is:
+so that the complex power flow leaving terminal 2 is:
 \begin{equation}
   S_2 \equiv P_2 + j Q_2 = V_2 I_2^*
   \label{eq:complex_S}
 \end{equation}
-And finally the initialization values of P and Q for such generator are straightforward
-to obtain, simply by subtracting from $S_2$ the value (with the proper sign) of the
-equivalent PQ loads, if any are present (see Fiche I8).
 
+This propagation is implemented in the function \code{\_calc\_pimodel()}. Since it is
+used at several steps of the procedure, looking in different directions (towards the
+grid, towards the units), one must be careful when handling the signs of its inputs and
+outputs: the signs will be correct if one is consistent with the arrows of
+Fig.~\ref{fig:pimodel_LF}, as pointed out in the corresponding sections below.
 
 \begin{figure}
   \centering
@@ -280,84 +313,48 @@ equivalent PQ loads, if any are present (see Fiche I8).
 \end{figure}
 
 
+\subsection{Transformer terminal orientation}
+\label{sec:orientation}
 
-\subsection{Second LF: the producer's ``internal network'' (case S+i)}
+For lines the pi-model is symmetric ($\Ysh_1 = \Ysh_2$, see
+Appendix~\ref{app:pimodel}), so it does not matter which physical terminal plays the
+role of ``terminal 1'' in Fig.~\ref{fig:pimodel_LF}. For transformers it does matter:
+the transformation ratio makes the equivalent pi-model \emph{asymmetric} ($\Ysh_1 \neq
+\Ysh_2$), and the parameters given in Appendix~\ref{app:xfmr} are expressed with the
+ratio living on the transformer's declared terminal-1 side.
 
-If the producer has modeled an internal network (by means of a Line object), we will
-need to propagate the complex voltage and current to the other side, the internal bus.
-
-The calculation is exactly the same as in the previous subsection, using again
-expressions~\eqref{eq:complex_V} and \eqref{eq:complex_I}.  We will keep the convention
-that terminal 1 is the one at which magnitudes are known (in this case, the PDR bus),
-and terminal 2 is where we need to calculate voltages, currents, and so on.  The signs
-of the resulting currents and power flows will be correct if we are consistent with the
-arrows: in this particular case here, it means that the values of inputs $P_1 + j Q_1$
-need to have their signs flipped, compared to the values used in the previous
-subsection.  To be sure, $P_1$ is positive in the previous subsection and it is negative
-here, as per the \Dynawo{} convention (which is, ``loads are positive'').
-
-Therefore we will be using a common function \code{calc\_pimodel\_pf()}, but we
-will have to be careful when handling the signs of its inputs and outputs.
-
-
-\subsection{Third LF: the generating unit}
-
-As it can be seen in the diagram for topologies S and S+i in Fig.~\ref{fig:topoS}, it
-now suffices to calculate the voltage and current at the low-voltage side of the
-generator's step-up transformer.
-
-Again, the calculation is is exactly the same as in the previous two subsections.  This
-time terminal 1 is the HV side of the step-up transformer (which is the the PDR bus in
-case of topology S, and the internal bus in case of topology S+i).  Therefore we will be
-calling again the common function \code{calc\_pimodel\_pf()}, being careful when
-handling the signs of inputs and outputs. One thus obtains the complex voltage with
-expression~\eqref{eq:complex_V} and the PQ output of the generator through
-expressions~\eqref{eq:complex_I} and \eqref{eq:complex_S}.
-
-
-
-
-\section{LF calculations for Topologies S+Aux, S+Aux+i}
-
-The calculations for these topologies are very similar to the previous ones.  The only
-difference lies in the third LF, since the presence of an auxiliary load forces us to
-calculate a proper two-bus load-flow problem, i.e. solve a quadratic equation (for which
-it is straightforward to get the solution algebraically, in closed form).
-
-The plan proceeds as follows, in outline mode:
+The producer is free to declare his transformers with either orientation (i.e., the
+generator may be connected to the transformer's declared terminal 1 or terminal 2).
+Therefore, before solving each propagation, the tool checks which declared terminal
+faces the bus where magnitudes are known:
 \begin{itemize}
-\item First LF: same as in the case of topologies S and S+i.
-\item Second LF (case S+Aux+i): same as in the case of topology S+i.
-\item Third LF: calculate voltage and current on the low-voltage side of the
-  \emph{auxiliary load} transformer first. We need to know this current in order
-  to calculate the next and final step.
-\item Fourth LF: calculate voltage and current on the low-voltage side of the
-  \emph{generator} transformer, thus obtaining the generator PQ output as well.
+\item if the known bus faces the transformer's declared terminal 1, the pi-model is used
+  as is;
+\item if the known bus faces the declared terminal 2, the same pi circuit must be solved
+  as seen from side 2, which simply amounts to \emph{swapping the two shunt admittances}
+  ($\Ysh_1 \leftrightarrow \Ysh_2$) in
+  equations~\eqref{eq:complex_V}--\eqref{eq:complex_S} (and in the two-bus load flow of
+  Section~\ref{sec:twobus}).
 \end{itemize}
+This check is applied to the plant-level transformer, the auxiliary-load transformer,
+and each step-up transformer.
 
 
-\subsection{Third LF: the auxiliary load circuit}
+\subsection{The two-bus load flow (voltage known at one end, PQ load at the other)}
+\label{sec:twobus}
 
-As it can be seen in Fig.~\ref{fig:topoS} (right hand side), the generator output PQ
-cannot be calculated until we know how much current is going into the auxiliary load
-circuit vs.\ the generator circuit.
+When the branch feeds a constant-PQ load (the auxiliary load behind its transformer),
+the current at terminal 1 is not known in advance, and one must solve a proper two-bus
+power-flow problem. It reduces to a quadratic equation, which we solve in closed form.
 
-Since the PQ consumption of the load is specified, and the complex voltage at the HV
-side of the load transformer is known, one can calculate the voltage at the load and
-thus the current.  This is a standard two-bus power flow problem, which involves solving
-a quadratic equation.
-
-Let us solve it in closed form. The circuit is again a simple pi-model model
-representing the auxiliary load transformer.  As in the rest of this paper, we adopt the
-convention that terminal 1 represents the bus where both voltage and current are
-known--although in this particular case, the current is unknown!  Terminal 2 is where
-the auxiliary load is connected to. Therefore equation we need to solve is:
+The circuit is again the pi-model of Fig.~\ref{fig:pimodel_LF}, where now $V_1$ is
+known, $S_2$ is known (the load's PQ consumption), and $V_2$ should be solved for. The
+equation to solve is:
 \begin{equation*}
-  (V_1 - V_2) \Ytr = \frac{S_2^*}{V_2^*} + \Ysh_2 V_2 \;,
+  (V_1 - V_2) \Ytr = \frac{S_2^*}{V_2^*} + \Ysh_2 V_2 \;.
 \end{equation*}
-where $V_1$ is known, $S_2$ is known (the load's PQ), and $V_2$ should be solved for. We
-will solve this in terms of the real and imaginary parts of $V_2$. To prepare for that,
-let us rearrange this equation:
+We will solve this in terms of the real and imaginary parts of $V_2$. To prepare for
+that, let us rearrange this equation:
 \begin{equation*}
   (\Ytr + \Ysh_2) V_2 - \Ytr V_1  +  \frac{S_2^*}{V_2^*}  = 0
 \end{equation*}
@@ -403,66 +400,199 @@ yield a high voltage ($v=1$) if the loads were zero ($\sigma=0$), as expected. T
 the complex voltage is:
 \begin{equation}
   v = \frac{1}{2} + \sqrt{\frac{1}{4} - \sigma_x - \sigma_y^2} - j \sigma_y
+  \label{eq:twobus_v}
 \end{equation}
 from which one readily obtains $V_2$ by undoing the definitions in
-Eq.~\eqref{eq:V2defs}.
+Eq.~\eqref{eq:V2defs}. (If the load were too large to be sustained at the given voltage,
+the discriminant in Eq.~\eqref{eq:twobus_v} would become negative and no physical
+solution would exist; such a case cannot be initialized.)
 
-Lastly, the net current that flows from terminal 1 into the auxiliary loads
-circuit can be calculated as:
+Lastly, the net current that flows from terminal 1 into the branch can be
+calculated as:
 \begin{equation}
-  I_{\text{aux}} = (V_1 - V_2) \Ytr + V_1 \Ysh_1
+  I_1 = (V_1 - V_2) \Ytr + V_1 \Ysh_1
+  \label{eq:twobus_I1}
 \end{equation}
-This quantity will be needed in the next section.
+This two-bus load flow is implemented in the function \code{\_calc\_twobus\_pf()}. The
+terminal-orientation rule of Section~\ref{sec:orientation} applies here as well.
+
+
+\subsection{Zero-impedance connections}
+\label{sec:zeroimp}
+
+Some PCSs do not model any connection line on the grid side (notably the islanding
+cases, where there is no grid at all). Internally, the missing branch is represented as
+a pi-model of \emph{zero impedance}: $\Ytr = \infty$, $\Ysh_1 = \Ysh_2 = 0$. The
+propagation formulas~\eqref{eq:complex_V}--\eqref{eq:complex_S} degenerate in that limit
+($V_2 \to V_1$, $S_2 \to S_1$), but they cannot be evaluated numerically with an
+infinite admittance; the tool therefore detects this case explicitly (function
+\code{\_zero\_imp\_line()}) and short-circuits the calculation: the two buses are the
+same bus, so voltage and flow carry over unchanged, and no global angle shift is
+performed (the PDR bus itself remains the angle reference).
 
 
 
-\subsection{Fourth LF: the generator circuit}
 
-Here the calculation is very similar to the third LF in the case of topologies S and
-S+i, except that we first need to subtract from $I_1$ the current $I_{\text{aux}}$ that
-is drawn by the auxiliary loads circuit (which was calculated in the previous
-subsection).  Once we do that, both voltage and current are known at terminal 1 and one
-can calculate voltage and current at terminal 2 (i.e., the generator terminals, also the
-LV side of the step-up transformer).
+\section{First LF: the grid side (common to all topologies)}
+\label{sec:gridside}
 
-Then the PQ output of the generator is simply given by $\Sgen = S_2 = V_2
-I_2^*$.
+The DTR PCSs specify three quantities at the point of connection, the PDR bus: the
+voltage modulus and the complex flow $S=P+jQ$. This allows one to propagate the complex
+voltage and complex currents on either side of the PDR bus, \emph{independently}. We
+start with the grid side because, once the grid-bus voltage is solved for, we can shift
+all phases globally so that the grid bus sets the reference (zero angle).
+
+Three remarks about the inputs of this first propagation:
+\begin{itemize}
+\item \textbf{Sign convention.} All flows in the tool follow the \Dynawo{} convention
+  (``loads are positive''), so the flow prescribed at the PDR bus, being an injection
+  from the producer towards the grid, is held internally as a negative quantity
+  $\Spdr$. Looking towards the grid, the flow that enters the connection line is
+  therefore $-\Spdr$ (positive).
+\item \textbf{Loads at the PDR bus.} Some PCSs (notably the Islanding PCS) model loads
+  hanging \emph{directly} from the PDR bus. These loads consume part of the producer's
+  delivery before it enters the connection line, and must not be confused with the
+  equivalent loads modeled behind the line on the grid side (as in PCS I8). The tool
+  separates the two groups by their connection point, and the flow entering the line
+  becomes:
+  \begin{equation}
+    S_1 = -\Spdr - \sum \Saux^{\textrm{(PDR)}}
+    \label{eq:pdrloads}
+  \end{equation}
+  where $\Saux^{\textrm{(PDR)}}$ are the PQ consumptions of the loads connected at the
+  PDR bus.
+\item \textbf{Multiple parallel lines.} When the grid side models several parallel
+  connection lines, they are aggregated into a single equivalent pi-model by adding
+  their admittances (see Appendix~\ref{app:parallel}).
+\end{itemize}
+
+With $V_1 = \Vpdr$ (angle zero) and $S_1$ as above, the propagation
+formulas~\eqref{eq:complex_V}--\eqref{eq:complex_S} directly yield the complex voltage
+$V_2 = V_{\textrm{grid}}$ at the grid bus, which is the value used to initialize the
+Infinite Bus model. All angles are then shifted globally by $-\arg(V_{\textrm{grid}})$,
+so that the grid bus becomes the angle reference and the PDR bus keeps the (now
+negative) relative angle. If there is no connection line at all, the zero-impedance
+treatment of Section~\ref{sec:zeroimp} applies instead: $V_{\textrm{grid}} = \Vpdr$ and
+no shift is performed.
+
+If instead of an infinite bus a real generator is modeled on the grid side (as is the
+case of PCS I8), we also need the PQ injection with which to initialize that generator.
+Equations~\eqref{eq:complex_I} and \eqref{eq:complex_S} provide the total complex
+injection $S_2$ at the grid bus; the generator's initialization values are then obtained
+by simply subtracting from $S_2$ the value (with the proper sign) of the equivalent PQ
+loads modeled at that bus, if any are present.
 
 
 
 
-\section{LF calculations for Topologies M and M+i}
+\section{Second LF: the producer's internal network}
+\label{sec:internal}
 
-The procedure is almost the same as that of Topologies S and S+i, with one crucial
-difference: when attempting to perform what we called the third LF, one needs more data;
-namely, how the net injection is \emph{shared} among the several generating units. We
-obtain these proportionality factors for P and Q from the user input. More precisely, we
-read the existing initialization values of $P_0$ and $Q_0$ for each generator $k$ in the
-\code{Producer.par} file provided by the user, and calculate the proportionality factors
-in a straightforward way:
+We now proceed from the PDR bus towards the producer's side. The known magnitudes are
+$\Vpdr$ (with its shifted angle) and $\Spdr$; as anticipated, the sign of the flow is
+opposite to the one used on the grid side, since we are now looking in the opposite
+direction ($P$ was positive there and is negative here, as per the \Dynawo{} ``loads are
+positive'' convention).
+
+Two sections may exist between the PDR bus and the node where the generation hangs
+(the ``internal bus''); each of them, when present, is solved with the propagation
+formulas~\eqref{eq:complex_V}--\eqref{eq:complex_S}, feeding the output of one section
+as the input of the next:
+
+\begin{enumerate}
+\item \textbf{The internal line} (topologies ``+i''): a plain symmetric pi-model
+  (Appendix~\ref{app:line}).
+\item \textbf{The plant-level transformer} \code{Main\_Xfmr} (topologies of the M
+  family): the asymmetric pi-model of Appendix~\ref{app:xfmr}, which accounts for the
+  transformation ratio $r$. The terminal-orientation rule of
+  Section~\ref{sec:orientation} decides whether the shunts must be swapped, depending on
+  which declared terminal of the transformer faces the PDR side.
+\end{enumerate}
+
+When neither section is modeled (topologies S and S+Aux), the internal bus is the PDR
+bus itself, and the voltage and flow carry over unchanged.
+
+
+
+
+\section{The generating unit circuits}
+\label{sec:gencircuits}
+
+At this point the complex voltage $V_{\textrm{int}}$ and the flow $S_{\textrm{int}}$ at
+the internal bus are known (when there is an auxiliary load, $S_{\textrm{int}}$ must
+first be corrected as described in Section~\ref{sec:auxcircuits}). It remains to
+propagate them through each unit's step-up transformer, in order to obtain the voltage
+at the unit's terminal and its PQ output.
+
+\subsection{Single unit (topologies S, S+i, S+Aux, S+Aux+i)}
+
+The whole flow $S_{\textrm{int}}$ goes through the single step-up transformer. One thus
+obtains the complex voltage at the unit's terminal with
+expression~\eqref{eq:complex_V}, and the PQ output of the unit through
+expressions~\eqref{eq:complex_I} and \eqref{eq:complex_S} --- always applying the
+terminal-orientation rule of Section~\ref{sec:orientation} to the transformer's
+pi-model. Then $\Sgen = S_2 = V_2 I_2^*$.
+
+When the step-up transformer is omitted (models with \code{ConverterLVControl = false},
+allowed in topology S only), no propagation is needed: the unit's terminal \emph{is}
+the internal bus, so it is initialized directly with $V_{\textrm{int}}$ and
+$S_{\textrm{int}}$.
+
+\subsection{Multiple units (topologies M, M+i, M+Aux, M+Aux+i)}
+
+When attempting to perform this last propagation with several units, one needs more
+data; namely, how the net injection is \emph{shared} among them. The tool obtains these
+proportionality factors for P and Q from the user input: the entries
+\code{P\_sharing\_<unit\_id>} and \code{Q\_sharing\_<unit\_id>} that the user provides
+in the producer's \code{.ini} file, one pair per unit $k$:
 \begin{equation}
   \begin{split}
-    \lambda_P^{(k)} & = \frac{P_0^{(k)}}{\sum_{i=1}^n P_0^{(i)}} \\
-    \lambda_Q^{(k)} & = \frac{Q_0^{(k)}}{\sum_{i=1}^n Q_0^{(i)}}
+    \lambda_P^{(k)} & = \frac{P_{\textrm{sh}}^{(k)}}{\sum_{i=1}^n P_{\textrm{sh}}^{(i)}} \\
+    \lambda_Q^{(k)} & = \frac{Q_{\textrm{sh}}^{(k)}}{\sum_{i=1}^n Q_{\textrm{sh}}^{(i)}}
   \end{split}
+  \label{eq:sharing}
 \end{equation}
-where $n$ is the number of generating units. We then simply apply these proportionality
-factors to the net injection $S_1$ of equation~\eqref{eq:complex_V}, to obtain the
-complex voltages and PQ values at each generator terminals, with equations
-\eqref{eq:complex_V}--\eqref{eq:complex_S}.
+where $n$ is the number of generating units. The tool validates that the fractions of
+each magnitude add up to 1 (for a single unit they default to 1, so this reduces
+naturally to the previous subsection). These factors are applied separately to the real
+and imaginary parts of the net injection at the internal bus:
+\begin{equation*}
+  S_{\textrm{int}}^{(k)} = \lambda_P^{(k)} P_{\textrm{int}} +
+                         j \, \lambda_Q^{(k)} Q_{\textrm{int}}
+\end{equation*}
+and each share is then propagated through the corresponding unit's step-up transformer
+exactly as in the single-unit case, yielding the complex voltage and PQ values at each
+unit's terminals.
 
 
 
 
-\section{LF calculations for Topologies M+Aux and M+Aux+i}
+\section{The auxiliary load circuit (topologies +Aux)}
+\label{sec:auxcircuits}
 
-The procedure follows the same steps as those for Topologies S+Aux and S+Aux+i, up to
-the third LF (for the auxiliary load).  Then, the fourth loadflow is different: one
-first needs to subtract from $I_1$ the current $I_{\text{aux}}$ that is drawn by the
-auxiliary load circuit. The new net value of the injection thus becomes $S_1 = V_1 (I_1
-- I_{\text{aux}})^*$, and we can then calculate the complex voltages and PQ values at
-each generator terminals as in the previous section, using their corresponding
-$\lambda_P^{(k)}, \lambda_Q^{(k)}$ sharing factors.
+As can be seen in Figs.~\ref{fig:topoS} and \ref{fig:topoM} (right-hand sides), when an
+auxiliary load is present the unit output PQ cannot be calculated until we know how much
+current goes into the auxiliary load circuit vs.\ the generation circuit. Therefore, in
+the ``+Aux'' topologies, an additional load flow must be solved at the internal bus
+\emph{before} the generating unit circuits of Section~\ref{sec:gencircuits}.
+
+Since the PQ consumption of the load is specified, and the complex voltage
+$V_{\textrm{int}}$ at the HV side of the auxiliary-load transformer is known, this is
+exactly the two-bus load flow of Section~\ref{sec:twobus} (with the transformer's
+asymmetric pi-model and the terminal-orientation rule of
+Section~\ref{sec:orientation}). It yields the voltage at the load terminal --- used to
+initialize the load --- and, through Eq.~\eqref{eq:twobus_I1}, the net current
+$I_{\textrm{aux}}$ drawn by the auxiliary circuit from the internal bus.
+
+The flow available to the generating units is then obtained by subtracting that current:
+\begin{equation}
+  S_{\textrm{int}}^{\textrm{(gens)}}
+    = V_{\textrm{int}} \left( \frac{S_{\textrm{int}}^*}{V_{\textrm{int}}^*}
+      - I_{\textrm{aux}} \right)^{\!*}
+\end{equation}
+and this corrected $S_{\textrm{int}}^{\textrm{(gens)}}$ is what enters the calculations
+of Section~\ref{sec:gencircuits} (the whole of it for a single unit, or split with the
+sharing factors of Eq.~\eqref{eq:sharing} for multiple units).
 
 
 
@@ -473,13 +603,16 @@ $\lambda_P^{(k)}, \lambda_Q^{(k)}$ sharing factors.
 \addappheadtotoc
 
 \section{Pi-model equivalent parameters}
+\label{app:pimodel}
 
 In this section we describe how to obtain the pi-model parameters $\Ytr, \Ysh_1,
 \Ysh_2$ from the physical parameters that we can read from the \Dynawo{} case
-files.
+files. These conversions are implemented in the functions \code{line\_pimodel()} and
+\code{xfmr\_pimodel()} (module \code{dycov/electrical/pimodel\_parameters.py}).
 
 
 \subsection{Single line}
+\label{app:line}
 
 This is quite simple, as \Dynawo's Line model is already in the form of a
 pi-model equivalent. Pay attention, though: the shunt admittances are already
@@ -489,20 +622,21 @@ divided by two (they follow Eurostag's convention: they are
   \begin{split}
     \Ytr   & = \frac{1}{\code{line\_RPu} + j \, \code{line\_XPu}} \\
     \Ysh_1 & = \code{line\_GPu} + j \, \code{line\_BPu} \\
-    \Ysh_2 & = \code{line\_GPu} + j \, \code{line\_BPu} 
+    \Ysh_2 & = \code{line\_GPu} + j \, \code{line\_BPu}
   \end{split}
 \end{equation}
 
 
 \subsection{Multiple parallel lines}
+\label{app:parallel}
 
 In this case one would simply \emph{add} the admittances, as both the transmission and
 the shunt admittances are connected in parallel to each other, respectively.
 \begin{equation}
   \begin{split}
-    \Ytr   & = \sum_{i=1}^n \frac{1}{\code{line\_RPu}_i + j \, \code{line\_XPu}}_i \\
+    \Ytr   & = \sum_{i=1}^n \frac{1}{\code{line\_RPu}_i + j \, \code{line\_XPu}_i} \\
     \Ysh_1 & = \sum_{i=1}^n \code{line\_GPu}_i + j \, \code{line\_BPu}_i \\
-    \Ysh_2 & = \sum_{i=1}^n \code{line\_GPu}_i + j \, \code{line\_BPu}_i 
+    \Ysh_2 & = \sum_{i=1}^n \code{line\_GPu}_i + j \, \code{line\_BPu}_i
   \end{split}
 \end{equation}
 
@@ -511,6 +645,7 @@ the shunt admittances are connected in parallel to each other, respectively.
 
 
 \subsection{Transformers}
+\label{app:xfmr}
 
 For transformers, one needs to pay attention to the internal modeling used in \Dynawo.
 This is the equivalent circuit and conventions:
@@ -525,7 +660,7 @@ This is the equivalent circuit and conventions:
   \end{verbatim}
 \end{quote}
 In the following, we will use the notation $Z \equiv R+jX$ (transmission branch)
-and $Y_m \equiv G + jB$ (magnetizing branch).  We will use this now this circuit
+and $Y_m \equiv G + jB$ (magnetizing branch).  We will use now this circuit
 to obtain the values of its pi-model equivalent $\Ytr, \Ysh_1, \Ysh_2$ in terms of
 $Z$ and $Y_m$. Note that, for this calculation, we will be using the convention
 that current $I2$ flows in the other direction (see Fig.~\ref{fig:pimodel_LF}),
@@ -597,6 +732,15 @@ Eq.\eqref{eq:pimodelIV}, one finally obtains:
   \end{split}
 \end{equation}
 
+Note that these parameters are expressed as seen from the transformer's declared
+terminal 1 (the ratio $r$ makes them asymmetric, $\Ysh_1 \neq \Ysh_2$). Whenever the bus
+with known magnitudes faces the declared terminal 2 instead, the pi-model must be used
+with its shunts swapped, as explained in Section~\ref{sec:orientation}.
+
+Every transformer of the topology --- the step-up transformers of the units, the
+auxiliary-load transformer, and the plant-level transformer \code{Main\_Xfmr} --- is
+converted through these same formulas.
+
 
 
 
@@ -608,4 +752,3 @@ Eq.\eqref{eq:pimodelIV}, one finally obtains:
 
 
 \end{document}
-
