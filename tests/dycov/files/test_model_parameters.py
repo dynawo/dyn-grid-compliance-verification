@@ -641,3 +641,51 @@ def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
     assert is_test_applicable is True
     assert calls["gen"] == 1
     assert calls["xfmr"] == 0
+
+
+def test_adjust_load_applied_twice_updates_values_instead_of_duplicating():
+    par_root = _make_root()
+    etree.SubElement(par_root, f"{{{_NS}}}set", id="Aux_Load")
+
+    model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.1, 0.05, 1.0, 0.2)
+    model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.3, 0.15, 1.05, 0.4)
+
+    parset = par_root.xpath("//ns:set[@id='Aux_Load']", namespaces={"ns": _NS})[0]
+    written = {par.get("name"): float(par.get("value")) for par in parset}
+    assert len(parset) == 4
+    assert written == {
+        "load_P0Pu": 0.3,
+        "load_Q0Pu": 0.15,
+        "load_U0Pu": 1.05,
+        "load_UPhase0": 0.4,
+    }
+
+
+def test_set_parameter_creates_par_in_document_namespace():
+    par_root = _make_root()
+    parset = etree.SubElement(par_root, f"{{{_NS}}}set", id="parGen")
+
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", 1, 0.5, create_if_missing=True
+    )
+
+    created = parset.xpath("ns:par[@name='generator_P0Pu']", namespaces={"ns": _NS})
+    assert len(created) == 1
+    assert created[0].tag == f"{{{_NS}}}par"
+    assert created[0].get("type") == "DOUBLE"
+    assert created[0].get("value") == "0.5"
+
+
+def test_set_parameter_repeated_create_updates_instead_of_duplicating():
+    par_root = _make_root()
+    parset = etree.SubElement(par_root, f"{{{_NS}}}set", id="parGen")
+
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", 1, 0.5, create_if_missing=True
+    )
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", -1, 0.75, create_if_missing=True
+    )
+
+    assert len(parset) == 1
+    assert parset[0].get("value") == "-0.75"
