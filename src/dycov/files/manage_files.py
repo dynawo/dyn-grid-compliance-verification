@@ -446,10 +446,14 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
             base_source_path, target_path, base_name, prefix_name
         )
 
-        # All curves must have the .dict file
-        success = len(copied_files) >= 2 and any(f.endswith(".dict") for f in copied_files)
+        has_dict_file = any(f.endswith(".dict") for f in copied_files)
+        if copied_files and not has_dict_file:
+            dycov_logging.get_logger("Manage files").warning(
+                f"Expected curve dictionary '{base_name}.dict' not found in "
+                f"'{base_source_path}', the test runs as if it had no curves"
+            )
 
-        return success
+        return len(copied_files) >= 2 and has_dict_file
 
     except OSError:
         dycov_logging.get_logger("Manage files").warning(
