@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import configparser
 from pathlib import Path
 from typing import Optional
 
@@ -17,6 +18,7 @@ from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files
+from dycov.logging import dycov_logging
 from dycov.model.parameters import (
     DisconnectionModel,
     GenInit,
@@ -87,13 +89,32 @@ class ImportedCurves(ProducerCurves):
         success: bool,
         is_reference: bool = False,
     ) -> tuple[bool, float, float, pd.DataFrame]:
+        if not success:
+            return False, 0.0, 0.0, pd.DataFrame()
+
+        try:
+            return self.__import_curve_data(
+                working_oc_dir, pcs_name, bm_name, oc_name, is_reference
+            )
+        except (configparser.Error, KeyError) as error:
+            dycov_logging.get_logger("Curves Importer").warning(
+                f"Invalid curve dictionary "
+                f"'{get_cfg_oc_name(pcs_name, bm_name, oc_name)}.dict' ({error}), "
+                f"the test runs as if it had no curves"
+            )
+            return False, 0.0, 0.0, pd.DataFrame()
+
+    def __import_curve_data(
+        self,
+        working_oc_dir: Path,
+        pcs_name: str,
+        bm_name: str,
+        oc_name: str,
+        is_reference: bool,
+    ) -> tuple[bool, float, float, pd.DataFrame]:
         has_imported_curves = False
         sim_t_event_start = 0.0
         fault_duration = 0.0
-        df_imported_curves = pd.DataFrame()
-
-        if not success:
-            return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
         importer = CurvesImporter(working_oc_dir, get_cfg_oc_name(pcs_name, bm_name, oc_name))
         df_imported_curves = importer.get_curves_dataframe(self._producer.get_zone())
