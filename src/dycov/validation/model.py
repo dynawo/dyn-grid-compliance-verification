@@ -566,7 +566,7 @@ class ModelValidator(Validator):
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["ramp_time_lag"], self._validations):
-            if "ramp_time_check" in compliance_values:
+            if "ramp_time_lag" in compliance_values:
                 check_results["ramp_time_lag"] = compliance_values["ramp_time_lag"] * 100
                 thr_ramp_time_lag = config.get_float("GridCode", "thr_ramp_time_lag", 0.10)
                 check_results["ramp_time_thr"] = thr_ramp_time_lag * 100
@@ -579,7 +579,7 @@ class ModelValidator(Validator):
                 check_results["compliance"] = False
 
         if compliance_list.contains_key(["ramp_error"], self._validations):
-            if "ramp_error_check" in compliance_values:
+            if "ramp_error" in compliance_values:
                 check_results["ramp_error"] = compliance_values["ramp_error"] * 100
                 thr_ramp_error = config.get_float("GridCode", "thr_ramp_error", 0.10)
                 check_results["ramp_error_thr"] = thr_ramp_error * 100
