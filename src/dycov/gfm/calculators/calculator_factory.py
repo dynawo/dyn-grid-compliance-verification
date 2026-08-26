@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 from typing import Optional
 
@@ -17,36 +15,31 @@ from dycov.gfm.calculators.rocof import RoCoF
 from dycov.gfm.calculators.scr_jump import SCRJump
 from dycov.gfm.parameters import GFMParameters
 
+_CALCULATOR_REGISTRY = {
+    "PhaseJump": PhaseJump,
+    "AmplitudeStep": AmplitudeStep,
+    "RoCoF": RoCoF,
+    "SCRJump": SCRJump,
+}
+
 
 def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculator]:
     """
-    Factory method to instantiate and return a specific GFMCalculator subclass.
-
-    This function maps string identifiers to their corresponding Grid Forming (GFM)
-    calculator classes, ensuring they are initialized with the provided parameters.
+    Factory method to instantiate a specific GFMCalculator subclass.
 
     Parameters
     ----------
     name : str
-        The identifier name of the calculator to retrieve
-        (e.g., "PhaseJump", "AmplitudeStep", "RoCoF", "SCRJump").
+        The string identifier of the target calculator.
     gfm_params : GFMParameters
-        An object containing all necessary grid forming parameters required
-        for the calculation instance.
+        The shared configuration parameters to pass.
 
     Returns
     -------
     Optional[GFMCalculator]
-        An instantiated object of the requested GFMCalculator subclass if the
-        name is recognized. Returns None if the calculator name is unknown.
+        An instance of the requested calculator, or None if not found.
     """
-    if name == "PhaseJump":
-        return PhaseJump(gfm_params=gfm_params)
-    if name == "AmplitudeStep":
-        return AmplitudeStep(gfm_params=gfm_params)
-    if name == "RoCoF":
-        return RoCoF(gfm_params=gfm_params)
-    if name == "SCRJump":
-        return SCRJump(gfm_params=gfm_params)
 
-    return None
+    # Retrieve the class definition and instantiate if it exists in the registry
+    calc_class = _CALCULATOR_REGISTRY.get(name)
+    return calc_class(gfm_params=gfm_params) if calc_class else None

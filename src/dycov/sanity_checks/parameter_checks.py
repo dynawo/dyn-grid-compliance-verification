@@ -229,7 +229,7 @@ def check_generators(
 
 def check_trafos(xfmrs: list[XfmrParams]) -> None:
     """Check whether the user-supplied transformers parameters are consistent:
-    * The admittance of each transformer must be greater than 0.
+    * The reactance of each transformer must be greater than 0.
 
     Parameters
     ----------
@@ -240,23 +240,21 @@ def check_trafos(xfmrs: list[XfmrParams]) -> None:
         check_trafo(xfmr)
 
 
-def check_trafo(xfmrs: XfmrParams) -> None:
-    """Check whether the user-supplied tranformer parameters are consistent:
-    * The admittance of the transformer must be greater than 0.
+def check_trafo(xfmr: XfmrParams) -> None:
+    """Check whether the user-supplied transformer parameters are consistent:
+    * The reactance of the transformer must be greater than 0.
 
     Parameters
     ----------
     xfmr: XfmrParams
         Transformer parameters.
     """
-    if xfmrs and xfmrs.x <= 0:
-        raise ValueError(
-            f"The admittance of the transformer {xfmrs.id} must be greater than zero."
-        )
+    if xfmr and xfmr.x <= 0:
+        raise ValueError(f"The reactance of the transformer {xfmr.id} must be greater than zero.")
 
-    if xfmrs and xfmrs.alpha_tfo != 0.0:
+    if xfmr and xfmr.alpha_tfo != 0.0:
         raise ValueError(
-            f"The alphaTfo parameter of the transformer {xfmrs.id} must be equal to zero."
+            f"The alphaTfo parameter of the transformer {xfmr.id} must be equal to zero."
         )
 
 
