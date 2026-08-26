@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """WECC front-end for the Excel -> DyCoV input generator: parsing + model resolution.
 
-Reuses the stdlib ``.xlsx`` reader and the control-parameter parser from ``tools/dynawo_par``,
+Reuses the stdlib ``.xlsx`` reader and the control-parameter parser (``workbook.py``),
 and adds:
 - ``read_selected_key``: the Excel-computed Model-Map key, read from the ``Général`` derived
   table (the tool has no knowledge of which blocks form the key);
@@ -22,12 +22,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# The reader/parser live in the sibling tool; import them by path (repo tool convention).
-_DYNAWO_PAR = Path(__file__).resolve().parent.parent / "dynawo_par"
-if str(_DYNAWO_PAR) not in sys.path:
-    sys.path.insert(0, str(_DYNAWO_PAR))
+# The parsing engine is a sibling top-level module; import it by path (repo tool convention).
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
-import generate_par as dp  # noqa: E402
+import workbook as wb  # noqa: E402
 
 MODEL_MAP_SHEET = "Model Map"
 _MAP_COLUMNS = ("zone3_lib", "zone3_prefix", "zone1_lib", "zone1_prefix")
@@ -42,7 +42,7 @@ def _normalized_header(value) -> str | None:
     """``'Zone3_lib'`` / ``'Zone3 lib '`` -> ``'zone3 lib'`` (both spellings occur)."""
     if not isinstance(value, str) or not value.strip():
         return None
-    return dp._strip_accents(value).replace("_", " ")
+    return wb._strip_accents(value).replace("_", " ")
 
 
 def _locate_key_column(grid) -> tuple[int, int] | None:
@@ -61,7 +61,7 @@ def _locate_key_column(grid) -> tuple[int, int] | None:
 def _config_grid(workbook: dict):
     """Return the ``Général`` sheet grid (accent-insensitive sheet-name match)."""
     for name, grid in workbook.items():
-        if dp._strip_accents(name).startswith(dp._CONFIG_SHEET):
+        if wb._strip_accents(name).startswith(wb._CONFIG_SHEET):
             return grid
     raise ValueError("Configuration sheet 'Général' not found in the workbook.")
 
@@ -77,7 +77,7 @@ def read_selected_key(workbook: dict) -> str:
     if located is None:
         raise ValueError("derived-model table (header 'Zone3 lib') not found in 'Général'.")
     header_row, key_col = located
-    key = dp._cell(grid, header_row + 1, key_col)
+    key = wb._cell(grid, header_row + 1, key_col)
     if not key:
         raise ValueError(
             "the Model-Map key cell in 'Général' is empty: the workbook carries no cached "
@@ -105,10 +105,10 @@ def _read_model_map(workbook: dict) -> dict:
     }
     table = {}
     for r in range(header_row + 1, len(grid)):
-        key = dp._cell(grid, r, key_col)
+        key = wb._cell(grid, r, key_col)
         if not key:
             break
-        table[key.strip()] = {name: dp._cell(grid, r, cols[name]) for name in cols}
+        table[key.strip()] = {name: wb._cell(grid, r, cols[name]) for name in cols}
     return table
 
 
@@ -162,7 +162,7 @@ def _locate_param_table(grid) -> tuple[int, int, int]:
     """
     for row_idx, row in enumerate(grid):
         header = {
-            dp._strip_accents(v): c for c, v in enumerate(row) if isinstance(v, str) and v.strip()
+            wb._strip_accents(v): c for c, v in enumerate(row) if isinstance(v, str) and v.strip()
         }
         if "valeurs" in header and ("parametres" in header or "parametre" in header):
             name_col = header.get("parametres", header.get("parametre"))
@@ -182,16 +182,16 @@ def parse_zone(workbook: dict, sheet_name: str) -> dict:
     header_row, name_col, value_col = _locate_param_table(grid)
     values = {}
     for r in range(header_row + 1, len(grid)):
-        name = dp._cell(grid, r, name_col)
+        name = wb._cell(grid, r, name_col)
         if not name:
             break
-        values[name] = dp._cell(grid, r, value_col)
+        values[name] = wb._cell(grid, r, value_col)
     return values
 
 
 def zone1_sheets(workbook: dict) -> list:
     """Ordered list of ``Zone1<x>`` sheet names present (``Zone1a``, ``Zone1b``, ...)."""
-    return [name for name in workbook if dp._strip_accents(name).startswith("zone1")]
+    return [name for name in workbook if wb._strip_accents(name).startswith("zone1")]
 
 
 # ---------------------------------------------------------------------------
@@ -208,21 +208,21 @@ def parse_control_params(workbook: dict) -> list:
     variant]`` section header (``dynawo_par`` design §8.3). The flat order is what the PAR
     emits, so the Excel alone determines it.
     """
-    config = dp.parse_config(workbook)
-    variants = dp.parse_variants(workbook)
+    config = wb.parse_config(workbook)
+    variants = wb.parse_variants(workbook)
     result = []
-    for block, variant in dp._selected_variants(config, variants):
+    for block, variant in wb._selected_variants(config, variants):
         pending_section = [variant.sheet, f"{variant.table} | {variant.name}"]
         for p in variant.parameters:
             if p.value is None:
                 continue
             comments = pending_section
             pending_section = []
-            merged = dp._merge_comment(p)
+            merged = wb._merge_comment(p)
             if merged:
                 comments.append(merged)
             result.append(
-                {"block": block, "name": p.name, "type": dp._map_type(p.type),
+                {"block": block, "name": p.name, "type": wb._map_type(p.type),
                  "value": p.value, "comments": comments}
             )
     return result

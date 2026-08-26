@@ -47,8 +47,8 @@ auxiliary load + its transformer; `+i` = aggregated HV collector line (PI model)
 python generate_inputs.py --excel model.xlsx --outdir <path>
 ```
 `--excel` is the WECC workbook (single source of truth); `--outdir` is where the `Dynawo/Zone1` and
-`Dynawo/Zone3` trees are written. `.xlsx` is parsed with the standard-library reader reused from
-`tools/dynawo_par`.
+`Dynawo/Zone3` trees are written. `.xlsx` is parsed with the tool's own standard-library engine
+(`workbook.py`), which the legacy `tools/dynawo_par` also imports until its retirement.
 
 **Sheets used**
 

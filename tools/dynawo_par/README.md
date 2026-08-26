@@ -1,5 +1,10 @@
 # Dynawo PAR generation from Excel
 
+> **Superseded by [`dynawo_inputs`](../dynawo_inputs/README.md)**, which generates the full
+> DyCoV input trees from the same template; this fragment tool will be retired. The Excel
+> parsing engine already lives there (`tools/dynawo_inputs/workbook.py`) and this tool
+> imports it, so removing this directory cannot break the successor.
+
 A standalone preprocessing utility that reads an Excel model specification and
 emits two Dynawo PAR fragments, ready to paste into your models:
 

@@ -24,11 +24,12 @@ and the open points for RTE in
 
 ## Requirements
 
-Unlike `dynawo_par` (standard library only), this tool **reuses the installed
-`dycov` package** and therefore needs it on the path (the repository's editable
-install is enough) plus its `lxml` dependency. The `.xlsx` itself is read with
-the stdlib reader borrowed from `dynawo_par`. Only the example builder
-(`examples/build_sample.py`) needs `openpyxl`.
+This tool **reuses the installed `dycov` package** and therefore needs it on
+the path (the repository's editable install is enough) plus its `lxml`
+dependency. The `.xlsx` itself is read with the tool's own stdlib parsing
+engine (`workbook.py`: workbook reader, variant tables, `Général` config),
+which the legacy `dynawo_par` also imports until its retirement. Only the
+example builder (`examples/build_sample.py`) needs `openpyxl`.
 
 ## Usage
 

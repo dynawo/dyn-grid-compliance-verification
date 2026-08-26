@@ -197,7 +197,7 @@ def _make_workbook():
 
 
 def test_generate_end_to_end(tmp_path, monkeypatch):
-    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: _make_workbook())
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: _make_workbook())
     report = G.generate(Path("ignored.xlsx"), tmp_path)
 
     root = tmp_path / "Dynawo"
@@ -247,18 +247,18 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
 def test_generate_fails_when_no_block_declares_zone1(tmp_path, monkeypatch):
     # Fail safe: with no 'Zone' column at all (or none declaring Zone1), Zone1 would come out
     # silently incomplete — the tool must refuse instead.
-    wb = _make_workbook()
-    wb["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # strip only the Zone column
-    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: wb)
+    book = _make_workbook()
+    book["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # strip only the Zone column
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
     with pytest.raises(ValueError, match="declares Zone1"):
         G.generate(Path("ignored.xlsx"), tmp_path)
 
 
 def test_main_reports_domain_errors_cleanly(tmp_path, monkeypatch, capsys):
     # Domain errors exit 1 with an 'ERROR: …' line on stderr (like dynawo_par), no traceback.
-    wb = _make_workbook()
-    wb["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # no Zone column -> ValueError
-    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: wb)
+    book = _make_workbook()
+    book["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # no Zone column -> ValueError
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
     excel = tmp_path / "model.xlsx"
     excel.write_text("stub")
     assert G.main(["--excel", str(excel), "--outdir", str(tmp_path / "out")]) == 1
@@ -269,9 +269,9 @@ def test_main_reports_domain_errors_cleanly(tmp_path, monkeypatch, capsys):
 def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
     # An unfilled template: the Zone1 blocks exist and declare their zone, but every value
     # cell is empty — the error must say so instead of blaming the 'Zone' column.
-    wb = _make_workbook()
-    wb["REEC"] = _variant_sheet("REEC_B", [("Kqp", "double", None)])
-    wb["REGC"] = _variant_sheet("REGC_A", [("Iqrmax", "double", None)])
-    monkeypatch.setattr(G.dp, "read_workbook", lambda _path: wb)
+    book = _make_workbook()
+    book["REEC"] = _variant_sheet("REEC_B", [("Kqp", "double", None)])
+    book["REGC"] = _variant_sheet("REGC_A", [("Iqrmax", "double", None)])
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
     with pytest.raises(ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"):
         G.generate(Path("ignored.xlsx"), tmp_path)
