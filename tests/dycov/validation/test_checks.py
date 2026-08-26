@@ -521,3 +521,269 @@ def test_guard_warnings_without_terminal_columns():
     warnings = checks.get_injector_voltage_guard_warnings(curves, curves)
 
     assert warnings == []
+
+
+# ---------------------------------------------------------------------------
+# Issue #373: an absent magnitude is reported as not computable
+# ---------------------------------------------------------------------------
+
+WINDOWS = ("before", "during", "after")
+ERRORS = ("mae", "me", "mxe")
+
+
+class _RecordingLogger:
+    """Captures the messages emitted through dycov_logging."""
+
+    def __init__(self):
+        self.errors = []
+
+    def error(self, msg):
+        self.errors.append(msg)
+
+
+def _window_errors(measurement, value):
+    """Error metrics of one measurement in one window, as calculate_errors builds them."""
+    return {measurement: {"mae": value, "me": value, "mxe": value, "tmxe": 0.5, "ymxe": 1.5}}
+
+
+def _windowed_compliance_values(measurement="BusPDR_BUS_ActivePower", value=0.001):
+    return {window: _window_errors(measurement, value) for window in WINDOWS}
+
+
+def test_calculate_errors_skips_a_measurement_without_reference_values():
+    """Issue #373: an all-NaN reference is not computable, so the magnitude is left out of the
+    results instead of feeding a broken position tuple to the caller."""
+    time = [0.0, 0.5, 1.0]
+    calculated = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [1.0, 2.0, 3.0]})
+    reference = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [np.nan] * 3})
+
+    results = checks.calculate_errors((calculated, reference), 1.0)
+
+    assert results == {}
+
+
+def test_calculate_errors_reports_a_measurement_missing_from_the_simulation(monkeypatch):
+    logger = _RecordingLogger()
+    monkeypatch.setattr("dycov.validation.checks.dycov_logging", logger)
+    time = [0.0, 1.0]
+    calculated = pd.DataFrame({"time": time})
+    reference = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [1.0, 2.0]})
+
+    results = checks.calculate_errors((calculated, reference), 1.0)
+
+    assert results == {}
+    assert logger.errors == ["Curve BusPDR_BUS_ActivePower not found in simulation results."]
+
+
+def test_complete_setpoint_tracking_with_an_absent_measurement_is_not_computable():
+    """Issue #373: a reference that does not carry the tracked magnitude used to raise a
+    TypeError when its None check was combined into the results; it is now reported as "N/A"
+    and counted as non-compliant, as the voltage dip checks already do."""
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        _windowed_compliance_values(), "VoltageSetpointPu", "voltage", results
+    )
+
+    for window in WINDOWS:
+        assert results[f"{window}_mxe_tc_voltage_check"] == "N/A"
+    assert results["setpoint_tracking_voltage_check"] == "N/A"
+    assert results["compliance"] is False
+
+
+def test_complete_setpoint_tracking_with_an_absent_measurement_saves_no_value():
+    """Issue #373: the report renders a missing key as an empty cell, so a window that could
+    not be computed must not leave a None value behind."""
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        _windowed_compliance_values(), "VoltageSetpointPu", "voltage", results
+    )
+
+    assert "before_mxe_tc_voltage_value" not in results
+    assert "before_mxe_tc_voltage_position" not in results
+
+
+def test_complete_setpoint_tracking_keeps_not_computable_over_a_later_window():
+    """A window that could not be computed keeps the aggregated check at "N/A" even when the
+    remaining windows are compliant."""
+    compliance_values = _windowed_compliance_values()
+    del compliance_values["after"]["BusPDR_BUS_ActivePower"]
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        compliance_values, "ActivePowerSetpointPu", "active_power", results
+    )
+
+    assert results["before_mxe_tc_active_power_check"] is True
+    assert results["after_mxe_tc_active_power_check"] == "N/A"
+    assert results["setpoint_tracking_active_power_check"] == "N/A"
+    assert results["compliance"] is False
+
+
+def test_complete_setpoint_tracking_within_the_thresholds_saves_the_position():
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        _windowed_compliance_values(), "ActivePowerSetpointPu", "active_power", results
+    )
+
+    # Only MXE carries a position; MAE and ME have no per-sample instant
+    assert results["before_mxe_tc_active_power_position"] == [0.5, 1.5]
+    assert results["before_mae_tc_active_power_position"] == [None, None]
+    assert results["setpoint_tracking_active_power_check"] is True
+    assert results["compliance"] is True
+
+
+def test_complete_setpoint_tracking_without_thresholds_aggregates_nothing(monkeypatch):
+    no_thresholds = {window: dict.fromkeys(ERRORS) for window in WINDOWS}
+    monkeypatch.setattr(
+        "dycov.validation.threshold_variables.get_setpoint_tracking_threshold_values",
+        lambda: no_thresholds,
+    )
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        _windowed_compliance_values(), "ActivePowerSetpointPu", "active_power", results
+    )
+
+    assert results["before_mxe_tc_active_power_value"] == pytest.approx(0.001)
+    assert results["before_mxe_tc_active_power_check"] is None
+    assert results["setpoint_tracking_active_power_check"] is True
+    assert results["compliance"] is True
+
+
+def test_check_voltage_dips_without_the_during_window_returns_no_during_metrics():
+    compliance_values = _windowed_compliance_values()
+    compliance_values["during"] = {}
+
+    (
+        _,
+        before_check,
+        _,
+        during_value,
+        during_check,
+        during_position,
+        _,
+        after_check,
+        _,
+    ) = checks._check_voltage_dips(
+        compliance_values, "BusPDR_BUS_ActivePower", "mae", is_field_measurements=False
+    )
+
+    assert before_check is True
+    assert after_check is True
+    assert during_value is None
+    assert during_check is None
+    assert during_position == [None, None]
+
+
+def test_check_measurement_with_an_absent_window_is_not_computable():
+    compliance_values = {
+        f"{window}_{error}_active_power_check": True for window in WINDOWS for error in ERRORS
+    }
+    del compliance_values["after_mxe_active_power_check"]
+    results = {"compliance": True}
+
+    checks.check_measurement(compliance_values, "active_power", results)
+
+    assert results["after_mxe_active_power_check"] == "N/A"
+    assert results["voltage_dips_active_power_check"] == "N/A"
+    assert results["compliance"] is False
+
+
+def test_check_measurement_ignores_windows_without_threshold():
+    compliance_values = {
+        f"{window}_{error}_active_power_check": None for window in WINDOWS for error in ERRORS
+    }
+    results = {"compliance": True}
+
+    checks.check_measurement(compliance_values, "active_power", results)
+
+    assert results["voltage_dips_active_power_check"] is True
+    assert "before_mae_active_power_check" not in results
+
+
+ALL_MEASUREMENTS = [
+    "BusPDR_BUS_ActivePower",
+    "BusPDR_BUS_ReactivePower",
+    "BusPDR_BUS_ActiveCurrent",
+    "BusPDR_BUS_ReactiveCurrent",
+    "BusPDR_BUS_Voltage",
+    "NetworkFrequencyPu",
+]
+
+
+def _all_measurements_compliance_values(value=0.001):
+    return {
+        window: {
+            measurement: {
+                "mae": value,
+                "me": value,
+                "mxe": value,
+                "tmxe": 0.5,
+                "ymxe": 1.5,
+            }
+            for measurement in ALL_MEASUREMENTS
+        }
+        for window in WINDOWS
+    }
+
+
+def test_calculate_curves_errors_fills_every_window_of_zone_1():
+    results = _all_measurements_compliance_values()
+
+    checks.calculate_curves_errors(1, is_field_measurements=False, results=results)
+
+    assert results["before_mae_active_power_value"] == pytest.approx(0.001)
+    assert results["during_me_reactive_power_value"] == pytest.approx(0.001)
+    assert results["after_mxe_reactive_current_value"] == pytest.approx(0.001)
+    assert results["before_mxe_active_power_check"] is True
+    assert results["before_mxe_active_power_position"] == [0.5, 1.5]
+    assert "before_mae_frequency_value" not in results
+
+
+def test_calculate_curves_errors_adds_the_frequency_in_zone_3():
+    results = _all_measurements_compliance_values()
+
+    checks.calculate_curves_errors(3, is_field_measurements=False, results=results)
+
+    assert results["before_mae_frequency_value"] == pytest.approx(0.001)
+
+
+def test_calculate_curves_errors_leaves_the_voltage_unchecked():
+    # The DTR defines no voltage threshold, so the error is reported but not checked
+    results = _all_measurements_compliance_values()
+
+    checks.calculate_curves_errors(1, is_field_measurements=False, results=results)
+
+    assert results["before_mae_voltage_value"] == pytest.approx(0.001)
+    assert results["before_mae_voltage_check"] is None
+
+
+def test_calculate_curves_errors_with_an_absent_measurement_yields_no_value():
+    results = _windowed_compliance_values()
+
+    checks.calculate_curves_errors(1, is_field_measurements=False, results=results)
+
+    assert results["before_mae_reactive_power_value"] is None
+    assert results["before_mae_reactive_power_check"] is None
+    assert results["before_mae_reactive_power_position"] == [None, None]
+
+
+def test_save_measurement_errors_skips_absent_windows():
+    results = {}
+
+    checks.save_measurement_errors({}, "active_power", results)
+
+    assert results == {}
+
+
+def test_calculate_errors_ignores_curves_outside_the_measurement_list():
+    time = [0.0, 1.0]
+    calculated = pd.DataFrame({"time": time, "Wind_Turbine_GEN_InternalAngle": [0.1, 0.1]})
+    reference = pd.DataFrame({"time": time, "Wind_Turbine_GEN_InternalAngle": [0.2, 0.2]})
+
+    results = checks.calculate_errors((calculated, reference), 1.0)
+
+    assert results == {}
