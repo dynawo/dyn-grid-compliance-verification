@@ -21,10 +21,13 @@ class GFMCalculator:
     _EPSILON_THRESHOLD = 1.0
 
     def __init__(self, gfm_params: GFMParameters) -> None:
-        """Initializes the base properties for all GFM calculators.
+        """
+        Initializes the base properties for all GFM calculators.
 
-        Args:
-            gfm_params (GFMParameters): The shared configuration parameters.
+        Parameters
+        ----------
+        gfm_params : GFMParameters
+            The shared configuration parameters.
         """
         self._scr = gfm_params.get_scr()
         self._min_ratio = gfm_params.get_min_ratio()
@@ -46,28 +49,40 @@ class GFMCalculator:
         self._epsilon_vals = None
 
     def get_plot_parameter_names(self) -> list[str]:
-        """Retrieves parameters relevant for rendering plots.
+        """
+        Retrieves parameters relevant for rendering plots.
 
-        Returns:
-            list[str]: A list of parameter names to be displayed.
+        Returns
+        -------
+        list[str]
+            A list of parameter names to be displayed.
         """
         raise NotImplementedError
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
-        """Calculates the signal deviation and bounding envelopes.
+        """
+        Calculates the signal deviation and bounding envelopes.
 
-        Args:
-            D (float): The damping constant.
-            H (float): The inertia constant.
-            Xeff (float): The effective reactance.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The timestamp when the grid event occurs.
+        Parameters
+        ----------
+        D : float
+            The damping constant.
+        H : float
+            The inertia constant.
+        Xeff : float
+            The effective reactance.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp when the grid event occurs.
 
-        Returns:
-            tuple[str, np.ndarray, np.ndarray, np.ndarray]: A tuple containing the
-                magnitude name, the main signal, the upper envelope, and the lower envelope.
+        Returns
+        -------
+        tuple[str, np.ndarray, np.ndarray, np.ndarray]
+            A tuple containing the
+            magnitude name, the main signal, the upper envelope, and the lower envelope.
         """
         raise NotImplementedError
 
@@ -79,19 +94,26 @@ class GFMCalculator:
         signal: np.ndarray,
         start_time: float = 0.0,
     ) -> np.ndarray:
-        """Applies a temporal right-shift delay to a signal.
+        """
+        Applies a temporal right-shift delay to a signal.
 
-        Args:
-            delay_time (float): The duration of the delay in seconds.
-            delayed_value (float): The constant value applied during the delay period.
-            time_array (np.ndarray): The simulation time vector.
-            signal (np.ndarray): The original signal to be delayed.
-            start_time (
-                float,
-                optional): The time at which delay logic initiates. Defaults to 0.0.
+        Parameters
+        ----------
+        delay_time : float
+            The duration of the delay in seconds.
+        delayed_value : float
+            The constant value applied during the delay period.
+        time_array : np.ndarray
+            The simulation time vector.
+        signal : np.ndarray
+            The original signal to be delayed.
+        start_time : float, optional
+            The time at which delay logic initiates. Defaults to 0.0.
 
-        Returns:
-            np.ndarray: The resulting time-shifted array.
+        Returns
+        -------
+        np.ndarray
+            The resulting time-shifted array.
         """
         # Calculate the discrete number of samples to shift based on time resolution
         dt = time_array[1] - time_array[0]
@@ -111,30 +133,44 @@ class GFMCalculator:
         return combined_signal[: len(time_array)]
 
     def _cut_signal(self, value_min: float, signal: np.ndarray, value_max: float) -> np.ndarray:
-        """Clips signal values that exceed specified operational limits.
+        """
+        Clips signal values that exceed specified operational limits.
 
-        Args:
-            value_min (float): The lower boundary limit.
-            signal (np.ndarray): The array to be clipped.
-            value_max (float): The upper boundary limit.
+        Parameters
+        ----------
+        value_min : float
+            The lower boundary limit.
+        signal : np.ndarray
+            The array to be clipped.
+        value_max : float
+            The upper boundary limit.
 
-        Returns:
-            np.ndarray: The clipped signal array.
+        Returns
+        -------
+        np.ndarray
+            The clipped signal array.
         """
         return np.clip(signal, value_min, value_max)
 
     def _calculate_epsilon_initial_check(
         self, D: np.ndarray, H: np.ndarray, x_total_initial: float
     ) -> np.ndarray:
-        """Computes the damping ratio (epsilon) to classify the dynamic response.
+        """
+        Computes the damping ratio (epsilon) to classify the dynamic response.
 
-        Args:
-            D (np.ndarray): Array of damping constant variations.
-            H (np.ndarray): Array of inertia constant variations.
-            x_total_initial (float): The total initial reactance.
+        Parameters
+        ----------
+        D : np.ndarray
+            Array of damping constant variations.
+        H : np.ndarray
+            Array of inertia constant variations.
+        x_total_initial : float
+            The total initial reactance.
 
-        Returns:
-            np.ndarray: An array of calculated epsilon values.
+        Returns
+        -------
+        np.ndarray
+            An array of calculated epsilon values.
         """
         return (
             D
@@ -154,15 +190,22 @@ class GFMCalculator:
     def _get_time_tunnel(
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
-        """Generates a dynamic, time-dependent tolerance band ('tunnel').
+        """
+        Generates a dynamic, time-dependent tolerance band ('tunnel').
 
-        Args:
-            p_peak (float): The absolute peak power deviation.
-            time_array (np.ndarray): The simulation time vector.
-            event_time (float): The time the event occurs.
+        Parameters
+        ----------
+        p_peak : float
+            The absolute peak power deviation.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The time the event occurs.
 
-        Returns:
-            np.ndarray: An array representing the dynamic tunnel values over time.
+        Returns
+        -------
+        np.ndarray
+            An array representing the dynamic tunnel values over time.
         """
         t_val = max(self._final_allowed_tunnel_pn, self._final_allowed_tunnel_variation * p_peak)
 
@@ -176,15 +219,21 @@ class GFMCalculator:
     def _calculate_unlimited_power_envelopes(
         self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Synthesizes theoretical bounding envelopes before hardware constraints.
+        """
+        Synthesizes theoretical bounding envelopes before hardware constraints.
 
-        Args:
-            list_of_arrays (list[np.ndarray]): A list of all signal variations calculated.
-            tunnel (np.ndarray): The computed dynamic tunnel array.
+        Parameters
+        ----------
+        list_of_arrays : list[np.ndarray]
+            A list of all signal variations calculated.
+        tunnel : np.ndarray
+            The computed dynamic tunnel array.
 
-        Returns:
-            tuple[np.ndarray, np.ndarray]: A tuple containing the unlimited lower and upper
-            envelopes.
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            A tuple containing the unlimited lower and upper
+        envelopes.
         """
         lower_env = np.minimum.reduce(list_of_arrays) - tunnel
         upper_env = np.maximum.reduce(list_of_arrays) + tunnel
@@ -201,21 +250,33 @@ class GFMCalculator:
         sign: int,
         use_opposite_signs: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Executes hardware and software saturation boundary logic using optimized clipping.
+        """
+        Executes hardware and software saturation boundary logic using optimized clipping.
 
-        Args:
-            lower_envelope_unlimited (np.ndarray): The theoretical lower envelope.
-            upper_envelope_unlimited (np.ndarray): The theoretical upper envelope.
-            tunnel_value (float): The static tolerance margin limit.
-            initial_power (float): The pre-event steady-state power.
-            max_power (float): The maximum hardware power capability.
-            min_power (float): The minimum hardware power capability.
-            sign (int): The directional sign of the expected transient.
-            use_opposite_signs (bool): Flag indicating if divergent boundary bounding applies.
+        Parameters
+        ----------
+        lower_envelope_unlimited : np.ndarray
+            The theoretical lower envelope.
+        upper_envelope_unlimited : np.ndarray
+            The theoretical upper envelope.
+        tunnel_value : float
+            The static tolerance margin limit.
+        initial_power : float
+            The pre-event steady-state power.
+        max_power : float
+            The maximum hardware power capability.
+        min_power : float
+            The minimum hardware power capability.
+        sign : int
+            The directional sign of the expected transient.
+        use_opposite_signs : bool
+            Flag indicating if divergent boundary bounding applies.
 
-        Returns:
-            tuple[np.ndarray, np.ndarray]: The finalized, hardware-limited lower and upper
-            envelopes.
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            The finalized, hardware-limited lower and upper
+        envelopes.
         """
         limit_max = self._pmax_mois_tunnel
         limit_min = self._pmin_mois_tunnel
