@@ -9,6 +9,7 @@
 #
 """Tests for the file management helpers (copy, versions, reports, curves)."""
 
+import logging
 import re
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -255,6 +256,64 @@ def test_copy_base_curves_files_fail(tmp_path):
     res = copy_base_curves_files(src, dst, "test")
 
     assert res is False
+
+
+def _patch_dycov_logging(monkeypatch):
+    monkeypatch.setattr(
+        "dycov.logging.dycov_logging.get_logger",
+        logging.getLogger,
+        raising=True,
+    )
+
+
+def _write_curves_source(directory: Path, with_dict: bool = True, dict_stem: str = "curve"):
+    directory.mkdir()
+    (directory / "CurvesFiles.ini").write_text("[Curves-Files]\n")
+    (directory / "curve.csv").write_text("time;P\n0;1\n")
+    if with_dict:
+        (directory / f"{dict_stem}.dict").write_text("[Curves-Dictionary]\n")
+
+
+def test_copy_base_curves_files_warns_missing_dict(tmp_path, monkeypatch, caplog):
+    _patch_dycov_logging(monkeypatch)
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_source(src, with_dict=False)
+
+    caplog.set_level(logging.WARNING)
+    res = copy_base_curves_files(src, dst, "curve")
+
+    assert res is False
+    assert any("'curve.dict'" in record.message for record in caplog.records)
+
+
+def test_copy_base_curves_files_warns_misnamed_dict(tmp_path, monkeypatch, caplog):
+    _patch_dycov_logging(monkeypatch)
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_source(src, dict_stem="other")
+
+    caplog.set_level(logging.WARNING)
+    res = copy_base_curves_files(src, dst, "curve")
+
+    assert res is False
+    assert any("'curve.dict'" in record.message for record in caplog.records)
+
+
+def test_copy_base_curves_files_complete_set_without_warning(tmp_path, monkeypatch, caplog):
+    _patch_dycov_logging(monkeypatch)
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_source(src)
+
+    caplog.set_level(logging.WARNING)
+    res = copy_base_curves_files(src, dst, "curve")
+
+    assert res is True
+    assert not any(".dict" in record.message for record in caplog.records)
 
 
 # ---------------------------------------------------------------------------
