@@ -361,8 +361,10 @@ def copy_base_case_files(
         copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
 
-def _copy_curve_files_by_name(source_path: Path, target_path: Path, base_name: str) -> list[str]:
-    """Copy curve files by base name and return list of copied target filenames."""
+def _copy_curve_files_by_name(
+    source_path: Path, target_path: Path, base_name: str, target_stem: str
+) -> list[str]:
+    """Copy curve files by base name, renamed to target_stem, and return the copied names."""
     if not source_path.exists():
         return []
 
@@ -376,7 +378,7 @@ def _copy_curve_files_by_name(source_path: Path, target_path: Path, base_name: s
                 and file.stem.lower() == base_name.lower()
                 and file.suffix.lower() in supported_exts
             ):
-                target_name = f"{base_name}{file.suffix.lower()}"
+                target_name = f"{target_stem}{file.suffix.lower()}"
                 target_file = target_path / target_name
 
                 copy_file(file, target_file)
@@ -394,6 +396,9 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
         - CurvesFiles.ini
         - The curve files (.csv, .cfg, .dat, etc.)
         - The associated dictionary file (.dict) - Mandatory for all curve types
+
+    A curve renamed through the [Curves-Files] section (relative or absolute path) is
+    copied under prefix_name, the canonical test name every downstream lookup uses.
 
     Parameters
     ----------
@@ -434,8 +439,12 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
             base_name = main_file.stem
             if main_file.is_absolute():
                 base_source_path = main_file.parent
+            elif main_file.parent != Path("."):
+                base_source_path = curves_dir / main_file.parent
 
-        copied_files = _copy_curve_files_by_name(base_source_path, target_path, base_name)
+        copied_files = _copy_curve_files_by_name(
+            base_source_path, target_path, base_name, prefix_name
+        )
 
         # All curves must have the .dict file
         success = len(copied_files) >= 2 and any(f.endswith(".dict") for f in copied_files)
