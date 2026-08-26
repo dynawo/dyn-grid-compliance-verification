@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 from pathlib import Path
 from typing import Optional, Tuple
@@ -20,41 +18,26 @@ from dycov.gfm.producer import GFMProducer
 
 
 class GFMParameters(Parameters):
-    """
-    Configuration entity used to define and manage the validation parameters
-    of a Grid Forming (GFM) model.
-
-    This class inherits from the foundational Parameters class, extending it
-    to retrieve, compute, and serve specific electrical, mechanical, and
-    simulation parameters required for GFM calculations.
-    """
+    """Configuration entity to define and manage GFM model validation parameters."""
 
     def __init__(
-        self,
-        producer_ini: Path,
-        selected_pcs: str,
-        output_dir: Path,
-        only_dtr: bool,
-        emt: bool,
+        self, producer_ini: Path, selected_pcs: str, output_dir: Path, only_dtr: bool, emt: bool
     ) -> None:
         """
-        Initializes the GFMParameters configuration instance.
+        Initializes the parameters object with producer configuration and runtime options.
 
         Parameters
         ----------
         producer_ini : Path
-            The directory path containing the Producer Model INI configuration files.
+            Path to the producer's INI configuration file.
         selected_pcs : str
-            The string identifier of the specific Power Conversion System (PCS) designated for
-            validation.
+            The specific PCS to evaluate.
         output_dir : Path
-            The user-specified target directory path where simulation results will be exported.
+            The directory path for saving outputs.
         only_dtr : bool
-            A flag indicating whether to validate the model exclusively using the PCS defined in
-            the DTR.
+            Flag indicating if only DTR evaluation is required.
         emt : bool
-            A flag defining whether the Electro-Magnetic Transients (EMT) simulation engine is
-            enabled.
+            Flag to enable EMT simulation mode.
         """
         super().__init__(None, selected_pcs, output_dir, only_dtr)
         self._emt = emt
@@ -62,130 +45,133 @@ class GFMParameters(Parameters):
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
         """
-        Updates the internal hierarchical section identifiers utilized for parameter retrieval.
+        Updates internal hierarchical section identifiers for parameter retrieval.
 
         Parameters
         ----------
         pcs_name : str
-            The identifier name of the specific Power Conversion System.
+            Name of the PCS section.
         bm_name : str
-            The identifier name of the specific Benchmark scenario.
+            Name of the Base Model section.
         oc_name : str
-            The identifier name of the specific Operating Condition.
+            Name of the Operating Condition section.
         """
+        # Establishes resolution order: Operating Condition -> Base Model -> PCS
         self._pcs_section = pcs_name
         self._bm_section = f"{pcs_name}.{bm_name}"
         self._oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
+        self._eval_sections = (self._oc_section, self._bm_section, self._pcs_section)
 
     def is_valid(self) -> bool:
         """
-        Validates whether the initialized producer configuration supports GFM calculations.
+        Checks if the associated producer is a valid GFM model.
 
         Returns
         -------
         bool
-            True if the internal producer configuration is structurally valid for GFM analysis.
+            True if valid, False otherwise.
         """
         return self._producer.is_gfm()
 
     def is_emt(self) -> bool:
         """
-        Checks if the configuration mandates an Electro-Magnetic Transients (EMT) simulation.
+        Returns whether EMT simulation mode is active.
 
         Returns
         -------
         bool
-            True if the EMT simulation engine is enabled, False otherwise.
+            True if EMT mode is enabled.
         """
         return self._emt
 
     def get_calculator_name(self) -> str:
         """
-        Retrieves the designated calculator strategy name for the current PCS and benchmark.
+        Retrieves the name of the calculator to be used.
 
         Returns
         -------
         str
-            The string identifier of the mathematical calculator (e.g., 'PhaseJump', 'RoCoF').
+            The calculator identifier string.
         """
         return self.__get_value("calculator")
 
     def get_effective_reactance(self) -> float:
         """
-        Retrieves the effective reactance of the system.
+        Retrieves the effective reactance (Xeff).
 
         Returns
         -------
         float
-            The effective reactance value, measured in per-unit (pu).
+            The effective reactance value in pu.
         """
         return float(self._producer._config.get("GFM Parameters", "Xeff"))
 
     def get_damping_constant(self) -> float:
         """
-        Retrieves the system damping constant value derived from the producer configuration.
+        Retrieves the damping constant (D).
 
         Returns
         -------
         float
-            The designated damping constant (D).
+            The damping constant.
         """
         return float(self._producer._config.get("GFM Parameters", "D"))
 
     def get_inertia_constant(self) -> float:
         """
-        Retrieves the system inertia constant value derived from the producer configuration.
+        Retrieves the inertia constant (H).
 
         Returns
         -------
         float
-            The designated inertia constant (H), measured in seconds (s).
+            The inertia constant in seconds.
         """
         return float(self._producer._config.get("GFM Parameters", "H"))
 
     def get_nominal_apparent_power(self) -> float:
         """
-        Retrieves the nominal apparent power capacity of the system.
+        Retrieves the nominal apparent power (Snom).
 
         Returns
         -------
         float
-            The nominal apparent power value, measured in Megavolt-Amperes (MVA).
+            The nominal apparent power.
         """
         return float(self._producer._config.get("GFM Parameters", "Snom"))
 
     def get_nominal_voltage(self) -> float:
         """
-        Retrieves the nominal operational voltage of the system.
+        Retrieves the nominal voltage (Unom).
 
         Returns
         -------
         float
-            The nominal voltage value, measured in kilovolts (kV).
+            The nominal voltage.
         """
         return float(self._producer._config.get("DEFAULT", "Unom"))
 
     def get_initial_active_power(self) -> float:
         """
-        Retrieves the initial steady-state active power (P0).
+        Calculates and retrieves the initial active power (P0).
 
         Returns
         -------
         float
-            The computed initial active power, measured in per-unit (pu).
+            The initial active power in pu.
         """
         p0_definition = self.__get_value("P0")
-        p_max = self.get_max_active_power()
-        return model_parameters.extract_defined_value(p0_definition, "Pmax", p_max, 1)
+        return model_parameters.extract_defined_value(
+            p0_definition, "Pmax", self.get_max_active_power(), 1
+        )
 
     def get_min_active_power(self) -> float:
         """
-        Retrieves the absolute minimum active power capability limit (PMin).
+        Retrieves the minimum active power injection.
 
         Returns
         -------
         float
-            The minimum active power constraint, measured in per-unit (pu).
+            The minimum active power in pu.
         """
         return (
             float(self._producer._config.get("DEFAULT", "p_min_injection"))
@@ -194,12 +180,12 @@ class GFMParameters(Parameters):
 
     def get_max_active_power(self) -> float:
         """
-        Retrieves the absolute maximum active power capability limit (PMax).
+        Retrieves the maximum active power injection.
 
         Returns
         -------
         float
-            The maximum active power constraint, measured in per-unit (pu).
+            The maximum active power in pu.
         """
         return (
             float(self._producer._config.get("DEFAULT", "p_max_injection"))
@@ -208,28 +194,30 @@ class GFMParameters(Parameters):
 
     def get_initial_reactive_power(self) -> float:
         """
-        Retrieves the initial steady-state reactive power (Q0).
+        Calculates and retrieves the initial reactive power (Q0).
 
         Returns
         -------
         float
-            The computed initial reactive power, measured in per-unit (pu).
+            The initial reactive power in pu.
         """
         q0_definition = self.__get_value("Q0")
         if "Qmin" in q0_definition:
-            q_min = self.get_min_reactive_power()
-            return model_parameters.extract_defined_value(q0_definition, "Qmin", q_min, 1)
-        q_max = self.get_max_reactive_power()
-        return model_parameters.extract_defined_value(q0_definition, "Qmax", q_max, 1)
+            return model_parameters.extract_defined_value(
+                q0_definition, "Qmin", self.get_min_reactive_power(), 1
+            )
+        return model_parameters.extract_defined_value(
+            q0_definition, "Qmax", self.get_max_reactive_power(), 1
+        )
 
     def get_min_reactive_power(self) -> float:
         """
-        Retrieves the absolute minimum reactive power capability limit (QMin).
+        Retrieves the minimum reactive power.
 
         Returns
         -------
         float
-            The minimum reactive power constraint, measured in per-unit (pu).
+            The minimum reactive power in pu.
         """
         return (
             float(self._producer._config.get("DEFAULT", "q_min"))
@@ -238,12 +226,12 @@ class GFMParameters(Parameters):
 
     def get_max_reactive_power(self) -> float:
         """
-        Retrieves the absolute maximum reactive power capability limit (QMax).
+        Retrieves the maximum reactive power.
 
         Returns
         -------
         float
-            The maximum reactive power constraint, measured in per-unit (pu).
+            The maximum reactive power in pu.
         """
         return (
             float(self._producer._config.get("DEFAULT", "q_max"))
@@ -252,164 +240,161 @@ class GFMParameters(Parameters):
 
     def get_initial_voltage(self) -> float:
         """
-        Retrieves the initial baseline voltage (U0).
+        Retrieves the initial voltage (U0).
 
         Returns
         -------
         float
-            The initial voltage value.
+            The initial voltage in pu.
         """
         return self.__get_float_value("U0", 1)
 
     def get_grid_voltage(self) -> float:
         """
-        Retrieves the operational grid voltage (Ugr).
+        Retrieves the grid voltage (Ugr).
 
         Returns
         -------
         float
-            The defined grid voltage value.
+            The grid voltage in pu.
         """
         return self.__get_float_value("Ugr", 1)
 
     def get_time_to_90(self) -> float:
         """
-        Retrieves the 'TimeTo90' transient response parameter.
+        Retrieves the time to reach 90% of the steady-state response.
 
         Returns
         -------
         float
-            The designated time required to reach 90% of the steady-state response, in seconds.
+            The time in seconds.
         """
         return self.__get_float_value("TimeTo90", 0.0)
 
     def get_time_for_tunnel(self) -> float:
         """
-        Retrieves the 'TimeForTunnel' parameter defining dynamic tolerance progression.
+        Retrieves the time constant for the margin tunnel decay.
 
         Returns
         -------
         float
-            The evaluated time parameter structuring the tunnel logic.
+            The time constant in seconds.
         """
         return self.__get_float_value("TimeforTunnel", 0.0)
 
     def get_final_allowed_tunnel_pn(self) -> float:
         """
-        Retrieves the 'FinalAllowedTunnelPn' parameter.
+        Retrieves the final allowed margin tunnel in absolute nominal power.
 
         Returns
         -------
         float
-            The static boundary allowed corresponding to the nominal power proportion.
+            The allowed tunnel margin in pu.
         """
         return self.__get_float_value("FinalAllowedTunnelPn", 0.0)
 
     def get_final_allowed_tunnel_variation(self) -> float:
         """
-        Retrieves the 'FinalAllowedTunnelVariation' parameter.
+        Retrieves the final allowed margin tunnel relative to the signal variation.
 
         Returns
         -------
         float
-            The permitted tolerance variation margin evaluating dynamic bounds.
+            The allowed variation ratio.
         """
         return self.__get_float_value("FinalAllowedTunnelVariation", 0.0)
 
     def get_margin_low(self) -> float:
         """
-        Retrieves the scaling factor defining the lower margin for envelope generation.
+        Retrieves the lower envelope margin multiplier.
 
         Returns
         -------
         float
-            The specific multiplier structuring lower constraint boundaries.
+            The lower margin ratio.
         """
         return self.__get_float_value("MarginLow", 0.0)
 
     def get_margin_high(self) -> float:
         """
-        Retrieves the scaling factor defining the upper margin for envelope generation.
+        Retrieves the upper envelope margin multiplier.
 
         Returns
         -------
         float
-            The specific multiplier structuring upper constraint boundaries.
+            The upper margin ratio.
         """
         return self.__get_float_value("MarginHigh", 0.0)
 
     def get_pmax_mois_tunnel(self) -> float:
         """
-        Retrieves the 'PmaxMOISTunnel' parameter, anchoring absolute upper clipping limits.
+        Retrieves the maximum power limit for the MOIS tunnel.
 
         Returns
         -------
         float
-            The defined ceiling limitation threshold. Defaults to 0.95 if omitted.
+            The maximum power limit in pu.
         """
         return self.__get_float_value("PmaxMOISTunnel", 0.95)
 
     def get_pmin_mois_tunnel(self) -> float:
         """
-        Retrieves the 'PminMOISTunnel' parameter, anchoring absolute lower clipping limits.
+        Retrieves the minimum power limit for the MOIS tunnel.
 
         Returns
         -------
         float
-            The defined floor limitation threshold. Defaults to 0.95 if omitted.
+            The minimum power limit in pu.
         """
         return self.__get_float_value("PminMOISTunnel", 0.95)
 
     def get_min_ratio(self) -> float:
         """
-        Retrieves the designated minimum proportional multiplier mapping parameter variations.
+        Retrieves the minimum parameter variation ratio.
 
         Returns
         -------
         float
-            The established minimum variation ratio.
+            The minimum ratio.
         """
         return self.__get_float_value("RatioMin", 1.0)
 
     def get_max_ratio(self) -> float:
         """
-        Retrieves the designated maximum proportional multiplier mapping parameter variations.
+        Retrieves the maximum parameter variation ratio.
 
         Returns
         -------
         float
-            The established maximum variation ratio.
+            The maximum ratio.
         """
         return self.__get_float_value("RatioMax", 1.0)
 
     def get_base_angular_frequency(self) -> float:
         """
-        Retrieves the base angular frequency benchmark ('Wb') of the operational system.
+        Retrieves the base angular frequency (Wb).
 
         Returns
         -------
         float
-            The base angular frequency value.
+            The base angular frequency in rad/s.
         """
         return self.__get_float_value("Wb", 0.0)
 
     def get_delta_phase(self) -> float:
         """
-        Calculates and retrieves the phase angle jump magnitude explicitly.
-
-        Supports dynamic evaluation if the configuration value is formulated
-        as a mathematical expression mapping reactances.
+        Calculates and retrieves the phase jump delta.
 
         Returns
         -------
         float
-            The final evaluated phase jump magnitude, converted and measured in degrees.
+            The phase jump delta in degrees.
         """
         value_definition = self.__get_value("DeltaPhase")
+
+        # Support dynamic calculation if delta phase relies on total reactance multiplication
         if "*" in value_definition:
-            parts = value_definition.split("*")
-            term1 = float(parts[0])
-            # Process derived expression combining reactances
+            term1 = float(value_definition.split("*")[0])
             delta_rad = term1 * (self.get_effective_reactance() + self.get_grid_reactance())
         else:
             delta_rad = float(value_definition)
@@ -418,134 +403,121 @@ class GFMParameters(Parameters):
 
     def get_voltage_step_at_grid(self) -> float:
         """
-        Calculates and retrieves the defined voltage step magnitude explicitly at the grid.
+        Calculates and retrieves the voltage step at the grid side.
 
         Returns
         -------
         float
-            The evaluated voltage step magnitude, measured in per-unit (pu).
+            The voltage step at the grid in percentage.
         """
         value_definition = self.__get_value("VoltageStepAtGrid")
         if "*" in value_definition:
-            parts = value_definition.split("*")
-            term1 = float(parts[0])
-            # Synthesize voltage step deriving through system impedance
-            voltage_step = (
-                term1 * (self.get_effective_reactance() + self.get_grid_reactance()) * 100
-            )
-        else:
-            voltage_step = float(value_definition)
-
-        return voltage_step
+            term1 = float(value_definition.split("*")[0])
+            return term1 * (self.get_effective_reactance() + self.get_grid_reactance()) * 100
+        return float(value_definition)
 
     def get_voltage_step_at_pdr(self) -> float:
         """
-        Calculates the voltage step magnitude specifically projected at the
-        Point of Delivery (PDR).
+        Calculates and retrieves the voltage step at the point of delivery.
 
         Returns
         -------
         float
-            The derived step magnitude at the PDR, measured in per-unit (pu).
+            The voltage step at PDR in percentage.
         """
-        return (
-            self.get_voltage_step_at_grid()
-            * self.get_effective_reactance()
-            / (self.get_grid_reactance() + self.get_effective_reactance())
-        )
+        x_eff = self.get_effective_reactance()
+        x_grid = self.get_grid_reactance()
+        return self.get_voltage_step_at_grid() * x_eff / (x_grid + x_eff)
 
     def get_delta_step(self) -> float:
         """
-        Calculates the operational magnitude of the angle step mapping onto the
-        Point of Common Coupling (PCC).
+        Calculates the angle step based on system reactances.
 
         Returns
         -------
         float
-            The explicit derived angle step deviation, measured in degrees.
+            The calculated angle step in degrees.
         """
         x_grid = self.get_grid_reactance()
         x_eff = self.get_effective_reactance()
-        delta_theta_if = self.get_delta_phase()
         if (x_eff + x_grid) == 0:
             return 0.0
-        delta_step = (x_eff / (x_eff + x_grid)) * delta_theta_if
-        return delta_step
+        return (x_eff / (x_eff + x_grid)) * self.get_delta_phase()
 
     def get_change_frequency(self) -> float:
         """
-        Retrieves the Rate of Change of Frequency (RoCoF) parameter.
+        Retrieves the Rate of Change of Frequency (RoCoF).
 
         Returns
         -------
         float
-            The normalized frequency variation rate, measured in per-unit per second (pu/s).
+            The normalized RoCoF value.
         """
         return self.__get_float_value("RoCoF", 0.0) / self._producer._f_nom
 
     def get_change_frequency_duration(self) -> float:
         """
-        Retrieves the defined operational duration of the RoCoF event.
+        Retrieves the duration of the RoCoF event.
 
         Returns
         -------
         float
-            The designated temporal duration mapping the frequency shift, in seconds (s).
+            The RoCoF duration in seconds.
         """
         return self.__get_float_value("RoCoFDuration", 0.0)
 
     def get_initial_frequency(self) -> float:
         """
-        Retrieves the normalized initial steady-state frequency benchmark.
+        Retrieves the initial system frequency.
 
         Returns
         -------
         float
-            The initial system frequency baseline, measured in per-unit (pu).
+            The normalized initial frequency.
         """
         return self.__get_float_value("Frequency0", 0.0) / self._producer._f_nom
 
     def get_t_expo_decrease(self) -> float:
         """
-        Retrieves the designated exponential decay time constant governing transient profiles.
+        Retrieves the time constant for exponential decrease.
 
         Returns
         -------
         float
-            The evaluated exponential decrease time parameter, measured in seconds (s).
+            The exponential decrease time constant in seconds.
         """
         return self.__get_float_value("TimeExponentialDecrease", 0.0)
 
     def get_pll_time_constant(self) -> float:
         """
-        Retrieves the operational Phase-Locked Loop (PLL) time constant.
+        Retrieves the PLL time constant (Tpll).
 
         Returns
         -------
         float
-            The internal PLL time evaluation constant, measured in seconds (s).
+            The PLL time constant in seconds.
         """
         return self.__get_float_value("Tpll", 0.0)
 
     def get_grid_reactance(self) -> float:
         """
-        Derives the absolute grid reactance directly from the defined Short Circuit Ratio (SCR).
+        Calculates and retrieves the grid reactance based on SCR.
 
         Returns
         -------
         float
-            The resultant grid reactance, measured in per-unit (pu).
+            The grid reactance in pu.
         """
         return 1 / self.get_scr()
 
     def get_scr(self) -> float:
         """
-        Retrieves the Short Circuit Ratio (SCR) parameter defined for the simulation.
+        Retrieves the Short-Circuit Ratio (SCR).
 
         Returns
         -------
         float
-            The evaluated static Short Circuit Ratio value.
+            The Short-Circuit Ratio.
         """
         scr = self.__get_value("SCR")
         if scr:
@@ -557,153 +529,135 @@ class GFMParameters(Parameters):
 
     def get_initial_scr(self) -> float:
         """
-        Retrieves the starting Short Circuit Ratio configured prior to an SCR jump event.
+        Retrieves the initial Short-Circuit Ratio.
 
         Returns
         -------
         float
-            The pre-event benchmark SCR value.
+            The initial Short-Circuit Ratio.
         """
         return self.__get_float_value("SCRinitial", 0.0)
 
     def get_final_scr(self) -> float:
         """
-        Retrieves the terminal Short Circuit Ratio achieved following an SCR jump event.
+        Retrieves the final Short-Circuit Ratio.
 
         Returns
         -------
         float
-            The post-event stabilized SCR value.
+            The final Short-Circuit Ratio.
         """
         return self.__get_float_value("SCRfinal", 0.0)
 
     def __get_value(self, option: str) -> str:
-        """Private helper traversing the hierarchical configuration framework to retrieve a string
-        value.
+        """
+        Traverses the hierarchical configuration framework to retrieve a string value.
 
         Parameters
         ----------
         option : str
-            The specific key identifier indicating the target configuration parameter.
+            The configuration key to find.
 
         Returns
         -------
         str
-            The retrieved configuration string resolving through the highest precedence level.
+            The configuration value as a string.
         """
-        if config.has_option(self._oc_section, option):
-            return config.get_value(self._oc_section, option)
-        elif config.has_option(self._bm_section, option):
-            return config.get_value(self._bm_section, option)
-        elif config.has_option(self._pcs_section, option):
-            return config.get_value(self._pcs_section, option)
+        # Fallback sequence: Specific Operating Condition -> Base Model -> General PCS -> Default
+        for section in self._eval_sections:
+            if config.has_option(section, option):
+                return config.get_value(section, option)
         return config.get_value("DEFAULT", option)
 
     def __get_float_value(self, option: str, default_value: float) -> float:
-        """Private helper traversing the hierarchical configuration framework to retrieve a float
-        value.
+        """
+        Traverses the hierarchical configuration framework to retrieve a float value.
 
         Parameters
         ----------
         option : str
-            The specific key identifier indicating the target configuration parameter.
+            The configuration key to find.
         default_value : float
-            The fallback baseline value deployed if the key is not explicitly defined.
+            The default value if not found.
 
         Returns
         -------
         float
-            The parsed floating-point configuration value resolving through the highest precedence
-            level.
+            The configuration value as a float.
         """
-        if config.has_option(self._oc_section, option):
-            return config.get_float(self._oc_section, option, default_value)
-        elif config.has_option(self._bm_section, option):
-            return config.get_float(self._bm_section, option, default_value)
-        elif config.has_option(self._pcs_section, option):
-            return config.get_float(self._pcs_section, option, default_value)
+        # Identical fallback sequence for numeric evaluations
+        for section in self._eval_sections:
+            if config.has_option(section, option):
+                return config.get_float(section, option, default_value)
         return config.get_float("DEFAULT", option, default_value)
 
     def get_hybrid_parameters(self) -> Optional[Tuple[float, float, float, float]]:
         """
-        Evaluates the configuration to retrieve a set of hybrid operational parameters
-        mapping both Overdamped and Underdamped structural constants.
+        Retrieves the D and H parameters for hybrid (over/underdamped) conditions.
 
         Returns
         -------
         Optional[Tuple[float, float, float, float]]
-            A comprehensive structural tuple mapping (D_Over, H_Over, D_Under, H_Under)
-            if the specific configurations are completely defined, otherwise None.
+            A tuple containing
+            (D_Overdamped, H_Overdamped, D_Underdamped, H_Underdamped) or None if incomplete.
         """
-        d_over = self._get_optional_float("D_Overdamped")
-        h_over = self._get_optional_float("H_Overdamped")
-        d_under = self._get_optional_float("D_Underdamped")
-        h_under = self._get_optional_float("H_Underdamped")
-
-        if all(v is not None for v in [d_over, h_over, d_under, h_under]):
-            return d_over, h_over, d_under, h_under
-        return None
+        params = (
+            self._get_optional_float("D_Overdamped"),
+            self._get_optional_float("H_Overdamped"),
+            self._get_optional_float("D_Underdamped"),
+            self._get_optional_float("H_Underdamped"),
+        )
+        # Ensure strict validation: return None if any of the 4 variables is missing
+        return params if None not in params else None
 
     def get_standard_parameters(self) -> Optional[Tuple[float, float]]:
         """
-        Evaluates the configuration to retrieve standard, non-hybrid parameters D and H.
+        Retrieves standard D and H parameters.
 
         Returns
         -------
         Optional[Tuple[float, float]]
-            A structural tuple mapping standard (D, H) variables if both are adequately
-            defined, otherwise None.
+            A tuple containing (D, H) or None if incomplete.
         """
-        d = self._get_optional_float("D")
-        h = self._get_optional_float("H")
-
-        if d is not None and h is not None:
-            return d, h
-        return None
+        params = (self._get_optional_float("D"), self._get_optional_float("H"))
+        return params if None not in params else None
 
     def _get_optional_float(self, option: str) -> Optional[float]:
         """
-        Protected helper deploying dual-level hierarchy validation to extract float configurations.
-
-        It interrogates the primary simulation parameter hierarchy first, before establishing
-        fallback verification against the base physical producer definitions.
+        Safely parses and retrieves an optional float value from config.
 
         Parameters
         ----------
         option : str
-            The explicit string key referencing the target configuration flag.
+            The configuration key to evaluate.
 
         Returns
         -------
         Optional[float]
-            The successfully parsed floating-point definition if located, otherwise None.
+            The parsed float value or None if invalid/missing.
         """
         val_str = self.__get_value(option)
-
-        # __get_value might return an empty string or default if not found in hierarchy
         if val_str:
             try:
                 return float(val_str)
             except ValueError:
-                pass  # Fallthrough to verify alternative source configuration
+                pass
 
         if self._producer._config.has_option("GFM Parameters", option):
             try:
                 return float(self._producer._config.get("GFM Parameters", option))
             except ValueError:
                 return None
-
         return None
 
     def should_save_all_envelopes(self) -> bool:
         """
-        Interrogates the base Producer INI framework to determine if extended
-        data serialization for all intermediate operational envelopes is enabled.
+        Returns whether to save detailed envelope outputs for debugging.
 
         Returns
         -------
         bool
-            True strictly if 'save_all_envelopes' evaluates to 'true' in the configuration.
+            True if all envelopes should be saved, False otherwise.
         """
         if self._producer._config.has_option("GFM Parameters", "save_all_envelopes"):
             try:
@@ -714,15 +668,12 @@ class GFMParameters(Parameters):
 
     def get_emt_delay(self) -> float:
         """
-        Retrieves the requisite initial delay specifically mapped for EMT simulation frameworks.
-
-        In the absence of an explicit INI definition, it automatically reverts to utilizing
-        the systemic baseline constant.
+        Retrieves the EMT delay value for timing compensation.
 
         Returns
         -------
         float
-            The evaluated EMT initial delay parameter, measured in seconds (s).
+            The EMT delay in seconds.
         """
         if self._producer._config.has_option("GFM Parameters", "emt_delay"):
             try:
