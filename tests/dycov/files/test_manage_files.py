@@ -229,20 +229,63 @@ def test_read_curves(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+CANONICAL_NAME = "PCS_RTE-I2.USetPointStep.AReactance"
+
+
+def _write_curve_pair(directory: Path, stem: str) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{stem}.csv").write_text("time;P\n0;1\n")
+    (directory / f"{stem}.dict").write_text("[Curves-Dictionary]\n")
+
+
+def _write_curves_ini(directory: Path, mapping: str = "") -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    files_section = f"{CANONICAL_NAME} = {mapping}\n" if mapping else ""
+    (directory / "CurvesFiles.ini").write_text(f"[Curves-Files]\n{files_section}")
+
+
 def test_copy_curve_files_by_name(tmp_path):
     src = tmp_path / "src"
     dst = tmp_path / "dst"
-
-    src.mkdir()
     dst.mkdir()
+    _write_curve_pair(src, "curve")
 
-    (src / "curve.csv").write_text("x")
-    (src / "curve.dict").write_text("x")
-
-    res = _copy_curve_files_by_name(src, dst, "curve")
+    res = _copy_curve_files_by_name(src, dst, "curve", "curve")
 
     assert len(res) == 2
     assert (dst / "curve.csv").exists()
+    assert (dst / "curve.dict").exists()
+
+
+def test_copy_curve_files_by_name_renames_to_target_stem(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curve_pair(src, "MyCurves")
+
+    res = _copy_curve_files_by_name(src, dst, "MyCurves", CANONICAL_NAME)
+
+    assert sorted(res) == [f"{CANONICAL_NAME}.csv", f"{CANONICAL_NAME}.dict"]
+    assert (dst / f"{CANONICAL_NAME}.csv").exists()
+    assert (dst / f"{CANONICAL_NAME}.dict").exists()
+
+
+def test_copy_curve_files_by_name_missing_source(tmp_path):
+    res = _copy_curve_files_by_name(tmp_path / "missing", tmp_path, "curve", "curve")
+
+    assert res == []
+
+
+def test_copy_curve_files_by_name_ignores_unsupported_extensions(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    src.mkdir()
+    (src / "curve.txt").write_text("x")
+
+    res = _copy_curve_files_by_name(src, dst, "curve", "curve")
+
+    assert res == []
 
 
 def test_copy_base_curves_files_fail(tmp_path):
@@ -253,6 +296,82 @@ def test_copy_base_curves_files_fail(tmp_path):
     dst.mkdir()
 
     res = copy_base_curves_files(src, dst, "test")
+
+    assert res is False
+
+
+def test_copy_base_curves_files_missing_source_dir(tmp_path):
+    res = copy_base_curves_files(tmp_path / "missing", tmp_path, CANONICAL_NAME)
+
+    assert res is False
+
+
+def test_copy_base_curves_files_canonical_name(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_ini(src)
+    _write_curve_pair(src, CANONICAL_NAME)
+
+    res = copy_base_curves_files(src, dst, CANONICAL_NAME)
+
+    assert res is True
+    assert (dst / f"{CANONICAL_NAME}.csv").exists()
+    assert (dst / f"{CANONICAL_NAME}.dict").exists()
+
+
+def test_copy_base_curves_files_custom_relative_name(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_ini(src, "MyCurves.csv")
+    _write_curve_pair(src, "MyCurves")
+
+    res = copy_base_curves_files(src, dst, CANONICAL_NAME)
+
+    assert res is True
+    assert (dst / f"{CANONICAL_NAME}.csv").exists()
+    assert (dst / f"{CANONICAL_NAME}.dict").exists()
+
+
+def test_copy_base_curves_files_custom_subdirectory(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_ini(src, "sub/MyCurves.csv")
+    _write_curve_pair(src / "sub", "MyCurves")
+
+    res = copy_base_curves_files(src, dst, CANONICAL_NAME)
+
+    assert res is True
+    assert (dst / f"{CANONICAL_NAME}.csv").exists()
+    assert (dst / f"{CANONICAL_NAME}.dict").exists()
+
+
+def test_copy_base_curves_files_custom_absolute_path(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    other = tmp_path / "other"
+    dst.mkdir()
+    _write_curves_ini(src, str(other / "MyCurves.csv"))
+    _write_curve_pair(other, "MyCurves")
+
+    res = copy_base_curves_files(src, dst, CANONICAL_NAME)
+
+    assert res is True
+    assert (dst / f"{CANONICAL_NAME}.csv").exists()
+    assert (dst / f"{CANONICAL_NAME}.dict").exists()
+
+
+def test_copy_base_curves_files_missing_dict(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_ini(src, "MyCurves.csv")
+    src.mkdir(exist_ok=True)
+    (src / "MyCurves.csv").write_text("time;P\n0;1\n")
+
+    res = copy_base_curves_files(src, dst, CANONICAL_NAME)
 
     assert res is False
 
