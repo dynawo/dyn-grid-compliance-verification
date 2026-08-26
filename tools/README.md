@@ -129,7 +129,9 @@ python tools/dynawo_par/generate_par.py --excel input.xlsx [--outdir DIR]
 
 It only extracts and formats parameters — no validation or model
 interpretation. Uses the standard library only (no third-party dependency).
-See `tools/dynawo_par/README.md` and
+**Superseded by `dynawo_inputs/` and slated for retirement**; the Excel parsing
+engine it uses lives in `tools/dynawo_inputs/workbook.py`. See
+`tools/dynawo_par/README.md` and
 `docs/design/Dynawo_par_generation_from_excel_design.md` for details.
 
 ---

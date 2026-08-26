@@ -20,13 +20,13 @@ from pathlib import Path
 from lxml import etree
 
 _HERE = Path(__file__).resolve().parent
-for _p in (_HERE, _HERE.parent / "dynawo_par", _HERE.parent.parent / "src"):
+for _p in (_HERE, _HERE.parent.parent / "src"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
 import electrical as el  # noqa: E402
-import generate_par as dp  # noqa: E402  (the stdlib xlsx reader)
 import parse as P  # noqa: E402
+import workbook as wb  # noqa: E402  (the stdlib xlsx reader)
 
 from dycov.files.producer_dyd_file import (  # noqa: E402
     BESS_ID,
@@ -192,7 +192,7 @@ def _empty_zone1_reason(config) -> str:
     """Why Zone1 came out without control parameters — never generate it silently incomplete."""
     declared = [
         block for block, choice in config.selections
-        if dp._strip_accents(choice) not in dp._NO_BLOCK
+        if wb._strip_accents(choice) not in wb._NO_BLOCK
         and "Zone1" in config.zones.get(block, [])
     ]
     if not declared:
@@ -244,7 +244,7 @@ def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> No
 
 def generate(excel: Path, outdir: Path) -> str:
     """Generate the ``Dynawo/Zone1`` + ``Dynawo/Zone3`` Producer input trees from *excel*."""
-    workbook = dp.read_workbook(excel)
+    workbook = wb.read_workbook(excel)
     resolved = P.resolve_models(workbook)
     template = P.template_for(resolved["zone3_lib"])
     builder_gen_id = BESS_ID if template == "model_BESS" else PPM_ID
@@ -256,7 +256,7 @@ def generate(excel: Path, outdir: Path) -> str:
     control = P.parse_control_params(workbook)
     topology = str(zone3["Topologie"]).strip()
 
-    config = dp.parse_config(workbook)
+    config = wb.parse_config(workbook)
     z1_control = zone_control_params(control, config.zones, "Zone1")
     z3_control = zone_control_params(control, config.zones, "Zone3")
     if not z1_control:
