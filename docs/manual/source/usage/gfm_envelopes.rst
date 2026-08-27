@@ -73,15 +73,34 @@ Basic usage
 
    dycov generateEnvelopes -i <path_to_input.ini>
 
-By default, results are written to a ``Results/`` directory in the current
-working directory. To specify a different output directory:
+By default, results are written to a ``Results/`` directory created next to
+the input file (inside the directory that contains it). To specify a
+different output directory, use ``-o``:
 
 .. code-block:: console
 
-   dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini
+   dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini -o gfm_results
 
 The tool reads the parameters from the INI file, computes the envelopes for
-all supported disturbance cases, and writes the results under ``Results/``.
+all supported disturbance cases, and writes the results under the output
+directory.
+
+EMT mode
+^^^^^^^^
+
+By default, the generated envelopes are meant to be compared against RMS
+simulations. Pass ``-e``/``--emt`` to generate envelopes for comparison
+against EMT simulations instead:
+
+.. code-block:: console
+
+   dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini -e
+
+In EMT mode, the envelopes and the PCC signal are shifted in time by the
+``emt_delay`` value (in seconds) read from the ``[GFM Parameters]`` section of
+the input file, to account for the initial response of an EMT simulation. The
+delay defaults to 0.02 s when the key is absent; all the shipped examples
+define it explicitly. Without ``-e``, ``emt_delay`` has no effect.
 
 
 .. _gfm_outputs:
