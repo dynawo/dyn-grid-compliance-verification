@@ -76,13 +76,13 @@ recommend reading :ref:`get-started` first.
 Reference
 =========
 
-Quick-access reference for the most frequently consulted information.
+Quick-access reference for the most frequently consulted information: the
+:doc:`examples <examples>`, the :doc:`configuration options
+<usage/configuration>`, the :doc:`input formats <usage/inputs>`, and the CLI
+reference below.
 
 .. toctree::
    :maxdepth: 2
    :caption: Reference
 
-   examples
-   usage/configuration
-   usage/inputs
    usage/cli_reference

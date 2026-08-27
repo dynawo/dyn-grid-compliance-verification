@@ -155,18 +155,16 @@ of a `ReferenceCurves/` directory inside a case**, not to a standalone layout.
 
 ```text
 ReferenceCurves/
-└── <Technology>/
-    └── Producer/
-        ├── CurvesFiles.ini
-        ├── PCS_RTE-I*.csv
-        └── PCS_RTE-I*.dict
+└── Producer/
+    ├── CurvesFiles.ini
+    ├── PCS_RTE-I*.csv
+    └── PCS_RTE-I*.dict
 ```
 **Example:**
 `examples/Model/Wind/WECC4B/ReferenceCurves/Producer/CurvesFiles.ini`
 
 Notes:
 
-*   `<Technology>` depends on the installation type (e.g. PPM, BESS).
 *   The validation zone (Zone 1 or Zone 3) is encoded directly in the
     **PCS identifier**.
 *   Each curve file must have an associated `.dict` file.
@@ -300,10 +298,10 @@ as reference curves, but additionally require
 ```text
 ProducerCurves/
 └── <Technology>/
-    └── Producer/
-        ├── CurvesFiles.ini
-        ├── PCS_RTE-I*.csv
-        └── PCS_RTE-I*.dict
+    ├── Producer/
+    │   ├── CurvesFiles.ini
+    │   ├── PCS_RTE-I*.csv
+    │   └── PCS_RTE-I*.dict
     ├── Zone1/
     │   └── Producer.ini
     └── Zone3/
