@@ -3,9 +3,11 @@ Results
 =======
 
 After each run, DyCoV writes all its outputs to a ``Results/`` directory
-created in the working directory. Everything is organized to make it easy to
-find what you need: a quick summary at the top, detailed per-PCS reports, and
-the raw data and simulation files for each individual test case.
+created next to the input: inside the directory that contains the producer
+model, the producer curves, or the GFM input file, depending on the command.
+Use ``-o`` to choose a different location. Everything is organized to make it
+easy to find what you need: a quick summary at the top, detailed per-PCS
+reports, and the raw data and simulation files for each individual test case.
 
 
 Organization of the Results folder
