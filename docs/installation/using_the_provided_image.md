@@ -1,6 +1,6 @@
 # Installing DyCoV using the provided distribution image
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** End‑user installation and execution of DyCoV using the prebuilt
 distribution image (recommended installation method).
 

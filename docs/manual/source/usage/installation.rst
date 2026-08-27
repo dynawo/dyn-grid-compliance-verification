@@ -61,14 +61,14 @@ Dynawo, clones the latest DyCoV release, and sets up a Python virtual
 environment so that your system Python is left untouched.
 
 Before running the installer, make sure the following system packages are
-present. They are needed to compile and run Dynawo, generate PDF reports, and
-manage the Python environment.
+present. They are required by the installer and by DyCoV's startup checks,
+and are used to generate PDF reports and manage the Python environment.
 
 Build tools:
 
 .. code-block:: console
 
-   sudo apt install curl unzip gcc g++ cmake
+   sudo apt install curl unzip gcc g++ cmake make
 
 LaTeX (for PDF report generation):
 

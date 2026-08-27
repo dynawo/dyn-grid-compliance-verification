@@ -1,6 +1,6 @@
 # First steps with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Conceptual and practical overview of DyCoV workflows and usage,
 from installation to running first studies.
 

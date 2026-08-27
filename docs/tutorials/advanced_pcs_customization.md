@@ -1,6 +1,6 @@
 ## Advanced PCS customization
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Advanced user‑side customization of Performance Checking Sheets (PCS)
 within existing DyCoV workflows, without modifying DyCoV source code.
 

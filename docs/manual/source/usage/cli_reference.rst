@@ -33,7 +33,9 @@ dycov performance
 -----------------
 
 Runs electric performance verification against the applicable DTR PCSs.
-Requires either a Dynawo model (``-m``) or producer curves (``-c``).
+Requires a Dynawo model (``-m``), producer curves (``-c``), or both — when
+both are given, compliance is evaluated on the simulated curves only and the
+producer curves are drawn in the figures as an overlay.
 
 .. include:: helps/performance.rst
 
