@@ -26,20 +26,20 @@ This tutorial does **not** cover:
 ### 2. Configuration files and precedence
 
 DyCoV is configured primarily through a `config.ini` file located in the
-user configuration directory.
+user configuration directory: `~/.config/dycov/`.
 
-Typical locations are:
-- Linux: `~/.config/dycov/`
-- Windows: `%APPDATA%\Local\dycov\`
-
-The distributed `config.ini` contains all available options commented out,
+The generated `config.ini` contains the most common options commented out,
 together with their default values. Users are encouraged to:
 - uncomment only the parameters they want to change,
 - duplicate lines when modifying values to keep track of defaults.
 
-In addition to `config.ini`, alternative files such as
-`config.ini_BASIC` and `config.ini_ADVANCED` may be provided to distinguish
-between common and advanced usage profiles.
+Two profiles are kept next to it, regenerated on every run:
+`config.ini_BASIC` (the same curated subset the initial `config.ini` is
+created from) and `config.ini_ADVANCED` (the full set of options, including
+sections the basic profile does not carry, such as `[Figures]`, `[Debug]` and
+`[GFM]`). To switch profiles, copy the desired file over `config.ini`;
+individual options from the advanced profile may also be copied into
+`config.ini` directly.
 
 Regardless of the configuration file used, user-defined values override the 
 defaults provided in the distributed configuration files.
@@ -171,18 +171,20 @@ DyCoV logging is controlled via global parameters:
 
 ```ini
 [Global]
-# file_log_level = INFO
-# console_log_level = INFO
+# file_log_level = 20
+# console_log_level = 20
 ```
 
-Available levels are:
-`CRITICAL`, `FATAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG`
+Levels are given as numeric Python logging levels:
+`50` (CRITICAL), `40` (ERROR), `30` (WARNING), `20` (INFO), `10` (DEBUG).
+Level names are not accepted; a non-numeric value is reported and the
+default (`20`) is used instead.
 
 Example: enable debug output on the console:
 
 ```ini
 [Global]
-console_log_level = DEBUG
+console_log_level = 10
 ```
 
 This is particularly useful for:
