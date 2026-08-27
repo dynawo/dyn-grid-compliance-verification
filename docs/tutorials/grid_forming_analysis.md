@@ -1,6 +1,6 @@
 # Grid‑Forming (GFM) analysis with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Generation and analysis of Grid‑Forming (GFM) admissible envelopes
 using analytical methods, as supported by DyCoV.
 
@@ -147,9 +147,9 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 > **Note**
 > `RatioMin` and `RatioMax` — the bounds applied to parameter variations for
 > the sensitivity analysis — are **not** read from `Producer.ini`. They belong
-> to the tool's PCS configuration (each `PCS_RTE-IGFMx` template defines its
-> own values) and can be overridden through the tool configuration like any
-> other PCS option.
+> to the tool's PCS configuration (most `PCS_RTE-IGFMx` templates define their
+> own values; when a template does not, both bounds default to 1.0) and can be
+> overridden through the tool configuration like any other PCS option.
 
 ---
 

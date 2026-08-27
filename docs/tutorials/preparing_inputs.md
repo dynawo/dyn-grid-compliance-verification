@@ -1,6 +1,6 @@
 # Preparing inputs for DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** How to prepare and organize input data for DyCoV workflows,
 including directory organization, reference and producer curves,
 supported curve formats, and workflow‑specific differences.

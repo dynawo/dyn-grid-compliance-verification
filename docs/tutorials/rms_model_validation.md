@@ -1,6 +1,6 @@
 # RMS model validation with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** RMS (phasor) model validation according to RTE PCS‑I16, including
 Zone 1 / Zone 3 validation, required inputs, execution workflow and result
 interpretation for both PPM and BESS installations.
@@ -250,9 +250,8 @@ Zone 1 tests validate the intrinsic dynamic behavior of the unit.
 For **PPM**, this includes:
 
 - transient and permanent three‑phase faults,
-- voltage dips with defined depth and duration,
-- active and reactive power steps,
-- voltage steps and frequency ramps,
+- setpoint steps in active power, reactive power and voltage,
+- grid voltage rises and drops (imposed by the network, no setpoint change),
 - tests under different SCR conditions.
 
 For **BESS**, the same structure applies, with operating points that explicitly
