@@ -42,7 +42,8 @@ prebuilt image.
 
 In this mode:
 - DyCoV is installed inside a user‑level Python virtual environment,
-- Dynawo is automatically downloaded and installed as part of the DyCoV installation process,
+- Dynawo can be downloaded and installed by the installer (it asks for
+  confirmation; a Dynawo installation of your own can be used instead),
 - system‑level prerequisites (Python ≥ 3.13, uv, LaTeX, build tools) must be
   installed manually by the user.
 

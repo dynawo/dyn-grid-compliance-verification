@@ -15,7 +15,9 @@ installed using one of the supported installation methods:
 - Using the prebuilt distribution image (recommended)
 - Native Linux installation (advanced users only)
 
-Refer to the installation guides in `docs/installation/` for detailed instructions
+Detailed instructions are in the *Installation* chapter of the user manual.
+If you are browsing the source repository, the same content is available in
+[`../installation/`](../installation/).
 
 ---
 

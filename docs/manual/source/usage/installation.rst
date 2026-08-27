@@ -2,25 +2,63 @@
 Installing Dynamic grid Compliance Verification
 ===============================================
 
-DyCoV is distributed as a self-contained package that bundles everything you
-need: the tool itself, a compatible version of Dynawo, and the reference
-manuals. The installation method depends on your platform and preferences.
+DyCoV can be installed in two ways. The recommended method — on every
+platform — is the **prebuilt distribution image**, a self-contained
+environment that bundles everything you need: the tool itself, a compatible
+version of Dynawo, and the reference manuals. For advanced users who want full
+control over their system, a **native Linux installer** is also provided; it
+offers to download Dynawo during the installation.
 
 All methods end up in the same place: a working ``dycov`` command, a copy of
 the bundled examples ready to run, and the reference manuals available locally.
 
 
-.. _install_linux_native:
-
 Linux
 -----
 
-Native installation
-^^^^^^^^^^^^^^^^^^^
+.. _install_linux_docker:
 
-This is the recommended method for Linux users. A single shell script handles
-everything: it downloads Dynawo, clones the latest DyCoV release, and sets up
-a Python virtual environment so that your system Python is left untouched.
+Docker installation (recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The distribution image keeps DyCoV completely isolated from your system and
+requires no manual dependency installation. You will need Docker installed and
+running.
+
+Download these three files and place them in the same directory:
+
+* ``dycov_rawimage.tar.gz``
+* ``import_image.sh``
+* ``run_dycov_docker.sh``
+
+Make them executable and import the image:
+
+.. code-block:: console
+
+   chmod +x import_image.sh run_dycov_docker.sh
+   ./import_image.sh dycov_rawimage.tar.gz
+
+From now on, create a directory for your work and launch DyCoV by mapping it
+into the container. The ``-u`` and ``-g`` flags ensure that files written
+inside the container are owned by your user:
+
+.. code-block:: console
+
+   mkdir my_project
+   ./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_project/
+
+Once inside the session, the reference manuals are at ``~/manual/``.
+
+
+.. _install_linux_native:
+
+Native installation (advanced users)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method is intended for advanced users who want full control over their
+environment. A single shell script handles everything: it offers to download
+Dynawo, clones the latest DyCoV release, and sets up a Python virtual
+environment so that your system Python is left untouched.
 
 Before running the installer, make sure the following system packages are
 present. They are needed to compile and run Dynawo, generate PDF reports, and
@@ -39,7 +77,7 @@ LaTeX (for PDF report generation):
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     texlive-bibtex-extra biber latexmk
+     latexmk
 
 Python 3.13 and uv:
 
@@ -72,43 +110,11 @@ before using DyCoV. A quick way to check that everything is working:
 
    dycov --version
 
-After installation the reference manuals are at ``~/dycov/manual/``:
+After installation the reference manuals are at ``$PWD/dycov/manual/``
+(inside the directory the installer was run from):
 
 * ``manual/html/index.html`` — browse it in any web browser
 * ``manual/dycov.pdf`` — the same content as a single PDF
-
-
-.. _install_linux_docker:
-
-Docker installation
-^^^^^^^^^^^^^^^^^^^
-
-If you prefer to keep DyCoV completely isolated from your system, the Docker
-image is a good alternative. You will need Docker installed and running.
-
-Download these three files and place them in the same directory:
-
-* ``dycov_rawimage.tar.gz``
-* ``import_image.sh``
-* ``run_dycov_docker.sh``
-
-Make them executable and import the image:
-
-.. code-block:: console
-
-   chmod +x import_image.sh run_dycov_docker.sh
-   ./import_image.sh dycov_rawimage.tar.gz
-
-From now on, create a directory for your work and launch DyCoV by mapping it
-into the container. The ``-u`` and ``-g`` flags ensure that files written
-inside the container are owned by your user:
-
-.. code-block:: console
-
-   mkdir my_project
-   ./run_dycov_docker.sh -u $(id -u) -g $(id -g) my_project/
-
-Once inside the session, the reference manuals are at ``~/manual/``.
 
 
 .. _install_windows:
