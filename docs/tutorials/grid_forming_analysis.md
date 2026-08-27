@@ -82,11 +82,12 @@ Inputs describe:
 
 ### 4.1 Input files
 
-GFM inputs are provided through a `Producer.ini` file containing
-a dedicated `[GFM Parameters]` section.
+GFM inputs are provided through a `Producer.ini` file with two sections:
 
-Multiple parameter sets can also be evaluated by supplying a CSV file;
-the exact format depends on the supported GFM case.
+- `[DEFAULT]` — the general quantities of the installation (nominal voltage
+  and operating limits),
+- `[GFM Parameters]` — the parameters specific to the GFM envelope
+  calculation.
 
 The structure of the inputs is illustrated in the project examples
 under `examples/GFM/`.
@@ -95,15 +96,30 @@ under `examples/GFM/`.
 
 ### 4.2 GFM parameters reference
 
-The following parameters are defined inside the `[GFM Parameters]` section
-of `Producer.ini`:
+**General quantities and operating limits**, defined in the `[DEFAULT]`
+section of `Producer.ini`:
+
+| Parameter | Description |
+|-----------|-------------|
+| `u_nom` | Nominal voltage at the PDR bus (kV). Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore) |
+| `p_max_injection` | Maximum active power injection (MW) |
+| `p_min_injection` | Minimum active power injection (MW, negative for absorption) |
+| `q_max` | Maximum reactive power (MVar) |
+| `q_min` | Minimum reactive power (MVar) |
+
+The remaining parameters are defined inside the `[GFM Parameters]` section.
 
 **Nominal quantities:**
 
 | Parameter | Description |
 |-----------|-------------|
-| `Snom` | Nominal apparent power (MVA) |
-| `Unom` | Nominal voltage (kV) |
+| `Snom` | Nominal apparent power (MVA). Used only by this workflow — Dynawo simulations take Snom from the PAR file |
+
+**Control parameters common to both modes:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `Xeff` | Effective reactance (pu) |
 
 **Standard control parameters** (used when operating in Standard mode):
 
@@ -111,7 +127,6 @@ of `Producer.ini`:
 |-----------|-------------|
 | `D` | Damping coefficient |
 | `H` | Inertia constant (s) |
-| `Xeff` | Effective reactance |
 
 **Hybrid control parameters** (used when operating in Hybrid mode):
 
@@ -122,22 +137,19 @@ of `Producer.ini`:
 | `D_Underdamped` | Damping coefficient for the underdamped case |
 | `H_Underdamped` | Inertia constant for the underdamped case (s) |
 
-**Operating limits:**
-
-| Parameter | Description |
-|-----------|-------------|
-| `p_max_injection` | Maximum active power injection |
-| `p_min_injection` | Minimum active power injection (negative for absorption) |
-| `q_max` | Maximum reactive power |
-| `q_min` | Minimum reactive power |
-
-**Output and sensitivity settings:**
+**Output and timing settings:**
 
 | Parameter | Description |
 |-----------|-------------|
 | `save_all_envelopes` | If `true`, the CSV output includes all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope |
-| `RatioMin` | Lower bound for sensitivity analysis on parameter variations |
-| `RatioMax` | Upper bound for sensitivity analysis on parameter variations |
+| `emt_delay` | Time shift (s) applied to the envelopes when running in EMT mode (`-e`); defaults to 0.02 when absent |
+
+> **Note**
+> `RatioMin` and `RatioMax` — the bounds applied to parameter variations for
+> the sensitivity analysis — are **not** read from `Producer.ini`. They belong
+> to the tool's PCS configuration (each `PCS_RTE-IGFMx` template defines its
+> own values) and can be overridden through the tool configuration like any
+> other PCS option.
 
 ---
 
@@ -208,6 +220,28 @@ DyCoV computes:
 
 *   the admissible upper and lower envelopes,
 *   derived quantities required by the selected GFM case.
+
+By default, the results are written to a `Results/` directory created next to
+the input file; use `-o` to choose a different location:
+
+```bash
+dycov generateEnvelopes -i Producer.ini -o gfm_results
+```
+
+### 6.3 EMT mode
+
+By default the envelopes are meant to be compared against RMS simulations.
+Pass `-e`/`--emt` to generate envelopes for comparison against EMT
+simulations instead:
+
+```bash
+dycov generateEnvelopes -i Producer.ini -e
+```
+
+In EMT mode, the envelopes and the PCC signal are shifted in time by the
+`emt_delay` value (in seconds) defined in `[GFM Parameters]`, to account for
+the initial response of an EMT simulation. Without `-e`, `emt_delay` has no
+effect.
 
 ---
 
