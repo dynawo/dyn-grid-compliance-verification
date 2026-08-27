@@ -205,7 +205,7 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv sha256sum; do
+for cmd in curl unzip gcc g++ cmake make pdflatex latexmk git awk uv sha256sum; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1

@@ -437,7 +437,8 @@ The guided process works in stages:
 
    .. code-block:: ini
 
-      # p_{max_unite} injection as defined by the DTR in MW (expected value >= 0.0)
+      [DEFAULT]
+      # p_{max_unite} injection as defined by the DTR in MW
       p_max_injection_at_PDR =
       # p_{max_unite} consumption as defined by the DTR in MW (only for BESS)
       p_max_consumption_at_PDR =
@@ -448,6 +449,10 @@ The guided process works in stages:
       q_max_at_PDR =
       # q_min is the minimum reactive power at the PDR bus (in MVar)
       q_min_at_PDR =
+      # Active power sharing per generator unit (%).  Values must be between 0 and 1.
+      P_sharing_[GEN_ID] =
+      # Reactive power sharing per generator unit (%).  Values must be between 0 and 1.
+      Q_sharing_[GEN_ID] =
       # topology
       topology = S+Aux
 

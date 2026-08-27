@@ -1,6 +1,6 @@
 # Quick start with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Run your first DyCoV studies in a few minutes using the provided examples.
 
 ---

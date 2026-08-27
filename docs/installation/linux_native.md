@@ -1,6 +1,6 @@
 # Native Linux installation of DyCoV (advanced)
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Native installation of DyCoV on Linux systems without using the
 prebuilt distribution image.
 
@@ -57,13 +57,13 @@ The instructions below assume a Debian‑based system (Debian or Ubuntu).
 ### 3.1 System build tools
 
 ```bash
-sudo apt install curl unzip gcc g++ cmake
+sudo apt install curl unzip gcc g++ cmake make
 ```
 
 `curl` and `unzip` are used by the installer itself, to download and unpack
-the components. `gcc`, `g++` and `cmake` are needed at **runtime**: Dynawo
-uses them to compile the dynamic models of each simulation. The installer
-only checks that they are present.
+the components. `gcc`, `g++` and `cmake` are required by the installer and by
+DyCoV's startup checks. `make` is used by the installer to build the bundled
+manuals, and at runtime to compile the PDF reports.
 
 ---
 

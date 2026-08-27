@@ -1,6 +1,6 @@
 ## Advanced configuration
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Advanced user configuration of DyCoV execution scope, compliance
 thresholds and logging behavior, without modifying DyCoV source code.
 
@@ -106,7 +106,7 @@ This is done using the following configuration sections:
 
 ```ini
 [PCS-Benchmarks]
-# PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridFreqRamp,GridVoltageStep
+# PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep,GridVoltageStep
 
 [PCS-OperatingConditions]
 # PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10
