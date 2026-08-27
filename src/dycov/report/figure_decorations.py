@@ -94,7 +94,7 @@ def draw_frequency_band(
     tuple
         Updated ymin and ymax values after considering the frequency band limits.
     """
-    f_nom = config.get_float("Global", "f_nom", 50.0)
+    f_nom = config.get_float("Dynawo", "f_nom", 50.0)
     margin = band.upper * 0.5 if band.upper is not None else 0.0
     color = "#c44e52" if band.upper and band.upper >= 1.0 else "#55a868"
 

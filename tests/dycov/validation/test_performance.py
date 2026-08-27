@@ -48,6 +48,18 @@ class DummyConfig:
         return self._overrides.get(key, default)
 
 
+class RecordingConfig(DummyConfig):
+    """DummyConfig that records every (section, key) requested."""
+
+    def __init__(self, **overrides):
+        super().__init__(**overrides)
+        self.calls = []
+
+    def get_float(self, section: str, key: str, default: float) -> float:
+        self.calls.append((section, key))
+        return super().get_float(section, key, default)
+
+
 class DummyProducer:
     def __init__(self, sim_type=ELECTRIC_PERFORMANCE_PPM, is_dynawo_model=True):
         self._sim_type = sim_type
@@ -462,6 +474,19 @@ def test_calculate_frequency_outside_the_nominal_band():
 
     assert compliance_values["check_freq1"] is False
     assert compliance_values["time_freq1"] == pytest.approx(2.0)
+
+
+def test_calculate_frequency_reads_f_nom_from_the_dynawo_section(monkeypatch):
+    recording = RecordingConfig()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.config", recording)
+    validator = _make_validator(
+        validations=["freq_1"],
+        calculated=_make_pdr_curves(G1_GEN_NetworkFrequencyPu=[1.0, 1.0, 1.0, 1.0, 1.0]),
+    )
+
+    validator._PerformanceValidator__calculate_frequency({})
+
+    assert ("Dynawo", "f_nom") in recording.calls
 
 
 # ---------------------------------------------------------------------------

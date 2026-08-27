@@ -11,6 +11,7 @@
 
 import pytest
 
+from dycov.configuration.cfg import Config
 from dycov.validate.producer import ModelProducer
 
 
@@ -20,3 +21,17 @@ def test_s_nom_pu_is_snom_over_snref():
     producer._s_nref = 100.0
 
     assert producer.s_nom_pu == pytest.approx(1.8)
+
+
+def test_init_reads_s_nref_from_the_dynawo_section(monkeypatch):
+    monkeypatch.setattr(
+        Config,
+        "get_float",
+        lambda self, section, key, default: (
+            90.0 if (section, key) == ("Dynawo", "s_nref") else default
+        ),
+    )
+
+    producer = ModelProducer(None, None, None, -1)
+
+    assert producer._s_nref == pytest.approx(90.0)
