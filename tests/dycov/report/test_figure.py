@@ -183,7 +183,7 @@ def test_add_curve2plot_applies_color_and_style():
 
 
 def test_get_yrange_applies_explicit_range_for_low_variation(set_user_option):
-    set_user_option("Figures", "graph_minvariaton_yrange_pct", "100")
+    set_user_option("Figures", "graph_minvariation_yrange_pct", "100")
     set_user_option("Figures", "graph_bottom_yrange_pct", "10")
     set_user_option("Figures", "graph_top_yrange_pct", "5")
     curve = [1, 1, 1, 1, 1]
@@ -196,7 +196,7 @@ def test_get_yrange_applies_explicit_range_for_low_variation(set_user_option):
 
 
 def test_get_yrange_honors_figures_margins(set_user_option):
-    set_user_option("Figures", "graph_minvariaton_yrange_pct", "100")
+    set_user_option("Figures", "graph_minvariation_yrange_pct", "100")
     set_user_option("Figures", "graph_bottom_yrange_pct", "50")
     set_user_option("Figures", "graph_top_yrange_pct", "25")
     curve = [1.0, 1.1]
@@ -335,7 +335,7 @@ def test_get_xrange_aggregates_curve_ranges():
 
 
 def test_get_yrange_falls_back_to_defaults_on_invalid_values(set_user_option):
-    set_user_option("Figures", "graph_minvariaton_yrange_pct", "not_a_number")
+    set_user_option("Figures", "graph_minvariation_yrange_pct", "not_a_number")
     set_user_option("Figures", "graph_bottom_yrange_pct", "not_a_number")
     set_user_option("Figures", "graph_top_yrange_pct", "not_a_number")
     curve = [1, 1, 1, 1, 1]

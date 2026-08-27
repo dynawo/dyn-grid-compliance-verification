@@ -89,7 +89,7 @@ def get_setpoint_tracking_threshold_values() -> dict:
     verification against reference setpoints.
 
     Regardless of the nature of the reference signal, the maximum permissible errors on the
-    quantity tracked in pu (base setpoint variation level) are as follow:
+    quantity tracked in pu (base setpoint variation level) are as follows:
     | window | quantity tracked   |
     |--------|------|------|------|
     |        | MXE  | ME   | MAE  |
