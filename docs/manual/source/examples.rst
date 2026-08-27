@@ -89,8 +89,10 @@ example:
    dycov validate Wind/WECC4B/ReferenceCurves/ -c ProducerCurves/PPM/
 
 In both cases, DyCoV compares the curves against the reference, evaluates
-compliance, and writes a PDF report and interactive HTML plots under
-``Results/``.
+compliance, and writes a PDF report and interactive HTML plots under a
+``Results/`` directory created next to the input passed to ``-m``/``-c`` —
+here ``Wind/WECC4B/Results/`` and ``ProducerCurves/Results/`` respectively.
+Use ``-o`` to choose a different location.
 
 
 Electric Performance Verification
@@ -114,7 +116,9 @@ containing ``Producer/`` and ``Producer.ini``:
    cd examples/Performance
    dycov performance -c ProducerCurves/PPM/
 
-Results go to ``Results/`` as well, with the same PDF and HTML structure.
+Results are likewise created next to the input — ``Single/WECC4B/Results/``
+and ``ProducerCurves/Results/`` for these two examples — with the same PDF
+and HTML structure.
 
 
 Grid-Forming (GFM) Envelope Generation
