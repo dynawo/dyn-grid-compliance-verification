@@ -8,9 +8,9 @@ what DyCoV produces before working with your own data.
 
 All examples live under the ``examples/`` directory at the root of the
 repository. If you installed DyCoV natively on Linux, a copy was placed in
-``~/dycov/examples/`` during installation. If you are using the Docker or WSL
-image, the examples are copied to your home directory the first time you start
-a session.
+``$PWD/dycov/examples/`` (inside the directory the installer was run from).
+If you are using the Docker or WSL image, the examples are copied to your home
+directory the first time you start a session.
 
 
 How the examples are organized
@@ -77,12 +77,16 @@ Using a Dynawo model:
    cd examples/Model/Wind/WECC4B
    dycov validate ReferenceCurves/ -m Dynawo/
 
-Using producer curves instead of a Dynawo model:
+Using producer curves instead of a Dynawo model. ``-c`` must point at the case
+directory — the one containing ``Producer/`` and the per-zone
+``Zone1/``/``Zone3/`` folders. Since the producer-curves example carries no
+reference curves of its own, the reference here is borrowed from the WECC4B
+example:
 
 .. code-block:: console
 
-   cd examples/Model/ProducerCurves/PPM
-   dycov validate ReferenceCurves/ -c ProducerCurves/
+   cd examples/Model
+   dycov validate Wind/WECC4B/ReferenceCurves/ -c ProducerCurves/PPM/
 
 In both cases, DyCoV compares the curves against the reference, evaluates
 compliance, and writes a PDF report and interactive HTML plots under
@@ -102,12 +106,13 @@ Using a Dynawo model:
    cd examples/Performance/Single/WECC4B
    dycov performance -m Dynawo/
 
-Using producer curves:
+Using producer curves. ``-c`` must point at the case directory — the one
+containing ``Producer/`` and ``Producer.ini``:
 
 .. code-block:: console
 
-   cd examples/Performance/ProducerCurves/PPM
-   dycov performance -c ProducerCurves/
+   cd examples/Performance
+   dycov performance -c ProducerCurves/PPM/
 
 Results go to ``Results/`` as well, with the same PDF and HTML structure.
 
