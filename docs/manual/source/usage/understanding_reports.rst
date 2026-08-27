@@ -83,17 +83,29 @@ The summary provides a **global view of all executed tests**.
 It includes:
 
 * execution metadata:
-  
-  * timestamp,
-  * Dynawo version,
+
+  * timestamp of the run,
+  * DyCoV version and commit identifier,
+  * Dynawo version (when the producer response is simulated with Dynawo),
   * model directory,
+  * reference-curves directory (RMS model validation),
 
 * a consolidated table with:
-  
+
   * PCS identifier,
   * benchmark (test type),
   * operating condition,
-  * overall result (Compliant / Non-compliant / other status).
+  * overall result.
+
+The overall result is one of twelve statuses. *Compliant* and *Non-compliant*
+are the two outcomes of a test that was evaluated; the other ten explain why a
+test could not be evaluated: *Invalid test*, *Failed simulation*, *Undefined
+validations*, *Missing some curves*, *Missing some reference curves*,
+*Missing some producer curves*, *Fault simulation fails*, *Fault dip
+unachievable*, *Simulation time out*, and *Not applicable test*. Every status
+other than *Compliant* is shown in red, and *Not applicable test* entries
+carry a footnote ("Not executed: incompatible control mode") — such tests are
+skipped, not failed.
 
 This is the primary entry point for quickly assessing the outcome of a study.
 
@@ -122,6 +134,13 @@ For RMS model validation, results are further grouped into:
 
 * **Zone 1** (unit-level),
 * **Zone 3** (plant-level).
+
+In Zone 1, the unit's connection node appears in the report as
+**InternalNode1** (the node called *Node1* in the DTR) — the name *PDR* is
+reserved for the real connection point of the complete installation, used in
+Zone 3. The injector-terminal figures (the currents Ip and Iq and the voltage
+at the converter output) are measured at **InternalNode2** (*Node2* in the
+DTR). Both nodes are labeled in the network schema included in each report.
 
 
 Structure of a test
