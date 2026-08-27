@@ -97,8 +97,9 @@ A typical file looks like this:
    :caption: Example GFM Producer INI file
 
    [DEFAULT]
-   # Nominal voltage at the PDR Bus (in kV)
-   Unom = 20.0
+   # Nominal voltage at the PDR bus (in kV)
+   # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
+   u_nom = 225
    # Active power limits (in MW)
    p_max_injection = 100.0
    p_min_injection = 0.0
@@ -117,7 +118,10 @@ A typical file looks like this:
    Snom = 110.0
 
 For **Hybrid mode** (combining overdamped and underdamped envelopes), the
-``[GFM Parameters]`` section should instead define separate parameter sets:
+``[GFM Parameters]`` section should instead define separate damping and
+inertia sets — ``Xeff`` is still required, and ``save_all_envelopes`` controls
+whether the intermediate overdamped and underdamped traces are kept in the
+CSV output alongside the merged envelope:
 
 .. code-block:: ini
 
@@ -126,7 +130,9 @@ For **Hybrid mode** (combining overdamped and underdamped envelopes), the
    H_Overdamped = 4.0
    D_Underdamped = 10.0
    H_Underdamped = 2.5
+   Xeff = 0.15
    Snom = 110.0
+   save_all_envelopes = False
 
 .. seealso::
    :ref:`GFM Envelope Generation <gfm_envelopes_cmd>` for a description of
@@ -431,10 +437,18 @@ The guided process works in stages:
 
    .. code-block:: ini
 
+      # p_{max_unite} injection as defined by the DTR in MW (expected value >= 0.0)
       p_max_injection_at_PDR =
-      u_nom =
+      # p_{max_unite} consumption as defined by the DTR in MW (only for BESS)
+      p_max_consumption_at_PDR =
+      # u_nom is the nominal voltage at the PDR bus (in kV)
+      # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
+      u_nom_at_PDR =
+      # q_max is the maximum reactive power at the PDR bus (in MVar)
       q_max_at_PDR =
+      # q_min is the minimum reactive power at the PDR bus (in MVar)
       q_min_at_PDR =
+      # topology
       topology = S+Aux
 
 4. **Curve files** — DyCoV creates a ``ReferenceCurves/`` directory with a

@@ -19,12 +19,11 @@ to the DTR's PCS structure. The following tests are currently implemented:
 * **RMS model validation (Power Parks)**: PCS I16, structured into:
 
   - *Zone 1* (unit-level): Fault Ride-Through, Step Response to Control
-    Setpoints, Ramp Response to Grid Frequency, and Step Response to Grid
-    Voltage.
+    Setpoints, and Step Response to Grid Voltage.
 
   - *Zone 3* (plant-level): Stability of Controls (like I2), Fault
     Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
-    (like I7), and Islanding (like I10).
+    (like I7), Ramp Response to Grid Frequency, and Islanding (like I10).
 
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
@@ -48,8 +47,8 @@ Conceptual structuring of the tests
 -------------------------------------
 
 .. note::
-Please do not skip this section: understanding these concepts will help
-you learn the tool and navigate the results much faster!
+   Please do not skip this section: understanding these concepts will help
+   you learn the tool and navigate the results much faster!
 
 All tests share the same conceptual split between the producer's model and the
 grid-side model:
@@ -71,20 +70,20 @@ This gives rise to the following conceptual hierarchy:
 
 .. code-block::
 
-launcher
-├── <PCS a>
-│   ├── <Benchmark j>
-│   │   └── <Operating Condition x>
-│   │       └── <Operating Point>
-│   └── <Benchmark k>
-│       ├── <Operating Condition y>
-│       │   └── <Operating Point>
-│       └── <Operating Condition z>
-│           └── <Operating Point>
-├── <PCS b>
-│   └── ...
-└── <PCS c>
-└── ...
+   launcher
+   ├── <PCS a>
+   │   ├── <Benchmark j>
+   │   │   └── <Operating Condition x>
+   │   │       └── <Operating Point>
+   │   └── <Benchmark k>
+   │       ├── <Operating Condition y>
+   │       │   └── <Operating Point>
+   │       └── <Operating Condition z>
+   │           └── <Operating Point>
+   ├── <PCS b>
+   │   └── ...
+   └── <PCS c>
+       └── ...
 
 That is, the launcher runs one or more DTR PCSs (the user may configure which
 ones to run or skip). Each PCS runs the tests defined in the DTR. Each test
@@ -256,10 +255,6 @@ defined by an operating point (OP), event parameters, and grid parameters.
       - :math:`U_n,\ P_{max},\ Q=0`
       - :math:`{\Delta}Q^{sp}=-5\%Q_{max}`
       - SCR=3
-    * - grid :math:`{\omega}` ramp
-      - :math:`U_n,\ P_{max},\ Q=0`
-      - :math:`{\Delta}{\omega}=+0.5Hz\ in\ 250ms`
-      - SCR=3
     * - grid V step
       - :math:`0.95U_n,\ 0.5P_{max},\ Q_{min}`
       - :math:`{\Delta}V=+10\%U_n`
@@ -320,6 +315,10 @@ defined by an operating point (OP), event parameters, and grid parameters.
       - :math:`U_n,\ P_{max},\ Q_{min}`
       - specified V profile
       - :math:`X_{min}`
+    * - grid :math:`{\omega}` ramp
+      - :math:`U_n,\ P_{max},\ Q=0`
+      - :math:`{\Delta}{\omega}=+0.5Hz\ in\ 250ms`
+      - SCR=3
     * - islanding
       - :math:`U_n,\ 0.8P_{max},\ Q=0`
       - :math:`{\Delta}\ PQ = [+0.1,\ +0.04]P_{max}`
