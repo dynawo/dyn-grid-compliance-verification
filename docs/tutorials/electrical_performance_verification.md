@@ -220,7 +220,10 @@ dycov performance
 
 ### 8.2 Example using Dynawo
 
+From a case directory containing the model:
+
 ```bash
+cd examples/Performance/Single/WECC4B
 dycov performance -m Dynawo/
 ```
 
@@ -228,8 +231,12 @@ dycov performance -m Dynawo/
 
 ### 8.3 Example using producer curves
 
+`-c` must point at the case directory — the one containing `Producer/` and
+`Producer.ini`:
+
 ```bash
-dycov performance -c ProducerCurves/
+cd examples/Performance
+dycov performance -c ProducerCurves/PPM/
 ```
 
 ---
@@ -249,10 +256,12 @@ Each PCS and its associated tests are evaluated and reported independently.
 
 In the report:
 - each test is evaluated independently,
-- results are classified as:
-  - **Compliant**
-  - **Non-compliant**
-- compliance is determined based on PCS-defined thresholds.
+- each test that could be evaluated is classified as **Compliant** or
+  **Non-compliant**, based on the PCS-defined thresholds,
+- a test that could not be evaluated carries one of ten other statuses
+  explaining why (for example *Failed simulation* or *Simulation time out*);
+  the full list is described in
+  [Understanding DyCoV reports](understanding_reports.md).
 
 ---
 

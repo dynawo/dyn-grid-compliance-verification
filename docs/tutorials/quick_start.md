@@ -155,9 +155,10 @@ You have successfully completed your first RMS model validation.
 - A `Results/` directory is created
 - PDF reports summarize the validation results (including compliance indicators)
 - HTML plots show simulated curves against reference curves
-- Each test is classified as:
-  - **Compliant**
-  - **Non-compliant**
+- Each test that could be evaluated is classified as **Compliant** or
+  **Non-compliant**; a test that could not be evaluated carries a status
+  explaining why (e.g. *Failed simulation*, *Not applicable test* — see
+  [Understanding DyCoV reports](understanding_reports.md))
 
 At this stage, focus on:
 - whether the workflow executed correctly,
@@ -213,9 +214,10 @@ You have successfully completed your first electrical performance verification.
 - A `Results/` directory is created
 - Each PCS test scenario is evaluated
 - PDF reports summarize compliance results
-- Each test is marked as:
-  - **Compliant**
-  - **Non-compliant**
+- Each test that could be evaluated is marked as **Compliant** or
+  **Non-compliant**; a test that could not be evaluated carries a status
+  explaining why (see
+  [Understanding DyCoV reports](understanding_reports.md))
 
 At this stage, focus on:
 - understanding how PCS tests are organized,
