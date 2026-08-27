@@ -39,7 +39,7 @@ even during development if you want to inspect the full output:
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     texlive-bibtex-extra biber latexmk
+     latexmk
 
 Python 3.13 — DyCoV requires Python 3.13 or newer:
 
