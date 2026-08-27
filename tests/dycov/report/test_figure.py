@@ -24,6 +24,7 @@ from dycov.report.figure import (
     _get_yrange,
     create_plot,
     get_common_time_range,
+    get_curves2plot,
 )
 from dycov.report.figure_decorations import draw_additional_curves, draw_response_characteristics
 from dycov.report.figure_renderer import MatplotlibRenderer
@@ -180,6 +181,24 @@ def test_add_curve2plot_applies_color_and_style():
 
     _add_curve2plot("Other", "Other", df, plot_curves)
     assert plot_curves[-1]["color"] == "#4c72b0"
+
+
+def test_get_curves2plot_reference_skips_setpoint_and_missing_columns():
+    reference = pd.DataFrame(
+        {
+            "BusPDR_BUS_Voltage": [1.0, 0.9],
+            "Wind_Turbine_GEN_VoltageSetpointPu": [1.0, 1.0],
+        }
+    )
+    variables = [
+        {"type": "bus", "variable": "Voltage"},
+        {"type": "bus", "variable": "ActivePower"},
+        {"type": "generator", "variable": "VoltageSetpointPu"},
+    ]
+
+    plot_curves = get_curves2plot(variables, reference, is_reference=True)
+
+    assert [curve["name"] for curve in plot_curves] == ["BusPDR_BUS_Voltage"]
 
 
 def test_get_yrange_applies_explicit_range_for_low_variation(set_user_option):

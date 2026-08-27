@@ -14,6 +14,7 @@ from typing import Optional
 import pandas as pd
 
 from dycov.configuration.cfg import config
+from dycov.core.global_variables import MODEL_VALIDATION
 from dycov.core.parameters import Parameters
 from dycov.curves import curves_factory, naming
 from dycov.logging import dycov_logging
@@ -95,6 +96,12 @@ class CurvesManager:
     def __has_reference_curves(self) -> bool:
         return self._producer.has_reference_curves_path()
 
+    def __reference_curves_drive_validation(self) -> bool:
+        """In model validation the reference curves are a validation input: they gate the
+        test and align the simulated event with theirs. In electrical performance they
+        are only plotted in the figures."""
+        return self._producer.get_sim_type() > MODEL_VALIDATION
+
     def __get_reference_curves_path(self) -> Path:
         if self._reference_curves_path is None:
             self._reference_curves_path = self._producer.get_reference_curves_path()
@@ -123,7 +130,12 @@ class CurvesManager:
                 oc_name,
                 self.__get_reference_curves_path(),
             )
-            self._reference_event_start_time = reference_event_start_time
+            if self.__reference_curves_drive_validation():
+                self._reference_event_start_time = reference_event_start_time
+            elif self._curves["reference"].empty:
+                dycov_logging.get_logger("Curves Manager").warning(
+                    "Test without reference curves, the figures will not include them"
+                )
         (
             jobs_output_dir,
             event_params,
@@ -268,7 +280,7 @@ class CurvesManager:
             measurement_names,
             self.get_curves("reference"),
             "reference",
-            self.__has_reference_curves(),
+            self.__has_reference_curves() and self.__reference_curves_drive_validation(),
         )
 
         if sim_curves and ref_curves:
