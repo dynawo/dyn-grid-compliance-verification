@@ -95,7 +95,8 @@ Conceptually:
 
 > **Note**  
 > To understand the distinction between an *Operating Condition* and an
-> *Operating Point*, refer to **Chapter 2.1 of the User Manual**.
+> *Operating Point*, refer to the *Conceptual structuring of the tests*
+> section of the *Validation Tests* chapter in the User Manual.
 
 An Operating Condition defines:
 
@@ -119,11 +120,15 @@ overridden.
 Example:
 
 ```ini
-[PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800]
+[PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.Model]
 pdr_Q = Qmin
 ```
 
-Only the parameters defined in the section are overridden.
+Only the parameters defined in the section are overridden. Note the `.Model`
+suffix: the initial operating point (`pdr_P`, `pdr_Q`, `pdr_U`) is read only
+from the `.Model` section of the operating condition — a section without the
+suffix is silently ignored. Event parameters live in the corresponding
+`.Event` section.
 
 > Important:
 > Changing an OC affects the simulation results but may not automatically update
