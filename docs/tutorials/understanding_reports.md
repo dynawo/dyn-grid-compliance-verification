@@ -64,9 +64,9 @@ This structure applies consistently to:
 
 The report begins with general contextual information:
 
-- Type of study:
-  - *Electrical performance verification*, or
-  - *RMS model validation*
+- Type of study, as printed in the report title:
+  - *Electrical Performance Verification*, or
+  - *Model Validation* (the RMS model validation workflow)
 - Technology:
   - PPM, BESS, or SM
 - Execution date
@@ -87,8 +87,9 @@ It includes:
   - DyCoV version and commit identifier,
   - Dynawo version (when the producer response is simulated with Dynawo),
   - model directory,
-  - reference-curves directory (RMS model validation),
+  - reference-curves directory (when reference curves were provided),
 - a consolidated table with:
+  - producer,
   - PCS identifier,
   - benchmark (test type),
   - operating condition,
