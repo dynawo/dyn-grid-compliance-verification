@@ -293,7 +293,9 @@ Results should always be interpreted using both:
 - Reference curves must **not** be provided.
 - Zone 1 / Zone 3 separation does **not** apply.
 - A single `Producer.ini` is always used.
-- Dynawo and producer curves are mutually exclusive within a case.
+- Dynawo and producer curves can be combined within a case: when both are given,
+  compliance is evaluated on the simulated curves only, and the producer curves
+  are drawn in the figures as an overlay.
 
 ---
 
