@@ -63,7 +63,7 @@ class ModelProducer(Producer):
         reference_curves_path: Path,
         verification_type: int,
     ):
-        self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
+        self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._producer_model_path = producer_model_path
         self._producer_curves_path = producer_curves_path
         self._reference_curves_path = reference_curves_path
