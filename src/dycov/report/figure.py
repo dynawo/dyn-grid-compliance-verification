@@ -100,8 +100,8 @@ def _get_xrange_for_curve(
                 origin=(operating_condition, "reference_step_size"),
             )
         )
-    graph_rel_tol = config.get_float("Global", "graph_rel_tol", 0.002)
-    graph_abs_tol = config.get_float("Global", "graph_abs_tol", 0.01) * graph_scale
+    graph_rel_tol = config.get_float("Figures", "graph_rel_tol", 0.002)
+    graph_abs_tol = config.get_float("Figures", "graph_abs_tol", 0.01) * graph_scale
 
     last_value = curve[-1]
     steady_pos = 0
@@ -117,10 +117,10 @@ def _get_xrange_for_curve(
 
     if time_curve[steady_pos] >= sim_t_event_end:
         graph_preevent_trange_pct = (
-            config.get_float("Global", "graph_preevent_trange_pct", 15) / 100.0
+            config.get_float("Figures", "graph_preevent_trange_pct", 15) / 100.0
         )
         graph_postevent_trange_pct = (
-            config.get_float("Global", "graph_postevent_trange_pct", 20) / 100.0
+            config.get_float("Figures", "graph_postevent_trange_pct", 20) / 100.0
         )
         # To prevent completely flat curves
         plot_range = max(1, abs(time_curve[steady_pos] - sim_t_event_end))
@@ -135,7 +135,7 @@ def _get_yrange(curves: list) -> tuple[Optional[float], Optional[float]]:
     For all the curves to be plotted on the same graph, obtain the common y-axis range.
     """
     # Returning None means 'let it plot on auto-range'.
-    manage_plots_yrange = not config.get_boolean("Global", "graph_auto_range_yrange", False)
+    manage_plots_yrange = not config.get_boolean("Figures", "graph_auto_range_yrange", False)
     if not manage_plots_yrange:
         return None, None
 
@@ -161,11 +161,11 @@ def _get_yrange_for_curve(curve: list) -> tuple[float, float]:
     Else, set the y-range explicitly. The idea is to show a sufficient amount of "zoom".
     """
     # curves varying less than this fraction of their avg value will receive an explicit y-range:
-    limit_fraction = config.get_float("Global", "graph_minvariaton_yrange_pct", 2) / 100.0
+    limit_fraction = config.get_float("Figures", "graph_minvariaton_yrange_pct", 2) / 100.0
     # yields margin of 10% of the curve variation
-    bottom_expand = 1.0 + 2 * config.get_float("Global", "graph_bottom_yrange_pct", 10) / 100.0
+    bottom_expand = 1.0 + 2 * config.get_float("Figures", "graph_bottom_yrange_pct", 10) / 100.0
     # yields margin of 5% of the curve variation
-    top_expand = 1.0 + 2 * config.get_float("Global", "graph_top_yrange_pct", 5) / 100.0
+    top_expand = 1.0 + 2 * config.get_float("Figures", "graph_top_yrange_pct", 5) / 100.0
 
     midpoint = (max(curve) + min(curve)) / 2
     variation = max(curve) - min(curve)
