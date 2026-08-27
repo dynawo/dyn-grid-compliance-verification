@@ -161,7 +161,7 @@ def _get_yrange_for_curve(curve: list) -> tuple[float, float]:
     Else, set the y-range explicitly. The idea is to show a sufficient amount of "zoom".
     """
     # curves varying less than this fraction of their avg value will receive an explicit y-range:
-    limit_fraction = config.get_float("Figures", "graph_minvariaton_yrange_pct", 2) / 100.0
+    limit_fraction = config.get_float("Figures", "graph_minvariation_yrange_pct", 2) / 100.0
     # yields margin of 10% of the curve variation
     bottom_expand = 1.0 + 2 * config.get_float("Figures", "graph_bottom_yrange_pct", 10) / 100.0
     # yields margin of 5% of the curve variation
