@@ -351,9 +351,10 @@ Signal processing parameters:
   specifies 60 ms; must not exceed 500 ms (IEC 61400-27-2).
 * ``disable_window_filtering`` — disable windowed signal filtering (filter
   applied to the whole signal instead).
-* ``stable_time`` — minimum time required to consider a simulation stable.
 * ``thr_ss_tol`` — numerical tolerance (% of value) for steady-state
-  detection.
+  detection. A signal is in steady state when it enters this band and stays
+  inside it until the end of the simulation; the band never narrows below
+  ``thr_ss_tol`` of the nominal 1 pu magnitude.
 
 Step-response time characteristic thresholds:
 
