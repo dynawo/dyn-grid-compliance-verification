@@ -44,10 +44,13 @@ def check_pre_stable(time: list[float], curve: list[float]) -> None:
 
     Parameters
     ----------
+    time: list
+        Time instants of the pre window curve.
     curve: list
         Pre window curve.
     """
-    stable, _ = common.is_stable(time, curve, time[-1] - time[0])
+    thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
+    stable, _ = common.is_stable(time, curve, thr_ss_tol)
     if not stable:
         dycov_logging.get_logger("Sanity Checks").warning(
             "Unstable curve before the event is triggered."
