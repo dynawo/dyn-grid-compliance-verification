@@ -8,10 +8,14 @@
 #     demiguelm@aia.es
 #
 
+import logging
+
 import pytest
 
 from dycov.model.parameters import GenParams, LineParams, LoadParams, Terminal, XfmrParams
 from dycov.sanity_checks import parameter_checks
+
+PRE_EVENT_TOLERANCE = 0.005
 
 
 def test_trafos():
@@ -360,6 +364,54 @@ def test_check_t_fault():
     # Should not raise any warning when event_time - start_time >= range_len
     parameter_checks.check_t_fault(start_time=0.0, event_time=5.0, range_len=5.0)
     parameter_checks.check_t_fault(start_time=0.0, event_time=10.0, range_len=5.0)
+
+
+@pytest.fixture
+def sanity_check_warnings(monkeypatch, caplog):
+    """Capture the warnings emitted by the sanity checks under a known steady-state tolerance."""
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.get_float",
+        lambda self, section, key, default: PRE_EVENT_TOLERANCE,
+    )
+    monkeypatch.setattr("dycov.logging.dycov_logging.get_logger", logging.getLogger)
+    caplog.set_level(logging.WARNING)
+    return caplog
+
+
+def _pre_event_window(values: list[float]) -> tuple[list[float], list[float]]:
+    return [sample * 0.01 for sample in range(len(values))], values
+
+
+def test_check_t_fault_warns_on_a_short_pre_event_window(sanity_check_warnings):
+    """An event triggered before the required range has elapsed must be reported."""
+    parameter_checks.check_t_fault(start_time=0.0, event_time=2.0, range_len=5.0)
+
+    assert any(
+        "The event is triggered before 5.0 seconds have elapsed" in record.message
+        for record in sanity_check_warnings.records
+    )
+
+
+def test_check_pre_stable_warns_on_an_unstable_pre_event_curve(sanity_check_warnings):
+    """An oscillation wider than the steady-state band must be reported as unstable, even
+    though its amplitude is far below the several-second span of the window."""
+    time, curve = _pre_event_window([1.0 + 0.05 * (-1) ** sample for sample in range(200)])
+
+    parameter_checks.check_pre_stable(time, curve)
+
+    assert any(
+        "Unstable curve before the event is triggered." in record.message
+        for record in sanity_check_warnings.records
+    )
+
+
+def test_check_pre_stable_of_a_settled_pre_event_curve(sanity_check_warnings):
+    """A ripple inside the steady-state band must not be reported."""
+    time, curve = _pre_event_window([1.0 + 0.001 * (-1) ** sample for sample in range(200)])
+
+    parameter_checks.check_pre_stable(time, curve)
+
+    assert not sanity_check_warnings.records
 
 
 def test_check_sampling_interval():
