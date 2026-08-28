@@ -21,6 +21,14 @@ ATOL = 1.0e-6
 TUBE_TARGET_THRESHOLD = 0.01
 # Absolute tolerance used when target is small
 TUBE_ABSOLUTE_TOL = 0.02
+# Fraction of the simulated time span over which a steady state must hold. Expressed as a
+# fraction, and not as a duration, so that the criterion does not depend on how long the
+# simulation runs: a duration longer than the post-event window can never be satisfied.
+# The DTR fixes no such window, so 0.1 is a calibration choice -- equivalent to 10 s of the
+# standard 100 s simulation -- and is the knob to turn if it proves too strict or too lax.
+SS_WINDOW_FRACTION = 0.1
+# Two samples are the least that can show whether a signal holds a value
+MIN_SS_WINDOW_SAMPLES = 2
 
 
 def get_ss_tolerance(setpoint_variation: float) -> float:
@@ -147,6 +155,27 @@ def is_invalid_test(
     return v_flat and p_flat and q_flat
 
 
+def _steady_state_window_start(time: list) -> int | None:
+    """Get the index at which the trailing steady-state window starts.
+
+    Parameters
+    ----------
+    time: list
+        List of time instants that make up the curve
+
+    Returns
+    -------
+    int | None
+        Index at which the window starts, or None if the curve is too short to hold one
+    """
+    if len(time) < MIN_SS_WINDOW_SAMPLES:
+        return None
+
+    window_span = SS_WINDOW_FRACTION * (time[-1] - time[0])
+    window_start = int(np.searchsorted(np.asarray(time), time[-1] - window_span))
+    return min(window_start, len(time) - MIN_SS_WINDOW_SAMPLES)
+
+
 def is_stable(time: list, curve: list, thr_ss_tol: float = 0.002) -> tuple[bool, int]:
     """
     Detects whether the signal reaches a steady-state and returns the
@@ -155,6 +184,14 @@ def is_stable(time: list, curve: list, thr_ss_tol: float = 0.002) -> tuple[bool,
     Stability is defined as:
     The signal enters the tolerance band and never leaves it afterwards.
 
+    The band is centred on the mean value over the last SS_WINDOW_FRACTION of the simulated
+    time span, and the whole of that window must lie inside it. A signal that is still moving
+    when the simulation ends -- an oscillation, a drift, a late excursion -- therefore has no
+    steady state, whereas a settled signal keeps one however long the simulation runs.
+
+    Curves are in per unit, so the band never narrows below thr_ss_tol of the nominal 1 pu
+    magnitude: a signal settling near zero has no meaningful relative tolerance.
+
     Parameters
     ----------
     time: list
@@ -162,7 +199,7 @@ def is_stable(time: list, curve: list, thr_ss_tol: float = 0.002) -> tuple[bool,
     curve: list
         List of values that make up the curve
     thr_ss_tol: float
-        Tolerance defining the steady-state band around the final value.
+        Tolerance defining the steady-state band around the settled value.
 
     Returns
     -------
@@ -171,26 +208,26 @@ def is_stable(time: list, curve: list, thr_ss_tol: float = 0.002) -> tuple[bool,
     int
         Index where steady-state begins, or -1 if not reached
     """
-    atol = 0.01 * thr_ss_tol
-
     if len(time) != len(curve):
         raise ValueError("the curve values and its time series have different length")
 
-    final_value = curve[-1]
-    n = len(curve)
+    window_start = _steady_state_window_start(time)
+    if window_start is None:
+        return False, -1
 
-    for i in range(n):
-        stable = True
+    settled_value = float(np.mean(curve[window_start:]))
 
-        for j in range(i, n):
-            if not math.isclose(curve[j], final_value, rel_tol=thr_ss_tol, abs_tol=atol):
-                stable = False
-                break
+    def in_band(value: float) -> bool:
+        return math.isclose(value, settled_value, rel_tol=thr_ss_tol, abs_tol=thr_ss_tol)
 
-        if stable:
-            return True, i
+    if not all(in_band(value) for value in curve[window_start:]):
+        return False, -1
 
-    return False, -1
+    first_steady = window_start
+    while first_steady > 0 and in_band(curve[first_steady - 1]):
+        first_steady -= 1
+
+    return True, first_steady
 
 
 def theta_pi(time: list, curve: list) -> bool:

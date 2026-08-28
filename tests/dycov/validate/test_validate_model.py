@@ -92,6 +92,7 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # 43
         Compliance.NonCompliant,  # 44
         Compliance.NonCompliant,  # 45
-        Compliance.Compliant,  # 46
+        # 46 (Islanding injection) ends the simulation in a sustained +-0.9 pu power swing.
+        Compliance.NonCompliant,  # 46
         Compliance.InvalidTest,  # 47
     ] == compliance

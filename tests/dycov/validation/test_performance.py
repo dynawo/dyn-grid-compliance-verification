@@ -244,7 +244,9 @@ def test_check_timeline_ignores_the_generator_events_when_looking_for_loads():
 
 
 def test_run_common_tests_of_a_stable_power_park_module():
-    validator = _make_validator(calculated=_make_pdr_curves())
+    validator = _make_validator(
+        calculated=_make_pdr_curves(active_power=[0.5, 0.5, 0.1, 0.5, 0.5])
+    )
 
     (
         steady_p,
@@ -259,12 +261,27 @@ def test_run_common_tests_of_a_stable_power_park_module():
     ) = validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_ppm=True)
 
     assert (steady_p, steady_q, steady_v) == (True, True, True)
-    assert (first_steady_pos_p, first_steady_pos_q, first_steady_pos_v) == (4, 0, 3)
+    assert (first_steady_pos_p, first_steady_pos_q, first_steady_pos_v) == (3, 0, 3)
 
     # The internal angle is only checked for synchronous machines.
     assert stable_theta is False
     assert first_stable_pos_theta == 0
     assert pass_pi is False
+
+
+def test_run_common_tests_of_a_power_park_module_still_moving_at_the_end(monkeypatch):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    # The default active power ends on a 0.53 -> 0.5 pu step, so it never settles.
+    validator = _make_validator(calculated=_make_pdr_curves())
+
+    steady_p, first_steady_pos_p, steady_q, _, steady_v, _, _, _, _ = (
+        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_ppm=True)
+    )
+
+    assert (steady_p, steady_q, steady_v) == (False, True, True)
+    assert first_steady_pos_p == -1
+    assert logger.warnings == ["P has not reached steady state"]
 
 
 def test_run_common_tests_warns_about_every_curve_without_a_steady_state(monkeypatch):
@@ -978,7 +995,7 @@ def test_validate_a_power_park_module(tmp_path):
     assert results["time_5U_check"] is True
     assert results["compliance"] is True
     # The internal angle is not part of the steady state of a power park module.
-    assert results["first_steady_pos"] == 4
+    assert results["first_steady_pos"] == 3
     assert results["curves"] is validator._get_calculated_curves()
     assert "reference_curves" not in results
 
@@ -989,7 +1006,7 @@ def test_validate_a_model_validation_power_park_module(tmp_path):
     results = validator.validate("oc", tmp_path, "outputs", VALIDATE_EVENT_PARAMS)
 
     assert results["compliance"] is True
-    assert results["first_steady_pos"] == 4
+    assert results["first_steady_pos"] == 3
 
 
 def test_validate_a_synchronous_machine_includes_the_internal_angle(tmp_path):
@@ -1002,8 +1019,34 @@ def test_validate_a_synchronous_machine_includes_the_internal_angle(tmp_path):
     results = validator.validate("oc", tmp_path, "outputs", VALIDATE_EVENT_PARAMS)
 
     assert results["compliance"] is True
-    assert results["first_steady_pos"] == 4
+    assert results["first_steady_pos"] == 3
     assert results["reference_curves"] is validator._get_reference_curves()
+
+
+def test_validate_reports_a_power_park_module_that_never_settles_as_not_stabilized(tmp_path):
+    validator = _make_validator(
+        validations=["stabilized"],
+        calculated=_make_pdr_curves(reactive_power=[0.1, 0.1, 0.1, 0.1, 0.3]),
+        sim_type=ELECTRIC_PERFORMANCE_PPM,
+    )
+
+    results = validator.validate("oc", tmp_path, "outputs", VALIDATE_EVENT_PARAMS)
+
+    assert results["stabilized"] is False
+    assert results["compliance"] is False
+
+
+def test_validate_reports_a_settled_power_park_module_as_stabilized(tmp_path):
+    validator = _make_validator(
+        validations=["stabilized"],
+        calculated=_make_pdr_curves(active_power=[0.5, 0.5, 0.1, 0.5, 0.5]),
+        sim_type=ELECTRIC_PERFORMANCE_PPM,
+    )
+
+    results = validator.validate("oc", tmp_path, "outputs", VALIDATE_EVENT_PARAMS)
+
+    assert results["stabilized"] is True
+    assert results["compliance"] is True
 
 
 def test_validate_checks_the_disconnections_of_a_dynamic_model(monkeypatch, tmp_path):
