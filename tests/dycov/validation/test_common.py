@@ -113,6 +113,91 @@ def test_is_stable_returns_the_first_index_of_the_steady_state():
     assert index == 4
 
 
+def test_is_stable_of_a_flat_curve_starts_at_the_first_sample():
+    time = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    curve = [1.0] * 9
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    assert stable is True
+    assert index == 0
+
+
+def test_is_stable_tolerates_a_ripple_inside_the_band():
+    time = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    curve = [1.0, 1.0, 1.0, 1.0, 1.0001, 0.9999, 1.0001, 0.9999, 1.0]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    assert stable is True
+    assert index == 0
+
+
+def test_is_stable_of_a_curve_settling_near_zero():
+    time = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    curve = [0.5, 0.2, 0.0005, -0.0005, 0.0005, -0.0005, 0.0005, -0.0005, 0.0005]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    # Near zero the relative band is meaningless: the ripple is 0.05% of the nominal magnitude.
+    assert stable is True
+    assert index == 2
+
+
+def test_is_stable_ignores_a_steady_stretch_the_curve_leaves_again():
+    time = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    curve = [1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    # The band is entered twice; only the stretch that lasts until the end counts.
+    assert stable is True
+    assert index == 3
+
+
+def test_is_stable_of_a_curve_that_jumps_on_its_last_sample():
+    time = [0, 1, 2, 3, 4]
+    curve = [0.5, 0.5, 0.5, 0.53, 0.5]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    # The final sample cannot certify its own steady state.
+    assert stable is False
+    assert index == -1
+
+
+def test_is_stable_of_a_sustained_oscillation():
+    time = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    curve = [1.45, 0.55, 1.45, 0.55, 1.45, 0.55, 1.45, 0.55, 1.45, 0.55, 1.45]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    assert stable is False
+    assert index == -1
+
+
+def test_is_stable_of_a_slowly_drifting_curve():
+    time = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    curve = [1.0 + 0.02 * i for i in range(11)]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    assert stable is False
+    assert index == -1
+
+
+@pytest.mark.parametrize("time_step", [0.2, 2.0, 20.0])
+def test_is_stable_does_not_depend_on_the_simulated_time_span(time_step):
+    time = [time_step * i for i in range(11)]
+    curve = [0.5, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
+    # The same response settles at the same sample whatever the total simulated time.
+    assert stable is True
+    assert index == 2
+
+
 def test_is_stable_with_a_diverged_curve():
     time = [0, 1, 2]
     curve = [0.0, 1.0, float("nan")]
@@ -120,6 +205,17 @@ def test_is_stable_with_a_diverged_curve():
     stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
 
     # A non-finite final value can never be approached.
+    assert stable is False
+    assert index == -1
+
+
+@pytest.mark.parametrize("samples", [0, 1])
+def test_is_stable_of_a_curve_too_short_to_show_a_steady_state(samples):
+    time = list(range(samples))
+    curve = [1.0] * samples
+
+    stable, index = common.is_stable(time, curve, thr_ss_tol=0.002)
+
     assert stable is False
     assert index == -1
 

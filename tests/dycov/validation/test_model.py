@@ -645,6 +645,19 @@ def test_calculate_mean_absolute_error_for_injection_covers_both_components():
     assert results["ss_error_reactive_current_1P"] == pytest.approx(0.0)
 
 
+def test_calculate_mean_absolute_error_reports_a_curve_still_moving_as_not_stabilized():
+    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    calculated, reference = _make_mae_curves("BusPDR_BUS_Voltage")
+    calculated["BusPDR_BUS_Voltage"] = [1.0, 1.0, 1.02, 1.06]
+    results = {}
+
+    validator._ModelValidator__calculate_mean_absolute_error(
+        "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
+    )
+
+    assert results["mae_voltage_1P_stabilized"] is False
+
+
 def test_calculate_mean_absolute_error_reports_not_stabilized_when_stability_is_undecidable(
     monkeypatch,
 ):
