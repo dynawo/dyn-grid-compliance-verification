@@ -234,9 +234,17 @@ class ModelValidator(Validator):
 
             results["ramp_error"] = ramp_error
 
-    def __is_stabilized(self, time_curve: list, calculated_curve: list, thr_ss_tol: float) -> bool:
+    def __is_stabilized(
+        self, calculated_curves: pd.DataFrame, measurement_name: str, thr_ss_tol: float
+    ) -> bool:
+        # The steady state is judged over the whole post-event window: a slice starting at the
+        # settling instant is already inside the steady-state tube by construction.
         try:
-            is_stabilized, _ = common.is_stable(time_curve, calculated_curve, thr_ss_tol)
+            is_stabilized, _ = common.is_stable(
+                list(calculated_curves["time"]),
+                list(calculated_curves[measurement_name]),
+                thr_ss_tol,
+            )
         except ValueError:
             return False
 
@@ -267,7 +275,6 @@ class ModelValidator(Validator):
         )
 
         thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
-        time_curve = list(calculated_curves["time"])[res_settlin_t_pos:]
         if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
             calculated_curve = list(calculated_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
             reference_curve = list(reference_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
@@ -277,8 +284,8 @@ class ModelValidator(Validator):
                 1.0,
             )
             results["mae_voltage_1P_stabilized"] = self.__is_stabilized(
-                time_curve,
-                calculated_curve,
+                calculated_curves,
+                "BusPDR_BUS_Voltage",
                 thr_ss_tol,
             )
 
@@ -301,8 +308,8 @@ class ModelValidator(Validator):
                 1.0,
             )
             results["mae_active_power_1P_stabilized"] = self.__is_stabilized(
-                time_curve,
-                calculated_curve,
+                calculated_curves,
+                "BusPDR_BUS_ActivePower",
                 thr_ss_tol,
             )
 
@@ -326,8 +333,8 @@ class ModelValidator(Validator):
                 1.0,
             )
             results["mae_reactive_power_1P_stabilized"] = self.__is_stabilized(
-                time_curve,
-                calculated_curve,
+                calculated_curves,
+                "BusPDR_BUS_ReactivePower",
                 thr_ss_tol,
             )
 
@@ -352,8 +359,8 @@ class ModelValidator(Validator):
                 1.0,
             )
             results["mae_active_current_1P_stabilized"] = self.__is_stabilized(
-                time_curve,
-                calculated_curve,
+                calculated_curves,
+                "BusPDR_BUS_ActiveCurrent",
                 thr_ss_tol,
             )
 
@@ -377,8 +384,8 @@ class ModelValidator(Validator):
                 1.0,
             )
             results["mae_reactive_current_1P_stabilized"] = self.__is_stabilized(
-                time_curve,
-                calculated_curve,
+                calculated_curves,
+                "BusPDR_BUS_ReactiveCurrent",
                 thr_ss_tol,
             )
 
