@@ -658,6 +658,24 @@ def test_calculate_mean_absolute_error_reports_a_curve_still_moving_as_not_stabi
     assert results["mae_voltage_1P_stabilized"] is False
 
 
+def test_calculate_mean_absolute_error_judges_the_stabilization_on_the_whole_after_window():
+    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    time = [float(instant) for instant in range(21)]
+    voltage = [1.0] * 21
+    voltage[18] = 1.5
+    calculated = pd.DataFrame({"time": time, "BusPDR_BUS_Voltage": voltage})
+    reference = pd.DataFrame({"time": time, "BusPDR_BUS_Voltage": [1.0] * 21})
+    results = {}
+
+    validator._ModelValidator__calculate_mean_absolute_error(
+        "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
+    )
+
+    # The settling slice begins at the excursion and is flat from the next sample on, so it
+    # hides it; the excursion only shows up when the whole post-event window is judged.
+    assert results["mae_voltage_1P_stabilized"] is False
+
+
 def test_calculate_mean_absolute_error_reports_not_stabilized_when_stability_is_undecidable(
     monkeypatch,
 ):
