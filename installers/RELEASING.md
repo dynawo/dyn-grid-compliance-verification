@@ -11,9 +11,10 @@ The installer-related files are organized as follows:
 
 ```
 installers/
+├── prepare_release.sh        # Release build script (run from the repo root)
 ├── linux_install.sh          # Linux native installer (end-user artifact)
-├── README.MD                 # End-user installation guide
-├── MAINTAINER_GUIDE.MD       # This file
+├── README.md                 # Directory overview (points to the user docs)
+├── RELEASING.md              # This file
 ├── docker/
 │   ├── Dockerfile            # Image definition
 │   ├── build.sh              # Builds the Docker image
@@ -39,34 +40,62 @@ filesystem tarball compatible with both `wsl --import` (Windows Standalone) and
 (ENV, ENTRYPOINT) is stripped — `import_image.sh` restores it for Docker users,
 while `run_dycov_wsl.ps1` calls the entrypoint explicitly for WSL users.
 
+The package version is derived from the Git tag by `setuptools_scm`; there is no version
+number to edit by hand anywhere in the repository. This is why the release script requires
+the tag to exist **before** it runs: it builds from the tagged commit and forces the same
+version into the artifacts (`SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov`) so that installs
+performed without the Git history still report the right version.
+
 ---
 
 ## Generating a Release
 
-All steps are automated by a single script at the root of the repository:
+### 1. Create and push the tag first
 
 ```bash
-./prepare_release.sh VERSION DYNAWO_DIR
+git tag v0.9.3
+git push origin v0.9.3
+```
+
+The build script refuses to run unless HEAD is exactly on the tag and the working tree is
+clean.
+
+### 2. Run the build script from the repository root
+
+```bash
+./installers/prepare_release.sh VERSION DYNAWO_DIR [--dry-run]
 ```
 
 **Example:**
 ```bash
-./prepare_release.sh v0.9.3 /path/to/dynawo
+./installers/prepare_release.sh v0.9.3 /path/to/dynawo
 ```
+
+`--dry-run` skips the Git checks (tag, HEAD, clean tree) and is only meant for testing the
+script itself; everything else — including the Docker build — still runs.
+
+**Requirements on the build machine:** `docker`, `zip`, and `uv` (used to create the
+throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpdf`.
 
 **What the script does, step by step:**
 
 | Step | Action |
 | :--- | :--- |
+| 0 | Verifies the Git state (tag exists, HEAD on the tag, clean tree) and that every expected installer file is present. |
 | 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v1.8.0.zip` and places it in the output directory. |
-| 2 | Updates `version` in `pyproject.toml` to match `VERSION`. |
-| 3 | Copies `linux_install.sh` to the output directory, updating `TARGET_BRANCH` and `DYNAWO_SHA256SUM`. |
-| 4 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
-| 5 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |
-| 6 | Collects all end-user artifacts into the output directory. |
-| 7 | Removes the Docker images `dycov:latest` and `dycov:VERSION` from the local registry. |
+| 2 | Updates `version` in `pyproject.toml` (no-op today — the version is dynamic via `setuptools_scm`). |
+| 3 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag, injecting the forced package version and setting `DYNAWO_SHA256SUM` to the checksum of the zip from Step 1. |
+| 4 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
+| 5 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
+| 6 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |
+| 7 | Collects all end-user artifacts into the output directory and zips `tools/dynawo_par` into `dycov_par_tool.zip`. |
+| 8 | Removes the Docker images `dycov:latest` and `dycov:VERSION` from the local registry. |
 
 **Output directory:** `./release_VERSION/`
+
+**Manuals:** they are *not* copied into the output directory. They are left under
+`docs/manual/build/` (`html/` and `latex/dycov.pdf`) — upload the PDF to the release if the
+manual changed for this version.
 
 ---
 
@@ -99,9 +128,12 @@ library only), it runs with any Python 3 — e.g.
 
 ## Post-Release Checklist
 
-1. **Commit and push** the `pyproject.toml` change before creating the GitHub release
-   (the script reminds you of this at the end).
-2. **Create the Git tag** matching `VERSION` (e.g., `v0.9.3`) and push it.
-3. **Create the GitHub release** from that tag and upload all files from `release_VERSION/`.
-4. Verify that `linux_install.sh` can download `Dynawo_omc_v1.8.0.zip` from the new
+1. **Create the GitHub release** from the tag and upload all files from `release_VERSION/`
+   (plus `docs/manual/build/latex/dycov.pdf` if the manual is published with the release).
+2. Verify that `linux_install.sh` can download `Dynawo_omc_v1.8.0.zip` from the new
    release URL before announcing the release publicly.
+3. Note that the loose `*.sh` artifacts (`import_image.sh`, `run_dycov_docker.sh`,
+   `linux_install.sh`) lose their exec bit when downloaded from GitHub; end users must run
+   `chmod +x` first. This is documented in
+   `docs/installation/using_the_provided_image.md` (section 3.2) and in the manual's
+   usage/installation page.
