@@ -101,39 +101,90 @@ def anonymize(
     )
 
 
+def _interior_times(t_grid: np.ndarray, min_points: int) -> np.ndarray:
+    """Chooses times to insert into `t_grid` so that it reaches `min_points` samples.
+
+    The new times go inside the longest intervals, splitting each into equal parts.
+    Zero-length intervals admit no interior point and are left alone.
+
+    Parameters
+    ----------
+    t_grid: np.ndarray
+        Existing time grid, sorted and possibly with duplicated timestamps.
+    min_points: int
+        Number of samples the grid must reach.
+
+    Returns
+    -------
+    np.ndarray
+        Sorted times to insert, empty if no interval can be subdivided.
+    """
+    lengths = np.diff(t_grid)
+    splits = {index: 0 for index, length in enumerate(lengths) if length > 0.0}
+    if not splits:
+        return np.array([])
+
+    for _ in range(min_points - len(t_grid)):
+        widest = max(splits, key=lambda index: lengths[index] / (splits[index] + 1))
+        splits[widest] += 1
+
+    return np.array(
+        [
+            time
+            for index, count in sorted(splits.items())
+            if count
+            for time in np.linspace(t_grid[index], t_grid[index + 1], count + 2)[1:-1]
+        ]
+    )
+
+
 def _ensure_min_points(df: pd.DataFrame, min_points: int = 10) -> pd.DataFrame:
+    """Ensures that the curve has at least `min_points` samples.
+
+    Too few samples make the interpolation applied downstream drift, turning a steady tail
+    into a slowly rising or falling one. The curve is densified, not resampled: existing
+    samples are kept untouched and new ones are interpolated in between, so a discontinuity
+    encoded as a pair of duplicated timestamps survives.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Curve to densify, with a "time" column.
+    min_points: int
+        Minimum number of samples of the returned curve.
+
+    Returns
+    -------
+    pd.DataFrame
+        The curve with at least `min_points` samples, or the input curve when it cannot be
+        densified (no samples, or a single instant repeated).
     """
-    Ensures that the curve has at least `min_points` samples.
-    If not, performs a linear resampling over the existing time range.
-    """
-    if len(df) >= min_points:
+    if len(df) >= min_points or df.empty:
         return df
 
-    if len(df) < 2:
-        # No se puede interpolar → devolver constante o NaNs
-        t_start = df["time"].iloc[0]
-        t_new = np.linspace(t_start, t_start + 1e-6, min_points)
+    t_grid = df["time"].to_numpy(dtype=float)
+    if len(df) == 1:
+        t_new = np.linspace(t_grid[0], t_grid[0] + 1e-6, min_points)
+        constants = {col: df[col].iloc[0] * np.ones(min_points) for col in df.columns}
+        return pd.DataFrame({**constants, "time": t_new})[df.columns]
 
-        new_df = {"time": t_new}
-        for col in df.columns:
-            if col == "time":
-                continue
-            val = df[col].iloc[0] if len(df) == 1 else np.nan
-            new_df[col] = val * np.ones(min_points)
+    t_interior = _interior_times(t_grid, min_points)
+    if t_interior.size == 0:
+        dycov_logging.get_logger("Anonymizer").warning(
+            f"Cannot densify a curve whose {len(df)} samples share the same timestamp; "
+            f"leaving it below the {min_points}-sample minimum."
+        )
+        return df
 
-        return pd.DataFrame(new_df)
-
-    # Interpolación normal
-    t_old = df["time"].to_numpy()
-    t_new = np.linspace(t_old[0], t_old[-1], min_points)
-
-    new_df = {"time": t_new}
+    order = np.argsort(np.concatenate((t_grid, t_interior)), kind="stable")
+    densified = {"time": np.concatenate((t_grid, t_interior))[order]}
     for col in df.columns:
         if col == "time":
             continue
-        new_df[col] = np.interp(t_new, t_old, df[col].to_numpy())
+        values = df[col].to_numpy(dtype=float)
+        densified[col] = np.concatenate((values, np.interp(t_interior, t_grid, values)))[order]
 
-    return pd.DataFrame(new_df)
+    return pd.DataFrame(densified)[df.columns]
 
 
 def _get_files(path: Path, extensions: List[str]) -> List[Path]:
