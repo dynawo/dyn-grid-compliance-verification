@@ -205,7 +205,7 @@ the image export:
 
 .. code-block:: console
 
-   $DycovPath  = 'ENV PATH=\"/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+   $DycovPath  = 'ENV PATH=\"/opt/dynawo_install/dynawo:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
    $DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
 
 Import the image:
