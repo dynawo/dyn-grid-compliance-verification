@@ -76,7 +76,7 @@ mkdir "$ROOT_DIR/dist"
 echo "Building Python package..."
 (
     cd "$ROOT_DIR"
-    uv build --out-dir dist
+    uv build --wheel --out-dir dist
 )
 
 ########################################
