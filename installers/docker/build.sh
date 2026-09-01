@@ -141,9 +141,12 @@ cp "$PKG" "$TEMP_DIR/"
 # 5. Copy examples
 ########################################
 
+# Staged from the Git index, not the working tree: artifacts ignored by Git
+# (Results*/ from a local run) would otherwise be shipped inside the image.
 echo "Copying examples..."
-if [[ -d "$ROOT_DIR/examples" ]]; then
-    cp -a "$ROOT_DIR/examples/"* "$EXAMPLES_DIR/" 2>/dev/null || true
+if ! git -C "$ROOT_DIR" archive HEAD examples | tar -x -C "$TEMP_DIR"; then
+    echo "ERROR: could not stage examples from Git."
+    exit 1
 fi
 
 
@@ -152,11 +155,8 @@ fi
 ########################################
 
 echo "Copying standalone tools..."
-if [[ -d "$ROOT_DIR/tools/dynawo_par" ]]; then
-    cp -a "$ROOT_DIR/tools/dynawo_par" "$TOOLS_DIR/"
-    find "$TOOLS_DIR" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-else
-    echo "ERROR: tools/dynawo_par not found at $ROOT_DIR/tools/dynawo_par"
+if ! git -C "$ROOT_DIR" archive HEAD tools/dynawo_par | tar -x -C "$TOOLS_DIR" --strip-components=1; then
+    echo "ERROR: could not stage tools/dynawo_par from Git."
     exit 1
 fi
 

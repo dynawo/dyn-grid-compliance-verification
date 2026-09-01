@@ -99,6 +99,15 @@ else
         error "Working tree is not clean. Commit or stash changes before releasing."
     fi
 
+    # Git-ignored leftovers under examples/ are invisible to the check above, and a
+    # stale Results/ from a local run means the examples on disk are not what the
+    # release describes.
+    STALE_EXAMPLES=$(git status --porcelain --ignored -- examples | grep "^!! " || true)
+    if [[ -n "$STALE_EXAMPLES" ]]; then
+        echo "$STALE_EXAMPLES" >&2
+        error "Git-ignored artifacts found under examples/ (see above). Remove them before releasing."
+    fi
+
     info "Git state OK:"
     info " - Tag: $CURRENT_TAG"
     info " - Commit: $(git rev-parse --short HEAD)"
@@ -241,8 +250,7 @@ cp "$RUN_WSL_PS1"     "$OUTPUT_DIR/run_dycov_wsl.ps1"
 # (installers/docker/build.sh), so the zip and the image ship identical content.
 rm -f "$OUTPUT_DIR/dycov_par_tool.zip"
 TOOL_STAGE=$(mktemp -d)
-cp -a "$TOOLS_DIR" "$TOOL_STAGE/"
-find "$TOOL_STAGE" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+git -C "$REPO_ROOT" archive HEAD tools/dynawo_par | tar -x -C "$TOOL_STAGE" --strip-components=1
 ( cd "$TOOL_STAGE" && zip -qr "$OUTPUT_DIR/dycov_par_tool.zip" dynawo_par )
 rm -rf "$TOOL_STAGE"
 info "Bundled standalone tool: dycov_par_tool.zip"
