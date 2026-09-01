@@ -29,16 +29,26 @@ Before starting, the following is assumed:
 
 - DyCoV is installed and accessible from the command line.
 - The `dycov` command is available.
-- You are working in a terminal with access to the DyCoV repository.
+- You are working in a terminal with access to the DyCoV examples (see section 3).
 
 This tutorial does **not** explain installation steps
 or input preparation details.
 
 ---
 
-## 3. Repository structure
+## 3. Where the examples live
 
-All examples used in this tutorial are located under the `examples/` directory.
+Every installation method ships the examples used in this tutorial; where they land
+depends on how DyCoV was installed:
+
+| Installation | Examples directory |
+| :--- | :--- |
+| Distribution image (WSL / Docker) | `~/examples` |
+| Native Linux | `<install_dir>/examples` |
+| Clone of the source repository | `examples/` at the repository root |
+
+The commands below are run from the directory that contains `examples/`: your home
+directory in the distribution image, `<install_dir>` in a native installation.
 
 Typical structure:
 
@@ -113,7 +123,7 @@ ready-to-run Dynawo example.
 
 ### 4.1 Go to an RMS example
 
-From the root of the DyCoV repository:
+From the directory that contains `examples/`:
 
 ```bash
 cd examples/Model/Wind/WECC4B
@@ -174,7 +184,7 @@ using a single Dynawo model.
 
 ### 5.1 Go to a performance example
 
-From the repository root:
+From the directory that contains `examples/`:
 
 ```bash
 cd examples/Performance/Single/WECC4B
@@ -236,7 +246,7 @@ No RMS simulation or reference curves are involved.
 
 ### 6.1 Go to a GFM example
 
-From the repository root:
+From the directory that contains `examples/`:
 
 ```bash
 cd examples/GFM/Overdamped
