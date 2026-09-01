@@ -891,7 +891,7 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
 
 def _get_generator_ppc_local(parset, nsmap, lib):
     _, ppc_local = _get_parameter(parset, nsmap, lib, "PPCLocal")
-    return ppc_local.lower() == "true" if ppc_local is not None else False
+    return ppc_local.lower() == "true" if ppc_local is not None else True
 
 
 def _get_generator_converter_lv_control(parset, nsmap, lib):

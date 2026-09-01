@@ -689,3 +689,88 @@ def test_set_parameter_repeated_create_updates_instead_of_duplicating():
 
     assert len(parset) == 1
     assert parset[0].get("value") == "-0.75"
+
+
+def test_get_generator_ppc_local_reads_a_declared_true():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "true"})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
+    )
+
+    assert ppc_local is True
+
+
+def test_get_generator_ppc_local_reads_a_declared_false():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "false"})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
+    )
+
+    assert ppc_local is False
+
+
+def test_get_generator_ppc_local_defaults_to_true_when_the_parameter_is_absent():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "IECWT4ACurrentSource2015"
+    )
+
+    assert ppc_local is True
+
+
+def test_get_generator_converter_lv_control_reads_a_declared_false():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WTG4B_ConverterLVControl": "false"})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert converter_lv_control is False
+
+
+def test_get_generator_converter_lv_control_defaults_to_true_when_absent():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert converter_lv_control is True
+
+
+def test_append_generator_takes_ppc_local_from_the_par_file():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "WT4BWeccCurrentSource", "parGen")
+    _add_connect(dyd_root, "Wind_Turbine", "WT4B_terminal", "StepUp_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "false"})
+    generators = []
+
+    model_parameters._append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert len(generators) == 1
+    assert generators[0].ppc_local is False
+    assert generators[0].terminals[0].connected_equipment == "StepUp_Xfmr"
+
+
+def test_append_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(
+        dyd_root, "Wind_Turbine", "IECWT4ACurrentSource2015", "parGen"
+    )
+    _add_connect(dyd_root, "Wind_Turbine", "WT4A_terminal", "StepUp_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {})
+    generators = []
+
+    model_parameters._append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert generators[0].ppc_local is True
