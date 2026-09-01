@@ -379,7 +379,7 @@ The following roadmap outlines the main development directions currently guiding
 * ~~Migration of initialization layer to pypowsybl~~ — *postponed — Dynawo release-cycle blocker ([details](docs/design/Dynawo_PyPowsybl_feasibility.md))*
 * ~~Dynamic generation of topology schematics in reports~~ — *postponed — depends on pypowsybl*
 * ~~Expanded test coverage and typing enforcement~~ — *available since v1.1.0*
-* ~~Documentation and tutorials~~ — *available since v1.1.0*
+* ~~Documentation and tutorials~~ — *available since v1.1.0, fully revised in v1.2.0*
 
 ### Axis 3 — Consistency with DTR updates
 
