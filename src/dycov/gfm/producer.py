@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# (c) 2025 RTE
+# (c) 2023/24 RTE
 # Developed by Grupo AIA
 #     marinjl@aia.es
 #     omsg@aia.es
 #     demiguelm@aia.es
-#
 
 import configparser
 import re
@@ -16,55 +14,47 @@ from dycov.model.producer import Producer
 
 
 class GFMProducer(Producer):
-    """
-    A class used to represent a producer parsed from an INI configuration file.
-
-    This class extends the base Producer class, providing specific methods to
-    locate, read, and access producer-related data required for Grid Forming (GFM)
-    calculations.
-    """
+    """Represents a producer parsed from an INI configuration file."""
 
     def __init__(self, producer_ini: Path) -> None:
-        """Initializes the GFMProducer with the path to the producer INI file.
+        """
+        Initializes the GFMProducer with the given configuration file.
 
         Parameters
         ----------
         producer_ini : Path
-            The absolute or relative path pointing to the producer INI file.
+            The file path to the producer's INI configuration.
         """
         super().__init__(None, producer_ini)
         self._config = self.__read_producer_ini()
 
     def get_producer_path(self) -> Path:
         """
-        Retrieves the base path to the producer INI file.
+        Retrieves the absolute path to the producer's INI file.
 
         Returns
         -------
         Path
-            The resolved path to the directory or file representing the producer INI.
+            The absolute path to the INI file.
         """
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
-        Retrieves the filenames associated with the producer model.
-
-        This method scans the producer path for INI files and returns a sorted
-        list of their stem names (filenames without extensions).
+        Returns a list of INI filenames found in the producer's directory.
 
         Parameters
         ----------
         zone : int, optional
-            The zone identifier to test, primarily used for model validation.
-            Defaults to 0.
+            The network zone identifier. Defaults to 0.
 
         Returns
         -------
         list[str]
-            A sorted list of filenames (stems) corresponding to the INI files found.
+            A sorted list of configuration filename stems.
         """
-        pattern = re.compile(r".*.[iI][nN][iI]")
+        # Case-insensitive regex to capture both .ini and .INI extensions
+        pattern = re.compile(r".*\.[iI][nN][iI]")
         return sorted(
             [
                 file.stem
@@ -75,83 +65,65 @@ class GFMProducer(Producer):
 
     def get_sim_type_str(self) -> str:
         """
-        Retrieves a string identifier representing the type of validation being executed.
+        Retrieves the simulation type identifier.
 
         Returns
         -------
         str
-            A static string literal 'gfm'.
+            The simulation string identifier (e.g., "gfm").
         """
         return "gfm"
 
     def set_zone(self, zone: int, filename: str) -> None:
         """
-        Dummy method to satisfy interface requirements.
+        Sets the active zone and filename.
 
         Parameters
         ----------
         zone : int
             The zone identifier.
         filename : str
-            The name of the file.
+            The name of the file to associate.
         """
         pass
 
     def get_config(self) -> configparser.ConfigParser:
         """
-        Retrieves the loaded producer settings required for GFM calculations.
+        Retrieves the parsed configuration object.
 
         Returns
         -------
         configparser.ConfigParser
-            The parsed configuration object containing all producer settings.
+            The loaded configuration parser instance.
         """
         return self._config
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """
-        Reads and parses the producer INI file.
-
-        This private method handles the internal logic of locating the INI file
-        matching the specific pattern and loading it into a ConfigParser object.
+        Locates and parses the producer's INI configuration file.
 
         Returns
         -------
         configparser.ConfigParser
-            The parsed configuration object ready for attribute retrieval.
+            The populated configuration parser.
 
         Raises
         ------
         FileNotFoundError
-            If no file matching the INI pattern is found within the specified path.
+            If the INI file cannot be located in the directory.
         """
 
         def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
-            """
-            Helper function to locate the producer INI file path.
-
-            Parameters
-            ----------
-            path : Path
-                The directory path to search within.
-            pattern : re.Pattern
-                The compiled regular expression pattern used to match the filename.
-
-            Returns
-            -------
-            Path
-                The full resolved path to the located producer INI file.
-            """
             for file in path.resolve().iterdir():
                 if pattern.match(str(file)):
                     return path.resolve() / file
             raise FileNotFoundError("Producer INI file not found.")
 
-        # Compile pattern to match files with .ini or .INI extensions
-        pattern_ini = re.compile(r".*.[iI][nN][iI]")
+        pattern_ini = re.compile(r".*\.[iI][nN][iI]")
         producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
 
-        # Initialize ConfigParser, ensuring '#' is recognized as an inline comment prefix
+        # Allow inline comments starting with '#' in the INI file
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(producer_ini_path)
+
         return producer_config

@@ -3,9 +3,11 @@ Results
 =======
 
 After each run, DyCoV writes all its outputs to a ``Results/`` directory
-created in the working directory. Everything is organized to make it easy to
-find what you need: a quick summary at the top, detailed per-PCS reports, and
-the raw data and simulation files for each individual test case.
+created next to the input: inside the directory that contains the producer
+model, the producer curves, or the GFM input file, depending on the command.
+Use ``-o`` to choose a different location. Everything is organized to make it
+easy to find what you need: a quick summary at the top, detailed per-PCS
+reports, and the raw data and simulation files for each individual test case.
 
 
 Organization of the Results folder
@@ -33,14 +35,12 @@ Reports
 
 The ``Reports/`` folder contains:
 
-* ``summary_report.pdf`` — a concise summary of all PCS results: which tests
-  passed, which failed, and the key compliance metrics.
-* ``report_*.pdf`` — one detailed report per PCS, with full data tables,
-  graphs, and compliance analysis for each Operating Condition.
-* ``full_report.pdf`` — all the detailed reports concatenated into a single
-  document, useful for submission or archiving.
+* ``report.pdf`` — the full compliance report: a summary section with the
+  overall result of every executed test, followed by one detailed chapter per
+  PCS with data tables, graphs, and the compliance analysis of each Operating
+  Condition.
 * ``HTML/`` — one HTML file per test case, containing interactive versions of
-  the same figures shown in the PDF reports. These are particularly useful for
+  the same figures shown in the PDF report. These are particularly useful for
   exploring the curves in detail, zooming in on specific time windows, or
   comparing simulated and reference responses side by side.
 
@@ -72,7 +72,10 @@ Each OC folder contains the data generated for that specific test:
     OC Results contents
 
 * **CSV files** — the calculated curves and, when applicable, the reference
-  curves, ready for post-processing or comparison in external tools.
+  curves, ready for post-processing or comparison in external tools. In
+  Zone 1, the connection-bus columns are saved under the
+  ``InternalNode1_BUS_*`` naming — *PDR* is reserved for the real connection
+  point.
 * **Dynawo files** (``*.dyd``, ``*.par``, ``*.jobs``, ``*.crv``) — the
   complete model used for the simulation, including both the TSO's grid-side
   model and the producer's model. These files are useful for debugging or for

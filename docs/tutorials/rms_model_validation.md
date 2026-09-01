@@ -1,6 +1,6 @@
 # RMS model validation with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** RMS (phasor) model validation according to RTE PCS‑I16, including
 Zone 1 / Zone 3 validation, required inputs, execution workflow and result
 interpretation for both PPM and BESS installations.
@@ -135,13 +135,12 @@ Typical structure:
 
 ```text
 ReferenceCurves/
-└── <Technology>/
-    └── Producer/
-        ├── CurvesFiles.ini
-        ├── PCS_RTE-I16z1*.csv
-        ├── PCS_RTE-I16z1*.dict
-        ├── PCS_RTE-I16z3*.csv
-        └── PCS_RTE-I16z3*.dict
+└── Producer/
+    ├── CurvesFiles.ini
+    ├── PCS_RTE-I16z1*.csv
+    ├── PCS_RTE-I16z1*.dict
+    ├── PCS_RTE-I16z3*.csv
+    └── PCS_RTE-I16z3*.dict
 ```
 
 Notes:
@@ -203,12 +202,12 @@ Exact structure:
 ```text
 ProducerCurves/
 └── <Technology>/
-    └── Producer/
-        ├── CurvesFiles.ini
-        ├── PCS_RTE-I16z1*.csv
-        ├── PCS_RTE-I16z1*.dict
-        ├── PCS_RTE-I16z3*.csv
-        └── PCS_RTE-I16z3*.dict
+    ├── Producer/
+    │   ├── CurvesFiles.ini
+    │   ├── PCS_RTE-I16z1*.csv
+    │   ├── PCS_RTE-I16z1*.dict
+    │   ├── PCS_RTE-I16z3*.csv
+    │   └── PCS_RTE-I16z3*.dict
     ├── Zone1/
     │   └── Producer.ini
     └── Zone3/
@@ -251,9 +250,8 @@ Zone 1 tests validate the intrinsic dynamic behavior of the unit.
 For **PPM**, this includes:
 
 - transient and permanent three‑phase faults,
-- voltage dips with defined depth and duration,
-- active and reactive power steps,
-- voltage steps and frequency ramps,
+- setpoint steps in active power, reactive power and voltage,
+- grid voltage rises and drops (imposed by the network, no setpoint change),
 - tests under different SCR conditions.
 
 For **BESS**, the same structure applies, with operating points that explicitly
@@ -303,14 +301,23 @@ dycov validate
 
 ### Example using Dynawo
 
+From a case directory containing the model and its reference curves:
+
 ```bash
+cd examples/Model/Wind/WECC4B
 dycov validate ReferenceCurves/ -m Dynawo/
 ```
 
 ### Example using producer curves
 
+`-c` must point at the case directory — the one containing `Producer/` and the
+per-zone `Zone1/`/`Zone3/` folders. Since the producer-curves example carries
+no reference curves of its own, the reference here is borrowed from the WECC4B
+example:
+
 ```bash
-dycov validate ReferenceCurves/ -c ProducerCurves/
+cd examples/Model
+dycov validate Wind/WECC4B/ReferenceCurves/ -c ProducerCurves/PPM/
 ```
 
 ---
@@ -321,7 +328,8 @@ dycov validate ReferenceCurves/ -c ProducerCurves/
 > DyCoV applies a standardized signal processing pipeline (time alignment,
 > resampling, filtering, and exclusion windows) before computing validation KPIs.
 >  
-> For details, see the *2.3.4 Curve Comparison Methodology* section in the User Manual.
+> For details, see the *Comparison methodology* section above and the
+> *Understanding DyCoV reports* chapter of the User Manual.
 
 A successful RMS model validation produces the following outputs:
 - a consolidated **PDF report** summarizing compliance results,
@@ -330,10 +338,12 @@ A successful RMS model validation produces the following outputs:
 
 In the report:
 - each test is evaluated independently,
-- results are classified as:
-  - **Compliant**
-  - **Non-compliant**
-- compliance is determined based on PCS‑I16 thresholds.
+- each test that could be evaluated is classified as **Compliant** or
+  **Non-compliant**, based on the PCS‑I16 thresholds,
+- a test that could not be evaluated carries one of ten other statuses
+  explaining why (for example *Failed simulation*, *Missing some reference
+  curves*, *Simulation time out* or *Not applicable test*); the full list is
+  described in [Understanding DyCoV reports](understanding_reports.md).
 
 ---
 

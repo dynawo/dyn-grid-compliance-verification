@@ -37,7 +37,7 @@ fi
 # that were lost during 'docker export'.
 do_import() {
     docker import \
-        --change "ENV PATH=/opt/dynawo_install/dynawo:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+        --change "ENV PATH=/opt/dynawo_install/dynawo:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
         --change "ENV DEBIAN_FRONTEND=noninteractive" \
         --change "ENTRYPOINT [\"/start_dycov.sh\"]" \
         - "$TARGET_IMAGE"
@@ -74,7 +74,9 @@ fi
 
 if [ $? -eq 0 ]; then
     colormsg "Success! Image '$TARGET_IMAGE' created."
-    colormsg "You can now run the tool using './run_dycov_docker.sh .'"
+    colormsg "You can now run the tool from your working directory using:"
+    colormsg "  ./run_dycov_docker.sh -u \$(id -u) -g \$(id -g) ."
+    colormsg "The -u/-g options keep the generated files owned by you instead of root."
 else
     errormsg "Import failed."
     exit 1

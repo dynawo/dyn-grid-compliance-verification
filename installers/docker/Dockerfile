@@ -10,11 +10,10 @@ ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
 ARG dycov_TOOLS=tools
 ARG dycov_TUTORIALS=tutorials
+ARG dycov_INSTALLATION=installation
 ARG DYNAWO_DIR_NAME=dynawo_build
 
 ENV DEBIAN_FRONTEND=noninteractive
-# Add uv's install directory to the PATH
-ENV PATH="/root/.local/bin:${PATH}"
 
 # First layer:
 #   - Update the base debian dist.
@@ -26,7 +25,8 @@ RUN apt-get update && apt-get -y upgrade \
      texlive-science texlive-lang-french texlive-bibtex-extra biber make \
      g++ \
      cmake \
-  && curl -LsSf https://astral.sh/uv/install.sh | sh
+  && curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh \
+  && uv --version
 
 # Second layer:
 #   - Install the dycov tool itself using uv.
@@ -42,9 +42,10 @@ COPY ./$dycov_EXAMPLES /opt/dycov/examples
 COPY ./$dycov_TOOLS /opt/dycov/tools
 
 # Copy the user-facing tutorials (Markdown). Kept as-is so their relative
-# cross-links work. docs/installation is intentionally not shipped: it is a
-# pre-install guide with no value inside an already-installed image.
+# cross-links work, including the link from tutorials/README.md to
+# ../installation/.
 COPY ./$dycov_TUTORIALS /opt/dycov/tutorials
+COPY ./$dycov_INSTALLATION /opt/dycov/installation
 
 # Third layer:
 #   - Install Dynawo from the host path provided at build time.

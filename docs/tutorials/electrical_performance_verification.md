@@ -1,6 +1,6 @@
 # Electrical performance verification with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Electrical performance verification according to RTE dynamic PCSs,
 including applicable PCSs by technology, required inputs, execution workflows,
 and result interpretation using Dynawo simulations or producer curves.
@@ -15,7 +15,7 @@ compliance of an electrical installation with **RTE-defined dynamic performance 
 as specified in the applicable PCSs (e.g. I2, I5, I6, I7, I10).
 
 Unlike RMS model validation:
-- **reference curves are not used**,
+- **no reference curves are required**,
 - **there is no distinction between Zone 1 and Zone 3**.
 
 Validation is always performed at the **installation level**, typically at the
@@ -34,7 +34,8 @@ described in the **“Preparing inputs”** tutorial.
 At this stage, it is important to understand that electrical performance verification
 does not rely on curve-to-curve comparison. Each test evaluates whether the installation 
 response satisfies the corresponding grid-code requirements, and results are classified as
-compliant or non-compliant based on PCS-defined thresholds.
+**Compliant**, **Non-compliant** or one of the other report statuses, based on
+PCS-defined thresholds.
 
 ---
 
@@ -107,7 +108,7 @@ The producer response is obtained from:
 
 Electrical performance verification requires a **producer response**.
 
-No reference curves are involved.
+No reference curves are required.
 
 The producer response can be provided using one of the two methods described
 in the following sections.
@@ -220,7 +221,10 @@ dycov performance
 
 ### 8.2 Example using Dynawo
 
+From a case directory containing the model:
+
 ```bash
+cd examples/Performance/Single/WECC4B
 dycov performance -m Dynawo/
 ```
 
@@ -228,8 +232,12 @@ dycov performance -m Dynawo/
 
 ### 8.3 Example using producer curves
 
+`-c` must point at the case directory — the one containing `Producer/` and
+`Producer.ini`:
+
 ```bash
-dycov performance -c ProducerCurves/
+cd examples/Performance
+dycov performance -c ProducerCurves/PPM/
 ```
 
 ---
@@ -249,10 +257,12 @@ Each PCS and its associated tests are evaluated and reported independently.
 
 In the report:
 - each test is evaluated independently,
-- results are classified as:
-  - **Compliant**
-  - **Non-compliant**
-- compliance is determined based on PCS-defined thresholds.
+- each test that could be evaluated is classified as **Compliant** or
+  **Non-compliant**, based on the PCS-defined thresholds,
+- a test that could not be evaluated carries one of ten other statuses
+  explaining why (for example *Failed simulation* or *Simulation time out*);
+  the full list is described in
+  [Understanding DyCoV reports](understanding_reports.md).
 
 ---
 
@@ -267,7 +277,7 @@ For a detailed description of the report structure, see:
 
 The key specificities of electrical performance verification reports are:
 
-- No reference curves are used  
+- No reference curves are needed  
 - Compliance is based on absolute performance criteria  
 - Indicators are physical (e.g. response times, settling times, stability)  
 - Each PCS defines its own criteria and thresholds  
@@ -281,10 +291,11 @@ Results should always be interpreted using both:
 
 ## 11. Common clarifications
 
-- Reference curves must **not** be provided.
 - Zone 1 / Zone 3 separation does **not** apply.
 - A single `Producer.ini` is always used.
-- Dynawo and producer curves are mutually exclusive within a case.
+- Dynawo and producer curves can be combined within a case: when both are given,
+  compliance is evaluated on the simulated curves only, and the producer curves
+  are drawn in the figures as an overlay.
 
 ---
 

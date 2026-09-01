@@ -32,6 +32,23 @@ def _write_xml(root, path):
     )
 
 
+def _add_parset(par_root, par_id, values):
+    parset = etree.SubElement(par_root, f"{{{_NS}}}set", id=par_id)
+    for name, value in values.items():
+        etree.SubElement(parset, f"{{{_NS}}}par", name=name, value=value)
+    return parset
+
+
+def _add_bbmodel(dyd_root, model_id, lib, par_id):
+    return etree.SubElement(
+        dyd_root, f"{{{_NS}}}blackBoxModel", id=model_id, lib=lib, parId=par_id
+    )
+
+
+def _add_connect(dyd_root, id1, var1, id2, var2):
+    etree.SubElement(dyd_root, f"{{{_NS}}}connect", id1=id1, var1=var1, id2=id2, var2=var2)
+
+
 def test_get_event_times_normal(tmp_path):
     root = _make_root()
     etree.SubElement(root, f"{{{_NS}}}par", name="fault_tBegin", value="1.5")
@@ -80,6 +97,188 @@ def test_get_parset_missing_id_raises():
         model_parameters._get_parset(par_root, "missing", {"ns": _NS})
 
 
+def test_get_parset_duplicated_id_raises():
+    par_root = _make_root()
+    _add_parset(par_root, "dup", {})
+    _add_parset(par_root, "dup", {})
+
+    with pytest.raises(ValueError, match="Multiple parameter sets with id='dup' were found"):
+        model_parameters._get_parset(par_root, "dup", {"ns": _NS})
+
+
+def test_get_line_values_missing_parset_raises():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "IntNetwork_Line", "Line", "missing")
+    par_root = _make_root()
+
+    with pytest.raises(ValueError, match="parameter set with id='missing' was not found"):
+        model_parameters._get_line_values(dyd_root, par_root, None, None)
+
+
+def test_get_line_values_reads_parameters():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "IntNetwork_Line", "Line", "parLine")
+    _add_connect(dyd_root, "IntNetwork_Line", "line_terminal1", "BusPDR", "bus_terminal")
+    _add_connect(dyd_root, "IntNetwork_Line", "line_terminal2", "StepUp_Xfmr", "term1")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parLine",
+        {"line_RPu": "0.01", "line_XPu": "0.1", "line_BPu": "0.02", "line_GPu": "0.005"},
+    )
+
+    lines = model_parameters._get_line_values(dyd_root, par_root, None, None)
+
+    assert len(lines) == 1
+    line = lines[0]
+    assert line.id == "IntNetwork_Line"
+    assert line.lib == "Line"
+    assert line.par_id == "parLine"
+    assert line.r == pytest.approx(0.01)
+    assert line.x == pytest.approx(0.1)
+    assert line.b == pytest.approx(0.02)
+    assert line.g == pytest.approx(0.005)
+    assert line.terminals[0].connected_equipment == "BusPDR"
+    assert line.terminals[1].connected_equipment == "StepUp_Xfmr"
+
+
+def test_get_line_values_applies_provided_impedances():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "IntNetwork_Line", "Line", "parLine")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parLine",
+        {"line_RPu": "0.01", "line_XPu": "{{line_XPu}}", "line_BPu": "0", "line_GPu": "0"},
+    )
+
+    lines = model_parameters._get_line_values(dyd_root, par_root, 0.02, 0.35)
+
+    assert lines[0].r == pytest.approx(0.02)
+    assert lines[0].x == pytest.approx(0.35)
+
+
+def test_get_transformer_values_missing_parset_raises():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "StepUp_Xfmr", "TransformerFixedRatio", "missing")
+    par_root = _make_root()
+
+    with pytest.raises(ValueError, match="parameter set with id='missing' was not found"):
+        model_parameters._get_transformer_values(dyd_root, par_root, s_nref=90.0)
+
+
+def test_get_transformer_values_reads_pu_parameters():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "StepUp_Xfmr", "TransformerFixedRatio", "parXfmr")
+    _add_connect(dyd_root, "StepUp_Xfmr", "transformer_terminal1", "IntNetwork_Line", "term2")
+    _add_connect(dyd_root, "StepUp_Xfmr", "transformer_terminal2", "Wind_Turbine", "term")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parXfmr",
+        {
+            "transformer_RPu": "0.003",
+            "transformer_XPu": "0.027",
+            "transformer_BPu": "0.001",
+            "transformer_GPu": "0.0",
+            "transformer_rTfoPu": "0.9574",
+        },
+    )
+
+    transformers = model_parameters._get_transformer_values(dyd_root, par_root, s_nref=90.0)
+
+    assert len(transformers) == 1
+    xfmr = transformers[0]
+    assert xfmr.id == "StepUp_Xfmr"
+    assert xfmr.par_id == "parXfmr"
+    assert xfmr.r == pytest.approx(0.003)
+    assert xfmr.x == pytest.approx(0.027)
+    assert xfmr.b == pytest.approx(0.001)
+    assert xfmr.g == pytest.approx(0.0)
+    assert xfmr.r_tfo == pytest.approx(0.9574)
+    assert xfmr.alpha_tfo == pytest.approx(0.0)
+    assert xfmr.terminals[0].connected_equipment == "IntNetwork_Line"
+    assert xfmr.terminals[1].connected_equipment == "Wind_Turbine"
+
+
+def test_convert_transformer_units_scales_percent_values(monkeypatch):
+    dynawo_names = {
+        "Resistance": "transformer_R",
+        "Reactance": "transformer_X",
+        "Conductance": "transformer_G",
+        "Susceptance": "transformer_B",
+        "SNom": "transformer_SNom",
+    }
+    translator_stub = SimpleNamespace(
+        get_dynawo_variable=lambda lib, name: (1, dynawo_names[name])
+    )
+    monkeypatch.setattr(model_parameters, "dynawo_translator", translator_stub)
+    par_root = _make_root()
+    parset = _add_parset(
+        par_root,
+        "parXfmr",
+        {
+            "transformer_R": "0.5",
+            "transformer_X": "12.0",
+            "transformer_G": "0.0",
+            "transformer_B": "2.0",
+            "transformer_SNom": "45.0",
+        },
+    )
+
+    r, x, g, b = model_parameters._convert_transformer_units(
+        [parset], {"ns": _NS}, "AnyLib", s_nref=90.0
+    )
+
+    assert r == pytest.approx(2.0 * 0.5 / 100)
+    assert x == pytest.approx(2.0 * 12.0 / 100)
+    assert g == pytest.approx(0.0)
+    assert b == pytest.approx(0.5 * 2.0 / 100)
+
+
+def test_get_load_values_missing_parset_raises():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Aux_Load", "LoadAlphaBeta", "missing")
+    par_root = _make_root()
+
+    with pytest.raises(ValueError, match="parameter set with id='missing' was not found"):
+        model_parameters._get_load_values(dyd_root, par_root)
+
+
+def test_get_load_values_reads_parameters():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Aux_Load", "LoadAlphaBeta", "parLoad")
+    _add_connect(dyd_root, "Aux_Load", "load_terminal", "AuxLoad_Xfmr", "term2")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parLoad",
+        {
+            "load_P0Pu": "0.02",
+            "load_Q0Pu": "0.01",
+            "load_U0Pu": "1.05",
+            "load_UPhase0": "0.1",
+            "load_alpha": "2",
+            "load_beta": "2",
+        },
+    )
+
+    loads = model_parameters._get_load_values(dyd_root, par_root)
+
+    assert len(loads) == 1
+    load = loads[0]
+    assert load.id == "Aux_Load"
+    assert load.lib == "LoadAlphaBeta"
+    assert load.par_id == "parLoad"
+    assert load.p == pytest.approx(0.02)
+    assert load.q == pytest.approx(0.01)
+    assert load.u == pytest.approx(1.05)
+    assert load.u_phase == pytest.approx(0.1)
+    assert load.alpha == pytest.approx(2.0)
+    assert load.beta == pytest.approx(2.0)
+    assert load.terminals[0].connected_equipment == "AuxLoad_Xfmr"
+
+
 def test_adjust_load_missing_parset_raises():
     par_root = _make_root()
 
@@ -101,6 +300,85 @@ def test_adjust_load_writes_initial_values():
         "load_U0Pu": 1.0,
         "load_UPhase0": 0.2,
     }
+
+
+def test_adjust_load_duplicated_parset_raises():
+    par_root = _make_root()
+    _add_parset(par_root, "Aux_Load", {})
+    _add_parset(par_root, "Aux_Load", {})
+
+    with pytest.raises(ValueError, match="Multiple parameter sets with id='Aux_Load' were found"):
+        model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.1, 0.05, 1.0, 0.0)
+
+
+def test_set_parameter_updates_existing_value():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"generator_P0Pu": "0.5"})
+
+    model_parameters._set_parameter([parset], {"ns": _NS}, "generator_P0Pu", -1, 0.75)
+
+    parameter = parset.xpath("ns:par[@name='generator_P0Pu']", namespaces={"ns": _NS})[0]
+    assert parameter.get("value") == "-0.75"
+
+
+def test_set_parameter_creates_parameter_only_when_requested():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    model_parameters._set_parameter([parset], {"ns": _NS}, "generator_Q0Pu", 1, 0.25)
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", 1, 0.5, create_if_missing=True
+    )
+
+    assert [par.get("name") for par in parset] == ["generator_P0Pu"]
+    created = next(par for par in parset if par.get("name") == "generator_P0Pu")
+    assert created.get("type") == "DOUBLE"
+    assert created.get("value") == "0.5"
+
+
+def test_set_parameter_without_name_is_noop():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    model_parameters._set_parameter([parset], {"ns": _NS}, None, 1, 0.5, create_if_missing=True)
+
+    assert len(parset) == 0
+
+
+def test_get_parameter_reads_value_and_sign():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parLoad", {"load_U0Pu": "1.02"})
+
+    sign, value = model_parameters._get_parameter(
+        [parset], {"ns": _NS}, "LoadAlphaBeta", "Voltage0"
+    )
+
+    assert sign == 1
+    assert value == "1.02"
+
+
+def test_get_parameter_missing_par_returns_none_value():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parLoad", {})
+
+    sign, value = model_parameters._get_parameter(
+        [parset], {"ns": _NS}, "LoadAlphaBeta", "Voltage0"
+    )
+
+    assert sign == 1
+    assert value is None
+
+
+def test_get_parameter_unknown_variable_returns_none():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parLoad", {"load_U0Pu": "1.02"})
+
+    sign, value = model_parameters._get_parameter(
+        [parset], {"ns": _NS}, "LoadAlphaBeta", "NoSuchToolVariable"
+    )
+
+    assert sign is None
+    assert value is None
 
 
 def test_extract_defined_value_with_placeholders():
@@ -363,3 +641,51 @@ def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
     assert is_test_applicable is True
     assert calls["gen"] == 1
     assert calls["xfmr"] == 0
+
+
+def test_adjust_load_applied_twice_updates_values_instead_of_duplicating():
+    par_root = _make_root()
+    etree.SubElement(par_root, f"{{{_NS}}}set", id="Aux_Load")
+
+    model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.1, 0.05, 1.0, 0.2)
+    model_parameters._adjust_load(par_root, "Aux_Load", "LoadAlphaBeta", 0.3, 0.15, 1.05, 0.4)
+
+    parset = par_root.xpath("//ns:set[@id='Aux_Load']", namespaces={"ns": _NS})[0]
+    written = {par.get("name"): float(par.get("value")) for par in parset}
+    assert len(parset) == 4
+    assert written == {
+        "load_P0Pu": 0.3,
+        "load_Q0Pu": 0.15,
+        "load_U0Pu": 1.05,
+        "load_UPhase0": 0.4,
+    }
+
+
+def test_set_parameter_creates_par_in_document_namespace():
+    par_root = _make_root()
+    parset = etree.SubElement(par_root, f"{{{_NS}}}set", id="parGen")
+
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", 1, 0.5, create_if_missing=True
+    )
+
+    created = parset.xpath("ns:par[@name='generator_P0Pu']", namespaces={"ns": _NS})
+    assert len(created) == 1
+    assert created[0].tag == f"{{{_NS}}}par"
+    assert created[0].get("type") == "DOUBLE"
+    assert created[0].get("value") == "0.5"
+
+
+def test_set_parameter_repeated_create_updates_instead_of_duplicating():
+    par_root = _make_root()
+    parset = etree.SubElement(par_root, f"{{{_NS}}}set", id="parGen")
+
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", 1, 0.5, create_if_missing=True
+    )
+    model_parameters._set_parameter(
+        [parset], {"ns": _NS}, "generator_P0Pu", -1, 0.75, create_if_missing=True
+    )
+
+    assert len(parset) == 1
+    assert parset[0].get("value") == "-0.75"

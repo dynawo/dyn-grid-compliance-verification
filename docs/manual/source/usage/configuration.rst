@@ -4,19 +4,25 @@ Configuration
 
 DyCoV is configured via a ``config.ini`` file, written in the standard INI
 format (`Python flavor <https://docs.python.org/3/library/configparser.html>`_).
-The file lives in the platform's standard application data directory:
+The file lives in ``$HOME/.config/dycov/``, and is created the first time the
+tool runs.
 
-* **Linux**: ``$HOME/.config/dycov/``
-* **Windows**: ``%APPDATA%\\Local\\dycov\\``
+The generated ``config.ini`` contains the most common options commented out,
+each shown with its default value. To change a setting, uncomment the relevant
+line and edit the value. We recommend duplicating the line first so you always
+have the original default visible as a reminder.
 
-The distributed ``config.ini`` has all options commented out, each shown with
-its default value. To change a setting, uncomment the relevant line and edit
-the value. We recommend duplicating the line first so you always have the
-original default visible as a reminder.
+Two profiles are kept next to it, regenerated on every run:
 
-Two additional profiles are provided — ``config.ini_BASIC`` and
-``config.ini_ADVANCED`` — for users who want a curated subset of options.
-To switch profiles, copy the desired file over ``config.ini``.
+* ``config.ini_BASIC`` — the same curated subset of common options that the
+  initial ``config.ini`` is created from.
+* ``config.ini_ADVANCED`` — the full set of options, including sections that
+  the basic profile does not carry at all (``[Figures]``, ``[Debug]``,
+  ``[GFM]``, solver tuning in ``[Dynawo]``, among others).
+
+To switch profiles, copy the desired file over ``config.ini``. Individual
+options from the advanced profile may also be copied into ``config.ini``
+directly — any option is honored there, whichever profile it comes from.
 
 
 PCS Structure
@@ -75,12 +81,23 @@ Basic configuration
 
 * ``file_log_level``
 
-  Log level for the log file. Accepted values:
-  ``CRITICAL``, ``FATAL``, ``ERROR``, ``WARNING``, ``INFO``, ``DEBUG``.
+  Log level for the log file, as a numeric Python logging level: ``50``
+  (CRITICAL), ``40`` (ERROR), ``30`` (WARNING), ``20`` (INFO), ``10`` (DEBUG).
+  Level names are not accepted; a non-numeric value is reported and the
+  default (``20``) is used instead.
 
 * ``console_log_level``
 
   Log level for the console output. Same accepted values as above.
+
+* ``parallel_pcs_validation``
+
+  When ``True`` (the default), the PCSs are validated in parallel processes,
+  potentially reducing the overall validation time on multi-core systems.
+
+* ``parallel_num_processes``
+
+  Maximum number of parallel processes allowed (default: 4).
 
 
 Dynawo options
@@ -97,13 +114,13 @@ Basic configuration
 
 * ``f_nom``
 
-  Grid nominal frequency (fNom), in pu. This must match the value defined in
-  Dynawo's ``Electrical/SystemBase.mo``. If Dynawo has been customized, update
-  this value accordingly.
+  Grid nominal frequency (fNom), in Hz (default: 50.0). This must match the
+  value defined in Dynawo's ``Electrical/SystemBase.mo``. If Dynawo has been
+  customized, update this value accordingly.
 
 * ``s_nref``
 
-  System-wide S base (SnRef), in pu. Same remark as above.
+  System-wide S base (SnRef), in MVA (default: 100.0). Same remark as above.
 
 Advanced configuration
 """"""""""""""""""""""
@@ -125,6 +142,31 @@ Advanced configuration
      use a minimum duration of 60 seconds.
 
 
+Debug options
+^^^^^^^^^^^^^
+
+The ``[Debug]`` section (present only in the advanced profile) contains
+switches meant for diagnosing the tool itself:
+
+* ``show_figs_t0`` / ``show_figs_tend`` — extend the plotted time range to
+  include the start / end of the simulation.
+* ``plot_all_curves_in_html`` — in the HTML output, plot all available curves,
+  not only the ones dictated by the PCS.
+* ``disable_LP_filtering`` — disable the low-pass frequency filtering of the
+  signals.
+* ``max_simulation_retries`` — maximum number of retries for a failed
+  simulation (default: 4).
+
+
+User templates
+^^^^^^^^^^^^^^
+
+Besides ``config.ini`` and its profiles, the configuration directory holds a
+``templates/`` tree (``templates/PCS/`` and ``templates/reports/``) where the
+packaged PCS definitions and LaTeX report templates can be overridden or
+extended. See the *Advanced PCS customization* tutorial for the workflow.
+
+
 Modifying the Benchmarks of a PCS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -135,7 +177,7 @@ comma-separated list:
 .. code-block::
 
     [PCS-Benchmarks]
-    PCS_RTE-I1 = Benchmark1,Benchmark2
+    PCS_RTE-I16z1 = ThreePhaseFault,SetPointStep
 
 If a Benchmark is removed from the list, its section in the final report will
 be empty. Newly added Benchmarks will not appear in the report unless a
@@ -150,7 +192,7 @@ uncomment the ``[PCS-OperatingConditions]`` section:
 .. code-block::
 
     [PCS-OperatingConditions]
-    PCS_RTE-I1.Benchmark1 = OperatingCondition1,OperatingCondition2
+    PCS_RTE-I16z1.ThreePhaseFault = TransientBoltedSCR3,TransientBoltedSCR10
 
 The same report behavior applies: removed OCs leave empty report sections,
 and new ones will not appear unless a template exists.
@@ -170,23 +212,34 @@ model validation (the ``pdr_`` key prefix is kept for both zones).
 
 .. code-block::
 
-    [PCS_RTE-I1.Benchmarks1.OperatingCondition1.Model]
+    [PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3.Model]
     pdr_P = 0.5*Pmax
     pdr_Q = 0.0
     pdr_U = Udim
 
-    [PCS_RTE-I1.Benchmarks1.OperatingCondition2.Model]
+    [PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10.Model]
     pdr_P = 0.5*Pmax
     pdr_Q = Qmax
     pdr_U = Udim
 
 Each quantity is written as a *value definition*: a bare number (in per-unit), a
 base magnitude, or ``multiplier*BaseMagnitude`` (an optional sign is allowed,
-e.g. ``-0.5*Pmax``). The accepted base magnitudes are:
+e.g. ``-0.5*Pmax``). The base magnitudes are (all names case-sensitive):
 
-* active/apparent power: ``Pmax``, ``Snom``
-* reactive power: ``Qmax``, ``Qmin`` (plus ``Pmax``/``Snom``)
-* voltage: ``Udim``, ``Unom``
+* ``Pmax``, ``PmaxInjection``, ``PmaxConsumption`` — the installation's maximum
+  active power. The three names resolve to the same value; using
+  ``PmaxConsumption`` in ``pdr_P`` additionally marks the operating point as
+  consumption (relevant for storage).
+* ``Qmax``, ``Qmin`` — the installation's reactive power limits.
+* ``Snom`` — the installation's nominal apparent power.
+* ``Udim``, ``Unom`` — the dimensioning and nominal voltages.
+* ``line_XPu`` — the connection-line reactance, meaningful only for keys
+  resolved in a context where that line is defined (elsewhere it resolves
+  to 0).
+
+Any base magnitude is accepted in any key — the tool does not restrict, say,
+voltage keys to voltage magnitudes. A definition that cannot be parsed, or
+that names an unknown magnitude, is rejected and the affected test fails.
 
 ``Snom`` and ``Unom`` use the same base as the HTML and report figures (powers in
 per-unit of :math:`S_{nom}`, voltage in per-unit of :math:`U_{nom}`), so the
@@ -331,6 +384,9 @@ Configuring graph appearance in reports
 Advanced configuration
 """"""""""""""""""""""
 
+All the options in this section belong to the ``[Figures]`` section, present
+only in the advanced profile.
+
 The temporal range (xrange) of the plots is computed automatically to show
 the window from the event to the point where all curves have settled, plus a
 small margin before the event. The key parameters are:
@@ -369,5 +425,8 @@ controlled by:
   ``max(curve) - min(curve)`` is smaller than this percentage of the curve's
   midpoint value, autorange is disabled and the yrange is set explicitly using:
 
-  * ``graph_bottommargin_yrange_pct`` — lower margin below ``min(curve)``
-  * ``graph_topmargin_yrange_pct`` — upper margin above ``max(curve)``
+  * ``graph_bottom_yrange_pct`` (default: 10%) — lower margin below ``min(curve)``
+  * ``graph_top_yrange_pct`` (default: 5%) — upper margin above ``max(curve)``
+
+Setting ``graph_auto_range_yrange`` to ``True`` disables this mechanism
+entirely and leaves the yrange of every figure to matplotlib's autorange.

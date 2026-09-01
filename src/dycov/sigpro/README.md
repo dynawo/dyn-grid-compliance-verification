@@ -1,34 +1,18 @@
-# rte-validation-sigpro
+# dycov.sigpro
 
-Signal processing module for the reference signals. It performs the following steps:
+Signal-processing stages used to prepare the calculated and reference curves for point-wise
+comparison in model validation:
 
-`abc -> phasors -> rms -> resampling -> lowpass filtering`
+- `sigpro.py` — pipeline stages: EMT→RMS positive-sequence conversion (`ensure_rms_signals`),
+  fixed-step and common-grid resampling (`resample_to_fixed_step`, `resample_to_common_tgrid`),
+  event-time alignment (`apply_time_shift`) and low-pass filtering (`filter_curves`).
+- `lp_filters.py` — second-order low-pass filter implementations (critically-damped biquad,
+  Bessel, Butterworth, Chebyshev-I) applied zero-phase via `filtfilt`.
+- `signal_windows.py` — pre/during/post windows and exclusion zones for filtering and validation.
 
-The lowpass filtering is not implemented yet.
+The stages are orchestrated, in a fixed order, by `CurvesManager.apply_signal_processing`
+(`dycov/curves/manager.py`).
 
-The entry point to the pipeline is the function `abc_to_psrms` which takes a list of three signals `[a, b, c]` and a sampling frequency, and returns the DyCoV value of the positive sequence.
-
-The function `gen_abc` generates a mockup three-phase signal of 1 sec duration with N samples. 
-
-Summary of inputs and outputs: 
-
-- `gen_abc`
-    - in: number of samples (integer)
-    - out: abc signals (list of vectors), sampling frequency (integer), time steps (vector)
-- `abc_to_psrms`
-    - in: abc signals, sampling frequency
-    - out: positive sequence DyCoV signal (vector)
-- `resample`
-    - in: positive sequence DyCoV signal, time steps, new number of samples  (integer)
-    - out: resampled signal (vector)
-- `lowpass_filter`
-    - in: resampled signal, cutoff frequency (integer)
-    - out: filtered signal (vector)
-
-Sample execution script
-```python
-abc, fs, tsteps = gen_abc(100)
-ps_rms = abc_to_psrms(abc, fs)
-r = resample(ps_rms, tsteps, 2000)
-rf = lowpass_filter(r, 50)
-```
+The full workflow, and the choices and adaptations made with respect to IEC 61400-27-2, are
+documented in `docs/design/Signal_processing_workflow.md`; the theoretical rationale is developed
+in `docs/signals_technote/signals_technote.tex`.

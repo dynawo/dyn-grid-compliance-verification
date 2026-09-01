@@ -39,7 +39,7 @@ You would use the command ``dycov validate``:
 
    .. code-block:: console
 
-      source ~/dycov/activate_dycov
+      source $PWD/dycov/activate_dycov
 
    You can tell the environment is active because the shell prompt will show
    its name. The Docker and WSL installations handle this automatically.
@@ -70,7 +70,7 @@ simulations) or from producer-provided curves. You would use the command
 
    .. code-block:: console
 
-      source ~/dycov/activate_dycov
+      source $PWD/dycov/activate_dycov
 
 For the format of DYD and PAR files (the Dynawo model of the producer's
 facilities), refer to the Dynawo documentation. The format of INI and curve

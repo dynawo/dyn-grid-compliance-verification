@@ -205,7 +205,7 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake pdflatex latexmk git awk uv sha256sum; do
+for cmd in curl unzip gcc g++ cmake make pdflatex latexmk git awk uv sha256sum; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1
@@ -363,11 +363,12 @@ deactivate
 ################################################################################
 color_msg "Step 5: Installing examples, tutorials and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
-# User-facing tutorials (only the *.md files, so their relative cross-links
-# work). Build helpers (md2pdf.sh, listings-setup.tex) and the docs/installation
-# guides are intentionally excluded (the user is already installed here).
-mkdir -p "$INSTALL_DIR"/tutorials
+# User-facing tutorials and installation guides (only the *.md files, so their
+# relative cross-links work: tutorials/README.md links to ../installation/).
+# Build helpers (md2pdf.sh, listings-setup.tex) are not installed.
+mkdir -p "$INSTALL_DIR"/tutorials "$INSTALL_DIR"/installation
 cp -a "$TMP_LOCAL_REPO"/docs/tutorials/*.md "$INSTALL_DIR"/tutorials/
+cp -a "$TMP_LOCAL_REPO"/docs/installation/*.md "$INSTALL_DIR"/installation/
 # shellcheck source=/dev/null
 . "$INSTALL_DIR"/activate_dycov
 uv pip install -q sphinx

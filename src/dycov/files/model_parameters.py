@@ -816,6 +816,8 @@ def _get_parset(par_root, par_id, nsmap):
     parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
     if not parset:
         raise ValueError(f"The parameter set with id='{par_id}' was not found")
+    if len(parset) > 1:
+        raise ValueError(f"Multiple parameter sets with id='{par_id}' were found")
     return parset
 
 
@@ -915,7 +917,7 @@ def _get_line_values(
         line_id = model_parameter.get("id")
         lib = model_parameter.get("lib")
         par_id = model_parameter.get("parId")
-        parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+        parset = _get_parset(par_root, par_id, nsmap)
 
         _, r_str = _get_parameter(parset, nsmap, lib, "ResistancePu")
         _, x_str = _get_parameter(parset, nsmap, lib, "ReactancePu")
@@ -1003,7 +1005,7 @@ def _parse_transformer_metadata(bbmodel, par_root, nsmap):
     transformer_id = bbmodel.get("id")
     lib = bbmodel.get("lib")
     par_id = bbmodel.get("parId")
-    parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+    parset = _get_parset(par_root, par_id, nsmap)
     return transformer_id, lib, par_id, parset
 
 
@@ -1081,7 +1083,7 @@ def _parse_load_metadata(bbmodel, dyd_root, par_root, nsmap):
     lib = bbmodel.get("lib")
     par_id = bbmodel.get("parId")
     connected_equipment = _get_connected_equipment(dyd_root, load_id)
-    parset = par_root.xpath(f"//ns:set[@id='{par_id}']", namespaces=nsmap)
+    parset = _get_parset(par_root, par_id, nsmap)
     return load_id, lib, par_id, connected_equipment, parset
 
 
@@ -1416,8 +1418,7 @@ def _adjust_load(
 
 
 def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value, create_if_missing=False):
-    # Validate parset contains exactly one element
-    if not isinstance(parset, list) or len(parset) != 1 or not parameter_name:
+    if not parameter_name:
         return
     ps = parset[0]
     parameter = ps.xpath(f"ns:par[@name='{parameter_name}']", namespaces=nsmap)
@@ -1428,17 +1429,18 @@ def _set_parameter(parset, nsmap, parameter_name, sign, parameter_value, create_
     if not create_if_missing:
         return
 
-    new_par = etree.Element("par")
-    new_par.set("name", parameter_name)
-    new_par.set("type", "DOUBLE")
-    new_par.set("value", str(sign * parameter_value))
-    ps.append(new_par)
+    etree.SubElement(
+        ps,
+        etree.QName(nsmap["ns"], "par"),
+        attrib={
+            "name": parameter_name,
+            "type": "DOUBLE",
+            "value": str(sign * parameter_value),
+        },
+    )
 
 
 def _get_parameter(parset, nsmap, lib, parameter_name):
-    # Validate parset contains exactly one element
-    if not isinstance(parset, list) or len(parset) != 1:
-        return None, None
     ps = parset[0]
     sign, variable_name = dynawo_translator.get_dynawo_variable(lib, parameter_name)
     if not variable_name:
