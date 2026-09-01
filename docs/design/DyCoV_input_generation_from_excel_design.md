@@ -58,11 +58,18 @@ python generate_inputs.py --excel model.xlsx --outdir <path>
 | `Model Map` | Variant tuple → Dynawo `lib` + prefix, per zone (§6). |
 | `Zone1<x>` (`Zone1a`, …) | One sheet per generator. Zone-1 data: `SnZone1`, `N_Zone1`, `ConverterLVControl`, `Un1`, `Un2`, internal `LvTr` (`Z_cc_LvTr`, `R_cc_LvTr / X_cc_LvTr`), external step-up (`r_TG`, `Z_cc_TG`, `R_cc_TG / X_cc_TG`), `Pmax_injection_z1`, `Pmax_soutirage_z1`, `Qmax_z1`, `Qmin_z1`, `P_share`, `Q_share`. |
 | `Zone3` | Exactly one. `Topologie`, `SnZone3`, `Un_PDR`, `Pmax_PDR`, `Qmax_PDR`, `Qmin_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`), aux load (`+Aux`), collector (`+i`). |
-| `REPC` / `REEC` / `REGC` / `Mechanical Part` | Control-block parameters, one column group per variant (header triplet `Paramètres \| Types \| Valeurs` — the template's French or the English spelling, accent-insensitive; optional `Bases…`/`Base unit`, `Commentaires`/`Comment` columns). |
+| `REPC` / `REEC` / `REGC` / `Mechanical Part` | Control-block parameters, one column group per variant, headed by `Paramètres` (French or English, accent-insensitive, and any parenthetical such as `Paramètres (Dynawo)`); optional `Bases…`/`Base unit`, `Commentaires`/`Comment` columns. |
 | `Signaux zone 1/3`, separator sheets | Ignored. |
 
-**Layout.** The two zone sheets use different column layouts, so the parser locates the header row
-and the *Valeurs* column per sheet rather than hardcoding a column:
+**Layout.** Nothing is addressed by a fixed column. In a control sheet, the header row is the first
+one naming parameters, values and types — requiring all three keeps the zone sheets' `Paramètres |
+Descriptions | Valeurs` tables out — and each variant's value and type columns are the nearest such
+headers to the right of its `Paramètres` column, inside its table block. That resolves both layouts
+in use: `Paramètres | Types | Valeurs` per variant, and `Paramètres | Valeurs` repeated with a
+single `Types` column shared by the variants of the block.
+
+The two zone sheets use different column layouts, so the parser locates the header row and the
+*Valeurs* column per sheet rather than hardcoding a column:
 - **`Zone1a`** — header `Paramètres | Descriptions | Valeurs | Unités | Commentaires`; name in col A,
   value in col C.
 - **`Zone3`** — header `Catégorie | Paramètres | Descriptions | Valeurs | …`; name in col B, value in
@@ -161,6 +168,16 @@ Observed Zone3 (plant-control) map (maintained in the Excel, not in the tool):
 sibling (same tuple, REPC removed): PV/BESS `X` ↔ `X`**`NoPlantControl`**; wind **`WTG`**`*` ↔
 **`WT`**`*`. The generator emits the matched pair.
 
+**`/` means "does not apply to this variant".** In the parameter name cell it drops the row for that
+variant; in the value cell the parameter still belongs to the variant but counts as unfilled, as
+the final template will leave that cell empty. Either way nothing reaches the PAR — written
+verbatim, `/` would, as a value or even as a parameter name. An unfilled parameter falls back to the
+descriptor's `defaultValue`; those without one must be filled for Dynawo to run.
+
+**Two parameters are derived, not read.** `ConverterLVControl` comes from the zone sheet (§7), and
+`PPCLocal` is always `false`, emitted only among the `Zone3` parameters: it exists in the plant
+`lib`s and in none of the turbine ones, and has no template row by RTE's decision.
+
 ---
 
 ### 7. Transformers and electrical computations
@@ -215,15 +232,26 @@ Tests live under `tests/tools/` (standard `pytest`):
 - **Electrical**: transformer/base conversions against known values.
 - **Parsing / submodel report**: layouts, unknown-combo detection, present/missing blocks.
 
+Template parameter names are audited separately against a Dynawo `ddb`, matching every row of the
+control sheets to the `.desc.xml` of both `lib`s of every `Model Map` row (exact → case-insensitive
+→ normalized, dropping a trailing `pu`), and classifying what does not match: capitalization-only,
+unit-suffix, Excel-only, model-only (a defect only where the descriptor has no `defaultValue`),
+`readOnly` offered for editing, type disagreement, or two rows targeting one parameter. Names go
+verbatim into the PAR and Dynawo ignores what it does not recognize, so a mis-named row binds
+nothing and raises no error.
+
 ---
 
-### 10. Open with RTE
+### 10. Open points
 
-Sent to and largely answered by RTE; the standing note is
-[`DyCoV_input_generation_RTE_questions.md`](DyCoV_input_generation_RTE_questions.md). Still needed:
-- **Parameter names** for the added variant columns `REGC_B`, `REEC_B`, `WTGP_B` (RTE fills names,
-  the end user the values).
-- **Review of the variant→model map** for completeness across the WECC models RTE supports.
-- **`M`: how each `Zone1<x>`'s model is selected** — the single `Général` selection resolves one
-  model, so the Excel cannot yet say which model each duplicated `Zone1<x>` is. Blocks `M`.
-- **Possible new scope:** electrical validations of the user-entered values.
+- **`M`: how each `Zone1<x>`'s model is selected.** The single `Général` selection resolves one
+  model and duplicating a `Zone1<x>` copies only electrical data, so the Excel cannot say which
+  model each generator is when they differ (e.g. `WECC4` mixes `WTG4A`+`WTG4B`). Blocks `M`, and
+  needs a design before it can be asked as a question.
+- **Awaiting RTE:** a review of the variant→model map for completeness across the WECC models they
+  support. Electrical validation of the user-entered values is possible extra scope.
+- **`WTG3WeccCurrentSource2` is mis-packaged in `Dynawo_v1.8.0_20260822`** (reported): its
+  descriptor is parameter-for-parameter identical to `WTG3WeccCurrentSource1` (the `WTGPa` pitch),
+  while its `.mo` extends `ParamsWTGPb` and its `.mandatoryParam` lists `Theta{C,W}{Max,Min}`,
+  which only the turbine-side `WeccWT3CurrentSource2` exposes. The `WTGP_B` rows therefore cannot
+  bind in `Zone3` with that build; the template is correct.

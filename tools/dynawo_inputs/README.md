@@ -18,9 +18,7 @@ prefix, the electrical values, and the topology wiring.
 The architecture is **standard-agnostic**: only a thin WECC front-end (parse the
 Excel + resolve the variant selection to a Dynawo model) is family-specific;
 everything downstream is shared. See the full design in
-[`docs/design/DyCoV_input_generation_from_excel_design.md`](../../docs/design/DyCoV_input_generation_from_excel_design.md)
-and the open points for RTE in
-[`docs/design/DyCoV_input_generation_RTE_questions.md`](../../docs/design/DyCoV_input_generation_RTE_questions.md).
+[`docs/design/DyCoV_input_generation_from_excel_design.md`](../../docs/design/DyCoV_input_generation_from_excel_design.md).
 
 ## Requirements
 
