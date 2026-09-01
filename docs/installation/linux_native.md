@@ -89,21 +89,14 @@ sudo apt install \
 
 DyCoV **requires Python version 3.13 or newer**.
 
-Install a minimal Python environment and Git:
+Install Git:
 
 ```bash
-sudo apt install python3.13 python3.13-venv git
+sudo apt install git
 ```
 
-Ensure that Python 3.13 is the default `python3` interpreter or explicitly
-available in your environment:
-
-```bash
-python3.13 --version
-```
-
-Install **uv**, which is used to manage the Python virtual environment and
-dependencies:
+Install **uv**, which provisions Python 3.13 and manages the virtual environment
+and dependencies:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -120,12 +113,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### 4.1 Choose an installation directory
 
-Choose a base directory where DyCoV will be installed:
+Choose a base directory to install from:
 
 ```bash
 mkdir dycov_install
 cd dycov_install
 ```
+
+The installer does not install into this directory itself: it creates a `dycov/`
+subdirectory inside it. Here and in the tutorials, `<install_dir>` means that
+subdirectory, that is `dycov_install/dycov` if you followed the commands above.
 
 ---
 

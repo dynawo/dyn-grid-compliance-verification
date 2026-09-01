@@ -10,6 +10,7 @@ ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
 ARG dycov_TOOLS=tools
 ARG dycov_TUTORIALS=tutorials
+ARG dycov_INSTALLATION=installation
 ARG DYNAWO_DIR_NAME=dynawo_build
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -41,9 +42,10 @@ COPY ./$dycov_EXAMPLES /opt/dycov/examples
 COPY ./$dycov_TOOLS /opt/dycov/tools
 
 # Copy the user-facing tutorials (Markdown). Kept as-is so their relative
-# cross-links work. docs/installation is intentionally not shipped: it is a
-# pre-install guide with no value inside an already-installed image.
+# cross-links work, including the link from tutorials/README.md to
+# ../installation/.
 COPY ./$dycov_TUTORIALS /opt/dycov/tutorials
+COPY ./$dycov_INSTALLATION /opt/dycov/installation
 
 # Third layer:
 #   - Install Dynawo from the host path provided at build time.
