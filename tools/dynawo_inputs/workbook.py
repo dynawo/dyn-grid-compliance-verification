@@ -32,6 +32,10 @@ _CONFIG_SHEET = "general"
 # Choices in the configuration sheet that mean "no block selected".
 _NO_BLOCK = {"", "aucun", "none", "n/a", "na", "-"}
 
+# Template mark for "this parameter does not apply to this variant", in the parameter name
+# cell, the value cell or both. Written verbatim it would reach the PAR, so it is dropped.
+_NOT_APPLICABLE = "/"
+
 # Excel type -> Dynawo PAR type. Anything unknown is simply upper-cased.
 _TYPE_MAP = {
     "double": "DOUBLE",
@@ -257,53 +261,94 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
         variant_name = _cell(grid, header_row - 1, param_col)
         if not variant_name:
             continue
+        value_col, type_col = _group_columns(grid, header_row, param_col, table_labels)
+        if value_col is None or type_col is None:
+            continue
         table = _label_for_column(table_labels, param_col) or sheet_name
         base_col = _extra_for_column(base_columns, table_labels, param_col)
         comment_col = _extra_for_column(comment_columns, table_labels, param_col)
         variant = Variant(name=variant_name, sheet=sheet_name, table=table)
         variant.parameters = _parse_parameters(
-            grid, header_row, param_col, base_col, comment_col
+            grid, header_row, param_col, value_col, type_col, base_col, comment_col
         )
         variants.append(variant)
     return variants
 
 
-# A variant column group is recognized by its header triplet, in the template's French
-# spelling or the English one (accent-insensitive): Paramètres | Types | Valeurs.
-_PARAM_HEADERS = {"parameter", "parametre", "parametres"}
+# Header spellings, accent-insensitive, in the template's French or in English.
+_PARAM_HEADER_PREFIXES = ("parametre", "parameter")
 _TYPE_HEADERS = {"type", "types"}
 _VALUE_HEADERS = {"value", "values", "valeur", "valeurs"}
 
 
-def _heads_column_group(row: list, col: int) -> bool:
-    """True when *col* starts a ``Parameter | Type | Value`` header triplet in *row*.
+def _normalized_header(value) -> str:
+    """Header text lower-cased, accent-free and single-spaced (``""`` when not text)."""
+    if not isinstance(value, str):
+        return ""
+    return re.sub(r"\s+", " ", _strip_accents(value))
 
-    Requiring the full triplet keeps non-table uses of the word out (e.g. the zone
-    sheets' ``Paramètres | Descriptions | Valeurs`` electrical tables).
+
+def _is_param_header(value) -> bool:
+    """True for ``Paramètres``, ``Parameter``, ``Paramètres (Dynawo)``, ``Paramètres\\n(Dynawo)``."""
+    return _normalized_header(value).startswith(_PARAM_HEADER_PREFIXES)
+
+
+def _is_type_header(value) -> bool:
+    return _normalized_header(value) in _TYPE_HEADERS
+
+
+def _is_value_header(value) -> bool:
+    return _normalized_header(value) in _VALUE_HEADERS
+
+
+def _heads_parameter_table(row: list) -> bool:
+    """True when *row* heads a parameter table: it names parameters, values and types.
+
+    Requiring all three keeps non-table uses of the word out (e.g. the zone sheets'
+    ``Paramètres | Descriptions | Valeurs`` electrical tables).
     """
-    def _norm(c: int) -> str:
-        value = row[c] if 0 <= c < len(row) else None
-        return _strip_accents(value) if isinstance(value, str) else ""
-
     return (
-        _norm(col) in _PARAM_HEADERS
-        and _norm(col + 1) in _TYPE_HEADERS
-        and _norm(col + 2) in _VALUE_HEADERS
+        any(_is_param_header(value) for value in row)
+        and any(_is_value_header(value) for value in row)
+        and any(_is_type_header(value) for value in row)
     )
 
 
 def _find_header_row(grid: Grid) -> int | None:
-    """Return the first row index that starts a variant column group."""
+    """Return the first row index that heads a parameter table."""
     for row_idx, row in enumerate(grid):
-        if any(_heads_column_group(row, col) for col in range(len(row))):
+        if _heads_parameter_table(row):
             return row_idx
     return None
 
 
 def _find_column_groups(grid: Grid, header_row: int) -> list[int]:
-    """Return the column index of every column group in the header row."""
-    row = grid[header_row]
-    return [col for col in range(len(row)) if _heads_column_group(row, col)]
+    """Return the column index of every variant column group in the header row."""
+    return [col for col, value in enumerate(grid[header_row]) if _is_param_header(value)]
+
+
+def _group_columns(
+    grid: Grid, header_row: int, param_col: int, labels: list[tuple[int, str]]
+) -> tuple[int | None, int | None]:
+    """Return the ``(value, type)`` columns of the group starting at *param_col*.
+
+    Each is the nearest such header to its right within the variant's table block: adjacent
+    when the variant carries its own ``Types`` column (``Parameter | Type | Value``), further
+    right when the block's variants share a single one (``Parameter | Value`` repeated).
+    """
+    _, block_end = _block_bounds(labels, param_col)
+
+    def nearest(matches) -> int | None:
+        return next(
+            (
+                col
+                for col, value in enumerate(grid[header_row])
+                if param_col < col < block_end and matches(value)
+            ),
+            None,
+        )
+
+    return nearest(_is_value_header), nearest(_is_type_header)
 
 
 def _find_extra_columns(grid: Grid, header_row: int, prefix: str) -> list[int]:
@@ -340,18 +385,23 @@ def _label_for_column(labels: list[tuple[int, str]], col: int) -> str | None:
     return chosen
 
 
+def _block_bounds(labels: list[tuple[int, str]], col: int) -> tuple[int, float]:
+    """Return the ``[start, end)`` column span of the table block holding *col*."""
+    block_start = 0
+    block_end = float("inf")
+    for label_col, _ in labels:
+        if label_col <= col:
+            block_start = label_col
+        elif label_col < block_end:
+            block_end = label_col
+    return block_start, block_end
+
+
 def _extra_for_column(
     extra_columns: list[int], labels: list[tuple[int, str]], param_col: int
 ) -> int | None:
     """Return the extra column (base unit / comment) of *param_col*'s block."""
-    # The block spans from this column's table label to the next one.
-    block_start = 0
-    block_end = float("inf")
-    for label_col, _ in labels:
-        if label_col <= param_col:
-            block_start = label_col
-        elif label_col < block_end:
-            block_end = label_col
+    block_start, block_end = _block_bounds(labels, param_col)
     for extra_col in extra_columns:
         if block_start <= extra_col < block_end:
             return extra_col
@@ -362,6 +412,8 @@ def _parse_parameters(
     grid: Grid,
     header_row: int,
     param_col: int,
+    value_col: int,
+    type_col: int,
     base_col: int | None,
     comment_col: int | None,
 ) -> list[Parameter]:
@@ -374,10 +426,12 @@ def _parse_parameters(
     parameters: list[Parameter] = []
     for row in range(header_row + 1, len(grid)):
         name = _cell(grid, row, param_col)
-        ptype = _cell(grid, row, param_col + 1)
-        if not name or not ptype:
+        ptype = _cell(grid, row, type_col)
+        if not name or not ptype or name == _NOT_APPLICABLE:
             continue
-        value = _cell(grid, row, param_col + 2)
+        value = _cell(grid, row, value_col)
+        if value == _NOT_APPLICABLE:
+            value = None
         base_unit = _cell(grid, row, base_col) if base_col is not None else None
         comment = _cell(grid, row, comment_col) if comment_col is not None else None
         parameters.append(
