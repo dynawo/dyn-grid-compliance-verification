@@ -35,8 +35,8 @@ from dycov.core.global_variables import (
 from dycov.files import manage_files, model_parameters
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
-from dycov.report.LatexReportException import LatexReportException
 from dycov.report.curve_classification import get_curve_style
+from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
