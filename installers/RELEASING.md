@@ -83,19 +83,20 @@ throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpd
 | :--- | :--- |
 | 0 | Verifies the Git state (tag exists, HEAD on the tag, clean tree) and that every expected installer file is present. |
 | 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v1.8.0.zip` and places it in the output directory. |
-| 2 | Updates `version` in `pyproject.toml` (no-op today — the version is dynamic via `setuptools_scm`). |
-| 3 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag, injecting the forced package version and setting `DYNAWO_SHA256SUM` to the checksum of the zip from Step 1. |
-| 4 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
-| 5 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
-| 6 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |
-| 7 | Collects all end-user artifacts into the output directory and zips `tools/dynawo_par` into `dycov_par_tool.zip`. |
-| 8 | Removes the Docker images `dycov:latest` and `dycov:VERSION` from the local registry. |
+| 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag, injecting the forced package version and setting `DYNAWO_SHA256SUM` to the checksum of the zip from Step 1. |
+| 3 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
+| 4 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
+| 5 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |
+| 6 | Collects all end-user artifacts into the output directory and zips `tools/dynawo_par` into `dycov_par_tool.zip`. |
+| 7 | Removes the Docker images `dycov:latest` and `dycov:VERSION` from the local registry. |
 
 **Output directory:** `./release_VERSION/`
 
-**Manuals:** they are *not* copied into the output directory. They are left under
-`docs/manual/build/` (`html/` and `latex/dycov.pdf`) — upload the PDF to the release if the
-manual changed for this version.
+**Manuals:** they are *not* release artifacts and are *not* copied into the output directory.
+They are built because the image needs them, and they are left under
+`docs/manual/build/` (`html/` and `latex/dycov.pdf`), where the Docker build picks them up.
+End users get them either inside the image (`~/manual/`) or compiled by `linux_install.sh`
+(`<install_dir>/manual/`), so there is nothing to upload.
 
 ---
 
@@ -128,12 +129,10 @@ library only), it runs with any Python 3 — e.g.
 
 ## Post-Release Checklist
 
-1. **Create the GitHub release** from the tag and upload all files from `release_VERSION/`
-   (plus `docs/manual/build/latex/dycov.pdf` if the manual is published with the release).
+1. **Create the GitHub release** from the tag and upload all nine files from `release_VERSION/`.
 2. Verify that `linux_install.sh` can download `Dynawo_omc_v1.8.0.zip` from the new
    release URL before announcing the release publicly.
-3. Note that the loose `*.sh` artifacts (`import_image.sh`, `run_dycov_docker.sh`,
-   `linux_install.sh`) lose their exec bit when downloaded from GitHub; end users must run
-   `chmod +x` first. This is documented in
-   `docs/installation/using_the_provided_image.md` (section 3.2) and in the manual's
-   usage/installation page.
+3. Note that `import_image.sh` and `run_dycov_docker.sh` lose their exec bit when downloaded
+   from GitHub; end users must run `chmod +x` first, as documented in
+   `docs/installation/using_the_provided_image.md` (section 3.2). `linux_install.sh` does not
+   need it: the installation docs pipe it straight into `bash`.
