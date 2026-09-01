@@ -76,7 +76,7 @@ mkdir "$ROOT_DIR/dist"
 echo "Building Python package..."
 (
     cd "$ROOT_DIR"
-    uv build --out-dir dist
+    uv build --wheel --out-dir dist
 )
 
 ########################################
@@ -141,9 +141,12 @@ cp "$PKG" "$TEMP_DIR/"
 # 5. Copy examples
 ########################################
 
+# Staged from the Git index, not the working tree: artifacts ignored by Git
+# (Results*/ from a local run) would otherwise be shipped inside the image.
 echo "Copying examples..."
-if [[ -d "$ROOT_DIR/examples" ]]; then
-    cp -a "$ROOT_DIR/examples/"* "$EXAMPLES_DIR/" 2>/dev/null || true
+if ! git -C "$ROOT_DIR" archive HEAD examples | tar -x -C "$TEMP_DIR"; then
+    echo "ERROR: could not stage examples from Git."
+    exit 1
 fi
 
 
@@ -152,11 +155,8 @@ fi
 ########################################
 
 echo "Copying standalone tools..."
-if [[ -d "$ROOT_DIR/tools/dynawo_par" ]]; then
-    cp -a "$ROOT_DIR/tools/dynawo_par" "$TOOLS_DIR/"
-    find "$TOOLS_DIR" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-else
-    echo "ERROR: tools/dynawo_par not found at $ROOT_DIR/tools/dynawo_par"
+if ! git -C "$ROOT_DIR" archive HEAD tools/dynawo_par | tar -x -C "$TOOLS_DIR" --strip-components=1; then
+    echo "ERROR: could not stage tools/dynawo_par from Git."
     exit 1
 fi
 
@@ -202,9 +202,8 @@ cp "$MANUAL_BUILD_DIR/latex/dycov.pdf" "$MANUAL_DIR/"
 # 7b. Copy user-facing tutorials
 ########################################
 
-# User tutorials (Markdown), kept as-is so their relative cross-links work. The
-# docs/installation guides are intentionally excluded: they are pre-install
-# guides and add no value inside an already-installed image.
+# User tutorials and installation guides (Markdown), kept as-is so their relative
+# cross-links work: tutorials/README.md links to ../installation/.
 echo "Copying tutorials..."
 TUTORIALS_SRC="$ROOT_DIR/docs/tutorials"
 if [[ ! -d "$TUTORIALS_SRC" ]]; then
@@ -213,8 +212,9 @@ if [[ ! -d "$TUTORIALS_SRC" ]]; then
 fi
 # Only the tutorials themselves (*.md); build helpers (md2pdf.sh,
 # listings-setup.tex) are not shipped.
-mkdir -p "$TEMP_DIR/tutorials"
+mkdir -p "$TEMP_DIR/tutorials" "$TEMP_DIR/installation"
 cp -a "$TUTORIALS_SRC"/*.md "$TEMP_DIR/tutorials/"
+cp -a "$ROOT_DIR/docs/installation"/*.md "$TEMP_DIR/installation/"
 
 
 ########################################
@@ -241,6 +241,7 @@ docker build \
     --build-arg dycov_EXAMPLES="examples" \
     --build-arg dycov_TOOLS="tools" \
     --build-arg dycov_TUTORIALS="tutorials" \
+    --build-arg dycov_INSTALLATION="installation" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \
     --build-arg MANUAL_BUILD="manual_build" \
     "$TEMP_DIR"

@@ -95,7 +95,11 @@ if ($existingDistros -contains $DistroName) {
     Write-Host "  including any files stored inside it." -ForegroundColor Yellow
     Write-Host "  Files on your Windows drives (C:\, D:\, etc.) are NOT affected." -ForegroundColor Yellow
     Write-Host ""
-    $response = Read-Host "Do you want to remove it and reinstall? [y/N]"
+    try {
+        $response = Read-Host "Do you want to remove it and reinstall? [y/N]"
+    } catch {
+        Exit-WithPause "Cannot ask for confirmation in a non-interactive host. Run this installer from a console window to reinstall over the existing distribution."
+    }
     if ($response -notmatch '^[yY]') {
         Exit-WithPause "Installation cancelled by user." 0
     }

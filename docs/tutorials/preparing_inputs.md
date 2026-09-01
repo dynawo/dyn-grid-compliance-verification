@@ -1,6 +1,6 @@
 # Preparing inputs for DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** How to prepare and organize input data for DyCoV workflows,
 including directory organization, reference and producer curves,
 supported curve formats, and workflow‑specific differences.
@@ -60,7 +60,7 @@ These requirements apply consistently across all DyCoV workflows.
 ## 3. Inputs and project examples
 
 All input formats described in this document are illustrated in the `examples/`
-directory of the DyCoV repository. Users are encouraged to inspect these
+directory shipped with every DyCoV installation. Users are encouraged to inspect these
 files and use them as a starting point when preparing their own cases.
 
 DyCoV inputs are always organized **within a concrete example case**.
@@ -83,7 +83,7 @@ This approach helps avoid common formatting and consistency issues.
 
 ---
 
-### 3.1 Examples in the DyCoV repository
+### 3.1 Examples shipped with DyCoV
 
 Typical RMS model validation examples using Dynawo:
 
@@ -148,25 +148,23 @@ They are **not used** in electrical performance verification.
 
 Reference curves are always stored **within a concrete validation case**.
 In practice, their organization is illustrated by the cases available
-under the `examples/` directory of the DyCoV repository.
+under the `examples/` directory shipped with DyCoV.
 
 The structure described below corresponds to the **internal organization
 of a `ReferenceCurves/` directory inside a case**, not to a standalone layout.
 
 ```text
 ReferenceCurves/
-└── <Technology>/
-    └── Producer/
-        ├── CurvesFiles.ini
-        ├── PCS_RTE-I*.csv
-        └── PCS_RTE-I*.dict
+└── Producer/
+    ├── CurvesFiles.ini
+    ├── PCS_RTE-I*.csv
+    └── PCS_RTE-I*.dict
 ```
 **Example:**
 `examples/Model/Wind/WECC4B/ReferenceCurves/Producer/CurvesFiles.ini`
 
 Notes:
 
-*   `<Technology>` depends on the installation type (e.g. PPM, BESS).
 *   The validation zone (Zone 1 or Zone 3) is encoded directly in the
     **PCS identifier**.
 *   Each curve file must have an associated `.dict` file.
@@ -291,7 +289,7 @@ They may be used in:
 
 Producer curves are also always organized within a **concrete example case**.
 The structure shown below directly corresponds to the layout used in the
-`examples/Model/ProducerCurves/` directory of the DyCoV repository.
+`examples/Model/ProducerCurves/` directory shipped with DyCoV.
 
 Producer curves share the same curve organization
 as reference curves, but additionally require
@@ -300,10 +298,10 @@ as reference curves, but additionally require
 ```text
 ProducerCurves/
 └── <Technology>/
-    └── Producer/
-        ├── CurvesFiles.ini
-        ├── PCS_RTE-I*.csv
-        └── PCS_RTE-I*.dict
+    ├── Producer/
+    │   ├── CurvesFiles.ini
+    │   ├── PCS_RTE-I*.csv
+    │   └── PCS_RTE-I*.dict
     ├── Zone1/
     │   └── Producer.ini
     └── Zone3/

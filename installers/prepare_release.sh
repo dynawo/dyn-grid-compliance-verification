@@ -69,7 +69,7 @@ fi
 [[ -d "$DYNAWO_DIR" ]] || error "Dynawo directory not found: $DYNAWO_DIR"
 DYNAWO_DIR=$(realpath "$DYNAWO_DIR")
 
-# Version without 'v' for pyproject.toml
+# Version without 'v', as setuptools_scm reports it
 VERSION_PLAIN="${VERSION#v}"
 
 # Repo root = current directory
@@ -99,6 +99,15 @@ else
         error "Working tree is not clean. Commit or stash changes before releasing."
     fi
 
+    # Git-ignored leftovers under examples/ are invisible to the check above, and a
+    # stale Results/ from a local run means the examples on disk are not what the
+    # release describes.
+    STALE_EXAMPLES=$(git status --porcelain --ignored -- examples | grep "^!! " || true)
+    if [[ -n "$STALE_EXAMPLES" ]]; then
+        echo "$STALE_EXAMPLES" >&2
+        error "Git-ignored artifacts found under examples/ (see above). Remove them before releasing."
+    fi
+
     info "Git state OK:"
     info " - Tag: $CURRENT_TAG"
     info " - Commit: $(git rev-parse --short HEAD)"
@@ -108,7 +117,6 @@ fi
 # Validate expected repo files
 ###############################################################################
 LINUX_INSTALL="$REPO_ROOT/installers/linux_install.sh"
-PYPROJECT="$REPO_ROOT/pyproject.toml"
 BUILD_SH="$REPO_ROOT/installers/docker/build.sh"
 EXPORT_SH="$REPO_ROOT/installers/docker/export_image.sh"
 IMPORT_SH="$REPO_ROOT/installers/docker/import_image.sh"
@@ -118,7 +126,7 @@ IMPORT_WSL_PS1="$REPO_ROOT/installers/wsl/import_wsl.ps1"
 RUN_WSL_PS1="$REPO_ROOT/installers/wsl/run_dycov_wsl.ps1"
 TOOLS_DIR="$REPO_ROOT/tools/dynawo_par"
 
-for f in "$LINUX_INSTALL" "$PYPROJECT" "$BUILD_SH" "$EXPORT_SH" "$IMPORT_SH" "$RUN_SH" \
+for f in "$LINUX_INSTALL" "$BUILD_SH" "$EXPORT_SH" "$IMPORT_SH" "$RUN_SH" \
           "$IMPORT_WSL_BAT" "$IMPORT_WSL_PS1" "$RUN_WSL_PS1"; do
     [[ -f "$f" ]] || error "Expected file not found: $f"
 done
@@ -147,27 +155,15 @@ zip -qr "$DYNAWO_ZIP" "$DYNAWO_BASENAME"
 info "$DYNAWO_ZIP_NAME generated."
 
 ###############################################################################
-# Step 2 — Update pyproject.toml in the repo
+# Step 2 — Generate updated linux_install.sh in output dir
 ###############################################################################
-step "Step 2: Updating pyproject.toml (version -> $VERSION_PLAIN)..."
-
-sed -i -E "s|^version = \"[^\"]+\"|version = \"${VERSION_PLAIN}\"|" "$PYPROJECT"
-
-info "pyproject.toml updated: $(grep '^version = ' "$PYPROJECT" | head -1)"
-
-###############################################################################
-# Step 3 — Generate updated linux_install.sh in output dir
-###############################################################################
-step "Step 3: Generating updated linux_install.sh..."
+step "Step 2: Generating updated linux_install.sh..."
 
 DYNAWO_SHA256=$(sha256sum "$DYNAWO_ZIP" | cut -d' ' -f1)
 info "SHA256: $DYNAWO_SHA256"
 
 LINUX_INSTALL_OUT="$OUTPUT_DIR/linux_install.sh"
 cp "$LINUX_INSTALL" "$LINUX_INSTALL_OUT"
-
-# Force version for release installer (avoids git tag dependency)
-sed -i "/^TARGET_BRANCH=/a export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov=${VERSION_PLAIN}" "$LINUX_INSTALL_OUT"
 
 # Remove the git fetch --tags line (we don't want to fetch tags in the release script)
 sed -i '/^[[:space:]]*cd "\$TMP_LOCAL_REPO"[[:space:]]*$/d' "$LINUX_INSTALL_OUT"
@@ -185,9 +181,9 @@ grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM)=" "$LINUX_INSTALL_OUT"
 echo "----------------------"
 
 ###############################################################################
-# Step 4 — Build the documentation manuals
+# Step 3 — Build the documentation manuals
 ###############################################################################
-step "Step 4: Building documentation manuals..."
+step "Step 3: Building documentation manuals..."
 
 MANUAL_BUILD_DIR="$REPO_ROOT/docs/manual/build"
 
@@ -198,8 +194,8 @@ rm -rf "$MANUAL_BUILD_DIR"
 # helps.py invokes the `dycov` CLI (dycov --help, dycov generate --help, ...) to
 # generate the command help pages, so dycov must be installed in the venv. This
 # keeps the manual build self-contained instead of relying on a dev environment
-# having dycov on PATH. The version is forced to match the release (dycov uses
-# setuptools_scm), reusing the same var as linux_install.sh.
+# having dycov on PATH. The version is forced here so the manual quotes the release
+# version even if the doc build leaves the tree dirty.
 uv venv "$REPO_ROOT/.manual_venv" --python 3.13 --quiet
 source "$REPO_ROOT/.manual_venv/bin/activate"
 uv pip install -q sphinx
@@ -216,18 +212,18 @@ info " - HTML: $MANUAL_BUILD_DIR/html"
 info " - PDF:  $MANUAL_BUILD_DIR/latex/dycov.pdf"
 
 ###############################################################################
-# Step 5 — Build Docker image
+# Step 4 — Build Docker image
 ###############################################################################
-step "Step 5: Building Docker image..."
+step "Step 4: Building Docker image..."
 
 cd "$REPO_ROOT/installers/docker"
 bash build.sh "$VERSION" "$DYNAWO_DIR" ${DRY_RUN:+--dry-run}
 info "Docker image built."
 
 ###############################################################################
-# Step 6 — Export Docker image
+# Step 5 — Export Docker image
 ###############################################################################
-step "Step 6: Exporting Docker image..."
+step "Step 5: Exporting Docker image..."
 
 cd "$REPO_ROOT/installers/docker"
 bash export_image.sh
@@ -238,9 +234,9 @@ RAW_IMAGE=$(find "$REPO_ROOT/installers/docker" -maxdepth 1 -name "dycov_rawimag
 [[ -z "$RAW_IMAGE" ]] && error "dycov_rawimage.tar.gz not found after export. Check export_image.sh output."
 
 ###############################################################################
-# Step 7 — Collect all artifacts in output dir
+# Step 6 — Collect all artifacts in output dir
 ###############################################################################
-step "Step 7: Collecting release artifacts..."
+step "Step 6: Collecting release artifacts..."
 
 mv "$RAW_IMAGE"       "$OUTPUT_DIR/dycov_rawimage.tar.gz"
 cp "$IMPORT_SH"       "$OUTPUT_DIR/import_image.sh"
@@ -254,8 +250,7 @@ cp "$RUN_WSL_PS1"     "$OUTPUT_DIR/run_dycov_wsl.ps1"
 # (installers/docker/build.sh), so the zip and the image ship identical content.
 rm -f "$OUTPUT_DIR/dycov_par_tool.zip"
 TOOL_STAGE=$(mktemp -d)
-cp -a "$TOOLS_DIR" "$TOOL_STAGE/"
-find "$TOOL_STAGE" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+git -C "$REPO_ROOT" archive HEAD tools/dynawo_par | tar -x -C "$TOOL_STAGE" --strip-components=1
 ( cd "$TOOL_STAGE" && zip -qr "$OUTPUT_DIR/dycov_par_tool.zip" dynawo_par )
 rm -rf "$TOOL_STAGE"
 info "Bundled standalone tool: dycov_par_tool.zip"
@@ -263,9 +258,9 @@ info "Bundled standalone tool: dycov_par_tool.zip"
 info "All artifacts ready."
 
 ###############################################################################
-# Step 8 — Remove Docker images
+# Step 7 — Remove Docker images
 ###############################################################################
-step "Step 8: Removing Docker images..."
+step "Step 7: Removing Docker images..."
 
 for tag in "dycov:latest" "dycov:${VERSION}"; do
     if docker image inspect "$tag" > /dev/null 2>&1; then
@@ -287,10 +282,8 @@ echo ""
 echo "Files to upload to GitHub release:"
 ls -lh "$OUTPUT_DIR" | grep -v '^total' | awk '{print "  " $NF " (" $5 ")"}'
 echo ""
-warn "pyproject.toml has been updated in the repo. Remember to commit and push before creating the GitHub release."
-echo ""
-warn "The loose *.sh artifacts (import_image.sh, run_dycov_docker.sh, linux_install.sh)"
-warn "lose their exec bit when downloaded from GitHub. End users must run 'chmod +x'"
-warn "before executing them; this is documented in docs/installation/using_the_provided_image.md"
-warn "(section 3.2) and in the manual's usage/installation page."
+warn "The loose *.sh artifacts (import_image.sh, run_dycov_docker.sh) lose their exec bit"
+warn "when downloaded from GitHub. End users must run 'chmod +x' before executing them;"
+warn "this is documented in docs/installation/using_the_provided_image.md (section 3.2) and"
+warn "in the manual. linux_install.sh does not need it: the docs pipe it straight into bash."
 echo ""

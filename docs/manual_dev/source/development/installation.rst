@@ -22,14 +22,14 @@ A recent Linux distribution is required. Debian 12 or Ubuntu 22.04 LTS (or
 newer) are the recommended choices, though other distributions may work.
 
 Before anything else, make sure the following packages are installed. They are
-needed to build and run Dynawo, generate PDF reports, and manage the Python
-environment.
+required by DyCoV's startup checks, and used to generate PDF reports and
+manage the Python environment.
 
 Build tools:
 
 .. code-block:: console
 
-   sudo apt install git curl unzip gcc g++ cmake
+   sudo apt install git curl unzip gcc g++ cmake make
 
 LaTeX — DyCoV generates PDF compliance reports, so LaTeX must be available
 even during development if you want to inspect the full output:
@@ -39,7 +39,7 @@ even during development if you want to inspect the full output:
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     texlive-bibtex-extra biber latexmk
+     latexmk
 
 Python 3.13 — DyCoV requires Python 3.13 or newer:
 

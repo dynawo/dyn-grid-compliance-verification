@@ -10,6 +10,7 @@
 
 import logging
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -22,7 +23,7 @@ from dycov.core.global_variables import (
 )
 from dycov.model.pcs import Pcs
 from dycov.validate.parameters import ValidationParameters
-from dycov.validate.validation import Validation
+from dycov.validate.validation import Validation, _open_document
 
 
 # ---- Logger fixture: force Report logger level != DEBUG (deterministic cleanup) ----
@@ -221,3 +222,98 @@ def test_validation_exits_on_existing_output_dir(monkeypatch, temp_dirs):
     with pytest.raises(SystemExit) as exc_info:
         Validation(parameters)
     assert exc_info.value.code == 1
+
+
+@pytest.fixture
+def recorded_logs(monkeypatch):
+    records = []
+
+    class _RecordingLogger:
+        def getEffectiveLevel(self):
+            return logging.INFO
+
+        def _record(self, level, message, *a, **k):
+            records.append((level, message))
+
+        def info(self, message, *a, **k):
+            self._record("info", message)
+
+        def warning(self, message, *a, **k):
+            self._record("warning", message)
+
+        def error(self, message, *a, **k):
+            self._record("error", message)
+
+        def debug(self, message, *a, **k):
+            self._record("debug", message)
+
+    monkeypatch.setattr(
+        "dycov.logging.dycov_logging.get_logger",
+        lambda name: _RecordingLogger(),
+        raising=True,
+    )
+    return records
+
+
+@pytest.fixture
+def spy_run(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "dycov.validate.validation.subprocess.run",
+        lambda *a, **k: calls.append((a, k)),
+    )
+    return calls
+
+
+def test_open_document_does_nothing_when_testing(monkeypatch, spy_run):
+    monkeypatch.setattr("dycov.validate.validation.shutil.which", lambda cmd: "/usr/bin/xdg-open")
+    monkeypatch.setenv("DISPLAY", ":0")
+
+    _open_document(Path("Results/Reports/report.pdf"), True)
+
+    assert spy_run == []
+
+
+def test_open_document_only_logs_without_a_viewer(monkeypatch, spy_run, recorded_logs):
+    monkeypatch.setattr("dycov.validate.validation.shutil.which", lambda cmd: None)
+    monkeypatch.setenv("DISPLAY", ":0")
+
+    _open_document(Path("Results/Reports/report.pdf"), False)
+
+    assert spy_run == []
+    assert any("Report saved in" in message for _, message in recorded_logs)
+
+
+def test_open_document_only_logs_without_display(monkeypatch, spy_run, recorded_logs):
+    monkeypatch.setattr("dycov.validate.validation.shutil.which", lambda cmd: "/usr/bin/xdg-open")
+    monkeypatch.delenv("DISPLAY", raising=False)
+
+    _open_document(Path("Results/Reports/report.pdf"), False)
+
+    assert spy_run == []
+    assert any("Report saved in" in message for _, message in recorded_logs)
+
+
+def test_open_document_uses_xdg_open(monkeypatch, spy_run):
+    report = Path("Results/Reports/report.pdf")
+    monkeypatch.setattr("dycov.validate.validation.shutil.which", lambda cmd: "/usr/bin/xdg-open")
+    monkeypatch.setenv("DISPLAY", ":0")
+
+    _open_document(report, False)
+
+    assert [args for args, _ in spy_run] == [(["xdg-open", report],)]
+
+
+def test_open_document_survives_a_failing_viewer(monkeypatch, recorded_logs):
+    def _failing_run(*a, **k):
+        raise subprocess.CalledProcessError(3, a[0])
+
+    monkeypatch.setattr("dycov.validate.validation.shutil.which", lambda cmd: "/usr/bin/xdg-open")
+    monkeypatch.setenv("DISPLAY", ":0")
+    monkeypatch.setattr("dycov.validate.validation.subprocess.run", _failing_run)
+
+    _open_document(Path("Results/Reports/report.pdf"), False)
+
+    assert any(
+        level == "warning" and "could not be opened" in message for level, message in recorded_logs
+    )

@@ -1,6 +1,6 @@
 # Quick start with DyCoV
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Run your first DyCoV studies in a few minutes using the provided examples.
 
 ---
@@ -29,16 +29,33 @@ Before starting, the following is assumed:
 
 - DyCoV is installed and accessible from the command line.
 - The `dycov` command is available.
-- You are working in a terminal with access to the DyCoV repository.
+- You are working in a terminal with access to the DyCoV examples (see section 3).
 
 This tutorial does **not** explain installation steps
 or input preparation details.
 
 ---
 
-## 3. Repository structure
+## 3. Where the examples live
 
-All examples used in this tutorial are located under the `examples/` directory.
+Every installation method ships the examples used in this tutorial; where they land
+depends on how DyCoV was installed:
+
+| Installation | Examples directory |
+| :--- | :--- |
+| Distribution image (WSL / Docker) | `~/examples` |
+| Native Linux | `<install_dir>/examples` |
+| Clone of the source repository | `examples/` at the repository root |
+
+The commands below are run from the directory that contains `examples/`: your home
+directory in the distribution image, `<install_dir>` in a native installation.
+
+> **Note**
+>
+> When `Results/` already exists and is not empty, DyCoV asks whether to
+> overwrite it. Answering no (the default) stops the run without producing
+> results, so re-running any of the walkthroughs below means either accepting
+> the overwrite or moving the previous `Results/` aside.
 
 Typical structure:
 
@@ -113,7 +130,7 @@ ready-to-run Dynawo example.
 
 ### 4.1 Go to an RMS example
 
-From the root of the DyCoV repository:
+From the directory that contains `examples/`:
 
 ```bash
 cd examples/Model/Wind/WECC4B
@@ -144,7 +161,7 @@ DyCoV will:
 
 After completion:
 
-- a `Results/` directory is created,
+- a `Results/` directory is created the first time, and reused afterwards,
 - PDF reports summarize the validation results,
 - HTML plots visualize the responses.
 
@@ -152,12 +169,13 @@ You have successfully completed your first RMS model validation.
 
 **Expected result:**
 
-- A `Results/` directory is created
+- A `Results/` directory is created the first time, and reused afterwards
 - PDF reports summarize the validation results (including compliance indicators)
 - HTML plots show simulated curves against reference curves
-- Each test is classified as:
-  - **Compliant**
-  - **Non-compliant**
+- Each test that could be evaluated is classified as **Compliant** or
+  **Non-compliant**; a test that could not be evaluated carries a status
+  explaining why (e.g. *Failed simulation*, *Not applicable test* — see
+  [Understanding DyCoV reports](understanding_reports.md))
 
 At this stage, focus on:
 - whether the workflow executed correctly,
@@ -173,7 +191,7 @@ using a single Dynawo model.
 
 ### 5.1 Go to a performance example
 
-From the repository root:
+From the directory that contains `examples/`:
 
 ```bash
 cd examples/Performance/Single/WECC4B
@@ -210,12 +228,13 @@ You have successfully completed your first electrical performance verification.
 
 **Expected result:**
 
-- A `Results/` directory is created
+- A `Results/` directory is created the first time, and reused afterwards
 - Each PCS test scenario is evaluated
 - PDF reports summarize compliance results
-- Each test is marked as:
-  - **Compliant**
-  - **Non-compliant**
+- Each test that could be evaluated is marked as **Compliant** or
+  **Non-compliant**; a test that could not be evaluated carries a status
+  explaining why (see
+  [Understanding DyCoV reports](understanding_reports.md))
 
 At this stage, focus on:
 - understanding how PCS tests are organized,
@@ -234,7 +253,7 @@ No RMS simulation or reference curves are involved.
 
 ### 6.1 Go to a GFM example
 
-From the repository root:
+From the directory that contains `examples/`:
 
 ```bash
 cd examples/GFM/Overdamped

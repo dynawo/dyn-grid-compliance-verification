@@ -1,6 +1,6 @@
 # Native Linux installation of DyCoV (advanced)
 
-**DyCoV version:** 1.1.0  
+**DyCoV version:** 1.2.0  
 **Scope:** Native installation of DyCoV on Linux systems without using the
 prebuilt distribution image.
 
@@ -22,8 +22,8 @@ prebuilt distribution image.
 In this mode:
 - DyCoV is installed as a **Python application** inside a user‑level virtual
   environment.
-- A compatible version of **Dynawo is automatically downloaded and installed**
-  by the DyCoV installer.
+- A compatible version of **Dynawo can be downloaded and installed** by the
+  DyCoV installer (it asks for confirmation first; see section 4.2).
 - The user is responsible for installing all **system‑level prerequisites**
   required by the installation process.  
   Missing or incompatible dependencies will result in installation failures.
@@ -47,11 +47,8 @@ Other distributions may work but are not explicitly supported.
 
 ## 3. System requirements
 
-The following system packages are required to run the **DyCoV native installer**.
-
-They are needed by the installation process, which automatically downloads and
-installs a compatible version of Dynawo.  
-Users are **not expected to install Dynawo manually**.
+The following system packages are required to run the **DyCoV native installer**
+and, later, the tool itself.
 
 The instructions below assume a Debian‑based system (Debian or Ubuntu).
 
@@ -59,12 +56,14 @@ The instructions below assume a Debian‑based system (Debian or Ubuntu).
 
 ### 3.1 System build tools
 
-These packages are required during the Dynawo installation step performed by
-the DyCoV installer.
-
 ```bash
-sudo apt install curl unzip gcc g++ cmake
+sudo apt install curl unzip gcc g++ cmake make
 ```
+
+`curl` and `unzip` are used by the installer itself, to download and unpack
+the components. `gcc`, `g++` and `cmake` are required by the installer and by
+DyCoV's startup checks. `make` is used by the installer to build the bundled
+manuals, and at runtime to compile the PDF reports.
 
 ---
 
@@ -90,21 +89,14 @@ sudo apt install \
 
 DyCoV **requires Python version 3.13 or newer**.
 
-Install a minimal Python environment and Git:
+Install Git:
 
 ```bash
-sudo apt install python3.13 python3.13-venv git
+sudo apt install git
 ```
 
-Ensure that Python 3.13 is the default `python3` interpreter or explicitly
-available in your environment:
-
-```bash
-python3.13 --version
-```
-
-Install **uv**, which is used to manage the Python virtual environment and
-dependencies:
+Install **uv**, which provisions Python 3.13 and manages the virtual environment
+and dependencies:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -121,12 +113,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### 4.1 Choose an installation directory
 
-Choose a base directory where DyCoV will be installed:
+Choose a base directory to install from:
 
 ```bash
 mkdir dycov_install
 cd dycov_install
 ```
+
+The installer does not install into this directory itself: it creates a `dycov/`
+subdirectory inside it. Here and in the tutorials, `<install_dir>` means that
+subdirectory, that is `dycov_install/dycov` if you followed the commands above.
 
 ---
 
@@ -149,6 +145,19 @@ The installation is performed under:
 
 ```text
 $PWD/dycov
+```
+
+The Dynawo version is pinned: the installer downloads
+`Dynawo_omc_v1.8.0.zip` — a Dynawo Nightly distribution validated by the
+DyCoV team and published as an asset of the DyCoV release itself — verifies
+its checksum, and unpacks it under `$PWD/dycov/dynawo`.
+
+If you skip the Dynawo download, you can use a Dynawo installation of your
+own: either make its launcher (`dynawo.sh`) reachable through `PATH`, or
+point the tool at it on each run with `-l`/`--launcher`:
+
+```bash
+dycov validate -l /path/to/dynawo/dynawo.sh ...
 ```
 
 ---
@@ -179,7 +188,7 @@ Verify that DyCoV is correctly installed:
 dycov --version
 ```
 
-If the help message is displayed, the installation is complete.
+If the version number is displayed, the installation is complete.
 
 ---
 

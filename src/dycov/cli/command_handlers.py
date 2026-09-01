@@ -158,12 +158,21 @@ def handle_performance_command(
     dycov_logging.get_logger("CommandHandlers").info("Handling 'performance' command.")
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
+    reference_curves: Optional[Path] = None
     output_dir: Optional[Path] = None
 
     if args.model:
         producer_model = Path(args.model)
         output_dir = args.output if args.output else producer_model.parent / "Results"
         dycov_logging.get_logger("CommandHandlers").debug(f"Producer model: {producer_model}")
+        if args.curves:
+            # With a model, the -c curves are used only for graphing (see the CLI help):
+            # they ride the reference-curves channel, which the figures already plot as
+            # an overlay and the performance validations never consume.
+            reference_curves = Path(args.curves)
+            dycov_logging.get_logger("CommandHandlers").debug(
+                f"Producer curves (graphing only): {reference_curves}"
+            )
     elif args.curves:
         producer_curves = Path(args.curves)
         output_dir = args.output if args.output else producer_curves.parent / "Results"
@@ -180,7 +189,7 @@ def handle_performance_command(
         output_dir=output_dir,
         producer_model=producer_model,
         producer_curves=producer_curves,
-        reference_curves=None,  # Not used for performance analysis
+        reference_curves=reference_curves,
         user_pcs=args.pcs,
         only_dtr=args.only_dtr,
         testing=args.testing,
