@@ -60,10 +60,26 @@ def _f(value) -> float:
 # ---------------------------------------------------------------------------
 
 
-def converter_par_set(par_id: str, prefix: str, control_params: list, zone1: dict, s_nom) -> tuple:
+def converter_par_set(
+    par_id: str,
+    prefix: str,
+    control_params: list,
+    zone1: dict,
+    s_nom,
+    plant_model: bool = False,
+) -> tuple:
     """Converter ``set``: prefixed control params, ``ConverterLVControl``, the internal ``LvTr``
-    (``RLvTrPu``/``XLvTrPu`` from ``Z_cc_LvTr``; the model has no B/G), and ``SNom``."""
+    (``RLvTrPu``/``XLvTrPu`` from ``Z_cc_LvTr``; the model has no B/G), and ``SNom``.
+
+    *plant_model* adds ``PPCLocal``, defined by the Zone3 plant models and by no turbine one; it
+    has no template row and is always ``false`` (RTE's decision).
+    """
     params = [{**p, "name": f"{prefix}{p['name']}"} for p in control_params]
+    if plant_model:
+        params.append(
+            {"name": f"{prefix}PPCLocal", "type": "BOOL", "value": "false",
+             "comments": ["Plant control"]}
+        )
     lv_control = _is_true(zone1.get("ConverterLVControl", "True"))
     params.append(
         {"name": f"{prefix}ConverterLVControl", "type": "BOOL",
@@ -300,7 +316,10 @@ def generate(excel: Path, outdir: Path) -> str:
     write_producer_par_file(root / "Zone1", "Producer.par", z1_sets)
 
     z3_sets = [
-        converter_par_set(gen_id, resolved["zone3_prefix"], z3_control, zone1, zone3["SnZone3"]),
+        converter_par_set(
+            gen_id, resolved["zone3_prefix"], z3_control, zone1, zone3["SnZone3"],
+            plant_model=True,
+        ),
         *_stepup("Zone3", resolved["zone3_prefix"], zone3["SnZone3"]),
     ]
     if "aux" in topology.casefold():
