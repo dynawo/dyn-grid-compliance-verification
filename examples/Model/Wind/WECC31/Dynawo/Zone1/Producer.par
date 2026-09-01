@@ -3,9 +3,6 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
 
-    <!-- PCS-->
-    <par type="BOOL" name="WT3_PPCLocal" value="true"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WT3_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT3_BLvTrPu" value="0"/>

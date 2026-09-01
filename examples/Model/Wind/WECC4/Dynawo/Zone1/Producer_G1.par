@@ -2,9 +2,6 @@
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- PCS-->
-    <par type="BOOL" name="WT4A_PPCLocal" value="true"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WT4A_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT4A_BLvTrPu" value="0"/>
