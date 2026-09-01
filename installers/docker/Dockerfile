@@ -13,8 +13,6 @@ ARG dycov_TUTORIALS=tutorials
 ARG DYNAWO_DIR_NAME=dynawo_build
 
 ENV DEBIAN_FRONTEND=noninteractive
-# Add uv's install directory to the PATH
-ENV PATH="/root/.local/bin:${PATH}"
 
 # First layer:
 #   - Update the base debian dist.
@@ -26,7 +24,8 @@ RUN apt-get update && apt-get -y upgrade \
      texlive-science texlive-lang-french texlive-bibtex-extra biber make \
      g++ \
      cmake \
-  && curl -LsSf https://astral.sh/uv/install.sh | sh
+  && curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh \
+  && uv --version
 
 # Second layer:
 #   - Install the dycov tool itself using uv.
