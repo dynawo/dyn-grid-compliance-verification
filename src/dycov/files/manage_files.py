@@ -244,7 +244,7 @@ def check_output_dir(path: Path, force_overwrite: bool = False) -> bool:
         True if the directory should NOT be overwritten, False otherwise.
     """
     if path.exists() and next(path.iterdir(), None):
-        option = input("Do you want to overwrite the results directory? (y/[N]]) ")
+        option = input("Do you want to overwrite the results directory? (y/[N]) ")
         if option.lower() in ("n", "no", ""):
             return True
         shutil.rmtree(path)
