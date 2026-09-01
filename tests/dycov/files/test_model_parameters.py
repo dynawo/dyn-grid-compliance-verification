@@ -763,9 +763,7 @@ def test_append_generator_takes_ppc_local_from_the_par_file():
 
 def test_append_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
     dyd_root = _make_root()
-    model_parameter = _add_bbmodel(
-        dyd_root, "Wind_Turbine", "IECWT4ACurrentSource2015", "parGen"
-    )
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "IECWT4ACurrentSource2015", "parGen")
     _add_connect(dyd_root, "Wind_Turbine", "WT4A_terminal", "StepUp_Xfmr", "transformer_terminal2")
     par_root = _make_root()
     _add_parset(par_root, "parGen", {})
