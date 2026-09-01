@@ -50,6 +50,13 @@ depends on how DyCoV was installed:
 The commands below are run from the directory that contains `examples/`: your home
 directory in the distribution image, `<install_dir>` in a native installation.
 
+> **Note**
+>
+> When `Results/` already exists and is not empty, DyCoV asks whether to
+> overwrite it. Answering no (the default) stops the run without producing
+> results, so re-running any of the walkthroughs below means either accepting
+> the overwrite or moving the previous `Results/` aside.
+
 Typical structure:
 
 ```text
@@ -154,7 +161,7 @@ DyCoV will:
 
 After completion:
 
-- a `Results/` directory is created,
+- a `Results/` directory is created the first time, and reused afterwards,
 - PDF reports summarize the validation results,
 - HTML plots visualize the responses.
 
@@ -162,7 +169,7 @@ You have successfully completed your first RMS model validation.
 
 **Expected result:**
 
-- A `Results/` directory is created
+- A `Results/` directory is created the first time, and reused afterwards
 - PDF reports summarize the validation results (including compliance indicators)
 - HTML plots show simulated curves against reference curves
 - Each test that could be evaluated is classified as **Compliant** or
@@ -221,7 +228,7 @@ You have successfully completed your first electrical performance verification.
 
 **Expected result:**
 
-- A `Results/` directory is created
+- A `Results/` directory is created the first time, and reused afterwards
 - Each PCS test scenario is evaluated
 - PDF reports summarize compliance results
 - Each test that could be evaluated is marked as **Compliant** or

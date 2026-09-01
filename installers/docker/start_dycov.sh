@@ -58,6 +58,12 @@ if [ -d "/opt/dycov/tutorials" ] && [ ! -d "$USER_HOME/tutorials" ]; then
     chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/tutorials"
 fi
 
+if [ -d "/opt/dycov/installation" ] && [ ! -d "$USER_HOME/installation" ]; then
+    echo "Copying installation guides to $USER_HOME/installation..."
+    cp -r /opt/dycov/installation "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/installation"
+fi
+
 # Leave the user in an interactive shell
 echo -e "\n-----------------------------------------------------------"
 echo -e " Dycov Container Environment"
@@ -65,6 +71,7 @@ echo -e "-----------------------------------------------------------"
 echo -e " User:      $dycov_USER ($dycov_UID)"
 echo -e " Examples:  ~/examples"
 echo -e " Tutorials: ~/tutorials/README.md  (start here)"
+echo -e " Install:   ~/installation/README.md"
 echo -e " Manual:    ~/manual/html/index.html  (HTML)"
 echo -e "            ~/manual/dycov.pdf        (PDF)"
 echo -e " Tools:     ~/tools/dynawo_par/generate_par.py  (Excel -> Dynawo PAR)"
