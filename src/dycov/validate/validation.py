@@ -55,12 +55,19 @@ def _open_document(file: Path, is_testing: bool) -> None:
     if os.name == "nt":
         dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
         subprocess.run(["start", file], shell=True)
-    else:
-        if shutil.which("open") and os.environ.get("DISPLAY"):
-            dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
-            subprocess.run(["open", file], check=True)
-        else:
-            dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
+        return
+
+    if not (shutil.which("xdg-open") and os.environ.get("DISPLAY")):
+        dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
+        return
+
+    dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
+    try:
+        subprocess.run(["xdg-open", file], check=True)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        dycov_logging.get_logger("Validation").warning(
+            f"The report could not be opened ({exc}). Report saved in: {file}"
+        )
 
 
 def _worker_initializer():
