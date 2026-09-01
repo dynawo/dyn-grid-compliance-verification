@@ -176,7 +176,7 @@ both dynamic regimes simultaneously.
 
 ## 5. Examples and directory organization
 
-The DyCoV repository provides ready‑to‑run GFM examples structured as:
+Every DyCoV installation provides ready‑to‑run GFM examples structured as:
 
 ```text
 examples/
