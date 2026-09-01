@@ -69,7 +69,7 @@ fi
 [[ -d "$DYNAWO_DIR" ]] || error "Dynawo directory not found: $DYNAWO_DIR"
 DYNAWO_DIR=$(realpath "$DYNAWO_DIR")
 
-# Version without 'v', forced into the artifacts via SETUPTOOLS_SCM_PRETEND_VERSION
+# Version without 'v', as setuptools_scm reports it
 VERSION_PLAIN="${VERSION#v}"
 
 # Repo root = current directory
@@ -156,9 +156,6 @@ info "SHA256: $DYNAWO_SHA256"
 LINUX_INSTALL_OUT="$OUTPUT_DIR/linux_install.sh"
 cp "$LINUX_INSTALL" "$LINUX_INSTALL_OUT"
 
-# Force version for release installer (avoids git tag dependency)
-sed -i "/^TARGET_BRANCH=/a export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov=${VERSION_PLAIN}" "$LINUX_INSTALL_OUT"
-
 # Remove the git fetch --tags line (we don't want to fetch tags in the release script)
 sed -i '/^[[:space:]]*cd "\$TMP_LOCAL_REPO"[[:space:]]*$/d' "$LINUX_INSTALL_OUT"
 sed -i '/git fetch .*--tags/d' "$LINUX_INSTALL_OUT"
@@ -188,8 +185,8 @@ rm -rf "$MANUAL_BUILD_DIR"
 # helps.py invokes the `dycov` CLI (dycov --help, dycov generate --help, ...) to
 # generate the command help pages, so dycov must be installed in the venv. This
 # keeps the manual build self-contained instead of relying on a dev environment
-# having dycov on PATH. The version is forced to match the release (dycov uses
-# setuptools_scm), reusing the same var as linux_install.sh.
+# having dycov on PATH. The version is forced here so the manual quotes the release
+# version even if the doc build leaves the tree dirty.
 uv venv "$REPO_ROOT/.manual_venv" --python 3.13 --quiet
 source "$REPO_ROOT/.manual_venv/bin/activate"
 uv pip install -q sphinx
