@@ -52,6 +52,18 @@ def test_converter_par_set_prefix_control_snom():
     assert named["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
 
 
+def test_converter_par_set_writes_ppclocal_only_for_the_plant_model():
+    # PPCLocal has no template row: the plant (Zone3) models define it, the turbine ones do not.
+    _id, turbine = G.converter_par_set("PV_Array", "photovoltaics_", [], ZONE1, "100")
+    _id, plant = G.converter_par_set(
+        "PV_Array", "photovoltaics_", [], ZONE1, "100", plant_model=True
+    )
+
+    assert "photovoltaics_PPCLocal" not in _named(turbine)
+    assert _named(plant)["photovoltaics_PPCLocal"] == "false"
+    assert next(p for p in plant if p["name"].endswith("PPCLocal"))["type"] == "BOOL"
+
+
 def test_converter_par_set_lvtr_from_its_own_field_regardless_of_lv_control():
     # The LvTr comes from Z_cc_LvTr, not Z_cc_TG, and is emitted whatever ConverterLVControl is.
     zone1_false = {**ZONE1, "ConverterLVControl": "False", "Z_cc_LvTr": "0.05"}
@@ -234,6 +246,9 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     z1_names = [p.get("name") for p in z1_par.iter(f"{{{ns}}}par")]
     assert "photovoltaics_Kqp" in z1_names
     assert "photovoltaics_FreqFlag" not in z1_names
+    # PPCLocal is written by the tool, in Zone3 only.
+    assert "photovoltaics_PPCLocal" in names
+    assert "photovoltaics_PPCLocal" not in z1_names
 
     # Zone3 INI: filled values
     cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
