@@ -36,6 +36,7 @@ from dycov.files import manage_files, model_parameters
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
+from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
@@ -315,7 +316,7 @@ def _pcs_replace(
         subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
         subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
         if "stabilized" in oc_results:
-            stabilized = "stable" if oc_results["stabilized"] else "\\textcolor{{red}}unstable"
+            stabilized = "stable" if oc_results["stabilized"] else "\textcolor{red}{unstable}"
             subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
@@ -775,7 +776,9 @@ def create_pdf(
         _clean(working_path)
 
     dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
-    if manage_files.move_report(working_path, output_path, REPORT_NAME):
-        dycov_logging.get_logger("Report").info("PDF done.")
-    else:
+    report_moved = manage_files.move_report(working_path, output_path, REPORT_NAME)
+    if proc.returncode != 0 or not report_moved:
         dycov_logging.get_logger("Report").error("PDFLatex Error.")
+        raise LatexReportException("pdflatex did not produce the final report.")
+
+    dycov_logging.get_logger("Report").info("PDF done.")
