@@ -114,9 +114,11 @@ def test_aux_load_and_line_par_sets():
     assert named["load_QRefPu"] == pytest.approx(0.005)
     assert named["load_alpha"] == pytest.approx(1.5)
 
+    # The collector rows are in ohms and siemens; its base is Un_PDR, the node it connects to.
     _p2, line = G.collector_line_par_set("IntNetwork_Line", ZONE3)
-    z_base = 33.0**2 / 100.0
+    z_base = float(ZONE3["Un_PDR"]) ** 2 / 100.0
     assert _named(line)["line_XPu"] == pytest.approx(1.0 / z_base)
+    assert _named(line)["line_BPu"] == pytest.approx(0.0)
 
 
 def test_drop_group_transformer_when_no_lv_control(tmp_path):
@@ -231,19 +233,21 @@ def _workbook_with(zone1_overrides):
 
 
 @pytest.mark.parametrize("lv_control", ["True", "False"])
-def test_zone1_ini_u_nom_is_the_node_voltage_whatever_the_converter_controls(
+def test_each_ini_carries_the_voltage_of_the_node_its_zone_connects_at(
     tmp_path, monkeypatch, lv_control
 ):
-    # Un2 (0.7 kV here) is the converter's own nominal and no grid-code level: writing it would
-    # leave the zone unclassifiable.
+    # Zone1 connects at its internal node (Un1) and Zone3 at the PDR (Un_PDR), whichever side the
+    # converter controls on — never the converter's own Un2.
     monkeypatch.setattr(
         G.wb, "read_workbook", lambda _path: _workbook_with({"ConverterLVControl": lv_control})
     )
     G.generate(Path("ignored.xlsx"), tmp_path)
 
-    cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    cp.read(tmp_path / "Dynawo" / "Zone1" / "Producer.ini")
-    assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == ZONE1["Un1"]
+    expected = {"Zone1": ZONE1["Un1"], "Zone3": ZONE3["Un_PDR"]}
+    for zone, u_nom in expected.items():
+        cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        cp.read(tmp_path / "Dynawo" / zone / "Producer.ini")
+        assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == u_nom
 
 
 def test_topology_spelled_with_spaces_is_accepted(tmp_path, monkeypatch):
