@@ -291,9 +291,6 @@ nothing and raises no error.
   applies the PDR level check to both zones, so a `Zone1` whose `Un1` is not a normalized level is
   rejected outright ("Unexpected nominal voltage at the PDR bus"). The shipped examples repeat
   `Un_PDR` in both zones and will want regenerating with the zone-1 node's real voltage.
-- **One cell, two zones.** A parameter declaring `Zone1;Zone3` gets one value for both PARs, and
-  the examples give some of them (`Kqi`, `Q{Max,Min}REECPu`, `tpWTGTb`) a different value per zone.
-  Either the template grows a second column for those, or the models are expected to share.
 - **Awaiting RTE:** a review of the variant→model map for completeness across the WECC models they
   support. Electrical validation of the user-entered values is possible extra scope.
 - **`WTG3WeccCurrentSource2` is mis-packaged in `Dynawo_v1.8.0_20260822`.** Its
