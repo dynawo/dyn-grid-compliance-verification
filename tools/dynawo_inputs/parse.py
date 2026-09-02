@@ -122,8 +122,9 @@ def resolve_models(workbook: dict) -> dict:
     table = _read_model_map(workbook)
     if key not in table:
         raise ValueError(
-            f"variant combination not found in '{MODEL_MAP_SHEET}': {key!r} "
-            f"(known: {', '.join(sorted(table)) or '(none)'})"
+            f"variant combination not found in '{MODEL_MAP_SHEET}': {key!r}. Pick a combination "
+            f"Dynawo has a model for in the 'Choix' column of 'Général', among: "
+            f"{', '.join(sorted(table)) or '(none)'}"
         )
     return {"key": key, **table[key]}
 
