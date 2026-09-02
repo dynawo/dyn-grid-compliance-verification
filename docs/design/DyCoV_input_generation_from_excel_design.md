@@ -79,6 +79,16 @@ Semantics: `Un1` = HTA/primary (node-1 nominal), `Un2` = BT/secondary (converter
 `ConverterLVControl` is text `"True"`/`"False"`; `R_cc_* / X_cc_*` rows are the **R/X ratio** `k`
 (§7), not impedances.
 
+Every zone field reaches the output except three, which are informative:
+
+- `N_Zone1`, the converter count: the workbook itself multiplies it by `SnZone1` to obtain
+  `SnZone3`, and the tool reads that result.
+- `Un2`, the converter's LV nominal: it tells whoever fills the workbook which voltage base the
+  control per-unit values are on (`Un2` when `ConverterLVControl = True`, `Un1` otherwise). The
+  WECC models take no nominal-voltage parameter — Dynawo gets it from the bus.
+- `Un_A`, the auxiliary load's nominal: no Dynawo parameter of the auxiliary transformer or load
+  takes it (the ratio comes from `r_TA`, the impedance base from `Sn_A`).
+
 ---
 
 ### 4. Output
@@ -182,28 +192,40 @@ descriptor's `defaultValue`; those without one must be filled for Dynawo to run.
 
 ### 7. Transformers and electrical computations
 
-Dynawo transformer/line impedances are per-unit on `SnRef = 100 MVA`. Transformer `(RPu, XPu)` on
-`SnRef` from `Z_cc` (pu on `SnZone`) and `k = R_cc/X_cc`:
+Dynawo **network elements** (transformers, lines) take per-unit values on `SnRef = 100 MVA`, so a
+`Z_cc` (pu on `SnZone`) with `k = R_cc/X_cc` becomes:
 ```
 X_cc = Z_cc / sqrt(1 + k²);  R_cc = k · X_cc;   XPu = X_cc · 100 / SnZone;   RPu = R_cc · 100 / SnZone
 ```
+The **WECC model's own** impedances are instead per-unit on its `SNom`, so `Z_cc_LvTr` (pu on
+`SnZone1`) is split into `R_cc`/`X_cc` and written unrebased. The same number serves both zones:
+Zone1's `SNom` is `SnZone1` already, and in Zone3 aggregating the `N` generator transformers in
+parallel onto `SnZone3 = N · SnZone1` cancels out.
 
-Per `Zone1` unit the tool writes **two distinct transformers**, from **separate** `Zone1a` fields:
+A `Zone1<x>` block describes two transformers, and each lands on a different side of the seam
+between the **Dynawo model** and the **network** DyCoV builds around it:
 
-- **Internal `LvTr`** — `RLvTrPu`/`XLvTrPu` (required by the model; no `B`/`G`) from `Z_cc_LvTr` +
-  `R_cc_LvTr / X_cc_LvTr` (base `SnZone1`). The template ships a neutral `1E-4` to replace.
-- **External `StepUp_Xfmr`** — `TransformerFixedRatio` (fixed ratio, no OLTC) from `Z_cc_TG` +
-  `r_TG` + `R_cc_TG / X_cc_TG` (base the zone's `Sn`), present **only when `ConverterLVControl =
-  True`** (below).
+- the converter's internal `LvTr` — `RLvTrPu`/`XLvTrPu` (no `B`/`G`) from `Z_cc_LvTr` +
+  `R_cc_LvTr / X_cc_LvTr` — is a *model* parameter;
+- the generator transformer — `TransformerFixedRatio` from `Z_cc_TG` + `r_TG` +
+  `R_cc_TG / X_cc_TG` — is a *network* block, `StepUp_Xfmr`, in both zones.
 
-`ConverterLVControl` states the side the converter control measures on and drives two things:
-(i) its per-unit nominal voltage in the INI — **`u_nom_at_PDR` = `Un2` (BT) if `True`, `Un1` (HTA)
-if `False`** (same `Un1` across `Zone1`s); (ii) whether the external `StepUp_Xfmr` exists —
-**`True` ⇒ present; `False` ⇒ absent** (the internal `LvTr` alone carries the step-up).
+`ConverterLVControl` decides which of the two carries the step-up, and the model enforces it
+(`Controls/WECC/Parameters/ParamsLvTfo.mo`): `True` zeroes the model's own branch, so the network
+block must be there; `False` puts `RLvTrPu` in it, so the block is dropped and the generator wired
+to its downstream node. It also states the side the converter control measures on, hence the
+converter's own nominal voltage (`Un2` when `True`, `Un1` when `False`) — which is *not* the INI's
+`u_nom_at_PDR`, the nominal voltage of the node the zone connects at (`Un1` in `Zone1`, i.e.
+`InternalNode1`, and `Un_PDR` in `Zone3`).
 
-Other elements: **`Main_Xfmr`** (`TransformerRatioTapChanger` from `Zone3`'s `Z_cc_TP` + taps
-`NbTap = N_prises + 1`, `RatioTfoMin/Max = r_min/r_max`) groups all generators — **`M` only**;
-**collector line** (`+i`) from `R_rc/X_rc/B_rc/G_rc` with `Zbase = Un1²/100`; **aux load** (`+Aux`)
+The **main HTB/HTA transformer** (`Main_Xfmr`, `TransformerRatioTapChanger` from `Z_cc_TP` + taps
+`NbTap = N_prises + 1`, `RatioTfoMin/Max = r_min/r_max`, base `SnZone3`) belongs to the `M`
+topologies only, where each `Zone1<x>` also keeps its own `StepUp_Xfmr_<i>`. In the
+single-generator topologies `Zone3` is one `Zone1` seen at plant scale, so its only external
+transformer is the generator one and `Zone3`'s tap rows stay unused.
+
+Other elements: **collector line** (`+i`), the aggregated HTA network as a PI model in
+`IntNetwork_Line`, from `R_rc/X_rc/B_rc/G_rc` with `Zbase = Un1²/100`; **aux load** (`+Aux`)
 `LoadAlphaBeta` from `P_A/Q_A/alpha/beta` + `AuxLoad_Xfmr` from `Z_cc_TA/r_TA/Sn_A`. Converter
 `SNom` = `SnZone`.
 
