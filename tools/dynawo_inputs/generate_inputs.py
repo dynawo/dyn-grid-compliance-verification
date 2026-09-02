@@ -168,9 +168,12 @@ def aux_load_par_set(par_id: str, zone3: dict) -> tuple:
 
 
 def collector_line_par_set(par_id: str, zone3: dict) -> tuple:
+    """Aggregated collector (``+i``) from ``R_rc``/``X_rc`` in ohms and ``B_rc``/``G_rc`` in
+    siemens. The rows carry no voltage of their own; the block connects to the PDR with no
+    transformer in between, so the per-unit base is ``Un_PDR``."""
     line = el.line_impedance(
         _f(zone3["R_rc"]), _f(zone3["X_rc"]), _f(zone3["B_rc"]), _f(zone3["G_rc"]),
-        _f(zone3["Un1"]),
+        _f(zone3["Un_PDR"]),
     )
     return par_id, [
         {"name": "line_RPu", "type": "DOUBLE", "value": line["RPu"]},
@@ -341,8 +344,9 @@ def generate(excel: Path, outdir: Path) -> str:
     write_producer_par_file(root / "Zone3", "Producer.par", z3_sets)
 
     include_consumption = template == "model_BESS"
-    # u_nom_at_PDR is the nominal voltage of the node the zone connects at, which DyCoV matches
-    # against the grid-code levels: Un1 here, never the converter's own Un2.
+    # u_nom_at_PDR is the nominal voltage of the node the zone connects at: Un1 for Zone1, whose
+    # node is internal to the plant and free of the DTR's level list (dycov#477), and Un_PDR for
+    # Zone3, the actual connection point.
     write_producer_ini_file(
         root / "Zone1", "Producer.ini", "S",
         values={"p_max_injection_at_PDR": zone1["Pmax_injection_z1"],
