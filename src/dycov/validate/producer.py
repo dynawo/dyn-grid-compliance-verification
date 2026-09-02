@@ -545,7 +545,7 @@ class ModelProducer(Producer):
         self._filename = filename
         self.__init_parameters()
         parameter_checks.check_producer_params(
-            self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom
+            self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom, self._zone
         )
 
         if self.is_dynawo_model():
