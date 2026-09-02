@@ -83,9 +83,10 @@ Every zone field reaches the output except three, which are informative:
 
 - `N_Zone1`, the converter count: the workbook itself multiplies it by `SnZone1` to obtain
   `SnZone3`, and the tool reads that result.
-- `Un2`, the converter's LV nominal: it tells whoever fills the workbook which voltage base the
-  control per-unit values are on (`Un2` when `ConverterLVControl = True`, `Un1` otherwise). The
-  WECC models take no nominal-voltage parameter — Dynawo gets it from the bus.
+- `Un2`, the converter side's nominal: it tells whoever fills the workbook which voltage base the
+  control per-unit values are on (`Un2` when `ConverterLVControl = True`, `Un1` otherwise), and
+  names the base the impedance rows refer to. The WECC models take no nominal-voltage parameter,
+  and the network blocks take ratios (`r_TG`, `r_TA`), not levels.
 - `Un_A`, the auxiliary load's nominal: no Dynawo parameter of the auxiliary transformer or load
   takes it (the ratio comes from `r_TA`, the impedance base from `Sn_A`).
 
@@ -214,9 +215,17 @@ between the **Dynawo model** and the **network** DyCoV builds around it:
 (`Controls/WECC/Parameters/ParamsLvTfo.mo`): `True` zeroes the model's own branch, so the network
 block must be there; `False` puts `RLvTrPu` in it, so the block is dropped and the generator wired
 to its downstream node. It also states the side the converter control measures on, hence the
-converter's own nominal voltage (`Un2` when `True`, `Un1` when `False`) — which is *not* the INI's
-`u_nom_at_PDR`, the nominal voltage of the node the zone connects at (`Un1` in `Zone1`, i.e.
-`InternalNode1`, and `Un_PDR` in `Zone3`).
+converter's own nominal voltage (`Un2` when `True`, `Un1` when `False`), which the values the user
+types are per-unit of.
+
+The INI's `u_nom_at_PDR` is a different thing: the nominal voltage of the node each zone connects
+at. `Zone3` connects at the real PDR, so it carries `Un_PDR`; `Zone1` connects at its internal
+node and carries `Un1`, typically an HTA level. Only `Zone3`'s has to be one of the DTR's
+normalized levels — `Zone1`'s is free, which is what
+[dycov#477](https://github.com/dynawo/dyn-grid-compliance-verification/issues/477) fixes: today
+DyCoV applies the level check to both zones and rejects an HTA `Zone1` outright ("Unexpected
+nominal voltage at the PDR bus"). Until that lands, a `Zone1` whose `Un1` is not a normalized
+level will not validate.
 
 The **main HTB/HTA transformer** (`Main_Xfmr`, `TransformerRatioTapChanger` from `Z_cc_TP` + taps
 `NbTap = N_prises + 1`, `RatioTfoMin/Max = r_min/r_max`, base `SnZone3`) belongs to the `M`
@@ -224,8 +233,10 @@ topologies only, where each `Zone1<x>` also keeps its own `StepUp_Xfmr_<i>`. In 
 single-generator topologies `Zone3` is one `Zone1` seen at plant scale, so its only external
 transformer is the generator one and `Zone3`'s tap rows stay unused.
 
-Other elements: **collector line** (`+i`), the aggregated HTA network as a PI model in
-`IntNetwork_Line`, from `R_rc/X_rc/B_rc/G_rc` with `Zbase = Un1²/100`; **aux load** (`+Aux`)
+Other elements: **collector line** (`+i`), the aggregated network as a PI model in
+`IntNetwork_Line`, from `R_rc/X_rc/B_rc/G_rc` in ohms and siemens with `Zbase = Un_PDR²/100` — the
+block connects to the PDR with no transformer in between, so that is its voltage base, whatever
+level the ohms were measured at; **aux load** (`+Aux`)
 `LoadAlphaBeta` from `P_A/Q_A/alpha/beta` + `AuxLoad_Xfmr` from `Z_cc_TA/r_TA/Sn_A`. Converter
 `SNom` = `SnZone`.
 
@@ -270,6 +281,10 @@ nothing and raises no error.
   model and duplicating a `Zone1<x>` copies only electrical data, so the Excel cannot say which
   model each generator is when they differ (e.g. `WECC4` mixes `WTG4A`+`WTG4B`). Blocks `M`, and
   needs a design before it can be asked as a question.
+- **Depends on [dycov#477](https://github.com/dynawo/dyn-grid-compliance-verification/issues/477):**
+  `Zone1` is written with its own `Un1`, as the DTR allows, which DyCoV only accepts once the PDR
+  level check stops being applied to zone 1. The shipped examples repeat `Un_PDR` in both zones and
+  will want regenerating with the zone-1 node's real voltage.
 - **Awaiting RTE:** a review of the variant→model map for completeness across the WECC models they
   support. Electrical validation of the user-entered values is possible extra scope.
 - **`WTG3WeccCurrentSource2` is mis-packaged in `Dynawo_v1.8.0_20260822`** (reported): its
