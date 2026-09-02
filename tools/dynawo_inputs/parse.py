@@ -199,20 +199,36 @@ def zone1_sheets(workbook: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
-def parse_control_params(workbook: dict) -> list:
+CONVERTER_VOLTAGE_CHOICE = "Un1 ou Un2"
+
+
+def _normalized_number(text: str) -> str:
+    """The shortest form that round-trips: Excel stores ``1e-5`` as ``1.0000000000000001E-5``."""
+    try:
+        value = float(text)
+    except (TypeError, ValueError):
+        return text
+    if value.is_integer() and abs(value) < 1e16:
+        return str(int(value))
+    return repr(value)
+
+
+def parse_control_params(workbook: dict, converter_voltage: str | None = None) -> list:
     """Selected control parameters, flat, in workbook order (sheet -> table -> parameter).
 
     Valued cells only. Each param is ``{"block"(provenance label, e.g. "REEC"), "name"(bare),
     "type"(mapped to the Dynawo convention), "value", "comments"}``; ``comments`` merges the
-    per-parameter comment/base unit and, on a variant's first param, the ``[sheet, table |
-    variant]`` section header (``dynawo_par`` design §8.3). The flat order is what the PAR
-    emits, so the Excel alone determines it.
+    per-parameter comment and base unit, and a variant's first param opens the section with the
+    variant name. The flat order is what the PAR emits, so the Excel alone determines it.
+
+    *converter_voltage* resolves the template's ``Un1 ou Un2`` base unit, which depends on the
+    side the converter controls on, to the one actually in force.
     """
     config = wb.parse_config(workbook)
     variants = wb.parse_variants(workbook)
     result = []
     for block, variant in wb._selected_variants(config, variants):
-        pending_section = [variant.sheet, f"{variant.table} | {variant.name}"]
+        pending_section = [variant.name]
         for p in variant.parameters:
             if p.value is None:
                 continue
@@ -220,9 +236,13 @@ def parse_control_params(workbook: dict) -> list:
             pending_section = []
             merged = wb._merge_comment(p)
             if merged:
+                if converter_voltage:
+                    merged = merged.replace(CONVERTER_VOLTAGE_CHOICE, converter_voltage)
                 comments.append(merged)
+            param_type = wb._map_type(p.type)
+            value = _normalized_number(p.value) if param_type == "DOUBLE" else p.value
             result.append(
-                {"block": block, "name": p.name, "type": wb._map_type(p.type),
-                 "value": p.value, "comments": comments}
+                {"block": block, "name": p.name, "type": param_type,
+                 "value": value, "comments": comments}
             )
     return result

@@ -26,17 +26,20 @@ from pathlib import Path
 _MAIN_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 _REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
-# Name of the configuration sheet (accent-insensitive match is applied).
+# Sheet names are matched accent-insensitively, hence the unaccented spelling.
 _CONFIG_SHEET = "general"
 
 # Choices in the configuration sheet that mean "no block selected".
 _NO_BLOCK = {"", "aucun", "none", "n/a", "na", "-"}
 
-# Template mark for "this parameter does not apply to this variant", in the parameter name
-# cell, the value cell or both. Written verbatim it would reach the PAR, so it is dropped.
+# The template marks a parameter that does not apply to a variant, in its name cell or its value
+# cell; written verbatim the mark would end up in the PAR.
 _NOT_APPLICABLE = "/"
 
-# Excel type -> Dynawo PAR type. Anything unknown is simply upper-cased.
+# Same idea in a base-unit or comment cell: the row has no annotation to carry.
+_NO_ANNOTATION = {"-", "/", "n/a", "na"}
+
+# Excel type -> Dynawo PAR type.
 _TYPE_MAP = {
     "double": "DOUBLE",
     "float": "DOUBLE",
@@ -64,6 +67,17 @@ class Parameter:
     value: str | None = None
     comment: str | None = None
     base_unit: str | None = None
+
+
+@dataclass
+class Columns:
+    """The columns a variant's parameters are read from; ``base``/``comment`` are optional."""
+
+    param: int
+    value: int
+    type: int
+    base: int | None = None
+    comment: int | None = None
 
 
 @dataclass
@@ -259,23 +273,21 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
     variants: list[Variant] = []
     for param_col in sorted(column_groups):
         variant_name = _cell(grid, header_row - 1, param_col)
-        if not variant_name:
+        columns = _group_columns(grid, header_row, param_col, table_labels)
+        if not variant_name or columns is None:
             continue
-        value_col, type_col = _group_columns(grid, header_row, param_col, table_labels)
-        if value_col is None or type_col is None:
-            continue
-        table = _label_for_column(table_labels, param_col) or sheet_name
-        base_col = _extra_for_column(base_columns, table_labels, param_col)
-        comment_col = _extra_for_column(comment_columns, table_labels, param_col)
-        variant = Variant(name=variant_name, sheet=sheet_name, table=table)
-        variant.parameters = _parse_parameters(
-            grid, header_row, param_col, value_col, type_col, base_col, comment_col
+        columns.base = _extra_for_column(base_columns, table_labels, param_col)
+        columns.comment = _extra_for_column(comment_columns, table_labels, param_col)
+        variant = Variant(
+            name=variant_name,
+            sheet=sheet_name,
+            table=_label_for_column(table_labels, param_col) or sheet_name,
         )
+        variant.parameters = _parse_parameters(grid, header_row, columns)
         variants.append(variant)
     return variants
 
 
-# Header spellings, accent-insensitive, in the template's French or in English.
 _PARAM_HEADER_PREFIXES = ("parametre", "parameter")
 _TYPE_HEADERS = {"type", "types"}
 _VALUE_HEADERS = {"value", "values", "valeur", "valeurs"}
@@ -289,7 +301,7 @@ def _normalized_header(value) -> str:
 
 
 def _is_param_header(value) -> bool:
-    """True for ``Paramètres``, ``Parameter``, ``Paramètres (Dynawo)``, ``Paramètres\\n(Dynawo)``."""
+    """True for ``Paramètres``/``Parameter``, with any suffix such as ``(Dynawo)``."""
     return _normalized_header(value).startswith(_PARAM_HEADER_PREFIXES)
 
 
@@ -329,12 +341,13 @@ def _find_column_groups(grid: Grid, header_row: int) -> list[int]:
 
 def _group_columns(
     grid: Grid, header_row: int, param_col: int, labels: list[tuple[int, str]]
-) -> tuple[int | None, int | None]:
-    """Return the ``(value, type)`` columns of the group starting at *param_col*.
+) -> "Columns | None":
+    """Return the columns of the variant group starting at *param_col*, ``None`` if incomplete.
 
-    Each is the nearest such header to its right within the variant's table block: adjacent
-    when the variant carries its own ``Types`` column (``Parameter | Type | Value``), further
-    right when the block's variants share a single one (``Parameter | Value`` repeated).
+    Value and type are the nearest such headers to the right of *param_col*, within its table
+    block: adjacent when the variant carries its own ``Types`` column (``Parameter | Type |
+    Value``), further right when the block's variants share a single one (``Parameter | Value``
+    repeated).
     """
     _, block_end = _block_bounds(labels, param_col)
 
@@ -348,7 +361,10 @@ def _group_columns(
             None,
         )
 
-    return nearest(_is_value_header), nearest(_is_type_header)
+    value_col, type_col = nearest(_is_value_header), nearest(_is_type_header)
+    if value_col is None or type_col is None:
+        return None
+    return Columns(param=param_col, value=value_col, type=type_col)
 
 
 def _find_extra_columns(grid: Grid, header_row: int, prefix: str) -> list[int]:
@@ -408,32 +424,28 @@ def _extra_for_column(
     return None
 
 
-def _parse_parameters(
-    grid: Grid,
-    header_row: int,
-    param_col: int,
-    value_col: int,
-    type_col: int,
-    base_col: int | None,
-    comment_col: int | None,
-) -> list[Parameter]:
+def _parse_parameters(grid: Grid, header_row: int, columns: Columns) -> list[Parameter]:
     """Parse the data rows of a single variant column group.
 
     A row is valid for this variant when both ``Parameter`` and ``Type`` are
     non-empty. Empty rows (for this variant) are skipped without ending the
     table, so sparse parallel variants are handled correctly.
     """
+    def annotation(row: int, col: int | None) -> str | None:
+        text = _cell(grid, row, col) if col is not None else None
+        return text if text and text.casefold() not in _NO_ANNOTATION else None
+
     parameters: list[Parameter] = []
     for row in range(header_row + 1, len(grid)):
-        name = _cell(grid, row, param_col)
-        ptype = _cell(grid, row, type_col)
+        name = _cell(grid, row, columns.param)
+        ptype = _cell(grid, row, columns.type)
         if not name or not ptype or name == _NOT_APPLICABLE:
             continue
-        value = _cell(grid, row, value_col)
+        value = _cell(grid, row, columns.value)
         if value == _NOT_APPLICABLE:
             value = None
-        base_unit = _cell(grid, row, base_col) if base_col is not None else None
-        comment = _cell(grid, row, comment_col) if comment_col is not None else None
+        base_unit = annotation(row, columns.base)
+        comment = annotation(row, columns.comment)
         parameters.append(
             Parameter(
                 name=name,
