@@ -98,8 +98,15 @@ def test_resolve_models_unknown_combination_raises():
     wb = _workbook(
         _general(("REPC", "REPC_A"), key="REGC_A|REEC_A|Aucun|WTGP_B|Aucun|Aucun")
     )
-    with pytest.raises(ValueError, match="not found in 'Model Map'"):
+    with pytest.raises(ValueError) as error:
         P.resolve_models(wb)
+
+    message = str(error.value)
+    assert "not found in 'Model Map'" in message
+    # The user's own combination, where to change it, and the ones to choose from.
+    assert "REGC_A|REEC_A|Aucun|WTGP_B|Aucun|Aucun" in message
+    assert "'Choix' column of 'Général'" in message
+    assert "REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun" in message
 
 
 def test_model_map_key_header_name_is_free():
