@@ -6,8 +6,10 @@ The fixture ``WECCSample_full.xlsx`` is a PV ``S+Aux`` case matching
 ``examples/Model/Photovoltaics/WECCCurrentSource``; values are invented, so we compare **structure
 only** (``blackBoxModel`` libs + ``connect`` wiring), normalizing the generator block id (tool
 ``PV_Array`` vs the example's legacy ``Wind_Turbine``). The step-up transformer **lib** is excluded
-from the example match and asserted directly as ``TransformerFixedRatio`` (the example's
-``TransformerRatioTapChanger`` is a divergence; DyCoV never validates the lib)."""
+from the example match and asserted directly as ``TransformerFixedRatio``: the single-generator
+topologies carry the generator transformer, which the Excel gives a fixed ratio (``r_TG``) and no
+tap data, so the example's ``TransformerRatioTapChanger`` is a divergence — and DyCoV never
+validates the lib."""
 
 from __future__ import annotations
 
@@ -86,7 +88,5 @@ def test_non_stepup_libs_match_example(generated, zone):
 
 @pytest.mark.parametrize("zone", ["Zone1", "Zone3"])
 def test_stepup_lib_is_data_driven(generated, zone):
-    # The fixture's fixed r_TG (no OLTC data) implies TransformerFixedRatio; rationale and why we
-    # assert the Excel rule instead of the example's lib are in the module docstring.
     stepups = {lib for bid, lib in _libs(generated / zone / "Producer.dyd") if bid == _STEPUP_ID}
     assert stepups == {"TransformerFixedRatio"}, stepups
