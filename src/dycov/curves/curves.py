@@ -132,12 +132,18 @@ class ProducerCurves:
     def get_generator_u_dim(self) -> float:
         """Get the Udim.
 
+        Zone 1's internal node voltage is not normalized against the DTR's PDR
+        voltage-level list (that classification only applies at the PDR, Zone 3),
+        so Zone 1 has no Udim to report: its own nominal voltage is used instead.
+
         Returns
         -------
         float
             Udim.
         """
         producer = self.get_producer()
+        if producer.get_zone() == 1:
+            return producer.u_nom
         return generator_variables.get_generator_u_dim(producer.u_nom)
 
     def get_setpoint_variation(self, pcs_bm_oc_name: str) -> float:

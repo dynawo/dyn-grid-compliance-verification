@@ -469,6 +469,18 @@ def test_check_producer_params(monkeypatch):
         )
     assert "Unexpected nominal voltage" in pytest_wrapped_e.value.args[0]
 
+    # Zone 1 has no PDR: an out-of-list u_nom must not raise
+    parameter_checks.check_producer_params(
+        p_max_injection_pu=100.0, p_max_consumption_pu=50.0, u_nom=999, zone=1
+    )
+
+    # Zone 3 is the PDR: the check still applies there
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        parameter_checks.check_producer_params(
+            p_max_injection_pu=100.0, p_max_consumption_pu=50.0, u_nom=999, zone=3
+        )
+    assert "Unexpected nominal voltage" in pytest_wrapped_e.value.args[0]
+
 
 def test_check_simulation_duration():
     """Test check_simulation_duration function."""
