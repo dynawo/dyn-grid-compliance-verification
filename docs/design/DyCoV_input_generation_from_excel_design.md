@@ -24,7 +24,8 @@ template. Its only checking role is at the **submodel** level (§8).
 
 **Topology codes.** `Zone3`'s `Topologie` is `{S | M}`, optionally followed by `+Aux` and/or `+i`.
 `S` = one `Zone1` sheet (single generator); `M` = one `Zone1<x>` sheet per generator. `+Aux` =
-auxiliary load + its transformer; `+i` = aggregated HV collector line (PI model).
+auxiliary load + its transformer; `+i` = the plant's collector network, aggregated as a PI line.
+Only the `M` topologies carry a main HTB/HTA transformer.
 
 **In scope:** `Producer.{ini,dyd,par}` for Zone1 and Zone3, single-`Zone1` topologies
 (`S`, `S+Aux`, `S+i`, `S+Aux+i`), plus the submodel report (§8).
@@ -57,7 +58,7 @@ python generate_inputs.py --excel model.xlsx --outdir <path>
 | `Général` | Block selection (`Type de bloc \| Choix \| Zone`: block → variant or `Aucun`, plus the `;`-separated zones the block's parameters go to) and the Excel-computed `Model Map` lookup key (derived table; the tool reads the cached key cell verbatim). |
 | `Model Map` | Variant tuple → Dynawo `lib` + prefix, per zone (§6). |
 | `Zone1<x>` (`Zone1a`, …) | One sheet per generator. Zone-1 data: `SnZone1`, `N_Zone1`, `ConverterLVControl`, `Un1`, `Un2`, internal `LvTr` (`Z_cc_LvTr`, `R_cc_LvTr / X_cc_LvTr`), external step-up (`r_TG`, `Z_cc_TG`, `R_cc_TG / X_cc_TG`), `Pmax_injection_z1`, `Pmax_soutirage_z1`, `Qmax_z1`, `Qmin_z1`, `P_share`, `Q_share`. |
-| `Zone3` | Exactly one. `Topologie`, `SnZone3`, `Un_PDR`, `Pmax_PDR`, `Qmax_PDR`, `Qmin_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`), aux load (`+Aux`), collector (`+i`). |
+| `Zone3` | Exactly one. `Topologie`, `SnZone3` (computed as `N_Zone1 · SnZone1`), `Un_PDR`, `Pmax_PDR`, `Qmax_PDR`, `Qmin_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min` — `M` only), aux load (`+Aux`), collector (`+i`). |
 | `REPC` / `REEC` / `REGC` / `Mechanical Part` | Control-block parameters, one column group per variant, headed by `Paramètres` (French or English, accent-insensitive, and any parenthetical such as `Paramètres (Dynawo)`); optional `Bases…`/`Base unit`, `Commentaires`/`Comment` columns. |
 | `Signaux zone 1/3`, separator sheets | Ignored. |
 
@@ -107,8 +108,9 @@ prefix; parameter type/value come from the Excel (§6):
   that declare that zone in `Général`'s `Zone` column, in the **workbook's own order** (sheet →
   table → parameter) — the Excel alone determines the PAR order, so diffs stay stable; a selection
   where no block declares `Zone1` is refused (never a silently incomplete `Zone1`). Empty Excel
-  cells are omitted (Dynawo defaults). Initialization / power-flow parameters (`i0Pu`, `u0Pu`,
-  `PInj0Pu`, …) are not in the Excel and are injected by DyCoV at simulation setup.
+  cells are omitted (Dynawo defaults). Initialization / power-flow parameters (`P0Pu`, `Q0Pu`,
+  `U0Pu`, `UPhase0`, `*Pcc0Pu`, …) are not in the Excel and are injected by DyCoV at simulation
+  setup.
 
 A variant's first parameter opens its section with a comment naming the variant, and a parameter
 carrying a base unit or a comment in the workbook gets one too, with the `Un1 ou Un2` base resolved
@@ -153,16 +155,22 @@ offline, in sync with the simulation Dynawo version. A workbook whose key cell i
 non-Excel writer, hence without cached formula values) is rejected with a message asking to open
 and save it in Excel.
 
+The map's rows are the combinations Dynawo has a model for, and the template lets the user select
+others — `REGC_B|REEC_C`, say, a BESS behind a voltage source. Choosing a valid combination is the
+user's job: a key the map does not hold is refused, naming the key and listing the known ones.
+
 **Parameter names carry the model prefix.** The Excel holds bare names (`Kqp`); each WECC model is a
 compiled composite whose descriptor flattens every parameter to `<prefix>_<Param>`
 (`photovoltaics_Kqp`) and the AC port to `<prefix>_terminal`. Dynawo binds by the exact flattened
 name, so the tool **prepends the resolved prefix** to every converter parameter — in both the PAR
-(`photovoltaics_Kqp`) and the DYD (`photovoltaics_terminal`). Parameter **type and value** are the
-only data taken verbatim from the Excel (`type` mapped to the Dynawo convention, `double → DOUBLE`).
+(`photovoltaics_Kqp`) and the DYD (`photovoltaics_terminal`). Beyond the name, the Excel supplies
+only the type, mapped to the Dynawo convention (`double → DOUBLE`), and the value: a `DOUBLE` is
+re-rendered as the shortest text that round-trips to the same number, so the 17 digits Excel stores
+for `1e-5` do not reach the PAR, and every other type is copied as it is.
 
 **Resolution is unambiguous (injective).** The variant selection determines one model, so no
 separate model field is needed and technology (PV/BESS/Wind) is derived from the resolved `lib`.
-Observed Zone3 (plant-control) map (maintained in the Excel, not in the tool):
+The Zone3 (plant) side of the map, which lives in the Excel and not in the tool:
 
 | Model (Zone3 `lib`) | tech | REGC | REEC | WTGT/WTGP/WTGA/WTGQ |
 | :--- | :-- | :-- | :-- | :-- |
@@ -187,13 +195,10 @@ the final template will leave that cell empty. Either way nothing reaches the PA
 verbatim, `/` would, as a value or even as a parameter name. An unfilled parameter falls back to the
 descriptor's `defaultValue`; those without one must be filled for Dynawo to run.
 
-**Two parameters are derived, not read.** `ConverterLVControl` comes from the zone sheet (§7), and
-`PPCLocal` has no template row: it is always `false`, and emitted only among the `Zone3`
-parameters, since it exists in the plant `lib`s and in none of the turbine ones.
-
-**Values are written verbatim, shortened.** A `DOUBLE` is re-rendered as the shortest text that
-round-trips to the same number, so the 17 digits Excel stores for `1e-5` do not reach the PAR.
-Other types are copied as they are.
+**Two model parameters come from outside the control sheets.** `ConverterLVControl` is read from
+the zone sheet, where it also decides the network (§7); `PPCLocal` has no row anywhere: it is
+always `false`, and emitted only among the `Zone3` parameters, since it exists in the plant `lib`s
+and in none of the turbine ones.
 
 ---
 
@@ -227,7 +232,7 @@ types are per-unit of.
 The INI's `u_nom_at_PDR` is a different thing: the nominal voltage of the node each zone connects
 at. `Zone3` connects at the real PDR and carries `Un_PDR`, which the DTR requires to be one of its
 normalized levels; `Zone1` connects at its internal node and carries `Un1`, typically an HTA level,
-which the DTR leaves free (§10).
+which the DTR leaves free.
 
 The **main HTB/HTA transformer** (`Main_Xfmr`, `TransformerRatioTapChanger` from `Z_cc_TP` + taps
 `NbTap = N_prises + 1`, `RatioTfoMin/Max = r_min/r_max`, base `SnZone3`) belongs to the `M`
@@ -235,12 +240,16 @@ topologies only, where each `Zone1<x>` also keeps its own `StepUp_Xfmr_<i>`. In 
 single-generator topologies `Zone3` is one `Zone1` seen at plant scale, so its only external
 transformer is the generator one and `Zone3`'s tap rows stay unused.
 
-Other elements: **collector line** (`+i`), the aggregated network as a PI model in
-`IntNetwork_Line`, from `R_rc/X_rc/B_rc/G_rc` in ohms and siemens with `Zbase = Un_PDR²/100` — the
-block connects to the PDR with no transformer in between, so that is its voltage base, whatever
-level the ohms were measured at; **aux load** (`+Aux`)
-`LoadAlphaBeta` from `P_A/Q_A/alpha/beta` + `AuxLoad_Xfmr` from `Z_cc_TA/r_TA/Sn_A`. Converter
-`SNom` = `SnZone`.
+The remaining blocks:
+
+- **collector line** (`+i`) — `IntNetwork_Line`, the plant's collector aggregated as a PI model,
+  from `R_rc`/`X_rc` in ohms and `B_rc`/`G_rc` in siemens with `Zbase = Un_PDR²/100`. Those rows
+  carry no voltage of their own, and the block connects to the PDR with no transformer in between,
+  so that is its base whatever level the ohms were measured at.
+- **auxiliary load** (`+Aux`) — `Aux_Load`, a `LoadAlphaBeta` from `P_A`/`Q_A` (MW/MVAr on
+  `SnRef`) and `alpha`/`beta`, behind `AuxLoad_Xfmr` from `Z_cc_TA` + `r_TA` on base `Sn_A`.
+
+The converter's `SNom` is the zone's own: `SnZone1` in Zone1, `SnZone3` in Zone3.
 
 ---
 
@@ -259,9 +268,14 @@ Tests live under `tests/tools/` (standard `pytest`):
 - **Map/pairing**: the variant→model map is injective and every plant model has its 1:1 turbine
   sibling.
 - **Golden**: for a committed AIA-authored fixture (`WECCSample_full.xlsx`, invented values), the
-  generated `dyd`/`par` match `examples/Model/**` structurally (connects + block libs).
+  generated `dyd` matches `examples/Model/**` structurally — the `connect` wiring and the block
+  libs, the step-up's excepted while §10 stands.
 - **Electrical**: transformer/base conversions against known values.
 - **Parsing / submodel report**: layouts, unknown-combo detection, present/missing blocks.
+
+Replicating a shipped `examples/Model/**` case is the end-to-end check: fill a workbook with the
+values the example's files imply, generate, and diff. What the diff cannot close tells whether a
+parameter is missing from the template, dead in the example, or simply not expressible.
 
 Template parameter names are audited separately against a Dynawo `ddb`, matching every row of the
 control sheets to the `.desc.xml` of both `lib`s of every `Model Map` row (exact → case-insensitive
@@ -280,21 +294,16 @@ nothing and raises no error.
   case uses `TransformerRatioTapChanger`. Proposal for RTE: add `N_prises`, `r_max` and `r_min` to
   `Zone1<x>`, next to `r_TG` and named as in `Zone3`, and let the lib follow the data — tap data
   present ⇒ regulated, `N_prises = 0` or empty ⇒ fixed ratio, with a template comment saying so.
-  The rule then reads the same for the three transformers. It also asks a little of the tool:
+  The rule covers the three transformers that are network blocks with a lib to choose:
+  `StepUp_Xfmr(_i)`, `Main_Xfmr` — which already has its tap rows — and `AuxLoad_Xfmr`, which has
+  only `r_TA` and so stays a fixed ratio unless tap rows are added for it too. It leaves out the
+  `LvTr`, a model parameter with no lib of its own. It also asks a little of the tool:
   `RatioTfo0Pu` becomes the given ratio rather than `1.0`, and `Tap0` the tap that matches it,
   `round((r − r_min) / (r_max − r_min) · N_prises)`.
-- **`M`: how each `Zone1<x>`'s model is selected.** The single `Général` selection resolves one
-  model and duplicating a `Zone1<x>` copies only electrical data, so the Excel cannot say which
-  model each generator is when they differ (e.g. `WECC4` mixes `WTG4A`+`WTG4B`). Blocks `M`, and
-  needs a design before it can be asked as a question.
-- **[dycov#477](https://github.com/dynawo/dyn-grid-compliance-verification/issues/477).** DyCoV
-  applies the PDR level check to both zones, so a `Zone1` whose `Un1` is not a normalized level is
-  rejected outright ("Unexpected nominal voltage at the PDR bus"). The shipped examples repeat
-  `Un_PDR` in both zones and will want regenerating with the zone-1 node's real voltage.
-- **Awaiting RTE:** a review of the variant→model map for completeness across the WECC models they
-  support. Electrical validation of the user-entered values is possible extra scope.
-- **`WTG3WeccCurrentSource2` is mis-packaged in `Dynawo_v1.8.0_20260822`.** Its
-  descriptor is parameter-for-parameter identical to `WTG3WeccCurrentSource1` (the `WTGPa` pitch),
-  while its `.mo` extends `ParamsWTGPb` and its `.mandatoryParam` lists `Theta{C,W}{Max,Min}`,
-  which only the turbine-side `WeccWT3CurrentSource2` exposes. The `WTGP_B` rows therefore cannot
-  bind in `Zone3` with that build; the template is correct.
+- **`M`: how each generator's model is selected.** `Général` holds one block selection, so it
+  resolves one variant tuple and one plant/turbine pair, while an `M` plant needs a model per
+  generator — in both zones. `examples/Model/Wind/WECC4` shows it: its `Zone3` carries
+  `Wind_Turbine1` as `WTG4AWeccCurrentSource` and `Wind_Turbine2` as `WTG4BWeccCurrentSource`, and
+  each has its own `Zone1`. Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing
+  in the workbook says which model each generator is. Blocks `M`, and needs a design before it can
+  be asked as a question.
