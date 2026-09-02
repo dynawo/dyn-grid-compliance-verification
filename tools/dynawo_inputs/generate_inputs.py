@@ -13,6 +13,7 @@ parameter names and computed values; the PAR is written install-independently fr
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -85,8 +86,11 @@ def converter_par_set(
         {"name": f"{prefix}ConverterLVControl", "type": "BOOL",
          "value": str(lv_control).lower(), "comments": ["LV Transformer"]}
     )
-    r_pu, x_pu = el.transformer_impedance(
-        _f(zone1["Z_cc_LvTr"]), _f(zone1["R_cc_LvTr / X_cc_LvTr"]), _f(zone1["SnZone1"])
+    # The model reads these on its own SNom, so Z_cc_LvTr (base SnZone1) needs no rebase: it is
+    # already the right pu in Zone1, and in Zone3 aggregating N transformers in parallel onto
+    # SnZone3 = N x SnZone1 gives back the same number.
+    r_pu, x_pu = el.short_circuit_rx(
+        _f(zone1["Z_cc_LvTr"]), _f(zone1["R_cc_LvTr / X_cc_LvTr"])
     )
     params += [
         {"name": f"{prefix}RLvTrPu", "type": "DOUBLE", "value": r_pu},
@@ -99,7 +103,10 @@ def converter_par_set(
 
 
 def main_transformer_par_set(par_id: str, zone3: dict) -> tuple:
-    """Zone3 main transformer (``TransformerRatioTapChanger``): impedance + OLTC taps."""
+    """``Main_Xfmr`` (``TransformerRatioTapChanger``): impedance + OLTC taps.
+
+    Only the ``M`` topologies carry a main HTB/HTA transformer, so this builder waits for them.
+    """
     r_pu, x_pu = el.transformer_impedance(
         _f(zone3["Z_cc_TP"]), _f(zone3["R_cc_TP / X_cc_TP"]), _f(zone3["SnZone3"])
     )
@@ -269,8 +276,11 @@ def generate(excel: Path, outdir: Path) -> str:
 
     zone3 = P.parse_zone(workbook, "Zone3")
     zone1 = P.parse_zone(workbook, "Zone1a")
-    control = P.parse_control_params(workbook)
-    topology = str(zone3["Topologie"]).strip()
+    converter_voltage = "Un2" if _is_true(zone1.get("ConverterLVControl", "True")) else "Un1"
+    control = P.parse_control_params(workbook, converter_voltage)
+    # DyCoV matches the topology string exactly ("S+Aux"), while the template's own legend spells
+    # it "S + Aux", so drop the spaces rather than fail on a faithful copy of the legend.
+    topology = re.sub(r"\s+", "", str(zone3["Topologie"]))
 
     config = wb.parse_config(workbook)
     z1_control = zone_control_params(control, config.zones, "Zone1")
@@ -302,8 +312,9 @@ def generate(excel: Path, outdir: Path) -> str:
     lv_control = _is_true(zone1.get("ConverterLVControl", "True"))
 
     def _stepup(zone_dir: str, prefix: str, s_nom) -> list:
-        # ConverterLVControl=True -> external StepUp_Xfmr (Z_cc_TG); False -> no StepUp (the LvTr
-        # carries the step-up), so drop the block and wire the generator to its downstream node.
+        # The single-generator topologies carry the generator transformer and no main one, so this
+        # block is Z_cc_TG in both zones. With ConverterLVControl=False the model's own LvTr
+        # carries it instead, so the block is dropped and the generator wired downstream.
         if lv_control:
             return [group_transformer_par_set(XFMR_ID, zone1, s_nom)]
         drop_group_transformer(root / zone_dir / "Producer.dyd", gen_id, f"{prefix}terminal")
@@ -330,11 +341,12 @@ def generate(excel: Path, outdir: Path) -> str:
     write_producer_par_file(root / "Zone3", "Producer.par", z3_sets)
 
     include_consumption = template == "model_BESS"
-    # u_nom_at_PDR = the converter control's nominal side: Un2 (BT) if ConverterLVControl else Un1.
+    # u_nom_at_PDR is the nominal voltage of the node the zone connects at, which DyCoV matches
+    # against the grid-code levels: Un1 here, never the converter's own Un2.
     write_producer_ini_file(
         root / "Zone1", "Producer.ini", "S",
         values={"p_max_injection_at_PDR": zone1["Pmax_injection_z1"],
-                "u_nom_at_PDR": zone1["Un2"] if lv_control else zone1["Un1"],
+                "u_nom_at_PDR": zone1["Un1"],
                 "q_max_at_PDR": zone1["Qmax_z1"], "q_min_at_PDR": zone1["Qmin_z1"]},
         gen_sharing={gen_id: (zone1["P_share"], zone1["Q_share"])},
     )

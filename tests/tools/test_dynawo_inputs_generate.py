@@ -64,6 +64,19 @@ def test_converter_par_set_writes_ppclocal_only_for_the_plant_model():
     assert next(p for p in plant if p["name"].endswith("PPCLocal"))["type"] == "BOOL"
 
 
+def test_converter_par_set_lvtr_is_on_the_model_base_not_snref():
+    # Z_cc_LvTr is pu on SnZone1 and the model reads RLvTrPu on its own SNom, so the value is
+    # never rebased to SnRef and comes out the same for the turbine and the plant.
+    zone1 = {**ZONE1, "SnZone1": "4", "Z_cc_LvTr": "0.06185", "R_cc_LvTr / X_cc_LvTr": "0.25"}
+    _id, turbine = G.converter_par_set("Wind_Turbine", "WT4B_", [], zone1, zone1["SnZone1"])
+    _id, plant = G.converter_par_set("Wind_Turbine", "WTG4B_", [], zone1, "90", plant_model=True)
+
+    assert _named(turbine)["WT4B_XLvTrPu"] == pytest.approx(0.06, abs=1e-4)
+    assert _named(turbine)["WT4B_RLvTrPu"] == pytest.approx(0.015, abs=1e-4)
+    assert _named(plant)["WTG4B_XLvTrPu"] == _named(turbine)["WT4B_XLvTrPu"]
+    assert _named(plant)["WTG4B_SNom"] == pytest.approx(90.0)
+
+
 def test_converter_par_set_lvtr_from_its_own_field_regardless_of_lv_control():
     # The LvTr comes from Z_cc_LvTr, not Z_cc_TG, and is emitted whatever ConverterLVControl is.
     zone1_false = {**ZONE1, "ConverterLVControl": "False", "Z_cc_LvTr": "0.05"}
@@ -208,6 +221,47 @@ def _make_workbook():
     }
 
 
+def _workbook_with(zone1_overrides):
+    book = _make_workbook()
+    book["Zone1a"] = [
+        [row[0], "d", zone1_overrides[row[0]], "u", "c"] if row[0] in zone1_overrides else row
+        for row in book["Zone1a"]
+    ]
+    return book
+
+
+@pytest.mark.parametrize("lv_control", ["True", "False"])
+def test_zone1_ini_u_nom_is_the_node_voltage_whatever_the_converter_controls(
+    tmp_path, monkeypatch, lv_control
+):
+    # Un2 (0.7 kV here) is the converter's own nominal and no grid-code level: writing it would
+    # leave the zone unclassifiable.
+    monkeypatch.setattr(
+        G.wb, "read_workbook", lambda _path: _workbook_with({"ConverterLVControl": lv_control})
+    )
+    G.generate(Path("ignored.xlsx"), tmp_path)
+
+    cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    cp.read(tmp_path / "Dynawo" / "Zone1" / "Producer.ini")
+    assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == ZONE1["Un1"]
+
+
+def test_topology_spelled_with_spaces_is_accepted(tmp_path, monkeypatch):
+    # The template's own legend spells it "S + Aux", while DyCoV matches the string exactly.
+    book = _make_workbook()
+    book["Zone3"] = [
+        ["cat", "Topologie", "d", "S + Aux + i", "u", "c"] if row[1:2] == ["Topologie"] else row
+        for row in book["Zone3"]
+    ]
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
+
+    G.generate(Path("ignored.xlsx"), tmp_path)
+
+    cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    cp.read(tmp_path / "Dynawo" / "Zone3" / "Producer.ini")
+    assert cp.get("DEFAULT", "topology").strip() == "S+Aux+i"
+
+
 def test_generate_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: _make_workbook())
     report = G.generate(Path("ignored.xlsx"), tmp_path)
@@ -233,12 +287,20 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     assert "Aux_Load" in set_ids and "IntNetwork_Line" in set_ids
     names = [p.get("name") for p in par.iter(f"{{{ns}}}par")]
     assert "photovoltaics_Kqp" in names
+    # Zone3's external transformer is the generator one (Z_cc_TG, fixed ratio): the main HTB/HTA
+    # transformer only exists in the M topologies.
+    stepup = {p.get("name"): p.get("value")
+              for s in par.iterfind(f"{{{ns}}}set") if s.get("id") == "StepUp_Xfmr"
+              for p in s.iter(f"{{{ns}}}par")}
+    assert stepup["transformer_rTfoPu"] == "1.0"
+    assert stepup["transformer_XPu"] == "0.1"  # Z_cc_TG purely reactive, SnZone3 = 100 = SnRef
+    assert "transformer_NbTap" not in stepup
     # PAR order is documental: REPC precedes REEC precedes REGC because the sheets do.
     assert names.index("photovoltaics_FreqFlag") < names.index("photovoltaics_Kqp")
     assert names.index("photovoltaics_Kqp") < names.index("photovoltaics_Iqrmax")
-    # Excel-derived section comments (design 8.3) and the Dynawo type mapping are preserved.
+    # Section comments and the Dynawo type mapping are preserved.
     par_text = (root / "Zone3" / "Producer.par").read_text()
-    assert "<!-- REEC -->" in par_text
+    assert "<!-- REEC_B -->" in par_text
     assert 'type="BOOL"' in par_text and 'type="boolean"' not in par_text
 
     # Zone1 PAR: only the blocks declaring Zone1 — the plant control (Zone3-only) is excluded.
@@ -246,7 +308,6 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     z1_names = [p.get("name") for p in z1_par.iter(f"{{{ns}}}par")]
     assert "photovoltaics_Kqp" in z1_names
     assert "photovoltaics_FreqFlag" not in z1_names
-    # PPCLocal is written by the tool, in Zone3 only.
     assert "photovoltaics_PPCLocal" in names
     assert "photovoltaics_PPCLocal" not in z1_names
 
