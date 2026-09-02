@@ -110,9 +110,11 @@ prefix; parameter type/value come from the Excel (§6):
   cells are omitted (Dynawo defaults). Initialization / power-flow parameters (`i0Pu`, `u0Pu`,
   `PInj0Pu`, …) are not in the Excel and are injected by DyCoV at simulation setup.
 
-Each `<par>` carries the Excel-derived origin comments of the `dynawo_par` format
-([design §8.3](Dynawo_par_generation_from_excel_design.md)); files are laid out (blank-line groups)
-like the `examples/Model/**` references so they read/diff cleanly.
+A variant's first parameter opens its section with a comment naming the variant, and a parameter
+carrying a base unit or a comment in the workbook gets one too, with the `Un1 ou Un2` base resolved
+to the side in force. The template's placeholder annotations (`-`, `/`) are dropped rather than
+copied. Files are laid out (blank-line groups) like the `examples/Model/**` references so they
+read and diff cleanly.
 
 ---
 
@@ -186,8 +188,12 @@ verbatim, `/` would, as a value or even as a parameter name. An unfilled paramet
 descriptor's `defaultValue`; those without one must be filled for Dynawo to run.
 
 **Two parameters are derived, not read.** `ConverterLVControl` comes from the zone sheet (§7), and
-`PPCLocal` is always `false`, emitted only among the `Zone3` parameters: it exists in the plant
-`lib`s and in none of the turbine ones, and has no template row by RTE's decision.
+`PPCLocal` has no template row: it is always `false`, and emitted only among the `Zone3`
+parameters, since it exists in the plant `lib`s and in none of the turbine ones.
+
+**Values are written verbatim, shortened.** A `DOUBLE` is re-rendered as the shortest text that
+round-trips to the same number, so the 17 digits Excel stores for `1e-5` do not reach the PAR.
+Other types are copied as they are.
 
 ---
 
@@ -219,13 +225,9 @@ converter's own nominal voltage (`Un2` when `True`, `Un1` when `False`), which t
 types are per-unit of.
 
 The INI's `u_nom_at_PDR` is a different thing: the nominal voltage of the node each zone connects
-at. `Zone3` connects at the real PDR, so it carries `Un_PDR`; `Zone1` connects at its internal
-node and carries `Un1`, typically an HTA level. Only `Zone3`'s has to be one of the DTR's
-normalized levels — `Zone1`'s is free, which is what
-[dycov#477](https://github.com/dynawo/dyn-grid-compliance-verification/issues/477) fixes: today
-DyCoV applies the level check to both zones and rejects an HTA `Zone1` outright ("Unexpected
-nominal voltage at the PDR bus"). Until that lands, a `Zone1` whose `Un1` is not a normalized
-level will not validate.
+at. `Zone3` connects at the real PDR and carries `Un_PDR`, which the DTR requires to be one of its
+normalized levels; `Zone1` connects at its internal node and carries `Un1`, typically an HTA level,
+which the DTR leaves free (§10).
 
 The **main HTB/HTA transformer** (`Main_Xfmr`, `TransformerRatioTapChanger` from `Z_cc_TP` + taps
 `NbTap = N_prises + 1`, `RatioTfoMin/Max = r_min/r_max`, base `SnZone3`) belongs to the `M`
@@ -239,10 +241,6 @@ block connects to the PDR with no transformer in between, so that is its voltage
 level the ohms were measured at; **aux load** (`+Aux`)
 `LoadAlphaBeta` from `P_A/Q_A/alpha/beta` + `AuxLoad_Xfmr` from `Z_cc_TA/r_TA/Sn_A`. Converter
 `SNom` = `SnZone`.
-
-> The tool honors `ConverterLVControl`: when `False` it emits no `StepUp_Xfmr` (the internal `LvTr`
-> alone carries the step-up), and DyCoV's `topology_checks` / `init_calcs` accept an `S` model with
-> or without one.
 
 ---
 
@@ -277,17 +275,28 @@ nothing and raises no error.
 
 ### 10. Open points
 
+- **A regulated generator transformer.** The step-up is emitted as a `TransformerFixedRatio`
+  because `Zone1<x>` gives it a ratio (`r_TG`) and no tap data, while every `examples/Model/**`
+  case uses `TransformerRatioTapChanger`. Proposal for RTE: add `N_prises`, `r_max` and `r_min` to
+  `Zone1<x>`, next to `r_TG` and named as in `Zone3`, and let the lib follow the data — tap data
+  present ⇒ regulated, `N_prises = 0` or empty ⇒ fixed ratio, with a template comment saying so.
+  The rule then reads the same for the three transformers. It also asks a little of the tool:
+  `RatioTfo0Pu` becomes the given ratio rather than `1.0`, and `Tap0` the tap that matches it,
+  `round((r − r_min) / (r_max − r_min) · N_prises)`.
 - **`M`: how each `Zone1<x>`'s model is selected.** The single `Général` selection resolves one
   model and duplicating a `Zone1<x>` copies only electrical data, so the Excel cannot say which
   model each generator is when they differ (e.g. `WECC4` mixes `WTG4A`+`WTG4B`). Blocks `M`, and
   needs a design before it can be asked as a question.
-- **Depends on [dycov#477](https://github.com/dynawo/dyn-grid-compliance-verification/issues/477):**
-  `Zone1` is written with its own `Un1`, as the DTR allows, which DyCoV only accepts once the PDR
-  level check stops being applied to zone 1. The shipped examples repeat `Un_PDR` in both zones and
-  will want regenerating with the zone-1 node's real voltage.
+- **[dycov#477](https://github.com/dynawo/dyn-grid-compliance-verification/issues/477).** DyCoV
+  applies the PDR level check to both zones, so a `Zone1` whose `Un1` is not a normalized level is
+  rejected outright ("Unexpected nominal voltage at the PDR bus"). The shipped examples repeat
+  `Un_PDR` in both zones and will want regenerating with the zone-1 node's real voltage.
+- **One cell, two zones.** A parameter declaring `Zone1;Zone3` gets one value for both PARs, and
+  the examples give some of them (`Kqi`, `Q{Max,Min}REECPu`, `tpWTGTb`) a different value per zone.
+  Either the template grows a second column for those, or the models are expected to share.
 - **Awaiting RTE:** a review of the variant→model map for completeness across the WECC models they
   support. Electrical validation of the user-entered values is possible extra scope.
-- **`WTG3WeccCurrentSource2` is mis-packaged in `Dynawo_v1.8.0_20260822`** (reported): its
+- **`WTG3WeccCurrentSource2` is mis-packaged in `Dynawo_v1.8.0_20260822`.** Its
   descriptor is parameter-for-parameter identical to `WTG3WeccCurrentSource1` (the `WTGPa` pitch),
   while its `.mo` extends `ParamsWTGPb` and its `.mandatoryParam` lists `Theta{C,W}{Max,Min}`,
   which only the turbine-side `WeccWT3CurrentSource2` exposes. The `WTGP_B` rows therefore cannot
