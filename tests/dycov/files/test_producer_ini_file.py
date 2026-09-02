@@ -34,6 +34,24 @@ class TestProducerIniFile:
             assert "q_max_at_PDR =" in content
             assert "q_min_at_PDR =" in content
 
+    def test_create_producer_ini_file_model_template_zone1_comment(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            (target / "Zone1").mkdir()
+            (target / "Zone3").mkdir()
+            create_producer_ini_file(target, "S", "model_PPM")
+            zone1_content = (target / "Zone1" / "Producer.ini").read_text()
+            zone3_content = (target / "Zone3" / "Producer.ini").read_text()
+
+            assert (
+                "# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV"
+                in zone1_content
+            )
+            assert "Allowed values" not in zone1_content
+
+            assert "# u_nom is the nominal voltage at the PDR bus (in kV)" in zone3_content
+            assert "Allowed values" in zone3_content
+
     def test_check_ini_parameters_all_values_present(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir)

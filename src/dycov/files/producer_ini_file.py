@@ -18,9 +18,20 @@ def _create_producer_ini_file(
     target: Path,
     filename: str,
     topology: str,
+    zone: int = 0,
 ) -> None:
     if (target / "Producer.ini").exists():
         (target / "Producer.ini").rename(target / filename)
+
+    if zone == 1:
+        u_nom_comment = (
+            "# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV\n"
+        )
+    else:
+        u_nom_comment = (
+            "# u_nom is the nominal voltage at the PDR bus (in kV)\n"
+            "# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)\n"
+        )
 
     producer_ini_txt = (
         f"[DEFAULT]\n"
@@ -28,8 +39,7 @@ def _create_producer_ini_file(
         f"p_max_injection_at_PDR =\n"
         f"# p_{{max_unite}} consumption as defined by the DTR in MW (only for BESS)\n"
         f"p_max_consumption_at_PDR =\n"
-        f"# u_nom is the nominal voltage at the PDR bus (in kV)\n"
-        f"# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)\n"
+        f"{u_nom_comment}"
         f"u_nom_at_PDR =\n"
         f"# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
         f"q_max_at_PDR =\n"
@@ -89,11 +99,11 @@ def create_producer_ini_file(
     """
     if template.startswith("model"):
         if topology.casefold().startswith("m"):
-            _create_producer_ini_file(target / "Zone1", "Producer_G1.ini", "S")
-            _create_producer_ini_file(target / "Zone1", "Producer_G2.ini", "S")
+            _create_producer_ini_file(target / "Zone1", "Producer_G1.ini", "S", zone=1)
+            _create_producer_ini_file(target / "Zone1", "Producer_G2.ini", "S", zone=1)
         else:
-            _create_producer_ini_file(target / "Zone1", "Producer.ini", "S")
-        _create_producer_ini_file(target / "Zone3", "Producer.ini", topology)
+            _create_producer_ini_file(target / "Zone1", "Producer.ini", "S", zone=1)
+        _create_producer_ini_file(target / "Zone3", "Producer.ini", topology, zone=3)
     else:
         _create_producer_ini_file(target, "Producer.ini", topology)
 
