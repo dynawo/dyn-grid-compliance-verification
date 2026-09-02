@@ -70,7 +70,7 @@ def _render_variant(variant: Variant) -> list[str]:
     ]
     for param in variant.parameters:
         if param.value is None:
-            continue  # only parameters that carry a value are exported
+            continue
         comment = _merge_comment(param)
         if comment:
             lines.append(f"  <!-- {comment} -->")
@@ -93,7 +93,6 @@ def _zone3_header_value(config: Config) -> str:
         return f"(not computed: {', '.join(missing)} missing in Excel)"
     try:
         product = float(sn3) * float(nconv)
-        # Render integers without a trailing ".0".
         return str(int(product)) if product.is_integer() else str(product)
     except ValueError:
         return f"{sn3} x {nconv}"

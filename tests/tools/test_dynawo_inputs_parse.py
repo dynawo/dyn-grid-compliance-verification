@@ -163,19 +163,57 @@ def test_parse_control_params_maps_type_and_carries_comments():
             ["REEC_B"],  # variant row (N-1)
             ["Parameter", "Type", "Value", "Base unit", "Comment"],
             ["Kqp", "double", "1.0", "", ""],
-            ["QFlag", "boolean", "true", "", "reactive flag"],
+            ["QFlag", "boolean", "true", "-", "reactive flag"],
             ["tIq", "double", "0.02", "s", ""],
         ],
     }
     params = P.parse_control_params(wb)
     assert [p["block"] for p in params] == ["REEC", "REEC", "REEC"]
-    # first valued parameter heads the section (design 8.3: sheet + table | variant)
-    assert params[0]["comments"][:2] == ["REEC", "Electrical Control | REEC_B"]
+    # the first valued parameter opens the section, named after the variant
+    assert params[0]["comments"][:1] == ["REEC_B"]
     # Excel type mapped to the Dynawo convention; per-param comment / base unit merged
     assert params[0]["type"] == "DOUBLE"
     assert {p["name"]: p["type"] for p in params}["QFlag"] == "BOOL"
     assert params[1]["comments"][-1] == "reactive flag"
     assert params[2]["comments"][-1] == "Base unit: s"
+
+
+def test_parse_control_params_resolves_the_converter_voltage_base():
+    wb = {
+        "Général": _general(("REGC", "REGC_A")),
+        "REGC": [
+            ["Generator Converter"],
+            ["REGC_A"],
+            ["Parameter", "Type", "Value", "Base unit"],
+            ["IqrMaxPu", "double", "20", "Un1 ou Un2, SnZone1"],
+        ],
+    }
+
+    resolved = P.parse_control_params(wb, "Un2")
+    unresolved = P.parse_control_params(wb)
+
+    assert resolved[0]["comments"][-1] == "Base unit: Un2, SnZone1"
+    assert unresolved[0]["comments"][-1] == "Base unit: Un1 ou Un2, SnZone1"
+
+
+def test_parse_control_params_shortens_doubles_only():
+    wb = {
+        "Général": _general(("REPC", "REPC_A")),
+        "REPC": [
+            ["Plant Control"],
+            ["REPC_A"],
+            ["Parameter", "Type", "Value"],
+            # Excel stores 1e-5 and 3.333 with the full 17 digits of the nearest double.
+            ["tFt", "double", "1.0000000000000001E-5"],
+            ["Kp", "double", "3.3330000000000002"],
+            ["PMaxREPCPu", "double", "1"],
+            ["FreqFlag", "boolean", "true"],
+        ],
+    }
+
+    values = {p["name"]: p["value"] for p in P.parse_control_params(wb)}
+
+    assert values == {"tFt": "1e-05", "Kp": "3.333", "PMaxREPCPu": "1", "FreqFlag": "true"}
 
 
 def test_parse_control_params_flat_list_preserves_workbook_order():
@@ -195,6 +233,6 @@ def test_parse_control_params_flat_list_preserves_workbook_order():
         ("REEC", "Kqp"), ("REEC", "QFlag"), ("REGC", "tG"),
     ]
     # each variant's first param carries its section header, the following ones do not
-    assert params[0]["comments"] == ["REEC", "Electrical Control | REEC_B"]
+    assert params[0]["comments"] == ["REEC_B"]
     assert params[1]["comments"] == []
-    assert params[2]["comments"] == ["REGC", "Generator Converter | REGC_A"]
+    assert params[2]["comments"] == ["REGC_A"]

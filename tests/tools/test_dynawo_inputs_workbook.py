@@ -118,6 +118,20 @@ def test_not_applicable_value_leaves_the_parameter_unfilled():
     assert [(p.name, p.value) for p in variants["REGC_A"].parameters] == [("KpPLL", None)]
 
 
+def test_placeholder_base_unit_is_not_an_annotation():
+    sheet = [
+        ["Interface réseau"],
+        ["REGC_A"],
+        ["Paramètres", "Valeurs", "Types", "Bases pour les pu"],
+        ["Lvplsw", "true", "boolean", "-"],
+        ["IqrMaxPu", "1.5", "double", "SnZone1"],
+    ]
+
+    variants = W.parse_variants({"REGC": sheet})
+
+    assert [p.base_unit for p in variants["REGC_A"].parameters] == [None, "SnZone1"]
+
+
 def test_variant_carries_its_sheet_and_table_label():
     variants = W.parse_variants({"REGC": _shared_types_sheet()})
 
