@@ -8,8 +8,8 @@
     <par type="BOOL" name="BESS_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="BESS_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="BESS_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="BESS_RLvTrPu" value="0.015"/>
-    <par type="DOUBLE" name="BESS_XLvTrPu" value="0.06"/>
+    <par type="DOUBLE" name="BESS_RLvTrPu" value="0.015273"/>
+    <par type="DOUBLE" name="BESS_XLvTrPu" value="0.0844458"/>
     <!-- Electrical Control -->
     <par type="BOOL" name="BESS_PfFlag" value="false"/>
     <par type="BOOL" name="BESS_PQFlag" value="false"/>
@@ -112,8 +112,8 @@
   <set id="Main_Xfmr">
     <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_SNom" value="60"/>
-    <par type="DOUBLE" name="transformer_RPu" value="0.000455"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.040743"/>
+    <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
