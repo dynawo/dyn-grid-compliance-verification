@@ -71,8 +71,8 @@ def init_calcs(
 
     v_pdr, grid_init = _solve_grid_side(pdr, grid_line, grid_load, pdr_load)
 
-    v_node, s_node, node_ids = _solve_int_line(int_line, v_pdr, pdr.s, PDR_IDS)
-    v_node, s_node, node_ids = _solve_main_xfmr(main_xfmr, v_node, s_node, node_ids)
+    v_node, s_node, node_ids = _solve_main_xfmr(main_xfmr, v_pdr, pdr.s, PDR_IDS)
+    v_node, s_node, node_ids = _solve_int_line(int_line, v_node, s_node, node_ids)
     s_node = _solve_aux_branch(aux_load, auxload_xfmr, v_node, s_node)
     _solve_gen_circuits(gens, gen_xfmrs, v_node, s_node)
 
