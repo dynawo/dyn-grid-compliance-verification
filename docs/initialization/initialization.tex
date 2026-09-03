@@ -127,30 +127,29 @@ one of these eight variants:
 \item [S+i:] single unit + Line (represents an ``internal network'')
 \item [S+Aux:] single unit + Aux Load
 \item [S+Aux+i:] single unit + Aux Load + Line
-\item [M:] multiple WT/PV/BESS units + plant transformer
-\item [M+i:] multiple WT/PV/BESS units + plant transformer + Line
-\item [M+Aux:] multiple WT/PV/BESS units + plant transformer + Aux Load
-\item [M+Aux+i:] multiple WT/PV/BESS units + plant transformer + Aux Load + Line
+\item [M:] multiple WT/PV/BESS units
+\item [M+i:] multiple WT/PV/BESS units + Line
+\item [M+Aux:] multiple WT/PV/BESS units + Aux Load
+\item [M+Aux+i:] multiple WT/PV/BESS units + Aux Load + Line
 \end{description}
 
 There are here two main groups: single-unit vs.\ multiple-unit topologies. Their
 composition rules, which the tool checks before running any calculation, are as follows:
 
 \begin{itemize}
-\item In the \textbf{single-unit} family the unit is connected to the rest of the
-  network through its step-up transformer (\code{StepUp\_Xfmr}). Only in topology S, the
-  step-up transformer may be omitted when the unit's dynamic model already includes its
-  own transformer internally (models with \code{ConverterLVControl = false}); in that
-  case the unit connects directly to the connection node. Synchronous machines are
-  admitted only in this family.
-\item In the \textbf{multiple-unit} family each unit has its own step-up transformer,
-  and all of them connect to a common internal bus. This family additionally requires a
-  \emph{plant-level transformer} (\code{Main\_Xfmr}) between the internal bus and the
-  PDR bus (or between the internal bus and the internal line, in the ``+i'' variants).
+\item Every topology has a \emph{main transformer} (\code{Main\_Xfmr}) as the block
+  adjacent to the PDR bus, and it is the only transformer the producer models between
+  its units and the grid: the group transformer of each unit belongs to the unit's own
+  dynamic model. Synchronous machines are admitted only in the single-unit family.
+\item The units hang from a common internal bus (\code{Int\_Bus}), directly, whatever
+  their number.
 \item In each case one may model, if desired, an ``internal network'' via a single
-  \code{Line} object (the ``+i'' variants), and an auxiliary load via a single
+  \code{Line} object (the ``+i'' variants), placed on the MV side of the main
+  transformer, between it and the internal bus; and an auxiliary load via a single
   \code{Load} object behind its own transformer (\code{AuxLoad\_Xfmr}), hanging from the
-  same node as the generation.
+  internal bus, as the DTR's PCS I16 figure draws it.
+\item Only the main transformer regulates its ratio: the group and auxiliary
+  transformers are fixed-ratio.
 \end{itemize}
 
 These topologies are depicted in Figs.~\ref{fig:topoS}--\ref{fig:topoM}. If the
@@ -162,9 +161,11 @@ simulations may start at an unstable state.
 
 \noindent\textbf{Note for Zone-1 tests:} for the isolated tests of an individual WT/PV/BESS
 unit without plant-level control (i.e., the so-called ``Zone 1'' tests of model
-validation), the only allowed topology is \textbf{``S''}: the unit and its step-up
-transformer (again, the transformer may be omitted for models with
-\code{ConverterLVControl = false}). This is depicted in Fig.~\ref{fig:topoZone1}.
+validation), the only allowed topology is \textbf{``S''}: the unit and its group
+transformer (\code{Group\_Xfmr}), up to the internal node. The group transformer is
+modeled explicitly only for models with \code{ConverterLVControl = true}; otherwise the
+converter already reaches the internal node through its own transformer. This is
+depicted in Fig.~\ref{fig:topoZone1}.
 
 \begin{figure}[ht]
   \centering
@@ -175,7 +176,7 @@ transformer (again, the transformer may be omitted for models with
   \hfill
   \caption{Allowed topologies for cases with a single unit. The dashed box (``internal
     network'' line) is present only in the ``+i'' variants; in its absence the node
-    labeled \code{Int\_Bus} coincides with the PDR bus.}
+    labeled \code{Int\_Bus} connects directly to the main transformer.}
   \label{fig:topoS}
 \end{figure}
 
@@ -186,17 +187,17 @@ transformer (again, the transformer may be omitted for models with
   \hfill
   \includegraphics[width=0.45\textwidth]{topology_M_AuxLoad.png}
   \hfill
-  \caption{Allowed topologies for cases with multiple units. Note the mandatory
-    plant-level transformer \code{Main\_Xfmr} between the internal bus and the PDR bus
-    (or the internal line, when the latter is modeled).}
+  \caption{Allowed topologies for cases with multiple units. The units hang from the
+    internal bus without a transformer of their own; the only one modeled is
+    \code{Main\_Xfmr}, next to the PDR bus.}
   \label{fig:topoM}
 \end{figure}
 
 \begin{figure}[ht]
   \centering
   \includegraphics[width=0.5\textwidth]{topology_Zone1.png}
-  \caption{The only topology allowed for Zone-1 tests: the single unit and its step-up
-    transformer.}
+  \caption{The only topology allowed for Zone-1 tests: the single unit and its group
+    transformer, which is modeled only when \code{ConverterLVControl = true}.}
   \label{fig:topoZone1}
 \end{figure}
 
@@ -226,10 +227,9 @@ a general strategy for the calculation follows:
   they look at the results). When there is no connection line (the islanding cases), the
   grid bus coincides with the PDR bus and no shift is needed.
 \item Then proceed from the PDR bus towards the producer's side, section by section:
-  first the internal line (if modeled), then the plant-level transformer (if present),
-  then the auxiliary load circuit (if present), and finally the generating unit(s)
-  behind their step-up transformers. The calculation of each section uses one of two
-  elementary blocks:
+  first the main transformer, then the internal line (if modeled), then the auxiliary
+  load circuit (if present), and finally the generating unit(s). The calculation of each
+  section uses one of two elementary blocks:
   \begin{itemize}
   \item If the section is a line or a transformer with known voltage and flow on one
     side, the calculation simply involves the propagation formulas of a pi-model
@@ -336,8 +336,8 @@ faces the bus where magnitudes are known:
   equations~\eqref{eq:complex_V}--\eqref{eq:complex_S} (and in the two-bus load flow of
   Section~\ref{sec:twobus}).
 \end{itemize}
-This check is applied to the plant-level transformer, the auxiliary-load transformer,
-and each step-up transformer.
+This check is applied to the main transformer, the auxiliary-load transformer, and the
+group transformer of Zone 1.
 
 
 \subsection{The two-bus load flow (voltage known at one end, PQ load at the other)}
@@ -500,17 +500,17 @@ formulas~\eqref{eq:complex_V}--\eqref{eq:complex_S}, feeding the output of one s
 as the input of the next:
 
 \begin{enumerate}
-\item \textbf{The internal line} (topologies ``+i''): a plain symmetric pi-model
-  (Appendix~\ref{app:line}).
-\item \textbf{The plant-level transformer} \code{Main\_Xfmr} (topologies of the M
-  family): the asymmetric pi-model of Appendix~\ref{app:xfmr}, which accounts for the
-  transformation ratio $r$. The terminal-orientation rule of
+\item \textbf{The main transformer} \code{Main\_Xfmr}, the block adjacent to the PDR bus
+  in every topology: the asymmetric pi-model of Appendix~\ref{app:xfmr}, which accounts
+  for the transformation ratio $r$. The terminal-orientation rule of
   Section~\ref{sec:orientation} decides whether the shunts must be swapped, depending on
   which declared terminal of the transformer faces the PDR side.
+\item \textbf{The internal line} (topologies ``+i''), on the MV side of the main
+  transformer: a plain symmetric pi-model (Appendix~\ref{app:line}).
 \end{enumerate}
 
-When neither section is modeled (topologies S and S+Aux), the internal bus is the PDR
-bus itself, and the voltage and flow carry over unchanged.
+When the line is not modeled (topologies S, S+Aux, M and M+Aux), the main transformer
+feeds the internal bus directly.
 
 
 
@@ -520,22 +520,23 @@ bus itself, and the voltage and flow carry over unchanged.
 
 At this point the complex voltage $V_{\textrm{int}}$ and the flow $S_{\textrm{int}}$ at
 the internal bus are known (when there is an auxiliary load, $S_{\textrm{int}}$ must
-first be corrected as described in Section~\ref{sec:auxcircuits}). It remains to
-propagate them through each unit's step-up transformer, in order to obtain the voltage
-at the unit's terminal and its PQ output.
+first be corrected as described in Section~\ref{sec:auxcircuits}). It remains to obtain
+the voltage at each unit's terminal and its PQ output. In Zone 3 the units hang from the
+internal bus, so their terminal values are those of the bus; in Zone 1 they sit behind
+the group transformer \code{Group\_Xfmr}, and the values are propagated through it.
 
 \subsection{Single unit (topologies S, S+i, S+Aux, S+Aux+i)}
 
-The whole flow $S_{\textrm{int}}$ goes through the single step-up transformer. One thus
+The whole flow $S_{\textrm{int}}$ goes through the single group transformer. One thus
 obtains the complex voltage at the unit's terminal with
 expression~\eqref{eq:complex_V}, and the PQ output of the unit through
 expressions~\eqref{eq:complex_I} and \eqref{eq:complex_S} --- always applying the
 terminal-orientation rule of Section~\ref{sec:orientation} to the transformer's
 pi-model. Then $\Sgen = S_2 = V_2 I_2^*$.
 
-When the step-up transformer is omitted (models with \code{ConverterLVControl = false},
-allowed in topology S only), no propagation is needed: the unit's terminal \emph{is}
-the internal bus, so it is initialized directly with $V_{\textrm{int}}$ and
+When the group transformer is not modeled --- always in Zone 3, and in Zone 1 for models
+with \code{ConverterLVControl = false} --- no propagation is needed: the unit's terminal
+\emph{is} the internal bus, so it is initialized directly with $V_{\textrm{int}}$ and
 $S_{\textrm{int}}$.
 
 \subsection{Multiple units (topologies M, M+i, M+Aux, M+Aux+i)}
@@ -560,9 +561,8 @@ and imaginary parts of the net injection at the internal bus:
   S_{\textrm{int}}^{(k)} = \lambda_P^{(k)} P_{\textrm{int}} +
                          j \, \lambda_Q^{(k)} Q_{\textrm{int}}
 \end{equation*}
-and each share is then propagated through the corresponding unit's step-up transformer
-exactly as in the single-unit case, yielding the complex voltage and PQ values at each
-unit's terminals.
+and each share gives directly the complex voltage and PQ values at the corresponding
+unit's terminals, since the units hang from the internal bus.
 
 
 
@@ -737,9 +737,9 @@ terminal 1 (the ratio $r$ makes them asymmetric, $\Ysh_1 \neq \Ysh_2$). Whenever
 with known magnitudes faces the declared terminal 2 instead, the pi-model must be used
 with its shunts swapped, as explained in Section~\ref{sec:orientation}.
 
-Every transformer of the topology --- the step-up transformers of the units, the
-auxiliary-load transformer, and the plant-level transformer \code{Main\_Xfmr} --- is
-converted through these same formulas.
+Every transformer of the topology --- the main transformer \code{Main\_Xfmr}, the
+auxiliary-load transformer, and the group transformer of Zone 1 --- is converted through
+these same formulas.
 
 
 
