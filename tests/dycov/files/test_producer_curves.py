@@ -72,3 +72,39 @@ def test_create_producer_curves_unknown_template(temp_model_dir):
     create_producer_curves(temp_model_dir, temp_model_dir, "unknown_template")
     ini_file = temp_model_dir / "Producer" / "CurvesFiles.ini"
     assert not ini_file.exists()
+
+
+def _read_curves_file(curves_path: Path) -> str:
+    return (curves_path / "Producer" / "CurvesFiles.ini").read_text()
+
+
+def test_create_producer_curves_offers_the_main_transformer_tap(temp_model_dir):
+    """The catalog leaves Main_Xfmr as the only transformer in series with the PDR."""
+    curves_path = temp_model_dir / "curves"
+    (curves_path / "Producer").mkdir(parents=True)
+    _write_producer_dyd(
+        temp_model_dir / "Producer.dyd",
+        transformer_ids=["Main_Xfmr", "AuxLoad_Xfmr"],
+        generator_ids=["Power_Park"],
+    )
+
+    create_producer_curves(temp_model_dir, curves_path, "performance_PPM")
+
+    content = _read_curves_file(curves_path)
+    assert "Main_Xfmr_XFMR_Tap" in content
+    assert "AuxLoad_Xfmr_XFMR_Tap" not in content
+
+
+def test_create_producer_curves_offers_the_group_transformer_tap(temp_model_dir):
+    """Zone 1 keeps a group transformer, so its tap is still offered as a curve."""
+    curves_path = temp_model_dir / "curves"
+    (curves_path / "Producer").mkdir(parents=True)
+    _write_producer_dyd(
+        temp_model_dir / "Producer.dyd",
+        transformer_ids=["Group_Xfmr"],
+        generator_ids=["Power_Park"],
+    )
+
+    create_producer_curves(temp_model_dir, curves_path, "performance_PPM")
+
+    assert "Group_Xfmr_XFMR_Tap" in _read_curves_file(curves_path)
