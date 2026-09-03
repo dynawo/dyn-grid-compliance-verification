@@ -553,3 +553,35 @@ def test_check_trafos():
 def test_check_internal_line_none():
     """Test check_internal_line with None line."""
     parameter_checks.check_internal_line(line=None)
+
+
+def _tap_changer(id: str) -> XfmrParams:
+    return XfmrParams(
+        id=id,
+        lib="TransformerRatioTapChanger",
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=1.0,
+        alpha_tfo=0.0,
+        par_id=id,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+
+
+def test_check_trafo_accepts_the_main_transformer_as_a_tap_changer():
+    parameter_checks.check_trafo(_tap_changer("Main_Xfmr"))
+
+
+@pytest.mark.parametrize("xfmr_id", ["Group_Xfmr", "AuxLoad_Xfmr"])
+def test_check_trafo_rejects_a_tap_changer_that_is_not_the_main_transformer(xfmr_id):
+    """Only the main transformer regulates its ratio; the rest are fixed-ratio."""
+    with pytest.raises(ValueError) as excinfo:
+        parameter_checks.check_trafo(_tap_changer(xfmr_id))
+
+    assert xfmr_id in str(excinfo.value)
+    assert "TransformerRatioTapChanger" in str(excinfo.value)
