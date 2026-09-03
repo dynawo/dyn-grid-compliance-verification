@@ -371,18 +371,18 @@ def _get_template(path, template_file):
 
 
 def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
-    """Render the Zone-1 circuit schematics, hiding the StepUp_Xfmr when absent.
+    """Render the Zone-1 circuit schematics, hiding the Group_Xfmr when absent.
 
-    The 'S' topology may omit the external step-up transformer (ConverterLVControl
-    =False): the converter's internal transformer already reaches node 1, so the
-    schematic must not draw an external transformer.
+    Zone 1 omits the external group transformer when ConverterLVControl is false: the
+    converter's own transformer already reaches the internal node, so the schematic
+    must not draw an external one.
     """
     group_xfmrs = getattr(producer, "group_xfmrs", None)
-    has_stepup = group_xfmrs is None or len(group_xfmrs) > 0
+    has_group_xfmr = group_xfmrs is None or len(group_xfmrs) > 0
     for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
         if (working_path / tikz_name).exists():
             tikz_template = _get_template(working_path, tikz_name)
-            tikz_template.stream(hasstepup=has_stepup).dump(str(working_path / tikz_name))
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(str(working_path / tikz_name))
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:
