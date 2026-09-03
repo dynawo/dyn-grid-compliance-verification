@@ -798,22 +798,8 @@ def test_initialize_int_line_records_the_pdr_side_on_its_declared_terminal():
     assert _is_equal(forward.terminals[0].p0, -4.567)
 
 
-def _init_main_xfmr_behind_int_line(main_on_terminal1: bool) -> tuple[LineParams, XfmrParams]:
+def _init_int_line_behind_main_xfmr(line_on_terminal1: bool) -> tuple[XfmrParams, LineParams]:
     gen, gen_xfmr = _make_gen_and_xfmr()
-    int_line = LineParams(
-        id="IntNetwork_Line",
-        lib=None,
-        r=0.0122,
-        x=0.1015,
-        g=0.0,
-        b=0.0021,
-        par_id=None,
-        terminals=(
-            Terminal(connected_equipment="BusPDR"),
-            Terminal(connected_equipment="Main_Xfmr"),
-        ),
-    )
-    ids = ("IntNetwork_Line", "BusInt") if main_on_terminal1 else ("BusInt", "IntNetwork_Line")
     main_xfmr = XfmrParams(
         id="Main_Xfmr",
         lib=None,
@@ -824,6 +810,20 @@ def _init_main_xfmr_behind_int_line(main_on_terminal1: bool) -> tuple[LineParams
         b=0.0,
         r_tfo=0.9574,
         alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment="BusPDR"),
+            Terminal(connected_equipment="IntNetwork_Line"),
+        ),
+    )
+    ids = ("Main_Xfmr", "BusInt") if line_on_terminal1 else ("BusInt", "Main_Xfmr")
+    int_line = LineParams(
+        id="IntNetwork_Line",
+        lib=None,
+        r=0.0122,
+        x=0.1015,
+        g=0.0,
+        b=0.0021,
+        par_id=None,
         terminals=tuple(Terminal(connected_equipment=i) for i in ids),
     )
     pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
@@ -838,20 +838,26 @@ def _init_main_xfmr_behind_int_line(main_on_terminal1: bool) -> tuple[LineParams
         grid_line=line_pimodel(_make_grid_line()),
         grid_load=None,
     )
-    return int_line, main_xfmr
+    return main_xfmr, int_line
 
 
-def test_initialize_main_xfmr_is_solved_from_the_internal_line_side():
-    """The plant transformer follows the internal line: they must share the same bus.
+def test_initialize_int_line_is_solved_from_the_main_xfmr_side():
+    """The internal line sits behind the main transformer: they must share the same bus.
 
-    Which of its terminals faces upstream is decided by the id of the equipment it is
-    declared against, so this pins the hand-off between the two series stages.
+    The catalog puts Main_Xfmr next to the PDR and the internal network on its MV side, so
+    the line is solved from the transformer's far terminal. Which of its own terminals faces
+    upstream is decided by the id it is declared against, which pins the hand-off between
+    the two series stages.
     """
-    for main_on_terminal1 in (True, False):
-        int_line, main_xfmr = _init_main_xfmr_behind_int_line(main_on_terminal1)
-        near = main_xfmr.terminals[0 if main_on_terminal1 else 1]
+    for line_on_terminal1 in (True, False):
+        main_xfmr, int_line = _init_int_line_behind_main_xfmr(line_on_terminal1)
+        near = int_line.terminals[0 if line_on_terminal1 else 1]
 
-        assert _is_equal(near.u0, int_line.terminals[1].u0)
-        assert _is_equal(near.u_phase0, int_line.terminals[1].u_phase0)
-        assert _is_equal(near.p0, -int_line.terminals[1].p0)
-        assert _is_equal(near.q0, -int_line.terminals[1].q0)
+        assert _is_equal(near.u0, main_xfmr.terminals[1].u0)
+        assert _is_equal(near.u_phase0, main_xfmr.terminals[1].u_phase0)
+        assert _is_equal(near.p0, -main_xfmr.terminals[1].p0)
+        assert _is_equal(near.q0, -main_xfmr.terminals[1].q0)
+
+    # The main transformer takes the PDR delivery on its declared PDR terminal
+    assert _is_equal(main_xfmr.terminals[0].u0, 1.04444444444444444444)
+    assert _is_equal(main_xfmr.terminals[0].p0, -4.567)
