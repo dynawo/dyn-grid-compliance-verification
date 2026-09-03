@@ -664,6 +664,7 @@ def adjust_producer_init(
     generators: list,
     xfmrs: list,
     aux_load: LoadParams,
+    main_xfmr: XfmrParams,
     pdr: PdrParams,
     generator_control_mode: str,
     force_voltage_droop: bool,
@@ -683,6 +684,8 @@ def adjust_producer_init(
         Parameters for the transformers
     aux_load: LoadParams
         Initial values to the producer's auxiliary load
+    main_xfmr: XfmrParams
+        Initial values to the producer's main transformer
     pdr: PdrParams
         PDR parameters
     generator_control_mode: str
@@ -700,6 +703,8 @@ def adjust_producer_init(
 
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
+
+    _adjust_series_transformer(producer_par_root, main_xfmr)
 
     is_test_applicable = True
     for generator, xfmr in zip_longest(generators, xfmrs):
@@ -1161,6 +1166,26 @@ def _resolve_value(raw, sign):
         return float(raw) * sign
     except (ValueError, TypeError):
         return raw
+
+
+def _adjust_series_transformer(producer_par_root, xfmr: XfmrParams) -> None:
+    """Writes the init values of a transformer in series with the PDR, if there is one.
+
+    A ratio tap changer needs the flow and both terminal voltages it starts from, and
+    init_calcs has already recorded them on the transformer's terminals.
+    """
+    if xfmr is None:
+        return
+
+    _adjust_transformer(
+        producer_par_root,
+        xfmr,
+        xfmr.terminals[0].p0,
+        xfmr.terminals[0].q0,
+        xfmr.terminals[0].u0,
+        xfmr.terminals[0].u_phase0,
+        xfmr.terminals[1].u0,
+    )
 
 
 def _adjust_transformer(

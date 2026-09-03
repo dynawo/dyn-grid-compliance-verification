@@ -633,6 +633,7 @@ def test_adjust_producer_init_without_group_xfmr(tmp_path, monkeypatch):
         [],
         None,
         None,
+        None,
         "USetpoint",
         False,
         1,
