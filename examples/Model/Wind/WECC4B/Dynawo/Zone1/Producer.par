@@ -3,8 +3,6 @@
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
 
-   <par type="BOOL" name="WT4B_PPCLocal" value="true"/>
-
     <!-- LV Transformer -->
     <par type="BOOL" name="WT4B_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT4B_BLvTrPu" value="0"/>
