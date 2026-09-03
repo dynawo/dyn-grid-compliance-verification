@@ -79,12 +79,16 @@ def check_sampling_interval(sampling_interval: float, cutoff: float) -> None:
 
 
 def check_producer_params(
-    p_max_injection_pu: float, p_max_consumption_pu: float, u_nom: float
+    p_max_injection_pu: float, p_max_consumption_pu: float, u_nom: float, zone: int = 0
 ) -> None:
     """Check whether the user-supplied model values are consistent:
     * The value of maximum active power generation must be greater or equal than 0.
     * The value of maximum active power consumption must be greater or equal than 0.
-    * The nominal voltage value is defined in the configuration file.
+    * The nominal voltage value is defined in the configuration file, at the PDR (zone 0 or 3).
+
+    The DTR only normalizes the connection voltage at the PDR (Fiche I16, Zone 3): Zone 1
+    (système de production d'énergie) characterizes its equivalent network by SCR/Zcc and a
+    free local voltage, so the check is skipped there.
 
     Parameters
     ----------
@@ -94,6 +98,9 @@ def check_producer_params(
         Maximum active power consumption.
     u_nom: float
         Nominal voltage.
+    zone: int
+        Zone being validated (0: performance/PDR, 1: model validation Zone 1, 3: model
+        validation Zone 3). Defaults to 0 (PDR).
     """
     if p_max_injection_pu < 0:
         raise ValueError(
@@ -103,6 +110,8 @@ def check_producer_params(
         raise ValueError(
             "The value of maximum active power consumption must be greater or equal than 0."
         )
+    if zone == 1:
+        return
     Udims = (
         config.get_list("GridCode", "HTB1_Udims")
         + config.get_list("GridCode", "HTB2_Udims")
