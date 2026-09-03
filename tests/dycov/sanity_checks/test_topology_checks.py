@@ -65,66 +65,26 @@ def make_generator(gen_type="S", converter_lv_control=True):
         ]
 
 
-def make_transformers(topology="S", generators=None):
-    """Build StepUp transformers.
-
-    When generators is provided, each transformer's first terminal points to the
-    corresponding generator id, establishing the Gen → Xfmr connection that
-    _find_stepup_xfmr relies on.  When generators is None the terminals are left
-    empty, so no generator-xfmr association exists.
-    """
-    if topology == "S":
-        gen_id = generators[0].id if generators else ""
-        return [
-            XfmrParams(
-                id="StepUp_Xfmr",
-                lib=None,
-                r=0.0003,
-                x=0.0268,
-                b=0.0,
-                g=0.0,
-                r_tfo=0.9574,
-                alpha_tfo=0.0,
-                par_id="",
-                terminals=(
-                    Terminal(connected_equipment=gen_id),
-                    Terminal(connected_equipment=""),
-                ),
-            )
-        ]
-    elif topology == "M":
-        return [
-            XfmrParams(
-                id="StepUp_Xfmr1",
-                lib=None,
-                r=0.0003,
-                x=0.0268,
-                b=0.0,
-                g=0.0,
-                r_tfo=0.9574,
-                alpha_tfo=0.0,
-                par_id="",
-                terminals=(
-                    Terminal(connected_equipment=generators[0].id if generators else ""),
-                    Terminal(connected_equipment=""),
-                ),
+def make_group_xfmr(generators=None):
+    """Builds the Zone-1 group transformer, referencing the generating unit."""
+    gen_id = generators[0].id if generators else ""
+    return [
+        XfmrParams(
+            id="Group_Xfmr",
+            lib=None,
+            r=0.0003,
+            x=0.0268,
+            b=0.0,
+            g=0.0,
+            r_tfo=0.9574,
+            alpha_tfo=0.0,
+            par_id="",
+            terminals=(
+                Terminal(connected_equipment=gen_id),
+                Terminal(connected_equipment=""),
             ),
-            XfmrParams(
-                id="StepUp_Xfmr2",
-                lib=None,
-                r=0.0003,
-                x=0.0268,
-                b=0.0,
-                g=0.0,
-                r_tfo=0.9574,
-                alpha_tfo=0.0,
-                par_id="",
-                terminals=(
-                    Terminal(connected_equipment=generators[1].id if generators else ""),
-                    Terminal(connected_equipment=""),
-                ),
-            ),
-        ]
+        )
+    ]
 
 
 def make_main_transformer():
@@ -185,337 +145,167 @@ def make_internal_line():
     )
 
 
-def _assert_error_contains(pytest_wrapped_e, topology_name):
-    message = pytest_wrapped_e.value.args[0]
-    assert f"The '{topology_name}' topology expects" in message
-    assert (
-        "internal line" in message
-        or "StepUp_Xfmr" in message
-        or "AuxLoad_Xfmr" in message
-        or "Main_Xfmr" in message
-    )
+ZONE1 = 1
+ZONE3 = 3
+
+TOPOLOGIES = {
+    "S": (1, False, False),
+    "S+i": (1, False, True),
+    "S+Aux": (1, True, False),
+    "S+Aux+i": (1, True, True),
+    "M": (2, False, False),
+    "M+i": (2, False, True),
+    "M+Aux": (2, True, False),
+    "M+Aux+i": (2, True, True),
+}
+
+
+def _zone3_equipment(topology: str) -> dict:
+    """Builds the equipment the catalog expects for a Zone-3 topology."""
+    units, aux_load, int_line = TOPOLOGIES[topology]
+    return {
+        "generators": make_generator("S" if units == 1 else "M"),
+        "transformers": [],
+        "auxiliary_load": make_auxiliary_load() if aux_load else None,
+        "auxiliary_transformer": make_auxiliary_transformer() if aux_load else None,
+        "transformer": make_main_transformer(),
+        "internal_line": make_internal_line() if int_line else None,
+    }
+
+
+def _check_zone3(topology: str, **overrides) -> None:
+    topology_checks.check_topology(ZONE3, topology, **{**_zone3_equipment(topology), **overrides})
+
+
+def _check_zone1(generators, transformers) -> None:
+    topology_checks.check_topology(ZONE1, "S", generators, transformers, None, None, None, None)
 
 
 # -------------------------
-# Tests: topology validation
+# Tests: Zone 3 topologies
 # -------------------------
 
 
-# Expected fail tests for S topologies
-def test_check_topology_s_expected_fail():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    internal_line = make_internal_line()
+@pytest.mark.parametrize("topology", list(TOPOLOGIES))
+def test_check_topology_accepts_the_catalog_equipment(topology):
+    _check_zone3(topology)
+
+
+@pytest.mark.parametrize("topology", list(TOPOLOGIES))
+def test_check_topology_requires_the_main_transformer(topology):
+    """The main transformer is now the block adjacent to the PDR in every topology."""
+    with pytest.raises(ValueError) as e:
+        _check_zone3(topology, transformer=None)
+
+    assert "Main_Xfmr" in e.value.args[0]
+
+
+@pytest.mark.parametrize("topology", list(TOPOLOGIES))
+def test_check_topology_rejects_a_unit_transformer(topology):
+    """In Zone 3 the group transformer of each unit is part of its dynamic model."""
+    with pytest.raises(ValueError) as e:
+        _check_zone3(topology, transformers=make_group_xfmr())
+
+    assert "generating units" in e.value.args[0]
+
+
+@pytest.mark.parametrize("topology", list(TOPOLOGIES))
+def test_check_topology_rejects_the_wrong_internal_line_presence(topology):
+    _, _, int_line = TOPOLOGIES[topology]
+    swapped = None if int_line else make_internal_line()
+
+    with pytest.raises(ValueError) as e:
+        _check_zone3(topology, internal_line=swapped)
+
+    assert "IntNetwork_Line" in e.value.args[0]
+
+
+@pytest.mark.parametrize("topology", list(TOPOLOGIES))
+def test_check_topology_rejects_the_wrong_auxiliary_presence(topology):
+    _, aux_load, _ = TOPOLOGIES[topology]
+    swapped_load = None if aux_load else make_auxiliary_load()
+    swapped_xfmr = None if aux_load else make_auxiliary_transformer()
+
+    with pytest.raises(ValueError) as e:
+        _check_zone3(topology, auxiliary_load=swapped_load, auxiliary_transformer=swapped_xfmr)
+
+    assert "Aux_Load" in e.value.args[0]
+
+
+def test_check_topology_rejects_multiple_units_in_a_single_topology():
+    with pytest.raises(ValueError) as e:
+        _check_zone3("S", generators=make_generator("M"))
+
+    assert "A single generator is expected." in e.value.args[0]
+
+
+def test_check_topology_rejects_a_single_unit_in_a_multiple_topology():
+    with pytest.raises(ValueError) as e:
+        _check_zone3("M", generators=make_generator("S"))
+
+    assert "Multiple generators are expected." in e.value.args[0]
+
+
+def test_check_topology_rejects_an_unknown_topology():
     with pytest.raises(ValueError) as e:
         topology_checks.check_topology(
-            "S", generators, transformers, None, None, None, internal_line
+            ZONE3, "S+Main", make_generator("S"), [], None, None, make_main_transformer(), None
         )
-    _assert_error_contains(e, "S")
+
+    assert "Select one of the 8 available topologies" in e.value.args[0]
 
 
-def test_check_topology_si_expected_fail():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
+# -------------------------
+# Tests: Zone 1, group transformer tied to ConverterLVControl
+# -------------------------
+
+
+def test_check_topology_zone1_requires_the_group_xfmr_when_lv_control_is_true():
+    generators = make_generator("S", converter_lv_control=True)
+
+    _check_zone1(generators, make_group_xfmr(generators))
+
+
+def test_check_topology_zone1_omits_the_group_xfmr_when_lv_control_is_false():
+    """The converter already reaches the internal node through its own transformer."""
+    generators = make_generator("S", converter_lv_control=False)
+
+    _check_zone1(generators, [])
+
+
+def test_check_topology_zone1_rejects_a_missing_group_xfmr_when_lv_control_is_true():
+    generators = make_generator("S", converter_lv_control=True)
+
     with pytest.raises(ValueError) as e:
-        topology_checks.check_topology("S+i", generators, transformers, None, None, None, None)
-    _assert_error_contains(e, "S+i")
+        _check_zone1(generators, [])
+
+    assert "ConverterLVControl = true" in e.value.args[0]
 
 
-def test_check_topology_saux_expected_fail():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    internal_line = make_internal_line()
+def test_check_topology_zone1_rejects_a_group_xfmr_when_lv_control_is_false():
+    """Two transformers in series: the converter's own and the external one."""
+    generators = make_generator("S", converter_lv_control=False)
+
     with pytest.raises(ValueError) as e:
-        topology_checks.check_topology(
-            "S+Aux", generators, transformers, aux_load, aux_transformer, None, internal_line
-        )
-    _assert_error_contains(e, "S+Aux")
+        _check_zone1(generators, make_group_xfmr(generators))
+
+    assert "ConverterLVControl = false" in e.value.args[0]
 
 
-def test_check_topology_sauxi_expected_fail():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    with pytest.raises(ValueError) as e:
-        topology_checks.check_topology(
-            "S+Aux+i", generators, transformers, aux_load, aux_transformer, None, None
-        )
-    _assert_error_contains(e, "S+Aux+i")
+def test_check_topology_zone1_rejects_the_main_transformer():
+    """Zone 1 stops at the internal node, so it has no transformer towards the PDR."""
+    generators = make_generator("S", converter_lv_control=True)
 
-
-# Expected fail tests for M topologies
-def test_check_topology_m_expected_fail():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    main_transformer = make_main_transformer()
-    internal_line = make_internal_line()
-    with pytest.raises(ValueError) as e:
-        topology_checks.check_topology(
-            "M", generators, transformers, None, None, main_transformer, internal_line
-        )
-    _assert_error_contains(e, "M")
-
-
-def test_check_topology_mi_expected_fail():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    main_transformer = make_main_transformer()
     with pytest.raises(ValueError) as e:
         topology_checks.check_topology(
-            "M+i", generators, transformers, None, None, main_transformer, None
-        )
-    _assert_error_contains(e, "M+i")
-
-
-def test_check_topology_maux_expected_fail():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    main_transformer = make_main_transformer()
-    internal_line = make_internal_line()
-    with pytest.raises(ValueError) as e:
-        topology_checks.check_topology(
-            "M+Aux",
+            ZONE1,
+            "S",
             generators,
-            transformers,
-            aux_load,
-            aux_transformer,
-            main_transformer,
-            internal_line,
+            make_group_xfmr(generators),
+            None,
+            None,
+            make_main_transformer(),
+            None,
         )
-    _assert_error_contains(e, "M+Aux")
 
-
-def test_check_topology_mauxi_expected_fail():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    main_transformer = make_main_transformer()
-    with pytest.raises(ValueError) as e:
-        topology_checks.check_topology(
-            "M+Aux+i", generators, transformers, aux_load, aux_transformer, main_transformer, None
-        )
-    _assert_error_contains(e, "M+Aux+i")
-
-
-# Success tests for S topologies
-def test_check_topology_S_success():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
-
-
-def test_check_topology_Si_success():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    internal_line = make_internal_line()
-    topology_checks.check_topology(
-        "S+i", generators, transformers, None, None, None, internal_line
-    )
-
-
-def test_check_topology_SAux_success():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    topology_checks.check_topology(
-        "S+Aux", generators, transformers, aux_load, aux_transformer, None, None
-    )
-
-
-def test_check_topology_SAuxi_success():
-    generators = make_generator("S")
-    transformers = make_transformers("S")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    internal_line = make_internal_line()
-    topology_checks.check_topology(
-        "S+Aux+i", generators, transformers, aux_load, aux_transformer, None, internal_line
-    )
-
-
-# Success tests for M topologies
-def test_check_topology_M_success():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    main_transformer = make_main_transformer()
-    topology_checks.check_topology(
-        "M", generators, transformers, None, None, main_transformer, None
-    )
-
-
-def test_check_topology_Mi_success():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    main_transformer = make_main_transformer()
-    internal_line = make_internal_line()
-    topology_checks.check_topology(
-        "M+i", generators, transformers, None, None, main_transformer, internal_line
-    )
-
-
-def test_check_topology_MAux_success():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    main_transformer = make_main_transformer()
-    topology_checks.check_topology(
-        "M+Aux", generators, transformers, aux_load, aux_transformer, main_transformer, None
-    )
-
-
-def test_check_topology_MAuxi_success():
-    generators = make_generator("M")
-    transformers = make_transformers("M")
-    aux_load = make_auxiliary_load()
-    aux_transformer = make_auxiliary_transformer()
-    main_transformer = make_main_transformer()
-    internal_line = make_internal_line()
-    topology_checks.check_topology(
-        "M+Aux+i",
-        generators,
-        transformers,
-        aux_load,
-        aux_transformer,
-        main_transformer,
-        internal_line,
-    )
-
-
-# -------------------------
-# Tests: converter_lv_control warning
-# -------------------------
-
-
-def test_converter_lv_control_no_warning_when_lv_true(caplog):
-    """converter_lv_control=True → no warning even when xfmr terminal references the gen."""
-    generators = make_generator("S", converter_lv_control=True)
-    transformers = make_transformers("S", generators)  # xfmr terminal → gen.id
-
-    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
-
-    assert "ConverterLVControl=False" not in caplog.text
-
-
-def test_converter_lv_control_no_warning_when_xfmr_not_referencing_gen(caplog):
-    """converter_lv_control=False but no xfmr terminal references the gen → no warning."""
-    generators = make_generator("S", converter_lv_control=False)
-    transformers = make_transformers("S")  # xfmr terminals are empty, no gen reference
-
-    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
-
-    assert "ConverterLVControl=False" not in caplog.text
-
-
-def test_converter_lv_control_warning_single_generator(caplog):
-    """converter_lv_control=False + xfmr terminal references the gen → warning emitted."""
-    caplog.set_level("WARNING", logger="Sanity Checks")
-
-    generators = make_generator("S", converter_lv_control=False)
-    transformers = make_transformers("S", generators)  # xfmr terminal → gen.id
-
-    topology_checks.check_topology("S", generators, transformers, None, None, None, None)
-
-    assert "ConverterLVControl=False" in caplog.text
-    assert "Synch_Gen" in caplog.text
-    assert "StepUp_Xfmr" in caplog.text
-
-
-def test_converter_lv_control_warning_multiple_generators(caplog):
-    """One warning listing both generators when both have converter_lv_control=False."""
-    caplog.set_level("WARNING", logger="Sanity Checks")
-
-    generators = make_generator("M", converter_lv_control=False)
-    transformers = make_transformers("M", generators)  # each xfmr terminal → matching gen.id
-    main_transformer = make_main_transformer()
-
-    topology_checks.check_topology(
-        "M", generators, transformers, None, None, main_transformer, None
-    )
-
-    assert "ConverterLVControl=False" in caplog.text
-    assert "Wind_Turbine1 → StepUp_Xfmr1" in caplog.text
-    assert "Wind_Turbine2 → StepUp_Xfmr2" in caplog.text
-
-
-def test_converter_lv_control_warning_only_for_affected_generator(caplog):
-    """Only the gen with converter_lv_control=False connected to a xfmr appears in the warning."""
-    caplog.set_level("WARNING", logger="Sanity Checks")
-
-    generators = [
-        GenParams(
-            id="Wind_Turbine1",
-            lib="WTG4AWeccCurrentSource1",
-            terminals=(Terminal(connected_equipment=""),),
-            s_nom=90,
-            i_max=100.0,
-            par_id="",
-            p=0.1,
-            q=0.05,
-            voltage_droop=None,
-            use_voltage_droop=False,
-            converter_lv_control=False,  # affected
-        ),
-        GenParams(
-            id="Wind_Turbine2",
-            lib="WTG4AWeccCurrentSource1",
-            terminals=(Terminal(connected_equipment=""),),
-            s_nom=90,
-            i_max=120.0,
-            par_id="",
-            p=0.12,
-            q=0.025,
-            voltage_droop=None,
-            use_voltage_droop=False,
-            converter_lv_control=True,  # not affected
-        ),
-    ]
-    transformers = make_transformers("M", generators)
-    main_transformer = make_main_transformer()
-
-    topology_checks.check_topology(
-        "M", generators, transformers, None, None, main_transformer, None
-    )
-
-    assert "Wind_Turbine1 → StepUp_Xfmr1" in caplog.text
-    assert "Wind_Turbine2" not in caplog.text
-
-
-# -------------------------
-# Tests: S topology StepUp tied to ConverterLVControl (Zone 1)
-# -------------------------
-
-
-def test_check_topology_S_no_stepup_when_lv_control_false():
-    """S with ConverterLVControl=False accepts a model without a StepUp_Xfmr."""
-    generators = make_generator("S", converter_lv_control=False)
-
-    topology_checks.check_topology("S", generators, [], None, None, None, None)
-
-
-def test_check_topology_S_no_stepup_fails_when_lv_control_true():
-    """S with ConverterLVControl=True still requires the StepUp_Xfmr."""
-    generators = make_generator("S", converter_lv_control=True)
-
-    with pytest.raises(ValueError) as e:
-        topology_checks.check_topology("S", generators, [], None, None, None, None)
-
-    _assert_error_contains(e, "S")
-
-
-def test_check_topology_Si_no_stepup_fails_even_when_lv_control_false():
-    """The optional StepUp is limited to 'S'; S+i still requires it, even with False."""
-    generators = make_generator("S", converter_lv_control=False)
-    internal_line = make_internal_line()
-
-    with pytest.raises(ValueError) as e:
-        topology_checks.check_topology("S+i", generators, [], None, None, None, internal_line)
-
-    _assert_error_contains(e, "S+i")
+    assert "Main_Xfmr" in e.value.args[0]

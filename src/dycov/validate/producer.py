@@ -377,6 +377,7 @@ class ModelProducer(Producer):
 
         # Check sanity of the producer network
         topology_checks.check_topology(
+            self._zone,
             self.topology,
             self.generators,
             self.stepup_xfmrs,
