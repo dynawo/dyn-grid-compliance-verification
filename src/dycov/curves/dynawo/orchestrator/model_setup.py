@@ -685,6 +685,7 @@ class ModelSetup:
             producer.generators,
             sorted_group_xfmrs,
             producer.aux_load,
+            producer.main_xfmr,
             pdr,
             control_mode,
             force_voltage_droop,
