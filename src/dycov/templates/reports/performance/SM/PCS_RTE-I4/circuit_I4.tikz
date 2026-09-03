@@ -6,7 +6,7 @@
 \begin{document}
 \begin{tikzpicture}
     \draw   (0.2,0) to [vsourcesin,l=Group] (1,0)
-    to [draw,voosource,align=center,l={Group\\ transformer}]  node[above,yshift=0.5cm] {PDR} (5,0);
+    to [draw,voosource,align=center,l={Main\\ transformer}]  node[above,yshift=0.5cm] {PDR} (5,0);
     \draw (5,-0.5) [L,l=3b]  to (6.5,-0.5);
     \draw (5,-1.5) [L,l=3b]  to (6.5,-1.5);
     \draw (5,1.5) [L,l=3b]  to (6.5,1.5);
