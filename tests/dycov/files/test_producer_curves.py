@@ -95,16 +95,16 @@ def test_create_producer_curves_offers_the_main_transformer_tap(temp_model_dir):
     assert "AuxLoad_Xfmr_XFMR_Tap" not in content
 
 
-def test_create_producer_curves_offers_the_group_transformer_tap(temp_model_dir):
-    """Zone 1 keeps a group transformer, so its tap is still offered as a curve."""
+def test_create_producer_curves_skips_the_fixed_ratio_transformers(temp_model_dir):
+    """Only the main transformer may be a tap changer; the rest have no tap to record."""
     curves_path = temp_model_dir / "curves"
     (curves_path / "Producer").mkdir(parents=True)
     _write_producer_dyd(
         temp_model_dir / "Producer.dyd",
-        transformer_ids=["Group_Xfmr"],
+        transformer_ids=["Group_Xfmr", "AuxLoad_Xfmr"],
         generator_ids=["Power_Park"],
     )
 
     create_producer_curves(temp_model_dir, curves_path, "performance_PPM")
 
-    assert "Group_Xfmr_XFMR_Tap" in _read_curves_file(curves_path)
+    assert "_XFMR_Tap" not in _read_curves_file(curves_path)
