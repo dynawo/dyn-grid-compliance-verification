@@ -15,27 +15,20 @@ from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
-from dycov.files.model_parameters import (
-    GROUP_XFMR_ROLE,
-    MAIN_XFMR_ROLE,
-    find_bbmodel_by_type,
-    role_of,
-)
+from dycov.files.model_parameters import MAIN_XFMR_ROLE, find_bbmodel_by_type, role_of
 from dycov.logging import dycov_logging
 
-CURVE_XFMR_ROLES = (GROUP_XFMR_ROLE, MAIN_XFMR_ROLE)
 
+def _find_tap_changer_xfmrs(producer_dyd_root: etree.Element) -> list:
+    """Returns the transformers whose tap can be offered as a producer curve.
 
-def _find_curve_xfmrs(producer_dyd_root: etree.Element) -> list:
-    """Returns the transformers whose tap is offered as a producer curve.
-
-    The auxiliary load transformer is left out: its tap is not part of the producer's
-    response at the connection point.
+    Only the main transformer may be a ratio tap changer; the group and auxiliary
+    transformers are fixed-ratio, so they have no tap to record.
     """
     return [
         xfmr
         for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer")
-        if role_of(xfmr.get("id")) in CURVE_XFMR_ROLES
+        if role_of(xfmr.get("id")) == MAIN_XFMR_ROLE
     ]
 
 
@@ -294,7 +287,7 @@ def _get_performance_templates(
         model_path / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
     )
     producer_dyd_root = producer_dyd_tree.getroot()
-    xfmrs = _find_curve_xfmrs(producer_dyd_root)
+    xfmrs = _find_tap_changer_xfmrs(producer_dyd_root)
 
     if template == "performance_SM":
         gen_sms = []
@@ -324,12 +317,13 @@ def _get_performance_templates(
 def _get_xmfrs_models(
     model_path: Path,
     zone: str,
+    filename: str,
 ) -> list:
     producer_dyd_tree = etree.parse(
-        model_path / zone / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
+        model_path / zone / filename, etree.XMLParser(remove_blank_text=True)
     )
     producer_dyd_root = producer_dyd_tree.getroot()
-    return _find_curve_xfmrs(producer_dyd_root)
+    return _find_tap_changer_xfmrs(producer_dyd_root)
 
 
 def _get_generator_models(
@@ -366,7 +360,7 @@ def _get_model_templates(
     template: str,
 ):
     zone = "Zone3"
-    xfmrs = _get_xmfrs_models(model_path, zone)
+    xfmrs = _get_xmfrs_models(model_path, zone, "Producer.dyd")
     z3_gens = _get_generator_models(model_path, template, zone, "Producer.dyd")
 
     if template == "model_PPM":
@@ -396,13 +390,14 @@ def _get_model_templates(
         else:
             preserve_producer_z1 = True
 
+        z1_xfmrs = _get_xmfrs_models(model_path, zone, dyd_file.name)
         z1_gens = _get_generator_models(model_path, template, zone, dyd_file.name)
 
         if template == "model_PPM":
             producer_curves_txt = _get_model_file_template(zone)
         elif template == "model_BESS":
             producer_curves_txt = _get_bess_model_file_template(zone)
-        curves_names_txt = _get_model_curves_template(xfmrs, zone, z1_gens)
+        curves_names_txt = _get_model_curves_template(z1_xfmrs, zone, z1_gens)
 
         with open(curves_path / dyd_file.name.replace(".dyd", "") / "CurvesFiles.ini", "w") as f:
             f.write("[Curves-Files]\n")
