@@ -4,7 +4,7 @@
   <dyn:blackBoxModel id="Int_Bus" lib="Bus"/>
   <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
   <dyn:blackBoxModel id="Aux_Load" lib="LoadAlphaBeta" parFile="Producer.par" parId="Aux_Load"/>
-  <dyn:blackBoxModel id="Main_Xfmr" lib="TransformerFixedRatio" parFile="Producer.par" parId="Main_Xfmr"/>
+  <dyn:blackBoxModel id="Main_Xfmr" lib="TransformerRatioTapChanger" parFile="Producer.par" parId="Main_Xfmr"/>
   <dyn:blackBoxModel id="Wind_Turbine1" lib="WTG4AWeccCurrentSource" parFile="Producer.par" parId="Wind_Turbine1"/>
   <dyn:blackBoxModel id="Wind_Turbine2" lib="WTG4BWeccCurrentSource" parFile="Producer.par" parId="Wind_Turbine2"/>
   <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
