@@ -8,8 +8,8 @@
     <par type="BOOL" name="WTG4A_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4A_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4A_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0.0002727"/>
-    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.0244458"/>
+    <par type="DOUBLE" name="WTG4A_RLvTrPu" value="0.0152727"/>
+    <par type="DOUBLE" name="WTG4A_XLvTrPu" value="0.0844458"/>
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4A_PfFlag" value="false"/>
     <par type="BOOL" name="WTG4A_PQFlag" value="false"/>
@@ -122,8 +122,8 @@
     <par type="BOOL" name="WTG4B_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4B_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.0002727"/>
-    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.0244458"/>
+    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.0152727"/>
+    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.0844458"/>
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4B_PQFlag" value="false"/>
     <par type="BOOL" name="WTG4B_PfFlag" value="false"/>
