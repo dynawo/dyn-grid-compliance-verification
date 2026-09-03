@@ -662,7 +662,7 @@ class ModelSetup:
             tuple(sorted_stepup_xfmrs),
             producer.aux_load,
             producer.auxload_xfmr,
-            producer.ppm_xfmr,
+            producer.main_xfmr,
             producer.intline,
             pdr,
             conn_line,
@@ -767,8 +767,8 @@ class ModelSetup:
         xmfrs = producer.stepup_xfmrs[:]
         if producer.auxload_xfmr:
             xmfrs.append(producer.auxload_xfmr)
-        if producer.ppm_xfmr:
-            xmfrs.append(producer.ppm_xfmr)
+        if producer.main_xfmr:
+            xmfrs.append(producer.main_xfmr)
 
         self.curves_dict = crv.create_curves_file(
             working_oc_dir,

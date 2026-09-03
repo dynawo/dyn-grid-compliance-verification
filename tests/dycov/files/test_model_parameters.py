@@ -81,12 +81,12 @@ def test_no_matching_equipment_models(tmp_path):
 
     result = model_parameters.get_producer_values(dyd_path, par_path, ini_file, s_nref=90.0)
 
-    generators, stepup_xfmrs, aux_load, auxload_xfmr, ppm_xfmr, intline = result
+    generators, stepup_xfmrs, aux_load, auxload_xfmr, main_xfmr, intline = result
     assert generators == []
     assert stepup_xfmrs == []
     assert aux_load is None
     assert auxload_xfmr is None
-    assert ppm_xfmr is None
+    assert main_xfmr is None
     assert intline is None
 
 
