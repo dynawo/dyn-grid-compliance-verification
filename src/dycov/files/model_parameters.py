@@ -190,14 +190,14 @@ def get_producer_values(
 
     stepup_xfmrs = []
     auxload_xfmr = None
-    ppm_xfmr = None
+    main_xfmr = None
     for transformer in transformers:
         if "StepUp_Xfmr" in transformer.id:
             stepup_xfmrs.append(transformer)
         elif "AuxLoad_Xfmr" in transformer.id:
             auxload_xfmr = transformer
         elif "Main_Xfmr" in transformer.id:
-            ppm_xfmr = transformer
+            main_xfmr = transformer
 
     aux_load = None
     if len(loads) > 0:
@@ -212,7 +212,7 @@ def get_producer_values(
         stepup_xfmrs,
         aux_load,
         auxload_xfmr,
-        ppm_xfmr,
+        main_xfmr,
         intline,
     )
 

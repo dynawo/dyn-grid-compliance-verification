@@ -365,7 +365,7 @@ class ModelProducer(Producer):
             self.stepup_xfmrs,
             self.aux_load,
             self.auxload_xfmr,
-            self.ppm_xfmr,
+            self.main_xfmr,
             self.intline,
         ) = model_parameters.get_producer_values(
             self.get_producer_dyd(),
@@ -382,13 +382,13 @@ class ModelProducer(Producer):
             self.stepup_xfmrs,
             self.aux_load,
             self.auxload_xfmr,
-            self.ppm_xfmr,
+            self.main_xfmr,
             self.intline,
         )
         parameter_checks.check_trafos(self.stepup_xfmrs)
         parameter_checks.check_auxiliary_load(self.aux_load)
         parameter_checks.check_trafo(self.auxload_xfmr)
-        parameter_checks.check_trafo(self.ppm_xfmr)
+        parameter_checks.check_trafo(self.main_xfmr)
         parameter_checks.check_internal_line(self.intline)
         parameter_checks.check_generators(self.generators)
 
@@ -500,8 +500,8 @@ class ModelProducer(Producer):
             if id == xmfr.id:
                 return xmfr.id, xmfr.lib
 
-        if self._ppm_xfmr and id == self._ppm_xfmr.id:
-            return self._ppm_xfmr.id, self._ppm_xfmr.lib
+        if self._main_xfmr and id == self._main_xfmr.id:
+            return self._main_xfmr.id, self._main_xfmr.lib
 
         return None, None
 
@@ -721,8 +721,8 @@ class ModelProducer(Producer):
         xfmrs = self._stepup_xfmrs
         if self._auxload_xfmr:
             xfmrs.append(self._auxload_xfmr)
-        if self._ppm_xfmr:
-            xfmrs.append(self._ppm_xfmr)
+        if self._main_xfmr:
+            xfmrs.append(self._main_xfmr)
         return xfmrs
 
     def set_is_field_measurements(self, is_field_measurements: bool) -> None:

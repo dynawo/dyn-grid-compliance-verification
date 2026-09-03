@@ -66,7 +66,7 @@ def _make_producer(
     producer.stepup_xfmrs = [xfmr]
     producer.aux_load = None
     producer.auxload_xfmr = None
-    producer.ppm_xfmr = None
+    producer.main_xfmr = None
     producer.intline = None
     return producer
 
@@ -797,18 +797,18 @@ class TestCompleteModel:
         _, _, mocks = self._run(has_line=False)
         mocks["mp"].get_pcs_lines_params.assert_not_called()
 
-    def test_aux_and_ppm_xfmrs_included_in_curves_file(self):
+    def test_aux_and_main_xfmrs_included_in_curves_file(self):
         producer = _make_producer()
         aux_xfmr = MagicMock(id="AUX_XFMR")
-        ppm_xfmr = MagicMock(id="PPM_XFMR")
+        main_xfmr = MagicMock(id="PPM_XFMR")
         producer.auxload_xfmr = aux_xfmr
-        producer.ppm_xfmr = ppm_xfmr
+        producer.main_xfmr = main_xfmr
 
         _, _, mocks = self._run(producer=producer)
 
         xmfrs = mocks["crv"].create_curves_file.call_args[0][2]
         assert aux_xfmr in xmfrs
-        assert ppm_xfmr in xmfrs
+        assert main_xfmr in xmfrs
 
 
 # ---------------------------------------------------------------------------
