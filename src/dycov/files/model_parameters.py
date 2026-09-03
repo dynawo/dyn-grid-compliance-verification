@@ -245,7 +245,7 @@ def get_producer_values(
     lines = _get_line_values(producer_dyd_root, producer_par_root, None, None)
 
     by_role = _classify_transformers(transformers)
-    stepup_xfmrs = by_role[GROUP_XFMR_ROLE]
+    group_xfmrs = by_role[GROUP_XFMR_ROLE]
     auxload_xfmr = _single(by_role[AUXLOAD_XFMR_ROLE])
     main_xfmr = _single(by_role[MAIN_XFMR_ROLE])
 
@@ -259,7 +259,7 @@ def get_producer_values(
 
     return (
         generators,
-        stepup_xfmrs,
+        group_xfmrs,
         aux_load,
         auxload_xfmr,
         main_xfmr,

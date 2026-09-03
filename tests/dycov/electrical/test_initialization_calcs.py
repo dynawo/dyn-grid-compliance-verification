@@ -203,7 +203,7 @@ def test_non_zero_imp_line():
 
 
 def test_initialize_topo_s():
-    """Topology 'S': a single generator behind its step-up transformer."""
+    """Topology 'S': a single generator behind its group transformer."""
     gen, gen_xfmr = _make_gen_and_xfmr()
     pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
     grid_line = line_pimodel(_make_grid_line())
@@ -231,8 +231,8 @@ def test_initialize_topo_s():
     assert _is_equal(gen.terminals[0].q0, -0.5124200670122216)
 
 
-def test_initialize_topo_s_without_stepup():
-    """Topology 'S' with ConverterLVControl=False: no step-up transformer.
+def test_initialize_topo_s_without_group_xfmr():
+    """Topology 'S' with ConverterLVControl=False: no group transformer.
 
     The generator is referenced directly at the internal node (which coincides
     with the PDR bus here, as there is no internal line nor plant transformer),
@@ -405,7 +405,7 @@ def test_initialize_topo_s_with_main_xfmr():
     assert _is_equal(main_xfmr.terminals[1].p0, 4.573257858564547)
     assert _is_equal(main_xfmr.terminals[1].q0, 0.5590353650995359)
 
-    # Generator, behind Main_Xfmr + step-up transformer
+    # Generator, behind Main_Xfmr + group transformer
     assert _is_equal(gen.terminals[0].u0, 1.0780685014941822)
     assert _is_equal(gen.terminals[0].u_phase0, 0.5611528954914154)
     assert _is_equal(gen.terminals[0].p0, -4.5795157171290946)
@@ -416,7 +416,7 @@ def test_initialize_topo_m_power_share():
     """Topology 'M': two generators with different P/Q shares.
 
     Regression test for issue #353 (point 2): the network-side terminal of
-    each step-up transformer must carry its per-generator share of the plant
+    each group transformer must carry its per-generator share of the plant
     flow (s_int_share), not the plant total. Covers both terminal
     orientations (generator on terminal 1 and on terminal 2), whose pi models
     are solved from the declared known side (issue #355).
@@ -512,7 +512,7 @@ def test_initialize_topo_m_power_share():
     assert _is_equal(grid_init.p0, 4.567)
     assert _is_equal(grid_init.q0, -0.5950059540540541)
 
-    # Network-side terminal of each step-up transformer: its own share
+    # Network-side terminal of each group transformer: its own share
     assert _is_equal(xfmr1.terminals[1].u0, 1.0444444444444445)
     assert _is_equal(xfmr1.terminals[1].p0, -2.7402)
     assert _is_equal(xfmr1.terminals[1].q0, -0.7)

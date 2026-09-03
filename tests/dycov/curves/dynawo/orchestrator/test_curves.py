@@ -70,7 +70,7 @@ def _make_producer_mock():
     producer.get_producer_par.return_value = Path("/producer/model.par")
     producer.generators = [MagicMock(id="GEN1")]
     producer.s_nom = 100.0
-    producer.stepup_xfmrs = []
+    producer.group_xfmrs = []
     return producer
 
 
@@ -204,7 +204,8 @@ class TestGetDisconnectionModel:
         producer = _make_producer_mock()
         producer.aux_load = MagicMock(id="AUX")
         producer.auxload_xfmr = MagicMock(id="AXFMR")
-        producer.stepup_xfmrs = [xfmr1, xfmr2]
+        producer.group_xfmrs = [xfmr1, xfmr2]
+        producer.main_xfmr = MagicMock(id="MAIN")
         producer.intline = MagicMock(id="INTLINE")
 
         curves = DynawoCurves.__new__(DynawoCurves)
@@ -215,7 +216,7 @@ class TestGetDisconnectionModel:
 
         assert result.auxload is producer.aux_load
         assert result.auxload_xfmr is producer.auxload_xfmr
-        assert result.stepup_xfmrs == ["XFMR1", "XFMR2"]
+        assert result.connection_xfmrs == ["XFMR1", "XFMR2", "MAIN"]
         assert result.gen_intline is producer.intline
 
 

@@ -43,7 +43,7 @@ def init_calcs(
     gens: tuple
         Params of the producer's generating units
     gen_xfmrs: tuple
-        Params of their step-up transformers (a tuple)
+        Params of their group transformers (a tuple)
     aux_load: LoadParams
         Params of the auxiliary load (if present)
     auxload_xfmr: XfmrParams

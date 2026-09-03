@@ -377,8 +377,8 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
     =False): the converter's internal transformer already reaches node 1, so the
     schematic must not draw an external transformer.
     """
-    stepup_xfmrs = getattr(producer, "stepup_xfmrs", None)
-    has_stepup = stepup_xfmrs is None or len(stepup_xfmrs) > 0
+    group_xfmrs = getattr(producer, "group_xfmrs", None)
+    has_stepup = group_xfmrs is None or len(group_xfmrs) > 0
     for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
         if (working_path / tikz_name).exists():
             tikz_template = _get_template(working_path, tikz_name)

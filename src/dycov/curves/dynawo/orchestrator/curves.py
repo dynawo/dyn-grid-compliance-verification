@@ -467,10 +467,14 @@ class DynawoCurves(ProducerCurves):
         Returns all equipment in the model that can be disconnected.
         """
         producer = self.get_producer()
+        connection_xfmrs = list(producer.group_xfmrs)
+        if producer.main_xfmr:
+            connection_xfmrs.append(producer.main_xfmr)
+
         return DisconnectionModel(
             producer.aux_load,
             producer.auxload_xfmr,
-            [xfmr.id for xfmr in producer.stepup_xfmrs],
+            [xfmr.id for xfmr in connection_xfmrs],
             producer.intline,
         )
 
