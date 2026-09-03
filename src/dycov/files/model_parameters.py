@@ -173,7 +173,7 @@ def _classify_transformers(transformers: list) -> dict[str, list]:
     """
     by_role = {role: [] for role in XFMR_ROLE_IDS}
     for transformer in transformers:
-        role = _role_of(transformer.id)
+        role = role_of(transformer.id)
         if role is None:
             accepted = ", ".join(id for ids in XFMR_ROLE_IDS.values() for id in ids)
             raise ValueError(
@@ -185,7 +185,8 @@ def _classify_transformers(transformers: list) -> dict[str, list]:
     return by_role
 
 
-def _role_of(transformer_id: str) -> Optional[str]:
+def role_of(transformer_id: str) -> Optional[str]:
+    """Returns the topology role the given transformer id declares, or None if unknown."""
     for role, ids in XFMR_ROLE_IDS.items():
         if any(id in transformer_id for id in ids):
             return role

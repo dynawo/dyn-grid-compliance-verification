@@ -15,8 +15,28 @@ from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
-from dycov.files.model_parameters import find_bbmodel_by_type
+from dycov.files.model_parameters import (
+    GROUP_XFMR_ROLE,
+    MAIN_XFMR_ROLE,
+    find_bbmodel_by_type,
+    role_of,
+)
 from dycov.logging import dycov_logging
+
+CURVE_XFMR_ROLES = (GROUP_XFMR_ROLE, MAIN_XFMR_ROLE)
+
+
+def _find_curve_xfmrs(producer_dyd_root: etree.Element) -> list:
+    """Returns the transformers whose tap is offered as a producer curve.
+
+    The auxiliary load transformer is left out: its tap is not part of the producer's
+    response at the connection point.
+    """
+    return [
+        xfmr
+        for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer")
+        if role_of(xfmr.get("id")) in CURVE_XFMR_ROLES
+    ]
 
 
 def _get_sm_file_template() -> str:
@@ -274,10 +294,7 @@ def _get_performance_templates(
         model_path / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
     )
     producer_dyd_root = producer_dyd_tree.getroot()
-    xfmrs = []
-    for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
-        if "StepUp_Xfmr" in xfmr.get("id"):
-            xfmrs.append(xfmr)
+    xfmrs = _find_curve_xfmrs(producer_dyd_root)
 
     if template == "performance_SM":
         gen_sms = []
@@ -312,12 +329,7 @@ def _get_xmfrs_models(
         model_path / zone / "Producer.dyd", etree.XMLParser(remove_blank_text=True)
     )
     producer_dyd_root = producer_dyd_tree.getroot()
-    xfmrs = []
-    for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer"):
-        if "StepUp_Xfmr" in xfmr.get("id"):
-            xfmrs.append(xfmr)
-
-    return xfmrs
+    return _find_curve_xfmrs(producer_dyd_root)
 
 
 def _get_generator_models(
