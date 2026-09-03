@@ -790,13 +790,12 @@ def test_classify_transformers_routes_each_id_to_its_role():
     assert by_role[model_parameters.MAIN_XFMR_ROLE] == [main]
 
 
-def test_classify_transformers_keeps_the_pre_catalog_unit_id():
-    """Producer models written against the old catalog still name the unit transformer."""
-    stepup = _xfmr("StepUp_Xfmr_1")
+def test_classify_transformers_rejects_the_pre_catalog_unit_id():
+    """A pre-catalog StepUp_Xfmr has no role: it is not the Zone-1 group transformer."""
+    with pytest.raises(ValueError) as excinfo:
+        model_parameters._classify_transformers([_xfmr("StepUp_Xfmr_1")])
 
-    by_role = model_parameters._classify_transformers([stepup])
-
-    assert by_role[model_parameters.GROUP_XFMR_ROLE] == [stepup]
+    assert "StepUp_Xfmr_1" in str(excinfo.value)
 
 
 def test_classify_transformers_rejects_an_unknown_id():
