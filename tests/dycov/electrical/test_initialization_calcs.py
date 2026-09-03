@@ -213,7 +213,7 @@ def test_initialize_topo_s():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -247,7 +247,7 @@ def test_initialize_topo_s_without_stepup():
         gen_xfmrs=[],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -291,7 +291,7 @@ def test_initialize_topo_s_i():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=int_line,
         pdr=pdr,
         grid_line=grid_line,
@@ -345,7 +345,7 @@ def test_initialize_topo_s_with_main_xfmr():
             Terminal(connected_equipment=None),
         ),
     )
-    ppm_xfmr = XfmrParams(
+    main_xfmr = XfmrParams(
         id=None,
         lib=None,
         par_id=None,
@@ -381,7 +381,7 @@ def test_initialize_topo_s_with_main_xfmr():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=ppm_xfmr,
+        main_xfmr=main_xfmr,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -396,14 +396,14 @@ def test_initialize_topo_s_with_main_xfmr():
     assert _is_equal(grid_init.q0, -1.522032981081081)
 
     # Main_Xfmr terminals: PDR side and internal side
-    assert _is_equal(ppm_xfmr.terminals[0].u0, 1.0444444444444445)
-    assert _is_equal(ppm_xfmr.terminals[0].u_phase0, 0.3216913640397123)
-    assert _is_equal(ppm_xfmr.terminals[0].p0, -4.567)
-    assert _is_equal(ppm_xfmr.terminals[0].q0, 0.0)
-    assert _is_equal(ppm_xfmr.terminals[1].u0, 1.0087747269606742)
-    assert _is_equal(ppm_xfmr.terminals[1].u_phase0, 0.44332797328537715)
-    assert _is_equal(ppm_xfmr.terminals[1].p0, 4.573257858564547)
-    assert _is_equal(ppm_xfmr.terminals[1].q0, 0.5590353650995359)
+    assert _is_equal(main_xfmr.terminals[0].u0, 1.0444444444444445)
+    assert _is_equal(main_xfmr.terminals[0].u_phase0, 0.3216913640397123)
+    assert _is_equal(main_xfmr.terminals[0].p0, -4.567)
+    assert _is_equal(main_xfmr.terminals[0].q0, 0.0)
+    assert _is_equal(main_xfmr.terminals[1].u0, 1.0087747269606742)
+    assert _is_equal(main_xfmr.terminals[1].u_phase0, 0.44332797328537715)
+    assert _is_equal(main_xfmr.terminals[1].p0, 4.573257858564547)
+    assert _is_equal(main_xfmr.terminals[1].q0, 0.5590353650995359)
 
     # Generator, behind Main_Xfmr + step-up transformer
     assert _is_equal(gen.terminals[0].u0, 1.0780685014941822)
@@ -500,7 +500,7 @@ def test_initialize_topo_m_power_share():
         gen_xfmrs=[xfmr1, xfmr2],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -570,7 +570,7 @@ def test_initialize_islanding_pdr_side_load():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -613,7 +613,7 @@ def test_initialize_grid_side_load_keeps_line_flow():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -657,7 +657,7 @@ def test_init_calcs_zero_imp_grid_line(monkeypatch):
         gen_xfmrs=(),
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=DummyLine(y_tr=complex(float("inf"))),
@@ -702,7 +702,7 @@ def _init_s_aux(aux_load: LoadParams, aux_xfmr: XfmrParams) -> tuple[GenParams, 
         gen_xfmrs=[gen_xfmr],
         aux_load=aux_load,
         auxload_xfmr=aux_xfmr,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=line_pimodel(_make_grid_line()),
@@ -769,7 +769,7 @@ def _init_s_i(int_line_reversed: bool) -> LineParams:
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=int_line,
         pdr=pdr,
         grid_line=line_pimodel(_make_grid_line()),
@@ -832,7 +832,7 @@ def _init_main_xfmr_behind_int_line(main_on_terminal1: bool) -> tuple[LineParams
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=main_xfmr,
+        main_xfmr=main_xfmr,
         int_line=int_line,
         pdr=pdr,
         grid_line=line_pimodel(_make_grid_line()),
