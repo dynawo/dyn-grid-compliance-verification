@@ -334,6 +334,15 @@ The topology is declared in the ``Producer.ini`` file and determines how
 DyCoV connects the producer's equipment to the connection bus internally
 (the PDR bus — or InternalNode1 for Zone 1 of the RMS model validation).
 
+Every topology places a main transformer (``Main_Xfmr``) next to the PDR bus,
+and the generating units hang from an internal bus (``Int_Bus``) behind it.
+The group transformer of each unit is part of the unit's own dynamic model, so
+it is not modelled as a separate block. When an internal network line is used
+(the ``+i`` variants) it sits on the MV side of the main transformer, between it
+and the internal bus, and the auxiliary load hangs from that same internal bus.
+Only the main transformer regulates its ratio: the group and auxiliary load
+transformers are fixed-ratio.
+
 .. figure:: figs_topologies/s.png
     :width: 600px
 
@@ -376,7 +385,11 @@ DyCoV connects the producer's equipment to the connection bus internally
 
 .. note::
    For Zone 1 :abbr:`WT (Wind Turbine)`/:abbr:`PV (Photovoltaic Array)` validation,
-   only the S topology is allowed.
+   only the S topology is allowed. Zone 1 stops at the internal node, so it has no
+   main transformer; the unit is connected through its group transformer
+   (``Group_Xfmr``), which is modelled explicitly only when the dynamic model
+   declares ``ConverterLVControl = true``. Otherwise the converter already reaches
+   the internal node through its own transformer and no external one is expected.
 
    .. figure:: figs_topologies/zone1.png
        :width: 500px
@@ -405,13 +418,20 @@ The guided process works in stages:
       <?xml version='1.0' encoding='UTF-8'?>
       <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
         <!--Topology: S+Aux-->
-        <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
-        <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
-        <dyn:blackBoxModel id="StepUp_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="StepUp_Xfmr"/>
-        <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
         <!--Replace: 'XFMR_DYNAMIC_MODEL', options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
+        <dyn:blackBoxModel id="Main_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="Main_Xfmr"/>
+        <!--Replace: 'BUS_DYNAMIC_MODEL', options: ['InfiniteBus', 'InfiniteBusFromTable', 'Bus']-->
+        <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
+        <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
+        <!--Replace: 'LOAD_DYNAMIC_MODEL', options: ['LoadAlphaBeta']-->
+        <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
         <!--Replace: 'SM_DYNAMIC_MODEL', options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', ...]-->
-        <!--Replace: 'LOAD_DYNAMIC_MODEL', options: ['LoadPQ','LoadAlphaBeta']-->
+        <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
+        <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
+        <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="Main_Xfmr" var2="transformer_terminal1"/>
+        <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
+        <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
+        <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="Int_Bus" var2="bus_terminal"/>
       </dyn:dynamicModelsArchitecture>
 
 2. **PAR file** — DyCoV generates a parameter file with all the parameters
