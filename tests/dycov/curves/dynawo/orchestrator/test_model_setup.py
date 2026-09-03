@@ -63,7 +63,7 @@ def _make_producer(
     producer.get_zone.return_value = zone
     producer.generators = generators or [_make_gen()]
     xfmr = MagicMock(id="XFMR1")
-    producer.stepup_xfmrs = [xfmr]
+    producer.group_xfmrs = [xfmr]
     producer.aux_load = None
     producer.auxload_xfmr = None
     producer.main_xfmr = None
@@ -729,7 +729,7 @@ class TestCompleteModel:
             patch.object(setup, "_get_pdr"),
             patch.object(setup, "_get_line", return_value=(0.01, 0.1)),
             patch.object(setup, "_get_lines_for_initial_calcs"),
-            patch.object(setup, "_sort_stepup_xfmrs_to_generators", return_value=[]),
+            patch.object(setup, "_sort_group_xfmrs_to_generators", return_value=[]),
             patch.object(setup, "_get_tso_loads", return_value=(None, None)),
             patch.object(setup, "_get_event_parameters", return_value=event_params),
             patch.object(setup, "_adjust_event_value"),
@@ -887,7 +887,7 @@ class TestGetLineBranches:
 
 
 # ---------------------------------------------------------------------------
-# _sort_stepup_xfmrs_to_generators
+# _sort_group_xfmrs_to_generators
 # ---------------------------------------------------------------------------
 
 
@@ -900,10 +900,10 @@ class TestSortStepupXfmrs:
         producer = _make_producer(generators=[gen_a, gen_b])
         xfmr_a = MagicMock(id="XFMR_A")
         xfmr_b = MagicMock(id="XFMR_B")
-        producer.stepup_xfmrs = [xfmr_b, xfmr_a]
+        producer.group_xfmrs = [xfmr_b, xfmr_a]
         setup = _make_setup(_make_owner(producer))
 
-        result = setup._sort_stepup_xfmrs_to_generators(producer)
+        result = setup._sort_group_xfmrs_to_generators(producer)
 
         assert result == [xfmr_a, xfmr_b]
 
@@ -911,15 +911,15 @@ class TestSortStepupXfmrs:
         gen = _make_gen()
         gen.terminals[0].connected_equipment = "NONE"
         producer = _make_producer(generators=[gen])
-        producer.stepup_xfmrs = []
+        producer.group_xfmrs = []
         setup = _make_setup(_make_owner(producer))
 
-        result = setup._sort_stepup_xfmrs_to_generators(producer)
+        result = setup._sort_group_xfmrs_to_generators(producer)
 
         assert result == [None]
 
     def test_none_placeholder_keeps_alignment_when_a_generator_has_no_xfmr(self):
-        # g0 has no step-up, g1 is connected to XFMR_B: XFMR_B must stay aligned to
+        # g0 has no group transformer, g1 is connected to XFMR_B: XFMR_B must stay aligned to
         # g1 (index 1) and index 0 must be None, never shifting it onto g0.
         gen_a = _make_gen()
         gen_a.terminals[0].connected_equipment = "NONE"
@@ -927,10 +927,10 @@ class TestSortStepupXfmrs:
         gen_b.terminals[0].connected_equipment = "XFMR_B"
         producer = _make_producer(generators=[gen_a, gen_b])
         xfmr_b = MagicMock(id="XFMR_B")
-        producer.stepup_xfmrs = [xfmr_b]
+        producer.group_xfmrs = [xfmr_b]
         setup = _make_setup(_make_owner(producer))
 
-        result = setup._sort_stepup_xfmrs_to_generators(producer)
+        result = setup._sort_group_xfmrs_to_generators(producer)
 
         assert result[0] is None
         assert result[1] is xfmr_b

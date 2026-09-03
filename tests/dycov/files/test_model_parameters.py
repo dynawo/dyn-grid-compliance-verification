@@ -81,9 +81,9 @@ def test_no_matching_equipment_models(tmp_path):
 
     result = model_parameters.get_producer_values(dyd_path, par_path, ini_file, s_nref=90.0)
 
-    generators, stepup_xfmrs, aux_load, auxload_xfmr, main_xfmr, intline = result
+    generators, group_xfmrs, aux_load, auxload_xfmr, main_xfmr, intline = result
     assert generators == []
-    assert stepup_xfmrs == []
+    assert group_xfmrs == []
     assert aux_load is None
     assert auxload_xfmr is None
     assert main_xfmr is None
@@ -585,8 +585,8 @@ def test_find_output_dir(tmp_path):
     assert res == "outdir"
 
 
-def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
-    """A generator without a step-up transformer must still get its init written.
+def test_adjust_producer_init_without_group_xfmr(tmp_path, monkeypatch):
+    """A generator without a group transformer must still get its init written.
 
     Regression for the S/ConverterLVControl=False topology: with an empty xfmrs
     list the generator must not be skipped (the transformer step is simply not

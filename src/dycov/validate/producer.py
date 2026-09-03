@@ -362,7 +362,7 @@ class ModelProducer(Producer):
         # Read producer network
         (
             self.generators,
-            self.stepup_xfmrs,
+            self.group_xfmrs,
             self.aux_load,
             self.auxload_xfmr,
             self.main_xfmr,
@@ -380,13 +380,13 @@ class ModelProducer(Producer):
             self._zone,
             self.topology,
             self.generators,
-            self.stepup_xfmrs,
+            self.group_xfmrs,
             self.aux_load,
             self.auxload_xfmr,
             self.main_xfmr,
             self.intline,
         )
-        parameter_checks.check_trafos(self.stepup_xfmrs)
+        parameter_checks.check_trafos(self.group_xfmrs)
         parameter_checks.check_auxiliary_load(self.aux_load)
         parameter_checks.check_trafo(self.auxload_xfmr)
         parameter_checks.check_trafo(self.main_xfmr)
@@ -497,7 +497,7 @@ class ModelProducer(Producer):
             if id == gen.id:
                 return gen.id, gen.lib
 
-        for xmfr in self._stepup_xfmrs:
+        for xmfr in self._group_xfmrs:
             if id == xmfr.id:
                 return xmfr.id, xmfr.lib
 
@@ -719,7 +719,7 @@ class ModelProducer(Producer):
         list
             Transformers defined in the producer model
         """
-        xfmrs = self._stepup_xfmrs
+        xfmrs = self._group_xfmrs
         if self._auxload_xfmr:
             xfmrs.append(self._auxload_xfmr)
         if self._main_xfmr:
