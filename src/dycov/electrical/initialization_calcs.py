@@ -23,7 +23,7 @@ def init_calcs(
     gen_xfmrs: tuple[mp.XfmrParams, ...],
     aux_load: mp.LoadParams,
     auxload_xfmr: mp.XfmrParams,
-    ppm_xfmr: mp.XfmrParams,
+    main_xfmr: mp.XfmrParams,
     int_line: mp.LineParams,
     pdr: mp.PdrParams,
     grid_line: mp.PimodelParams,
@@ -48,7 +48,7 @@ def init_calcs(
         Params of the auxiliary load (if present)
     auxload_xfmr: XfmrParams
         Params of the auxiliary load transformer (if present)
-    ppm_xfmr: XfmrParams
+    main_xfmr: XfmrParams
         Params of the plant transformer (if present)
     int_line: LineParams
         Params of the "internal network" line (if present)
@@ -72,7 +72,7 @@ def init_calcs(
     v_pdr, grid_init = _solve_grid_side(pdr, grid_line, grid_load, pdr_load)
 
     v_node, s_node, node_ids = _solve_int_line(int_line, v_pdr, pdr.s, PDR_IDS)
-    v_node, s_node, node_ids = _solve_main_xfmr(ppm_xfmr, v_node, s_node, node_ids)
+    v_node, s_node, node_ids = _solve_main_xfmr(main_xfmr, v_node, s_node, node_ids)
     s_node = _solve_aux_branch(aux_load, auxload_xfmr, v_node, s_node)
     _solve_gen_circuits(gens, gen_xfmrs, v_node, s_node)
 
