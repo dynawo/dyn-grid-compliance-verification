@@ -141,6 +141,62 @@ def get_connected_to_pdr(producer_dyd: Path) -> list:
     return connected_to_pdr
 
 
+GROUP_XFMR_ROLE = "Group_Xfmr"
+AUXLOAD_XFMR_ROLE = "AuxLoad_Xfmr"
+MAIN_XFMR_ROLE = "Main_Xfmr"
+PRE_CATALOG_GROUP_XFMR_ID = "StepUp_Xfmr"
+
+XFMR_ROLE_IDS = {
+    GROUP_XFMR_ROLE: (GROUP_XFMR_ROLE, PRE_CATALOG_GROUP_XFMR_ID),
+    AUXLOAD_XFMR_ROLE: (AUXLOAD_XFMR_ROLE,),
+    MAIN_XFMR_ROLE: (MAIN_XFMR_ROLE,),
+}
+
+
+def _classify_transformers(transformers: list) -> dict[str, list]:
+    """Groups the producer transformers by the role their id declares.
+
+    Parameters
+    ----------
+    transformers: list
+        Transformers read from the producer model
+
+    Returns
+    -------
+    dict
+        Transformers of the producer model, keyed by role
+
+    Raises
+    ------
+    ValueError
+        If a transformer id matches no known role
+    """
+    by_role = {role: [] for role in XFMR_ROLE_IDS}
+    for transformer in transformers:
+        role = _role_of(transformer.id)
+        if role is None:
+            accepted = ", ".join(id for ids in XFMR_ROLE_IDS.values() for id in ids)
+            raise ValueError(
+                f"Unexpected transformer id '{transformer.id}': the producer's transformers "
+                f"must be named after their role in the topology ({accepted})."
+            )
+        by_role[role].append(transformer)
+
+    return by_role
+
+
+def _role_of(transformer_id: str) -> Optional[str]:
+    for role, ids in XFMR_ROLE_IDS.items():
+        if any(id in transformer_id for id in ids):
+            return role
+
+    return None
+
+
+def _single(transformers: list):
+    return transformers[0] if transformers else None
+
+
 def get_producer_values(
     producer_dyd: Path,
     producer_par: Path,
@@ -188,16 +244,10 @@ def get_producer_values(
     loads = _get_load_values(producer_dyd_root, producer_par_root)
     lines = _get_line_values(producer_dyd_root, producer_par_root, None, None)
 
-    stepup_xfmrs = []
-    auxload_xfmr = None
-    main_xfmr = None
-    for transformer in transformers:
-        if "StepUp_Xfmr" in transformer.id:
-            stepup_xfmrs.append(transformer)
-        elif "AuxLoad_Xfmr" in transformer.id:
-            auxload_xfmr = transformer
-        elif "Main_Xfmr" in transformer.id:
-            main_xfmr = transformer
+    by_role = _classify_transformers(transformers)
+    stepup_xfmrs = by_role[GROUP_XFMR_ROLE]
+    auxload_xfmr = _single(by_role[AUXLOAD_XFMR_ROLE])
+    main_xfmr = _single(by_role[MAIN_XFMR_ROLE])
 
     aux_load = None
     if len(loads) > 0:

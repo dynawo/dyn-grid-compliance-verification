@@ -772,3 +772,36 @@ def test_append_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
     model_parameters._append_generator(dyd_root, par_root, model_parameter, generators)
 
     assert generators[0].ppc_local is True
+
+
+def _xfmr(id: str) -> SimpleNamespace:
+    return SimpleNamespace(id=id)
+
+
+def test_classify_transformers_routes_each_id_to_its_role():
+    group = _xfmr("Group_Xfmr")
+    auxload = _xfmr("AuxLoad_Xfmr")
+    main = _xfmr("Main_Xfmr")
+
+    by_role = model_parameters._classify_transformers([main, auxload, group])
+
+    assert by_role[model_parameters.GROUP_XFMR_ROLE] == [group]
+    assert by_role[model_parameters.AUXLOAD_XFMR_ROLE] == [auxload]
+    assert by_role[model_parameters.MAIN_XFMR_ROLE] == [main]
+
+
+def test_classify_transformers_keeps_the_pre_catalog_unit_id():
+    """Producer models written against the old catalog still name the unit transformer."""
+    stepup = _xfmr("StepUp_Xfmr_1")
+
+    by_role = model_parameters._classify_transformers([stepup])
+
+    assert by_role[model_parameters.GROUP_XFMR_ROLE] == [stepup]
+
+
+def test_classify_transformers_rejects_an_unknown_id():
+    with pytest.raises(ValueError) as excinfo:
+        model_parameters._classify_transformers([_xfmr("Some_Xfmr")])
+
+    assert "Some_Xfmr" in str(excinfo.value)
+    assert "Group_Xfmr" in str(excinfo.value)
