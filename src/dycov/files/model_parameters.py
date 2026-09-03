@@ -144,13 +144,7 @@ def get_connected_to_pdr(producer_dyd: Path) -> list:
 GROUP_XFMR_ROLE = "Group_Xfmr"
 AUXLOAD_XFMR_ROLE = "AuxLoad_Xfmr"
 MAIN_XFMR_ROLE = "Main_Xfmr"
-PRE_CATALOG_GROUP_XFMR_ID = "StepUp_Xfmr"
-
-XFMR_ROLE_IDS = {
-    GROUP_XFMR_ROLE: (GROUP_XFMR_ROLE, PRE_CATALOG_GROUP_XFMR_ID),
-    AUXLOAD_XFMR_ROLE: (AUXLOAD_XFMR_ROLE,),
-    MAIN_XFMR_ROLE: (MAIN_XFMR_ROLE,),
-}
+XFMR_ROLES = (GROUP_XFMR_ROLE, AUXLOAD_XFMR_ROLE, MAIN_XFMR_ROLE)
 
 
 def _classify_transformers(transformers: list) -> dict[str, list]:
@@ -171,14 +165,13 @@ def _classify_transformers(transformers: list) -> dict[str, list]:
     ValueError
         If a transformer id matches no known role
     """
-    by_role = {role: [] for role in XFMR_ROLE_IDS}
+    by_role = {role: [] for role in XFMR_ROLES}
     for transformer in transformers:
         role = role_of(transformer.id)
         if role is None:
-            accepted = ", ".join(id for ids in XFMR_ROLE_IDS.values() for id in ids)
             raise ValueError(
                 f"Unexpected transformer id '{transformer.id}': the producer's transformers "
-                f"must be named after their role in the topology ({accepted})."
+                f"must be named after their role in the topology ({', '.join(XFMR_ROLES)})."
             )
         by_role[role].append(transformer)
 
@@ -187,11 +180,7 @@ def _classify_transformers(transformers: list) -> dict[str, list]:
 
 def role_of(transformer_id: str) -> Optional[str]:
     """Returns the topology role the given transformer id declares, or None if unknown."""
-    for role, ids in XFMR_ROLE_IDS.items():
-        if any(id in transformer_id for id in ids):
-            return role
-
-    return None
+    return next((role for role in XFMR_ROLES if role in transformer_id), None)
 
 
 def _single(transformers: list):
