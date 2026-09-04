@@ -17,6 +17,9 @@ from lxml import etree
 
 from dycov.files.producer_curves import check_curves, create_producer_curves
 
+TAP_CHANGER = "TransformerRatioTapChanger"
+FIXED_RATIO = "TransformerFixedRatio"
+
 
 def _write_producer_dyd(
     path: Path, transformer_ids=None, generator_ids=None, lib_type="WTG4AWeccCurrentSource"
@@ -26,8 +29,9 @@ def _write_producer_dyd(
     """
     root = etree.Element("dynamics", nsmap={None: "http://www.rte-france.com/dynawo"})
     if transformer_ids:
-        for tid in transformer_ids:
-            etree.SubElement(root, "blackBoxModel", id=tid, lib="Transformer")
+        for entry in transformer_ids:
+            tid, lib = entry if isinstance(entry, tuple) else (entry, "TransformerFixedRatio")
+            etree.SubElement(root, "blackBoxModel", id=tid, lib=lib)
     if generator_ids:
         for gid in generator_ids:
             etree.SubElement(root, "blackBoxModel", id=gid, lib=lib_type)
@@ -78,33 +82,44 @@ def _read_curves_file(curves_path: Path) -> str:
     return (curves_path / "Producer" / "CurvesFiles.ini").read_text()
 
 
-def test_create_producer_curves_offers_the_main_transformer_tap(temp_model_dir):
-    """The catalog leaves Main_Xfmr as the only transformer in series with the PDR."""
+def _curves_for(temp_model_dir, transformer_ids) -> str:
+    """Generates the curves file for a producer with the given transformers."""
     curves_path = temp_model_dir / "curves"
     (curves_path / "Producer").mkdir(parents=True)
     _write_producer_dyd(
         temp_model_dir / "Producer.dyd",
-        transformer_ids=["Main_Xfmr", "AuxLoad_Xfmr"],
+        transformer_ids=transformer_ids,
         generator_ids=["Power_Park"],
     )
 
     create_producer_curves(temp_model_dir, curves_path, "performance_PPM")
 
-    content = _read_curves_file(curves_path)
+    return _read_curves_file(curves_path)
+
+
+def test_create_producer_curves_offers_the_tap_of_a_tap_changer(temp_model_dir):
+    content = _curves_for(
+        temp_model_dir,
+        [("Main_Xfmr", TAP_CHANGER), ("AuxLoad_Xfmr", FIXED_RATIO)],
+    )
+
     assert "Main_Xfmr_XFMR_Tap" in content
     assert "AuxLoad_Xfmr_XFMR_Tap" not in content
 
 
-def test_create_producer_curves_skips_the_fixed_ratio_transformers(temp_model_dir):
-    """Only the main transformer may be a tap changer; the rest have no tap to record."""
-    curves_path = temp_model_dir / "curves"
-    (curves_path / "Producer").mkdir(parents=True)
-    _write_producer_dyd(
-        temp_model_dir / "Producer.dyd",
-        transformer_ids=["Group_Xfmr", "AuxLoad_Xfmr"],
-        generator_ids=["Power_Park"],
+def test_create_producer_curves_skips_a_fixed_ratio_main_transformer(temp_model_dir):
+    """The main transformer has no tap unless it is declared as a tap changer."""
+    content = _curves_for(temp_model_dir, [("Main_Xfmr", FIXED_RATIO)])
+
+    assert "_XFMR_Tap" not in content
+
+
+def test_create_producer_curves_offers_the_tap_of_a_group_transformer(temp_model_dir):
+    """Any block may be declared a tap changer, and then its tap is a producer curve."""
+    content = _curves_for(
+        temp_model_dir,
+        [("Main_Xfmr", FIXED_RATIO), ("Group_Xfmr", TAP_CHANGER)],
     )
 
-    create_producer_curves(temp_model_dir, curves_path, "performance_PPM")
-
-    assert "_XFMR_Tap" not in _read_curves_file(curves_path)
+    assert "Group_Xfmr_XFMR_Tap" in content
+    assert "Main_Xfmr_XFMR_Tap" not in content
