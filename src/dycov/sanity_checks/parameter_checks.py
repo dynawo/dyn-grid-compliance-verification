@@ -14,12 +14,9 @@ parameters of Dynawo models, including generator, transformer, load, and simulat
 
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
-from dycov.files.model_parameters import MAIN_XFMR_ROLE, role_of
 from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams, LineParams, LoadParams, XfmrParams
 from dycov.validation import common
-
-TAP_CHANGER_MODEL = "TransformerRatioTapChanger"
 
 
 def check_t_fault(start_time: float, event_time: float, range_len: float) -> None:
@@ -271,28 +268,6 @@ def check_trafo(xfmr: XfmrParams) -> None:
         raise ValueError(
             f"The alphaTfo parameter of the transformer {xfmr.id} must be equal to zero."
         )
-
-    _check_tap_regulation(xfmr)
-
-
-def _check_tap_regulation(xfmr: XfmrParams) -> None:
-    """Check that only the main transformer regulates its ratio.
-
-    The group transformer of the generating units and the auxiliary load transformer are
-    fixed-ratio, so declaring them as tap changers would offer a tap the topology has not.
-
-    Parameters
-    ----------
-    xfmr: XfmrParams
-        Transformer parameters.
-    """
-    if not xfmr or xfmr.lib != TAP_CHANGER_MODEL or role_of(xfmr.id) == MAIN_XFMR_ROLE:
-        return
-
-    raise ValueError(
-        f"The transformer {xfmr.id} must not be a {TAP_CHANGER_MODEL}: only the main "
-        "transformer regulates its ratio."
-    )
 
 
 def check_auxiliary_load(load: LoadParams) -> None:

@@ -15,20 +15,21 @@ from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
-from dycov.files.model_parameters import MAIN_XFMR_ROLE, find_bbmodel_by_type, role_of
+from dycov.files.model_parameters import find_bbmodel_by_type, find_bbmodels
 from dycov.logging import dycov_logging
 
 
 def _find_tap_changer_xfmrs(producer_dyd_root: etree.Element) -> list:
-    """Returns the transformers whose tap can be offered as a producer curve.
+    """Returns the transformers whose tap is offered as a producer curve.
 
-    Only the main transformer may be a ratio tap changer; the group and auxiliary
-    transformers are fixed-ratio, so they have no tap to record.
+    A transformer has a tap to record only when its dynamic model declares one, which the
+    tool's dictionary already states: the fixed-ratio model has no `Tap` variable and the
+    ratio tap changer does. Any block of the topology may be declared either way.
     """
     return [
-        xfmr
-        for xfmr in find_bbmodel_by_type(producer_dyd_root, "Transformer")
-        if role_of(xfmr.get("id")) == MAIN_XFMR_ROLE
+        bbmodel
+        for bbmodel in find_bbmodels(producer_dyd_root)
+        if dynawo_translator.get_dynawo_variable(bbmodel.get("lib"), "Tap")[1]
     ]
 
 

@@ -91,6 +91,23 @@ def write_pdr_comment(path: Path, par_file: str, pdr: PdrParams) -> None:
     par_tree.write(par_path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
 
+def find_bbmodels(producer_dyd_root: etree.Element) -> list:
+    """Gets every blackbox model declared in the producer model.
+
+    Parameters
+    ----------
+    producer_dyd_root: Element
+        Root of the producer model
+
+    Returns
+    -------
+    list
+        All the blackbox models in the producer model
+    """
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    return producer_dyd_root.xpath("//ns:blackBoxModel", namespaces=nsmap)
+
+
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
     """Gets the blackbox models of the producer model by type of equipment.
 
@@ -105,13 +122,7 @@ def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> l
     list
         All the blackbox models in the producer model
     """
-    bbmodels = []
-    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
-    for bbmodel in producer_dyd_root.xpath("//ns:blackBoxModel", namespaces=nsmap):
-        if model_type == bbmodel.get("lib"):
-            bbmodels.append(bbmodel)
-
-    return bbmodels
+    return [b for b in find_bbmodels(producer_dyd_root) if model_type == b.get("lib")]
 
 
 def get_connected_to_pdr(producer_dyd: Path) -> list:

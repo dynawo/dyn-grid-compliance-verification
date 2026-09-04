@@ -573,15 +573,7 @@ def _tap_changer(id: str) -> XfmrParams:
     )
 
 
-def test_check_trafo_accepts_the_main_transformer_as_a_tap_changer():
-    parameter_checks.check_trafo(_tap_changer("Main_Xfmr"))
-
-
-@pytest.mark.parametrize("xfmr_id", ["Group_Xfmr", "AuxLoad_Xfmr"])
-def test_check_trafo_rejects_a_tap_changer_that_is_not_the_main_transformer(xfmr_id):
-    """Only the main transformer regulates its ratio; the rest are fixed-ratio."""
-    with pytest.raises(ValueError) as excinfo:
-        parameter_checks.check_trafo(_tap_changer(xfmr_id))
-
-    assert xfmr_id in str(excinfo.value)
-    assert "TransformerRatioTapChanger" in str(excinfo.value)
+@pytest.mark.parametrize("xfmr_id", ["Main_Xfmr", "Group_Xfmr", "AuxLoad_Xfmr"])
+def test_check_trafo_accepts_a_tap_changer_on_any_transformer(xfmr_id):
+    """RTE allows either transformer model on any block of the topology."""
+    parameter_checks.check_trafo(_tap_changer(xfmr_id))
