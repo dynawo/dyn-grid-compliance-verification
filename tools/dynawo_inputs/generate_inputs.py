@@ -16,6 +16,7 @@ import argparse
 import re
 import sys
 import zipfile
+from functools import partial
 from pathlib import Path
 
 from lxml import etree
@@ -57,6 +58,25 @@ def _f(value) -> float:
     return float(value)
 
 
+SUPPORTED_TOPOLOGIES = ("S", "S+i", "S+Aux", "S+Aux+i")
+
+
+def _checked_topology(zone3: dict) -> str:
+    """The Topologie row, as DyCoV spells it.
+
+    DyCoV matches the topology string exactly ("S+Aux"), while the template's own legend spells
+    it "S + Aux", so drop the spaces rather than fail on a faithful copy of the legend.
+    """
+    topology = re.sub(r"\s+", "", P.zone_text(zone3, "Topologie"))
+    if topology not in SUPPORTED_TOPOLOGIES:
+        raise ValueError(
+            f"topology {topology!r} in sheet {P._sheet_of(zone3)!r} is not generated yet; "
+            f"supported: {', '.join(SUPPORTED_TOPOLOGIES)}. The 'M' family describes several "
+            f"generating units and the tool emits one, so it is refused rather than truncated."
+        )
+    return topology
+
+
 # ---------------------------------------------------------------------------
 # PAR set builders (pure)
 # ---------------------------------------------------------------------------
@@ -92,9 +112,8 @@ def converter_par_set(
     # pu in Zone1, and in Zone3 aggregating N of them onto SnZone3 = N x SnZone1 gives the same
     # number. In Zone1 with ConverterLVControl=True the model zeroes this branch and the external
     # block carries the transformer instead.
-    r_pu, x_pu = el.short_circuit_rx(
-        _f(zone1["Z_cc_TG"]), _f(zone1["R_cc_TG / X_cc_TG"])
-    )
+    number = partial(P.zone_number, zone1)
+    r_pu, x_pu = el.short_circuit_rx(number("Z_cc_TG"), number("R_cc_TG / X_cc_TG"))
     params += [
         {"name": f"{prefix}RLvTrPu", "type": "DOUBLE", "value": r_pu},
         {"name": f"{prefix}XLvTrPu", "type": "DOUBLE", "value": x_pu},
@@ -106,16 +125,15 @@ def converter_par_set(
 
 
 def main_transformer_par_set(par_id: str, zone3: dict) -> tuple:
-    """``Main_Xfmr`` (``TransformerRatioTapChanger``): impedance + OLTC taps.
-
-    Only the ``M`` topologies carry a main HTB/HTA transformer, so this builder waits for them.
-    """
+    """``Main_Xfmr`` (``TransformerRatioTapChanger``): impedance + OLTC taps."""
+    number = partial(P.zone_number, zone3)
+    s_nom = number("SnZone3")
     r_pu, x_pu = el.transformer_impedance(
-        _f(zone3["Z_cc_TP"]), _f(zone3["R_cc_TP / X_cc_TP"]), _f(zone3["SnZone3"])
+        number("Z_cc_TP"), number("R_cc_TP / X_cc_TP"), s_nom
     )
-    taps = el.transformer_taps(int(_f(zone3["N_prises"])), _f(zone3["r_min"]), _f(zone3["r_max"]))
+    taps = el.transformer_taps(int(number("N_prises")), number("r_min"), number("r_max"))
     params = [
-        {"name": "transformer_SNom", "type": "DOUBLE", "value": _f(zone3["SnZone3"]),
+        {"name": "transformer_SNom", "type": "DOUBLE", "value": s_nom,
          "comments": [PU_BASE_NOTE]},
         {"name": "transformer_RPu", "type": "DOUBLE", "value": r_pu},
         {"name": "transformer_XPu", "type": "DOUBLE", "value": x_pu},
@@ -134,39 +152,42 @@ def main_transformer_par_set(par_id: str, zone3: dict) -> tuple:
 def group_transformer_par_set(par_id: str, zone1: dict, s_nom) -> tuple:
     """Generator step-up transformer (``TransformerFixedRatio``) from ``Zone1a``'s ``Z_cc_TG`` /
     ``r_TG``; ``s_nom`` is the impedance base (``SnZone1`` in Zone1, ``SnZone3`` in Zone3)."""
+    number = partial(P.zone_number, zone1)
     r_pu, x_pu = el.transformer_impedance(
-        _f(zone1["Z_cc_TG"]), _f(zone1["R_cc_TG / X_cc_TG"]), _f(s_nom)
+        number("Z_cc_TG"), number("R_cc_TG / X_cc_TG"), _f(s_nom)
     )
     params = [
         {"name": "transformer_RPu", "type": "DOUBLE", "value": r_pu, "comments": [PU_BASE_NOTE]},
         {"name": "transformer_XPu", "type": "DOUBLE", "value": x_pu},
         {"name": "transformer_BPu", "type": "DOUBLE", "value": 0.0},
         {"name": "transformer_GPu", "type": "DOUBLE", "value": 0.0},
-        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": _f(zone1["r_TG"])},
+        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": number("r_TG")},
     ]
     return par_id, params
 
 
 def aux_transformer_par_set(par_id: str, zone3: dict) -> tuple:
+    number = partial(P.zone_number, zone3)
     r_pu, x_pu = el.transformer_impedance(
-        _f(zone3["Z_cc_TA"]), _f(zone3["R_cc_TA / X_cc_TA"]), _f(zone3["Sn_A"])
+        number("Z_cc_TA"), number("R_cc_TA / X_cc_TA"), number("Sn_A")
     )
     return par_id, [
         {"name": "transformer_RPu", "type": "DOUBLE", "value": r_pu, "comments": [PU_BASE_NOTE]},
         {"name": "transformer_XPu", "type": "DOUBLE", "value": x_pu},
         {"name": "transformer_BPu", "type": "DOUBLE", "value": 0.0},
         {"name": "transformer_GPu", "type": "DOUBLE", "value": 0.0},
-        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": _f(zone3["r_TA"])},
+        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": number("r_TA")},
     ]
 
 
 def aux_load_par_set(par_id: str, zone3: dict) -> tuple:
-    p_ref, q_ref = el.load_pu(_f(zone3["P_A"]), _f(zone3["Q_A"]))
+    number = partial(P.zone_number, zone3)
+    p_ref, q_ref = el.load_pu(number("P_A"), number("Q_A"))
     return par_id, [
         {"name": "load_PRefPu", "type": "DOUBLE", "value": p_ref},
         {"name": "load_QRefPu", "type": "DOUBLE", "value": q_ref},
-        {"name": "load_alpha", "type": "DOUBLE", "value": _f(zone3["alpha"])},
-        {"name": "load_beta", "type": "DOUBLE", "value": _f(zone3["beta"])},
+        {"name": "load_alpha", "type": "DOUBLE", "value": number("alpha")},
+        {"name": "load_beta", "type": "DOUBLE", "value": number("beta")},
     ]
 
 
@@ -174,9 +195,9 @@ def collector_line_par_set(par_id: str, zone3: dict) -> tuple:
     """Aggregated collector (``+i``) from ``R_rc``/``X_rc`` in ohms and ``B_rc``/``G_rc`` in
     siemens. The rows carry no voltage of their own; the block connects to the PDR with no
     transformer in between, so the per-unit base is ``Un_PDR``."""
+    number = partial(P.zone_number, zone3)
     line = el.line_impedance(
-        _f(zone3["R_rc"]), _f(zone3["X_rc"]), _f(zone3["B_rc"]), _f(zone3["G_rc"]),
-        _f(zone3["Un_PDR"]),
+        number("R_rc"), number("X_rc"), number("B_rc"), number("G_rc"), number("Un_PDR")
     )
     return par_id, [
         {"name": "line_RPu", "type": "DOUBLE", "value": line["RPu"]},
@@ -284,9 +305,7 @@ def generate(excel: Path, outdir: Path) -> str:
     zone1 = P.parse_zone(workbook, "Zone1a")
     converter_voltage = "Un2" if _is_true(zone1.get("ConverterLVControl", "True")) else "Un1"
     control = P.parse_control_params(workbook, converter_voltage)
-    # DyCoV matches the topology string exactly ("S+Aux"), while the template's own legend spells
-    # it "S + Aux", so drop the spaces rather than fail on a faithful copy of the legend.
-    topology = re.sub(r"\s+", "", str(zone3["Topologie"]))
+    topology = _checked_topology(zone3)
 
     config = wb.parse_config(workbook)
     z1_control = zone_control_params(control, config.zones, "Zone1")
@@ -316,26 +335,28 @@ def generate(excel: Path, outdir: Path) -> str:
     )
 
     lv_control = _is_true(zone1.get("ConverterLVControl", "True"))
+    sn_zone1 = P.zone_number(zone1, "SnZone1")
 
     def _zone1_group_xfmr() -> list:
         # With ConverterLVControl=False the model's own LvTr carries the group transformer, so the
         # block is dropped and the generator wired to its downstream node.
         if lv_control:
-            return [group_transformer_par_set(GROUP_XFMR_ID, zone1, zone1["SnZone1"])]
+            return [group_transformer_par_set(GROUP_XFMR_ID, zone1, sn_zone1)]
         drop_group_transformer(
             root / "Zone1" / "Producer.dyd", gen_id, f"{resolved['zone1_prefix']}terminal"
         )
         return []
 
     z1_sets = [
-        converter_par_set(gen_id, resolved["zone1_prefix"], z1_control, zone1, zone1["SnZone1"]),
+        converter_par_set(gen_id, resolved["zone1_prefix"], z1_control, zone1, sn_zone1),
         *_zone1_group_xfmr(),
     ]
     write_producer_par_file(root / "Zone1", "Producer.par", z1_sets)
 
     z3_sets = [
         converter_par_set(
-            gen_id, resolved["zone3_prefix"], z3_control, zone1, zone3["SnZone3"],
+            gen_id, resolved["zone3_prefix"], z3_control, zone1,
+            P.zone_number(zone3, "SnZone3"),
             plant_model=True,
         ),
         main_transformer_par_set(MAIN_XFMR_ID, zone3),
@@ -347,24 +368,30 @@ def generate(excel: Path, outdir: Path) -> str:
         z3_sets.append(collector_line_par_set("IntNetwork_Line", zone3))
     write_producer_par_file(root / "Zone3", "Producer.par", z3_sets)
 
+    z1_value = partial(P.zone_value, zone1)
+    z3_value = partial(P.zone_value, zone3)
+    sharing = {gen_id: (z1_value("P_share"), z1_value("Q_share"))}
     include_consumption = template == "model_BESS"
     # u_nom_at_PDR is the nominal voltage of the node the zone connects at: Un1 for Zone1, whose
     # node is internal to the plant and free of the DTR's level list (dycov#477), and Un_PDR for
     # Zone3, the actual connection point.
     write_producer_ini_file(
         root / "Zone1", "Producer.ini", "S",
-        values={"p_max_injection_at_PDR": zone1["Pmax_injection_z1"],
-                "u_nom_at_PDR": zone1["Un1"],
-                "q_max_at_PDR": zone1["Qmax_z1"], "q_min_at_PDR": zone1["Qmin_z1"]},
-        gen_sharing={gen_id: (zone1["P_share"], zone1["Q_share"])},
+        values={"p_max_injection_at_PDR": z1_value("Pmax_injection_z1"),
+                "u_nom_at_PDR": z1_value("Un1"),
+                "q_max_at_PDR": z1_value("Qmax_z1"),
+                "q_min_at_PDR": z1_value("Qmin_z1")},
+        gen_sharing=sharing,
     )
-    z3_values = {"p_max_injection_at_PDR": zone3["Pmax_PDR"], "u_nom_at_PDR": zone3["Un_PDR"],
-                 "q_max_at_PDR": zone3["Qmax_PDR"], "q_min_at_PDR": zone3["Qmin_PDR"]}
+    z3_values = {"p_max_injection_at_PDR": z3_value("Pmax_PDR"),
+                 "u_nom_at_PDR": z3_value("Un_PDR"),
+                 "q_max_at_PDR": z3_value("Qmax_PDR"),
+                 "q_min_at_PDR": z3_value("Qmin_PDR")}
     if include_consumption:
         z3_values["p_max_consumption_at_PDR"] = zone1.get("Pmax_soutirage_z1", "")
     write_producer_ini_file(
         root / "Zone3", "Producer.ini", topology, z3_values,
-        gen_sharing={gen_id: (zone1["P_share"], zone1["Q_share"])},
+        gen_sharing=sharing,
         include_consumption=include_consumption,
     )
 
@@ -380,7 +407,14 @@ def main(argv=None) -> int:
         ap.error(f"Excel not found: {args.excel}")
     try:
         report = generate(args.excel, args.outdir)
-    except (ValueError, zipfile.BadZipFile) as exc:
+    except zipfile.BadZipFile:
+        print(
+            f"ERROR: {args.excel} is not a readable .xlsx workbook (a legacy .xls file has to be "
+            f"saved as .xlsx first).",
+            file=sys.stderr,
+        )
+        return 1
+    except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     print(report)

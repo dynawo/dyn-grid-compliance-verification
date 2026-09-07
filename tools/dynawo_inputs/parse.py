@@ -171,7 +171,61 @@ def _locate_param_table(grid) -> tuple[int, int, int]:
     raise ValueError("parameter table header ('Paramètres' / 'Valeurs') not found in the sheet.")
 
 
-def parse_zone(workbook: dict, sheet_name: str) -> dict:
+class ZoneValues(dict):
+    """{parameter name -> value} of one zone sheet, remembering which sheet it came from so
+    a missing or unusable row can name its origin."""
+
+    def __init__(self, sheet: str, values: dict):
+        super().__init__(values)
+        self.sheet = sheet
+
+
+def _sheet_of(zone) -> str:
+    return getattr(zone, "sheet", "the zone sheet")
+
+
+def zone_text(zone: dict, name: str) -> str:
+    """The value of row *name*, refusing a row that is absent or left empty."""
+    if name not in zone:
+        raise ValueError(
+            f"row {name!r} not found in sheet {_sheet_of(zone)!r}: the sheet is from an older "
+            f"template revision, or the row was renamed."
+        )
+    value = zone[name]
+    if value is None or not str(value).strip():
+        raise ValueError(
+            f"row {name!r} in sheet {_sheet_of(zone)!r} has no value; fill it in, or mark it "
+            f"'{wb._NOT_APPLICABLE}' if it does not apply to this model."
+        )
+    value = str(value).strip()
+    if value == wb._NOT_APPLICABLE:
+        raise ValueError(
+            f"row {name!r} in sheet {_sheet_of(zone)!r} is marked '{wb._NOT_APPLICABLE}' (not "
+            f"applicable), but the chosen model and topology need it."
+        )
+    return value
+
+
+def zone_number(zone: dict, name: str) -> float:
+    """The value of row *name* as a number, naming the row when the cell is not numeric."""
+    value = zone_text(zone, name)
+    try:
+        return float(value)
+    except ValueError:
+        raise ValueError(
+            f"row {name!r} in sheet {_sheet_of(zone)!r} expects a number and holds {value!r}; "
+            f"use a plain decimal point and no units."
+        ) from None
+
+
+def zone_value(zone: dict, name: str) -> str:
+    """Row *name* as written, validated as a number: DyCoV reads these values numerically, so a
+    unit or a stray character has to be reported here and not further downstream."""
+    zone_number(zone, name)
+    return zone_text(zone, name)
+
+
+def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:
     """Parse a ``Zone1<x>`` / ``Zone3`` electrical table into ``{parameter name -> value}``.
 
     Values are strings (as read); an empty value stays ``None``. Reading stops at the first row
@@ -187,7 +241,7 @@ def parse_zone(workbook: dict, sheet_name: str) -> dict:
         if not name:
             break
         values[name] = wb._cell(grid, r, value_col)
-    return values
+    return ZoneValues(sheet_name, values)
 
 
 def zone1_sheets(workbook: dict) -> list:
