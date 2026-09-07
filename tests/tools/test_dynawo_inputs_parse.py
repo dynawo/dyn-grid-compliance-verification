@@ -243,3 +243,56 @@ def test_parse_control_params_flat_list_preserves_workbook_order():
     assert params[0]["comments"] == ["REEC_B"]
     assert params[1]["comments"] == []
     assert params[2]["comments"] == ["REGC_A"]
+
+
+def _zone3(**rows):
+    grid = [
+        ["Catégorie", "Paramètres", "Descriptions", "Valeurs", "Unités", "Commentaires"],
+        *([None, name, None, value, None, None] for name, value in rows.items()),
+    ]
+    return P.parse_zone({"Zone3": grid}, "Zone3")
+
+
+def test_zone_text_names_the_sheet_of_an_absent_row():
+    zone = _zone3(Un_PDR="225")
+
+    with pytest.raises(ValueError, match="row 'Z_cc_TP' not found in sheet 'Zone3'"):
+        P.zone_text(zone, "Z_cc_TP")
+
+
+def test_zone_text_reports_an_empty_cell_and_offers_the_sentinel():
+    zone = _zone3(Z_cc_TP=None)
+
+    with pytest.raises(ValueError, match="row 'Z_cc_TP' in sheet 'Zone3' has no value"):
+        P.zone_text(zone, "Z_cc_TP")
+
+
+def test_zone_text_rejects_a_row_the_model_needs_but_the_sheet_marks_not_applicable():
+    zone = _zone3(Z_cc_TA="/")
+
+    with pytest.raises(ValueError, match="marked '/' .not applicable."):
+        P.zone_text(zone, "Z_cc_TA")
+
+
+def test_zone_number_quotes_the_offending_cell():
+    zone = _zone3(SnZone3="55 MVA")
+
+    with pytest.raises(ValueError, match="expects a number and holds '55 MVA'"):
+        P.zone_number(zone, "SnZone3")
+
+
+def test_zone_number_reads_a_plain_decimal():
+    zone = _zone3(SnZone3="55.5")
+
+    assert P.zone_number(zone, "SnZone3") == 55.5
+
+
+def test_zone_value_validates_the_number_but_keeps_the_written_form():
+    zone = _zone3(Un_PDR="225.0")
+
+    assert P.zone_value(zone, "Un_PDR") == "225.0"
+
+
+def test_zone_accessors_work_on_a_plain_dict_without_provenance():
+    with pytest.raises(ValueError, match="not found in sheet 'the zone sheet'"):
+        P.zone_text({"Un_PDR": "225"}, "Z_cc_TP")

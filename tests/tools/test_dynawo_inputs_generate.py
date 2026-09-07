@@ -354,3 +354,23 @@ def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
     with pytest.raises(ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"):
         G.generate(Path("ignored.xlsx"), tmp_path)
+
+
+def test_checked_topology_drops_the_legend_spacing():
+    zone3 = {**ZONE3, "Topologie": "S + Aux"}
+
+    assert G._checked_topology(zone3) == "S+Aux"
+
+
+def test_checked_topology_refuses_the_multiple_unit_family():
+    zone3 = {**ZONE3, "Topologie": "M+Aux"}
+
+    with pytest.raises(ValueError, match="topology 'M[+]Aux' .* is not generated yet"):
+        G._checked_topology(zone3)
+
+
+def test_checked_topology_refuses_an_unknown_string():
+    zone3 = {**ZONE3, "Topologie": "S+Foo"}
+
+    with pytest.raises(ValueError, match="supported: S, S[+]i, S[+]Aux, S[+]Aux[+]i"):
+        G._checked_topology(zone3)
