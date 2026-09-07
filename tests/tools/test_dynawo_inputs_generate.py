@@ -21,7 +21,6 @@ import generate_inputs as G  # noqa: E402
 
 ZONE1 = {
     "SnZone1": "100", "Z_cc_TG": "0.1", "R_cc_TG / X_cc_TG": "0", "ConverterLVControl": "True",
-    "Z_cc_LvTr": "0.0001", "R_cc_LvTr / X_cc_LvTr": "0",
     "r_TG": "1", "Un1": "33", "Un2": "0.7", "Pmax_injection_z1": "1", "Pmax_soutirage_z1": "0",
     "Qmax_z1": "0.4", "Qmin_z1": "-0.4", "P_share": "1", "Q_share": "1",
 }
@@ -46,9 +45,8 @@ def test_converter_par_set_prefix_control_snom():
     assert named["photovoltaics_Kqp"] == "1"  # control param, prefixed, value verbatim
     assert named["photovoltaics_ConverterLVControl"] == "true"
     assert named["photovoltaics_SNom"] == pytest.approx(100.0)
-    # The internal LvTr is always emitted, from Z_cc_LvTr (0.0001 on base SnZone1=100), separate
-    # from the external StepUp_Xfmr (which carries Z_cc_TG).
-    assert named["photovoltaics_XLvTrPu"] == pytest.approx(0.0001)
+    # The model's own transformer is always emitted, from the group transformer's Z_cc_TG.
+    assert named["photovoltaics_XLvTrPu"] == pytest.approx(0.1)
     assert named["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
 
 
@@ -65,9 +63,9 @@ def test_converter_par_set_writes_ppclocal_only_for_the_plant_model():
 
 
 def test_converter_par_set_lvtr_is_on_the_model_base_not_snref():
-    # Z_cc_LvTr is pu on SnZone1 and the model reads RLvTrPu on its own SNom, so the value is
-    # never rebased to SnRef and comes out the same for the turbine and the plant.
-    zone1 = {**ZONE1, "SnZone1": "4", "Z_cc_LvTr": "0.06185", "R_cc_LvTr / X_cc_LvTr": "0.25"}
+    # Z_cc_TG is pu on SnZone1 and the model reads RLvTrPu on its own SNom, so the value is never
+    # rebased to SnRef and comes out the same for the turbine and the plant.
+    zone1 = {**ZONE1, "SnZone1": "4", "Z_cc_TG": "0.06185", "R_cc_TG / X_cc_TG": "0.25"}
     _id, turbine = G.converter_par_set("Wind_Turbine", "WT4B_", [], zone1, zone1["SnZone1"])
     _id, plant = G.converter_par_set("Wind_Turbine", "WTG4B_", [], zone1, "90", plant_model=True)
 
@@ -77,18 +75,19 @@ def test_converter_par_set_lvtr_is_on_the_model_base_not_snref():
     assert _named(plant)["WTG4B_SNom"] == pytest.approx(90.0)
 
 
-def test_converter_par_set_lvtr_from_its_own_field_regardless_of_lv_control():
-    # The LvTr comes from Z_cc_LvTr, not Z_cc_TG, and is emitted whatever ConverterLVControl is.
-    zone1_false = {**ZONE1, "ConverterLVControl": "False", "Z_cc_LvTr": "0.05"}
+def test_converter_par_set_writes_the_model_transformer_whatever_the_flag():
+    # The parameters have no Dynawo default, so they are written even when the model zeroes the
+    # branch and the external block carries the transformer (ConverterLVControl=True).
+    zone1_false = {**ZONE1, "ConverterLVControl": "False", "Z_cc_TG": "0.05"}
     _id, params = G.converter_par_set("PV_Array", "photovoltaics_", [], zone1_false, "100")
     named = _named(params)
     assert named["photovoltaics_ConverterLVControl"] == "false"
-    assert named["photovoltaics_XLvTrPu"] == pytest.approx(0.05)  # Z_cc_LvTr on base SnZone1=100
+    assert named["photovoltaics_XLvTrPu"] == pytest.approx(0.05)  # Z_cc_TG, on the model's base
     assert named["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
 
 
 def test_main_transformer_par_set():
-    par_id, params = G.main_transformer_par_set("StepUp_Xfmr", ZONE3)
+    par_id, params = G.main_transformer_par_set("Main_Xfmr", ZONE3)
     named = _named(params)
     assert named["transformer_XPu"] == pytest.approx(0.18)
     assert named["transformer_RPu"] == pytest.approx(0.0)
@@ -100,7 +99,7 @@ def test_main_transformer_par_set():
 
 def test_group_transformer_par_set_fixed_ratio():
     # Z_cc_TG=0.1 on base SnZone1=100 -> XPu=0.1; from Zone1a in both zones (base = s_nom).
-    _par_id, params = G.group_transformer_par_set("StepUp_Xfmr", ZONE1, ZONE1["SnZone1"])
+    _par_id, params = G.group_transformer_par_set("Group_Xfmr", ZONE1, ZONE1["SnZone1"])
     named = _named(params)
     assert named["transformer_XPu"] == pytest.approx(0.1)
     assert named["transformer_rTfoPu"] == pytest.approx(1.0)
@@ -122,7 +121,7 @@ def test_aux_load_and_line_par_sets():
 
 
 def test_drop_group_transformer_when_no_lv_control(tmp_path):
-    # ConverterLVControl=False: no gen transformer -> StepUp_Xfmr removed, gen wired downstream.
+    # ConverterLVControl=False: no gen transformer -> Group_Xfmr removed, gen wired downstream.
     from dycov.files.producer_dyd_file import create_producer_dyd_file
 
     (tmp_path / "Zone1").mkdir()
@@ -135,12 +134,12 @@ def test_drop_group_transformer_when_no_lv_control(tmp_path):
     root = etree.parse(str(dyd)).getroot()
     ns = etree.QName(root).namespace
     ids = [b.get("id") for b in root.iterfind(f"{{{ns}}}blackBoxModel")]
-    assert "StepUp_Xfmr" not in ids
+    assert "Group_Xfmr" not in ids
     conns = [
         (c.get("id1"), c.get("var1"), c.get("id2"), c.get("var2"))
         for c in root.iterfind(f"{{{ns}}}connect")
     ]
-    assert not any("StepUp_Xfmr" in (c[0], c[2]) for c in conns)
+    assert not any("Group_Xfmr" in (c[0], c[2]) for c in conns)
     # generator now connects directly to what the transformer fed (BusPDR in S)
     assert (gen, "photovoltaics_terminal", "BusPDR", "bus_terminal") in conns
 
