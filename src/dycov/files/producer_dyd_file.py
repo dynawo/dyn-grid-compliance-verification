@@ -66,6 +66,8 @@ PLACEHOLDER_MODELS = [
 
 PLACEHOLDER_TERMINALS = [PPM_TERMINAL]
 
+PARAMETERLESS_MODELS = [BUS_DYNAMIC_MODEL]
+
 
 def _add_terminal_options(dyd_root: etree.Element, terminal: str):
     if terminal != PPM_TERMINAL:
@@ -120,19 +122,19 @@ def _add_blackbox(
     id: str,
     lib: str,
     par_filename: str,
-    par_id: str,
+    par_id: str | None,
     show_comment: bool = False,
 ):
     if show_comment and lib in PLACEHOLDER_MODELS:
         _add_lib_options(dyd_root, lib)
 
+    par_attrs = {} if par_id is None else {"parFile": par_filename, "parId": par_id}
     etree.SubElement(
         dyd_root,
         f"{{{ns}}}blackBoxModel",
         id=id,
         lib=lib,
-        parFile=par_filename,
-        parId=par_id,
+        **par_attrs,
     )
 
 
@@ -207,7 +209,10 @@ class _DydWriter:
         self._documented = set()
 
     def blackbox(self, id: str, lib: str) -> None:
-        _add_blackbox(self._dyd_root, self._ns, id, lib, self._par_filename, id, self._first(lib))
+        par_id = None if lib in PARAMETERLESS_MODELS else id
+        _add_blackbox(
+            self._dyd_root, self._ns, id, lib, self._par_filename, par_id, self._first(lib)
+        )
 
     def connect(self, id_from: str, var_from: str, id_to: str, var_to: str) -> None:
         show = any(self._first(var) for var in (var_from, var_to) if var in PLACEHOLDER_TERMINALS)
