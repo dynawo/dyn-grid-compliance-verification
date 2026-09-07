@@ -203,7 +203,7 @@ def test_non_zero_imp_line():
 
 
 def test_initialize_topo_s():
-    """Topology 'S': a single generator behind its step-up transformer."""
+    """Topology 'S': a single generator behind its group transformer."""
     gen, gen_xfmr = _make_gen_and_xfmr()
     pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
     grid_line = line_pimodel(_make_grid_line())
@@ -213,7 +213,7 @@ def test_initialize_topo_s():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -231,8 +231,8 @@ def test_initialize_topo_s():
     assert _is_equal(gen.terminals[0].q0, -0.5124200670122216)
 
 
-def test_initialize_topo_s_without_stepup():
-    """Topology 'S' with ConverterLVControl=False: no step-up transformer.
+def test_initialize_topo_s_without_group_xfmr():
+    """Topology 'S' with ConverterLVControl=False: no group transformer.
 
     The generator is referenced directly at the internal node (which coincides
     with the PDR bus here, as there is no internal line nor plant transformer),
@@ -247,7 +247,7 @@ def test_initialize_topo_s_without_stepup():
         gen_xfmrs=[],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -291,7 +291,7 @@ def test_initialize_topo_s_i():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=int_line,
         pdr=pdr,
         grid_line=grid_line,
@@ -345,7 +345,7 @@ def test_initialize_topo_s_with_main_xfmr():
             Terminal(connected_equipment=None),
         ),
     )
-    ppm_xfmr = XfmrParams(
+    main_xfmr = XfmrParams(
         id=None,
         lib=None,
         par_id=None,
@@ -381,7 +381,7 @@ def test_initialize_topo_s_with_main_xfmr():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=ppm_xfmr,
+        main_xfmr=main_xfmr,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -396,16 +396,16 @@ def test_initialize_topo_s_with_main_xfmr():
     assert _is_equal(grid_init.q0, -1.522032981081081)
 
     # Main_Xfmr terminals: PDR side and internal side
-    assert _is_equal(ppm_xfmr.terminals[0].u0, 1.0444444444444445)
-    assert _is_equal(ppm_xfmr.terminals[0].u_phase0, 0.3216913640397123)
-    assert _is_equal(ppm_xfmr.terminals[0].p0, -4.567)
-    assert _is_equal(ppm_xfmr.terminals[0].q0, 0.0)
-    assert _is_equal(ppm_xfmr.terminals[1].u0, 1.0087747269606742)
-    assert _is_equal(ppm_xfmr.terminals[1].u_phase0, 0.44332797328537715)
-    assert _is_equal(ppm_xfmr.terminals[1].p0, 4.573257858564547)
-    assert _is_equal(ppm_xfmr.terminals[1].q0, 0.5590353650995359)
+    assert _is_equal(main_xfmr.terminals[0].u0, 1.0444444444444445)
+    assert _is_equal(main_xfmr.terminals[0].u_phase0, 0.3216913640397123)
+    assert _is_equal(main_xfmr.terminals[0].p0, -4.567)
+    assert _is_equal(main_xfmr.terminals[0].q0, 0.0)
+    assert _is_equal(main_xfmr.terminals[1].u0, 1.0087747269606742)
+    assert _is_equal(main_xfmr.terminals[1].u_phase0, 0.44332797328537715)
+    assert _is_equal(main_xfmr.terminals[1].p0, 4.573257858564547)
+    assert _is_equal(main_xfmr.terminals[1].q0, 0.5590353650995359)
 
-    # Generator, behind Main_Xfmr + step-up transformer
+    # Generator, behind Main_Xfmr + group transformer
     assert _is_equal(gen.terminals[0].u0, 1.0780685014941822)
     assert _is_equal(gen.terminals[0].u_phase0, 0.5611528954914154)
     assert _is_equal(gen.terminals[0].p0, -4.5795157171290946)
@@ -416,7 +416,7 @@ def test_initialize_topo_m_power_share():
     """Topology 'M': two generators with different P/Q shares.
 
     Regression test for issue #353 (point 2): the network-side terminal of
-    each step-up transformer must carry its per-generator share of the plant
+    each group transformer must carry its per-generator share of the plant
     flow (s_int_share), not the plant total. Covers both terminal
     orientations (generator on terminal 1 and on terminal 2), whose pi models
     are solved from the declared known side (issue #355).
@@ -500,7 +500,7 @@ def test_initialize_topo_m_power_share():
         gen_xfmrs=[xfmr1, xfmr2],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -512,7 +512,7 @@ def test_initialize_topo_m_power_share():
     assert _is_equal(grid_init.p0, 4.567)
     assert _is_equal(grid_init.q0, -0.5950059540540541)
 
-    # Network-side terminal of each step-up transformer: its own share
+    # Network-side terminal of each group transformer: its own share
     assert _is_equal(xfmr1.terminals[1].u0, 1.0444444444444445)
     assert _is_equal(xfmr1.terminals[1].p0, -2.7402)
     assert _is_equal(xfmr1.terminals[1].q0, -0.7)
@@ -570,7 +570,7 @@ def test_initialize_islanding_pdr_side_load():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -613,7 +613,7 @@ def test_initialize_grid_side_load_keeps_line_flow():
         gen_xfmrs=[gen_xfmr],
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=grid_line,
@@ -657,7 +657,7 @@ def test_init_calcs_zero_imp_grid_line(monkeypatch):
         gen_xfmrs=(),
         aux_load=None,
         auxload_xfmr=None,
-        ppm_xfmr=None,
+        main_xfmr=None,
         int_line=None,
         pdr=pdr,
         grid_line=DummyLine(y_tr=complex(float("inf"))),
@@ -669,3 +669,195 @@ def test_init_calcs_zero_imp_grid_line(monkeypatch):
     assert res.u_phase0 == 0
     assert res.p0 == 1
     assert res.q0 == 0
+
+
+def _make_aux_xfmr(load_on_terminal1: bool) -> XfmrParams:
+    ids = ("Aux_Load", "BusInt") if load_on_terminal1 else ("BusInt", "Aux_Load")
+    return XfmrParams(
+        id="AuxLoad_Xfmr",
+        lib=None,
+        par_id=None,
+        r=0.0015,
+        x=0.0721,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9836,
+        alpha_tfo=0.0,
+        terminals=tuple(Terminal(connected_equipment=i) for i in ids),
+    )
+
+
+def _make_aux_load(p: float, q: float) -> LoadParams:
+    load = _make_load(p, q)
+    load.id = "Aux_Load"
+    load.terminals[0].connected_equipment = "AuxLoad_Xfmr"
+    return load
+
+
+def _init_s_aux(aux_load: LoadParams, aux_xfmr: XfmrParams) -> tuple[GenParams, PdrParams]:
+    gen, gen_xfmr = _make_gen_and_xfmr()
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=aux_load,
+        auxload_xfmr=aux_xfmr,
+        main_xfmr=None,
+        int_line=None,
+        pdr=pdr,
+        grid_line=line_pimodel(_make_grid_line()),
+        grid_load=None,
+    )
+    return gen, pdr
+
+
+def test_initialize_topo_s_aux_zero_load_matches_topo_s():
+    """Topology 'S+Aux' with an idle auxiliary load must reduce to topology 'S'.
+
+    The aux branch is solved by a different solver than the series branches, so an
+    aux load drawing no power is the reference point that pins the two together.
+    """
+    gen, _ = _init_s_aux(_make_aux_load(0.0, 0.0), _make_aux_xfmr(load_on_terminal1=True))
+
+    assert _is_equal(gen.terminals[0].u0, 1.0991244531721)
+    assert _is_equal(gen.terminals[0].u_phase0, 0.43328564582460044)
+    assert _is_equal(gen.terminals[0].p0, -4.572736045526256)
+    assert _is_equal(gen.terminals[0].q0, -0.5124200670122216)
+
+
+def test_initialize_topo_s_aux_load_is_supplied_by_the_generator():
+    """Topology 'S+Aux': the units supply the aux consumption on top of the export."""
+    aux_load = _make_aux_load(0.25, 0.08)
+    gen, _ = _init_s_aux(aux_load, _make_aux_xfmr(load_on_terminal1=True))
+
+    # The load terminal is initialized at its own consumption, behind its transformer
+    assert _is_equal(aux_load.terminals[0].p0, 0.25)
+    assert _is_equal(aux_load.terminals[0].q0, 0.08)
+    # Generation convention is negative here, so supplying the aux load lowers p0
+    assert gen.terminals[0].p0 < -4.572736045526256
+    assert gen.terminals[0].q0 < -0.5124200670122216
+
+
+def test_initialize_topo_s_aux_terminal_order_selects_the_solved_side():
+    """The declared terminal order picks which side of the aux transformer is solved.
+
+    Its pi model is asymmetric (the ratio lives on terminal 1), so the two declarations
+    are different circuits and must not yield the same result.
+    """
+    gen_a, _ = _init_s_aux(_make_aux_load(0.25, 0.08), _make_aux_xfmr(load_on_terminal1=True))
+    gen_b, _ = _init_s_aux(_make_aux_load(0.25, 0.08), _make_aux_xfmr(load_on_terminal1=False))
+
+    assert not _is_equal(gen_a.terminals[0].p0, gen_b.terminals[0].p0)
+
+
+def _init_s_i(int_line_reversed: bool) -> LineParams:
+    gen, gen_xfmr = _make_gen_and_xfmr()
+    ids = ("BusInt", "BusPDR") if int_line_reversed else ("BusPDR", "BusInt")
+    int_line = LineParams(
+        id="IntNetwork_Line",
+        lib=None,
+        r=0.0122,
+        x=0.1015,
+        g=0.0,
+        b=0.0021,
+        par_id=None,
+        terminals=tuple(Terminal(connected_equipment=i) for i in ids),
+    )
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=None,
+        auxload_xfmr=None,
+        main_xfmr=None,
+        int_line=int_line,
+        pdr=pdr,
+        grid_line=line_pimodel(_make_grid_line()),
+        grid_load=None,
+    )
+    return int_line
+
+
+def test_initialize_int_line_records_the_pdr_side_on_its_declared_terminal():
+    """The internal line's PDR-facing terminal is the one declared against the PDR bus.
+
+    The line pi model is symmetric, so reversing the declaration must only swap the
+    two recorded terminals, never change the values.
+    """
+    forward = _init_s_i(int_line_reversed=False)
+    reversed_ = _init_s_i(int_line_reversed=True)
+
+    for attr in ("u0", "u_phase0", "p0", "q0"):
+        for near, far in ((0, 1), (1, 0)):
+            assert _is_equal(
+                getattr(forward.terminals[near], attr), getattr(reversed_.terminals[far], attr)
+            )
+
+    # The PDR-facing terminal carries the PDR delivery
+    assert _is_equal(forward.terminals[0].u0, 1.04444444444444444444)
+    assert _is_equal(forward.terminals[0].p0, -4.567)
+
+
+def _init_int_line_behind_main_xfmr(line_on_terminal1: bool) -> tuple[XfmrParams, LineParams]:
+    gen, gen_xfmr = _make_gen_and_xfmr()
+    main_xfmr = XfmrParams(
+        id="Main_Xfmr",
+        lib=None,
+        par_id=None,
+        r=0.0003,
+        x=0.0268,
+        g=0.0,
+        b=0.0,
+        r_tfo=0.9574,
+        alpha_tfo=0.0,
+        terminals=(
+            Terminal(connected_equipment="BusPDR"),
+            Terminal(connected_equipment="IntNetwork_Line"),
+        ),
+    )
+    ids = ("Main_Xfmr", "BusInt") if line_on_terminal1 else ("BusInt", "Main_Xfmr")
+    int_line = LineParams(
+        id="IntNetwork_Line",
+        lib=None,
+        r=0.0122,
+        x=0.1015,
+        g=0.0,
+        b=0.0021,
+        par_id=None,
+        terminals=tuple(Terminal(connected_equipment=i) for i in ids),
+    )
+    pdr = PdrParams(u=1.04444444444444444444, u_phase=0.0, s=-4.567 + 0.0j, p=-4.567, q=0.0)
+    init_calcs(
+        gens=[gen],
+        gen_xfmrs=[gen_xfmr],
+        aux_load=None,
+        auxload_xfmr=None,
+        main_xfmr=main_xfmr,
+        int_line=int_line,
+        pdr=pdr,
+        grid_line=line_pimodel(_make_grid_line()),
+        grid_load=None,
+    )
+    return main_xfmr, int_line
+
+
+def test_initialize_int_line_is_solved_from_the_main_xfmr_side():
+    """The internal line sits behind the main transformer: they must share the same bus.
+
+    The catalog puts Main_Xfmr next to the PDR and the internal network on its MV side, so
+    the line is solved from the transformer's far terminal. Which of its own terminals faces
+    upstream is decided by the id it is declared against, which pins the hand-off between
+    the two series stages.
+    """
+    for line_on_terminal1 in (True, False):
+        main_xfmr, int_line = _init_int_line_behind_main_xfmr(line_on_terminal1)
+        near = int_line.terminals[0 if line_on_terminal1 else 1]
+
+        assert _is_equal(near.u0, main_xfmr.terminals[1].u0)
+        assert _is_equal(near.u_phase0, main_xfmr.terminals[1].u_phase0)
+        assert _is_equal(near.p0, -main_xfmr.terminals[1].p0)
+        assert _is_equal(near.q0, -main_xfmr.terminals[1].q0)
+
+    # The main transformer takes the PDR delivery on its declared PDR terminal
+    assert _is_equal(main_xfmr.terminals[0].u0, 1.04444444444444444444)
+    assert _is_equal(main_xfmr.terminals[0].p0, -4.567)

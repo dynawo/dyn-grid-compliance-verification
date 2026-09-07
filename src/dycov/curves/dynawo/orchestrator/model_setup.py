@@ -571,8 +571,8 @@ class ModelSetup:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def _sort_stepup_xfmrs_to_generators(self, producer) -> list:
-        """Align each generator with the step-up transformer it is connected to.
+    def _sort_group_xfmrs_to_generators(self, producer) -> list:
+        """Align each generator with the group transformer it is connected to.
 
         Returns
         -------
@@ -580,8 +580,8 @@ class ModelSetup:
             One entry per generator, in generator order: the StepUp_Xfmr the
             generator's terminal is connected to, or None when it has none.
         """
-        xfmr_map = {xfmr.id: xfmr for xfmr in producer.stepup_xfmrs}
-        # Keep a None placeholder for generators with no step-up transformer: the
+        xfmr_map = {xfmr.id: xfmr for xfmr in producer.group_xfmrs}
+        # Keep a None placeholder for generators with no group transformer: the
         # index of each entry must match its generator so downstream consumers pair
         # them positionally. Filtering the None out would shift the alignment and
         # assign a generator the transformer of another.
@@ -654,15 +654,15 @@ class ModelSetup:
 
         conn_line = self._get_lines_for_initial_calcs(tso_lines)
 
-        sorted_stepup_xfmrs = self._sort_stepup_xfmrs_to_generators(producer)
+        sorted_group_xfmrs = self._sort_group_xfmrs_to_generators(producer)
 
         pdr_load, grid_load = self._get_tso_loads(pcs_name, bm_name, oc_name, u_dim)
         tso_gen = init_calcs(
             tuple(producer.generators),
-            tuple(sorted_stepup_xfmrs),
+            tuple(sorted_group_xfmrs),
             producer.aux_load,
             producer.auxload_xfmr,
-            producer.ppm_xfmr,
+            producer.main_xfmr,
             producer.intline,
             pdr,
             conn_line,
@@ -683,8 +683,9 @@ class ModelSetup:
             working_oc_dir,
             producer.get_producer_par(),
             producer.generators,
-            sorted_stepup_xfmrs,
+            sorted_group_xfmrs,
             producer.aux_load,
+            producer.main_xfmr,
             pdr,
             control_mode,
             force_voltage_droop,
@@ -764,11 +765,11 @@ class ModelSetup:
             pdr,
         )
 
-        xmfrs = producer.stepup_xfmrs[:]
+        xmfrs = producer.group_xfmrs[:]
         if producer.auxload_xfmr:
             xmfrs.append(producer.auxload_xfmr)
-        if producer.ppm_xfmr:
-            xmfrs.append(producer.ppm_xfmr)
+        if producer.main_xfmr:
+            xmfrs.append(producer.main_xfmr)
 
         self.curves_dict = crv.create_curves_file(
             working_oc_dir,
