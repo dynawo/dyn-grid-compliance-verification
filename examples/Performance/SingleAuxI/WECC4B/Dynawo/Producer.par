@@ -8,8 +8,8 @@
     <par type="BOOL" name="WTG4B_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WTG4B_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.0152727"/>
-    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.0844458"/>
+    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.015247347"/>
+    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.082173061"/>
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WTG4B_PQFlag" value="false"/>
     <par type="BOOL" name="WTG4B_PfFlag" value="false"/>
