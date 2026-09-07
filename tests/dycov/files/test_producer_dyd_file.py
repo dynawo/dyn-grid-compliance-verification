@@ -147,7 +147,7 @@ def test_fill_producer_dyd_injects_libs_and_terminal():
         producer_dyd_file.fill_producer_dyd(
             dyd_path,
             libs={
-                "StepUp_Xfmr": "TransformerRatioTapChanger",
+                producer_dyd_file.MAIN_XFMR_ID: "TransformerRatioTapChanger",
                 gen: "PhotovoltaicsWeccCurrentSource",
             },
             terminals={gen: "photovoltaics_terminal"},
@@ -155,7 +155,7 @@ def test_fill_producer_dyd_injects_libs_and_terminal():
         root = etree.parse(str(dyd_path)).getroot()
         ns = etree.QName(root).namespace
         libs = {b.get("id"): b.get("lib") for b in root.iterfind(f"{{{ns}}}blackBoxModel")}
-        assert libs["StepUp_Xfmr"] == "TransformerRatioTapChanger"
+        assert libs[producer_dyd_file.MAIN_XFMR_ID] == "TransformerRatioTapChanger"
         assert libs[gen] == "PhotovoltaicsWeccCurrentSource"
         conns = _connects(dyd_path)
         # terminal placeholder replaced, and the remote-control ports derived from it

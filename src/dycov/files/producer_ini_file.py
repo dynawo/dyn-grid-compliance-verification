@@ -24,6 +24,7 @@ def _render_ini_text(
     values: dict,
     gen_sharing: dict,
     include_consumption: bool,
+    zone: int = 0,
 ) -> str:
     """Single source of the Producer INI layout.
 
@@ -40,9 +41,14 @@ def _render_ini_text(
             "# p_{max_unite} consumption as defined by the DTR in MW (only for BESS)",
             _kv("p_max_consumption_at_PDR", values.get("p_max_consumption_at_PDR", "")),
         ]
+    if zone == 1:
+        lines += ["# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV"]
+    else:
+        lines += [
+            "# u_nom is the nominal voltage at the PDR bus (in kV)",
+            "# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)",
+        ]
     lines += [
-        "# u_nom is the nominal voltage at the PDR bus (in kV)",
-        "# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)",
         _kv("u_nom_at_PDR", values.get("u_nom_at_PDR", "")),
         "# q_max is the maximum reactive power at the PDR bus (in MVar)",
         _kv("q_max_at_PDR", values.get("q_max_at_PDR", "")),
@@ -64,6 +70,7 @@ def _create_producer_ini_file(
     values: dict = None,
     gen_sharing: dict = None,
     include_consumption: bool = True,
+    zone: int = 0,
 ) -> None:
     if (target / "Producer.ini").exists():
         (target / "Producer.ini").rename(target / filename)
@@ -73,6 +80,7 @@ def _create_producer_ini_file(
         values or {},
         gen_sharing or {"[GEN_ID]": ("", "")},
         include_consumption,
+        zone,
     )
     with open(target / filename, "w") as f:
         f.write(text)
@@ -120,7 +128,6 @@ def create_producer_ini_file(
     target: Path,
     topology: str,
     template: str,
-    n_generators: int = 2,
 ) -> None:
     """Create a INI file in target path
 
@@ -137,17 +144,14 @@ def create_producer_ini_file(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
-    n_generators: int
-        Number of generators for an ``M`` topology (one ``Producer_G<i>.ini`` per ``Zone1<x>``
-        sheet); default 2.
     """
     if template.startswith("model"):
         if topology.casefold().startswith("m"):
-            for i in range(1, n_generators + 1):
-                _create_producer_ini_file(target / "Zone1", f"Producer_G{i}.ini", "S")
+            _create_producer_ini_file(target / "Zone1", "Producer_G1.ini", "S", zone=1)
+            _create_producer_ini_file(target / "Zone1", "Producer_G2.ini", "S", zone=1)
         else:
-            _create_producer_ini_file(target / "Zone1", "Producer.ini", "S")
-        _create_producer_ini_file(target / "Zone3", "Producer.ini", topology)
+            _create_producer_ini_file(target / "Zone1", "Producer.ini", "S", zone=1)
+        _create_producer_ini_file(target / "Zone3", "Producer.ini", topology, zone=3)
     else:
         _create_producer_ini_file(target, "Producer.ini", topology)
 

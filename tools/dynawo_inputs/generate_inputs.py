@@ -31,8 +31,9 @@ import workbook as wb  # noqa: E402  (the stdlib xlsx reader)
 
 from dycov.files.producer_dyd_file import (  # noqa: E402
     BESS_ID,
+    GROUP_XFMR_ID,
+    MAIN_XFMR_ID,
     PPM_ID,
-    XFMR_ID,
     create_producer_dyd_file,
     fill_producer_dyd,
     write_producer_dyd,
@@ -246,14 +247,14 @@ def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> No
     downstream = None
     for connect in list(root.iterfind(f"{{{ns}}}connect")):
         id1, var1, id2, var2 = (connect.get(k) for k in ("id1", "var1", "id2", "var2"))
-        if id1 == XFMR_ID and var1 == "transformer_terminal2":
+        if id1 == GROUP_XFMR_ID and var1 == "transformer_terminal2":
             downstream = (id2, var2)
-        elif id2 == XFMR_ID and var2 == "transformer_terminal2":
+        elif id2 == GROUP_XFMR_ID and var2 == "transformer_terminal2":
             downstream = (id1, var1)
-        if XFMR_ID in (id1, id2):
+        if GROUP_XFMR_ID in (id1, id2):
             root.remove(connect)
     for bbmodel in list(root.iterfind(f"{{{ns}}}blackBoxModel")):
-        if bbmodel.get("id") == XFMR_ID:
+        if bbmodel.get("id") == GROUP_XFMR_ID:
             root.remove(bbmodel)
     if downstream:
         etree.SubElement(
@@ -297,35 +298,36 @@ def generate(excel: Path, outdir: Path) -> str:
 
     create_producer_dyd_file(root, topology, template)
 
-    net_libs = {XFMR_ID: LIB_XFMR_OLTC, "AuxLoad_Xfmr": LIB_XFMR_FIXED, "Aux_Load": LIB_LOAD,
+    net_libs = {"AuxLoad_Xfmr": LIB_XFMR_FIXED, "Aux_Load": LIB_LOAD,
                 "IntNetwork_Line": LIB_LINE, "Int_Bus": LIB_BUS}
     fill_producer_dyd(
         root / "Zone1" / "Producer.dyd",
-        libs={**net_libs, XFMR_ID: LIB_XFMR_FIXED, gen_id: resolved["zone1_lib"]},
+        libs={**net_libs, GROUP_XFMR_ID: LIB_XFMR_FIXED, gen_id: resolved["zone1_lib"]},
         terminals={gen_id: f"{resolved['zone1_prefix']}terminal"},
         rename=rename,
     )
     fill_producer_dyd(
         root / "Zone3" / "Producer.dyd",
-        libs={**net_libs, XFMR_ID: LIB_XFMR_FIXED, gen_id: resolved["zone3_lib"]},
+        libs={**net_libs, MAIN_XFMR_ID: LIB_XFMR_OLTC, gen_id: resolved["zone3_lib"]},
         terminals={gen_id: f"{resolved['zone3_prefix']}terminal"},
         rename=rename,
     )
 
     lv_control = _is_true(zone1.get("ConverterLVControl", "True"))
 
-    def _stepup(zone_dir: str, prefix: str, s_nom) -> list:
-        # The single-generator topologies carry the generator transformer and no main one, so this
-        # block is Z_cc_TG in both zones. With ConverterLVControl=False the model's own LvTr
-        # carries it instead, so the block is dropped and the generator wired downstream.
+    def _zone1_group_xfmr() -> list:
+        # With ConverterLVControl=False the model's own LvTr carries the group transformer, so the
+        # block is dropped and the generator wired to its downstream node.
         if lv_control:
-            return [group_transformer_par_set(XFMR_ID, zone1, s_nom)]
-        drop_group_transformer(root / zone_dir / "Producer.dyd", gen_id, f"{prefix}terminal")
+            return [group_transformer_par_set(GROUP_XFMR_ID, zone1, zone1["SnZone1"])]
+        drop_group_transformer(
+            root / "Zone1" / "Producer.dyd", gen_id, f"{resolved['zone1_prefix']}terminal"
+        )
         return []
 
     z1_sets = [
         converter_par_set(gen_id, resolved["zone1_prefix"], z1_control, zone1, zone1["SnZone1"]),
-        *_stepup("Zone1", resolved["zone1_prefix"], zone1["SnZone1"]),
+        *_zone1_group_xfmr(),
     ]
     write_producer_par_file(root / "Zone1", "Producer.par", z1_sets)
 
@@ -334,7 +336,7 @@ def generate(excel: Path, outdir: Path) -> str:
             gen_id, resolved["zone3_prefix"], z3_control, zone1, zone3["SnZone3"],
             plant_model=True,
         ),
-        *_stepup("Zone3", resolved["zone3_prefix"], zone3["SnZone3"]),
+        main_transformer_par_set(MAIN_XFMR_ID, zone3),
     ]
     if "aux" in topology.casefold():
         z3_sets += [aux_transformer_par_set("AuxLoad_Xfmr", zone3),

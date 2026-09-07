@@ -81,12 +81,12 @@ def test_no_matching_equipment_models(tmp_path):
 
     result = model_parameters.get_producer_values(dyd_path, par_path, ini_file, s_nref=90.0)
 
-    generators, stepup_xfmrs, aux_load, auxload_xfmr, ppm_xfmr, intline = result
+    generators, group_xfmrs, aux_load, auxload_xfmr, main_xfmr, intline = result
     assert generators == []
-    assert stepup_xfmrs == []
+    assert group_xfmrs == []
     assert aux_load is None
     assert auxload_xfmr is None
-    assert ppm_xfmr is None
+    assert main_xfmr is None
     assert intline is None
 
 
@@ -585,8 +585,8 @@ def test_find_output_dir(tmp_path):
     assert res == "outdir"
 
 
-def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
-    """A generator without a step-up transformer must still get its init written.
+def test_adjust_producer_init_without_group_xfmr(tmp_path, monkeypatch):
+    """A generator without a group transformer must still get its init written.
 
     Regression for the S/ConverterLVControl=False topology: with an empty xfmrs
     list the generator must not be skipped (the transformer step is simply not
@@ -631,6 +631,7 @@ def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
         producer_par,
         [gen],
         [],
+        None,
         None,
         None,
         "USetpoint",
@@ -689,3 +690,118 @@ def test_set_parameter_repeated_create_updates_instead_of_duplicating():
 
     assert len(parset) == 1
     assert parset[0].get("value") == "-0.75"
+
+
+def test_get_generator_ppc_local_reads_a_declared_true():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "true"})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
+    )
+
+    assert ppc_local is True
+
+
+def test_get_generator_ppc_local_reads_a_declared_false():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "false"})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
+    )
+
+    assert ppc_local is False
+
+
+def test_get_generator_ppc_local_defaults_to_true_when_the_parameter_is_absent():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "IECWT4ACurrentSource2015"
+    )
+
+    assert ppc_local is True
+
+
+def test_get_generator_converter_lv_control_reads_a_declared_false():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WTG4B_ConverterLVControl": "false"})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert converter_lv_control is False
+
+
+def test_get_generator_converter_lv_control_defaults_to_true_when_absent():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert converter_lv_control is True
+
+
+def test_append_generator_takes_ppc_local_from_the_par_file():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "WT4BWeccCurrentSource", "parGen")
+    _add_connect(dyd_root, "Wind_Turbine", "WT4B_terminal", "StepUp_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "false"})
+    generators = []
+
+    model_parameters._append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert len(generators) == 1
+    assert generators[0].ppc_local is False
+    assert generators[0].terminals[0].connected_equipment == "StepUp_Xfmr"
+
+
+def test_append_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "IECWT4ACurrentSource2015", "parGen")
+    _add_connect(dyd_root, "Wind_Turbine", "WT4A_terminal", "StepUp_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {})
+    generators = []
+
+    model_parameters._append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert generators[0].ppc_local is True
+
+
+def _xfmr(id: str) -> SimpleNamespace:
+    return SimpleNamespace(id=id)
+
+
+def test_classify_transformers_routes_each_id_to_its_role():
+    group = _xfmr("Group_Xfmr")
+    auxload = _xfmr("AuxLoad_Xfmr")
+    main = _xfmr("Main_Xfmr")
+
+    by_role = model_parameters._classify_transformers([main, auxload, group])
+
+    assert by_role[model_parameters.GROUP_XFMR_ROLE] == [group]
+    assert by_role[model_parameters.AUXLOAD_XFMR_ROLE] == [auxload]
+    assert by_role[model_parameters.MAIN_XFMR_ROLE] == [main]
+
+
+def test_classify_transformers_rejects_the_pre_catalog_unit_id():
+    """A pre-catalog StepUp_Xfmr has no role: it is not the Zone-1 group transformer."""
+    with pytest.raises(ValueError) as excinfo:
+        model_parameters._classify_transformers([_xfmr("StepUp_Xfmr_1")])
+
+    assert "StepUp_Xfmr_1" in str(excinfo.value)
+
+
+def test_classify_transformers_rejects_an_unknown_id():
+    with pytest.raises(ValueError) as excinfo:
+        model_parameters._classify_transformers([_xfmr("Some_Xfmr")])
+
+    assert "Some_Xfmr" in str(excinfo.value)
+    assert "Group_Xfmr" in str(excinfo.value)

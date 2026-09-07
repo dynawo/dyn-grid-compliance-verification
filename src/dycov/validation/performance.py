@@ -586,7 +586,7 @@ class PerformanceValidator(Validator):
                 else:
                     gen_intline_id = self._disconnection_model.gen_intline.id
                 disconneted_xfmr = list(
-                    set(self._disconnection_model.stepup_xfmrs) & set(disconnection_list)
+                    set(self._disconnection_model.connection_xfmrs) & set(disconnection_list)
                 )
                 if len(disconneted_xfmr) == 0 and gen_intline_id not in disconnection_list:
                     results["no_disconnection_gen"] = True

@@ -287,18 +287,18 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     par = etree.parse(str(root / "Zone3" / "Producer.par")).getroot()
     ns = etree.QName(par).namespace
     set_ids = [s.get("id") for s in par.iterfind(f"{{{ns}}}set")]
-    assert G.GEN_ID_BY_TECH["PV"] in set_ids and "StepUp_Xfmr" in set_ids  # PV -> PV_Array
+    assert G.GEN_ID_BY_TECH["PV"] in set_ids and "Main_Xfmr" in set_ids  # PV -> PV_Array
     assert "Aux_Load" in set_ids and "IntNetwork_Line" in set_ids
     names = [p.get("name") for p in par.iter(f"{{{ns}}}par")]
     assert "photovoltaics_Kqp" in names
-    # Zone3's external transformer is the generator one (Z_cc_TG, fixed ratio): the main HTB/HTA
-    # transformer only exists in the M topologies.
-    stepup = {p.get("name"): p.get("value")
-              for s in par.iterfind(f"{{{ns}}}set") if s.get("id") == "StepUp_Xfmr"
-              for p in s.iter(f"{{{ns}}}par")}
-    assert stepup["transformer_rTfoPu"] == "1.0"
-    assert stepup["transformer_XPu"] == "0.1"  # Z_cc_TG purely reactive, SnZone3 = 100 = SnRef
-    assert "transformer_NbTap" not in stepup
+    # Zone3's external transformer is the plant's main one: Z_cc_TP with its tap block, the group
+    # transformer living inside the generator's model.
+    main_xfmr = {p.get("name"): p.get("value")
+                 for s in par.iterfind(f"{{{ns}}}set") if s.get("id") == "Main_Xfmr"
+                 for p in s.iter(f"{{{ns}}}par")}
+    assert main_xfmr["transformer_NbTap"] == "21" and main_xfmr["transformer_Tap0"] == "10"
+    assert main_xfmr["transformer_XPu"] == "0.18"  # Z_cc_TP reactive, SnZone3 = 100 = SnRef
+    assert "transformer_rTfoPu" not in main_xfmr
     # PAR order is documental: REPC precedes REEC precedes REGC because the sheets do.
     assert names.index("photovoltaics_FreqFlag") < names.index("photovoltaics_Kqp")
     assert names.index("photovoltaics_Kqp") < names.index("photovoltaics_Iqrmax")

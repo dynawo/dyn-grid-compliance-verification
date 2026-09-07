@@ -12,7 +12,6 @@ This module provides functions for validating Dynawo model topologies based on
 expected and actual components and their connections.
 """
 
-from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams, LineParams, LoadParams, XfmrParams
 
 _GENERATOR_ERROR_MESSAGE = (
@@ -31,52 +30,32 @@ _MULTIPLE_GENERATOR_ERROR_MESSAGE = (
 )
 
 
-def _find_stepup_xfmr(gen: GenParams, transformers: list[XfmrParams]) -> XfmrParams | None:
-    """Return the StepUp_Xfmr whose terminals reference the given generator, or None."""
-    return next(
-        (
-            xfmr
-            for xfmr in transformers
-            if xfmr.id.startswith("StepUp_Xfmr")
-            and any(terminal.connected_equipment == gen.id for terminal in xfmr.terminals)
-        ),
-        None,
-    )
-
-
-def _check_converter_lv_control(
+def _check_group_xfmr(
     generators: list[GenParams],
     transformers: list[XfmrParams],
+    add_error,
 ) -> None:
-    """Warn when a generator has converter_lv_control=False and is connected to a StepUp_Xfmr.
+    """Checks the Zone-1 group transformer against the unit's ConverterLVControl flag.
 
-    In that configuration the converter's internal transformer and the StepUp_Xfmr are in
-    series, which is likely unintentional.
+    The converter reaches the internal node through its own transformer when the flag is
+    false, so modelling an external one as well would put two transformers in series.
     """
-    problematic = []
-    for gen in generators:
-        if gen.converter_lv_control:
-            continue
-        xfmr = _find_stepup_xfmr(gen, transformers)
-        if xfmr:
-            problematic.append((gen.id, xfmr.id))
-
-    if problematic:
-        dycov_logging.get_logger("Sanity Checks").warning(
-            "The following generators have ConverterLVControl=False and are connected to StepUp "
-            "transformers:"
+    expected = bool(generators) and generators[0].converter_lv_control
+    if expected and len(transformers) != 1:
+        add_error(
+            "A transformer with id 'Group_Xfmr' is expected between the generating unit and "
+            "the internal node, because the unit has ConverterLVControl = true."
         )
-        for gid, tid in problematic:
-            dycov_logging.get_logger("Sanity Checks").warning(f"  - {gid} → {tid}")
-
-        dycov_logging.get_logger("Sanity Checks").warning(
-            "This results in two transformers in series (the converter's internal transformer "
-            "and the StepUp_Xfmr), which is usually unintended. Consider enabling "
-            "ConverterLVControl or removing the external StepUp_Xfmr if not required."
+    elif not expected and transformers:
+        add_error(
+            "No transformer is expected between the generating unit and the internal node, "
+            "because the unit has ConverterLVControl = false: its own transformer already "
+            "reaches the internal node."
         )
 
 
 def _check_topology_components(
+    zone: int,
     topology_name: str,
     generators: list[GenParams],
     transformers: list[XfmrParams],
@@ -85,7 +64,6 @@ def _check_topology_components(
     main_transformer: XfmrParams | None,
     internal_line: LineParams | None,
     expected_gen_count: str,  # "single" or "multiple"
-    expected_xfmr_count: str,  # "single" or "multiple"
     expect_aux_load: bool,
     expect_aux_xfmr: bool,
     expect_main_xfmr: bool,
@@ -125,27 +103,14 @@ def _check_topology_components(
         elif not _is_valid_generators(generators):
             add_error("Invalid generators configuration.")
 
-    # Validate step-up transformers
-    if expected_xfmr_count == "single":
-        # Only topology 'S' (Zone 1) may omit the external StepUp_Xfmr, and only when
-        # the converter reaches node 1 through its internal transformer
-        # (ConverterLVControl=False); the rest of the single-generator family requires it.
-        stepup_optional = (
-            topology_name.casefold() == "s"
-            and bool(generators)
-            and not generators[0].converter_lv_control
+    # Validate the unit transformers: only Zone 1 may model one
+    if zone == 1:
+        _check_group_xfmr(generators, transformers, add_error)
+    elif transformers:
+        add_error(
+            "No transformer is expected between the generating units and the internal bus: "
+            "the group transformer of each unit is part of its dynamic model."
         )
-        if stepup_optional and not transformers:
-            pass
-        elif len(transformers) != 1:
-            add_error("A transformer with id 'StepUp_Xfmr' is expected.")
-        elif not _is_valid_stepup_xfmr(transformers, generators):
-            add_error("Invalid step-up transformer configuration.")
-    elif expected_xfmr_count == "multiple":
-        if len(transformers) <= 1:
-            add_error("Multiple step-up transformers are expected.")
-        elif not _is_valid_stepup_xfmr(transformers, generators):
-            add_error("Invalid step-up transformers configuration.")
 
     # Validate optional components
     def validate_optional(expect: bool, component, name: str, validator, expected_msg: str):
@@ -185,10 +150,6 @@ def _check_topology_components(
         _is_valid_internal_line,
         "An internal line with id 'IntNetwork_Line' is expected.",
     )
-
-    # Warn about potentially unintended double-transformer configurations.
-    # Runs regardless of structural errors above so the user sees all issues at once.
-    _check_converter_lv_control(generators, transformers)
 
     if not error_messages:
         return
@@ -233,11 +194,6 @@ def _is_valid_generator(gen_id: str, add_sm: bool = True) -> bool:
     return any(gen_type in gen_id for gen_type in gen_types)
 
 
-def _is_valid_stepup_xfmr(transformers: list[XfmrParams], generators: list[GenParams]) -> bool:
-    ids = [t.id for t in transformers if t.id.startswith("StepUp_Xfmr")]
-    return len(generators) == len(ids)
-
-
 def _is_valid_auxiliary_transformer(auxiliary_transformer: XfmrParams) -> bool:
     return auxiliary_transformer is not None and auxiliary_transformer.id == "AuxLoad_Xfmr"
 
@@ -254,7 +210,21 @@ def _is_valid_internal_line(internal_line: LineParams) -> bool:
     return internal_line is not None and internal_line.id == "IntNetwork_Line"
 
 
+ZONE1_CONFIG = {
+    "expected_gen_count": "single",
+    "expect_aux_load": False,
+    "expect_aux_xfmr": False,
+    "expect_main_xfmr": False,
+    "expect_internal_line": False,
+    "generator_bus_connection": "internal node",
+    "aux_load_bus_connection": "",
+    "main_xfmr_bus_connection": "",
+    "internal_line_bus_connection": "",
+}
+
+
 def check_topology(
+    zone: int,
     topology: str,
     generators: list[GenParams],
     transformers: list[XfmrParams],
@@ -268,6 +238,8 @@ def check_topology(
 
     Parameters
     ----------
+    zone: int
+        Zone under test; only Zone 1 models the group transformer of the generating unit.
     topology: str
         Selected topology.
     generators: list
@@ -292,98 +264,90 @@ def check_topology(
     topology_configs = {
         "s": {
             "expected_gen_count": "single",
-            "expected_xfmr_count": "single",
             "expect_aux_load": False,
             "expect_aux_xfmr": False,
-            "expect_main_xfmr": False,
+            "expect_main_xfmr": True,
             "expect_internal_line": False,
-            "generator_bus_connection": "PDR bus",
+            "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "",
-            "main_xfmr_bus_connection": "",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
             "internal_line_bus_connection": "",
         },
         "s+i": {
             "expected_gen_count": "single",
-            "expected_xfmr_count": "single",
             "expect_aux_load": False,
             "expect_aux_xfmr": False,
-            "expect_main_xfmr": False,
+            "expect_main_xfmr": True,
             "expect_internal_line": True,
-            "generator_bus_connection": "internal line",
+            "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "",
-            "main_xfmr_bus_connection": "",
-            "internal_line_bus_connection": "transformer and the PDR bus",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
+            "internal_line_bus_connection": "internal bus and the main transformer",
         },
         "s+aux": {
             "expected_gen_count": "single",
-            "expected_xfmr_count": "single",
             "expect_aux_load": True,
             "expect_aux_xfmr": True,
-            "expect_main_xfmr": False,
+            "expect_main_xfmr": True,
             "expect_internal_line": False,
-            "generator_bus_connection": "PDR bus",
-            "aux_load_bus_connection": "PDR bus",
-            "main_xfmr_bus_connection": "",
+            "generator_bus_connection": "internal bus",
+            "aux_load_bus_connection": "internal bus",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
             "internal_line_bus_connection": "",
         },
         "s+aux+i": {
             "expected_gen_count": "single",
-            "expected_xfmr_count": "single",
             "expect_aux_load": True,
             "expect_aux_xfmr": True,
-            "expect_main_xfmr": False,
+            "expect_main_xfmr": True,
             "expect_internal_line": True,
             "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "internal bus",
-            "main_xfmr_bus_connection": "",
-            "internal_line_bus_connection": "transformer and the PDR bus",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
+            "internal_line_bus_connection": "internal bus and the main transformer",
         },
         "m": {
             "expected_gen_count": "multiple",
-            "expected_xfmr_count": "multiple",
             "expect_aux_load": False,
             "expect_aux_xfmr": False,
             "expect_main_xfmr": True,
             "expect_internal_line": False,
             "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "",
-            "main_xfmr_bus_connection": "internal bus and the PDR bus",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
             "internal_line_bus_connection": "",
         },
         "m+i": {
             "expected_gen_count": "multiple",
-            "expected_xfmr_count": "multiple",
             "expect_aux_load": False,
             "expect_aux_xfmr": False,
             "expect_main_xfmr": True,
             "expect_internal_line": True,
             "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "",
-            "main_xfmr_bus_connection": "internal bus and the internal line",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
             "internal_line_bus_connection": "transformer with id 'transformer' and the PDR bus",
         },
         "m+aux": {
             "expected_gen_count": "multiple",
-            "expected_xfmr_count": "multiple",
             "expect_aux_load": True,
             "expect_aux_xfmr": True,
             "expect_main_xfmr": True,
             "expect_internal_line": False,
             "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "internal bus",
-            "main_xfmr_bus_connection": "internal bus and the PDR bus",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
             "internal_line_bus_connection": "",
         },
         "m+aux+i": {
             "expected_gen_count": "multiple",
-            "expected_xfmr_count": "multiple",
             "expect_aux_load": True,
             "expect_aux_xfmr": True,
             "expect_main_xfmr": True,
             "expect_internal_line": True,
             "generator_bus_connection": "internal bus",
             "aux_load_bus_connection": "internal bus",
-            "main_xfmr_bus_connection": "internal bus and the internal line",
+            "main_xfmr_bus_connection": "internal network and the PDR bus",
             "internal_line_bus_connection": "transformer with id 'transformer' and the PDR bus",
         },
     }
@@ -402,8 +366,9 @@ def check_topology(
             "  - M+Aux+i\n"
         )
 
-    cfg = topology_configs[topology_lower]
+    cfg = ZONE1_CONFIG if zone == 1 else topology_configs[topology_lower]
     _check_topology_components(
+        zone,
         topology,
         generators,
         transformers,
@@ -412,7 +377,6 @@ def check_topology(
         transformer,
         internal_line,
         cfg["expected_gen_count"],
-        cfg["expected_xfmr_count"],
         cfg["expect_aux_load"],
         cfg["expect_aux_xfmr"],
         cfg["expect_main_xfmr"],

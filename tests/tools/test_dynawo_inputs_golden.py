@@ -5,11 +5,7 @@
 The fixture ``WECCSample_full.xlsx`` is a PV ``S+Aux`` case matching
 ``examples/Model/Photovoltaics/WECCCurrentSource``; values are invented, so we compare **structure
 only** (``blackBoxModel`` libs + ``connect`` wiring), normalizing the generator block id (tool
-``PV_Array`` vs the example's legacy ``Wind_Turbine``). The step-up transformer **lib** is excluded
-from the example match and asserted directly as ``TransformerFixedRatio``: the single-generator
-topologies carry the generator transformer, which the Excel gives a fixed ratio (``r_TG``) and no
-tap data, so the example's ``TransformerRatioTapChanger`` is a divergence — and DyCoV never
-validates the lib."""
+``PV_Array`` vs the example's legacy ``Wind_Turbine``)."""
 
 from __future__ import annotations
 
@@ -30,7 +26,6 @@ _EXAMPLE = _REPO / "examples" / "Model" / "Photovoltaics" / "WECCCurrentSource" 
 
 # Generator block ids to canonicalize before comparison (tool tech-specific vs example legacy).
 _GEN_IDS = {"PV_Array", "Wind_Turbine", "Bess", "Power_Park", "Storage"}
-_STEPUP_ID = "StepUp_Xfmr"
 
 
 def _norm(block_id):
@@ -79,14 +74,8 @@ def test_connects_match_example(generated, zone):
 
 
 @pytest.mark.parametrize("zone", ["Zone1", "Zone3"])
-def test_non_stepup_libs_match_example(generated, zone):
-    # Every lib except the step-up transformer's (excluded per the module docstring).
-    got = {(bid, lib) for bid, lib in _libs(generated / zone / "Producer.dyd") if bid != _STEPUP_ID}
-    exp = {(bid, lib) for bid, lib in _libs(_EXAMPLE / zone / "Producer.dyd") if bid != _STEPUP_ID}
+def test_libs_match_example(generated, zone):
+    # The transformers included: Zone1's group one is a fixed ratio, Zone3's main one a tap changer.
+    got = _libs(generated / zone / "Producer.dyd")
+    exp = _libs(_EXAMPLE / zone / "Producer.dyd")
     assert got == exp, _diff(zone, "libs", got, exp)
-
-
-@pytest.mark.parametrize("zone", ["Zone1", "Zone3"])
-def test_stepup_lib_is_data_driven(generated, zone):
-    stepups = {lib for bid, lib in _libs(generated / zone / "Producer.dyd") if bid == _STEPUP_ID}
-    assert stepups == {"TransformerFixedRatio"}, stepups

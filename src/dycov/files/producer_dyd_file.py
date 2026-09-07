@@ -35,23 +35,17 @@ MAIN_XFMR_ID = "Main_Xfmr"
 INT_BUS_ID = "Int_Bus"
 XFMR_AUX_ID = "AuxLoad_Xfmr"
 AUX_ID = "Aux_Load"
-XFMR_ID = "StepUp_Xfmr"
-# Generator ids must contain a token accepted by topology_checks._is_valid_generator.
+GROUP_XFMR_ID = "Group_Xfmr"
 SM_ID = "Synch_Gen"
-PPM_ID = "Wind_Turbine"
-XFMR1_ID = "StepUp_Xfmr_1"
-PPM1_ID = "Wind_Turbine_1"
-XFMR2_ID = "StepUp_Xfmr_2"
-PPM2_ID = "Wind_Turbine_2"
-BESS_ID = "Bess"
-BESS1_ID = "Bess_1"
-BESS2_ID = "Bess_2"
+PPM_ID = "Power_Park"
+PPM1_ID = "Power_Park_1"
+PPM2_ID = "Power_Park_2"
+BESS_ID = "Storage"
+BESS1_ID = "Storage_1"
+BESS2_ID = "Storage_2"
 
-# One placeholder for all the generator's ports (terminal + remote-control vars) so a single
-# find-replace fills them; braces (not <>) to avoid XML-escaping.
-MODEL_PREFIX = "{MODEL_PREFIX}"
 SM_TERMINAL = "generator_terminal"
-PPM_TERMINAL = f"{MODEL_PREFIX}_terminal"
+PPM_TERMINAL = "PPM_TERMINAL"
 BESS_TERMINAL = "BESS_terminal"
 BUS_TERMINAL = "bus_terminal"
 LOAD_TERMINAL = "load_terminal"
@@ -77,11 +71,18 @@ def _add_terminal_options(dyd_root: etree.Element, terminal: str):
     if terminal != PPM_TERMINAL:
         return
 
-    prefixes = ["photovoltaics", "WTG3", "WTG4A", "WTG4B", "WT3", "WT4A", "WT4B", "WPP", "WT"]
+    available_models = [
+        "WPP_terminal",
+        "WT_terminal",
+        "WTG4A_terminal",
+        "WTG4B_terminal",
+        "WT4A_terminal",
+        "WT4B_terminal",
+        "photovoltaics_terminal",
+    ]
     dyd_root.append(
         etree.Comment(
-            f"Replace '{MODEL_PREFIX}' with the model's prefix (one find-replace fills the "
-            f"terminal and all remote-control ports). Available: {prefixes}"
+            f"Replace the placeholder: '{PPM_TERMINAL}', available_options: {available_models}"
         )
     )
 
@@ -160,6 +161,65 @@ def _add_connection(
     )
 
 
+TOPOLOGY_LAYOUTS = {
+    "S": {"units": 1, "aux_load": False, "int_line": False},
+    "S+i": {"units": 1, "aux_load": False, "int_line": True},
+    "S+Aux": {"units": 1, "aux_load": True, "int_line": False},
+    "S+Aux+i": {"units": 1, "aux_load": True, "int_line": True},
+    "M": {"units": 2, "aux_load": False, "int_line": False},
+    "M+i": {"units": 2, "aux_load": False, "int_line": True},
+    "M+Aux": {"units": 2, "aux_load": True, "int_line": False},
+    "M+Aux+i": {"units": 2, "aux_load": True, "int_line": True},
+}
+
+
+def _layout(topology: str) -> dict:
+    """Returns the layout of the selected topology, whichever way the caller spelled it."""
+    for name, layout in TOPOLOGY_LAYOUTS.items():
+        if name.casefold() == topology.casefold():
+            return layout
+
+    available = "".join(f"  - {name}\n" for name in TOPOLOGY_LAYOUTS)
+    raise ValueError(f"Select one of the 8 available topologies:\n{available}")
+
+
+def _generating_units(validation_type: int, units: int) -> list[tuple[str, str, str]]:
+    """Returns the (id, lib, terminal) of each generating unit of the producer."""
+    if validation_type == PERFORMANCE_SM:
+        return [(SM_ID, SM_DYNAMIC_MODEL, SM_TERMINAL)]
+    if validation_type in (PERFORMANCE_PPM, VALIDATION_PPM):
+        lib, terminal, ids = PPM_DYNAMIC_MODEL, PPM_TERMINAL, (PPM_ID, PPM1_ID, PPM2_ID)
+    else:
+        lib, terminal, ids = BESS_DYNAMIC_MODEL, BESS_TERMINAL, (BESS_ID, BESS1_ID, BESS2_ID)
+
+    if units == 1:
+        return [(ids[0], lib, terminal)]
+    return [(ids[i + 1], lib, terminal) for i in range(units)]
+
+
+class _DydWriter:
+    """Writes blackboxes and connections, showing each placeholder's options only once."""
+
+    def __init__(self, dyd_root: etree.Element, ns: str, par_filename: str):
+        self._dyd_root = dyd_root
+        self._ns = ns
+        self._par_filename = par_filename
+        self._documented = set()
+
+    def blackbox(self, id: str, lib: str) -> None:
+        _add_blackbox(self._dyd_root, self._ns, id, lib, self._par_filename, id, self._first(lib))
+
+    def connect(self, id_from: str, var_from: str, id_to: str, var_to: str) -> None:
+        show = any(self._first(var) for var in (var_from, var_to) if var in PLACEHOLDER_TERMINALS)
+        _add_connection(self._dyd_root, self._ns, id_from, var_from, id_to, var_to, show)
+
+    def _first(self, key: str) -> bool:
+        if key in self._documented:
+            return False
+        self._documented.add(key)
+        return True
+
+
 def _remote_control_ports(gen_terminal: str) -> dict:
     """PCC-monitoring port names derived from the gen terminal (works for the concrete
     ``<prefix>terminal`` and the ``{MODEL_PREFIX}_terminal`` placeholder alike)."""
@@ -214,115 +274,57 @@ def _add_remote_control(dyd_root: etree.Element, ns: str, gen_id: str, gen_termi
     _add_connection(dyd_root, ns, "Measurements", "measurements_QPu", gen_id, ports["QPccPu"])
 
 
-def _generator_spec(validation_type: int) -> tuple[str, str, str]:
-    """The single generator's ``(id, lib placeholder, terminal)`` for an ``S``-family topology."""
-    if validation_type == PERFORMANCE_SM:
-        return SM_ID, SM_DYNAMIC_MODEL, SM_TERMINAL
-    if validation_type in (PERFORMANCE_PPM, VALIDATION_PPM):
-        return PPM_ID, PPM_DYNAMIC_MODEL, PPM_TERMINAL
-    return BESS_ID, BESS_DYNAMIC_MODEL, BESS_TERMINAL
-
-
-def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
-    gen_id, gen_lib, gen_terminal = _generator_spec(validation_type)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
-
-
-def _create_saux_topology(
+def _create_zone1_topology(
     dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
-):
-    gen_id, gen_lib, gen_terminal = _generator_spec(validation_type)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID, True)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
+) -> None:
+    """Zone 1: a single unit behind its group transformer, up to the internal node.
 
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
-
-
-def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
-    gen_id, gen_lib, gen_terminal = _generator_spec(validation_type)
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
-
-
-def _create_sauxi_topology(
-    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
-):
-    gen_id, gen_lib, gen_terminal = _generator_spec(validation_type)
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID, True)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL1, True)
-
-
-def _create_m_topology(
-    dyd_root: etree.Element,
-    ns: str,
-    validation_type: int,
-    par_filename: str,
-    n_generators: int = 2,
-    has_aux: bool = False,
-    has_i: bool = False,
-):
-    """Multi-generator plant (``M`` family), parametrized on ``n_generators``.
-
-    ``n_generators`` generators, each behind its own ``StepUp_Xfmr_<i>``, join at ``Int_Bus`` and
-    are grouped by ``Main_Xfmr`` → [``IntNetwork_Line`` if ``+i``] → PDR; ``+Aux`` adds the
-    auxiliary load. ``n_generators`` = number of filled ``Zone1<x>`` sheets (default 2 for the
-    human-template flow).
+    The group transformer is only modelled explicitly when the unit's dynamic model does
+    not already reach the internal node through its own (ConverterLVControl).
     """
-    gen_base, gen_lib, gen_terminal = _generator_spec(validation_type)
+    writer = _DydWriter(dyd_root, ns, par_filename)
+    (gen_id, gen_lib, gen_terminal) = _generating_units(validation_type, 1)[0]
 
-    if has_i:
-        _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    if has_aux:
-        _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID)
-        _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    units = []
-    for i in range(1, n_generators + 1):
-        xfmr_id, gen_id = f"{XFMR_ID}_{i}", f"{gen_base}_{i}"
-        _add_blackbox(dyd_root, ns, xfmr_id, XFMR_DYNAMIC_MODEL, par_filename, xfmr_id)
-        _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, i == 1)
-        units.append((xfmr_id, gen_id))
+    writer.blackbox(GROUP_XFMR_ID, XFMR_DYNAMIC_MODEL)
+    writer.blackbox(gen_id, gen_lib)
 
-    if has_i:
-        _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, PDR_ID, BUS_TERMINAL)
-        _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_LINE_ID, LINE_TERMINAL1)
+    writer.connect(GROUP_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    writer.connect(gen_id, gen_terminal, GROUP_XFMR_ID, XFMR_TERMINAL1)
+
+
+def _create_zone3_topology(
+    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str, topology: str
+) -> None:
+    """Zone 3: PDR - Main_Xfmr - [IntNetwork_Line] - Int_Bus - generating units.
+
+    The group transformer of each unit lives inside its dynamic model, so the only
+    transformer in series with the PDR is the main one.
+    """
+    layout = _layout(topology)
+    writer = _DydWriter(dyd_root, ns, par_filename)
+    units = _generating_units(validation_type, layout["units"])
+
+    writer.blackbox(MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL)
+    if layout["int_line"]:
+        writer.blackbox(INT_LINE_ID, LINE_DYNAMIC_MODEL)
+    writer.blackbox(INT_BUS_ID, BUS_DYNAMIC_MODEL)
+    if layout["aux_load"]:
+        writer.blackbox(XFMR_AUX_ID, XFMR_DYNAMIC_MODEL)
+        writer.blackbox(AUX_ID, LOAD_DYNAMIC_MODEL)
+    for gen_id, gen_lib, _ in units:
+        writer.blackbox(gen_id, gen_lib)
+
+    writer.connect(MAIN_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    if layout["int_line"]:
+        writer.connect(INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
+        writer.connect(INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
     else:
-        _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    if has_aux:
-        _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-        _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
-    for idx, (xfmr_id, gen_id) in enumerate(units):
-        _add_connection(dyd_root, ns, xfmr_id, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-        _add_connection(dyd_root, ns, gen_id, gen_terminal, xfmr_id, XFMR_TERMINAL1, idx == 0)
+        writer.connect(INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    if layout["aux_load"]:
+        writer.connect(XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+        writer.connect(AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    for gen_id, _, gen_terminal in units:
+        writer.connect(gen_id, gen_terminal, INT_BUS_ID, BUS_TERMINAL)
 
 
 def _group_spacing(xml_text: str) -> str:
@@ -399,8 +401,8 @@ def _create_producer_dyd_file(
     filename: str,
     topology: str,
     validation_type: int,
+    zone: int,
     remote_control: bool = True,
-    n_generators: int = 2,
 ) -> None:
     if (target / "Producer.dyd").exists():
         (target / "Producer.dyd").unlink()
@@ -412,39 +414,14 @@ def _create_producer_dyd_file(
     dyd_root.append(comment)
 
     par_filename = filename.replace(".dyd", ".par")
-    if "S".casefold() == topology.casefold():
-        _create_s_topology(dyd_root, ns, validation_type, par_filename)
-    elif "S+i".casefold() == topology.casefold():
-        _create_si_topology(dyd_root, ns, validation_type, par_filename)
-    elif "S+Aux".casefold() == topology.casefold():
-        _create_saux_topology(dyd_root, ns, validation_type, par_filename)
-    elif "S+Aux+i".casefold() == topology.casefold():
-        _create_sauxi_topology(dyd_root, ns, validation_type, par_filename)
-    elif "M".casefold() == topology.casefold():
-        _create_m_topology(dyd_root, ns, validation_type, par_filename, n_generators)
-    elif "M+i".casefold() == topology.casefold():
-        _create_m_topology(dyd_root, ns, validation_type, par_filename, n_generators, has_i=True)
-    elif "M+Aux".casefold() == topology.casefold():
-        _create_m_topology(dyd_root, ns, validation_type, par_filename, n_generators, has_aux=True)
-    elif "M+Aux+i".casefold() == topology.casefold():
-        _create_m_topology(
-            dyd_root, ns, validation_type, par_filename, n_generators, has_aux=True, has_i=True
-        )
+    if zone == 1:
+        _layout(topology)
+        _create_zone1_topology(dyd_root, ns, validation_type, par_filename)
     else:
-        raise ValueError(
-            "Select one of the 8 available topologies:\n"
-            "  - S\n"
-            "  - S+i\n"
-            "  - S+Aux\n"
-            "  - S+Aux+i\n"
-            "  - M\n"
-            "  - M+i\n"
-            "  - M+Aux\n"
-            "  - M+Aux+i\n"
-        )
+        _create_zone3_topology(dyd_root, ns, validation_type, par_filename, topology)
 
     if remote_control:
-        for gen_id, gen_terminal in _plant_generators(validation_type, topology, n_generators):
+        for gen_id, gen_terminal in _plant_generators(validation_type, topology):
             _add_remote_control(dyd_root, ns, gen_id, gen_terminal)
 
     write_producer_dyd(dyd_root, target / filename)
@@ -454,7 +431,6 @@ def create_producer_dyd_file(
     target: Path,
     topology: str,
     template: str,
-    n_generators: int = 2,
 ) -> None:
     """Create a DYD file in target path with the selected topology.
 
@@ -471,9 +447,6 @@ def create_producer_dyd_file(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
-    n_generators: int
-        Number of generators for an ``M`` topology (one per ``Zone1<x>`` sheet); default 2. In the
-        model flow this yields ``Producer_G1..GN`` in ``Zone1`` and an ``M`` ``Zone3`` with N units.
     """
     if template.startswith("performance"):
         validation_type = PERFORMANCE_SM
@@ -481,27 +454,24 @@ def create_producer_dyd_file(
             validation_type = PERFORMANCE_PPM
         elif template == "performance_BESS":
             validation_type = PERFORMANCE_BESS
-        _create_producer_dyd_file(
-            target, "Producer.dyd", topology, validation_type, n_generators=n_generators
-        )
+        _create_producer_dyd_file(target, "Producer.dyd", topology, validation_type, 3)
 
     elif template.startswith("model"):
         validation_type = VALIDATION_PPM
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
         if topology.casefold().startswith("m"):
-            for i in range(1, n_generators + 1):
-                _create_producer_dyd_file(
-                    target / "Zone1", f"Producer_G{i}.dyd", "S", validation_type,
-                    remote_control=False,
-                )
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer_G1.dyd", "S", validation_type, 1, remote_control=False
+            )
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer_G2.dyd", "S", validation_type, 1, remote_control=False
+            )
         else:
             _create_producer_dyd_file(
-                target / "Zone1", "Producer.dyd", "S", validation_type, remote_control=False
+                target / "Zone1", "Producer.dyd", "S", validation_type, 1, remote_control=False
             )
-        _create_producer_dyd_file(
-            target / "Zone3", "Producer.dyd", topology, validation_type, n_generators=n_generators
-        )
+        _create_producer_dyd_file(target / "Zone3", "Producer.dyd", topology, validation_type, 3)
 
     else:
         raise ValueError("Unsupported template name")

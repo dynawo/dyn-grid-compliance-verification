@@ -469,6 +469,18 @@ def test_check_producer_params(monkeypatch):
         )
     assert "Unexpected nominal voltage" in pytest_wrapped_e.value.args[0]
 
+    # Zone 1 has no PDR: an out-of-list u_nom must not raise
+    parameter_checks.check_producer_params(
+        p_max_injection_pu=100.0, p_max_consumption_pu=50.0, u_nom=999, zone=1
+    )
+
+    # Zone 3 is the PDR: the check still applies there
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        parameter_checks.check_producer_params(
+            p_max_injection_pu=100.0, p_max_consumption_pu=50.0, u_nom=999, zone=3
+        )
+    assert "Unexpected nominal voltage" in pytest_wrapped_e.value.args[0]
+
 
 def test_check_simulation_duration():
     """Test check_simulation_duration function."""
@@ -541,3 +553,27 @@ def test_check_trafos():
 def test_check_internal_line_none():
     """Test check_internal_line with None line."""
     parameter_checks.check_internal_line(line=None)
+
+
+def _tap_changer(id: str) -> XfmrParams:
+    return XfmrParams(
+        id=id,
+        lib="TransformerRatioTapChanger",
+        r=0.0003,
+        x=0.0268,
+        b=0.0,
+        g=0.0,
+        r_tfo=1.0,
+        alpha_tfo=0.0,
+        par_id=id,
+        terminals=(
+            Terminal(connected_equipment=None),
+            Terminal(connected_equipment=None),
+        ),
+    )
+
+
+@pytest.mark.parametrize("xfmr_id", ["Main_Xfmr", "Group_Xfmr", "AuxLoad_Xfmr"])
+def test_check_trafo_accepts_a_tap_changer_on_any_transformer(xfmr_id):
+    """RTE allows either transformer model on any block of the topology."""
+    parameter_checks.check_trafo(_tap_changer(xfmr_id))
