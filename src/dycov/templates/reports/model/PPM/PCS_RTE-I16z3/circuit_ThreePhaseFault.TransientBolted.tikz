@@ -6,12 +6,13 @@
   font={\fontsize{7pt}{7}\selectfont}}
 \begin{document}
 \begin{tikzpicture}
-    \draw   (-0.5,1) to [vsourcesin] (0.3,1) to [draw,voosource,align=center] (2.0,1) to  (2.5,1) to  (2.5,0);
-    \draw   (-0.5,0) to [vsourcesin] (0.3,0) to [draw,voosource,align=center] (2.0,0) to [draw,voosource,align=center,l={Group\\ transf.}] (4.5,0) to  (4.0,0) to (5,0);
-    \draw   (-0.5,-1.5) to [vsourcesin] (0.3,-1.5) to [draw,voosource,align=center, l_={Machine\\ transformer}] (2.0,-1.5) to  (2.5,-1.5) to  (2.5,0);
-    \draw (2,2) to (2.4,2) to [draw,voosource,align=center] (3.9,2) to (3.9,0);
-    \node at (1.6,2.05) {Aux};
-    \draw[-{latex[length=1mm]}] (2,2) to (1.9,2);
+    \draw   (-0.5,1) to [vsourcesin] (0.3,1) to  (2.0,1) to  (2.0,0);
+    \draw   (-0.5,0) to [vsourcesin] (0.3,0) to  (2.0,0) to [draw,voosource,align=center,l={Main\\ transformer}] (4.5,0) to  (4.0,0) to (5,0);
+    \draw   (-0.5,-1.5) to [vsourcesin] (0.3,-1.5) to  (2.0,-1.5) to  (2.0,0);
+    \node at (1.75,1.35) {Int. bus};
+    \draw (0.1,2) to (0.5,2) to [draw,voosource,align=center] (2.0,2) to (2.0,1);
+    \node at (-0.25,2.05) {Aux};
+    \draw[-{latex[length=1mm]}] (0.1,2) to (0.0,2);
     \draw (5,-0.5) [L,l=3b]  to (6.5,-0.5);
     \draw (5,-1.5) [L,l=3b]  to (6.5,-1.5);
     \draw (5,1.5) [L,l=3b]  to (6.5,1.5);

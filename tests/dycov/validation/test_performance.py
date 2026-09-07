@@ -141,7 +141,7 @@ def _make_disconnection_model(gen_intline=True, auxload_xfmr=True):
     return DisconnectionModel(
         auxload=DummyElement("Aux_Load"),
         auxload_xfmr=DummyElement("AuxLoad_Xfmr") if auxload_xfmr else None,
-        stepup_xfmrs=["StepUp_Xfmr"],
+        connection_xfmrs=["Group_Xfmr", "Main_Xfmr"],
         gen_intline=DummyElement("Gen_IntLine") if gen_intline else None,
     )
 
@@ -774,8 +774,21 @@ def test_check_disconnections_without_generator_disconnections(monkeypatch, tmp_
     assert results["compliance"] is True
 
 
-def test_check_disconnections_of_a_stepup_transformer_fails(monkeypatch, tmp_path):
-    _patch_timeline(monkeypatch, ["StepUp_Xfmr"])
+def test_check_disconnections_of_a_group_transformer_fails(monkeypatch, tmp_path):
+    _patch_timeline(monkeypatch, ["Group_Xfmr"])
+    validator = _make_validator(validations=["no_disconnection_gen"])
+    validator._disconnection_model = _make_disconnection_model()
+    results = {"compliance": True}
+
+    validator._PerformanceValidator__check_disconnections(results, tmp_path, True)
+
+    assert results["no_disconnection_gen"] is False
+    assert results["compliance"] is False
+
+
+def test_check_disconnections_of_the_main_transformer_fails(monkeypatch, tmp_path):
+    """The main transformer connects the plant to the PDR, so losing it disconnects it."""
+    _patch_timeline(monkeypatch, ["Main_Xfmr"])
     validator = _make_validator(validations=["no_disconnection_gen"])
     validator._disconnection_model = _make_disconnection_model()
     results = {"compliance": True}
@@ -806,7 +819,7 @@ def test_check_disconnections_of_an_unrelated_model_is_compliant(monkeypatch, tm
 
     validator._PerformanceValidator__check_disconnections(results, tmp_path, True)
 
-    # Only the generator internal line and the step-up transformers break the compliance.
+    # Only the producer's connection equipment breaks the compliance.
     assert results["no_disconnection_gen"] is True
     assert results["compliance"] is True
 

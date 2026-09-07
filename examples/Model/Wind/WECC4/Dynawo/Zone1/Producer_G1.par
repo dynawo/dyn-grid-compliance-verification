@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
@@ -6,9 +6,10 @@
     <par type="BOOL" name="WT4A_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT4A_BLvTrPu" value="0"/>
     <par type="DOUBLE" name="WT4A_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0.015"/> <!-- not used for zone 1 when ConverterLVControl=true -->
-    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0.06"/> <!-- not used for zone 1 when ConverterLVControl=true -->
-
+    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0.015"/>
+    <!-- not used for zone 1 when ConverterLVControl=true -->
+    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0.06"/>
+    <!-- not used for zone 1 when ConverterLVControl=true -->
     <!-- Electrical Control REEC -->
     <par type="BOOL" name="WT4A_PfFlag" value="false"/>
     <par type="BOOL" name="WT4A_PQFlag" value="false"/>
@@ -44,7 +45,6 @@
     <par type="DOUBLE" name="WT4A_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WT4A_VRef0Pu" value="1"/>
     <par type="DOUBLE" name="WT4A_VUpPu" value="1.35"/>
-
     <!-- Electrical Control REECa -->
     <par type="DOUBLE" name="WT4A_VDLIp11" value="1.1"/>
     <par type="DOUBLE" name="WT4A_VDLIp12" value="1.1"/>
@@ -67,48 +67,37 @@
     <par type="DOUBLE" name="WT4A_IqFrzPu" value="0"/>
     <par type="BOOL" name="WT4A_PFlag" value="false"/>
     <par type="DOUBLE" name="WT4A_VRef1Pu" value="0"/>
-
     <!-- Generator Converter REGC -->
     <par type="DOUBLE" name="WT4A_IqrMaxPu" value="20"/>
     <par type="DOUBLE" name="WT4A_IqrMinPu" value="-20"/>
     <par type="DOUBLE" name="WT4A_RrpwrPu" value="10"/>
     <par type="DOUBLE" name="WT4A_tFilterGC" value="0.02"/>
-
     <!-- Generator Converter REGCa -->
     <par type="DOUBLE" name="WT4A_tG" value="0.02"/>
     <par type="BOOL" name="WT4A_Lvplsw" value="false"/>
     <par type="DOUBLE" name="WT4A_zerox" value="0.1"/>
     <par type="DOUBLE" name="WT4A_brkpt" value="0.05"/>
     <par type="DOUBLE" name="WT4A_lvpl1" value="1.22"/>
-
     <!-- PLL Control -->
     <par type="DOUBLE" name="WT4A_KiPLL" value="20"/>
     <par type="DOUBLE" name="WT4A_KpPLL" value="3"/>
     <par type="DOUBLE" name="WT4A_OmegaMaxPu" value="1.5"/>
     <par type="DOUBLE" name="WT4A_OmegaMinPu" value="0.5"/>
-
     <!-- Drive Train Control -->
     <par type="DOUBLE" name="WT4A_Ht" value="5"/>
     <par type="DOUBLE" name="WT4A_Hg" value="1"/>
     <par type="DOUBLE" name="WT4A_Dshaft" value="1.5"/>
     <par type="DOUBLE" name="WT4A_Kshaft" value="200"/>
-
     <!-- General -->
     <par type="DOUBLE" name="WT4A_SNom" value="4"/>
-</set>
- 
- <!-- tfo -->
-  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
-    <par type="DOUBLE" name="transformer_SNom" value="4"/>
+  </set>
+  <!-- tfo -->
+  <set id="Group_Xfmr">
+    <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
-    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
-    <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
-    <par type="INT" name="transformer_NbTap" value="21"/>
-    <par type="INT" name="transformer_Tap0" value="10"/>
+    <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
 </parametersSet>

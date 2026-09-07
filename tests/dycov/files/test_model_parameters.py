@@ -81,12 +81,12 @@ def test_no_matching_equipment_models(tmp_path):
 
     result = model_parameters.get_producer_values(dyd_path, par_path, ini_file, s_nref=90.0)
 
-    generators, stepup_xfmrs, aux_load, auxload_xfmr, ppm_xfmr, intline = result
+    generators, group_xfmrs, aux_load, auxload_xfmr, main_xfmr, intline = result
     assert generators == []
-    assert stepup_xfmrs == []
+    assert group_xfmrs == []
     assert aux_load is None
     assert auxload_xfmr is None
-    assert ppm_xfmr is None
+    assert main_xfmr is None
     assert intline is None
 
 
@@ -585,8 +585,8 @@ def test_find_output_dir(tmp_path):
     assert res == "outdir"
 
 
-def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
-    """A generator without a step-up transformer must still get its init written.
+def test_adjust_producer_init_without_group_xfmr(tmp_path, monkeypatch):
+    """A generator without a group transformer must still get its init written.
 
     Regression for the S/ConverterLVControl=False topology: with an empty xfmrs
     list the generator must not be skipped (the transformer step is simply not
@@ -631,6 +631,7 @@ def test_adjust_producer_init_without_stepup(tmp_path, monkeypatch):
         producer_par,
         [gen],
         [],
+        None,
         None,
         None,
         "USetpoint",
@@ -772,3 +773,35 @@ def test_append_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
     model_parameters._append_generator(dyd_root, par_root, model_parameter, generators)
 
     assert generators[0].ppc_local is True
+
+
+def _xfmr(id: str) -> SimpleNamespace:
+    return SimpleNamespace(id=id)
+
+
+def test_classify_transformers_routes_each_id_to_its_role():
+    group = _xfmr("Group_Xfmr")
+    auxload = _xfmr("AuxLoad_Xfmr")
+    main = _xfmr("Main_Xfmr")
+
+    by_role = model_parameters._classify_transformers([main, auxload, group])
+
+    assert by_role[model_parameters.GROUP_XFMR_ROLE] == [group]
+    assert by_role[model_parameters.AUXLOAD_XFMR_ROLE] == [auxload]
+    assert by_role[model_parameters.MAIN_XFMR_ROLE] == [main]
+
+
+def test_classify_transformers_rejects_the_pre_catalog_unit_id():
+    """A pre-catalog StepUp_Xfmr has no role: it is not the Zone-1 group transformer."""
+    with pytest.raises(ValueError) as excinfo:
+        model_parameters._classify_transformers([_xfmr("StepUp_Xfmr_1")])
+
+    assert "StepUp_Xfmr_1" in str(excinfo.value)
+
+
+def test_classify_transformers_rejects_an_unknown_id():
+    with pytest.raises(ValueError) as excinfo:
+        model_parameters._classify_transformers([_xfmr("Some_Xfmr")])
+
+    assert "Some_Xfmr" in str(excinfo.value)
+    assert "Group_Xfmr" in str(excinfo.value)
