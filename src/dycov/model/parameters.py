@@ -199,7 +199,7 @@ class DisconnectionModel:
 
     auxload: object
     auxload_xfmr: object
-    stepup_xfmrs: object
+    connection_xfmrs: object
     gen_intline: object
 
 

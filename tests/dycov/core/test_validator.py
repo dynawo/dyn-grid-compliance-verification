@@ -75,7 +75,9 @@ class DummyCurvesManager:
         self._disconnection_model = (
             disconnection_model
             if disconnection_model is not None
-            else DisconnectionModel(auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[])
+            else DisconnectionModel(
+                auxload=[], auxload_xfmr=[], connection_xfmrs=[], gen_intline=[]
+            )
         )
         self._setpoint_variation = setpoint_variation
         self._calculated_curves = (
@@ -228,7 +230,7 @@ def test_set_disconnection_model():
         bm_name="BM",
     )
     dm = DisconnectionModel(
-        auxload=["a"], auxload_xfmr=["b"], stepup_xfmrs=["c"], gen_intline=["d"]
+        auxload=["a"], auxload_xfmr=["b"], connection_xfmrs=["c"], gen_intline=["d"]
     )
     validator.set_disconnection_model(dm)
     assert validator._disconnection_model == dm
@@ -272,7 +274,7 @@ def test_complete_producer_sets_all_attributes():
             time_cct=2.5,
             generators_imax={"g1": 10.0},
             disconnection_model=DisconnectionModel(
-                auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
+                auxload=[1], auxload_xfmr=[2], connection_xfmrs=[3], gen_intline=[4]
             ),
             setpoint_variation=0.99,
         )
@@ -295,7 +297,7 @@ def test_complete_producer_sets_all_attributes():
         assert validator._time_cct == 2.5
         assert validator._generators_imax == {"g1": 10.0}
         assert validator._disconnection_model == DisconnectionModel(
-            auxload=[1], auxload_xfmr=[2], stepup_xfmrs=[3], gen_intline=[4]
+            auxload=[1], auxload_xfmr=[2], connection_xfmrs=[3], gen_intline=[4]
         )
         assert validator._setpoint_variation == 0.99
 
@@ -357,7 +359,7 @@ def test_complete_producer_handles_missing_optional_producer():
         curves_manager = DummyCurvesManager(
             generators_imax={"g2": 20.0},
             disconnection_model=DisconnectionModel(
-                auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
+                auxload=[], auxload_xfmr=[], connection_xfmrs=[], gen_intline=[]
             ),
             setpoint_variation=0.0,
         )
@@ -381,7 +383,7 @@ def test_complete_producer_handles_missing_optional_producer():
         assert validator._time_cct is None
         assert validator._generators_imax == {"g2": 20.0}
         assert validator._disconnection_model == DisconnectionModel(
-            auxload=[], auxload_xfmr=[], stepup_xfmrs=[], gen_intline=[]
+            auxload=[], auxload_xfmr=[], connection_xfmrs=[], gen_intline=[]
         )
         assert validator._setpoint_variation == 0.0
 

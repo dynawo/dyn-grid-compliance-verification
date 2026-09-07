@@ -91,6 +91,23 @@ def write_pdr_comment(path: Path, par_file: str, pdr: PdrParams) -> None:
     par_tree.write(par_path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
 
+def find_bbmodels(producer_dyd_root: etree.Element) -> list:
+    """Gets every blackbox model declared in the producer model.
+
+    Parameters
+    ----------
+    producer_dyd_root: Element
+        Root of the producer model
+
+    Returns
+    -------
+    list
+        All the blackbox models in the producer model
+    """
+    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
+    return producer_dyd_root.xpath("//ns:blackBoxModel", namespaces=nsmap)
+
+
 def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> list:
     """Gets the blackbox models of the producer model by type of equipment.
 
@@ -105,13 +122,7 @@ def find_bbmodel_by_type(producer_dyd_root: etree.Element, model_type: str) -> l
     list
         All the blackbox models in the producer model
     """
-    bbmodels = []
-    nsmap = {"ns": etree.QName(producer_dyd_root).namespace}
-    for bbmodel in producer_dyd_root.xpath("//ns:blackBoxModel", namespaces=nsmap):
-        if model_type == bbmodel.get("lib"):
-            bbmodels.append(bbmodel)
-
-    return bbmodels
+    return [b for b in find_bbmodels(producer_dyd_root) if model_type == b.get("lib")]
 
 
 def get_connected_to_pdr(producer_dyd: Path) -> list:
@@ -139,6 +150,52 @@ def get_connected_to_pdr(producer_dyd: Path) -> list:
             connected_to_pdr.append(PdrEquipments(connect.get("id1"), connect.get("var1")))
 
     return connected_to_pdr
+
+
+GROUP_XFMR_ROLE = "Group_Xfmr"
+AUXLOAD_XFMR_ROLE = "AuxLoad_Xfmr"
+MAIN_XFMR_ROLE = "Main_Xfmr"
+XFMR_ROLES = (GROUP_XFMR_ROLE, AUXLOAD_XFMR_ROLE, MAIN_XFMR_ROLE)
+
+
+def _classify_transformers(transformers: list) -> dict[str, list]:
+    """Groups the producer transformers by the role their id declares.
+
+    Parameters
+    ----------
+    transformers: list
+        Transformers read from the producer model
+
+    Returns
+    -------
+    dict
+        Transformers of the producer model, keyed by role
+
+    Raises
+    ------
+    ValueError
+        If a transformer id matches no known role
+    """
+    by_role = {role: [] for role in XFMR_ROLES}
+    for transformer in transformers:
+        role = role_of(transformer.id)
+        if role is None:
+            raise ValueError(
+                f"Unexpected transformer id '{transformer.id}': the producer's transformers "
+                f"must be named after their role in the topology ({', '.join(XFMR_ROLES)})."
+            )
+        by_role[role].append(transformer)
+
+    return by_role
+
+
+def role_of(transformer_id: str) -> Optional[str]:
+    """Returns the topology role the given transformer id declares, or None if unknown."""
+    return next((role for role in XFMR_ROLES if role in transformer_id), None)
+
+
+def _single(transformers: list):
+    return transformers[0] if transformers else None
 
 
 def get_producer_values(
@@ -188,16 +245,10 @@ def get_producer_values(
     loads = _get_load_values(producer_dyd_root, producer_par_root)
     lines = _get_line_values(producer_dyd_root, producer_par_root, None, None)
 
-    stepup_xfmrs = []
-    auxload_xfmr = None
-    ppm_xfmr = None
-    for transformer in transformers:
-        if "StepUp_Xfmr" in transformer.id:
-            stepup_xfmrs.append(transformer)
-        elif "AuxLoad_Xfmr" in transformer.id:
-            auxload_xfmr = transformer
-        elif "Main_Xfmr" in transformer.id:
-            ppm_xfmr = transformer
+    by_role = _classify_transformers(transformers)
+    group_xfmrs = by_role[GROUP_XFMR_ROLE]
+    auxload_xfmr = _single(by_role[AUXLOAD_XFMR_ROLE])
+    main_xfmr = _single(by_role[MAIN_XFMR_ROLE])
 
     aux_load = None
     if len(loads) > 0:
@@ -209,10 +260,10 @@ def get_producer_values(
 
     return (
         generators,
-        stepup_xfmrs,
+        group_xfmrs,
         aux_load,
         auxload_xfmr,
-        ppm_xfmr,
+        main_xfmr,
         intline,
     )
 
@@ -624,6 +675,7 @@ def adjust_producer_init(
     generators: list,
     xfmrs: list,
     aux_load: LoadParams,
+    main_xfmr: XfmrParams,
     pdr: PdrParams,
     generator_control_mode: str,
     force_voltage_droop: bool,
@@ -643,6 +695,8 @@ def adjust_producer_init(
         Parameters for the transformers
     aux_load: LoadParams
         Initial values to the producer's auxiliary load
+    main_xfmr: XfmrParams
+        Initial values to the producer's main transformer
     pdr: PdrParams
         PDR parameters
     generator_control_mode: str
@@ -660,6 +714,8 @@ def adjust_producer_init(
 
     producer_par_tree = etree.parse(producer_par, etree.XMLParser(remove_blank_text=True))
     producer_par_root = producer_par_tree.getroot()
+
+    _adjust_series_transformer(producer_par_root, main_xfmr)
 
     is_test_applicable = True
     for generator, xfmr in zip_longest(generators, xfmrs):
@@ -1121,6 +1177,26 @@ def _resolve_value(raw, sign):
         return float(raw) * sign
     except (ValueError, TypeError):
         return raw
+
+
+def _adjust_series_transformer(producer_par_root, xfmr: XfmrParams) -> None:
+    """Writes the init values of a transformer in series with the PDR, if there is one.
+
+    A ratio tap changer needs the flow and both terminal voltages it starts from, and
+    init_calcs has already recorded them on the transformer's terminals.
+    """
+    if xfmr is None:
+        return
+
+    _adjust_transformer(
+        producer_par_root,
+        xfmr,
+        xfmr.terminals[0].p0,
+        xfmr.terminals[0].q0,
+        xfmr.terminals[0].u0,
+        xfmr.terminals[0].u_phase0,
+        xfmr.terminals[1].u0,
+    )
 
 
 def _adjust_transformer(

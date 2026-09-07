@@ -5,7 +5,7 @@
   font={\fontsize{7pt}{7}\selectfont}}
 \begin{document}
 \begin{tikzpicture}
-    \BLOCK{ if hasstepup }
+    \BLOCK{ if hasgroupxfmr }
     \draw   (0.2,0) to [vsourcesin,l_=Group] (1,0)
     to [draw,voosource,align=center,l_={Group\\ transformer}] (5,0)
     to [generic,l=Zc] (6.5,0) to (6.5,0)

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
   <!-- Unit parameters -->
   <set id="Wind_Turbine">
@@ -65,7 +65,8 @@
     <par type="DOUBLE" name="WT_fOverPu" value="1.1"/>
     <par type="DOUBLE" name="WT_fUnderPu" value="0.9"/>
     <par type="DOUBLE" name="WT_UOverPu" value="1.1"/>
-    <par type="DOUBLE" name="WT_UUnderPu" value="0"/> <!-- We disable under voltage limit to avoid protection tripping -->
+    <par type="DOUBLE" name="WT_UUnderPu" value="0"/>
+    <!-- We disable under voltage limit to avoid protection tripping -->
     <!-- UfMeasurement -->
     <par type="DOUBLE" name="WT_tphiFilt" value="0.02"/>
     <par type="BOOL" name="WT_Mzc" value="false"/>
@@ -76,19 +77,13 @@
     <par type="DOUBLE" name="WT_SNom" value="4"/>
     <par type="DOUBLE" name="WT_tS" value="0.001"/>
   </set>
- 
- <!-- tfo -->
-  <set id="StepUp_Xfmr"> <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
-    <par type="DOUBLE" name="transformer_SNom" value="4"/>
+  <!-- tfo -->
+  <set id="Group_Xfmr">
+    <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
     <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
-    <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
-    <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
-    <par type="INT" name="transformer_NbTap" value="21"/>
-    <par type="INT" name="transformer_Tap0" value="10"/>
+    <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
 </parametersSet>
