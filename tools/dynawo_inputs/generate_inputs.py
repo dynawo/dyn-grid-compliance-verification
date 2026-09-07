@@ -70,8 +70,8 @@ def converter_par_set(
     s_nom,
     plant_model: bool = False,
 ) -> tuple:
-    """Converter ``set``: prefixed control params, ``ConverterLVControl``, the internal ``LvTr``
-    (``RLvTrPu``/``XLvTrPu`` from ``Z_cc_LvTr``; the model has no B/G), and ``SNom``.
+    """Converter ``set``: prefixed control params, ``ConverterLVControl``, the model's own
+    transformer (``RLvTrPu``/``XLvTrPu``, no B/G) and ``SNom``.
 
     *plant_model* adds ``PPCLocal``, defined by the Zone3 plant models and by no turbine one; it
     has no template row and is always ``false`` (RTE's decision).
@@ -87,11 +87,13 @@ def converter_par_set(
         {"name": f"{prefix}ConverterLVControl", "type": "BOOL",
          "value": str(lv_control).lower(), "comments": ["LV Transformer"]}
     )
-    # The model reads these on its own SNom, so Z_cc_LvTr (base SnZone1) needs no rebase: it is
-    # already the right pu in Zone1, and in Zone3 aggregating N transformers in parallel onto
-    # SnZone3 = N x SnZone1 gives back the same number.
+    # The group transformer is the only one the workbook describes for the unit, and the model
+    # reads it on its own SNom, so Z_cc_TG (base SnZone1) needs no rebase: it is already the right
+    # pu in Zone1, and in Zone3 aggregating N of them onto SnZone3 = N x SnZone1 gives the same
+    # number. In Zone1 with ConverterLVControl=True the model zeroes this branch and the external
+    # block carries the transformer instead.
     r_pu, x_pu = el.short_circuit_rx(
-        _f(zone1["Z_cc_LvTr"]), _f(zone1["R_cc_LvTr / X_cc_LvTr"])
+        _f(zone1["Z_cc_TG"]), _f(zone1["R_cc_TG / X_cc_TG"])
     )
     params += [
         {"name": f"{prefix}RLvTrPu", "type": "DOUBLE", "value": r_pu},
