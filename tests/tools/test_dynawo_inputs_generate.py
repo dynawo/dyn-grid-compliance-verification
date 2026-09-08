@@ -27,7 +27,8 @@ from workbooks import GENERAL, ZONE3_ROWS, make_workbook, variant_sheet
 
 def test_submodel_report_lists_general_blocks_present_and_missing():
     resolved = {
-        "zone3_lib": "PhotovoltaicsWeccCurrentSource", "zone3_prefix": "photovoltaics_",
+        "zone3_lib": "PhotovoltaicsWeccCurrentSource",
+        "zone3_prefix": "photovoltaics_",
         "zone1_lib": "PhotovoltaicsWeccCurrentSourceNoPlantControl",
         "zone1_prefix": "photovoltaics_",
     }
@@ -48,8 +49,12 @@ def test_submodel_report_lists_general_blocks_present_and_missing():
 
 def test_reference_curves_report_names_what_is_still_missing():
     report = G._reference_curves_report(
-        {"target": Path("/out/ReferenceCurves/Producer"), "tests": 3, "copied": 2,
-         "missing": ["rise.csv"]}
+        {
+            "target": Path("/out/ReferenceCurves/Producer"),
+            "tests": 3,
+            "copied": 2,
+            "missing": ["rise.csv"],
+        }
     )
 
     assert "tests described : 3" in report
@@ -122,9 +127,12 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     assert "photovoltaics_Kqp" in names
     # Zone3's external transformer is the plant's main one: Z_cc_TP with its tap block, the group
     # transformer living inside the generator's model.
-    main_xfmr = {p.get("name"): p.get("value")
-                 for s in par_root.iterfind(f"{{{ns}}}set") if s.get("id") == "Main_Xfmr"
-                 for p in s.iter(f"{{{ns}}}par")}
+    main_xfmr = {
+        p.get("name"): p.get("value")
+        for s in par_root.iterfind(f"{{{ns}}}set")
+        if s.get("id") == "Main_Xfmr"
+        for p in s.iter(f"{{{ns}}}par")
+    }
     assert main_xfmr["transformer_NbTap"] == "21" and main_xfmr["transformer_Tap0"] == "10"
     assert main_xfmr["transformer_XPu"] == "0.18"  # Z_cc_TP reactive, SnZone3 = 100 = SnRef
     assert "transformer_rTfoPu" not in main_xfmr

@@ -26,7 +26,12 @@ def _write(tmp_path, zone1, zone3, gen_id="PV_Array", include_consumption=False)
     for zone in ("Zone1", "Zone3"):
         (tmp_path / zone).mkdir(exist_ok=True)
     ini.write_ini(
-        tmp_path, "Producer", "S+Aux", zone1, zone3, gen_id,
+        tmp_path,
+        "Producer",
+        "S+Aux",
+        zone1,
+        zone3,
+        gen_id,
         include_consumption=include_consumption,
     )
     return _read(tmp_path / "Zone1" / "Producer.ini"), _read(tmp_path / "Zone3" / "Producer.ini")

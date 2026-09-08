@@ -40,7 +40,8 @@ def test_checked_topology_refuses_an_unknown_string(zone3):
 
 def test_write_dyd_fills_the_resolved_libs_and_terminals(tmp_path):
     resolved = {
-        "zone3_lib": "PhotovoltaicsWeccCurrentSource", "zone3_prefix": "photovoltaics_",
+        "zone3_lib": "PhotovoltaicsWeccCurrentSource",
+        "zone3_prefix": "photovoltaics_",
         "zone1_lib": "PhotovoltaicsWeccCurrentSourceNoPlantControl",
         "zone1_prefix": "photovoltaics_",
     }
@@ -48,7 +49,12 @@ def test_write_dyd_fills_the_resolved_libs_and_terminals(tmp_path):
         (tmp_path / zone).mkdir()
 
     dyd.write_dyd(
-        tmp_path, "Producer", "S+Aux", "model_PPM", resolved, "PV_Array",
+        tmp_path,
+        "Producer",
+        "S+Aux",
+        "model_PPM",
+        resolved,
+        "PV_Array",
         rename={PPM_ID: "PV_Array"},
     )
 

@@ -23,30 +23,77 @@ if str(_TOOL_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOL_DIR))
 
 ZONE1_ROWS = {
-    "SnZone1": "100", "Z_cc_TG": "0.1", "R_cc_TG / X_cc_TG": "0", "ConverterLVControl": "True",
-    "r_TG": "1", "Un1": "33", "Un2": "0.7", "Pmax_injection_z1": "1", "Pmax_soutirage_z1": "0",
-    "Qmax_z1": "0.4", "Qmin_z1": "-0.4", "P_share": "1", "Q_share": "1",
+    "SnZone1": "100",
+    "Z_cc_TG": "0.1",
+    "R_cc_TG / X_cc_TG": "0",
+    "ConverterLVControl": "True",
+    "r_TG": "1",
+    "Un1": "33",
+    "Un2": "0.7",
+    "Pmax_injection_z1": "1",
+    "Pmax_soutirage_z1": "0",
+    "Qmax_z1": "0.4",
+    "Qmin_z1": "-0.4",
+    "P_share": "1",
+    "Q_share": "1",
 }
 ZONE3_ROWS = {
-    "SnZone3": "100", "Topologie": "S+Aux+i", "Un_PDR": "63", "Pmax_injection_PDR": "90",
-    "Pmax_soutirage_PDR": "0", "Qmax_PDR": "30", "Qmin_PDR": "-30", "Z_cc_TP": "0.18",
-    "R_cc_TP / X_cc_TP": "0", "N_prises": "20", "r_min": "0.9", "r_max": "1.1", "Un1": "33",
-    "Sn_A": "2", "r_TA": "1", "Z_cc_TA": "0.1", "R_cc_TA / X_cc_TA": "0", "P_A": "1", "Q_A": "0.5",
-    "alpha": "1.5", "beta": "2.5", "R_rc": "0.2", "X_rc": "1", "B_rc": "0", "G_rc": "0",
+    "SnZone3": "100",
+    "Topologie": "S+Aux+i",
+    "Un_PDR": "63",
+    "Pmax_injection_PDR": "90",
+    "Pmax_soutirage_PDR": "0",
+    "Qmax_PDR": "30",
+    "Qmin_PDR": "-30",
+    "Z_cc_TP": "0.18",
+    "R_cc_TP / X_cc_TP": "0",
+    "N_prises": "20",
+    "r_min": "0.9",
+    "r_max": "1.1",
+    "Un1": "33",
+    "Sn_A": "2",
+    "r_TA": "1",
+    "Z_cc_TA": "0.1",
+    "R_cc_TA / X_cc_TA": "0",
+    "P_A": "1",
+    "Q_A": "0.5",
+    "alpha": "1.5",
+    "beta": "2.5",
+    "R_rc": "0.2",
+    "X_rc": "1",
+    "B_rc": "0",
+    "G_rc": "0",
 }
 
 GENERAL = [
-    ["Type de bloc", "Choix", "Zone", None, "Combinaison sélectionnée (clé Model Map)",
-     "Zone3 lib", "Zone3 prefix", "Zone1 lib", "Zone1 prefix"],
+    [
+        "Type de bloc",
+        "Choix",
+        "Zone",
+        None,
+        "Combinaison sélectionnée (clé Model Map)",
+        "Zone3 lib",
+        "Zone3 prefix",
+        "Zone1 lib",
+        "Zone1 prefix",
+    ],
     ["REPC", "REPC_A", "Zone3", None, "REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"],
-    ["REEC", "REEC_B", "Zone1;Zone3"], ["REGC", "REGC_A", "Zone1;Zone3"],
-    ["WTGT", "Aucun", "Zone1;Zone3"], ["WTGP", "Aucun", "Zone1;Zone3"],
-    ["WTGA", "Aucun", "Zone1;Zone3"], ["WTGQ", "Aucun", "Zone1;Zone3"],
+    ["REEC", "REEC_B", "Zone1;Zone3"],
+    ["REGC", "REGC_A", "Zone1;Zone3"],
+    ["WTGT", "Aucun", "Zone1;Zone3"],
+    ["WTGP", "Aucun", "Zone1;Zone3"],
+    ["WTGA", "Aucun", "Zone1;Zone3"],
+    ["WTGQ", "Aucun", "Zone1;Zone3"],
 ]
 MODEL_MAP = [
     ["Key", "Zone3_lib", "Zone3_prefix", "Zone1_lib", "Zone1_prefix"],
-    ["REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun", "PhotovoltaicsWeccCurrentSource", "photovoltaics_",
-     "PhotovoltaicsWeccCurrentSourceNoPlantControl", "photovoltaics_"],
+    [
+        "REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun",
+        "PhotovoltaicsWeccCurrentSource",
+        "photovoltaics_",
+        "PhotovoltaicsWeccCurrentSourceNoPlantControl",
+        "photovoltaics_",
+    ],
 ]
 
 
@@ -61,8 +108,10 @@ def make_workbook() -> dict:
     """The synthetic workbook ``generate`` reads, as ``{sheet -> grid}``."""
     zone1_grid = [["intro"], ["Paramètres", "Descriptions", "Valeurs", "Unités", "Commentaires"]]
     zone1_grid += [[k, "d", v, "u", "c"] for k, v in ZONE1_ROWS.items()]
-    zone3_grid = [["defs"],
-                  ["Catégorie", "Paramètres", "Descriptions", "Valeurs", "Unités", "Cmt"]]
+    zone3_grid = [
+        ["defs"],
+        ["Catégorie", "Paramètres", "Descriptions", "Valeurs", "Unités", "Cmt"],
+    ]
     zone3_grid += [["cat", k, "d", v, "u", "c"] for k, v in ZONE3_ROWS.items()]
     return {
         "Général": GENERAL,

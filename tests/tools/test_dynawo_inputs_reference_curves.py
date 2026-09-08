@@ -18,8 +18,17 @@ import signals as sig
 from reference_curves import curves_files, dicts
 
 _SIGNALS_HEADER = ["Grandeur", "Unité", "Variable associée dans les .csv", "Nom DyCoV"]
-_TESTS_HEADER = [None, None, None, None, None, None, "Fichier de résultats .csv", None,
-                 "Test DyCoV"]
+_TESTS_HEADER = [
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    "Fichier de résultats .csv",
+    None,
+    "Test DyCoV",
+]
 
 
 FOLDER_LABEL = "Dossier de résultats pour les courbes de références"
@@ -29,8 +38,18 @@ def _sheet(curves: list, tests: list, folder: str | None = "/curves") -> list:
     """A signal sheet: the signals table, the folder cell and the tests table."""
     grid = [["title"], _SIGNALS_HEADER]
     grid += [[label, "pu", column, name] for label, name, column in curves]
-    grid += [[None], ["Dossier de résultats pour les courbes de références", None, None, None,
-                      None, None, None]]
+    grid += [
+        [None],
+        [
+            "Dossier de résultats pour les courbes de références",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ],
+    ]
     grid += [[folder]] if folder else [[None]]
     grid += [[None], list(_TESTS_HEADER)]
     for name, file in tests:
@@ -61,8 +80,10 @@ def test_parse_zone_signals_reads_curves_tests_and_folder():
 
     parsed = sig.parse_zone_signals(book, "Zone1")
 
-    assert parsed.curves == {"InternalNode1_BUS_Voltage": "U1",
-                             "InternalNode1_BUS_ActiveCurrent": "Ip1"}
+    assert parsed.curves == {
+        "InternalNode1_BUS_Voltage": "U1",
+        "InternalNode1_BUS_ActiveCurrent": "Ip1",
+    }
     assert [(t.name, t.curves_file) for t in parsed.tests] == [
         ("PCS_RTE-I16z1.SetPointStep.Active", "step_active.csv")
     ]
@@ -108,9 +129,12 @@ def test_a_sheet_with_no_tests_table_describes_nothing():
 
 def test_curves_files_text_lists_every_test_and_one_dictionary_per_zone():
     parsed = sig.parse_signals(
-        _workbook(ZONE1_CURVES, ZONE1_TESTS,
-                  [("Tension au PDR", "BusPDR_BUS_Voltage", "U")],
-                  [("PCS_RTE-I16z3.PSetPointStep.Inc40", "p_inc40.csv")])
+        _workbook(
+            ZONE1_CURVES,
+            ZONE1_TESTS,
+            [("Tension au PDR", "BusPDR_BUS_Voltage", "U")],
+            [("PCS_RTE-I16z3.PSetPointStep.Inc40", "p_inc40.csv")],
+        )
     )
 
     text = curves_files.text(parsed)
