@@ -89,3 +89,36 @@ def test_load_pu_matches_reference_example():
     p_ref, q_ref = el.load_pu(1.0, 0.5)
     assert p_ref == pytest.approx(0.01)
     assert q_ref == pytest.approx(0.005)
+
+
+def test_transformer_taps_starting_tap_from_tap_0():
+    taps = el.transformer_taps(20, 0.9, 1.1, tap_0=15)
+
+    assert (taps["Tap0"], taps["RatioTfo0Pu"]) == (15, pytest.approx(1.05))
+
+
+def test_transformer_taps_starting_tap_derived_from_the_ratio():
+    taps = el.transformer_taps(20, 0.9, 1.1, r_0=1.05)
+
+    assert (taps["Tap0"], taps["RatioTfo0Pu"]) == (15, pytest.approx(1.05))
+
+
+def test_transformer_taps_accepts_both_rows_when_they_agree():
+    taps = el.transformer_taps(20, 0.9, 1.1, tap_0=15, r_0=1.05)
+
+    assert taps["Tap0"] == 15
+
+
+def test_transformer_taps_rejects_rows_that_disagree():
+    with pytest.raises(ValueError, match="'Tap_0' .* and 'r_0' .* disagree"):
+        el.transformer_taps(20, 0.9, 1.1, tap_0=15, r_0=1.0)
+
+
+def test_transformer_taps_rejects_a_ratio_between_two_taps():
+    with pytest.raises(ValueError, match="is not on a tap"):
+        el.transformer_taps(20, 0.9, 1.1, r_0=1.0501)
+
+
+def test_transformer_taps_rejects_a_tap_outside_the_range():
+    with pytest.raises(ValueError, match="outside 0..N_prises"):
+        el.transformer_taps(20, 0.9, 1.1, tap_0=21)

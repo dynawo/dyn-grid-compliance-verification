@@ -131,7 +131,10 @@ def main_transformer_par_set(par_id: str, zone3: dict) -> tuple:
     r_pu, x_pu = el.transformer_impedance(
         number("Z_cc_TP"), number("R_cc_TP / X_cc_TP"), s_nom
     )
-    taps = el.transformer_taps(int(number("N_prises")), number("r_min"), number("r_max"))
+    taps = el.transformer_taps(
+         int(number("N_prises")), number("r_min"), number("r_max"),
+         tap_0=P.zone_optional_number(zone3, "Tap_0"), r_0=P.zone_optional_number(zone3, "r_0"),
+     )
     params = [
         {"name": "transformer_SNom", "type": "DOUBLE", "value": s_nom,
          "comments": [PU_BASE_NOTE]},
@@ -375,20 +378,24 @@ def generate(excel: Path, outdir: Path) -> str:
     # u_nom_at_PDR is the nominal voltage of the node the zone connects at: Un1 for Zone1, whose
     # node is internal to the plant and free of the DTR's level list (dycov#477), and Un_PDR for
     # Zone3, the actual connection point.
-    write_producer_ini_file(
-        root / "Zone1", "Producer.ini", "S",
-        values={"p_max_injection_at_PDR": z1_value("Pmax_injection_z1"),
-                "u_nom_at_PDR": z1_value("Un1"),
-                "q_max_at_PDR": z1_value("Qmax_z1"),
-                "q_min_at_PDR": z1_value("Qmin_z1")},
-        gen_sharing=sharing,
-    )
-    z3_values = {"p_max_injection_at_PDR": z3_value("Pmax_PDR"),
+    z1_values = {"p_max_injection_at_PDR": z1_value("Pmax_injection_z1"),
+                 "u_nom_at_PDR": z1_value("Un1"),
+                 "q_max_at_PDR": z1_value("Qmax_z1"),
+                 "q_min_at_PDR": z1_value("Qmin_z1")}
+    z3_values = {"p_max_injection_at_PDR": z3_value("Pmax_injection_PDR"),
                  "u_nom_at_PDR": z3_value("Un_PDR"),
                  "q_max_at_PDR": z3_value("Qmax_PDR"),
                  "q_min_at_PDR": z3_value("Qmin_PDR")}
     if include_consumption:
-        z3_values["p_max_consumption_at_PDR"] = zone1.get("Pmax_soutirage_z1", "")
+        # BESS declares the consumption limit in both zones, and DyCoV rejects an INI without it.
+        # Zone3 prefers its own row when the template has one (the Zone1a row is per unit).
+        z1_values["p_max_consumption_at_PDR"] = z1_value("Pmax_soutirage_z1")
+        z3_values["p_max_consumption_at_PDR"] = z3_value("Pmax_soutirage_PDR")
+    write_producer_ini_file(
+        root / "Zone1", "Producer.ini", "S", z1_values,
+        gen_sharing=sharing,
+        include_consumption=include_consumption,
+    )
     write_producer_ini_file(
         root / "Zone3", "Producer.ini", topology, z3_values,
         gen_sharing=sharing,

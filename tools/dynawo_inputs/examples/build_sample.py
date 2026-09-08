@@ -57,8 +57,7 @@ ZONE1 = [
     ("SnZone1", 90, "MVA"), ("N_Zone1", 1, "-"), ("ConverterLVControl", "True", "-"),
     ("Un2", 0.69, "kV"), ("Un1", 33, "kV"),
     # Internal LV transformer (LvTr): neutral placeholder (the end user sets the real impedance).
-    ("Z_cc_LvTr", 0.0001, "pu"), ("R_cc_LvTr / X_cc_LvTr", 0, "-"),
-    # Generator step-up transformer (StepUp_Xfmr, fixed ratio).
+    # Group transformer (Group_Xfmr in Zone1, the model's own transformer in Zone3).
     ("r_TG", 1, "pu"), ("Z_cc_TG", 0.02445, "pu"), ("R_cc_TG / X_cc_TG", 0.01115, "-"),
     ("Pmax_injection_z1", 90, "MW"), ("Pmax_soutirage_z1", 0, "MW"),
     ("Qmax_z1", 30, "MVAr"), ("Qmin_z1", -30, "MVAr"), ("P_share", 1, "-"), ("Q_share", 1, "-"),
@@ -67,10 +66,12 @@ ZONE1 = [
 # auxiliary transformer/load reproduce the example (XPu ~= 1e-4, load 0.01/0.005 pu on SnRef=100).
 ZONE3 = [
     ("Paramètres généraux", "SnZone3", 90, "MVA"), ("", "Topologie", "S+Aux", "-"),
-    ("", "Un_PDR", 225, "kV"), ("", "Pmax_PDR", 90, "MW"), ("", "Qmax_PDR", 30, "MVAr"),
+    ("", "Un_PDR", 225, "kV"), ("", "Pmax_injection_PDR", 90, "MW"),
+    ("", "Pmax_soutirage_PDR", 0, "MW"), ("", "Qmax_PDR", 30, "MVAr"),
     ("", "Qmin_PDR", -30, "MVAr"),
     ("Transformateur principal", "Z_cc_TP", 0.12, "pu"), ("", "R_cc_TP / X_cc_TP", 0.01, "-"),
     ("", "N_prises", 20, "-"), ("", "r_max", 1.1, "pu"), ("", "r_min", 0.9, "pu"),
+    ("", "r_0", 1.05, "pu"), ("", "Tap_0", None, "-"),
     ("Charge auxiliaire", "Un_A", 0.69, "kV"), ("", "Sn_A", 1, "MVA"), ("", "r_TA", 1, "pu"),
     ("", "Z_cc_TA", 0.000001, "pu"), ("", "R_cc_TA / X_cc_TA", 0.1, "-"), ("", "P_A", 1, "MW"),
     ("", "Q_A", 0.5, "MVAr"), ("", "alpha", 1.0, "-"), ("", "beta", 1.0, "-"),

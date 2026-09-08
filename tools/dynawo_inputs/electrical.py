@@ -43,19 +43,55 @@ def transformer_impedance(
     return rebase(r, s_nom, s_ref), rebase(x, s_nom, s_ref)
 
 
-def transformer_taps(n_prises: int, r_min: float, r_max: float) -> dict:
-    """OLTC tap parameters from the Excel's ``N_prises`` / ``r_min`` / ``r_max``.
+def tap_of_ratio(ratio: float, n_prises: int, r_min: float, r_max: float) -> int:
+    """The tap whose ratio is *ratio*, refusing a ratio that lies between two taps."""
+    if r_max == r_min:
+        raise ValueError("'r_max' and 'r_min' are equal, so no tap has ratio %s" % ratio)
+    exact = (ratio - r_min) / (r_max - r_min) * int(n_prises)
+    tap = round(exact)
+    if abs(exact - tap) > 1e-6 or not 0 <= tap <= int(n_prises):
+        raise ValueError(
+            "ratio %s is not on a tap: (r_0 - r_min) / (r_max - r_min) * N_prises = %s, which is "
+            "not a whole number between 0 and %s" % (ratio, exact, int(n_prises))
+        )
+    return tap
 
-    ``NbTap = N_prises + 1``; the nominal ratio is 1 at the middle tap ``Tap0 = (NbTap - 1) // 2``
-    (the DTR taps are symmetric about nominal, i.e. ``N_prises`` is even -> ``NbTap`` odd).
+
+def ratio_of_tap(tap: int, n_prises: int, r_min: float, r_max: float) -> float:
+    """The ratio of tap *tap*, as Dynawo derives it (TransformerRatioTapChanger.mo)."""
+    return r_min + (r_max - r_min) * int(tap) / int(n_prises)
+
+
+def transformer_taps(
+    n_prises: int, r_min: float, r_max: float, tap_0=None, r_0=None
+) -> dict:
+    """OLTC tap parameters from the Excel's ``N_prises`` / ``r_min`` / ``r_max`` / ``Tap_0``|``r_0``.
+
+    ``NbTap = N_prises + 1``. The starting tap comes from ``Tap_0``, or from ``r_0`` when only the
+    ratio is given, and defaults to the middle tap (nominal ratio, the DTR taps being symmetric
+    about it). Dynawo derives the starting ratio from the tap, so both rows must agree.
     """
     nb_tap = int(n_prises) + 1
+    if tap_0 is None and r_0 is None:
+        tap = (nb_tap - 1) // 2
+    elif tap_0 is None:
+        tap = tap_of_ratio(r_0, n_prises, r_min, r_max)
+    else:
+        tap = int(tap_0)
+        if not 0 <= tap <= int(n_prises):
+            raise ValueError("'Tap_0' is %s, outside 0..N_prises (%s)" % (tap, int(n_prises)))
+        if r_0 is not None and abs(ratio_of_tap(tap, n_prises, r_min, r_max) - r_0) > 1e-6:
+            raise ValueError(
+                "'Tap_0' (%s) and 'r_0' (%s) disagree: tap %s has ratio %s. Fill in one of the "
+                "two rows, or make them consistent."
+                % (tap, r_0, tap, ratio_of_tap(tap, n_prises, r_min, r_max))
+            )
     return {
         "NbTap": nb_tap,
-        "Tap0": (nb_tap - 1) // 2,
+        "Tap0": tap,
         "RatioTfoMinPu": r_min,
         "RatioTfoMaxPu": r_max,
-        "RatioTfo0Pu": 1.0,
+        "RatioTfo0Pu": ratio_of_tap(tap, n_prises, r_min, r_max),
     }
 
 

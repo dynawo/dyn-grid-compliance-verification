@@ -225,6 +225,14 @@ def zone_value(zone: dict, name: str) -> str:
     return zone_text(zone, name)
 
 
+def zone_optional_number(zone: dict, name: str) -> float | None:
+    """Row *name* as a number, or ``None`` when the sheet has no such row or leaves it empty."""
+    value = zone.get(name)
+    if value is None or not str(value).strip() or str(value).strip() == wb._NOT_APPLICABLE:
+        return None
+    return zone_number(zone, name)
+
+
 def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:
     """Parse a ``Zone1<x>`` / ``Zone3`` electrical table into ``{parameter name -> value}``.
 
