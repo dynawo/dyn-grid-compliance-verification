@@ -31,10 +31,7 @@ _FILLED_METADATA = (
 _METADATA_WITHOUT_EVENT_START = "[Curves-Metadata]\nfrequency_sampling = 15\n"
 
 _UNFILLED_METADATA = (
-    "[Curves-Metadata]\n"
-    "sim_t_event_start =\n"
-    "fault_duration =\n"
-    "is_field_measurements =\n"
+    "[Curves-Metadata]\nsim_t_event_start =\nfault_duration =\nis_field_measurements =\n"
 )
 
 _METADATA_WITH_UNFILLED_IMAX = (
