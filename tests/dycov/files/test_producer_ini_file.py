@@ -8,13 +8,12 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 import shutil
 import tempfile
 from pathlib import Path
 
 import pytest
-
-import configparser
 
 from dycov.files.producer_ini_file import (
     check_ini_parameters,
