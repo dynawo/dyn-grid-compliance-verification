@@ -267,6 +267,9 @@ It contains:
 
 DyCoV cannot process curves without DICT files.
 DICT files are mandatory for all supported curve formats and workflows.
+The metadata options describe the curves you supply, so they must be filled
+in: DyCoV stops before simulating and names the file and the option left
+without a value.
 
 **Example:**
 `examples/Model/Wind/WECC4B/ReferenceCurves/Producer/PCS_RTE-I16z1*.dict`
@@ -504,6 +507,8 @@ without unit‑level versus plant‑level separation.
 ## 7. Common issues and recommendations
 
 *   Missing `.dict` files always result in an error.
+*   Unfilled `Curves-Metadata` options also result in an error, naming the
+    file and the option to complete.
 *   Mixing curve formats within the same case is discouraged.
 *   Ensure consistent sampling and correct event alignment.
 *   Prefer COMTRADE or EUROSTAG formats when curves originate
