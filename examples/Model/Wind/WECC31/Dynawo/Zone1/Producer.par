@@ -1,133 +1,173 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- LV Transformer -->
-    <par type="BOOL" name="WT3_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT3_BLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT3_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT3_RLvTrPu" value="0.015"/>
-    <!-- not used for zone 1 when ConverterLVControl=true -->
-    <par type="DOUBLE" name="WT3_XLvTrPu" value="0.06"/>
-    <!-- not used for zone 1 when ConverterLVControl=true -->
-    <!-- Electrical Control REEC -->
-    <par type="BOOL" name="WT3_PQFlag" value="false"/>
+    <!-- REEC_A -->
     <par type="BOOL" name="WT3_PfFlag" value="false"/>
-    <par type="BOOL" name="WT3_QFlag" value="true"/>
     <par type="BOOL" name="WT3_VFlag" value="true"/>
-    <par type="DOUBLE" name="WT3_Dbd1Pu" value="-0.05"/>
-    <par type="DOUBLE" name="WT3_Dbd2Pu" value="0.05"/>
-    <par type="DOUBLE" name="WT3_DPMaxPu" value="2"/>
-    <par type="DOUBLE" name="WT3_DPMinPu" value="-2"/>
-    <par type="DOUBLE" name="WT3_IMaxPu" value="1.3"/>
-    <par type="DOUBLE" name="WT3_Iqh1Pu" value="1.1"/>
-    <par type="DOUBLE" name="WT3_Iql1Pu" value="-1.1"/>
-    <par type="DOUBLE" name="WT3_Kqi" value="0.5"/>
-    <par type="DOUBLE" name="WT3_Kqp" value="1"/>
-    <par type="DOUBLE" name="WT3_Kqv" value="2"/>
-    <par type="DOUBLE" name="WT3_Kvi" value="0.7"/>
-    <par type="DOUBLE" name="WT3_Kvp" value="1"/>
-    <par type="DOUBLE" name="WT3_PMaxREECPu" value="1"/>
-    <par type="DOUBLE" name="WT3_PMinREECPu" value="0"/>
-    <par type="DOUBLE" name="WT3_QMaxREECPu" value="1.0"/>
-    <par type="DOUBLE" name="WT3_QMinREECPu" value="-1.0"/>
-    <par type="DOUBLE" name="WT3_PMaxREPCPu" value="1"/>
-    <par type="DOUBLE" name="WT3_PMinREPCPu" value="0"/>
-    <par type="DOUBLE" name="WT3_QMaxREPCPu" value="1.0"/>
-    <par type="DOUBLE" name="WT3_QMinREPCPu" value="-1.0"/>
-    <par type="DOUBLE" name="WT3_VDipPu" value="0.9"/>
-    <par type="DOUBLE" name="WT3_VMaxPu" value="1.1"/>
-    <par type="DOUBLE" name="WT3_VMinPu" value="0.9"/>
-    <par type="DOUBLE" name="WT3_VRef0Pu" value="0"/>
-    <par type="DOUBLE" name="WT3_VUpPu" value="1.1"/>
-    <par type="DOUBLE" name="WT3_tIq" value="0.01"/>
-    <par type="DOUBLE" name="WT3_tpREEC" value="0.05"/>
-    <par type="DOUBLE" name="WT3_tpREPC" value="0.05"/>
-    <par type="DOUBLE" name="WT3_tpWTGQa" value="0.05"/>
-    <par type="DOUBLE" name="WT3_tPord" value="0.01"/>
-    <par type="DOUBLE" name="WT3_tRv" value="0.01"/>
-    <!-- Electrical Control REECa -->
+    <par type="BOOL" name="WT3_QFlag" value="true"/>
     <par type="BOOL" name="WT3_PFlag" value="false"/>
-    <par type="DOUBLE" name="WT3_IqFrzPu" value="0"/>
-    <par type="DOUBLE" name="WT3_VDLIp11" value="1.1"/>
-    <par type="DOUBLE" name="WT3_VDLIp12" value="1.1"/>
-    <par type="DOUBLE" name="WT3_VDLIp21" value="1.15"/>
-    <par type="DOUBLE" name="WT3_VDLIp22" value="1"/>
-    <par type="DOUBLE" name="WT3_VDLIp31" value="1.16"/>
-    <par type="DOUBLE" name="WT3_VDLIp32" value="1"/>
-    <par type="DOUBLE" name="WT3_VDLIp41" value="1.17"/>
-    <par type="DOUBLE" name="WT3_VDLIp42" value="1"/>
-    <par type="DOUBLE" name="WT3_VDLIq11" value="1.1"/>
-    <par type="DOUBLE" name="WT3_VDLIq12" value="1.1"/>
-    <par type="DOUBLE" name="WT3_VDLIq21" value="1.15"/>
-    <par type="DOUBLE" name="WT3_VDLIq22" value="1"/>
-    <par type="DOUBLE" name="WT3_VDLIq31" value="1.16"/>
-    <par type="DOUBLE" name="WT3_VDLIq32" value="1"/>
-    <par type="DOUBLE" name="WT3_VDLIq41" value="1.17"/>
-    <par type="DOUBLE" name="WT3_VDLIq42" value="1"/>
+    <par type="BOOL" name="WT3_PQFlag" value="false"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDipPu" value="0.9"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VUpPu" value="1.1"/>
+    <par type="DOUBLE" name="WT3_tRv" value="0.01"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_Dbd1Pu" value="-0.05"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_Dbd2Pu" value="0.05"/>
+    <par type="DOUBLE" name="WT3_Kqv" value="2"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_Iqh1Pu" value="1.1"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_Iql1Pu" value="-1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VRef0Pu" value="0"/>
+    <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT3_VRef1Pu" value="0"/>
-    <par type="DOUBLE" name="WT3_tHoldIpMax" value="0"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_IqFrzPu" value="0"/>
     <par type="DOUBLE" name="WT3_tHoldIq" value="0"/>
-    <!-- Generator Converter REGC -->
+    <par type="DOUBLE" name="WT3_tHoldIpMax" value="0"/>
+    <par type="DOUBLE" name="WT3_tpREEC" value="0.05"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_QMaxREECPu" value="1"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_QMinREECPu" value="-1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VMaxPu" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VMinPu" value="0.9"/>
+    <par type="DOUBLE" name="WT3_Kqp" value="1"/>
+    <par type="DOUBLE" name="WT3_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WT3_Kvp" value="1"/>
+    <par type="DOUBLE" name="WT3_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WT3_tIq" value="0.01"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_DPMaxPu" value="2"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_DPMinPu" value="-2"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_PMaxREECPu" value="1"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_PMinREECPu" value="0"/>
+    <!-- Base unit: Un, SnZone1 -->
+    <par type="DOUBLE" name="WT3_IMaxPu" value="1.3"/>
+    <par type="DOUBLE" name="WT3_tPord" value="0.01"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIq11" value="1.1"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIq12" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIq21" value="1.15"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIq22" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIq31" value="1.16"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIq32" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIq41" value="1.17"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIq42" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIp11" value="1.1"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIp12" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIp21" value="1.15"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIp22" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIp31" value="1.16"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIp32" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_VDLIp41" value="1.17"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_VDLIp42" value="1"/>
+    <!-- REGC_A -->
+    <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="WT3_IqrMaxPu" value="20"/>
+    <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="WT3_IqrMinPu" value="-20"/>
     <par type="DOUBLE" name="WT3_RrpwrPu" value="10"/>
     <par type="DOUBLE" name="WT3_tFilterGC" value="0.02"/>
-    <!-- Generator Converter REGCa -->
-    <par type="BOOL" name="WT3_Lvplsw" value="false"/>
-    <par type="DOUBLE" name="WT3_brkpt" value="0.05"/>
-    <par type="DOUBLE" name="WT3_lvpl1" value="1.22"/>
     <par type="DOUBLE" name="WT3_tG" value="0.02"/>
+    <par type="BOOL" name="WT3_Lvplsw" value="false"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT3_brkpt" value="0.05"/>
+    <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT3_zerox" value="0.1"/>
-    <!-- PLL Control -->
-    <par type="DOUBLE" name="WT3_KiPLL" value="20"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT3_lvpl1" value="1.22"/>
     <par type="DOUBLE" name="WT3_KpPLL" value="3"/>
+    <par type="DOUBLE" name="WT3_KiPLL" value="20"/>
+    <!-- Base unit: wn (= 2*pi*50 rd/s) -->
     <par type="DOUBLE" name="WT3_OmegaMaxPu" value="1.5"/>
+    <!-- Base unit: wn (= 2*pi*50 rd/s) -->
     <par type="DOUBLE" name="WT3_OmegaMinPu" value="0.5"/>
-    <!-- Pitch Control -->
-    <par type="DOUBLE" name="WT3_Kcc" value="0"/>
-    <par type="DOUBLE" name="WT3_Kic" value="0"/>
+    <!-- WTGT_A -->
+    <par type="DOUBLE" name="WT3_Ht" value="6"/>
+    <par type="DOUBLE" name="WT3_Hg" value="0.5"/>
+    <!-- Base unit: wn (= 2*pi*50 rd/s), SnZone1 -->
+    <par type="DOUBLE" name="WT3_Dshaft" value="2.5"/>
+    <!-- Base unit: wn (= 2*pi*50 rd/s), SnZone1 -->
+    <par type="DOUBLE" name="WT3_Kshaft" value="2"/>
+    <!-- WTGP_A -->
     <par type="DOUBLE" name="WT3_Kiw" value="0.6"/>
-    <par type="DOUBLE" name="WT3_Kpc" value="0"/>
     <par type="DOUBLE" name="WT3_Kpw" value="70"/>
+    <par type="DOUBLE" name="WT3_Kic" value="0"/>
+    <par type="DOUBLE" name="WT3_Kpc" value="0"/>
+    <par type="DOUBLE" name="WT3_Kcc" value="0"/>
+    <par type="DOUBLE" name="WT3_tTheta" value="0.2"/>
     <par type="DOUBLE" name="WT3_ThetaMax" value="90"/>
     <par type="DOUBLE" name="WT3_ThetaMin" value="0"/>
     <par type="DOUBLE" name="WT3_ThetaRMax" value="8"/>
     <par type="DOUBLE" name="WT3_ThetaRMin" value="-8"/>
-    <par type="DOUBLE" name="WT3_tTheta" value="0.2"/>
-    <!-- Torque Control -->
-    <par type="BOOL" name="WT3_TFlag" value="true"/>
-    <par type="DOUBLE" name="WT3_Kip" value="10"/>
-    <par type="DOUBLE" name="WT3_Kpp" value="2"/>
-    <par type="DOUBLE" name="WT3_P1" value="0"/>
-    <par type="DOUBLE" name="WT3_P2" value="0.3"/>
-    <par type="DOUBLE" name="WT3_P3" value="0.6"/>
-    <par type="DOUBLE" name="WT3_P4" value="1"/>
-    <par type="DOUBLE" name="WT3_Spd1" value="0.6"/>
-    <par type="DOUBLE" name="WT3_Spd2" value="0.6"/>
-    <par type="DOUBLE" name="WT3_Spd3" value="0.97"/>
-    <par type="DOUBLE" name="WT3_Spd4" value="1"/>
-    <par type="DOUBLE" name="WT3_TeMaxPu" value="1.5"/>
-    <par type="DOUBLE" name="WT3_TeMinPu" value="0"/>
-    <par type="DOUBLE" name="WT3_tOmegaRef" value="15"/>
-    <!-- Aerodynamic Model -->
+    <!-- WTGA_A -->
     <par type="DOUBLE" name="WT3_Ka" value="0.1"/>
-    <!-- Drive Train Control -->
-    <par type="DOUBLE" name="WT3_Dshaft" value="2.5"/>
-    <par type="DOUBLE" name="WT3_Hg" value="0.5"/>
-    <par type="DOUBLE" name="WT3_Ht" value="6"/>
-    <par type="DOUBLE" name="WT3_Kshaft" value="2"/>
-    <!-- General -->
-    <par type="DOUBLE" name="WT3_SNom" value="4"/>
     <par type="DOUBLE" name="WT3_Pm0Pu" value="0.7"/>
+    <!-- WTGQ_A -->
+    <par type="BOOL" name="WT3_TFlag" value="true"/>
+    <par type="DOUBLE" name="WT3_Kpp" value="2"/>
+    <par type="DOUBLE" name="WT3_Kip" value="10"/>
+    <par type="DOUBLE" name="WT3_tpWTGQa" value="0.05"/>
+    <par type="DOUBLE" name="WT3_tOmegaRef" value="15"/>
+    <!-- Base unit: SnZone1 / wn (wn=2*pi*50 rd/s) -->
+    <par type="DOUBLE" name="WT3_TeMaxPu" value="1.5"/>
+    <!-- Base unit: SnZone1 / wn (wn=2*pi*50 rd/s) -->
+    <par type="DOUBLE" name="WT3_TeMinPu" value="0"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_P1" value="0"/>
+    <!-- Base unit: wn = 2*pi*50 rd/s -->
+    <par type="DOUBLE" name="WT3_Spd1" value="0.6"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_P2" value="0.3"/>
+    <!-- Base unit: wn = 2*pi*50 rd/s -->
+    <par type="DOUBLE" name="WT3_Spd2" value="0.6"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_P3" value="0.6"/>
+    <!-- Base unit: wn = 2*pi*50 rd/s -->
+    <par type="DOUBLE" name="WT3_Spd3" value="0.97"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT3_P4" value="1"/>
+    <!-- Base unit: wn = 2*pi*50 rd/s -->
+    <par type="DOUBLE" name="WT3_Spd4" value="1"/>
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WT3_ConverterLVControl" value="true"/>
+    <par type="DOUBLE" name="WT3_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WT3_XLvTrPu" value="0.06"/>
+    <!-- General -->
+    <par type="DOUBLE" name="WT3_SNom" value="4.0"/>
   </set>
-  <!-- tfo -->
+
   <set id="Group_Xfmr">
-    <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
-    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
-    <par type="DOUBLE" name="transformer_BPu" value="0"/>
-    <par type="DOUBLE" name="transformer_GPu" value="0"/>
+    <!-- impedances in pu, base SnRef = 100 MVA -->
+    <par type="DOUBLE" name="transformer_RPu" value="0.375"/>
+    <par type="DOUBLE" name="transformer_XPu" value="1.5"/>
+    <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
+    <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
 </parametersSet>
