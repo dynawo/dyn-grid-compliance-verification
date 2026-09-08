@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """Generic Excel template parsing shared by the input-generation tools.
 
 Standard library only: ``.xlsx`` files are plain ZIP archives of XML. This module holds the
@@ -217,7 +223,9 @@ def _cell_value(cell: ET.Element, shared: list[str]) -> str | None:
         return shared[int(node.text)] if node is not None else None
     if ctype == "inlineStr":  # inline string
         node = cell.find(f"{_MAIN_NS}is")
-        return "".join(t.text or "" for t in node.iter(f"{_MAIN_NS}t")) if node is not None else None
+        if node is None:
+            return None
+        return "".join(t.text or "" for t in node.iter(f"{_MAIN_NS}t"))
     if ctype == "b":  # boolean -> Dynawo wants true/false
         node = cell.find(f"{_MAIN_NS}v")
         return "true" if (node is not None and node.text == "1") else "false"

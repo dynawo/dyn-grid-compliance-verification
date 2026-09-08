@@ -1,21 +1,21 @@
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """Tests for the electrical computations of the Excel -> DyCoV input generator
 (``tools/dynawo_inputs/electrical.py``), per design doc section 9."""
 
 from __future__ import annotations
 
 import math
-import sys
-from pathlib import Path
 
+import electrical as el
 import pytest
-
-# The tool lives under tools/ (outside the dycov package); import it by path.
-_TOOL_DIR = Path(__file__).resolve().parents[2] / "tools" / "dynawo_inputs"
-sys.path.insert(0, str(_TOOL_DIR))
-
-import electrical as el  # noqa: E402
 
 
 def test_short_circuit_rx_purely_reactive():
