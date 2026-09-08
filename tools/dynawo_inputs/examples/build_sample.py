@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """Build the AIA-authored test fixture ``WECCSample_full.xlsx`` for the input generator.
 
 This is a **testing artifact with representative contents** — columns, parameter names *and*
@@ -78,7 +84,8 @@ ZONE3 = [
 ]
 
 # Control blocks: {sheet: (variant, table name, [(name, type, value, base_unit, comment)])}.
-# Values are the example's PhotovoltaicsWeccCurrentSource Producer.par (bare names; the model prefix
+# Values are the example's PhotovoltaicsWeccCurrentSource Producer.par (bare names; the
+# model prefix
 # is prepended by the tool). REPC is the plant controller: its 'Zone' cell declares Zone3 only, so
 # it stays out of the Zone1 turbine output.
 CONTROL = {

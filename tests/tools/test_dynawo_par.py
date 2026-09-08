@@ -1,5 +1,12 @@
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """Tests for the Dynawo PAR generation tool (``tools/dynawo_par``).
 
 A minimal but valid ``.xlsx`` is built in memory (inline strings only) so the

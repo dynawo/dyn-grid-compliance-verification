@@ -1,5 +1,12 @@
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """Tests for the shared Excel parsing engine (``tools/dynawo_inputs/workbook.py``).
 
 Workbooks are hand-built as ``{sheet -> grid}`` (grid = list of rows of str|None), the same
@@ -7,13 +14,7 @@ shape the stdlib reader returns, so no ``.xlsx`` is needed to exercise the logic
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-_TOOL_DIR = Path(__file__).resolve().parents[2] / "tools" / "dynawo_inputs"
-sys.path.insert(0, str(_TOOL_DIR))
-
-import workbook as W  # noqa: E402
+import workbook as W
 
 
 def _shared_types_sheet():

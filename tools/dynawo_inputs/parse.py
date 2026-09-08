@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """WECC front-end for the Excel -> DyCoV input generator: parsing + model resolution.
 
 Reuses the stdlib ``.xlsx`` reader and the control-parameter parser (``workbook.py``),
@@ -140,9 +146,8 @@ def technology(lib: str) -> str:
         return "PV"
     if lib.startswith("BESS"):
         return "BESS"
-    if lib.startswith(("WTG", "Wecc", "WT")):
-        return "Wind"
-    raise ValueError(f"cannot derive technology from lib {lib!r}")
+
+    return "Wind"
 
 
 def template_for(lib: str) -> str:
@@ -180,27 +185,32 @@ class ZoneValues(dict):
         self.sheet = sheet
 
 
-def _sheet_of(zone) -> str:
+def sheet_of(zone) -> str:
     return getattr(zone, "sheet", "the zone sheet")
+
+
+def is_true(value) -> bool:
+    """Whether a workbook cell states a boolean truth, in French or in English."""
+    return str(value).strip().lower() in ("true", "1", "vrai", "oui", "yes")
 
 
 def zone_text(zone: dict, name: str) -> str:
     """The value of row *name*, refusing a row that is absent or left empty."""
     if name not in zone:
         raise ValueError(
-            f"row {name!r} not found in sheet {_sheet_of(zone)!r}: the sheet is from an older "
+            f"row {name!r} not found in sheet {sheet_of(zone)!r}: the sheet is from an older "
             f"template revision, or the row was renamed."
         )
     value = zone[name]
     if value is None or not str(value).strip():
         raise ValueError(
-            f"row {name!r} in sheet {_sheet_of(zone)!r} has no value; fill it in, or mark it "
+            f"row {name!r} in sheet {sheet_of(zone)!r} has no value; fill it in, or mark it "
             f"'{wb._NOT_APPLICABLE}' if it does not apply to this model."
         )
     value = str(value).strip()
     if value == wb._NOT_APPLICABLE:
         raise ValueError(
-            f"row {name!r} in sheet {_sheet_of(zone)!r} is marked '{wb._NOT_APPLICABLE}' (not "
+            f"row {name!r} in sheet {sheet_of(zone)!r} is marked '{wb._NOT_APPLICABLE}' (not "
             f"applicable), but the chosen model and topology need it."
         )
     return value
@@ -213,7 +223,7 @@ def zone_number(zone: dict, name: str) -> float:
         return float(value)
     except ValueError:
         raise ValueError(
-            f"row {name!r} in sheet {_sheet_of(zone)!r} expects a number and holds {value!r}; "
+            f"row {name!r} in sheet {sheet_of(zone)!r} expects a number and holds {value!r}; "
             f"use a plain decimal point and no units."
         ) from None
 

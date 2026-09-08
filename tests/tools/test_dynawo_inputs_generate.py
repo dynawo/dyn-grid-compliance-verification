@@ -1,153 +1,35 @@
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
-"""Tests for the Excel -> DyCoV orchestration/emission (``tools/dynawo_inputs/generate_inputs.py``).
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+"""Tests for the orchestration (``tools/dynawo_inputs/generate_inputs.py``).
 
-Pure PAR-set builders are unit-tested with synthetic dicts; ``generate`` is smoke-tested
-end-to-end with a hand-built workbook (``read_workbook`` monkeypatched), writing a real tree."""
+The per-output modules are unit-tested next to them; here ``generate`` is exercised end to end
+with the synthetic workbook from ``conftest`` (``read_workbook`` monkeypatched), writing a real
+tree, plus the reports and the refusals."""
 
 from __future__ import annotations
 
 import configparser
-import sys
 from pathlib import Path
 
+import generate_inputs as G
+import par
 import pytest
 from lxml import etree
-
-_TOOL_DIR = Path(__file__).resolve().parents[2] / "tools" / "dynawo_inputs"
-sys.path.insert(0, str(_TOOL_DIR))
-
-import generate_inputs as G  # noqa: E402
-
-ZONE1 = {
-    "SnZone1": "100", "Z_cc_TG": "0.1", "R_cc_TG / X_cc_TG": "0", "ConverterLVControl": "True",
-    "r_TG": "1", "Un1": "33", "Un2": "0.7", "Pmax_injection_z1": "1", "Pmax_soutirage_z1": "0",
-    "Qmax_z1": "0.4", "Qmin_z1": "-0.4", "P_share": "1", "Q_share": "1",
-}
-ZONE3 = {
-    "SnZone3": "100", "Topologie": "S+Aux+i", "Un_PDR": "63", "Pmax_injection_PDR": "90", "Pmax_soutirage_PDR": "0", "Qmax_PDR": "30",
-    "Qmin_PDR": "-30", "Z_cc_TP": "0.18", "R_cc_TP / X_cc_TP": "0", "N_prises": "20",
-    "r_min": "0.9", "r_max": "1.1", "Un1": "33",
-    "Sn_A": "2", "r_TA": "1", "Z_cc_TA": "0.1", "R_cc_TA / X_cc_TA": "0", "P_A": "1", "Q_A": "0.5",
-    "alpha": "1.5", "beta": "2.5", "R_rc": "0.2", "X_rc": "1", "B_rc": "0", "G_rc": "0",
-}
-
-
-def _named(params):
-    return {p["name"]: p["value"] for p in params}
-
-
-def test_converter_par_set_prefix_control_snom():
-    control = [{"name": "Kqp", "type": "DOUBLE", "value": "1"}]
-    par_id, params = G.converter_par_set("PV_Array", "photovoltaics_", control, ZONE1, "100")
-    named = _named(params)
-    assert par_id == "PV_Array"
-    assert named["photovoltaics_Kqp"] == "1"  # control param, prefixed, value verbatim
-    assert named["photovoltaics_ConverterLVControl"] == "true"
-    assert named["photovoltaics_SNom"] == pytest.approx(100.0)
-    # The model's own transformer is always emitted, from the group transformer's Z_cc_TG.
-    assert named["photovoltaics_XLvTrPu"] == pytest.approx(0.1)
-    assert named["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
-
-
-def test_converter_par_set_writes_ppclocal_only_for_the_plant_model():
-    # PPCLocal has no template row: the plant (Zone3) models define it, the turbine ones do not.
-    _id, turbine = G.converter_par_set("PV_Array", "photovoltaics_", [], ZONE1, "100")
-    _id, plant = G.converter_par_set(
-        "PV_Array", "photovoltaics_", [], ZONE1, "100", plant_model=True
-    )
-
-    assert "photovoltaics_PPCLocal" not in _named(turbine)
-    assert _named(plant)["photovoltaics_PPCLocal"] == "false"
-    assert next(p for p in plant if p["name"].endswith("PPCLocal"))["type"] == "BOOL"
-
-
-def test_converter_par_set_lvtr_is_on_the_model_base_not_snref():
-    # Z_cc_TG is pu on SnZone1 and the model reads RLvTrPu on its own SNom, so the value is never
-    # rebased to SnRef and comes out the same for the turbine and the plant.
-    zone1 = {**ZONE1, "SnZone1": "4", "Z_cc_TG": "0.06185", "R_cc_TG / X_cc_TG": "0.25"}
-    _id, turbine = G.converter_par_set("Wind_Turbine", "WT4B_", [], zone1, zone1["SnZone1"])
-    _id, plant = G.converter_par_set("Wind_Turbine", "WTG4B_", [], zone1, "90", plant_model=True)
-
-    assert _named(turbine)["WT4B_XLvTrPu"] == pytest.approx(0.06, abs=1e-4)
-    assert _named(turbine)["WT4B_RLvTrPu"] == pytest.approx(0.015, abs=1e-4)
-    assert _named(plant)["WTG4B_XLvTrPu"] == _named(turbine)["WT4B_XLvTrPu"]
-    assert _named(plant)["WTG4B_SNom"] == pytest.approx(90.0)
-
-
-def test_converter_par_set_writes_the_model_transformer_whatever_the_flag():
-    # The parameters have no Dynawo default, so they are written even when the model zeroes the
-    # branch and the external block carries the transformer (ConverterLVControl=True).
-    zone1_false = {**ZONE1, "ConverterLVControl": "False", "Z_cc_TG": "0.05"}
-    _id, params = G.converter_par_set("PV_Array", "photovoltaics_", [], zone1_false, "100")
-    named = _named(params)
-    assert named["photovoltaics_ConverterLVControl"] == "false"
-    assert named["photovoltaics_XLvTrPu"] == pytest.approx(0.05)  # Z_cc_TG, on the model's base
-    assert named["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
-
-
-def test_main_transformer_par_set():
-    par_id, params = G.main_transformer_par_set("Main_Xfmr", ZONE3)
-    named = _named(params)
-    assert named["transformer_XPu"] == pytest.approx(0.18)
-    assert named["transformer_RPu"] == pytest.approx(0.0)
-    assert named["transformer_SNom"] == pytest.approx(100.0)
-    assert named["transformer_NbTap"] == 21
-    assert named["transformer_Tap0"] == 10
-    assert named["transformer_RatioTfoMinPu"] == pytest.approx(0.9)
-
-
-def test_group_transformer_par_set_fixed_ratio():
-    # Z_cc_TG=0.1 on base SnZone1=100 -> XPu=0.1; from Zone1a in both zones (base = s_nom).
-    _par_id, params = G.group_transformer_par_set("Group_Xfmr", ZONE1, ZONE1["SnZone1"])
-    named = _named(params)
-    assert named["transformer_XPu"] == pytest.approx(0.1)
-    assert named["transformer_rTfoPu"] == pytest.approx(1.0)
-    assert "transformer_NbTap" not in named  # fixed ratio -> no taps
-
-
-def test_aux_load_and_line_par_sets():
-    _p, load = G.aux_load_par_set("Aux_Load", ZONE3)
-    named = _named(load)
-    assert named["load_PRefPu"] == pytest.approx(0.01)  # P_A=1 MW / 100
-    assert named["load_QRefPu"] == pytest.approx(0.005)
-    assert named["load_alpha"] == pytest.approx(1.5)
-
-    # The collector rows are in ohms and siemens; its base is Un_PDR, the node it connects to.
-    _p2, line = G.collector_line_par_set("IntNetwork_Line", ZONE3)
-    z_base = float(ZONE3["Un_PDR"]) ** 2 / 100.0
-    assert _named(line)["line_XPu"] == pytest.approx(1.0 / z_base)
-    assert _named(line)["line_BPu"] == pytest.approx(0.0)
-
-
-def test_drop_group_transformer_when_no_lv_control(tmp_path):
-    # ConverterLVControl=False: no gen transformer -> Group_Xfmr removed, gen wired downstream.
-    from dycov.files.producer_dyd_file import create_producer_dyd_file
-
-    (tmp_path / "Zone1").mkdir()
-    (tmp_path / "Zone3").mkdir()
-    create_producer_dyd_file(tmp_path, "S", "model_PPM")
-    dyd = tmp_path / "Zone1" / "Producer.dyd"
-    gen = "Wind_Turbine"  # builder's S gen id
-    G.drop_group_transformer(dyd, gen, "photovoltaics_terminal")
-
-    root = etree.parse(str(dyd)).getroot()
-    ns = etree.QName(root).namespace
-    ids = [b.get("id") for b in root.iterfind(f"{{{ns}}}blackBoxModel")]
-    assert "Group_Xfmr" not in ids
-    conns = [
-        (c.get("id1"), c.get("var1"), c.get("id2"), c.get("var2"))
-        for c in root.iterfind(f"{{{ns}}}connect")
-    ]
-    assert not any("Group_Xfmr" in (c[0], c[2]) for c in conns)
-    # generator now connects directly to what the transformer fed (BusPDR in S)
-    assert (gen, "photovoltaics_terminal", "BusPDR", "bus_terminal") in conns
+from workbooks import GENERAL, ZONE3_ROWS, make_workbook, variant_sheet
 
 
 def test_submodel_report_lists_general_blocks_present_and_missing():
     resolved = {
         "zone3_lib": "PhotovoltaicsWeccCurrentSource", "zone3_prefix": "photovoltaics_",
-        "zone1_lib": "PhotovoltaicsWeccCurrentSourceNoPlantControl", "zone1_prefix": "photovoltaics_",
+        "zone1_lib": "PhotovoltaicsWeccCurrentSourceNoPlantControl",
+        "zone1_prefix": "photovoltaics_",
     }
     # The reported blocks come from 'Général' (no fixed family list): an unknown block name is
     # reported all the same, and only blocks whose sheets contributed params are 'present'.
@@ -156,102 +38,49 @@ def test_submodel_report_lists_general_blocks_present_and_missing():
         {"block": "REPC", "name": "FreqFlag", "type": "BOOL", "value": "true", "comments": []},
         {"block": "REEC", "name": "Kqp", "type": "DOUBLE", "value": "1", "comments": []},
     ]
-    report = G.submodel_report(resolved, selections, control)
+
+    report = G._submodel_report(resolved, selections, control)
+
     assert "REPC  : present" in report
     assert "NEWBLK : missing" in report
     assert "WTGT" not in report
 
 
-def test_zone_control_params_filters_by_declared_zone_and_drops_label():
+def test_reference_curves_report_names_what_is_still_missing():
+    report = G._reference_curves_report(
+        {"target": Path("/out/ReferenceCurves/Producer"), "tests": 3, "copied": 2,
+         "missing": ["rise.csv"]}
+    )
+
+    assert "tests described : 3" in report
+    assert ".csv missing    : 1" in report and "rise.csv" in report
+
+
+def test_reference_curves_report_says_when_the_sheets_describe_nothing():
+    report = G._reference_curves_report({"target": None, "tests": 0, "copied": 0, "missing": []})
+
+    assert "describe no test" in report
+
+
+def test_control_params_are_filtered_by_the_zone_they_declare():
     control = [
         {"block": "REPC", "name": "FreqFlag", "type": "BOOL", "value": "true", "comments": []},
         {"block": "REEC", "name": "Kqp", "type": "DOUBLE", "value": "1", "comments": []},
         {"block": "NOZONE", "name": "X", "type": "DOUBLE", "value": "0", "comments": []},
     ]
     zones = {"REPC": ["Zone3"], "REEC": ["Zone1", "Zone3"]}  # NOZONE declares nothing
-    z1 = G.zone_control_params(control, zones, "Zone1")
-    z3 = G.zone_control_params(control, zones, "Zone3")
+
+    z1 = par.control_params_for_zone(control, zones, "Zone1")
+    z3 = par.control_params_for_zone(control, zones, "Zone3")
+
     assert [p["name"] for p in z1] == ["Kqp"]
     assert [p["name"] for p in z3] == ["FreqFlag", "Kqp"]  # a zone-less block enters neither
     assert all("block" not in p for p in z1 + z3)
 
 
-# ---------------------------------------------------------------------------
-# End-to-end smoke test (synthetic workbook)
-# ---------------------------------------------------------------------------
-
-_GENERAL = [
-    ["Type de bloc", "Choix", "Zone", None, "Combinaison sélectionnée (clé Model Map)",
-     "Zone3 lib", "Zone3 prefix", "Zone1 lib", "Zone1 prefix"],
-    ["REPC", "REPC_A", "Zone3", None, "REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"],
-    ["REEC", "REEC_B", "Zone1;Zone3"], ["REGC", "REGC_A", "Zone1;Zone3"],
-    ["WTGT", "Aucun", "Zone1;Zone3"], ["WTGP", "Aucun", "Zone1;Zone3"],
-    ["WTGA", "Aucun", "Zone1;Zone3"], ["WTGQ", "Aucun", "Zone1;Zone3"],
-]
-_MODEL_MAP = [
-    ["Key", "Zone3_lib", "Zone3_prefix", "Zone1_lib", "Zone1_prefix"],
-    ["REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun", "PhotovoltaicsWeccCurrentSource", "photovoltaics_",
-     "PhotovoltaicsWeccCurrentSourceNoPlantControl", "photovoltaics_"],
-]
-def _variant_sheet(variant_name, params):
-    """A control-param sheet: variant name sits on the row above the 'Parameter' header."""
-    grid = [[variant_name], ["Parameter", "Type", "Value"]]
-    grid += [[name, typ, val] for name, typ, val in params]
-    return grid
-
-
-# Every selected non-Aucun block needs its variant table (else _selected_variants raises).
-_REPC = _variant_sheet("REPC_A", [("FreqFlag", "boolean", "true")])
-_REEC = _variant_sheet("REEC_B", [("Kqp", "double", "1.0"), ("QFlag", "boolean", "true")])
-_REGC = _variant_sheet("REGC_A", [("Iqrmax", "double", "20")])
-
-
-def _make_workbook():
-    zone1_grid = [["intro"], ["Paramètres", "Descriptions", "Valeurs", "Unités", "Commentaires"]]
-    zone1_grid += [[k, "d", v, "u", "c"] for k, v in ZONE1.items()]
-    zone3_grid = [["defs"], ["Catégorie", "Paramètres", "Descriptions", "Valeurs", "Unités", "Cmt"]]
-    zone3_grid += [["cat", k, "d", v, "u", "c"] for k, v in ZONE3.items()]
-    return {
-        "Général": _GENERAL,
-        "Model Map": _MODEL_MAP,
-        "Zone1a": zone1_grid,
-        "Zone3": zone3_grid,
-        "REPC": _REPC,
-        "REEC": _REEC,
-        "REGC": _REGC,
-    }
-
-
-def _workbook_with(zone1_overrides):
-    book = _make_workbook()
-    book["Zone1a"] = [
-        [row[0], "d", zone1_overrides[row[0]], "u", "c"] if row[0] in zone1_overrides else row
-        for row in book["Zone1a"]
-    ]
-    return book
-
-
-@pytest.mark.parametrize("lv_control", ["True", "False"])
-def test_each_ini_carries_the_voltage_of_the_node_its_zone_connects_at(
-    tmp_path, monkeypatch, lv_control
-):
-    # Zone1 connects at its internal node (Un1) and Zone3 at the PDR (Un_PDR), whichever side the
-    # converter controls on — never the converter's own Un2.
-    monkeypatch.setattr(
-        G.wb, "read_workbook", lambda _path: _workbook_with({"ConverterLVControl": lv_control})
-    )
-    G.generate(Path("ignored.xlsx"), tmp_path)
-
-    expected = {"Zone1": ZONE1["Un1"], "Zone3": ZONE3["Un_PDR"]}
-    for zone, u_nom in expected.items():
-        cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        cp.read(tmp_path / "Dynawo" / zone / "Producer.ini")
-        assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == u_nom
-
-
 def test_topology_spelled_with_spaces_is_accepted(tmp_path, monkeypatch):
     # The template's own legend spells it "S + Aux", while DyCoV matches the string exactly.
-    book = _make_workbook()
+    book = make_workbook()
     book["Zone3"] = [
         ["cat", "Topologie", "d", "S + Aux + i", "u", "c"] if row[1:2] == ["Topologie"] else row
         for row in book["Zone3"]
@@ -266,7 +95,8 @@ def test_topology_spelled_with_spaces_is_accepted(tmp_path, monkeypatch):
 
 
 def test_generate_end_to_end(tmp_path, monkeypatch):
-    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: _make_workbook())
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: make_workbook())
+
     report = G.generate(Path("ignored.xlsx"), tmp_path)
 
     root = tmp_path / "Dynawo"
@@ -280,20 +110,20 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     assert "PhotovoltaicsWeccCurrentSource" in dyd
     assert "photovoltaics_terminal" in dyd
     assert "photovoltaics_uPccPu_re" in dyd  # remote-control port filled from the same prefix
-    assert "MODEL_PREFIX" not in dyd and "PPM_DYNAMIC_MODEL" not in dyd  # no leftover placeholders
+    assert "MODEL_PREFIX" not in dyd and "PPM_DYNAMIC_MODEL" not in dyd
 
     # Zone3 PAR: prefixed control param + main transformer taps + aux + line (topology S+Aux+i)
-    par = etree.parse(str(root / "Zone3" / "Producer.par")).getroot()
-    ns = etree.QName(par).namespace
-    set_ids = [s.get("id") for s in par.iterfind(f"{{{ns}}}set")]
-    assert G.GEN_ID_BY_TECH["PV"] in set_ids and "Main_Xfmr" in set_ids  # PV -> PV_Array
+    par_root = etree.parse(str(root / "Zone3" / "Producer.par")).getroot()
+    ns = etree.QName(par_root).namespace
+    set_ids = [s.get("id") for s in par_root.iterfind(f"{{{ns}}}set")]
+    assert G.dyd.GEN_ID_BY_TECH["PV"] in set_ids and "Main_Xfmr" in set_ids  # PV -> PV_Array
     assert "Aux_Load" in set_ids and "IntNetwork_Line" in set_ids
-    names = [p.get("name") for p in par.iter(f"{{{ns}}}par")]
+    names = [p.get("name") for p in par_root.iter(f"{{{ns}}}par")]
     assert "photovoltaics_Kqp" in names
     # Zone3's external transformer is the plant's main one: Z_cc_TP with its tap block, the group
     # transformer living inside the generator's model.
     main_xfmr = {p.get("name"): p.get("value")
-                 for s in par.iterfind(f"{{{ns}}}set") if s.get("id") == "Main_Xfmr"
+                 for s in par_root.iterfind(f"{{{ns}}}set") if s.get("id") == "Main_Xfmr"
                  for p in s.iter(f"{{{ns}}}par")}
     assert main_xfmr["transformer_NbTap"] == "21" and main_xfmr["transformer_Tap0"] == "10"
     assert main_xfmr["transformer_XPu"] == "0.18"  # Z_cc_TP reactive, SnZone3 = 100 = SnRef
@@ -317,30 +147,45 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     # Zone3 INI: filled values
     cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
     cp.read(root / "Zone3" / "Producer.ini")
-    assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == "63"
+    assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == ZONE3_ROWS["Un_PDR"]
     assert cp.get("DEFAULT", "topology").strip() == "S+Aux+i"
 
     assert "present" in report
 
 
+def test_generate_writes_no_reference_curves_when_the_workbook_has_no_signal_sheet(
+    tmp_path, monkeypatch
+):
+    # The signal sheets are optional: their absence must not stop the model inputs.
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: make_workbook())
+
+    report = G.generate(Path("ignored.xlsx"), tmp_path)
+
+    assert not (tmp_path / "ReferenceCurves").exists()
+    assert "describe no test" in report
+
+
 def test_generate_fails_when_no_block_declares_zone1(tmp_path, monkeypatch):
     # Fail safe: with no 'Zone' column at all (or none declaring Zone1), Zone1 would come out
     # silently incomplete — the tool must refuse instead.
-    book = _make_workbook()
-    book["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # strip only the Zone column
+    book = make_workbook()
+    book["Général"] = [row[:2] + row[3:] for row in GENERAL]  # strip only the Zone column
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
+
     with pytest.raises(ValueError, match="declares Zone1"):
         G.generate(Path("ignored.xlsx"), tmp_path)
 
 
 def test_main_reports_domain_errors_cleanly(tmp_path, monkeypatch, capsys):
     # Domain errors exit 1 with an 'ERROR: …' line on stderr (like dynawo_par), no traceback.
-    book = _make_workbook()
-    book["Général"] = [row[:2] + row[3:] for row in _GENERAL]  # no Zone column -> ValueError
+    book = make_workbook()
+    book["Général"] = [row[:2] + row[3:] for row in GENERAL]  # no Zone column -> ValueError
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
     excel = tmp_path / "model.xlsx"
     excel.write_text("stub")
+
     assert G.main(["--excel", str(excel), "--outdir", str(tmp_path / "out")]) == 1
+
     err = capsys.readouterr().err
     assert err.startswith("ERROR: ") and "declares Zone1" in err
 
@@ -348,29 +193,12 @@ def test_main_reports_domain_errors_cleanly(tmp_path, monkeypatch, capsys):
 def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
     # An unfilled template: the Zone1 blocks exist and declare their zone, but every value
     # cell is empty — the error must say so instead of blaming the 'Zone' column.
-    book = _make_workbook()
-    book["REEC"] = _variant_sheet("REEC_B", [("Kqp", "double", None)])
-    book["REGC"] = _variant_sheet("REGC_A", [("Iqrmax", "double", None)])
+    book = make_workbook()
+    book["REEC"] = variant_sheet("REEC_B", [("Kqp", "double", None)])
+    book["REGC"] = variant_sheet("REGC_A", [("Iqrmax", "double", None)])
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
-    with pytest.raises(ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"):
+
+    with pytest.raises(
+        ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"
+    ):
         G.generate(Path("ignored.xlsx"), tmp_path)
-
-
-def test_checked_topology_drops_the_legend_spacing():
-    zone3 = {**ZONE3, "Topologie": "S + Aux"}
-
-    assert G._checked_topology(zone3) == "S+Aux"
-
-
-def test_checked_topology_refuses_the_multiple_unit_family():
-    zone3 = {**ZONE3, "Topologie": "M+Aux"}
-
-    with pytest.raises(ValueError, match="topology 'M[+]Aux' .* is not generated yet"):
-        G._checked_topology(zone3)
-
-
-def test_checked_topology_refuses_an_unknown_string():
-    zone3 = {**ZONE3, "Topologie": "S+Foo"}
-
-    with pytest.raises(ValueError, match="supported: S, S[+]i, S[+]Aux, S[+]Aux[+]i"):
-        G._checked_topology(zone3)

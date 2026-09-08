@@ -1,5 +1,12 @@
-# Copyright (c) 2024-2026, RTE (https://www.rte-france.com)
-# SPDX-License-Identifier: MPL-2.0
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 """Id-agnostic structural golden: the tool's output vs the authoritative ``examples/Model/**``.
 
 The fixture ``WECCSample_full.xlsx`` is a PV ``S+Aux`` case matching
@@ -9,19 +16,14 @@ only** (``blackBoxModel`` libs + ``connect`` wiring), normalizing the generator 
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
+import generate_inputs as G
 import pytest
 from lxml import etree
 
-_TOOL_DIR = Path(__file__).resolve().parents[2] / "tools" / "dynawo_inputs"
-sys.path.insert(0, str(_TOOL_DIR))
-
-import generate_inputs as G  # noqa: E402
-
 _REPO = Path(__file__).resolve().parents[2]
-_FIXTURE = _TOOL_DIR / "examples" / "WECCSample_full.xlsx"
+_FIXTURE = _REPO / "tools" / "dynawo_inputs" / "examples" / "WECCSample_full.xlsx"
 _EXAMPLE = _REPO / "examples" / "Model" / "Photovoltaics" / "WECCCurrentSource" / "Dynawo"
 
 # Generator block ids to canonicalize before comparison (tool tech-specific vs example legacy).
@@ -75,7 +77,8 @@ def test_connects_match_example(generated, zone):
 
 @pytest.mark.parametrize("zone", ["Zone1", "Zone3"])
 def test_libs_match_example(generated, zone):
-    # The transformers included: Zone1's group one is a fixed ratio, Zone3's main one a tap changer.
+    # The transformers included: Zone1's group one has a fixed ratio, Zone3's main one a
+    # tap changer.
     got = _libs(generated / zone / "Producer.dyd")
     exp = _libs(_EXAMPLE / zone / "Producer.dyd")
     assert got == exp, _diff(zone, "libs", got, exp)
