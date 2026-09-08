@@ -100,9 +100,7 @@ def write_producer_ini_file(
     is the data (``values`` and per-generator ``gen_sharing`` ``{id -> (P_sharing, Q_sharing)}``).
     Set ``include_consumption`` for BESS (adds ``p_max_consumption_at_PDR``).
     """
-    _create_producer_ini_file(
-        target, filename, topology, values, gen_sharing, include_consumption
-    )
+    _create_producer_ini_file(target, filename, topology, values, gen_sharing, include_consumption)
 
 
 def _check_ini_parameters(target: Path, filename: str) -> bool:
