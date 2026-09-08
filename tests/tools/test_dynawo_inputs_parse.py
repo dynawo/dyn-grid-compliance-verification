@@ -296,3 +296,17 @@ def test_zone_value_validates_the_number_but_keeps_the_written_form():
 def test_zone_accessors_work_on_a_plain_dict_without_provenance():
     with pytest.raises(ValueError, match="not found in sheet 'the zone sheet'"):
         P.zone_text({"Un_PDR": "225"}, "Z_cc_TP")
+
+
+def test_zone_optional_number_reads_a_filled_row():
+    zone = _zone3(Tap_0="15")
+
+    assert P.zone_optional_number(zone, "Tap_0") == 15.0
+
+
+def test_zone_optional_number_is_none_for_an_empty_or_absent_or_not_applicable_row():
+    zone = _zone3(Tap_0=None, r_0="/")
+
+    assert P.zone_optional_number(zone, "Tap_0") is None
+    assert P.zone_optional_number(zone, "r_0") is None
+    assert P.zone_optional_number(zone, "Un_PDR") is None

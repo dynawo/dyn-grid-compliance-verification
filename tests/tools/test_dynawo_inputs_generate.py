@@ -25,7 +25,7 @@ ZONE1 = {
     "Qmax_z1": "0.4", "Qmin_z1": "-0.4", "P_share": "1", "Q_share": "1",
 }
 ZONE3 = {
-    "SnZone3": "100", "Topologie": "S+Aux+i", "Un_PDR": "63", "Pmax_PDR": "90", "Qmax_PDR": "30",
+    "SnZone3": "100", "Topologie": "S+Aux+i", "Un_PDR": "63", "Pmax_injection_PDR": "90", "Pmax_soutirage_PDR": "0", "Qmax_PDR": "30",
     "Qmin_PDR": "-30", "Z_cc_TP": "0.18", "R_cc_TP / X_cc_TP": "0", "N_prises": "20",
     "r_min": "0.9", "r_max": "1.1", "Un1": "33",
     "Sn_A": "2", "r_TA": "1", "Z_cc_TA": "0.1", "R_cc_TA / X_cc_TA": "0", "P_A": "1", "Q_A": "0.5",
