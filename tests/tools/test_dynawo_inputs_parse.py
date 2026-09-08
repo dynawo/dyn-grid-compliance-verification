@@ -22,9 +22,19 @@ def _general(*choices, key=None):
     """A ``Général`` grid: block table (with its ``Zone`` column) plus the horizontal derived
     table, whose first column holds the Excel-cached Model-Map key. The key header is
     deliberately not named ``Key`` — the parser anchors on ``Zone3 lib`` and never reads it."""
-    rows = [["Type de bloc", "Choix", "Zone", None,
-             "Combinaison sélectionnée (clé Model Map)", "Zone3 lib", "Zone3 prefix",
-             "Zone1 lib", "Zone1 prefix"]]
+    rows = [
+        [
+            "Type de bloc",
+            "Choix",
+            "Zone",
+            None,
+            "Combinaison sélectionnée (clé Model Map)",
+            "Zone3 lib",
+            "Zone3 prefix",
+            "Zone1 lib",
+            "Zone1 prefix",
+        ]
+    ]
     for i, (block, choice) in enumerate(choices):
         row = [block, choice, "Zone3" if block == "REPC" else "Zone1;Zone3"]
         if i == 0:
@@ -50,8 +60,13 @@ _MODEL_MAP = [
         "WT4BWeccCurrentSource",
         "WT4B_",
     ],
-    ["REGC_A|REEC_C|Aucun|Aucun|Aucun|Aucun", "BESSWeccCurrentSource", "BESS_",
-     "BESSWeccCurrentSourceNoPlantControl", "BESS_"],
+    [
+        "REGC_A|REEC_C|Aucun|Aucun|Aucun|Aucun",
+        "BESSWeccCurrentSource",
+        "BESS_",
+        "BESSWeccCurrentSourceNoPlantControl",
+        "BESS_",
+    ],
 ]
 
 
@@ -82,8 +97,13 @@ def test_read_selected_key_without_derived_table_raises():
 def test_resolve_models_pv():
     wb = _workbook(
         _general(
-            ("REPC", "REPC_A"), ("REEC", "REEC_B"), ("REGC", "REGC_A"),
-            ("WTGT", "Aucun"), ("WTGP", "Aucun"), ("WTGA", "Aucun"), ("WTGQ", "Aucun"),
+            ("REPC", "REPC_A"),
+            ("REEC", "REEC_B"),
+            ("REGC", "REGC_A"),
+            ("WTGT", "Aucun"),
+            ("WTGP", "Aucun"),
+            ("WTGA", "Aucun"),
+            ("WTGQ", "Aucun"),
             key="REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun",
         )
     )
@@ -95,9 +115,7 @@ def test_resolve_models_pv():
 
 
 def test_resolve_models_unknown_combination_raises():
-    wb = _workbook(
-        _general(("REPC", "REPC_A"), key="REGC_A|REEC_A|Aucun|WTGP_B|Aucun|Aucun")
-    )
+    wb = _workbook(_general(("REPC", "REPC_A"), key="REGC_A|REEC_A|Aucun|WTGP_B|Aucun|Aucun"))
     with pytest.raises(ValueError) as error:
         P.resolve_models(wb)
 
@@ -231,13 +249,18 @@ def test_parse_control_params_flat_list_preserves_workbook_order():
 
     wb = {
         "Général": _general(("REGC", "REGC_A"), ("REEC", "REEC_B")),
-        "REEC": _sheet("Electrical Control", "REEC_B",
-                       [["Kqp", "double", "1.0"], ["QFlag", "boolean", "true"]]),
+        "REEC": _sheet(
+            "Electrical Control",
+            "REEC_B",
+            [["Kqp", "double", "1.0"], ["QFlag", "boolean", "true"]],
+        ),
         "REGC": _sheet("Generator Converter", "REGC_A", [["tG", "double", "0.02"]]),
     }
     params = P.parse_control_params(wb)
     assert [(p["block"], p["name"]) for p in params] == [
-        ("REEC", "Kqp"), ("REEC", "QFlag"), ("REGC", "tG"),
+        ("REEC", "Kqp"),
+        ("REEC", "QFlag"),
+        ("REGC", "tG"),
     ]
     # each variant's first param carries its section header, the following ones do not
     assert params[0]["comments"] == ["REEC_B"]

@@ -50,9 +50,7 @@ def test_converter_par_set_lvtr_is_on_the_model_base_not_snref(zone1, named):
     zone1.update({"SnZone1": "4", "Z_cc_TG": "0.06185", "R_cc_TG / X_cc_TG": "0.25"})
 
     _id, turbine = par.converter_par_set("Wind_Turbine", "WT4B_", [], zone1, zone1["SnZone1"])
-    _id, plant = par.converter_par_set(
-        "Wind_Turbine", "WTG4B_", [], zone1, "90", plant_model=True
-    )
+    _id, plant = par.converter_par_set("Wind_Turbine", "WTG4B_", [], zone1, "90", plant_model=True)
 
     assert named(turbine)["WT4B_XLvTrPu"] == pytest.approx(0.06, abs=1e-4)
     assert named(turbine)["WT4B_RLvTrPu"] == pytest.approx(0.015, abs=1e-4)
