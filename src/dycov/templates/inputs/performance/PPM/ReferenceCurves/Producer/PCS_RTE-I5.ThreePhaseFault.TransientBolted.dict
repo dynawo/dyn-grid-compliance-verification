@@ -8,9 +8,9 @@ sim_t_event_start =
 fault_duration =
 # Frequency sampling of the reference curves
 frequency_sampling =
-# Maximum current at converter by Wind Turbine or PV Array
+# Maximum injected current by Wind Turbine or PV Array
 # Replace "[WT_ID]" with the Wind Turbine id or PV Array id
-[WT_ID]_GEN_MaxCurrentAtConverterPu = 
+[WT_ID]_GEN_MaxInjectedCurrentPu = 
 
 [Curves-Dictionary]
 time = 
