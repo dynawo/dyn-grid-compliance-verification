@@ -12,8 +12,7 @@
 from __future__ import annotations
 
 import electrical as el
-
-from .common import number_of
+import parse as P
 
 
 def aux_par_set(par_id: str, zone3: dict) -> tuple:
@@ -31,11 +30,11 @@ def aux_par_set(par_id: str, zone3: dict) -> tuple:
     tuple
         ``(set id, parameters)``.
     """
-    number = number_of(zone3)
-    p_ref, q_ref = el.load_pu(number("P_A"), number("Q_A"))
+    number = P.numbers("Zone3", zone3)
+    p_ref, q_ref = el.load_pu(number("aux_p"), number("aux_q"))
     return par_id, [
         {"name": "load_PRefPu", "type": "DOUBLE", "value": p_ref},
         {"name": "load_QRefPu", "type": "DOUBLE", "value": q_ref},
-        {"name": "load_alpha", "type": "DOUBLE", "value": number("alpha")},
-        {"name": "load_beta", "type": "DOUBLE", "value": number("beta")},
+        {"name": "load_alpha", "type": "DOUBLE", "value": number("aux_alpha")},
+        {"name": "load_beta", "type": "DOUBLE", "value": number("aux_beta")},
     ]

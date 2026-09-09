@@ -7,10 +7,10 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""PAR set builders, one module per kind of equipment.
+"""The PAR: one module per kind of equipment, plus the control sheets it also carries.
 
-Every builder is pure: it reads the rows of a zone sheet and returns ``(set id, parameters)``,
-leaving the writing to ``dycov.files.producer_par_file``.
+Every equipment builder is pure: it reads the rows of a zone sheet and returns
+``(set id, parameters)``, leaving the writing to ``dycov.files.producer_par_file``.
 """
 
 from .control import control_params, empty_zone1_reason

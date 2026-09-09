@@ -27,6 +27,7 @@ for _p in (_HERE, _HERE.parent.parent / "src"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import excel_names as names  # noqa: E402
 import par  # noqa: E402
 import parse as P  # noqa: E402
 import producer_dyd as dyd  # noqa: E402
@@ -71,8 +72,10 @@ def _submodel_report(resolved: dict, selections: list, control_params: list) -> 
 def _reference_curves_report(curves: dict) -> str:
     """Report what the signal sheets produced, and which .csv files are still to be provided."""
     if not curves["tests"]:
-        return ("Reference curves\n  the signal sheets describe no test: nothing written under "
-                "ReferenceCurves/")
+        return (
+            "Reference curves\n  the signal sheets describe no test: nothing written under "
+            "ReferenceCurves/"
+        )
     lines = [
         "Reference curves",
         "  %s" % curves["target"],
@@ -80,8 +83,10 @@ def _reference_curves_report(curves: dict) -> str:
         "  .csv copied     : %d" % curves["copied"],
     ]
     if curves["missing"]:
-        lines.append("  .csv missing    : %d (copy them next to the .dict files: %s)"
-                     % (len(curves["missing"]), ", ".join(curves["missing"][:4])))
+        lines.append(
+            "  .csv missing    : %d (copy them next to the .dict files: %s)"
+            % (len(curves["missing"]), ", ".join(curves["missing"][:4]))
+        )
     return "\n".join(lines)
 
 
@@ -94,13 +99,14 @@ def _zone1_par_sets(
     root: Path, zone1: dict, control: list, resolved: dict, gen_id: str, lv_control: bool
 ) -> list:
     """The unit and, unless its own transformer reaches the internal node, the group one."""
-    s_nom = P.zone_number(zone1, "SnZone1")
+    s_nom = P.numbers("Zone1", zone1)("s_nom")
     sets = [par.converter_par_set(gen_id, resolved["zone1_prefix"], control, zone1, s_nom)]
     if lv_control:
         sets.append(par.group_transformer_par_set(GROUP_XFMR_ID, zone1, s_nom))
     else:
         dyd.drop_group_transformer(
-            root / "Zone1" / f"{PRODUCER_NAME}.dyd", gen_id,
+            root / "Zone1" / f"{PRODUCER_NAME}.dyd",
+            gen_id,
             f"{resolved['zone1_prefix']}terminal",
         )
     return sets
@@ -112,15 +118,20 @@ def _zone3_par_sets(
     """The plant, its main transformer, and the equipment the topology adds."""
     sets = [
         par.converter_par_set(
-            gen_id, resolved["zone3_prefix"], control, zone1,
-            P.zone_number(zone3, "SnZone3"),
+            gen_id,
+            resolved["zone3_prefix"],
+            control,
+            zone1,
+            P.numbers("Zone3", zone3)("s_nom"),
             plant_model=True,
         ),
         par.main_transformer_par_set(MAIN_XFMR_ID, zone3),
     ]
     if "aux" in topology.casefold():
-        sets += [par.aux_transformer_par_set("AuxLoad_Xfmr", zone3),
-                 par.aux_load_par_set("Aux_Load", zone3)]
+        sets += [
+            par.aux_transformer_par_set("AuxLoad_Xfmr", zone3),
+            par.aux_load_par_set("Aux_Load", zone3),
+        ]
     if topology.casefold().endswith("i"):
         sets.append(par.collector_line_par_set("IntNetwork_Line", zone3))
     return sets
@@ -140,9 +151,9 @@ def generate(excel: Path, outdir: Path) -> str:
     gen_id = dyd.GEN_ID_BY_TECH[P.technology(resolved["zone3_lib"])]
     rename = {builder_gen_id: gen_id} if gen_id != builder_gen_id else {}
 
-    zone3 = P.parse_zone(workbook, "Zone3")
-    zone1 = P.parse_zone(workbook, "Zone1a")
-    lv_control = P.is_true(zone1.get("ConverterLVControl", "True"))
+    zone3 = P.parse_zone(workbook, names.sheet("zone3"))
+    zone1 = P.parse_zone(workbook, names.sheet("zone1"))
+    lv_control = P.is_true(zone1.get(names.row("Zone1", "converter_lv_control"), "True"))
     control = par.control_params(workbook, lv_control)
     topology = dyd.checked_topology(zone3)
 
@@ -159,23 +170,35 @@ def generate(excel: Path, outdir: Path) -> str:
     dyd.write_dyd(root, PRODUCER_NAME, topology, template, resolved, gen_id, rename)
 
     write_producer_par_file(
-        root / "Zone1", f"{PRODUCER_NAME}.par",
+        root / "Zone1",
+        f"{PRODUCER_NAME}.par",
         _zone1_par_sets(root, zone1, z1_control, resolved, gen_id, lv_control),
     )
     write_producer_par_file(
-        root / "Zone3", f"{PRODUCER_NAME}.par",
+        root / "Zone3",
+        f"{PRODUCER_NAME}.par",
         _zone3_par_sets(zone1, zone3, z3_control, resolved, gen_id, topology),
     )
 
     ini.write_ini(
-        root, PRODUCER_NAME, topology, zone1, zone3, gen_id,
+        root,
+        PRODUCER_NAME,
+        topology,
+        zone1,
+        zone3,
+        gen_id,
         include_consumption=template == "model_BESS",
     )
 
-    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, sig.parse_signals(workbook))
+    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, sig.parse_signals(workbook, gen_id))
 
-    return "\n".join([_submodel_report(resolved, config.selections, control),
-                      "", _reference_curves_report(curves)])
+    return "\n".join(
+        [
+            _submodel_report(resolved, config.selections, control),
+            "",
+            _reference_curves_report(curves),
+        ]
+    )
 
 
 def main(argv=None) -> int:

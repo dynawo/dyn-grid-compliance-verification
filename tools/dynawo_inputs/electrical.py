@@ -145,9 +145,7 @@ def ratio_of_tap(tap: int, n_prises: int, r_min: float, r_max: float) -> float:
     return r_min + (r_max - r_min) * int(tap) / int(n_prises)
 
 
-def transformer_taps(
-    n_prises: int, r_min: float, r_max: float, tap_0=None, r_0=None
-) -> dict:
+def transformer_taps(n_prises: int, r_min: float, r_max: float, tap_0=None, r_0=None) -> dict:
     """Build the OLTC parameters of a transformer from the workbook's tap rows.
 
     ``NbTap = N_prises + 1``, and the starting tap defaults to the middle one (nominal ratio, the

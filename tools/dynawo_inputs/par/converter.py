@@ -12,9 +12,8 @@
 from __future__ import annotations
 
 import electrical as el
+import excel_names as names
 import parse as P
-
-from .common import number_of
 
 
 def par_set(
@@ -56,22 +55,29 @@ def par_set(
     params = [{**p, "name": f"{prefix}{p['name']}"} for p in control_params]
     if plant_model:
         params.append(
-            {"name": f"{prefix}PPCLocal", "type": "BOOL", "value": "false",
-             "comments": ["Plant control"]}
+            {
+                "name": f"{prefix}PPCLocal",
+                "type": "BOOL",
+                "value": "false",
+                "comments": ["Plant control"],
+            }
         )
-    lv_control = P.is_true(zone1.get("ConverterLVControl", "True"))
+    lv_control = P.is_true(zone1.get(names.row("Zone1", "converter_lv_control"), "True"))
     params.append(
-        {"name": f"{prefix}ConverterLVControl", "type": "BOOL",
-         "value": str(lv_control).lower(), "comments": ["LV Transformer"]}
+        {
+            "name": f"{prefix}ConverterLVControl",
+            "type": "BOOL",
+            "value": str(lv_control).lower(),
+            "comments": ["LV Transformer"],
+        }
     )
-    number = number_of(zone1)
-    r_pu, x_pu = el.short_circuit_rx(number("Z_cc_TG"), number("R_cc_TG / X_cc_TG"))
+    number = P.numbers("Zone1", zone1)
+    r_pu, x_pu = el.short_circuit_rx(number("group_impedance"), number("group_rx_ratio"))
     params += [
         {"name": f"{prefix}RLvTrPu", "type": "DOUBLE", "value": r_pu},
         {"name": f"{prefix}XLvTrPu", "type": "DOUBLE", "value": x_pu},
     ]
     params.append(
-        {"name": f"{prefix}SNom", "type": "DOUBLE", "value": float(s_nom),
-         "comments": ["General"]}
+        {"name": f"{prefix}SNom", "type": "DOUBLE", "value": float(s_nom), "comments": ["General"]}
     )
     return par_id, params

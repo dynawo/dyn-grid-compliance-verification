@@ -12,8 +12,7 @@
 from __future__ import annotations
 
 import electrical as el
-
-from .common import number_of
+import parse as P
 
 
 def collector_par_set(par_id: str, zone3: dict) -> tuple:
@@ -34,9 +33,13 @@ def collector_par_set(par_id: str, zone3: dict) -> tuple:
     tuple
         ``(set id, parameters)``.
     """
-    number = number_of(zone3)
+    number = P.numbers("Zone3", zone3)
     line = el.line_impedance(
-        number("R_rc"), number("X_rc"), number("B_rc"), number("G_rc"), number("Un_PDR")
+        number("collector_r"),
+        number("collector_x"),
+        number("collector_b"),
+        number("collector_g"),
+        number("u_nom"),
     )
     return par_id, [
         {"name": "line_RPu", "type": "DOUBLE", "value": line["RPu"]},
