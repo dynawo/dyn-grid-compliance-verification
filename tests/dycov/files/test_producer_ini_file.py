@@ -23,6 +23,27 @@ from dycov.files.producer_ini_file import (
 
 
 class TestProducerIniFile:
+    def test_every_ini_explains_why_the_file_exists(self):
+        # Both flows open the file with the reason it exists: it carries the parameters some
+        # Dynawo models lack, and a value given here as well as in the PAR must be the more
+        # restrictive one.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            (target / "Zone1").mkdir()
+            (target / "Zone3").mkdir()
+
+            create_producer_ini_file(target, "S", "model_PPM")
+            write_producer_ini_file(
+                target, "Filled.ini", "S", {"u_nom_at_PDR": "33"}, {"Wind_Turbine": ("1", "1")}
+            )
+
+            written = [target / "Zone1" / "Producer.ini", target / "Filled.ini"]
+            for ini_file in written:
+                content = ini_file.read_text()
+                assert "The raison d'être for this INI file" in content
+                assert "**both** input files" in content
+                assert "more restrictive than PAR" in content
+
     def test_create_producer_ini_file_performance_template_success(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir)

@@ -13,6 +13,17 @@ from pathlib import Path
 
 from dycov.logging import dycov_logging
 
+_PREAMBLE = [
+    "# IMPORTANT: The raison d'être for this INI file is that some models from the Dynawo",
+    "# library do not have a few parameters needed by DyCoV tests, and therefore they can only",
+    "# be provided here, instead of Producer.PAR. However, there are other Dynawo models that",
+    "# do have one or more of the parameters listed here in this INI. In such case, you will",
+    "# have to make sure you provide said parameters in **both** input files, Producer.INI and",
+    "# Producer.PAR. DyCoV will double-check that INI values are more restrictive than PAR",
+    "# values, and stop with an ERROR if they are not.",
+    "",
+]
+
 
 def _kv(key: str, value) -> str:
     """Render an INI ``key = value`` line, leaving it blank when no value is given."""
@@ -33,6 +44,7 @@ def _render_ini_text(
     """
     lines = [
         "[DEFAULT]",
+        *_PREAMBLE,
         "# p_{max_unite} injection as defined by the DTR in MW",
         _kv("p_max_injection_at_PDR", values.get("p_max_injection_at_PDR", "")),
     ]
