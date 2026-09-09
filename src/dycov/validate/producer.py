@@ -96,6 +96,8 @@ class ModelProducer(Producer):
         elif verification_type == MODEL_VALIDATION:
             self.__set_model_validation_type()
 
+        file_checks.check_curves_metadata(self._producer_curves_path, self._reference_curves_path)
+
     def __set_electric_performance_type(self):
         #  Expected input example:
         #  Dynawo

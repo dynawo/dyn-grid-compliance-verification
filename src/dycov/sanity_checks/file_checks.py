@@ -12,6 +12,7 @@ This module provides functions for validating the presence, structure, and consi
 of various files related to Dynawo models and curves.
 """
 
+import configparser
 import errno
 import os
 import re
@@ -19,6 +20,7 @@ from pathlib import Path
 
 from lxml import etree
 
+from dycov.curves.importer.metadata import CurvesMetadata
 from dycov.files.producer_curves import create_producer_curves
 from dycov.logging import dycov_logging
 
@@ -142,6 +144,86 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
         # Log an error and raise FileNotFoundError if 'CurvesFiles.ini' is still not found
         dycov_logging.get_logger("Sanity Checks").error(f"CurvesFiles.ini not found.{message}")
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "CurvesFiles.ini")
+
+
+def _get_unfilled_metadata_options(dict_file: Path) -> list:
+    """Gets the mandatory metadata options that a curves dictionary leaves without a value.
+
+    Parameters
+    ----------
+    dict_file : Path
+        Path to the curves dictionary.
+
+    Returns
+    -------
+    list
+        Names of the mandatory options declared without a value; empty when the dictionary
+        cannot be parsed, a case that the curves importer reports for every operating
+        condition using it.
+    """
+    try:
+        return CurvesMetadata.from_dict_file(dict_file).get_unfilled_options()
+    except configparser.Error:
+        return []
+
+
+def _find_unfilled_curves_metadata(curves_paths: tuple) -> list:
+    """Finds the curves dictionaries that leave mandatory metadata options without a value.
+
+    Parameters
+    ----------
+    curves_paths : tuple
+        Paths to the directories holding the curve files.
+
+    Returns
+    -------
+    list
+        Pairs of curves dictionary and names of its unfilled mandatory options.
+    """
+    unfilled_dicts = []
+    for curves_path in curves_paths:
+        if not curves_path:
+            continue
+
+        for dict_file in sorted(curves_path.rglob("*.[dD][iI][cC][tT]")):
+            unfilled_options = _get_unfilled_metadata_options(dict_file)
+            if unfilled_options:
+                unfilled_dicts.append((dict_file, unfilled_options))
+
+    return unfilled_dicts
+
+
+def check_curves_metadata(*curves_paths: Path) -> None:
+    """Checks that every curves dictionary declares a value for its mandatory metadata.
+
+    The metadata describes the curve files supplied by the producer, so an option declared
+    without a value cannot be replaced by a default: validating against an event placed at
+    another instant of time would report a compliance failure instead of an unfilled input.
+
+    Parameters
+    ----------
+    *curves_paths : Path
+        Paths to the directories holding the curve files. Undefined paths are ignored.
+
+    Raises
+    ------
+    ValueError
+        If any curves dictionary declares a mandatory metadata option without a value.
+    """
+    unfilled_dicts = _find_unfilled_curves_metadata(curves_paths)
+    if not unfilled_dicts:
+        return
+
+    unfilled_detail = "\n".join(
+        f"  {dict_file}: {', '.join(unfilled_options)}"
+        for dict_file, unfilled_options in unfilled_dicts
+    )
+    dycov_logging.get_logger("Sanity Checks").error(
+        "The metadata of the following curves dictionaries has options without a value, "
+        "fill them in with the values that describe the supplied curves:\n"
+        f"{unfilled_detail}"
+    )
+    raise ValueError("Curves dictionaries with unfilled metadata options.")
 
 
 def check_performance_model(model_path: Path) -> None:
