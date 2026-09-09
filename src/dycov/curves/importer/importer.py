@@ -17,6 +17,7 @@ from typing import Optional
 import pandas as pd
 
 from dycov.curves import naming
+from dycov.curves.importer.metadata import CurvesMetadata
 from dycov.curves.importer.reader import get_curves_reader
 
 
@@ -64,6 +65,7 @@ class CurvesImporter:
         self._curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._curves_cfg.optionxform = str
         self._curves_cfg.read(dict_file)
+        self._metadata = CurvesMetadata(self._curves_cfg, dict_file)
 
         if remove_working_dict:
             dict_file.unlink()
@@ -124,6 +126,18 @@ class CurvesImporter:
                 channel: naming.to_internal_name(name) for channel, name in curves_dict.items()
             }
         return curves_dict
+
+    @property
+    def metadata(self) -> CurvesMetadata:
+        """
+        Gets the metadata declared for the curves.
+
+        Returns
+        -------
+        CurvesMetadata
+            The metadata of the loaded curves configuration.
+        """
+        return self._metadata
 
     @property
     def config(self) -> configparser.ConfigParser:

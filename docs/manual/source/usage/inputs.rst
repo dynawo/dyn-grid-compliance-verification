@@ -274,6 +274,11 @@ from the curve file itself:
 * the mapping between curve columns and the signal names expected by DyCoV,
 * simulation parameters used to obtain the curves (event timing, etc.).
 
+The simulation parameters must be filled in. When a DICT file declares one of
+them without a value, DyCoV stops before simulating and names the file and the
+option: replacing the missing value with a default would validate the model
+against an event placed at another instant of time.
+
 The DICT file uses INI format, interpreted by Python's ``configparser``
 module. The precise syntax is described in the
 `Supported ini file structure <https://docs.python.org/3/library/configparser.html#supported-ini-file-structure>`_
