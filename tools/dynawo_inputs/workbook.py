@@ -24,6 +24,8 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import excel_names as names
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -33,17 +35,17 @@ _MAIN_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 _REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
 # Sheet names are matched accent-insensitively, hence the unaccented spelling.
-_CONFIG_SHEET = "general"
+_CONFIG_SHEET = names.normalize(names.sheet("config"))
 
 # Choices in the configuration sheet that mean "no block selected".
-_NO_BLOCK = {"", "aucun", "none", "n/a", "na", "-"}
+_NO_BLOCK = names.markers("no_block")
 
 # The template marks a parameter that does not apply to a variant, in its name cell or its value
 # cell; written verbatim the mark would end up in the PAR.
-_NOT_APPLICABLE = "/"
+_NOT_APPLICABLE = names.marker("not_applicable")
 
 # Same idea in a base-unit or comment cell: the row has no annotation to carry.
-_NO_ANNOTATION = {"-", "/", "n/a", "na"}
+_NO_ANNOTATION = names.markers("no_annotation")
 
 # Excel type -> Dynawo PAR type.
 _TYPE_MAP = {
@@ -148,10 +150,7 @@ def read_workbook(path: Path) -> dict[str, Grid]:
     with zipfile.ZipFile(path) as archive:
         shared = _read_shared_strings(archive)
         sheets = _read_sheet_index(archive)
-        return {
-            name: _read_sheet_grid(archive, target, shared)
-            for name, target in sheets
-        }
+        return {name: _read_sheet_grid(archive, target, shared) for name, target in sheets}
 
 
 def _read_shared_strings(archive: zipfile.ZipFile) -> list[str]:
@@ -188,9 +187,7 @@ def _read_sheet_index(archive: zipfile.ZipFile) -> list[tuple[str, str]]:
     return sheets
 
 
-def _read_sheet_grid(
-    archive: zipfile.ZipFile, target: str, shared: list[str]
-) -> Grid:
+def _read_sheet_grid(archive: zipfile.ZipFile, target: str, shared: list[str]) -> Grid:
     """Parse a single worksheet XML into a dense grid of string values."""
     root = ET.fromstring(archive.read(target))
     cells: dict[tuple[int, int], str] = {}
@@ -274,8 +271,8 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
         return []  # not a structured parameter sheet
 
     column_groups = _find_column_groups(grid, header_row)
-    base_columns = _find_extra_columns(grid, header_row, "base")
-    comment_columns = _find_extra_columns(grid, header_row, "comment")
+    base_columns = _find_extra_columns(grid, header_row, names.anchors("base_unit"))
+    comment_columns = _find_extra_columns(grid, header_row, names.anchors("comment"))
     table_labels = _find_table_labels(grid, header_row - 2)
 
     variants: list[Variant] = []
@@ -296,9 +293,9 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
     return variants
 
 
-_PARAM_HEADER_PREFIXES = ("parametre", "parameter")
-_TYPE_HEADERS = {"type", "types"}
-_VALUE_HEADERS = {"value", "values", "valeur", "valeurs"}
+_PARAM_HEADER_PREFIXES = names.anchors("param")
+_TYPE_HEADERS = set(names.anchors("type"))
+_VALUE_HEADERS = set(names.anchors("value"))
 
 
 def _normalized_header(value) -> str:
@@ -375,15 +372,15 @@ def _group_columns(
     return Columns(param=param_col, value=value_col, type=type_col)
 
 
-def _find_extra_columns(grid: Grid, header_row: int, prefix: str) -> list[int]:
-    """Return header columns whose label starts with *prefix* (case-insensitive).
+def _find_extra_columns(grid: Grid, header_row: int, prefixes: tuple) -> list[int]:
+    """Return header columns whose label starts with any of *prefixes*.
 
     Used for the optional ``Base unit`` / ``Base`` and ``Comment`` columns.
     """
     return [
         col
         for col, value in enumerate(grid[header_row])
-        if isinstance(value, str) and value.strip().lower().startswith(prefix)
+        if _normalized_header(value).startswith(prefixes)
     ]
 
 
@@ -439,6 +436,7 @@ def _parse_parameters(grid: Grid, header_row: int, columns: Columns) -> list[Par
     non-empty. Empty rows (for this variant) are skipped without ending the
     table, so sparse parallel variants are handled correctly.
     """
+
     def annotation(row: int, col: int | None) -> str | None:
         text = _cell(grid, row, col) if col is not None else None
         return text if text and text.casefold() not in _NO_ANNOTATION else None
@@ -501,10 +499,12 @@ def _parse_block_selection(
     """
     for row_idx, row in enumerate(grid):
         normalized = [_strip_accents(c) for c in row if isinstance(c, str)]
-        if "type de bloc" in normalized and "choix" in normalized:
-            block_col = _header_column(row, "type de bloc")
-            choice_col = _header_column(row, "choix")
-            zone_col = _header_column(row, "zone")
+        block_header = names.anchor("block")
+        choice_header = names.anchor("choice")
+        if block_header in normalized and choice_header in normalized:
+            block_col = _header_column(row, block_header)
+            choice_col = _header_column(row, choice_header)
+            zone_col = _header_column(row, names.anchor("zone"))
             selections: list[tuple[str, str]] = []
             zones: dict[str, list[str]] = {}
             for r in range(row_idx + 1, len(grid)):
@@ -517,9 +517,7 @@ def _parse_block_selection(
                     declared = _cell(grid, r, zone_col) or ""
                     zones[block] = [z.strip() for z in declared.split(";") if z.strip()]
             return selections, zones
-    raise ValueError(
-        "Block-selection table ('Type de bloc' | 'Choix') not found in 'Général'."
-    )
+    raise ValueError("Block-selection table ('Type de bloc' | 'Choix') not found in 'Général'.")
 
 
 def _parse_globals(grid: Grid, config: Config) -> None:
@@ -528,11 +526,13 @@ def _parse_globals(grid: Grid, config: Config) -> None:
         normalized = [_strip_accents(c) for c in row if isinstance(c, str)]
         if "grandeur" in normalized and "valeur" in normalized:
             name_col = next(
-                c for c, v in enumerate(row)
+                c
+                for c, v in enumerate(row)
                 if isinstance(v, str) and _strip_accents(v) == "grandeur"
             )
             value_col = next(
-                c for c, v in enumerate(row)
+                c
+                for c, v in enumerate(row)
                 if isinstance(v, str) and _strip_accents(v) == "valeur"
             )
             for r in range(row_idx + 1, len(grid)):
@@ -571,9 +571,7 @@ def _merge_comment(param: Parameter) -> str | None:
     return " | ".join(parts) if parts else None
 
 
-def _selected_variants(
-    config: Config, variants: dict[str, Variant]
-) -> list[tuple[str, Variant]]:
+def _selected_variants(config: Config, variants: dict[str, Variant]) -> list[tuple[str, Variant]]:
     """Return the enabled ``(block, variant)`` pairs in *workbook* order.
 
     The ``Général`` sheet only decides *which* variant each block uses; the
@@ -594,8 +592,4 @@ def _selected_variants(
                 f"typically in the '{block}' sheet. Variant tables found: {found}."
             )
         block_of[choice] = block
-    return [
-        (block_of[name], variant)
-        for name, variant in variants.items()
-        if name in block_of
-    ]
+    return [(block_of[name], variant) for name, variant in variants.items() if name in block_of]

@@ -78,9 +78,9 @@ def empty_zone1_reason(config) -> str:
         The message the tool refuses with.
     """
     declared = [
-        block for block, choice in config.selections
-        if wb._strip_accents(choice) not in wb._NO_BLOCK
-        and "Zone1" in config.zones.get(block, [])
+        block
+        for block, choice in config.selections
+        if wb._strip_accents(choice) not in wb._NO_BLOCK and "Zone1" in config.zones.get(block, [])
     ]
     if not declared:
         return (

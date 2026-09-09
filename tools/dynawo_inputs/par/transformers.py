@@ -14,7 +14,7 @@ from __future__ import annotations
 import electrical as el
 import parse as P
 
-from .common import PU_BASE_NOTE, number_of
+PU_BASE_NOTE = "impedances in pu, base SnRef = 100 MVA"
 
 
 def _impedance_params(r_pu: float, x_pu: float) -> list:
@@ -43,12 +43,12 @@ def group_par_set(par_id: str, zone1: dict, s_nom) -> tuple:
     tuple
         ``(set id, parameters)``.
     """
-    number = number_of(zone1)
+    number = P.numbers("Zone1", zone1)
     r_pu, x_pu = el.transformer_impedance(
-        number("Z_cc_TG"), number("R_cc_TG / X_cc_TG"), float(s_nom)
+        number("group_impedance"), number("group_rx_ratio"), float(s_nom)
     )
     return par_id, _impedance_params(r_pu, x_pu) + [
-        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": number("r_TG")},
+        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": number("group_ratio")},
     ]
 
 
@@ -67,16 +67,18 @@ def main_par_set(par_id: str, zone3: dict) -> tuple:
     tuple
         ``(set id, parameters)``.
     """
-    number = number_of(zone3)
-    s_nom = number("SnZone3")
-    r_pu, x_pu = el.transformer_impedance(number("Z_cc_TP"), number("R_cc_TP / X_cc_TP"), s_nom)
+    number = P.numbers("Zone3", zone3)
+    s_nom = number("s_nom")
+    r_pu, x_pu = el.transformer_impedance(number("main_impedance"), number("main_rx_ratio"), s_nom)
     taps = el.transformer_taps(
-        int(number("N_prises")), number("r_min"), number("r_max"),
-        tap_0=P.zone_optional_number(zone3, "Tap_0"), r_0=P.zone_optional_number(zone3, "r_0"),
+        int(number("taps")),
+        number("tap_ratio_min"),
+        number("tap_ratio_max"),
+        tap_0=P.optional_number("Zone3", zone3, "starting_tap"),
+        r_0=P.optional_number("Zone3", zone3, "starting_ratio"),
     )
     return par_id, [
-        {"name": "transformer_SNom", "type": "DOUBLE", "value": s_nom,
-         "comments": [PU_BASE_NOTE]},
+        {"name": "transformer_SNom", "type": "DOUBLE", "value": s_nom, "comments": [PU_BASE_NOTE]},
         {"name": "transformer_RPu", "type": "DOUBLE", "value": r_pu},
         {"name": "transformer_XPu", "type": "DOUBLE", "value": x_pu},
         {"name": "transformer_BPu", "type": "DOUBLE", "value": 0.0},
@@ -105,10 +107,10 @@ def aux_par_set(par_id: str, zone3: dict) -> tuple:
     tuple
         ``(set id, parameters)``.
     """
-    number = number_of(zone3)
+    number = P.numbers("Zone3", zone3)
     r_pu, x_pu = el.transformer_impedance(
-        number("Z_cc_TA"), number("R_cc_TA / X_cc_TA"), number("Sn_A")
+        number("aux_impedance"), number("aux_rx_ratio"), number("aux_s_nom")
     )
     return par_id, _impedance_params(r_pu, x_pu) + [
-        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": number("r_TA")},
+        {"name": "transformer_rTfoPu", "type": "DOUBLE", "value": number("aux_ratio")},
     ]

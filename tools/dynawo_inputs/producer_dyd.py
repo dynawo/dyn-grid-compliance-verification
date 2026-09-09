@@ -68,7 +68,7 @@ def checked_topology(zone3: dict) -> str:
     str
         The topology name, in DyCoV's spelling.
     """
-    topology = re.sub(r"\s+", "", P.zone_text(zone3, "Topologie"))
+    topology = re.sub(r"\s+", "", P.texts("Zone3", zone3)("topology"))
     if topology not in _SUPPORTED_TOPOLOGIES:
         raise ValueError(
             f"topology {topology!r} in sheet {P.sheet_of(zone3)!r} is not generated yet; "
@@ -153,7 +153,11 @@ def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> No
             root.remove(bbmodel)
     if downstream:
         etree.SubElement(
-            root, f"{{{ns}}}connect",
-            id1=gen_id, var1=gen_terminal, id2=downstream[0], var2=downstream[1],
+            root,
+            f"{{{ns}}}connect",
+            id1=gen_id,
+            var1=gen_terminal,
+            id2=downstream[0],
+            var2=downstream[1],
         )
     write_producer_dyd(root, dyd_file)

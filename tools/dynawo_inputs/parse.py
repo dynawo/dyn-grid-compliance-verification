@@ -7,20 +7,18 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""WECC front-end for the Excel -> DyCoV input generator: parsing + model resolution.
+"""Reading of the workbook, on top of the stdlib ``.xlsx`` reader (``workbook.py``):
 
-Reuses the stdlib ``.xlsx`` reader and the control-parameter parser (``workbook.py``),
-and adds:
-- ``read_selected_key``: the Excel-computed Model-Map key, read from the ``Général`` derived
-  table (the tool has no knowledge of which blocks form the key);
-- ``resolve_models``: that key -> Dynawo ``lib`` + prefix (per zone), by looking up the
-  ``Model Map`` sheet;
-- ``parse_zone``: the ``Zone1<x>`` / ``Zone3`` electrical tables, locating the *Valeurs* column
-  per sheet (design doc section 4.3, the two sheets differ);
+- ``read_selected_key``: the Excel-computed Model-Map key, read from the derived table of the
+  configuration sheet (the tool has no knowledge of which blocks form the key);
+- ``resolve_models``: that key -> Dynawo ``lib`` + prefix (per zone), by looking up the Model Map;
+- ``parse_zone``: the electrical tables, locating the value column per sheet (the two differ);
 - ``parse_control_params``: the selected control parameters, flat, in workbook order;
-- ``technology`` / ``template_for``: derive PV/BESS/Wind and the DyCoV template.
+- ``technology`` / ``template_for``: derive PV/BESS/Wind and the DyCoV template;
+- ``zone_text`` / ``zone_number`` / ``zone_value``: rows read with their sheet as context, so an
+  absent, empty or unusable one is refused by name.
 
-Everything here is the standard-specific front-end; the downstream is agnostic (design section 6).
+Which sheet, row or header each of these looks for comes from ``excel_names.ini``.
 """
 
 from __future__ import annotations
@@ -33,9 +31,10 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import excel_names as names  # noqa: E402
 import workbook as wb  # noqa: E402
 
-MODEL_MAP_SHEET = "Model Map"
+MODEL_MAP_SHEET = names.sheet("model_map")
 _MAP_COLUMNS = ("zone3_lib", "zone3_prefix", "zone1_lib", "zone1_prefix")
 
 
@@ -59,7 +58,7 @@ def _locate_key_column(grid) -> tuple[int, int] | None:
     """
     for row_idx, row in enumerate(grid):
         for col, value in enumerate(row):
-            if _normalized_header(value) == "zone3 lib" and col > 0:
+            if _normalized_header(value) == names.anchor("model_map") and col > 0:
                 return row_idx, col - 1
     return None
 
@@ -243,6 +242,80 @@ def zone_optional_number(zone: dict, name: str) -> float | None:
     return zone_number(zone, name)
 
 
+def numbers(zone_key: str, zone: dict):
+    """Bind the numeric reader to one sheet, read by concept instead of by row name.
+
+    Parameters
+    ----------
+    zone_key: str
+        Zone the sheet describes, ``Zone1`` or ``Zone3``.
+    zone: dict
+        Rows of that sheet, as ``parse_zone`` returns them.
+
+    Returns
+    -------
+    callable
+        ``concept -> float``, e.g. ``numbers("Zone3", zone3)("main_impedance")``.
+    """
+    return lambda key: zone_number(zone, names.row(zone_key, key))
+
+
+def texts(zone_key: str, zone: dict):
+    """Bind the text reader to one sheet, read by concept instead of by row name.
+
+    Parameters
+    ----------
+    zone_key: str
+        Zone the sheet describes, ``Zone1`` or ``Zone3``.
+    zone: dict
+        Rows of that sheet.
+
+    Returns
+    -------
+    callable
+        ``concept -> str``.
+    """
+    return lambda key: zone_text(zone, names.row(zone_key, key))
+
+
+def values(zone_key: str, zone: dict):
+    """Bind the reader that validates a row as a number but keeps it as written.
+
+    Parameters
+    ----------
+    zone_key: str
+        Zone the sheet describes, ``Zone1`` or ``Zone3``.
+    zone: dict
+        Rows of that sheet.
+
+    Returns
+    -------
+    callable
+        ``concept -> str``.
+    """
+    return lambda key: zone_value(zone, names.row(zone_key, key))
+
+
+def optional_number(zone_key: str, zone: dict, key: str) -> float | None:
+    """The value of a row that may be left empty, read by concept.
+
+    Parameters
+    ----------
+    zone_key: str
+        Zone the sheet describes, ``Zone1`` or ``Zone3``.
+    zone: dict
+        Rows of that sheet.
+    key: str
+        Concept the row stands for.
+
+    Returns
+    -------
+    float or None
+        The number, or None when the sheet has no such row or leaves it empty.
+    """
+    return zone_optional_number(zone, names.row(zone_key, key))
+
+
 def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:
     """Parse a ``Zone1<x>`` / ``Zone3`` electrical table into ``{parameter name -> value}``.
 
@@ -264,7 +337,8 @@ def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:
 
 def zone1_sheets(workbook: dict) -> list:
     """Ordered list of ``Zone1<x>`` sheet names present (``Zone1a``, ``Zone1b``, ...)."""
-    return [name for name in workbook if wb._strip_accents(name).startswith("zone1")]
+    prefix = names.normalize(names.sheet("zone1_prefix"))
+    return [name for name in workbook if wb._strip_accents(name).startswith(prefix)]
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +346,7 @@ def zone1_sheets(workbook: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
-CONVERTER_VOLTAGE_CHOICE = "Un1 ou Un2"
+CONVERTER_VOLTAGE_CHOICE = names.marker("converter_voltage")
 
 
 def _normalized_number(text: str) -> str:
@@ -315,7 +389,12 @@ def parse_control_params(workbook: dict, converter_voltage: str | None = None) -
             param_type = wb._map_type(p.type)
             value = _normalized_number(p.value) if param_type == "DOUBLE" else p.value
             result.append(
-                {"block": block, "name": p.name, "type": param_type,
-                 "value": value, "comments": comments}
+                {
+                    "block": block,
+                    "name": p.name,
+                    "type": param_type,
+                    "value": value,
+                    "comments": comments,
+                }
             )
     return result
