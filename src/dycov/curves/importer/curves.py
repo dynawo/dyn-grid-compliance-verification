@@ -56,12 +56,6 @@ def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
     ]
 
 
-def _get_config_value(config, section, option, default=0.0):
-    if config.has_option(section, option):
-        return float(config.get(section, option))
-    return default
-
-
 class ImportedCurves(ProducerCurves):
     """
     Manages the import and processing of producer curves from external files.
@@ -127,23 +121,15 @@ class ImportedCurves(ProducerCurves):
             self._generators = self.__get_generators(df_imported_curves)
             self._gens = _get_generators_ini(self._generators, df_imported_curves)
 
-        sim_t_event_start = _get_config_value(
-            importer.config, "Curves-Metadata", "sim_t_event_start"
-        )
-        fault_duration = _get_config_value(importer.config, "Curves-Metadata", "fault_duration")
+        sim_t_event_start = importer.metadata.get_float("sim_t_event_start")
+        fault_duration = importer.metadata.get_float("fault_duration")
 
-        if importer.config.has_option("Curves-Metadata", "is_field_measurements"):
-            self._is_field_measurements = (
-                importer.config.get("Curves-Metadata", "is_field_measurements").lower() == "true"
-            )
+        self._is_field_measurements = importer.metadata.get_boolean(
+            "is_field_measurements", self._is_field_measurements
+        )
         self.get_producer().set_is_field_measurements(self._is_field_measurements)
 
-        generators_imax = {}
-        for key in importer.config["Curves-Metadata"].keys():
-            if key.endswith("_GEN_MaxInjectedCurrentPu"):
-                generator_id = key.replace("_GEN_MaxInjectedCurrentPu", "")
-                generators_imax[generator_id] = float(importer.config.get("Curves-Metadata", key))
-        self._generators_imax = generators_imax
+        self._generators_imax = importer.metadata.get_generators_imax()
 
         return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
