@@ -188,23 +188,34 @@ class ComtradeReader(CurvesReader):
         ----------
         remove_file: bool, optional
             Whether to remove the file after reading. Default is True.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the record is neither a CFG and DAT pair nor a single CFF file
         """
         rec = Comtrade()
         cfg_files = list(self._path.glob(self._filename + ".[cC][fF][gG]"))
-        if cfg_files:
+        dat_files = list(self._path.glob(self._filename + ".[dD][aA][tT]"))
+        cff_files = list(self._path.glob(self._filename + ".[cC][fF][fF]"))
+        if cfg_files and dat_files:
             cfg_file = cfg_files[0]
-            dat_file = next(self._path.glob(self._filename + ".[dD][aA][tT]"))
+            dat_file = dat_files[0]
             rec.load(cfg_file.as_posix(), dat_file.as_posix())
             if remove_file:
                 cfg_file.unlink()
                 dat_file.unlink()
-
-        cff_files = list(self._path.glob(self._filename + ".[cC][fF][fF]"))
-        if cff_files:
+        elif cff_files:
             cff_file = cff_files[0]
             rec.load(cff_file.as_posix())
             if remove_file:
                 cff_file.unlink()
+        else:
+            raise FileNotFoundError(
+                f"the COMTRADE record '{self._filename}' in '{self._path}' has no configuration "
+                f"file, add the '{self._filename}.cfg' file that describes its data file, or "
+                f"supply the record as a single '{self._filename}.cff' file"
+            )
 
         self._analog_channel_ids = rec.analog_channel_ids
         self._time_values = rec.time
