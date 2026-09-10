@@ -301,6 +301,12 @@ tool writes the keys with their meaning and no value. Filling them with the simu
 instant would silently compare curves that are not aligned in time, which reads as a
 non-compliant model rather than as an unfilled input (`dycov#481`).
 
+**Storage runs every case twice.** A BESS is tested injecting and consuming, so DyCoV names two
+operating conditions per DTR case and expects one `.csv` for each. The tests table has one
+results-file cell per case, so the workbook carries the file's base name and the tool appends each
+suffix of `[Storage]` to both the test name and the file name (`…ActiveInjection.csv`,
+`…ActiveConsumption.csv`). The template needs no storage-specific row.
+
 A row with no curve of its own — the setpoint rows, say — is informative: DyCoV reads no such curve.
 Likewise, a DTR case the sheets do not list gets no reference file; today the frequency ramp is in
 that position, listed by neither signal sheet.
