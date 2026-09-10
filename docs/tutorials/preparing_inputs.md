@@ -271,6 +271,11 @@ The metadata options describe the curves you supply, so they must be filled
 in: DyCoV stops before simulating and names the file and the option left
 without a value.
 
+For EUROSTAG and CSV files, the **Curves‑Dictionary** `time` entry must name
+the column holding the time steps, as the curve file writes it. DyCoV stops
+and names the file and the column it looked for when the file has no such
+column. COMTRADE records carry their own time base and do not need the entry.
+
 **Example:**
 `examples/Model/Wind/WECC4B/ReferenceCurves/Producer/PCS_RTE-I16z1*.dict`
 
