@@ -99,6 +99,11 @@ def curves(zone: str, generator_id: str) -> dict:
     return mapped
 
 
+def test_suffixes() -> tuple:
+    """The suffixes a storage plant's operating conditions carry, verbatim: they name files."""
+    return tuple(value.strip() for value in _option("Storage", "test_suffixes").split(","))
+
+
 def tests(zone: str) -> dict:
     """``{normalized test key -> PCS.Benchmark.OperatingCondition}`` of a signal sheet.
 

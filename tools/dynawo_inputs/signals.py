@@ -111,7 +111,15 @@ def _test_key(case: str, seen: dict) -> tuple[str, str]:
     return f"{case}/{ordinal}", case
 
 
-def _parse_tests(grid, zone: str) -> list:
+def _suffixed(name: str, curves_file: str, suffix: str) -> Test:
+    if not suffix:
+        return Test(name=name, curves_file=curves_file)
+    stem, dot, extension = curves_file.rpartition(".")
+    suffixed_file = f"{stem}{suffix}{dot}{extension}" if dot else f"{curves_file}{suffix}"
+    return Test(name=name + suffix, curves_file=suffixed_file)
+
+
+def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
     known = names.tests(zone)
     case_column = None
     for key in ("test_case", "test_fiche"):
@@ -132,11 +140,13 @@ def _parse_tests(grid, zone: str) -> list:
         name = known.get(with_ordinal, known.get(plain))
         if not name or not curves_file or curves_file == names.marker("not_applicable"):
             continue
-        tests.append(Test(name=name, curves_file=curves_file.strip()))
+        tests += [_suffixed(name, curves_file.strip(), suffix) for suffix in suffixes]
     return tests
 
 
-def parse_zone_signals(workbook: dict, zone: str, generator_id: str) -> ZoneSignals:
+def parse_zone_signals(
+    workbook: dict, zone: str, generator_id: str, storage: bool = False
+) -> ZoneSignals:
     """Parse one signal sheet.
 
     Parameters
@@ -147,6 +157,9 @@ def parse_zone_signals(workbook: dict, zone: str, generator_id: str) -> ZoneSign
         Zone whose sheet is read, ``Zone1`` or ``Zone3``.
     generator_id: str
         Id of the generator block, which names its own curves.
+    storage: bool
+        Whether the plant is a storage one, whose every case runs twice (injecting and consuming),
+        so one row of the tests table describes two tests and two ``.csv`` files.
 
     Returns
     -------
@@ -157,7 +170,7 @@ def parse_zone_signals(workbook: dict, zone: str, generator_id: str) -> ZoneSign
     if sheet_name not in workbook:
         return ZoneSignals(zone=zone)
     grid = workbook[sheet_name]
-    tests = _parse_tests(grid, zone)
+    tests = _parse_tests(grid, zone, names.test_suffixes() if storage else ("",))
     if not tests:
         return ZoneSignals(zone=zone)
     return ZoneSignals(
@@ -168,7 +181,7 @@ def parse_zone_signals(workbook: dict, zone: str, generator_id: str) -> ZoneSign
     )
 
 
-def parse_signals(workbook: dict, generator_id: str) -> dict:
+def parse_signals(workbook: dict, generator_id: str, storage: bool = False) -> dict:
     """Parse both signal sheets.
 
     Parameters
@@ -177,10 +190,15 @@ def parse_signals(workbook: dict, generator_id: str) -> dict:
         The whole workbook, as ``{sheet name -> grid}``.
     generator_id: str
         Id of the generator block, which names its own curves.
+    storage: bool
+        Whether the plant is a storage one (see ``parse_zone_signals``).
 
     Returns
     -------
     dict
         ``{zone -> ZoneSignals}`` for both zones.
     """
-    return {zone: parse_zone_signals(workbook, zone, generator_id) for zone in ("Zone1", "Zone3")}
+    return {
+        zone: parse_zone_signals(workbook, zone, generator_id, storage)
+        for zone in ("Zone1", "Zone3")
+    }

@@ -97,6 +97,55 @@ def test_a_test_whose_file_is_not_given_is_left_out():
     assert [t.curves_file for t in parsed.tests] == ["scr10.csv"]
 
 
+def test_a_storage_case_describes_one_test_per_direction():
+    # A storage plant runs every case injecting and consuming, so the workbook carries the base
+    # name of the .csv files and each suffix names one test and one file.
+    parsed = sig.parse_zone_signals(
+        _workbook(zone1=(ZONE1_ROWS, [("6", "bolted_scr3.csv")])), "Zone1", "Bess", storage=True
+    )
+
+    assert [(test.name, test.curves_file) for test in parsed.tests] == [
+        (
+            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Injection",
+            "bolted_scr3Injection.csv",
+        ),
+        (
+            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Consumption",
+            "bolted_scr3Consumption.csv",
+        ),
+    ]
+
+
+def test_a_plant_that_is_not_storage_describes_one_test_per_case():
+    parsed = sig.parse_zone_signals(
+        _workbook(zone1=(ZONE1_ROWS, [("6", "bolted_scr3.csv")])), "Zone1", GEN
+    )
+
+    assert [test.name for test in parsed.tests] == [
+        "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3"
+    ]
+
+
+def test_storage_writes_the_two_files_of_every_case(tmp_path):
+    folder = tmp_path / "curves"
+    folder.mkdir()
+    (folder / "scr3Injection.csv").write_text("time\n0\n", encoding="utf-8")
+    book = _workbook(
+        zone1=(ZONE1_ROWS, [("6", "scr3.csv")]), zone3=(ZONE3_ROWS, []), folder=str(folder)
+    )
+
+    written = rc.write_reference_curves(
+        tmp_path / "out", "Producer", sig.parse_signals(book, "Bess", storage=True)
+    )
+
+    target = tmp_path / "out" / "ReferenceCurves" / "Producer"
+    assert written["tests"] == 2
+    assert (written["copied"], written["missing"]) == (1, ["scr3Consumption.csv"])
+    for suffix in names.test_suffixes():
+        name = "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3%s.dict" % suffix
+        assert (target / name).is_file()
+
+
 def test_an_absent_sheet_describes_nothing():
     parsed = sig.parse_zone_signals({}, "Zone3", GEN)
 

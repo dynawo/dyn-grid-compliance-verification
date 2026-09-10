@@ -190,7 +190,8 @@ def generate(excel: Path, outdir: Path) -> str:
         include_consumption=template == "model_BESS",
     )
 
-    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, sig.parse_signals(workbook, gen_id))
+    signals = sig.parse_signals(workbook, gen_id, storage=template == "model_BESS")
+    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, signals)
 
     return "\n".join(
         [
