@@ -168,6 +168,43 @@ class CurvesReader:
         """
         return self._frequency_sampling
 
+    def _find_time_index(self, channel_ids: list, file: Path) -> int:
+        """Locate the channel that holds the simulation time steps.
+
+        Parameters
+        ----------
+        channel_ids: list
+            Names of the channels, as the file declares them
+        file: Path
+            Path to the file being read
+
+        Returns
+        -------
+        int
+            Position of the channel with the simulation time steps
+
+        Raises
+        ------
+        ValueError
+            If the file has no channel named as the declared time channel
+        """
+        for idx, channel_id in enumerate(channel_ids):
+            if channel_id and channel_id == self._time_name:
+                return idx
+
+        if not self._time_name:
+            raise ValueError(
+                f"the curves dictionary does not declare the time channel of '{file}', fill in "
+                f"the 'time' option of its 'Curves-Dictionary' section with the name that the "
+                f"file gives to its time channel"
+            )
+
+        raise ValueError(
+            f"the file '{file}' has no channel named '{self._time_name}', declared as its time "
+            f"channel in the 'time' option of the 'Curves-Dictionary' section of the curves "
+            f"dictionary"
+        )
+
     @abstractmethod
     def load(self, remove_file: bool = True) -> None:
         """Parse file contents
@@ -214,18 +251,21 @@ class ComtradeReader(CurvesReader):
 
 
 class CsvReader(CurvesReader):
-    def __read(self, data: pd.DataFrame) -> None:
+    def __read(self, data: pd.DataFrame, file: Path) -> None:
         """Read and import the data from the file.
 
         Parameters
         ----------
         data: DataFrame
             Dataframe with all the curves data
+        file: Path
+            Path to the file being read
         """
-        self._time_values = data[self._time_name]
-        self._analog_count = int(len(data[self._time_name]))
+        time_name = data.columns[self._find_time_index(list(data.columns), file)]
+        self._time_values = data[time_name]
+        self._analog_count = int(len(self._time_values))
 
-        value_data = data.loc[:, ~data.columns.isin([self._time_name])]
+        value_data = data.loc[:, ~data.columns.isin([time_name])]
         self._column_count = len(value_data.columns)
         self._analog_channel_ids = [None] * self._column_count
         self._analog_values = [None] * self._column_count
@@ -241,22 +281,29 @@ class CsvReader(CurvesReader):
         ----------
         remove_file: bool, optional
             Whether to remove the file after reading. Default is True.
+
+        Raises
+        ------
+        ValueError
+            If the file has no column named as the declared time channel
         """
         file = next(self._path.glob(self._filename + ".[cC][sS][vV]"))
         data = pd.read_csv(file.as_posix(), sep=None, engine="python", skipinitialspace=True)
-        self.__read(data)
+        self.__read(data, file)
         if remove_file:
             file.unlink()
 
 
 class EurostagReader(CurvesReader):
-    def __read(self, data: TextIO) -> None:
+    def __read(self, data: TextIO, file: Path) -> None:
         """Read and import the data from the file.
 
         Parameters
         ----------
         data: TextIO
             Object with all the curves data
+        file: Path
+            Path to the file being read
         """
         # First line: obtain number of results
         line = data.readline()
@@ -273,12 +320,11 @@ class EurostagReader(CurvesReader):
 
         # Column names line
         self._column_count = len(packed) - 2
+        time_idx = self._find_time_index(packed, file)
         self._analog_channel_ids = [None] * self._column_count
         column_idx = 0
         for idx, channel_idx in enumerate(packed):
-            if channel_idx == self._time_name:
-                time_idx = idx
-            elif channel_idx == "":
+            if idx == time_idx or channel_idx == "":
                 pass
             else:
                 self._analog_channel_ids[column_idx] = channel_idx
@@ -312,9 +358,14 @@ class EurostagReader(CurvesReader):
         ----------
         remove_file: bool, optional
             Whether to remove the file after reading. Default is True.
+
+        Raises
+        ------
+        ValueError
+            If the file has no column named as the declared time channel
         """
         file = next(self._path.glob(self._filename + ".[eE][xX][pP]"))
         with open(file.as_posix(), "r") as data:
-            self.__read(data)
+            self.__read(data, file)
         if remove_file:
             file.unlink()
