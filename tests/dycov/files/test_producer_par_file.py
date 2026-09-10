@@ -11,7 +11,11 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.files.producer_par_file import check_parameters, create_producer_par_file
+from dycov.files.producer_par_file import (
+    check_parameters,
+    create_producer_par_file,
+    write_producer_par_file,
+)
 
 
 class TestProducerParFile:
@@ -110,6 +114,37 @@ class TestProducerParFile:
             assert len(pars) == 1
             assert pars[0].get("name") == "p"
             assert pars[0].get("value") == "3.14"
+
+    def test_write_producer_par_file_install_independent(self, tmp_path):
+        # Excel-driven flow: sets provided directly, no ddb / launcher involved.
+        write_producer_par_file(
+            tmp_path,
+            "Producer.par",
+            [
+                (
+                    "Power_Park",
+                    [
+                        {"name": "photovoltaics_Kqp", "type": "DOUBLE", "value": "1"},
+                        {"name": "photovoltaics_QFlag", "type": "BOOL", "value": "true"},
+                    ],
+                ),
+                (
+                    "StepUp_Xfmr",
+                    [{"name": "transformer_XPu", "type": "DOUBLE", "value": "0.027"}],
+                ),
+            ],
+        )
+        par_file = tmp_path / "Producer.par"
+        assert par_file.exists()
+        sets, ns = self._parse_par_sets(par_file)
+        assert [s.get("id") for s in sets] == ["Power_Park", "StepUp_Xfmr"]
+        pars = list(sets[0].iterfind(f"{{{ns}}}par"))
+        assert {p.get("name"): p.get("value") for p in pars} == {
+            "photovoltaics_Kqp": "1",
+            "photovoltaics_QFlag": "true",
+        }
+        # a fully-provided PAR passes the completeness check
+        assert check_parameters(tmp_path, "performance_SM") is True
 
     def test_check_parameters_all_values_present(self, tmp_path, monkeypatch):
         dyd_file = tmp_path / "Producer.dyd"
