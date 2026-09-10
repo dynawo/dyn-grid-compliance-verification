@@ -133,7 +133,7 @@ def _zone3_par_sets(
             par.aux_load_par_set("Aux_Load", zone3),
         ]
     if topology.casefold().endswith("i"):
-        sets.append(par.collector_line_par_set("IntNetwork_Line", zone3))
+        sets.append(par.collector_line_par_set("IntNetwork_Line", zone3, zone1))
     return sets
 
 

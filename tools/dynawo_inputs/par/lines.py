@@ -15,11 +15,12 @@ import electrical as el
 import parse as P
 
 
-def collector_par_set(par_id: str, zone3: dict) -> tuple:
+def collector_par_set(par_id: str, zone3: dict, zone1: dict) -> tuple:
     """Build the aggregated collector of the ``+i`` topologies (``Line``).
 
-    Its rows carry no voltage of their own, and the block connects to the PDR with no transformer
-    in between, so the per-unit base is ``Un_PDR``.
+    DyCoV wires zone 3 as ``PDR - Main_Xfmr - IntNetwork_Line - Int_Bus``, so the collector sits on
+    the medium-voltage side of the main transformer and its per-unit base is ``Un1``, the voltage
+    its own rows are expressed at, not ``Un_PDR``.
 
     Parameters
     ----------
@@ -27,6 +28,8 @@ def collector_par_set(par_id: str, zone3: dict) -> tuple:
         Id of the set, matching the line's block in the DYD.
     zone3: dict
         Rows of the ``Zone3`` sheet: ``R_rc``/``X_rc`` in ohms and ``B_rc``/``G_rc`` in siemens.
+    zone1: dict
+        Rows of the ``Zone1`` sheet, read for ``Un1``.
 
     Returns
     -------
@@ -39,7 +42,7 @@ def collector_par_set(par_id: str, zone3: dict) -> tuple:
         number("collector_x"),
         number("collector_b"),
         number("collector_g"),
-        number("u_nom"),
+        P.numbers("Zone1", zone1)("u_nom"),
     )
     return par_id, [
         {"name": "line_RPu", "type": "DOUBLE", "value": line["RPu"]},

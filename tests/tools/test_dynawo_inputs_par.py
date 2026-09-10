@@ -111,10 +111,18 @@ def test_aux_load_par_set(zone3, named):
     assert values["load_alpha"] == pytest.approx(1.5)
 
 
-def test_collector_line_par_set_uses_the_pdr_voltage_as_base(zone3, named):
-    # The collector rows are in ohms and siemens; its base is Un_PDR, the node it connects to.
-    _par_id, line = par.collector_line_par_set("IntNetwork_Line", zone3)
+def test_collector_line_par_set_uses_the_collector_voltage_as_base(zone1, zone3, named):
+    # DyCoV wires the collector below the main transformer, so its base is Un1, not Un_PDR.
+    _par_id, line = par.collector_line_par_set("IntNetwork_Line", zone3, zone1)
 
-    z_base = float(zone3["Un_PDR"]) ** 2 / 100.0
+    z_base = float(zone1["Un1"]) ** 2 / 100.0
     assert named(line)["line_XPu"] == pytest.approx(1.0 / z_base)
     assert named(line)["line_BPu"] == pytest.approx(0.0)
+
+
+def test_collector_line_par_set_ignores_the_pdr_voltage(zone1, zone3, named):
+    # Guard against the base slipping back to Un_PDR: the two voltages differ by a large factor.
+    _par_id, line = par.collector_line_par_set("IntNetwork_Line", zone3, zone1)
+
+    pdr_base = float(zone3["Un_PDR"]) ** 2 / 100.0
+    assert named(line)["line_XPu"] != pytest.approx(1.0 / pdr_base)
