@@ -279,6 +279,13 @@ them without a value, DyCoV stops before simulating and names the file and the
 option: replacing the missing value with a default would validate the model
 against an event placed at another instant of time.
 
+For EUROSTAG and CSV files, the ``time`` entry of the ``[Curves-Dictionary]``
+section must name the column that holds the time steps. The shipped DICT
+templates leave it empty, and a curve file may name that column in its own
+way: when the column is not found, DyCoV stops and names both the file and the
+column it looked for. COMTRADE records carry their own time base, so they do
+not need the entry.
+
 The DICT file uses INI format, interpreted by Python's ``configparser``
 module. The precise syntax is described in the
 `Supported ini file structure <https://docs.python.org/3/library/configparser.html#supported-ini-file-structure>`_
