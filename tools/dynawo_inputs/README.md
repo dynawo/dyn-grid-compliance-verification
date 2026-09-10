@@ -115,7 +115,12 @@ transformer) → `TransformerRatioTapChanger`.
   check values or completeness. Empty control cells are omitted (Dynawo applies
   its default); the tool only reports which submodels are present/missing.
 
-## Example
+## Example workbooks
+
+`examples/` holds one filled-in workbook per WECC example shipped in
+`examples/`, each named after the example it regenerates, plus the fixture
+below. See [`examples/README.md`](examples/README.md) for the table and the
+command that regenerates an example.
 
 `examples/WECCSample_full.xlsx` is a committed, fully-populated example — a
 90 MVA PV `S+Aux` case built to mirror `examples/Model/Photovoltaics/`
