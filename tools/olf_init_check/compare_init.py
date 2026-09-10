@@ -30,7 +30,8 @@ Modelling choices (matching how these plants actually behave):
 
 Remote regulation is expressed by pointing every generator at a 0-power "L_VREG" load
 placed on the PDR bus (OLF only lets a generator regulate an injection/busbar, not a
-bare bus).
+bare bus). Every branch — line or transformer — enters the network as its pi-equivalent, so
+an off-nominal tap is modelled rather than skipped.
 
 USAGE
 -----
@@ -68,7 +69,8 @@ SNREF = 100.0                      # MVA — Dynawo default pu base for impedanc
 GRID_SRC = {"InfiniteBus", "InfiniteBusFromTable", "InertialGrid"}
 LINE_LIBS = {"Line", "LineFault"}
 LOAD_LIBS = {"LoadAlphaBeta"}
-SKIP_LIBS = {"Measurements", "Step", "NodeFault", "SetPoint", "OmegaRef"}
+SKIP_LIBS = {"Measurements", "Step", "NodeFault", "SetPoint", "OmegaRef",
+             "EventSetPointBoolean"}
 # Newton must be tight on weak grids (huge X amplifies a tiny reactive residual into a
 # visible voltage error); slack is NOT distributed (a single grid slack absorbs balance).
 LF_PARAMS = dict(newtonRaphsonConvEpsPerEq="1e-10", maxNewtonRaphsonIterations="100")
@@ -137,6 +139,18 @@ def _find_suffix(d, *suffixes):
     return None
 
 
+def _branch_pimodel(r, x, rho):
+    """Pi-equivalent of an ideal ratio `rho` at terminal 1 followed by the series impedance.
+
+    Same algebra as `dycov.electrical.pimodel_parameters.xfmr_pimodel`, itself checked against
+    Dynawo's transformer equations, so an off-nominal tap lands on the side Dynawo puts it on.
+    Returns (series impedance, shunt admittance at terminal 1, shunt admittance at terminal 2);
+    rho=1 degenerates to the plain series branch.
+    """
+    y = 1 / complex(r, x)
+    return complex(r, x) / rho, rho * (rho - 1) * y, (1 - rho) * y
+
+
 def _gen_prefix(genset):
     for k in genset:
         m = re.match(r"(.+)_P0Pu$", k)
@@ -198,7 +212,7 @@ def compare_case(case):
 
     branches, gridline_idx, gens, loads, src, pdr_node, grid_family = [], [], [], [], None, None, "InfiniteBus"
     producer_ids = {mid for mid, _, _ in pmodels}
-    has_intline = False
+    has_intline, int_node, tso_gen = False, None, None
     for mid, lib, par in models:
         if lib in SKIP_LIBS:
             continue
@@ -221,13 +235,15 @@ def compare_case(case):
         elif lib in LINE_LIBS or lib.startswith("Transformer"):
             if len(ts) < 2:
                 return dict(status="SKIP", reason=f"branch terminals ({lib})")
-            ratio = _find_suffix(s, "RatioTfo0Pu", "rTfoPu")
-            if ratio is not None and abs(ratio - 1.0) > 1e-6:
-                return dict(status="SKIP", reason=f"off-nominal tap ratio={ratio:.4f}")
+            alpha = _find_suffix(s, "AlphaTfo0")
+            if alpha:
+                return dict(status="SKIP", reason=f"phase-shifting tap alpha={alpha:.4f}")
             r, x = _find_suffix(s, "_RPu"), _find_suffix(s, "_XPu")
             if r is None or x is None:
                 return dict(status="SKIP", reason=f"no branch impedance ({lib})")
-            branches.append((mid, uf.find(ts[0]), uf.find(ts[1]), r, x))
+            ratio = _find_suffix(s, "RatioTfo0Pu", "rTfoPu")
+            branches.append((mid, uf.find(ts[0]), uf.find(ts[1]), r, x,
+                             1.0 if ratio is None else ratio))
             if lib in LINE_LIBS:
                 if mid in producer_ids:      # producer-side equivalent internal line ("+i")
                     has_intline = True
@@ -237,15 +253,25 @@ def compare_case(case):
             loads.append((mid, uf.find(ts[0]), float(s.get("load_P0Pu", "0")), float(s.get("load_Q0Pu", "0")),
                           float(s.get("load_U0Pu", "nan")), float(s.get("load_UPhase0", "nan"))))
         elif lib == "Bus":
-            pdr_node = uf.find(ts[0])
-        else:  # generator
+            if par == "PDR":
+                pdr_node = uf.find(ts[0])
+            elif mid in producer_ids:
+                int_node = uf.find(ts[0])
+        else:  # generator: a producer unit, or the TSO's equivalent machine (Pcs I8)
             pref = _gen_prefix(s)
             if pref is None:
                 return dict(status="SKIP", reason=f"no generator init ({lib})")
-            gens.append((mid, uf.find(ts[0]), -float(s[pref + "_P0Pu"]), -float(s[pref + "_Q0Pu"]),
-                         float(s.get(pref + "_U0Pu", "nan")), float(s.get(pref + "_UPhase0", "nan"))))
+            entry = (mid, uf.find(ts[0]), -float(s[pref + "_P0Pu"]), -float(s[pref + "_Q0Pu"]),
+                     float(s.get(pref + "_U0Pu", "nan")), float(s.get(pref + "_UPhase0", "nan")))
+            if mid in producer_ids:
+                gens.append(entry)
+            else:
+                tso_gen = entry
+    if src is None and tso_gen is not None and tso_gen[4] == tso_gen[4]:
+        ph0 = tso_gen[5]
+        grid_family, src = "EquivMachine", (tso_gen[1], tso_gen[4], 0.0 if ph0 != ph0 else ph0)
     if src is None:
-        return dict(status="SKIP", reason="no grid source")
+        return dict(status="SKIP", reason="islanded (no grid source)")
     if not gens:
         return dict(status="SKIP", reason="no generator")
     if pdr_node is None:
@@ -255,7 +281,7 @@ def compare_case(case):
 
     # --- build the IIDM network ---
     nodes = {src[0], pdr_node}
-    for _, n1, n2, _, _ in branches:
+    for _, n1, n2, *_ in branches:
         nodes |= {n1, n2}
     for _, n, *_ in gens + loads:
         nodes.add(n)
@@ -278,9 +304,13 @@ def compare_case(case):
     for k, (_, node, p, q, _, _) in enumerate(loads):
         nb.add_load(id=f"L{k}", voltage_level_id="VL_" + nid[node], bus_id="B_" + nid[node],
                     p0=p * SNREF, q0=q * SNREF)
-    for j, (_, n1, n2, r, x) in enumerate(branches):
+    for j, (_, n1, n2, r, x, rho) in enumerate(branches):
+        z, ysh1, ysh2 = _branch_pimodel(r, x, rho)
         nb.add_line(id=f"BR{j}", voltage_level1_id="VL_" + nid[n1], bus1_id="B_" + nid[n1],
-                    voltage_level2_id="VL_" + nid[n2], bus2_id="B_" + nid[n2], r=r * zbase, x=x * zbase)
+                    voltage_level2_id="VL_" + nid[n2], bus2_id="B_" + nid[n2],
+                    r=z.real * zbase, x=z.imag * zbase,
+                    g1=ysh1.real / zbase, b1=ysh1.imag / zbase,
+                    g2=ysh2.real / zbase, b2=ysh2.imag / zbase)
     net = nb.build()
     # If the grid source sits directly on the PDR (no line between them), the PDR voltage is fixed by the
     # (stiff) grid and the plant cannot regulate it -> the generators inject their recorded reactive power
@@ -336,18 +366,19 @@ def compare_case(case):
     lines_df = net.get_lines(); P = Q = 0.0; locP = locQ = 0.0
     if gridline_idx:                                   # with a grid line: sum the grid lines at the PDR end
         for j in gridline_idx:
-            _, n1, n2, _, _ = branches[j]
+            _, n1, n2, *_ = branches[j]
             row = lines_df.loc[f"BR{j}"]
             if n1 == pdr_node:
                 P += row["p1"]; Q += row["q1"]
             elif n2 == pdr_node:
                 P += row["p2"]; Q += row["q2"]
-        # loads hanging directly from the PDR node (Islanding's Main_Load) consume part of the
-        # PCC delivery before it enters the grid line: discount them from the expected flow
+        # A load on the PDR node itself (the TSO's islanding Main_Load) consumes part of the PCC
+        # delivery before it enters the grid line, so discount it from the expected flow. The
+        # producer's own auxiliary load hangs off the internal node, inside the delivery already.
         locP = sum(p for (_, node, p, q, _, _) in loads if node == pdr_node)
         locQ = sum(q for (_, node, p, q, _, _) in loads if node == pdr_node)
-    else:                                              # grid source sits on the PDR: flow to grid = the
-        for j, (_, n1, n2, _, _) in enumerate(branches):   # producer's net delivery into the PDR node
+    else:                                     # grid source sits on the PDR: flow to grid = the
+        for j, (_, n1, n2, *_) in enumerate(branches):   # producer's net delivery into that node
             row = lines_df.loc[f"BR{j}"]
             if n1 == pdr_node:
                 P -= row["p1"]; Q -= row["q1"]
@@ -357,14 +388,14 @@ def compare_case(case):
     flow = dict(expP=-sp["P"] - locP, olfP=P / SNREF, dP=dP, expQ=-sp["Q"] - locQ, olfQ=Q / SNREF, dQ=dQ)
 
     ngen = len(gens)
-    # official DyCoV topology naming: S/M [+Aux] [+i]; the plant transformer is an annotation
+    # official DyCoV topology naming: S/M [+Aux] [+i], which only Zone 3 declares
     has_aux = any(mid in producer_ids for mid, *_ in loads)
     topo = ("M" if ngen > 1 else "S") + ("+Aux" if has_aux else "") + ("+i" if has_intline else "")
-    if any(m == "Main_Xfmr" for m, *_ in branches):
-        topo += " (Main)"
+    zone = "z3" if int_node is not None else "z1"
     match = maxdv < TOL and maxda < TOL and dQgen < TOL and dP < TOL and dQ < TOL
     return dict(status=("MATCH" if match else "DIVERGE"),
-                topo=topo, grid=grid_family, ngen=ngen, maxdv=maxdv, maxda=maxda, dQgen=dQgen, dP=dP, dQ=dQ,
+                topo=topo, zone=zone, grid=grid_family, ngen=ngen,
+                maxdv=maxdv, maxda=maxda, dQgen=dQgen, dP=dP, dQ=dQ,
                 worst=worst, iters=res[0].iteration_count, detail=detail, flow=flow, genq=genq)
 
 
@@ -396,7 +427,8 @@ def main(argv=None):
     show_all = args.all or len(case_dirs) <= 25
     width = max(28, min(64, max(len(label(cd)) for cd in case_dirs) + 2))
     print(f"OLF vs DyCoV internal init  —  {len(case_dirs)} case(s) under {root}\n")
-    hdr = f"{'case':<{width}}  {'topo':<16}{'grid':<22}{'it':>3}  {'max|dV|':>9} {'max|dPhi|':>9}  verdict"
+    hdr = (f"{'case':<{width}}  {'zone':<6}{'topo':<10}{'grid':<22}{'it':>3}  "
+           f"{'max|dV|':>9} {'max|dPhi|':>9}  verdict")
     print(hdr); print("-" * len(hdr))
     results = {}
     for cd in case_dirs:
@@ -410,7 +442,7 @@ def main(argv=None):
                 print(f"{name:<{width}}  {st}: {r['reason']}")
             continue
         if show:
-            print(f"{name:<{width}}  {r['topo']:<16}{r['grid']:<22}{r['iters']:>3}  "
+            print(f"{name:<{width}}  {r['zone']:<6}{r['topo']:<10}{r['grid']:<22}{r['iters']:>3}  "
                   f"{r['maxdv']:>9.1e} {r['maxda']:>9.1e}  {st}"
                   f"{'  (worst @ ' + str(r['worst']) + ')' if st == 'DIVERGE' else ''}")
             if args.verbose:
@@ -442,6 +474,7 @@ def main(argv=None):
               f"|dP_PDR|={mp:.1e} pu  |dQ_PDR|={mq:.1e} pu")
         print(f"      by grid: {dict(collections.Counter(r['grid'] for r in ok))}")
         print(f"      by topo: {dict(collections.Counter(r['topo'] for r in ok))}")
+        print(f"      by zone: {dict(collections.Counter(r['zone'] for r in ok))}")
         print("    -> OLF (generators as PV regulating the PDR) reproduces the internal init — node V/angle,")
         print("       generator reactive power AND PDR P/Q flow — to numerical precision. No accuracy gained.")
     if isl:
