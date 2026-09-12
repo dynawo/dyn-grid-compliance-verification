@@ -38,7 +38,6 @@ class _ContextAdapter(logging.LoggerAdapter):
 class DycovLogger(logging.getLoggerClass()):
     def __init__(self, name: str) -> None:
         super(DycovLogger, self).__init__(name)
-        self.setLevel(logging.INFO)
 
     def _add_console_handler(
         self,

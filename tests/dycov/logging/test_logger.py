@@ -20,6 +20,13 @@ from dycov.logging.logger import DycovLogger
 
 
 class TestDycovLogger:
+    def test_unconfigured_logger_inherits_level(self):
+        logger = logging.getLogger("third_party_logger")
+
+        assert isinstance(logger, DycovLogger)
+        assert logger.level == logging.NOTSET
+        assert logger.getEffectiveLevel() == logging.getLogger().getEffectiveLevel()
+
     @pytest.mark.skip
     def test_logger_initializes_with_console_and_file_handlers(self):
         logger = DycovLogger("test_logger")
