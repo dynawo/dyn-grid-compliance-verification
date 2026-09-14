@@ -22,10 +22,11 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 _LAUNCHER = Path("dynawo.sh")
 
 
-def _performance_args(model=None, curves=None):
+def _performance_args(model=None, curves=None, excel=None):
     args = MagicMock()
     args.model = model
     args.curves = curves
+    args.excel = excel
     args.output = "output_dir"
     args.pcs = None
     args.only_dtr = True
@@ -106,6 +107,19 @@ def test_validate_with_model_and_reference_passes_both(mocker):
     assert kwargs["producer_model"] == Path("Dynawo")
     assert kwargs["reference_curves"] == Path("ReferenceCurves")
     assert kwargs["verification_type"] == MODEL_VALIDATION
+
+
+def test_validate_refuses_a_model_and_curves_together(mocker):
+    # No argument group states this any more: every incompatibility is refused here.
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification")
+    parser = MagicMock()
+
+    handle_validate_command(
+        parser, _validate_args(model="Dynawo", curves="Curves", reference="Ref"), _LAUNCHER
+    )
+
+    parser.error.assert_called_once()
+    run_verification.assert_not_called()
 
 
 def test_validate_without_reference_reports_a_parser_error(mocker):
@@ -257,6 +271,82 @@ def test_validate_from_a_workbook_refuses_reference_curves_as_well(mocker, tmp_p
 
     handle_validate_command(
         parser, _validate_args(excel=str(workbook), reference="ReferenceCurves"), _LAUNCHER
+    )
+
+    parser.error.assert_called_once()
+    generate.assert_not_called()
+
+
+def test_validate_from_a_workbook_refuses_a_model_as_well(mocker, tmp_path):
+    # The workbook replaces every other input, and the same rule states it for both commands.
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch("dycov.cli.command_handlers.excel_generator.generate")
+    parser = MagicMock()
+
+    handle_validate_command(parser, _validate_args(excel=str(workbook), model="Dynawo"), _LAUNCHER)
+
+    assert "model" in parser.error.call_args.args[0]
+    generate.assert_not_called()
+
+
+def test_performance_from_a_workbook_uses_only_zone3(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    parser = MagicMock()
+
+    result = handle_performance_command(parser, _performance_args(excel=str(workbook)), _LAUNCHER)
+
+    assert result == 0
+    kwargs = run_verification.call_args.kwargs
+    generated = generate.call_args.args[1]
+    # Performance is a zone-3 workflow: of everything the conversion writes, only that is used.
+    assert kwargs["producer_model"] == generated / "Dynawo" / "Zone3"
+    assert kwargs["reference_curves"] is None
+    assert kwargs["verification_type"] == ELECTRIC_PERFORMANCE
+    assert kwargs["producer_workbook"] == workbook
+
+
+def test_performance_from_a_workbook_leaves_no_temporary_directory(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+
+    handle_performance_command(parser, _performance_args(excel=str(workbook)), _LAUNCHER)
+
+    assert not generate.call_args.args[1].exists()
+
+
+def test_performance_from_a_workbook_that_is_not_there_reports_a_parser_error(mocker, tmp_path):
+    generate = mocker.patch("dycov.cli.command_handlers.excel_generator.generate")
+    parser = MagicMock()
+
+    handle_performance_command(
+        parser, _performance_args(excel=str(tmp_path / "absent.xlsx")), _LAUNCHER
+    )
+
+    parser.error.assert_called_once()
+    generate.assert_not_called()
+
+
+def test_performance_refuses_a_workbook_together_with_curves(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch("dycov.cli.command_handlers.excel_generator.generate")
+    parser = MagicMock()
+
+    handle_performance_command(
+        parser,
+        _performance_args(excel=str(workbook), curves="ProducerCurves/PPM"),
+        _LAUNCHER,
     )
 
     parser.error.assert_called_once()

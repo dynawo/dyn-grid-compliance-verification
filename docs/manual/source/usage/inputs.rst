@@ -427,12 +427,18 @@ two trees next to the workbook — or under ``--output``, if you give one:
 which is exactly what ``dycov validate`` expects, as ``-m Dynawo`` and
 ``ReferenceCurves``.
 
-If you do not need to keep those files, ``dycov validate`` takes the workbook
-directly and does the conversion itself:
+If you do not need to keep those files, ``dycov validate`` and ``dycov
+performance`` take the workbook directly and do the conversion themselves:
 
 .. code-block:: console
 
    dycov validate --excel Producer.xlsx
+   dycov performance --excel Producer.xlsx
+
+Performance is a zone-3 workflow and needs no reference curves, so of
+everything the conversion writes it uses only ``Dynawo/Zone3``. In both
+commands the workbook replaces the other inputs: giving a model, curves or a
+reference directory alongside it is refused.
 
 The inputs are generated into a temporary directory that is removed when the
 run ends — the only input you keep is the workbook, and the report names it

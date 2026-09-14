@@ -39,7 +39,11 @@ dycov performance
 Runs electric performance verification against the applicable DTR PCSs.
 Requires a Dynawo model (``-m``), producer curves (``-c``), or both — when
 both are given, compliance is evaluated on the simulated curves only and the
-producer curves are drawn in the figures as an overlay.
+producer curves are drawn in the figures as an overlay. It also takes the
+workbook that describes the installation (``-e``), on its own: the model is
+generated from it into a temporary directory that is removed when the run
+ends, and since performance is a zone-3 workflow, only the ``Dynawo/Zone3``
+half of the conversion is used.
 
 .. include:: helps/performance.rst
 

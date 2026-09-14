@@ -27,6 +27,29 @@ from dycov.logging import dycov_logging
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
 
+# What each verification takes from a converted workbook, and the arguments that cannot be given
+# alongside it: the workbook replaces them all. The rule lives here, and not in a mutually
+# exclusive group, because argparse cannot express it for 'performance', where a model and curves
+# are a valid combination with each other but not with a workbook.
+_WORKBOOK_FLOWS = {
+    MODEL_VALIDATION: {
+        "purpose": "validate",
+        "model": Path("Dynawo"),
+        "reference": Path("ReferenceCurves"),
+        "refuses": ("model", "curves", "reference"),
+        "needs_metadata": True,
+    },
+    ELECTRIC_PERFORMANCE: {
+        # Performance is a zone-3 workflow and needs no reference curves, so of everything the
+        # conversion writes only that half is used.
+        "purpose": "verify",
+        "model": Path("Dynawo") / "Zone3",
+        "reference": None,
+        "refuses": ("model", "curves"),
+        "needs_metadata": False,
+    },
+}
+
 
 def handle_generate_gfm_envelopes_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace
@@ -97,7 +120,10 @@ def handle_validate_command(
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'validate' command.")
     if args.excel:
-        return _validate_from_workbook(parser, args, dwo_launcher)
+        return _verify_from_workbook(parser, args, dwo_launcher, MODEL_VALIDATION)
+    if args.model and args.curves:
+        parser.error("A model validation runs on a model or on curves, not on both.")
+        return 1
 
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
@@ -146,44 +172,75 @@ def handle_validate_command(
     return result_code
 
 
-def _validate_from_workbook(
-    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> int:
-    """Validates a model described by a workbook: convert, then validate what came out.
+def _convert_workbook(
+    parser: argparse.ArgumentParser, workbook: Path, target: Path, purpose: str
+) -> bool:
+    """Write the inputs a workbook describes into *target*; False when it could not.
 
-    The conversion goes to a temporary directory that is removed when the validation ends: the
-    inputs the user keeps are the workbook itself, and the report names it instead of the
-    temporary copy.
+    Whatever the conversion refuses is reported as such — a workbook that is not an .xlsx, a row
+    that is empty or not a number, a topology that is not supported — instead of surfacing later
+    as a missing file.
     """
     logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info(f"Converting {workbook} into the inputs to {purpose}.")
+    try:
+        logger.info(excel_generator.generate(workbook, target))
+    except zipfile.BadZipFile:
+        parser.error(
+            f"{workbook} is not a readable .xlsx workbook (a legacy .xls file has to be "
+            f"saved as .xlsx first)."
+        )
+        return False
+    except ValueError as e:
+        parser.error(f"The workbook cannot be converted: {e}")
+        return False
+    return True
+
+
+def _workbook_replaces(
+    parser: argparse.ArgumentParser, args: argparse.Namespace, refuses: tuple
+) -> bool:
+    """Whether the workbook is the only input given; the ones it replaces are refused."""
+    given = [name for name in refuses if getattr(args, name, None)]
+    if given:
+        pronoun = "it" if len(given) == 1 else "they"
+        parser.error(
+            f"The workbook provides the {' and '.join(given)}, so {pronoun} cannot be given "
+            f"as well."
+        )
+        return False
+    return True
+
+
+def _verify_from_workbook(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    dwo_launcher: Path,
+    verification_type: int,
+) -> int:
+    """Convert the workbook, then run the verification on what came out.
+
+    The conversion goes to a temporary directory that is removed when the run ends: the input the
+    user keeps is the workbook itself, and the report names it instead of the temporary copy.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    flow = _WORKBOOK_FLOWS[verification_type]
     workbook = Path(args.excel)
     if not workbook.is_file():
         parser.error(f"Workbook not found: {workbook}")
         return 1
-    if args.reference:
-        parser.error(
-            "The reference curves come from the workbook, so they cannot be given as well."
-        )
+    if not _workbook_replaces(parser, args, flow["refuses"]):
         return 1
 
     output_dir = args.output if args.output else workbook.parent / "Results"
     with tempfile.TemporaryDirectory(prefix="dycov_excel2inputs_") as tmpdir:
         generated = Path(tmpdir)
-        logger.info(f"Converting {workbook} into the inputs to validate.")
-        try:
-            report = excel_generator.generate(workbook, generated)
-        except zipfile.BadZipFile:
-            parser.error(
-                f"{workbook} is not a readable .xlsx workbook (a legacy .xls file has to be "
-                f"saved as .xlsx first)."
-            )
+        if not _convert_workbook(parser, workbook, generated, flow["purpose"]):
             return 1
-        except ValueError as e:
-            parser.error(f"The workbook cannot be converted: {e}")
-            return 1
-        logger.info(report)
 
-        unfilled = excel_generator.tests_without_metadata(generated)
+        unfilled = (
+            excel_generator.tests_without_metadata(generated) if flow["needs_metadata"] else []
+        )
         if unfilled:
             parser.error(
                 f"{len(unfilled)} test(s) have no curve metadata in the workbook, and DyCoV "
@@ -195,18 +252,18 @@ def _validate_from_workbook(
         result_code = _run_verification(
             dwo_launcher=dwo_launcher,
             output_dir=output_dir,
-            producer_model=generated / "Dynawo",
+            producer_model=generated / flow["model"],
             producer_curves=None,
-            reference_curves=generated / "ReferenceCurves",
+            reference_curves=generated / flow["reference"] if flow["reference"] else None,
             user_pcs=args.pcs,
             only_dtr=args.only_dtr,
             testing=args.testing,
-            verification_type=MODEL_VALIDATION,
+            verification_type=verification_type,
             producer_workbook=workbook,
         )
 
     if result_code == -1:
-        logger.critical("Validation failed. Check logs for details.")
+        logger.critical("The verification failed. Check logs for details.")
         parser.error("It is not possible to generate the producer model from the workbook.")
     return result_code
 
@@ -228,6 +285,9 @@ def handle_performance_command(
         Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'performance' command.")
+    if args.excel:
+        return _verify_from_workbook(parser, args, dwo_launcher, ELECTRIC_PERFORMANCE)
+
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
     reference_curves: Optional[Path] = None
