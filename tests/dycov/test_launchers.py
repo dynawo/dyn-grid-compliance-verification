@@ -31,21 +31,6 @@ def _patch_common(mocker):
 # ---------------------------------------------------------------------------
 
 
-def test_dycov_calls_generate_handler(mocker):
-    _patch_common(mocker)
-
-    mock_handle = mocker.patch("dycov.launchers.handle_generate_command")
-    mock_setup = mocker.patch("dycov.launchers.setup_cli_parsers")
-
-    mock_setup.return_value.parse_args.return_value = _fake_args("generate")
-
-    from dycov.launchers import dycov
-
-    dycov()
-
-    mock_handle.assert_called_once()
-
-
 def test_dycov_calls_validate_handler(mocker):
     _patch_common(mocker)
 
@@ -88,7 +73,7 @@ def test_dycov_raises_when_dynawo_not_available(mocker):
     )
     mocker.patch(
         "dycov.launchers.setup_cli_parsers"
-    ).return_value.parse_args.return_value = _fake_args("generate")
+    ).return_value.parse_args.return_value = _fake_args("validate")
 
     from dycov.launchers import dycov
 

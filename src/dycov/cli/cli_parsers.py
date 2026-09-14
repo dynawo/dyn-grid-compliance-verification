@@ -20,7 +20,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     """Sets up the command-line argument parsers for the DYCOV tool.
 
     This function defines the main parser and its subparsers for various
-    DYCOV commands like validate, performance, generate, compile, and anonymize.
+    DYCOV commands like validate, performance, excel2inputs and anonymize.
 
     Returns
     -------
@@ -52,7 +52,6 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_generate_envelopes_subparser(subparsers)
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
-    _add_generate_subparser(subparsers)
     _add_excel2inputs_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
 
@@ -713,25 +712,6 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_only_dtr_argument(performance)
     _add_testing_argument(performance)
     dycov_logging.get_logger("CliParsers").debug("Added 'performance' subparser.")
-
-
-def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'generate' subparser to the given subparsers action.
-
-    Parameters
-    ----------
-    subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'generate' subparser will be added.
-    """
-    generate = subparsers.add_parser(
-        "generate",
-        help="Create all the necessary input files through a guided process.",
-    )
-    _add_launcher_argument(generate)
-    _add_output_argument(generate, is_required=True)
-    _add_topology_argument(generate, is_required=True)
-    _add_validation_argument(generate, is_required=True)
-    dycov_logging.get_logger("CliParsers").debug("Added 'generate' subparser.")
 
 
 def _add_excel2inputs_subparser(subparsers: argparse._SubParsersAction) -> None:

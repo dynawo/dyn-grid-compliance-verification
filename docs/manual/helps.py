@@ -7,7 +7,6 @@ COMMANDS = [
     "",
     "anonymize",
     "excel2inputs",
-    "generate",
     "generateEnvelopes",
     "performance",
     "validate",

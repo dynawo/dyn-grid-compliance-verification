@@ -18,7 +18,6 @@ from dycov.cli.command_handlers import (
     handle_anonymize_command,
     handle_compile_command,
     handle_excel2inputs_command,
-    handle_generate_command,
     handle_generate_envelopes_command,
     handle_performance_command,
     handle_validate_command,
@@ -77,10 +76,9 @@ class DycovCLI:
         # Determine Dynawo launcher availability and initialize components.
         dynawo_launcher_path: Optional[Path] = None
         # A workbook is a model that does not exist yet: simulating it needs the launcher too.
-        needs_launcher = (
-            args.command in {"performance", "validate"}
-            and (args.model is not None or getattr(args, "excel", None) is not None)
-        ) or args.command == "generate"
+        needs_launcher = args.command in {"performance", "validate"} and (
+            args.model is not None or getattr(args, "excel", None) is not None
+        )
         if needs_launcher:
             dynawo_launcher_name = get_dynawo_launcher_name(parser, args)
             check_dynawo_launcher_availability(dynawo_launcher_name)
@@ -131,8 +129,6 @@ class DycovCLI:
             ret = handle_generate_envelopes_command(parser, args)
         elif args.command == "validate":
             ret = handle_validate_command(parser, args, dynawo_launcher_path)
-        elif args.command == "generate":
-            ret = handle_generate_command(parser, args, dynawo_launcher_path)
         elif args.command == "compile":
             ret = handle_compile_command(parser, args, dynawo_launcher_path)
         elif args.command == "performance":
