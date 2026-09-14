@@ -13,6 +13,8 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Optional
 
+import shtab
+
 from dycov.logging import dycov_logging
 
 
@@ -42,6 +44,11 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
         version=f"%(prog)s {version('dycov')}",
         help="Show program's version number and exit.",
     )
+    shtab.add_argument_to(
+        main_parser,
+        "--print-completion",
+        help="Print the shell completion script for the tool and exit.",
+    )
     _add_debug_argument(main_parser)
     _add_diagnostic_argument(main_parser)
     _add_user_config_argument(main_parser)
@@ -68,6 +75,7 @@ def _add_argument(
     choices: Optional[list] = None,
     nargs: Optional[str] = None,
     is_required: bool = False,
+    completion: Optional[dict] = None,
 ) -> None:
     """Helper function to add an argument to a parser, dynamically including only
     non-None parameters and handling 'required' based on argument type (positional
@@ -93,6 +101,8 @@ def _add_argument(
         The number of command-line arguments that should be consumed.
     is_required: bool
         Whether the argument is required.
+    completion: Optional[dict]
+        The kind of value the shell completes for the argument, as one of shtab's constants.
     """
     kwargs = {"help": help_msg}
 
@@ -113,7 +123,9 @@ def _add_argument(
     if nargs:
         kwargs["nargs"] = nargs
 
-    parser.add_argument(*args, **kwargs)
+    argument = parser.add_argument(*args, **kwargs)
+    if completion:
+        argument.complete = completion
     dycov_logging.get_logger("CliParsers").debug(
         f"Added argument {args} to parser with help: {help_msg}"
     )
@@ -129,6 +141,7 @@ def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
         ),
         arg_type=Path,
         default=None,
+        completion=shtab.FILE,
     )
 
 
@@ -185,6 +198,7 @@ def _add_launcher_argument(parser: argparse.ArgumentParser) -> None:
             "provided, the tool will try to find it from the PATH "
             "environment variable."
         ),
+        completion=shtab.FILE,
     )
 
 
@@ -214,6 +228,7 @@ def _add_ini_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.FILE,
     )
 
 
@@ -268,6 +283,7 @@ def _add_model_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -297,36 +313,7 @@ def _add_output_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
-    )
-
-
-def _add_topology_argument(
-    parser: argparse.ArgumentParser,
-    explain: str = "",
-    is_required: bool = False,
-) -> None:
-    """Adds the '--topology' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    explain: str
-        Additional explanation for the help message.
-    is_required: bool
-        Whether the argument is required.
-    """
-    help_msg = "Choice of topology to implement in the DYD file"
-    if explain:
-        help_msg += f" {explain}"
-    _add_argument(
-        parser,
-        "-t",
-        "--topology",
-        arg_type=str,
-        help_msg=help_msg,
-        is_required=is_required,
-        choices=["S", "S+i", "S+Aux", "S+Aux+i", "M", "M+i", "M+Aux", "M+Aux+i"],
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -356,6 +343,7 @@ def _add_curves_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -389,6 +377,7 @@ def _add_excel_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.FILE,
     )
 
 
@@ -421,37 +410,7 @@ def _add_reference_argument(
         help_msg=help_msg,
         is_required=is_required,
         nargs=nargs,
-    )
-
-
-def _add_validation_argument(
-    parser: argparse.ArgumentParser,
-    explain: str = "",
-    is_required: bool = False,
-) -> None:
-    """Adds the '--validation' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    explain: str
-        Additional explanation for the help message.
-    is_required: bool
-        Whether the argument is required.
-    """
-    help_msg = "Choice of process, performance verification (SM, PPM or BESS) "
-    help_msg += "vs. RMS model validation (PPM or BESS)"
-    if explain:
-        help_msg += f" {explain}"
-    _add_argument(
-        parser,
-        "-v",
-        "--validation",
-        arg_type=str,
-        help_msg=help_msg,
-        is_required=is_required,
-        choices=["performance_SM", "performance_PPM", "model_PPM", "model_BESS"],
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -522,6 +481,7 @@ def _add_functional_testing_argument(parser: argparse.ArgumentParser) -> None:
             "Path to the baseline directory containing verified CSVs "
             "to compare against the output."
         ),
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -613,6 +573,7 @@ def _add_results_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=Path,
         help_msg="Path to a verification results directory. If provided,"
         " 'curves_calculated.csv' and 'dycov.log' files will be copied from here.",
+        completion=shtab.DIRECTORY,
     )
 
 

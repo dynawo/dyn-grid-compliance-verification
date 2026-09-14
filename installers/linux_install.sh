@@ -348,6 +348,7 @@ else
 fi
 
 sed -E --in-place=.ORIG -e "s@^PATH=.*@PATH=\"$USER_PATH\"@" "$ACTIVATE_SCRIPT"
+bash "$TMP_LOCAL_REPO"/installers/install_bash_completion.sh "$INSTALL_DIR/$VENV"
 cp "$ACTIVATE_SCRIPT" "$INSTALL_DIR"/activate_dycov
 
 # Test

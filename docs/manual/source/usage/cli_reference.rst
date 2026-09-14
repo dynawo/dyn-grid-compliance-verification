@@ -77,3 +77,21 @@ Produces an anonymized version of a set of curves, replacing signal names
 with generic identifiers and adding a noise signal.
 
 .. include:: helps/anonymize.rst
+
+----
+
+Shell completion
+----------------
+
+Every command, option and path argument documented above is completed with
+``TAB``. The completion script is generated from the same parsers that define
+the commands, so it never falls behind them:
+
+.. code-block:: console
+
+    dycov --print-completion bash
+
+Both the native installer and the distribution image install that script and
+load it from the environment, so in bash nothing else is needed. For another
+shell, replace ``bash`` with ``zsh``, ``tcsh``, ``fish`` or ``powershell`` and
+install the output where that shell looks for its completions.
