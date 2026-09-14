@@ -34,8 +34,10 @@ A `Model-*` workbook writes `Dynawo/Zone1` and `Dynawo/Zone3` plus `ReferenceCur
 examples carry no reference curves, so those workbooks keep the template's placeholder in the
 results-folder cell.
 
-The `[Curves-Metadata]` section of each generated `.dict` is written with its keys empty on
-purpose: their values describe the recorded `.csv` files, which only whoever produced them knows.
+The `[Curves-Metadata]` section of each generated `.dict` comes from the four metadata columns of
+the tests table, which these workbooks carry filled in with the values of the example they
+regenerate. A column left blank writes its key with no value, and the run says which tests are in
+that state.
 
 ## Storage: two directions per case
 
@@ -45,14 +47,10 @@ each. The tests table has one results-file cell per case, so `Model-BESS-WECC.xl
 `[Storage]` in `excel_names.ini` to both the operating condition and the file name
 (`…ActiveInjection.csv`, `…ActiveConsumption.csv`).
 
-## Two known limits
+## One known limit
 
-- **Auxiliary transformer, last bit.** Regenerating a `+Aux` example reproduces its files except
-  for the auxiliary transformer's `transformer_RPu`/`XPu`, which differ in the last bit
-  (`1.0000000000000008e-05` vs `…004e-05`): the workbook holds the short-circuit impedance and the
-  R/X ratio, and splitting them again is not bit-exact. It is float noise, not a modelling
-  difference.
-- **The frequency ramp is not in the sheet.** `Signaux zone 3` has no row for the frequency-ramp
-  case, so no workbook can describe `PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms`. It is the only test
-  the BESS example carries that regenerating it does not reproduce; adding the row to the template
-  is RTE's, and `[Zone3-Tests]` then names it.
+**Auxiliary transformer, last bit.** Regenerating a `+Aux` example reproduces its files except for
+the auxiliary transformer's `transformer_RPu`/`XPu`, which differ in the last bit
+(`1.0000000000000008e-05` vs `…004e-05`): the workbook holds the short-circuit impedance and the
+R/X ratio, and splitting them again is not bit-exact. It is float noise, not a modelling
+difference.
