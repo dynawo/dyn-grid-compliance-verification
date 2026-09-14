@@ -9,6 +9,7 @@
 #
 import argparse
 import logging
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -94,6 +95,9 @@ def handle_validate_command(
         Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'validate' command.")
+    if args.excel:
+        return _validate_from_workbook(parser, args, dwo_launcher)
+
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
     reference_curves: Optional[Path] = None
@@ -138,6 +142,71 @@ def handle_validate_command(
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
+    return result_code
+
+
+def _validate_from_workbook(
+    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
+) -> int:
+    """Validates a model described by a workbook: convert, then validate what came out.
+
+    The conversion goes to a temporary directory that is removed when the validation ends: the
+    inputs the user keeps are the workbook itself, and the report names it instead of the
+    temporary copy.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    workbook = Path(args.excel)
+    if not workbook.is_file():
+        parser.error(f"Workbook not found: {workbook}")
+        return 1
+    if args.reference:
+        parser.error(
+            "The reference curves come from the workbook, so they cannot be given as well."
+        )
+        return 1
+
+    output_dir = args.output if args.output else workbook.parent / "Results"
+    with tempfile.TemporaryDirectory(prefix="dycov_excel2inputs_") as tmpdir:
+        generated = Path(tmpdir)
+        logger.info(f"Converting {workbook} into the inputs to validate.")
+        try:
+            report = excel_generator.generate(workbook, generated)
+        except zipfile.BadZipFile:
+            parser.error(
+                f"{workbook} is not a readable .xlsx workbook (a legacy .xls file has to be "
+                f"saved as .xlsx first)."
+            )
+            return 1
+        except ValueError as e:
+            parser.error(f"The workbook cannot be converted: {e}")
+            return 1
+        logger.info(report)
+
+        unfilled = excel_generator.tests_without_metadata(generated)
+        if unfilled:
+            parser.error(
+                f"{len(unfilled)} test(s) have no curve metadata in the workbook, and DyCoV "
+                f"cannot read their reference curves: {', '.join(unfilled[:4])}. Fill in the "
+                f"metadata columns of the signal sheets."
+            )
+            return 1
+
+        result_code = _run_verification(
+            dwo_launcher=dwo_launcher,
+            output_dir=output_dir,
+            producer_model=generated / "Dynawo",
+            producer_curves=None,
+            reference_curves=generated / "ReferenceCurves",
+            user_pcs=args.pcs,
+            only_dtr=args.only_dtr,
+            testing=args.testing,
+            verification_type=MODEL_VALIDATION,
+            producer_workbook=workbook,
+        )
+
+    if result_code == -1:
+        logger.critical("Validation failed. Check logs for details.")
+        parser.error("It is not possible to generate the producer model from the workbook.")
     return result_code
 
 
@@ -373,6 +442,7 @@ def _run_verification(
     only_dtr: bool,
     testing: bool,
     verification_type: int,
+    producer_workbook: Optional[Path] = None,
 ) -> int:
     """Initializes and runs a model validation or performance verification.
 
@@ -419,6 +489,7 @@ def _run_verification(
             output_dir=output_dir,
             only_dtr=only_dtr,
             verification_type=verification_type,
+            producer_workbook=producer_workbook,
         )
     except ValueError as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")

@@ -587,13 +587,15 @@ def _summary_log(
     dynawo_version: str,
     model_template: str,
     reference_template: str,
+    model_is_workbook: bool = False,
 ) -> None:
     header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
     header_txt += f"***Dycov version: {version} commit: {commit_id}***\n"
     if dynawo_version:
         header_txt += f"***Dynawo version: {dynawo_version}***\n"
     if model_template:
-        header_txt += f"***Model dir: {model_template}***\n"
+        label = "Workbook" if model_is_workbook else "Model dir"
+        header_txt += f"***{label}: {model_template}***\n"
     if reference_template:
         header_txt += f"***Reference curves dir: {reference_template}***\n"
 
@@ -729,15 +731,32 @@ def create_pdf(
         ).replace("\\", "\\textbackslash")
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
-    model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
-    summary_description += f"Model dir: {model_template} \\\\"
+    workbook = parameters.get_producer_workbook()
+    if workbook:
+        # The model and its reference curves were generated into a directory that is removed
+        # when the run ends, so the input worth naming is the workbook they came from.
+        model_template = str(workbook).replace("\\", "\\textbackslash")
+        reference_template = None
+        summary_description += f"Workbook: {model_template} \\\\"
+    else:
+        model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
+        summary_description += f"Model dir: {model_template} \\\\"
 
-    reference_template = None
-    if producer.has_reference_curves_path():
-        reference_template = str(producer.get_reference_path()).replace("\\", "\\textbackslash")
-        summary_description += f"Reference curves dir: {reference_template} \\\\"
+        reference_template = None
+        if producer.has_reference_curves_path():
+            reference_template = str(producer.get_reference_path()).replace(
+                "\\", "\\textbackslash"
+            )
+            summary_description += f"Reference curves dir: {reference_template} \\\\"
 
-    _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
+    _summary_log(
+        sorted_summary,
+        timestamp,
+        dynawo_version,
+        model_template,
+        reference_template,
+        model_is_workbook=bool(workbook),
+    )
     summary_map = summary.create_map(sorted_summary)
 
     # Extracting zones from the PCS data in the summary to identify the relevant "common" files

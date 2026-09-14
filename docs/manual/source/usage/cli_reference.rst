@@ -22,8 +22,12 @@ The main entry point. Run without arguments to see the available subcommands.
 dycov validate
 --------------
 
-Runs RMS model validation against a set of reference curves. Requires either
-a Dynawo model (``-m``) or producer curves (``-c``).
+Runs RMS model validation against a set of reference curves. Requires a Dynawo
+model (``-m``), producer curves (``-c``), or the workbook that describes the
+installation (``-e``). With a workbook, the model and its reference curves are
+generated from it into a temporary directory that is removed when the run ends,
+so the reference directory is not given either and the report names the
+workbook as its input.
 
 .. include:: helps/validate.rst
 

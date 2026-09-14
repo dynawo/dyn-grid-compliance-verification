@@ -33,9 +33,10 @@ def _performance_args(model=None, curves=None):
     return args
 
 
-def _validate_args(model=None, curves=None, reference=None):
+def _validate_args(model=None, curves=None, reference=None, excel=None):
     args = _performance_args(model=model, curves=curves)
     args.reference = reference
+    args.excel = excel
     return args
 
 
@@ -188,3 +189,75 @@ def test_excel2inputs_reports_a_workbook_that_is_not_an_xlsx(mocker, tmp_path):
     handle_excel2inputs_command(parser, _excel2inputs_args(excel=str(workbook)))
 
     assert ".xlsx" in parser.error.call_args.args[0]
+
+
+def test_validate_from_a_workbook_converts_and_validates_what_came_out(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.tests_without_metadata", return_value=[]
+    )
+    parser = MagicMock()
+
+    result = handle_validate_command(parser, _validate_args(excel=str(workbook)), _LAUNCHER)
+
+    assert result == 0
+    kwargs = run_verification.call_args.kwargs
+    generated = generate.call_args.args[1]
+    assert kwargs["producer_model"] == generated / "Dynawo"
+    assert kwargs["reference_curves"] == generated / "ReferenceCurves"
+    assert kwargs["verification_type"] == MODEL_VALIDATION
+    # The report names the workbook, not the directory that is about to disappear.
+    assert kwargs["producer_workbook"] == workbook
+
+
+def test_validate_from_a_workbook_leaves_no_temporary_directory(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.tests_without_metadata", return_value=[]
+    )
+    mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+
+    handle_validate_command(parser, _validate_args(excel=str(workbook)), _LAUNCHER)
+
+    assert not generate.call_args.args[1].exists()
+
+
+def test_validate_from_a_workbook_stops_when_the_metadata_is_blank(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    mocker.patch("dycov.cli.command_handlers.excel_generator.generate", return_value="report")
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.tests_without_metadata",
+        return_value=["PCS_RTE-I16z1.SetPointStep.Active"],
+    )
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification")
+    parser = MagicMock()
+
+    handle_validate_command(parser, _validate_args(excel=str(workbook)), _LAUNCHER)
+
+    assert "SetPointStep.Active" in parser.error.call_args.args[0]
+    run_verification.assert_not_called()
+
+
+def test_validate_from_a_workbook_refuses_reference_curves_as_well(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch("dycov.cli.command_handlers.excel_generator.generate")
+    parser = MagicMock()
+
+    handle_validate_command(
+        parser, _validate_args(excel=str(workbook), reference="ReferenceCurves"), _LAUNCHER
+    )
+
+    parser.error.assert_called_once()
+    generate.assert_not_called()

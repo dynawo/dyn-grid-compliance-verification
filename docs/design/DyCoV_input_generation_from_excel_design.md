@@ -46,6 +46,13 @@ dycov excel2inputs model.xlsx --output <path>
 ```
 The positional argument is the WECC workbook (single source of truth); `--output` is where the
 trees are written, and defaults to the directory holding the workbook.
+
+`dycov validate --excel model.xlsx` runs the same conversion as its first step, into a temporary
+directory that is removed when the validation ends: the generated files are a means, not a
+deliverable, so the report names the workbook as its input rather than a path that no longer
+exists. The conversion is checked before the validation starts — a test whose curve metadata the
+workbook leaves blank stops the run there, instead of failing later inside the reference-curve
+importer.
 `.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`), which the legacy
 `tools/dynawo_par` also imports until its retirement.
 

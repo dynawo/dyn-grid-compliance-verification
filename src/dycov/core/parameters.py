@@ -79,6 +79,7 @@ class Parameters:
         self._selected_pcs = selected_pcs
         self._output_dir = output_dir
         self._only_dtr = only_dtr
+        self._producer_workbook = None
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
@@ -169,6 +170,16 @@ class Parameters:
             Producer
         """
         return self._producer
+
+    def get_producer_workbook(self) -> Path:
+        """Get the workbook the producer inputs were generated from, when there is one.
+
+        Returns
+        -------
+        Path
+            Workbook the inputs come from, or None when they were given as files.
+        """
+        return self._producer_workbook
 
     def is_valid(self) -> bool:
         """Checks if the execution of the tool is valid.

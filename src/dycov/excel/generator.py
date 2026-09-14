@@ -17,6 +17,7 @@ Each output has its own module: this one only decides what to build and reports 
 
 from __future__ import annotations
 
+import configparser
 from pathlib import Path
 
 from dycov.excel import names, par
@@ -26,6 +27,7 @@ from dycov.excel import producer_ini as ini
 from dycov.excel import reference_curves as rc
 from dycov.excel import signals as sig
 from dycov.excel import workbook as wb
+from dycov.excel.reference_curves import dicts
 from dycov.files.producer_dyd_file import (
     BESS_ID,
     GROUP_XFMR_ID,
@@ -137,6 +139,37 @@ def _zone3_par_sets(
 # ---------------------------------------------------------------------------
 
 
+def tests_without_metadata(outdir: Path, producer: str = PRODUCER_NAME) -> list:
+    """The generated tests DyCoV would refuse to run, because their metadata is blank.
+
+    Parameters
+    ----------
+    outdir: Path
+        Directory the generation wrote into.
+    producer: str
+        Producer name, which names the reference-curve subdirectory.
+
+    Returns
+    -------
+    list
+        Name of every test whose ``.dict`` leaves a metadata key without a value. A test with no
+        ``.csv`` is not in the list: DyCoV reports those as not applicable and carries on.
+    """
+    target = outdir / "ReferenceCurves" / producer
+    if not target.is_dir():
+        return []
+    incomplete = []
+    for path in sorted(target.glob("*.dict")):
+        parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        parser.read(path, encoding="utf-8")
+        if not parser.has_section("Curves-Metadata"):
+            continue
+        filled = dict(parser.items("Curves-Metadata"))
+        if any(not filled.get(key, "").strip() for key in dicts.METADATA_HELP):
+            incomplete.append(path.stem)
+    return incomplete
+
+
 def generate(excel: Path, outdir: Path) -> str:
     """Generate the ``Dynawo/Zone1`` + ``Dynawo/Zone3`` Producer input trees from *excel*."""
     workbook = wb.read_workbook(excel)
@@ -186,7 +219,7 @@ def generate(excel: Path, outdir: Path) -> str:
     )
 
     signals = sig.parse_signals(workbook, gen_id, storage=template == "model_BESS")
-    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, signals)
+    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, signals, excel.parent)
 
     return "\n".join(
         [
