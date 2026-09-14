@@ -262,6 +262,8 @@ Accepted curve file formats:
 
 * **COMTRADE** — all versions up to C37.111-2013 are accepted, either as a
   single CFF file or as a DAT+CFG pair (both files must share the same name).
+  When both forms are supplied, DyCoV reads the DAT+CFG pair and ignores the
+  CFF file.
 * **EUROSTAG** — only the EXP ASCII format is supported.
 * **CSV** — the column separator must be ``";"``. A ``time`` column is
   required but does not need to be the first column.
