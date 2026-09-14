@@ -668,17 +668,26 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
     validate = subparsers.add_parser(
         "validate",
         help="Validate a Dynawo model against a set of curves.",
+        # One line per way of calling it: the inputs exclude each other, which argparse cannot
+        # express on its own.
+        usage=(
+            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]\n"
+            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]"
+        ),
     )
-    model_or_curves = validate.add_mutually_exclusive_group(required=False)
     _add_launcher_argument(validate)
-    _add_model_argument(model_or_curves)
-    _add_curves_argument(model_or_curves, explain="(when using curves instead of an RMS model)")
+    validate_inputs = validate.add_argument_group("input options (give one)")
+    _add_model_argument(validate_inputs)
+    _add_curves_argument(validate_inputs, explain="(when using curves instead of an RMS model)")
     _add_excel_argument(
-        model_or_curves,
+        validate_inputs,
         as_option=True,
         explain=(
-            "The model and its reference curves are generated from it, so neither the model "
-            "nor the reference directory are given."
+            "The model and its reference curves are generated from it, so neither the model, "
+            "the curves nor the reference directory are given."
         ),
     )
     _add_reference_argument(validate, nargs="?")
@@ -700,12 +709,26 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     performance = subparsers.add_parser(
         "performance",
         help="Analyze the performance of a Dynawo model (or its results).",
+        # One line per way of calling it: a model may be drawn against the producer curves, but a
+        # workbook replaces both.
+        usage=(
+            "dycov performance -e EXCEL  [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov performance -m MODEL  [-c CURVES] [-h] [-l LAUNCHER] [-o OUTPUT]"
+            " [-p PCS] [-od]\n"
+            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+        ),
     )
     _add_launcher_argument(performance)
-    _add_model_argument(performance)
+    performance_inputs = performance.add_argument_group("input options (give one)")
+    _add_model_argument(performance_inputs)
     _add_curves_argument(
-        performance,
+        performance_inputs,
         explain="(if a model is also provided, these are used only for graphing)",
+    )
+    _add_excel_argument(
+        performance_inputs,
+        as_option=True,
+        explain=("The model is generated from it, so neither the model nor the curves are given."),
     )
     _add_output_argument(performance)
     _add_pcs_argument(performance)
