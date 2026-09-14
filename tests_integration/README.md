@@ -7,7 +7,7 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 >
 > *   **Validation** — `dycov validate` for Wind / Photovoltaics / BESS
 > *   **Performance** — `dycov performance` for selected topologies and models
-> *   **Envelope Generation** — `dycov generateEnvelopes` for GFM (Overdamped / Underdamped)
+> *   **Envelope Generation** — `dycov generate_gfm_envelopes` for GFM (Overdamped / Underdamped)
 
 ***
 
@@ -93,7 +93,7 @@ Running with **no options** will:
     *   Output: `${results_path}/Performance/<Topology>/<Model>`
 *   Runs up to **4 jobs in parallel**.
 
-### C) Envelope Generation — `dycov generateEnvelopes`
+### C) Envelope Generation — `dycov generate_gfm_envelopes`
 
 *   **GFM_Options**: `Overdamped`, `Underdamped`, `Fusion`
 *   Paths per model:

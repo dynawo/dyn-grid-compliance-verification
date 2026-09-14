@@ -13,48 +13,106 @@ from pathlib import Path
 
 from dycov.logging import dycov_logging
 
+_PREAMBLE = [
+    "# IMPORTANT: The raison d'être for this INI file is that some models from the Dynawo",
+    "# library do not have a few parameters needed by DyCoV tests, and therefore they can only",
+    "# be provided here, instead of Producer.PAR. However, there are other Dynawo models that",
+    "# do have one or more of the parameters listed here in this INI. In such case, you will",
+    "# have to make sure you provide said parameters in **both** input files, Producer.INI and",
+    "# Producer.PAR. DyCoV will double-check that INI values are more restrictive than PAR",
+    "# values, and stop with an ERROR if they are not.",
+    "",
+]
+
+
+def _kv(key: str, value) -> str:
+    """Render an INI ``key = value`` line, leaving it blank when no value is given."""
+    return f"{key} =" if value in (None, "") else f"{key} = {value}"
+
+
+def _render_ini_text(
+    topology: str,
+    values: dict,
+    gen_sharing: dict,
+    include_consumption: bool,
+    zone: int = 0,
+) -> str:
+    """Single source of the Producer INI layout.
+
+    Both the blank template (``values={}``, ``gen_sharing={"[GEN_ID]": ("", "")}``) and the
+    value-filled Excel flow render from here.
+    """
+    lines = [
+        "[DEFAULT]",
+        *_PREAMBLE,
+        "# p_{max_unite} injection as defined by the DTR in MW",
+        _kv("p_max_injection_at_PDR", values.get("p_max_injection_at_PDR", "")),
+    ]
+    if include_consumption:
+        lines += [
+            "# p_{max_unite} consumption as defined by the DTR in MW (only for BESS)",
+            _kv("p_max_consumption_at_PDR", values.get("p_max_consumption_at_PDR", "")),
+        ]
+    if zone == 1:
+        lines += ["# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV"]
+    else:
+        lines += [
+            "# u_nom is the nominal voltage at the PDR bus (in kV)",
+            "# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)",
+        ]
+    lines += [
+        _kv("u_nom_at_PDR", values.get("u_nom_at_PDR", "")),
+        "# q_max is the maximum reactive power at the PDR bus (in MVar)",
+        _kv("q_max_at_PDR", values.get("q_max_at_PDR", "")),
+        "# q_min is the minimum reactive power at the PDR bus (in MVar)",
+        _kv("q_min_at_PDR", values.get("q_min_at_PDR", "")),
+        "# Active power sharing per generator unit (%).  Values must be between 0 and 1.",
+    ]
+    lines += [_kv(f"P_sharing_{gen_id}", p) for gen_id, (p, _q) in gen_sharing.items()]
+    lines += ["# Reactive power sharing per generator unit (%).  Values must be between 0 and 1."]
+    lines += [_kv(f"Q_sharing_{gen_id}", q) for gen_id, (_p, q) in gen_sharing.items()]
+    lines += ["# topology", f"topology = {topology}"]
+    return "\n".join(lines) + "\n"
+
 
 def _create_producer_ini_file(
     target: Path,
     filename: str,
     topology: str,
+    values: dict = None,
+    gen_sharing: dict = None,
+    include_consumption: bool = True,
     zone: int = 0,
 ) -> None:
     if (target / "Producer.ini").exists():
         (target / "Producer.ini").rename(target / filename)
 
-    if zone == 1:
-        u_nom_comment = (
-            "# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV\n"
-        )
-    else:
-        u_nom_comment = (
-            "# u_nom is the nominal voltage at the PDR bus (in kV)\n"
-            "# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)\n"
-        )
-
-    producer_ini_txt = (
-        f"[DEFAULT]\n"
-        f"# p_{{max_unite}} injection as defined by the DTR in MW\n"
-        f"p_max_injection_at_PDR =\n"
-        f"# p_{{max_unite}} consumption as defined by the DTR in MW (only for BESS)\n"
-        f"p_max_consumption_at_PDR =\n"
-        f"{u_nom_comment}"
-        f"u_nom_at_PDR =\n"
-        f"# q_max is the maximum reactive power at the PDR bus (in MVar)\n"
-        f"q_max_at_PDR =\n"
-        f"# q_min is the minimum reactive power at the PDR bus (in MVar)\n"
-        f"q_min_at_PDR =\n"
-        f"# Active power sharing per generator unit (%).  Values must be between 0 and 1.\n"
-        f"P_sharing_[GEN_ID] =\n"
-        f"# Reactive power sharing per generator unit (%).  Values must be between 0 and 1.\n"
-        f"Q_sharing_[GEN_ID] =\n"
-        f"# topology\n"
-        f"topology = {topology}\n"
+    text = _render_ini_text(
+        topology,
+        values or {},
+        gen_sharing or {"[GEN_ID]": ("", "")},
+        include_consumption,
+        zone,
     )
-
     with open(target / filename, "w") as f:
-        f.write(producer_ini_txt)
+        f.write(text)
+
+
+def write_producer_ini_file(
+    target: Path,
+    filename: str,
+    topology: str,
+    values: dict,
+    gen_sharing: dict,
+    include_consumption: bool = False,
+) -> None:
+    """Write a value-filled INI (Excel-driven flow) using the shared layout.
+
+    Thin wrapper over ``_create_producer_ini_file``; the only difference from the blank template
+    is the data (``values`` and per-generator ``gen_sharing`` ``{id -> (P_sharing, Q_sharing)}``).
+    Set ``include_consumption`` for BESS (adds ``p_max_consumption_at_PDR``).
+    """
+    _create_producer_ini_file(target, filename, topology, values, gen_sharing, include_consumption)
 
 
 def _check_ini_parameters(target: Path, filename: str) -> bool:

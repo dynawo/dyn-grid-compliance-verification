@@ -266,7 +266,7 @@ This directory contains a single `Producer.ini` file.
 ### 6.2 Generate envelopes
 
 ```bash
-dycov generateEnvelopes -i Producer.ini
+dycov generate_gfm_envelopes -i Producer.ini
 ```
 
 DyCoV will compute:

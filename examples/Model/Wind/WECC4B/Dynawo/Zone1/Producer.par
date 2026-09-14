@@ -1,95 +1,126 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
-  <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- LV Transformer -->
-    <par type="BOOL" name="WT4B_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT4B_BLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_GLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0.015"/>
-    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.06"/>
-    <!-- Electrical Control REEC -->
-    <par type="BOOL" name="WT4B_PQFlag" value="false"/>
+    <!-- REEC_A -->
     <par type="BOOL" name="WT4B_PfFlag" value="false"/>
-    <par type="BOOL" name="WT4B_QFlag" value="true"/>
     <par type="BOOL" name="WT4B_VFlag" value="true"/>
-    <par type="DOUBLE" name="WT4B_Dbd1Pu" value="-0.05"/>
-    <par type="DOUBLE" name="WT4B_Dbd2Pu" value="0.05"/>
-    <par type="DOUBLE" name="WT4B_DPMaxPu" value="999"/>
-    <par type="DOUBLE" name="WT4B_DPMinPu" value="-999"/>
-    <par type="DOUBLE" name="WT4B_IMaxPu" value="1.3"/>
-    <par type="DOUBLE" name="WT4B_Iqh1Pu" value="1.1"/>
-    <par type="DOUBLE" name="WT4B_Iql1Pu" value="-1.1"/>
-    <par type="DOUBLE" name="WT4B_Kqi" value="0.7"/>
-    <par type="DOUBLE" name="WT4B_Kqp" value="1"/>
-    <par type="DOUBLE" name="WT4B_Kqv" value="2"/>
-    <par type="DOUBLE" name="WT4B_Kvi" value="0.7"/>
-    <par type="DOUBLE" name="WT4B_Kvp" value="1"/>
-    <par type="DOUBLE" name="WT4B_VDipPu" value="0.9"/>
-    <par type="DOUBLE" name="WT4B_VMaxPu" value="1.1"/>
-    <par type="DOUBLE" name="WT4B_VMinPu" value="0.9"/>
-    <par type="DOUBLE" name="WT4B_VRef0Pu" value="1"/>
-    <par type="DOUBLE" name="WT4B_VUpPu" value="1.35"/>
-    <par type="DOUBLE" name="WT4B_tIq" value="0.01"/>
-    <par type="DOUBLE" name="WT4B_tpREEC" value="0.05"/>
-    <par type="DOUBLE" name="WT4B_tPord" value="0.01"/>
-    <par type="DOUBLE" name="WT4B_tRv" value="0.01"/>
-    <par type="DOUBLE" name="WT4B_PMaxREECPu" value="1"/>
-    <par type="DOUBLE" name="WT4B_PMinREECPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_QMaxREECPu" value="1.0"/>
-    <par type="DOUBLE" name="WT4B_QMinREECPu" value="-1.0"/>
-    <par type="DOUBLE" name="WT4B_PMaxREPCPu" value="1"/>
-    <par type="DOUBLE" name="WT4B_PMinREPCPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_QMaxREPCPu" value="1.0"/>
-    <par type="DOUBLE" name="WT4B_QMinREPCPu" value="-1.0"/>
-    <!-- Electrical Control REECa -->
+    <par type="BOOL" name="WT4B_QFlag" value="true"/>
     <par type="BOOL" name="WT4B_PFlag" value="false"/>
-    <par type="DOUBLE" name="WT4B_IqFrzPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_VDLIp11" value="1.1"/>
-    <par type="DOUBLE" name="WT4B_VDLIp12" value="1.1"/>
-    <par type="DOUBLE" name="WT4B_VDLIp21" value="1.15"/>
-    <par type="DOUBLE" name="WT4B_VDLIp22" value="1"/>
-    <par type="DOUBLE" name="WT4B_VDLIp31" value="1.16"/>
-    <par type="DOUBLE" name="WT4B_VDLIp32" value="1"/>
-    <par type="DOUBLE" name="WT4B_VDLIp41" value="1.17"/>
-    <par type="DOUBLE" name="WT4B_VDLIp42" value="1"/>
-    <par type="DOUBLE" name="WT4B_VDLIq11" value="1.1"/>
-    <par type="DOUBLE" name="WT4B_VDLIq12" value="1.1"/>
-    <par type="DOUBLE" name="WT4B_VDLIq21" value="1.15"/>
-    <par type="DOUBLE" name="WT4B_VDLIq22" value="1"/>
-    <par type="DOUBLE" name="WT4B_VDLIq31" value="1.16"/>
-    <par type="DOUBLE" name="WT4B_VDLIq32" value="1"/>
-    <par type="DOUBLE" name="WT4B_VDLIq41" value="1.17"/>
-    <par type="DOUBLE" name="WT4B_VDLIq42" value="1"/>
+    <par type="BOOL" name="WT4B_PQFlag" value="false"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDipPu" value="0.9"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VUpPu" value="1.35"/>
+    <par type="DOUBLE" name="WT4B_tRv" value="0.01"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_Dbd1Pu" value="-0.05"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_Dbd2Pu" value="0.05"/>
+    <par type="DOUBLE" name="WT4B_Kqv" value="2"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_Iqh1Pu" value="1.1"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_Iql1Pu" value="-1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VRef0Pu" value="1"/>
+    <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT4B_VRef1Pu" value="0"/>
-    <par type="DOUBLE" name="WT4B_tHoldIpMax" value="0"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_IqFrzPu" value="0"/>
     <par type="DOUBLE" name="WT4B_tHoldIq" value="0"/>
-    <!-- Generator Converter REGC -->
+    <par type="DOUBLE" name="WT4B_tHoldIpMax" value="0"/>
+    <par type="DOUBLE" name="WT4B_tpREEC" value="0.05"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT4B_QMaxREECPu" value="0.8"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT4B_QMinREECPu" value="-0.8"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VMaxPu" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VMinPu" value="0.9"/>
+    <par type="DOUBLE" name="WT4B_Kqp" value="1"/>
+    <par type="DOUBLE" name="WT4B_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WT4B_Kvp" value="1"/>
+    <par type="DOUBLE" name="WT4B_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WT4B_tIq" value="0.01"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT4B_DPMaxPu" value="999"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT4B_DPMinPu" value="-999"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT4B_PMaxREECPu" value="1"/>
+    <!-- Base unit: SnZone1 -->
+    <par type="DOUBLE" name="WT4B_PMinREECPu" value="0"/>
+    <!-- Base unit: Un, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_IMaxPu" value="1.3"/>
+    <par type="DOUBLE" name="WT4B_tPord" value="0.01"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIq11" value="1.1"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIq12" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIq21" value="1.15"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIq22" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIq31" value="1.16"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIq32" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIq41" value="1.17"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIq42" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIp11" value="1.1"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIp12" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIp21" value="1.15"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIp22" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIp31" value="1.16"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIp32" value="1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_VDLIp41" value="1.17"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_VDLIp42" value="1"/>
+    <!-- REGC_A -->
+    <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="WT4B_IqrMaxPu" value="20"/>
+    <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="WT4B_IqrMinPu" value="-20"/>
     <par type="DOUBLE" name="WT4B_RrpwrPu" value="10"/>
     <par type="DOUBLE" name="WT4B_tFilterGC" value="0.02"/>
-    <!-- Generator Converter REGCa -->
-    <par type="BOOL" name="WT4B_Lvplsw" value="false"/>
-    <par type="DOUBLE" name="WT4B_brkpt" value="0.05"/>
-    <par type="DOUBLE" name="WT4B_lvpl1" value="1.22"/>
     <par type="DOUBLE" name="WT4B_tG" value="0.02"/>
+    <par type="BOOL" name="WT4B_Lvplsw" value="false"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WT4B_brkpt" value="0.05"/>
+    <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT4B_zerox" value="0.1"/>
-    <!-- PLL Control -->
-    <par type="DOUBLE" name="WT4B_KiPLL" value="20"/>
+    <!-- Base unit: Un2, SnZone1 -->
+    <par type="DOUBLE" name="WT4B_lvpl1" value="1.22"/>
     <par type="DOUBLE" name="WT4B_KpPLL" value="3"/>
+    <par type="DOUBLE" name="WT4B_KiPLL" value="20"/>
+    <!-- Base unit: wn (= 2*pi*50 rd/s) -->
     <par type="DOUBLE" name="WT4B_OmegaMaxPu" value="1.5"/>
+    <!-- Base unit: wn (= 2*pi*50 rd/s) -->
     <par type="DOUBLE" name="WT4B_OmegaMinPu" value="0.5"/>
+    <!-- LV Transformer -->
+    <par type="BOOL" name="WT4B_ConverterLVControl" value="true"/>
+    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.06"/>
     <!-- General -->
-    <par type="DOUBLE" name="WT4B_SNom" value="4"/>
+    <par type="DOUBLE" name="WT4B_SNom" value="4.0"/>
   </set>
-  <!-- tfo -->
+
   <set id="Group_Xfmr">
-    <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
-    <par type="DOUBLE" name="transformer_RPu" value="0.01"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.1"/>
-    <par type="DOUBLE" name="transformer_BPu" value="0"/>
-    <par type="DOUBLE" name="transformer_GPu" value="0"/>
+    <!-- impedances in pu, base SnRef = 100 MVA -->
+    <par type="DOUBLE" name="transformer_RPu" value="0.375"/>
+    <par type="DOUBLE" name="transformer_XPu" value="1.5"/>
+    <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
+    <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
 </parametersSet>

@@ -13,7 +13,6 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.files import manage_files
 from dycov.logging import dycov_logging
 
 
@@ -70,6 +69,8 @@ def _get_desc_xml_params(model_desc: Path):
 def _write_params_par_file(producer_par_root: etree.Element, params_list: list, parId: str):
     xml_set = etree.SubElement(producer_par_root, "set", id=f"{parId}")
     for param in params_list:
+        for comment in param.get("comments", ()):
+            xml_set.append(etree.Comment(f" {comment} "))
         etree.SubElement(
             xml_set,
             "par",
@@ -79,39 +80,76 @@ def _write_params_par_file(producer_par_root: etree.Element, params_list: list, 
         )
 
 
-def _create_producer_par_file(
-    launcher_dwo: Path,
-    target: Path,
-    filename: str,
-) -> None:
-    ddb_dynawo_path = _get_ddb_model_path(launcher_dwo)
+def _par_spacing(xml_text: str) -> str:
+    """Insert a blank line between consecutive ``<set>`` blocks, matching the examples."""
+    spaced = []
+    previous_closed_a_set = False
+    for line in xml_text.splitlines():
+        if line.strip().startswith("<set") and previous_closed_a_set:
+            spaced.append("")
+        spaced.append(line)
+        previous_closed_a_set = line.strip().startswith("</set")
+    return "\n".join(spaced) + "\n"
+
+
+def _dump_par_sets(target: Path, filename: str, parameter_sets: list) -> None:
+    """Serialize ``[(parId, params)]`` to a PAR file. Single writer for both flows."""
     producer_par_root = etree.fromstring(
         """<parametersSet xmlns="http://www.rte-france.com/dynawo"></parametersSet>"""
     )
+    for par_id, params_list in parameter_sets:
+        _write_params_par_file(producer_par_root, params_list, par_id)
 
-    models_dict = _get_bbmodels_info(target / filename.replace(".par", ".dyd"))
-    for key, value in models_dict.items():
+    normalized = etree.fromstring(
+        etree.tostring(producer_par_root), etree.XMLParser(remove_blank_text=True)
+    )
+    xml = etree.tostring(
+        normalized, encoding="UTF-8", pretty_print=True, xml_declaration=True
+    ).decode("utf-8")
+    (Path(target) / filename).write_text(_par_spacing(xml), encoding="utf-8")
+
+
+def _ddb_parameter_sets(launcher_dwo: Path, dyd_file: Path) -> list:
+    """Build ``[(parId, params)]`` from each DYD model's ``.desc.xml`` in the Dynawo install."""
+    ddb_dynawo_path = _get_ddb_model_path(launcher_dwo)
+    parameter_sets = []
+    for value in _get_bbmodels_info(dyd_file).values():
         if value["parId"] is None:
             continue
-
         model_desc = _search_ddb_model_file(value["lib"], ddb_dynawo_path)
         if not model_desc:
             dycov_logging.get_logger("Create PAR input").error(
                 f"Error: {value['lib']}.desc.xml file not found"
             )
             continue
+        parameter_sets.append((value["parId"], _get_desc_xml_params(model_desc)))
+    return parameter_sets
 
-        params_list = _get_desc_xml_params(model_desc)
-        _write_params_par_file(producer_par_root, params_list, value["parId"])
 
-    producer_par_tree = etree.ElementTree(
-        etree.fromstring(
-            etree.tostring(producer_par_root), etree.XMLParser(remove_blank_text=True)
-        )
-    )
-    producer_par_tree.write(
-        target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True
-    )
+def _create_producer_par_file(
+    launcher_dwo: Path,
+    target: Path,
+    filename: str,
+) -> None:
+    sets = _ddb_parameter_sets(launcher_dwo, target / filename.replace(".par", ".dyd"))
+    _dump_par_sets(target, filename, sets)
+
+
+def write_producer_par_file(target: Path, filename: str, parameter_sets: list) -> None:
+    """Write a PAR from provided parameter sets, without reading the Dynawo install (Excel-driven
+    flow; the caller supplies fully-formed parameters with prefixed names).
+
+    Parameters
+    ----------
+    target: Path
+        Target directory.
+    filename: str
+        PAR file name.
+    parameter_sets: list
+        Ordered ``[(parId, params)]`` where ``params`` is a list of
+        ``{"name": str, "type": str, "value": str}`` (optionally ``"comments": [str]``).
+    """
+    _dump_par_sets(target, filename, parameter_sets)
 
 
 def _check_parameters(target: Path, filename: str) -> bool:
@@ -139,6 +177,7 @@ def create_producer_par_file(
     target: Path,
     topology: str,
     template: str,
+    n_generators: int = 2,
 ) -> None:
     """Create a PAR file in target path
 
@@ -157,19 +196,14 @@ def create_producer_par_file(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
+    n_generators: int
+        Number of generators for an ``M`` topology (one ``Producer_G<i>.par`` per ``Zone1<x>``
+        sheet); default 2. Each ``.par`` is built from its ``.dyd``.
     """
     if template.startswith("model"):
         if topology.casefold().startswith("m"):
-            manage_files.copy_file(
-                target / "Zone1" / "Producer.par", target / "Zone1" / "Producer_G1.par"
-            )
-            manage_files.copy_file(
-                target / "Zone1" / "Producer.par", target / "Zone1" / "Producer_G2.par"
-            )
-            (target / "Zone1" / "Producer.par").unlink()
-
-            _create_producer_par_file(launcher_dwo, target / "Zone1", "Producer_G1.par")
-            _create_producer_par_file(launcher_dwo, target / "Zone1", "Producer_G2.par")
+            for i in range(1, n_generators + 1):
+                _create_producer_par_file(launcher_dwo, target / "Zone1", f"Producer_G{i}.par")
         else:
             _create_producer_par_file(launcher_dwo, target / "Zone1", "Producer.par")
         _create_producer_par_file(launcher_dwo, target / "Zone3", "Producer.par")

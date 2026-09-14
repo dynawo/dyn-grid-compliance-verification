@@ -14,16 +14,14 @@ from pathlib import Path
 
 import pytest
 
-import dycov
 from dycov.curves.importer.curves import ImportedCurves
+from dycov.excel.reference_curves import dicts
 
 _IC = "dycov.curves.importer.curves"
 
-_INPUT_TEMPLATES = Path(dycov.__file__).resolve().parent / "templates" / "inputs"
 _METADATA_SECTION = "Curves-Metadata"
-_SECTION_HEADER = re.compile(r"^\[(?P<name>[^]]+)\]\s*$")
-_GENERATOR_PLACEHOLDER = "[WT_ID]"
-_PER_GENERATOR_OPTION = re.compile(r"^(?P<option>\[WT_ID\][^=\s]+)\s*=")
+_GENERATOR_PLACEHOLDER = "<generator>"
+_PER_GENERATOR_OPTION = re.compile(r"(?P<option><generator>[^=\s]+)\s*=")
 
 _GENERATOR_ID = "Wind_Turbine"
 _GENERATOR_IMAX = 1.3
@@ -41,40 +39,22 @@ _METADATA = (
 )
 
 
-def _per_generator_metadata_options(dict_file: Path) -> list[str]:
-    """Options that a curve dictionary declares once per generator in its metadata section.
+def _declared_per_generator_options() -> list[str]:
+    """Options the generated dictionaries declare once per generator, in their metadata section.
 
-    A template dictionary cannot be read with configparser: the placeholder makes each of these
-    declarations look like a section header, and the option name is dropped.
-
-    Parameters
-    ----------
-    dict_file : Path
-        Path to the curve dictionary.
+    The generator writes them as guidance, with a placeholder where the block id goes, so they
+    are read from the lines it emits rather than parsed back with configparser.
 
     Returns
     -------
     list
         Option names, with the generator placeholder still in them.
     """
-    options = []
-    in_metadata = False
-    for line in dict_file.read_text(encoding="utf-8").splitlines():
-        section_header = _SECTION_HEADER.match(line)
-        if section_header:
-            in_metadata = section_header.group("name") == _METADATA_SECTION
-            continue
-        option = _PER_GENERATOR_OPTION.match(line)
-        if in_metadata and option:
-            options.append(option.group("option"))
-    return options
-
-
-def _declared_per_generator_options() -> list[tuple[Path, str]]:
     return [
-        (dict_file, option)
-        for dict_file in sorted(_INPUT_TEMPLATES.rglob("*.dict"))
-        for option in _per_generator_metadata_options(dict_file)
+        match.group("option")
+        for line in dicts._METADATA_OPTIONAL
+        for match in [_PER_GENERATOR_OPTION.search(line)]
+        if match
     ]
 
 
@@ -156,14 +136,10 @@ def _write_curves(curves_dir: Path, metadata: str) -> None:
 def test_generated_curves_dicts_declare_a_per_generator_option():
     declared = _declared_per_generator_options()
 
-    assert declared, f"No per-generator metadata option declared under {_INPUT_TEMPLATES}."
+    assert declared, "The generated dictionaries declare no per-generator metadata option."
 
 
-@pytest.mark.parametrize(
-    "option",
-    [option for _, option in _DECLARED_OPTIONS],
-    ids=[dict_file.name for dict_file, _ in _DECLARED_OPTIONS],
-)
+@pytest.mark.parametrize("option", _DECLARED_OPTIONS)
 def test_generated_per_generator_option_is_imported_as_the_generator_imax(
     option: str, tmp_path, tool_config
 ):

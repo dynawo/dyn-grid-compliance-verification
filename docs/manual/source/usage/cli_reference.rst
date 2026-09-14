@@ -22,8 +22,12 @@ The main entry point. Run without arguments to see the available subcommands.
 dycov validate
 --------------
 
-Runs RMS model validation against a set of reference curves. Requires either
-a Dynawo model (``-m``) or producer curves (``-c``).
+Runs RMS model validation against a set of reference curves. Requires a Dynawo
+model (``-m``), producer curves (``-c``), or the workbook that describes the
+installation (``-e``). With a workbook, the model and its reference curves are
+generated from it into a temporary directory that is removed when the run ends,
+so the reference directory is not given either and the report names the
+workbook as its input.
 
 .. include:: helps/validate.rst
 
@@ -35,29 +39,34 @@ dycov performance
 Runs electric performance verification against the applicable DTR PCSs.
 Requires a Dynawo model (``-m``), producer curves (``-c``), or both — when
 both are given, compliance is evaluated on the simulated curves only and the
-producer curves are drawn in the figures as an overlay.
+producer curves are drawn in the figures as an overlay. It also takes the
+workbook that describes the installation (``-e``), on its own: the model is
+generated from it into a temporary directory that is removed when the run
+ends, and since performance is a zone-3 workflow, only the ``Dynawo/Zone3``
+half of the conversion is used.
 
 .. include:: helps/performance.rst
 
 ----
 
-dycov generateEnvelopes
------------------------
+dycov generate_gfm_envelopes
+----------------------------
 
 Analytically computes GFM admissible response envelopes. No Dynawo model
 required — only a ``Producer.ini`` file.
 
-.. include:: helps/generateEnvelopes.rst
+.. include:: helps/generate_gfm_envelopes.rst
 
 ----
 
-dycov generate
---------------
+dycov excel2inputs
+------------------
 
-Interactive wizard that generates the input files (DYD, PAR, INI, DICT)
-needed to run a validation.
+Writes the input files of a model — ``Producer.{dyd,par,ini}`` for both zones
+and the reference-curve tree — from the workbook that describes it. The
+workbook is the single source of truth; nothing else is asked for.
 
-.. include:: helps/generate.rst
+.. include:: helps/excel2inputs.rst
 
 ----
 
