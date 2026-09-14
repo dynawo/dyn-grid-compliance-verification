@@ -17,9 +17,6 @@ Each output has its own module: this one only decides what to build and reports 
 
 from __future__ import annotations
 
-import argparse
-import sys
-import zipfile
 from pathlib import Path
 
 from dycov.excel import names, par
@@ -198,31 +195,3 @@ def generate(excel: Path, outdir: Path) -> str:
             _reference_curves_report(curves),
         ]
     )
-
-
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Generate DyCoV Producer inputs from a WECC Excel.")
-    ap.add_argument("--excel", required=True, type=Path)
-    ap.add_argument("--outdir", required=True, type=Path)
-    args = ap.parse_args(argv)
-    if not args.excel.is_file():
-        ap.error(f"Excel not found: {args.excel}")
-    try:
-        report = generate(args.excel, args.outdir)
-    except zipfile.BadZipFile:
-        print(
-            f"ERROR: {args.excel} is not a readable .xlsx workbook (a legacy .xls file has to be "
-            f"saved as .xlsx first).",
-            file=sys.stderr,
-        )
-        return 1
-    except ValueError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-    print(report)
-    print(f"\nWrote input tree under: {args.outdir / 'Dynawo'}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

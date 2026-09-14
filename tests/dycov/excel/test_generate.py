@@ -187,18 +187,15 @@ def test_generate_fails_when_no_block_declares_zone1(tmp_path, monkeypatch):
         G.generate(Path("ignored.xlsx"), tmp_path)
 
 
-def test_main_reports_domain_errors_cleanly(tmp_path, monkeypatch, capsys):
-    # Domain errors exit 1 with an 'ERROR: …' line on stderr (like dynawo_par), no traceback.
+def test_generate_refuses_a_workbook_with_no_zone_column(tmp_path, monkeypatch):
+    # Without the 'Zone' column no block declares Zone1; the refusal names that, and the CLI
+    # handler is the one that turns it into an error message.
     book = make_workbook()
-    book["Général"] = [row[:2] + row[3:] for row in GENERAL]  # no Zone column -> ValueError
+    book["Général"] = [row[:2] + row[3:] for row in GENERAL]
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
-    excel = tmp_path / "model.xlsx"
-    excel.write_text("stub")
 
-    assert G.main(["--excel", str(excel), "--outdir", str(tmp_path / "out")]) == 1
-
-    err = capsys.readouterr().err
-    assert err.startswith("ERROR: ") and "declares Zone1" in err
+    with pytest.raises(ValueError, match="declares Zone1"):
+        G.generate(tmp_path / "model.xlsx", tmp_path / "out")
 
 
 def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):

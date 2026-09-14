@@ -10,6 +10,7 @@
 import argparse
 import logging
 import time
+import zipfile
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,7 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.core.input_template import InputTemplateGenerator
 from dycov.curves import anonymizer
 from dycov.curves.dynawo.tooling import prepare_tool
+from dycov.excel import generator as excel_generator
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.verification.functional_tests import compare_csv_directories
@@ -278,6 +280,52 @@ def handle_compile_command(
         parser.error(f"Failed to compile models: {e}")
         result_code = 1
     return result_code
+
+
+def handle_excel2inputs_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    """Handles the 'excel2inputs' command.
+
+    Writes the input files of a model — both zones and the reference curves — from the workbook
+    that describes it.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The argument parser instance.
+    args: argparse.Namespace
+        Parsed command-line arguments.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info("Handling 'excel2inputs' command.")
+    excel = Path(args.excel)
+    if not excel.is_file():
+        parser.error(f"Workbook not found: {excel}")
+        return 1
+
+    output = Path(args.output) if args.output else excel.parent
+    logger.debug(f"Input files will be written under: {output}")
+    try:
+        report = excel_generator.generate(excel, output)
+    except zipfile.BadZipFile:
+        parser.error(
+            f"{excel} is not a readable .xlsx workbook (a legacy .xls file has to be saved as "
+            f".xlsx first)."
+        )
+        return 1
+    except ValueError as e:
+        parser.error(f"The workbook cannot be converted: {e}")
+        return 1
+    except Exception as e:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception("Error generating the input files")
+        else:
+            logger.error(f"Error generating the input files: {e}")
+        parser.error(f"Failed to generate the input files: {e}")
+        return 1
+
+    logger.info(report)
+    logger.info(f"Input files written under {output}")
+    return 0
 
 
 def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:

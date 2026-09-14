@@ -53,6 +53,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
     _add_generate_subparser(subparsers)
+    _add_excel2inputs_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
 
     return main_parser
@@ -353,6 +354,34 @@ def _add_curves_argument(
         parser,
         "-c",
         "--curves",
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
+    )
+
+
+def _add_excel_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+) -> None:
+    """Adds the 'excel' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    """
+    help_msg = "Path to the workbook describing the model."
+    if explain:
+        help_msg += f" {explain}"
+    _add_argument(
+        parser,
+        "excel",
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
@@ -686,6 +715,29 @@ def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_topology_argument(generate, is_required=True)
     _add_validation_argument(generate, is_required=True)
     dycov_logging.get_logger("CliParsers").debug("Added 'generate' subparser.")
+
+
+def _add_excel2inputs_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'excel2inputs' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'excel2inputs' subparser will be added.
+    """
+    excel2inputs = subparsers.add_parser(
+        "excel2inputs",
+        help="Create the input files of a model from the workbook that describes it.",
+    )
+    _add_excel_argument(excel2inputs, is_required=True)
+    _add_output_argument(
+        excel2inputs,
+        explain=(
+            "The Dynawo and ReferenceCurves trees are written under it; "
+            "defaults to the directory holding the workbook."
+        ),
+    )
+    dycov_logging.get_logger("CliParsers").debug("Added 'excel2inputs' subparser.")
 
 
 def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
