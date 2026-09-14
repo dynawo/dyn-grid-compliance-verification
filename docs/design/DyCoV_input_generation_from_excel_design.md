@@ -42,7 +42,7 @@ injects at simulation setup.
 
 **CLI**
 ```bash
-python generate_inputs.py --excel model.xlsx --outdir <path>
+python -m dycov.excel --excel model.xlsx --outdir <path>
 ```
 `--excel` is the WECC workbook (single source of truth); `--outdir` is where the trees are written.
 `.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`), which the legacy
@@ -61,7 +61,10 @@ python generate_inputs.py --excel model.xlsx --outdir <path>
 | Descriptive sheets | Ignored: without a parameter table they yield nothing. |
 
 **Names live in a configuration file.** Every sheet, row, header and marker the tool looks for is an
-entry of `excel_names.ini`, so a renamed sheet or row is a change there and not in the code:
+entry of `excel_names.ini`, so a renamed sheet or row is a change there and not in the code. Two
+copies are read, as with the rest of DyCoV's configuration: the one shipped in the package
+(`dictionary/`) and the user's own under the configuration directory, which wins key by key and
+arrives fully commented out, so uncommenting a name is what overrides it:
 
 | Section | Holds |
 | :--- | :--- |
@@ -139,11 +142,12 @@ The base name of every file, and the `ReferenceCurves` subdirectory, come from o
 
 ### 5. Organization
 
-One module per generated file, and the readers behind them:
+One module per generated file, and the readers behind them, under `src/dycov/excel/`:
 
 ```
-generate_inputs.py        CLI: what to build, in what order, and the run report
-  excel_names.py / .ini   every sheet, row, header and marker name the workbook uses
+generator.py              what to build, in what order, and the run report
+  names.py                the reader of the names file, package copy plus the user's own
+  dictionary/excel_names.ini   every sheet, row, header and marker name the workbook uses
   workbook.py             stdlib .xlsx reader: sheets as grids, variant tables
   parse.py                model resolution (Model Map), the electrical sheets, control params
   signals.py              the signal sheets: curves, tests and their .csv files
@@ -333,9 +337,9 @@ missing.
 
 ### 10. Testing
 
-Tests live under `tests/tools/`, one module per module of the tool (`_par`, `_dyd`, `_ini`,
-`_reference_curves`, `_parse`, `_workbook`, `_electrical`), plus `_golden` and the synthetic
-workbook they share (`workbooks.py`, exposed through `conftest.py`):
+Tests live under `tests/dycov/excel/`, one module per module of the package (`par`, `dyd`, `ini`,
+`reference_curves`, `parse`, `workbook`, `electrical`), plus `golden` and the synthetic workbook
+they share (`workbooks.py`, exposed through `conftest.py`):
 
 - **Map/pairing**: the variant→model map is injective and every plant model has its 1:1 turbine
   sibling.
