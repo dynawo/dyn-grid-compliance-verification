@@ -8,9 +8,10 @@ DyCoV has three main workflows, each with its own entry point:
 * For :ref:`Electric Performance Verification <perf_verification>`: ``dycov performance``
 * For :ref:`Grid-Forming envelope generation <gfm_envelopes_cmd>`: ``dycov generateEnvelopes``
 
-There are also two utility commands: ``dycov generate`` to create input files
-through a guided process, and ``dycov anonymize`` to produce anonymized curve
-files. All commands are described below.
+There are also three utility commands: ``dycov excel2inputs`` to write the
+input files from the workbook that describes the installation, ``dycov
+generate`` to create them through a guided process, and ``dycov anonymize`` to
+produce anonymized curve files. All commands are described below.
 
 Run ``dycov --help`` (or ``-h``) at any time to get a quick overview:
 
@@ -102,9 +103,14 @@ and interactive HTML plots.
 Generate Producer Input Files
 ------------------------------
 
-If you are starting from scratch and need to create the input files required
-by DyCoV, the ``dycov generate`` command walks you through the process
-interactively:
+If you have the workbook describing the installation, ``dycov excel2inputs``
+writes every input file from it in one step — both zones and the
+reference-curve tree:
+
+.. include:: helps/excel2inputs.rst
+
+If you are starting from scratch instead, the ``dycov generate`` command walks
+you through the process interactively:
 
 .. include:: helps/generate.rst
 
