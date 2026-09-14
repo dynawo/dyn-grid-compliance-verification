@@ -50,22 +50,33 @@ def write_reference_curves(outdir: Path, producer: str, signals_by_zone: dict) -
     -------
     dict
         ``target`` directory (None when nothing was described), how many ``tests`` were written,
-        how many ``.csv`` were ``copied`` and which ones are still ``missing``.
+        how many ``.csv`` were ``copied``, which ones are still ``missing``, and the tests whose
+        metadata the workbook left ``unfilled`` — DyCoV refuses to run those.
     """
     described = {zone: signals for zone, signals in signals_by_zone.items() if signals.tests}
     if not described:
-        return {"target": None, "tests": 0, "copied": 0, "missing": []}
+        return {"target": None, "tests": 0, "copied": 0, "missing": [], "unfilled": []}
 
     target = outdir / "ReferenceCurves" / producer
     target.mkdir(parents=True, exist_ok=True)
     (target / "CurvesFiles.ini").write_text(curves_files.text(described), encoding="utf-8")
 
-    tests, copied, missing = 0, 0, []
+    tests, copied, missing, unfilled = 0, 0, [], []
     for signals in described.values():
         for test in signals.tests:
-            (target / ("%s.dict" % test.name)).write_text(dicts.text(signals), encoding="utf-8")
+            (target / ("%s.dict" % test.name)).write_text(
+                dicts.text(signals, test), encoding="utf-8"
+            )
             tests += 1
+            if any(key not in test.metadata for key in dicts.METADATA_HELP):
+                unfilled.append(test.name)
         zone_copied, zone_missing = _copy_curves(signals, target)
         copied += zone_copied
         missing += zone_missing
-    return {"target": target, "tests": tests, "copied": copied, "missing": missing}
+    return {
+        "target": target,
+        "tests": tests,
+        "copied": copied,
+        "missing": missing,
+        "unfilled": unfilled,
+    }

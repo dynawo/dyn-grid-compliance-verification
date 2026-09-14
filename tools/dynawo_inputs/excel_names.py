@@ -99,6 +99,25 @@ def curves(zone: str, generator_id: str) -> dict:
     return mapped
 
 
+def metadata_columns() -> dict:
+    """``{metadata key -> normalized column header}`` of the curve-metadata block."""
+    parser = _parsed()
+    section = "Metadata-Columns"
+    if not parser.has_section(section):
+        return {}
+    return {key: normalize(header) for key, header in parser.items(section) if header.strip()}
+
+
+def metadata_booleans() -> tuple:
+    """The metadata keys DyCoV reads as a boolean."""
+    return tuple(key.strip() for key in _option("Metadata-Values", "booleans").split(","))
+
+
+def metadata_true_values() -> set:
+    """The cell values meaning ``True`` for a boolean metadata key, normalized."""
+    return {normalize(value) for value in _option("Metadata-Values", "true").split(",")}
+
+
 def test_suffixes() -> tuple:
     """The suffixes a storage plant's operating conditions carry, verbatim: they name files."""
     return tuple(value.strip() for value in _option("Storage", "test_suffixes").split(","))

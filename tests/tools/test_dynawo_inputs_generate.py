@@ -54,11 +54,13 @@ def test_reference_curves_report_names_what_is_still_missing():
             "tests": 3,
             "copied": 2,
             "missing": ["rise.csv"],
+            "unfilled": ["PCS_RTE-I16z1.SetPointStep.Active"],
         }
     )
 
     assert "tests described : 3" in report
     assert ".csv missing    : 1" in report and "rise.csv" in report
+    assert "metadata to fill: 1" in report and "SetPointStep.Active" in report
 
 
 def test_reference_curves_report_says_when_the_sheets_describe_nothing():

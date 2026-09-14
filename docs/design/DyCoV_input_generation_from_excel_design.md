@@ -295,11 +295,15 @@ operating conditions.
 - **The `.csv` files** — copied from the folder the sheet names; the ones not found are reported so
   the user can drop them in.
 
-**The metadata is left empty on purpose.** `sim_t_event_start`, `fault_duration`,
-`frequency_sampling` and `is_field_measurements` describe the user's own files, not the model: the
-tool writes the keys with their meaning and no value. Filling them with the simulation's own event
-instant would silently compare curves that are not aligned in time, which reads as a
-non-compliant model rather than as an unfilled input (`dycov#481`).
+**The metadata comes from the workbook, not from the model.** `sim_t_event_start`,
+`fault_duration`, `frequency_sampling` and `is_field_measurements` describe the user's own files,
+so the tests table carries one column per key (`[Metadata-Columns]`) and each test's `.dict` is
+written with the values of its own row. Deriving them from the simulation instead would silently
+compare curves that are not aligned in time, which reads as a non-compliant model rather than as
+an unfilled input. A key whose cell is blank is still written with its meaning and no value, and
+the run reports which tests are in that state — DyCoV refuses to run them (`dycov#481`).
+`is_field_measurements` is the one key DyCoV reads as a boolean: `[Metadata-Values]` lists the
+cell values that mean true, so the workbook can keep saying `Oui` / `Non`.
 
 **Storage runs every case twice.** A BESS is tested injecting and consuming, so DyCoV names two
 operating conditions per DTR case and expects one `.csv` for each. The tests table has one
@@ -308,8 +312,9 @@ suffix of `[Storage]` to both the test name and the file name (`…ActiveInjecti
 `…ActiveConsumption.csv`). The template needs no storage-specific row.
 
 A row with no curve of its own — the setpoint rows, say — is informative: DyCoV reads no such curve.
-Likewise, a DTR case the sheets do not list gets no reference file; today the frequency ramp is in
-that position, listed by neither signal sheet.
+Likewise, a DTR case the sheets do not list gets no reference file. The frequency ramp is listed by
+both sheets, and only zone 3 runs it: its zone-1 row carries the note that marks it as not
+applicable there, and no results file.
 
 The signal sheets are optional as a whole: an untouched one describes no test, and the model inputs
 are generated all the same.

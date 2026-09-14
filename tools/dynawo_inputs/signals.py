@@ -31,10 +31,11 @@ import workbook as wb
 
 @dataclass
 class Test:
-    """One row of the tests table: the DyCoV test and the file holding its reference curves."""
+    """One row of the tests table: the DyCoV test, its reference-curve file and its metadata."""
 
     name: str
     curves_file: str
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -111,12 +112,35 @@ def _test_key(case: str, seen: dict) -> tuple[str, str]:
     return f"{case}/{ordinal}", case
 
 
-def _suffixed(name: str, curves_file: str, suffix: str) -> Test:
+def _suffixed(name: str, curves_file: str, suffix: str, metadata: dict) -> Test:
     if not suffix:
-        return Test(name=name, curves_file=curves_file)
+        return Test(name=name, curves_file=curves_file, metadata=metadata)
     stem, dot, extension = curves_file.rpartition(".")
     suffixed_file = f"{stem}{suffix}{dot}{extension}" if dot else f"{curves_file}{suffix}"
-    return Test(name=name + suffix, curves_file=suffixed_file)
+    return Test(name=name + suffix, curves_file=suffixed_file, metadata=dict(metadata))
+
+
+def _metadata_columns(grid) -> dict:
+    """``{metadata key -> column}`` for the keys whose header the sheet carries."""
+    located = {}
+    for key, header in names.metadata_columns().items():
+        column = _column_of(grid, header)
+        if column is not None:
+            located[key] = column
+    return located
+
+
+def _metadata_of(grid, row: int, columns: dict) -> dict:
+    """The metadata one test row fills in; a blank cell leaves its key for the user."""
+    booleans, truthy = names.metadata_booleans(), names.metadata_true_values()
+    filled = {}
+    for key, column in columns.items():
+        value = wb._cell(grid, row, column)
+        if not value or value.strip() == names.marker("not_applicable"):
+            continue
+        value = value.strip()
+        filled[key] = str(names.normalize(value) in truthy) if key in booleans else value
+    return filled
 
 
 def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
@@ -129,6 +153,7 @@ def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
     file_column = _column_of(grid, names.anchor("test_file"))
     if case_column is None or file_column is None:
         return []
+    metadata_columns = _metadata_columns(grid)
 
     tests, seen = [], {}
     for row in range(len(grid)):
@@ -140,7 +165,8 @@ def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
         name = known.get(with_ordinal, known.get(plain))
         if not name or not curves_file or curves_file == names.marker("not_applicable"):
             continue
-        tests += [_suffixed(name, curves_file.strip(), suffix) for suffix in suffixes]
+        metadata = _metadata_of(grid, row, metadata_columns)
+        tests += [_suffixed(name, curves_file.strip(), suffix, metadata) for suffix in suffixes]
     return tests
 
 
