@@ -313,36 +313,7 @@ def _add_output_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
-    )
-
-
-def _add_topology_argument(
-    parser: argparse.ArgumentParser,
-    explain: str = "",
-    is_required: bool = False,
-) -> None:
-    """Adds the '--topology' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    explain: str
-        Additional explanation for the help message.
-    is_required: bool
-        Whether the argument is required.
-    """
-    help_msg = "Choice of topology to implement in the DYD file"
-    if explain:
-        help_msg += f" {explain}"
-    _add_argument(
-        parser,
-        "-t",
-        "--topology",
-        arg_type=str,
-        help_msg=help_msg,
-        is_required=is_required,
-        choices=["S", "S+i", "S+Aux", "S+Aux+i", "M", "M+i", "M+Aux", "M+Aux+i"],
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -439,37 +410,7 @@ def _add_reference_argument(
         help_msg=help_msg,
         is_required=is_required,
         nargs=nargs,
-    )
-
-
-def _add_validation_argument(
-    parser: argparse.ArgumentParser,
-    explain: str = "",
-    is_required: bool = False,
-) -> None:
-    """Adds the '--validation' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    explain: str
-        Additional explanation for the help message.
-    is_required: bool
-        Whether the argument is required.
-    """
-    help_msg = "Choice of process, performance verification (SM, PPM or BESS) "
-    help_msg += "vs. RMS model validation (PPM or BESS)"
-    if explain:
-        help_msg += f" {explain}"
-    _add_argument(
-        parser,
-        "-v",
-        "--validation",
-        arg_type=str,
-        help_msg=help_msg,
-        is_required=is_required,
-        choices=["performance_SM", "performance_PPM", "model_PPM", "model_BESS"],
+        completion=shtab.DIRECTORY,
     )
 
 
