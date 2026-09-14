@@ -86,3 +86,13 @@ Output naming (`curves/naming.py`): internals use `BusPDR_BUS_*` everywhere, but
 outputs (saved CSVs, report/figure labels) rename the bus to `InternalNode1` — PDR is
 reserved for the real connection point (issue #275). The importer accepts both namings
 in Zone 1 reference-curve dictionaries.
+
+## Shell completion (CLI)
+
+`cli/cli_parsers.py` is the single source: `shtab.add_argument_to()` adds `--print-completion
+<shell>`, and every path argument declares `completion=shtab.FILE|DIRECTORY` through `_add_argument`,
+so a new command or option is completed without writing any completion code.
+`installers/install_bash_completion.sh` generates the bash script into
+`<venv>/share/bash-completion/completions/dycov` and sources it from the venv's `activate`; it is
+called by `build_and_install.sh` and `installers/linux_install.sh`. The distribution image generates
+it in its `Dockerfile` and loads it from `/etc/profile.d/dycov.sh`.

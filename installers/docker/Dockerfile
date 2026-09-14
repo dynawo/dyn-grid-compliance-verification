@@ -73,6 +73,10 @@ RUN \
 
 RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dycov.sh
 
+# Bash completion of the 'dycov' command, for the login shell the entrypoint hands the user.
+RUN dycov --print-completion bash > /etc/dycov-completion.bash \
+ && echo '[ -n "${BASH_VERSION:-}" ] && . /etc/dycov-completion.bash' >> /etc/profile.d/dycov.sh
+
 # Fourth layer:
 #   - Copy the pre-compiled manual (built by prepare_release.sh) into the image.
 ARG MANUAL_BUILD=manual_build
