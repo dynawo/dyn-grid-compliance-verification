@@ -243,7 +243,16 @@ as WSL updates replace the entire distribution.
 
 ---
 
-## 7. Alternative installation method
+## 7. Command completion
+
+Inside the DyCoV session, `dycov` completes its commands, options and paths
+with `TAB`; the session shell loads the completion script automatically. The
+script is generated from the tool itself, so it always matches the installed
+version.
+
+---
+
+## 8. Alternative installation method
 
 Installing DyCoV natively on Linux without using the distribution image is possible,
 but intended for **advanced users only**.
@@ -259,7 +268,7 @@ It is documented separately and is **not the recommended approach** for most use
 
 ---
 
-## 8. Next steps
+## 9. Next steps
 
 Once DyCoV is running:
 

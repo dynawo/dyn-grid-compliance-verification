@@ -176,7 +176,15 @@ source dycov/activate_dycov
 This step ensures that:
 
 *   the Python 3.13 virtual environment is active,
-*   Dynawo binaries installed by the installer are available in the system `PATH`.
+*   Dynawo binaries installed by the installer are available in the system `PATH`,
+*   `dycov` completes its commands, options and paths with `TAB`, in bash.
+
+For another shell, generate the completion script and install it where that
+shell looks for its completions:
+
+```bash
+dycov --print-completion zsh
+```
 
 ---
 
