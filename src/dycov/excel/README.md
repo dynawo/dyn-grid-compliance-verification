@@ -22,12 +22,13 @@ everything downstream is shared. See the full design in
 ## Usage
 
 ```bash
-python -m dycov.excel --excel input.xlsx --outdir DIR
+dycov excel2inputs input.xlsx --output DIR
 ```
 
-- `--excel` — path to the input workbook (required).
-- `--outdir` — where the `Dynawo/Zone1` and `Dynawo/Zone3` trees are written
-  (required).
+- `excel` — path to the input workbook (positional, required).
+- `-o` / `--output` — where the `Dynawo/Zone1`, `Dynawo/Zone3` and
+  `ReferenceCurves/` trees are written; defaults to the directory holding the
+  workbook.
 
 The command also prints a **submodel report**: the resolved Zone3/Zone1 `lib` +
 prefix and, for every block listed in `Général`, whether its parameter sheet
@@ -136,9 +137,8 @@ Every example under `examples/` carries the workbook it is generated from, next
 to its `Dynawo/` and `ReferenceCurves/` directories:
 
 ```bash
-python -m dycov.excel \
-  --excel examples/Model/Wind/WECC4B/Excel/Producer.xlsx \
-  --outdir examples/Model/Wind/WECC4B
+dycov excel2inputs examples/Model/Wind/WECC4B/Excel/Producer.xlsx \
+  --output examples/Model/Wind/WECC4B
 ```
 
 A `Model-*` example describes both zones plus its reference curves; a

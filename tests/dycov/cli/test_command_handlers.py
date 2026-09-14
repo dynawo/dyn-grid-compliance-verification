@@ -8,10 +8,15 @@
 #     demiguelm@aia.es
 #
 
+import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from dycov.cli.command_handlers import handle_performance_command, handle_validate_command
+from dycov.cli.command_handlers import (
+    handle_excel2inputs_command,
+    handle_performance_command,
+    handle_validate_command,
+)
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 
 _LAUNCHER = Path("dynawo.sh")
@@ -111,3 +116,75 @@ def test_validate_without_reference_reports_a_parser_error(mocker):
 
     parser.error.assert_called_once()
     run_verification.assert_not_called()
+
+
+def _excel2inputs_args(excel="Producer.xlsx", output="output_dir"):
+    args = MagicMock()
+    args.excel = excel
+    args.output = output
+    return args
+
+
+def test_excel2inputs_generates_from_the_workbook(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    parser = MagicMock()
+
+    result = handle_excel2inputs_command(parser, _excel2inputs_args(excel=str(workbook)))
+
+    assert result == 0
+    assert generate.call_args.args == (workbook, Path("output_dir"))
+
+
+def test_excel2inputs_writes_next_to_the_workbook_by_default(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    parser = MagicMock()
+
+    handle_excel2inputs_command(parser, _excel2inputs_args(excel=str(workbook), output=None))
+
+    assert generate.call_args.args == (workbook, tmp_path)
+
+
+def test_excel2inputs_without_a_workbook_reports_a_parser_error(mocker, tmp_path):
+    generate = mocker.patch("dycov.cli.command_handlers.excel_generator.generate")
+    parser = MagicMock()
+
+    handle_excel2inputs_command(parser, _excel2inputs_args(excel=str(tmp_path / "absent.xlsx")))
+
+    parser.error.assert_called_once()
+    generate.assert_not_called()
+
+
+def test_excel2inputs_reports_what_the_workbook_cannot_express(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate",
+        side_effect=ValueError("'Z_cc_TP' is empty in sheet 'Zone3'"),
+    )
+    parser = MagicMock()
+
+    handle_excel2inputs_command(parser, _excel2inputs_args(excel=str(workbook)))
+
+    assert "Z_cc_TP" in parser.error.call_args.args[0]
+
+
+def test_excel2inputs_reports_a_workbook_that_is_not_an_xlsx(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate",
+        side_effect=zipfile.BadZipFile("not a zip"),
+    )
+    parser = MagicMock()
+
+    handle_excel2inputs_command(parser, _excel2inputs_args(excel=str(workbook)))
+
+    assert ".xlsx" in parser.error.call_args.args[0]

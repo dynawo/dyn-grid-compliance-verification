@@ -42,9 +42,10 @@ injects at simulation setup.
 
 **CLI**
 ```bash
-python -m dycov.excel --excel model.xlsx --outdir <path>
+dycov excel2inputs model.xlsx --output <path>
 ```
-`--excel` is the WECC workbook (single source of truth); `--outdir` is where the trees are written.
+The positional argument is the WECC workbook (single source of truth); `--output` is where the
+trees are written, and defaults to the directory holding the workbook.
 `.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`), which the legacy
 `tools/dynawo_par` also imports until its retirement.
 

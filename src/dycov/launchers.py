@@ -17,6 +17,7 @@ from dycov.cli.cli_parsers import setup_cli_parsers
 from dycov.cli.command_handlers import (
     handle_anonymize_command,
     handle_compile_command,
+    handle_excel2inputs_command,
     handle_generate_command,
     handle_generate_envelopes_command,
     handle_performance_command,
@@ -134,6 +135,8 @@ class DycovCLI:
             ret = handle_compile_command(parser, args, dynawo_launcher_path)
         elif args.command == "performance":
             ret = handle_performance_command(parser, args, dynawo_launcher_path)
+        elif args.command == "excel2inputs":
+            ret = handle_excel2inputs_command(parser, args)
         elif args.command == "anonymize":
             ret = handle_anonymize_command(parser, args)
         else:
