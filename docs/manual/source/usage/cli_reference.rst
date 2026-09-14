@@ -61,6 +61,17 @@ needed to run a validation.
 
 ----
 
+dycov excel2inputs
+------------------
+
+Writes the input files of a model — ``Producer.{dyd,par,ini}`` for both zones
+and the reference-curve tree — from the workbook that describes it. The
+workbook is the single source of truth; nothing else is asked for.
+
+.. include:: helps/excel2inputs.rst
+
+----
+
 dycov anonymize
 ---------------
 

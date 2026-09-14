@@ -405,6 +405,48 @@ transformers are fixed-ratio.
 Generating input files
 ----------------------
 
+From the description workbook
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you have the RTE workbook describing the installation, ``dycov
+excel2inputs`` writes every input file from it in one step:
+
+.. code-block:: console
+
+   dycov excel2inputs Producer.xlsx
+
+The workbook is the single source of truth: the model comes from its
+``Model Map`` sheet, the electrical values from the ``Zone1a`` and ``Zone3``
+sheets, the control parameters from the block sheets that ``Général`` selects,
+and the reference curves from the two ``Signaux`` sheets. The command writes
+two trees next to the workbook — or under ``--output``, if you give one:
+
+.. code-block:: text
+
+   Dynawo/Zone1/Producer.{dyd,par,ini}
+   Dynawo/Zone3/Producer.{dyd,par,ini}
+   ReferenceCurves/Producer/CurvesFiles.ini + one .dict per test + the .csv files
+
+which is exactly what ``dycov validate`` expects, as ``-m Dynawo`` and
+``ReferenceCurves``.
+
+The run reports what it could not complete rather than failing silently: the
+blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
+files named in the sheets that were not found in the results folder, and the
+tests whose curve metadata is still blank. A row that is needed and is absent,
+empty or not a number is refused naming the sheet, the row and what was found,
+so an unfilled workbook says so instead of producing half a model.
+
+Every sheet, row and header name the command looks for lives in a
+configuration file, ``excel_names.ini``. A copy of it, fully commented out,
+sits in your configuration directory (``~/.config/dycov`` on Linux,
+``%LOCALAPPDATA%\dycov`` on Windows): uncomment a name there and the command
+reads your spelling instead of the one shipped, with no need to wait for a new
+release.
+
+Interactively, from scratch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Starting from scratch? The ``dycov generate`` command walks you through the
 process of creating all the input files interactively, so you do not need to
 build the DYD, PAR, and INI files manually.
