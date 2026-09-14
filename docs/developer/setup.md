@@ -211,6 +211,15 @@ Commands executed in this environment:
 *   use the local source tree,
 *   reflect code changes immediately.
 
+The build script also installs the bash completion of `dycov` into the
+environment, so activating it completes commands, options and paths with
+`TAB`. The completion script is generated from the CLI parsers; after adding
+or modifying a command, regenerate it with:
+
+```bash
+bash installers/install_bash_completion.sh "$PWD/dycov_venv"
+```
+
 ---
 
 ## 8. Typical development workflow

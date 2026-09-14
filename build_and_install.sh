@@ -117,6 +117,10 @@ fi
 # Install with uv, ensuring proper quoting
 uv pip install --upgrade "$install_target$install_extras"
 colormsg "OK."
+
+colormsg "Step 3: Installing the bash completion of the 'dycov' command..."
+bash installers/install_bash_completion.sh "$MY_VENV"
+colormsg "OK."
 echo
 colormsg "Development environment is ready."
 colormsg "To activate it, run: source $MY_VENV/bin/activate"
