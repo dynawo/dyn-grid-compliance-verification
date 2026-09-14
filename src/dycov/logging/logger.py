@@ -36,9 +36,6 @@ class _ContextAdapter(logging.LoggerAdapter):
 
 
 class DycovLogger(logging.getLoggerClass()):
-    def __init__(self, name: str) -> None:
-        super(DycovLogger, self).__init__(name)
-
     def _add_console_handler(
         self,
         console_log_level: int,
@@ -203,5 +200,4 @@ class DycovLogger(logging.getLoggerClass()):
             A LoggerAdapter that injects the test context into log messages.
         """
         child = self.getChild(name)
-        child.setLevel(self.getEffectiveLevel())
         return _ContextAdapter(child, {})
