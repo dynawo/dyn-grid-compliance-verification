@@ -18,6 +18,7 @@ from typing import Optional
 from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.tooling.prepare_tool import precompile
+from dycov.excel import names as excel_names
 from dycov.files import manage_files
 from dycov.logging import dycov_logging, enable_warning_capture
 
@@ -146,8 +147,23 @@ class DycovInitializer:
                     config.get_config_dir() / "config.ini",
                 )
 
+        self._setup_excel_dictionary(tool_path)
+
         if user_config_path:
             config.load_user_config(user_config_path)
+
+    def _setup_excel_dictionary(self, tool_path: Path):
+        """Put a copy of the workbook dictionary next to the user's configuration.
+
+        Every line arrives commented out, so the copy starts as a reference: uncommenting a name
+        is what makes the tool read the user's spelling instead of the one shipped.
+        """
+        user_dictionary = config.get_config_dir() / excel_names.NAMES_FILENAME
+        if not user_dictionary.is_file():
+            manage_files.create_config_file(
+                tool_path / "excel" / "dictionary" / excel_names.NAMES_FILENAME,
+                user_dictionary,
+            )
 
     def _setup_templates_and_models(self, tool_path: Path):
         """

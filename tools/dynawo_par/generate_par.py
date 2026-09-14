@@ -17,9 +17,9 @@ parameters. The only contextual transformations it performs are:
 * mapping the Excel ``Type`` to the Dynawo convention (``double`` -> ``DOUBLE``);
 * the ``SnZone3 = SnZone3 x Nombre de convertisseur`` header value of Zone 3.
 
-This tool is superseded by ``tools/dynawo_inputs`` (which generates the full
+This tool is superseded by ``dycov.excel`` (which generates the full
 DyCoV input trees from the same template) and will be retired with it. The
-Excel parsing engine lives there (``tools/dynawo_inputs/workbook.py``); this
+Excel parsing engine lives there (``dycov/excel/workbook.py``); this
 module keeps only the fragment emission and re-exports the parsing API it
 always exposed.
 
@@ -35,21 +35,16 @@ import sys
 import zipfile
 from pathlib import Path
 
-# The parsing engine lives in the successor tool; import it by path (repo tool convention).
-_DYNAWO_INPUTS = Path(__file__).resolve().parent.parent / "dynawo_inputs"
-if str(_DYNAWO_INPUTS) not in sys.path:
-    sys.path.insert(0, str(_DYNAWO_INPUTS))
-
-from workbook import (  # noqa: E402,F401  (re-exported parsing API)
+from dycov.excel.workbook import (  # noqa: F401  (re-exported parsing API)
+    _CONFIG_SHEET,
+    _NO_BLOCK,
     Config,
     Grid,
     Parameter,
     Variant,
     _cell,
-    _CONFIG_SHEET,
     _map_type,
     _merge_comment,
-    _NO_BLOCK,
     _selected_variants,
     _strip_accents,
     parse_config,
@@ -75,8 +70,7 @@ def _render_variant(variant: Variant) -> list[str]:
         if comment:
             lines.append(f"  <!-- {comment} -->")
         lines.append(
-            f'  <par type="{_map_type(param.type)}" '
-            f'name="{param.name}" value="{param.value}"/>'
+            f'  <par type="{_map_type(param.type)}" name="{param.name}" value="{param.value}"/>'
         )
     return lines
 
@@ -159,9 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Generate Dynawo PAR fragments (Zone 1 and Zone 3) from an "
         "Excel model specification."
     )
-    parser.add_argument(
-        "--excel", required=True, type=Path, help="Path to the input .xlsx file."
-    )
+    parser.add_argument("--excel", required=True, type=Path, help="Path to the input .xlsx file.")
     parser.add_argument(
         "--outdir",
         type=Path,
