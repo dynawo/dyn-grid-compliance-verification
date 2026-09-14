@@ -87,6 +87,11 @@ def _reference_curves_report(curves: dict) -> str:
             "  .csv missing    : %d (copy them next to the .dict files: %s)"
             % (len(curves["missing"]), ", ".join(curves["missing"][:4]))
         )
+    if curves["unfilled"]:
+        lines.append(
+            "  metadata to fill: %d (the workbook leaves some column empty for: %s)"
+            % (len(curves["unfilled"]), ", ".join(curves["unfilled"][:4]))
+        )
     return "\n".join(lines)
 
 

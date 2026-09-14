@@ -32,15 +32,38 @@ ZONE3_ROWS = [("Tension directe au PDR", "U")]
 ZONE3_TESTS = [("I2", "u_step_a.csv"), ("I2", "u_step_b.csv")]
 
 
+# The metadata block: one column per key of a .dict's [Curves-Metadata] section.
+METADATA_HEADERS = [
+    "Mesures sur le terrain",
+    "Début de l'événement",
+    "durée du défaut",
+    "échantillonnage fréquentiel",
+]
+METADATA_KEYS = [
+    "is_field_measurements",
+    "sim_t_event_start",
+    "fault_duration",
+    "frequency_sampling",
+]
+
+
 def _sheet(rows: list, tests: list, folder: str | None = "/curves") -> list:
-    """A signal sheet: the signals table, the folder cell and the tests table."""
+    """A signal sheet: the signals table, the folder cell and the tests table.
+
+    A test is ``(case, file)``, or ``(case, file, {metadata key: cell})`` to fill the metadata
+    columns in as well.
+    """
     grid = [["Signaux à fournir"], ["Grandeur", "Unité", "Variable associée dans les .csv"]]
     grid += [[label, "pu", column] for label, column in rows]
     grid += [[None], [None, None, None, None, None, None, "Dossier de résultats"]]
     grid += [[None, None, None, None, None, None, folder]]
     grid += [[None], [None, None, None, None, None, None, "Fichier de résultats .csv"]]
-    grid += [["Cas", "Evènement à simuler"]]
-    grid += [[case, "évènement", None, None, None, None, file] for case, file in tests]
+    grid += [["Cas", "Evènement à simuler", None, None, None, None, None] + METADATA_HEADERS]
+    for test in tests:
+        case, file = test[0], test[1]
+        metadata = test[2] if len(test) > 2 else {}
+        row = [case, "évènement", None, None, None, None, file]
+        grid.append(row + [metadata.get(key) for key in METADATA_KEYS])
     return grid
 
 
@@ -146,6 +169,60 @@ def test_storage_writes_the_two_files_of_every_case(tmp_path):
         assert (target / name).is_file()
 
 
+def test_the_metadata_of_a_test_comes_from_its_own_row():
+    filled = {
+        "is_field_measurements": "Oui",
+        "sim_t_event_start": "20.0",
+        "fault_duration": "0.15",
+        "frequency_sampling": "15",
+    }
+    parsed = sig.parse_zone_signals(
+        _workbook(zone1=(ZONE1_ROWS, [("6", "scr3.csv", filled)])), "Zone1", GEN
+    )
+
+    # The boolean is translated to what DyCoV reads; the rest go as the workbook spells them.
+    assert parsed.tests[0].metadata == {
+        "is_field_measurements": "True",
+        "sim_t_event_start": "20.0",
+        "fault_duration": "0.15",
+        "frequency_sampling": "15",
+    }
+
+
+def test_a_blank_metadata_cell_leaves_its_key_for_the_user():
+    parsed = sig.parse_zone_signals(
+        _workbook(zone1=(ZONE1_ROWS, [("6", "scr3.csv", {"fault_duration": "0.15"})])),
+        "Zone1",
+        GEN,
+    )
+
+    text = dicts.text(parsed, parsed.tests[0])
+
+    assert "fault_duration = 0.15" in text
+    assert "\nsim_t_event_start =\n" in text
+
+
+def test_a_cell_that_does_not_mean_true_reads_as_false():
+    parsed = sig.parse_zone_signals(
+        _workbook(zone1=(ZONE1_ROWS, [("6", "scr3.csv", {"is_field_measurements": "Non"})])),
+        "Zone1",
+        GEN,
+    )
+
+    assert parsed.tests[0].metadata["is_field_measurements"] == "False"
+
+
+def test_both_directions_of_a_storage_case_share_its_metadata():
+    parsed = sig.parse_zone_signals(
+        _workbook(zone1=(ZONE1_ROWS, [("6", "scr3.csv", {"sim_t_event_start": "20.0"})])),
+        "Zone1",
+        "Bess",
+        storage=True,
+    )
+
+    assert [test.metadata["sim_t_event_start"] for test in parsed.tests] == ["20.0", "20.0"]
+
+
 def test_an_absent_sheet_describes_nothing():
     parsed = sig.parse_zone_signals({}, "Zone3", GEN)
 
@@ -211,7 +288,7 @@ def test_write_reference_curves_copies_the_files_it_finds(tmp_path):
 def test_write_reference_curves_writes_nothing_when_no_test_is_described(tmp_path):
     written = rc.write_reference_curves(tmp_path, "Producer", sig.parse_signals({}, GEN))
 
-    assert written == {"target": None, "tests": 0, "copied": 0, "missing": []}
+    assert written == {"target": None, "tests": 0, "copied": 0, "missing": [], "unfilled": []}
     assert not (tmp_path / "ReferenceCurves").exists()
 
 
