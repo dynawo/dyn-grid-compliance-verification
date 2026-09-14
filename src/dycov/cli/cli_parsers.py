@@ -364,6 +364,7 @@ def _add_excel_argument(
     parser: argparse.ArgumentParser,
     explain: str = "",
     is_required: bool = False,
+    as_option: bool = False,
 ) -> None:
     """Adds the 'excel' argument to the given parser.
 
@@ -375,13 +376,17 @@ def _add_excel_argument(
         Additional explanation for the help message.
     is_required: bool
         Whether the argument is required.
+    as_option: bool
+        Add it as '-e' / '--excel' instead of as the positional argument, for the commands whose
+        input can also be a model or a set of curves.
     """
     help_msg = "Path to the workbook describing the model."
     if explain:
         help_msg += f" {explain}"
+    names = ("-e", "--excel") if as_option else ("excel",)
     _add_argument(
         parser,
-        "excel",
+        *names,
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
@@ -392,6 +397,7 @@ def _add_reference_argument(
     parser: argparse.ArgumentParser,
     explain: str = "",
     is_required: bool = False,
+    nargs: Optional[str] = None,
 ) -> None:
     """Adds the 'reference' argument to the given parser.
 
@@ -403,6 +409,8 @@ def _add_reference_argument(
         Additional explanation for the help message.
     is_required: bool
         Whether the argument is required.
+    nargs: Optional[str]
+        Use '?' to let the positional be omitted, as when the curves come from a workbook.
     """
     help_msg = "Path to the directory containing the reference curves to be used."
     if explain:
@@ -413,6 +421,7 @@ def _add_reference_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        nargs=nargs,
     )
 
 
@@ -665,7 +674,15 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_launcher_argument(validate)
     _add_model_argument(model_or_curves)
     _add_curves_argument(model_or_curves, explain="(when using curves instead of an RMS model)")
-    _add_reference_argument(validate, is_required=True)
+    _add_excel_argument(
+        model_or_curves,
+        as_option=True,
+        explain=(
+            "The model and its reference curves are generated from it, so neither the model "
+            "nor the reference directory are given."
+        ),
+    )
+    _add_reference_argument(validate, nargs="?")
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)

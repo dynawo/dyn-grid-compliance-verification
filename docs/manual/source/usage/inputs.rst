@@ -430,6 +430,20 @@ two trees next to the workbook — or under ``--output``, if you give one:
 which is exactly what ``dycov validate`` expects, as ``-m Dynawo`` and
 ``ReferenceCurves``.
 
+If you do not need to keep those files, ``dycov validate`` takes the workbook
+directly and does the conversion itself:
+
+.. code-block:: console
+
+   dycov validate --excel Producer.xlsx
+
+The inputs are generated into a temporary directory that is removed when the
+run ends — the only input you keep is the workbook, and the report names it
+instead of the directory that no longer exists. The conversion is checked
+before the validation starts: if the workbook leaves the curve metadata of a
+test blank, the run stops there saying which tests are affected, rather than
+failing later when DyCoV tries to read the reference curves.
+
 The run reports what it could not complete rather than failing silently: the
 blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
 files named in the sheets that were not found in the results folder, and the

@@ -40,6 +40,18 @@ The `.xlsx` is read with the package's own stdlib parsing engine
 (`workbook.py`: workbook reader, variant tables, `Général` config), which the
 legacy `tools/dynawo_par` also imports until its retirement.
 
+`dycov validate` takes the workbook directly as well:
+
+```bash
+dycov validate --excel input.xlsx
+```
+
+It converts into a temporary directory that is removed when the run ends, so
+the only input kept is the workbook, and the report names it instead of the
+directory that no longer exists. The conversion is checked first: a test whose
+curve metadata the workbook leaves blank stops the run before the validation
+starts.
+
 ## Names live in a configuration file
 
 Every sheet, row, header and marker the generator looks for is an entry of

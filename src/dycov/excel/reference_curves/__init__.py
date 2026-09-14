@@ -22,10 +22,23 @@ from pathlib import Path
 from . import curves_files, dicts
 
 
-def _copy_curves(signals, target: Path) -> tuple[int, list]:
+def _curves_folder(signals, base: Path) -> Path | None:
+    """Where the user's ``.csv`` files are.
+
+    A relative path in the sheet is relative to the workbook, not to the directory the command
+    happens to run from, so a workbook that travels with its curves keeps working anywhere.
+    """
+    if not signals.folder:
+        return None
+    folder = Path(signals.folder)
+    return folder if folder.is_absolute() or base is None else base / folder
+
+
+def _copy_curves(signals, target: Path, base: Path = None) -> tuple[int, list]:
     copied, missing = 0, []
+    folder = _curves_folder(signals, base)
     for test in signals.tests:
-        source = Path(signals.folder) / test.curves_file if signals.folder else None
+        source = folder / test.curves_file if folder else None
         if source is not None and source.is_file():
             shutil.copy(source, target / test.curves_file)
             copied += 1
@@ -34,7 +47,9 @@ def _copy_curves(signals, target: Path) -> tuple[int, list]:
     return copied, missing
 
 
-def write_reference_curves(outdir: Path, producer: str, signals_by_zone: dict) -> dict:
+def write_reference_curves(
+    outdir: Path, producer: str, signals_by_zone: dict, base: Path = None
+) -> dict:
     """Write the reference-curve tree, copying in the ``.csv`` files that are available.
 
     Parameters
@@ -70,7 +85,7 @@ def write_reference_curves(outdir: Path, producer: str, signals_by_zone: dict) -
             tests += 1
             if any(key not in test.metadata for key in dicts.METADATA_HELP):
                 unfilled.append(test.name)
-        zone_copied, zone_missing = _copy_curves(signals, target)
+        zone_copied, zone_missing = _copy_curves(signals, target, base)
         copied += zone_copied
         missing += zone_missing
     return {
