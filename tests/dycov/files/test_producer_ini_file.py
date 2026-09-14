@@ -8,16 +8,42 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 import shutil
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from dycov.files.producer_ini_file import check_ini_parameters, create_producer_ini_file
+from dycov.files.producer_ini_file import (
+    check_ini_parameters,
+    create_producer_ini_file,
+    write_producer_ini_file,
+)
 
 
 class TestProducerIniFile:
+    def test_every_ini_explains_why_the_file_exists(self):
+        # Both flows open the file with the reason it exists: it carries the parameters some
+        # Dynawo models lack, and a value given here as well as in the PAR must be the more
+        # restrictive one.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            (target / "Zone1").mkdir()
+            (target / "Zone3").mkdir()
+
+            create_producer_ini_file(target, "S", "model_PPM")
+            write_producer_ini_file(
+                target, "Filled.ini", "S", {"u_nom_at_PDR": "33"}, {"Wind_Turbine": ("1", "1")}
+            )
+
+            written = [target / "Zone1" / "Producer.ini", target / "Filled.ini"]
+            for ini_file in written:
+                content = ini_file.read_text()
+                assert "The raison d'être for this INI file" in content
+                assert "**both** input files" in content
+                assert "more restrictive than PAR" in content
+
     def test_create_producer_ini_file_performance_template_success(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir)
@@ -93,6 +119,51 @@ class TestProducerIniFile:
             ini_file.write_text(ini_content)
             result = check_ini_parameters(target, "performance_SM")
             assert result is False
+
+    def test_write_producer_ini_file_fills_values(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            write_producer_ini_file(
+                target,
+                "Producer.ini",
+                "S+Aux",
+                values={
+                    "p_max_injection_at_PDR": 50,
+                    "u_nom_at_PDR": 63,
+                    "q_max_at_PDR": 16,
+                    "q_min_at_PDR": -16,
+                },
+                gen_sharing={"Power_Park": (1.0, 1.0)},
+            )
+            cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
+            cp.read(target / "Producer.ini")
+            assert cp.get("DEFAULT", "topology").strip() == "S+Aux"
+            assert cp.get("DEFAULT", "p_max_injection_at_PDR").strip() == "50"
+            assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == "63"
+            assert cp.get("DEFAULT", "P_sharing_Power_Park").strip() == "1.0"
+            assert cp.get("DEFAULT", "Q_sharing_Power_Park").strip() == "1.0"
+            # a filled INI must pass the completeness check
+            assert check_ini_parameters(target, "performance_SM") is True
+
+    def test_write_producer_ini_file_bess_consumption(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir)
+            write_producer_ini_file(
+                target,
+                "Producer.ini",
+                "S",
+                values={
+                    "p_max_injection_at_PDR": 50,
+                    "p_max_consumption_at_PDR": 40,
+                    "u_nom_at_PDR": 63,
+                    "q_max_at_PDR": 16,
+                    "q_min_at_PDR": -16,
+                },
+                gen_sharing={"Storage": (1.0, 1.0)},
+                include_consumption=True,
+            )
+            content = (target / "Producer.ini").read_text()
+            assert "p_max_consumption_at_PDR = 40" in content
 
     def test_create_producer_ini_file_nonexistent_target(self):
         tmpdir = tempfile.mkdtemp()

@@ -6,9 +6,10 @@
   <!--Replace the placeholder: 'LINE_DYNAMIC_MODEL', available_options: ['Line', 'LineFault']-->
   <dyn:blackBoxModel id="IntNetwork_Line" lib="LINE_DYNAMIC_MODEL" parFile="Producer.par" parId="IntNetwork_Line"/>
   <!--Replace the placeholder: 'BUS_DYNAMIC_MODEL', available_options: ['InfiniteBus', 'InfiniteBusFromTable', 'Bus']-->
-  <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
+  <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL"/>
   <!--Replace the placeholder: 'SM_DYNAMIC_MODEL', available_options: ['GeneratorSynchronousFourWindingsGoverPropVRPropInt', 'GeneratorSynchronousFourWindingsProportionalRegulations', 'GeneratorSynchronousFourWindingsTGov1Sexs', 'GeneratorSynchronousFourWindingsTGov1SexsPss2a', 'GeneratorSynchronousFourWindingsVRKundur', 'GeneratorSynchronousFourWindingsVRKundurPssKundur', 'GeneratorSynchronousThreeWindingsGoverPropVRPropInt', 'GeneratorSynchronousThreeWindingsProportionalRegulations', 'GeneratorSynchronousThreeWindingsDTRI8', 'InertialGrid']-->
   <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
+
   <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
   <dyn:connect id1="IntNetwork_Line" var1="line_terminal2" id2="Main_Xfmr" var2="transformer_terminal1"/>
   <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="IntNetwork_Line" var2="line_terminal1"/>

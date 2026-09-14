@@ -14,7 +14,7 @@ directory the first time you start a session.
 
 
 How the examples are organized
--------------------------------
+------------------------------
 
 .. code-block:: text
 
@@ -96,7 +96,7 @@ Use ``-o`` to choose a different location.
 
 
 Electric Performance Verification
------------------------------------
+---------------------------------
 
 This workflow checks compliance with grid-code dynamic performance
 requirements. No reference curves are needed — only a producer response.
@@ -122,7 +122,7 @@ and HTML structure.
 
 
 Grid-Forming (GFM) Envelope Generation
------------------------------------------
+--------------------------------------
 
 Unlike the other two workflows, GFM analysis is purely analytical — it
 computes admissible dynamic response envelopes without running any simulation.
@@ -131,7 +131,7 @@ All you need is a ``Producer.ini`` describing the GFM unit parameters.
 .. code-block:: console
 
    cd examples/GFM/Overdamped
-   dycov generateEnvelopes -i Producer.ini
+   dycov generate_gfm_envelopes -i Producer.ini
 
 The three example configurations represent different dynamic regimes:
 

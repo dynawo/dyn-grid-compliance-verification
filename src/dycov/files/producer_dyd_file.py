@@ -66,6 +66,8 @@ PLACEHOLDER_MODELS = [
 
 PLACEHOLDER_TERMINALS = [PPM_TERMINAL]
 
+PARAMETERLESS_MODELS = [BUS_DYNAMIC_MODEL]
+
 
 def _add_terminal_options(dyd_root: etree.Element, terminal: str):
     if terminal != PPM_TERMINAL:
@@ -120,19 +122,19 @@ def _add_blackbox(
     id: str,
     lib: str,
     par_filename: str,
-    par_id: str,
+    par_id: str | None,
     show_comment: bool = False,
 ):
     if show_comment and lib in PLACEHOLDER_MODELS:
         _add_lib_options(dyd_root, lib)
 
+    par_attrs = {} if par_id is None else {"parFile": par_filename, "parId": par_id}
     etree.SubElement(
         dyd_root,
         f"{{{ns}}}blackBoxModel",
         id=id,
         lib=lib,
-        parFile=par_filename,
-        parId=par_id,
+        **par_attrs,
     )
 
 
@@ -207,7 +209,10 @@ class _DydWriter:
         self._documented = set()
 
     def blackbox(self, id: str, lib: str) -> None:
-        _add_blackbox(self._dyd_root, self._ns, id, lib, self._par_filename, id, self._first(lib))
+        par_id = None if lib in PARAMETERLESS_MODELS else id
+        _add_blackbox(
+            self._dyd_root, self._ns, id, lib, self._par_filename, par_id, self._first(lib)
+        )
 
     def connect(self, id_from: str, var_from: str, id_to: str, var_to: str) -> None:
         show = any(self._first(var) for var in (var_from, var_to) if var in PLACEHOLDER_TERMINALS)
@@ -218,6 +223,60 @@ class _DydWriter:
             return False
         self._documented.add(key)
         return True
+
+
+def _remote_control_ports(gen_terminal: str) -> dict:
+    """PCC-monitoring port names derived from the gen terminal (works for the concrete
+    ``<prefix>terminal`` and the ``{MODEL_PREFIX}_terminal`` placeholder alike)."""
+    if gen_terminal.endswith("terminal"):
+        prefix = gen_terminal[: -len("terminal")]
+    else:
+        prefix = gen_terminal + "_"
+    return {
+        "uPccPu_re": f"{prefix}uPccPu_re",
+        "uPccPu_im": f"{prefix}uPccPu_im",
+        "PPccPu": f"{prefix}PPccPu",
+        "QPccPu": f"{prefix}QPccPu",
+    }
+
+
+def _plant_generators(validation_type: int, topology: str, n_generators: int = 2) -> list:
+    """The (id, terminal) of the plant generators that sense the PCC — only PPM/BESS (SM has no
+    plant control); ``n_generators`` of them in ``M``, one in ``S``."""
+    if validation_type in (PERFORMANCE_PPM, VALIDATION_PPM):
+        gen_base, gen_terminal = PPM_ID, PPM_TERMINAL
+    elif validation_type in (PERFORMANCE_BESS, VALIDATION_BESS):
+        gen_base, gen_terminal = BESS_ID, BESS_TERMINAL
+    else:
+        return []
+    if topology.casefold().startswith("m"):
+        return [(f"{gen_base}_{i}", gen_terminal) for i in range(1, n_generators + 1)]
+    return [(gen_base, gen_terminal)]
+
+
+def _add_remote_control(dyd_root: etree.Element, ns: str, gen_id: str, gen_terminal: str):
+    """Wire a plant generator's PCC measurements (U, P, Q) to the PDR bus. ``Measurements`` and
+    ``BusPDR`` are injected by DyCoV (referenced, not declared)."""
+    ports = _remote_control_ports(gen_terminal)
+    dyd_root.append(
+        etree.Comment(
+            "Remote voltage control: connect the plant's monitored voltage (UPcc) to the PDR bus"
+        )
+    )
+    _add_connection(dyd_root, ns, PDR_ID, f"{BUS_TERMINAL}_V_re", gen_id, ports["uPccPu_re"])
+    _add_connection(dyd_root, ns, PDR_ID, f"{BUS_TERMINAL}_V_im", gen_id, ports["uPccPu_im"])
+    dyd_root.append(
+        etree.Comment(
+            "Remote P/Q control: connect the plant's monitored flows (PPcc, QPcc) to the PDR bus"
+        )
+    )
+    dyd_root.append(
+        etree.Comment(
+            '(note this is done through a "measurements" object that is connected to the PDR bus)'
+        )
+    )
+    _add_connection(dyd_root, ns, "Measurements", "measurements_PPu", gen_id, ports["PPccPu"])
+    _add_connection(dyd_root, ns, "Measurements", "measurements_QPu", gen_id, ports["QPccPu"])
 
 
 def _create_zone1_topology(
@@ -273,6 +332,44 @@ def _create_zone3_topology(
         writer.connect(gen_id, gen_terminal, INT_BUS_ID, BUS_TERMINAL)
 
 
+def _group_spacing(xml_text: str) -> str:
+    """Insert a blank line at each group boundary (models | connections | voltage | P/Q control),
+    matching the examples: before a connection following a model, and before a comment following a
+    connection."""
+
+    def kind(line: str) -> str:
+        stripped = line.strip()
+        if stripped.startswith("<dyn:blackBoxModel"):
+            return "model"
+        if stripped.startswith("<dyn:connect"):
+            return "connect"
+        if stripped.startswith("<!--"):
+            return "comment"
+        return "other"
+
+    spaced = []
+    previous = "other"
+    for line in xml_text.splitlines():
+        current = kind(line)
+        if (current == "connect" and previous == "model") or (
+            current == "comment" and previous == "connect"
+        ):
+            spaced.append("")
+        spaced.append(line)
+        previous = current
+    return "\n".join(spaced) + "\n"
+
+
+def write_producer_dyd(root: etree.Element, path: Path) -> None:
+    """Serialize a producer DYD, pretty-printed with blank lines between the logical groups
+    (``_group_spacing``)."""
+    normalized = etree.fromstring(etree.tostring(root), etree.XMLParser(remove_blank_text=True))
+    xml = etree.tostring(
+        normalized, encoding="UTF-8", pretty_print=True, xml_declaration=True
+    ).decode("utf-8")
+    Path(path).write_text(_group_spacing(xml), encoding="utf-8")
+
+
 def _check_dynamic_models(target: Path, filename: str) -> bool:
     placeholders = (
         dynawo_translator.get_bus_models()
@@ -310,6 +407,7 @@ def _create_producer_dyd_file(
     topology: str,
     validation_type: int,
     zone: int,
+    remote_control: bool = True,
 ) -> None:
     if (target / "Producer.dyd").exists():
         (target / "Producer.dyd").unlink()
@@ -327,10 +425,11 @@ def _create_producer_dyd_file(
     else:
         _create_zone3_topology(dyd_root, ns, validation_type, par_filename, topology)
 
-    dyd_tree = etree.ElementTree(
-        etree.fromstring(etree.tostring(dyd_root), etree.XMLParser(remove_blank_text=True))
-    )
-    dyd_tree.write(target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True)
+    if remote_control:
+        for gen_id, gen_terminal in _plant_generators(validation_type, topology):
+            _add_remote_control(dyd_root, ns, gen_id, gen_terminal)
+
+    write_producer_dyd(dyd_root, target / filename)
 
 
 def create_producer_dyd_file(
@@ -367,14 +466,77 @@ def create_producer_dyd_file(
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
         if topology.casefold().startswith("m"):
-            _create_producer_dyd_file(target / "Zone1", "Producer_G1.dyd", "S", validation_type, 1)
-            _create_producer_dyd_file(target / "Zone1", "Producer_G2.dyd", "S", validation_type, 1)
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer_G1.dyd", "S", validation_type, 1, remote_control=False
+            )
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer_G2.dyd", "S", validation_type, 1, remote_control=False
+            )
         else:
-            _create_producer_dyd_file(target / "Zone1", "Producer.dyd", "S", validation_type, 1)
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer.dyd", "S", validation_type, 1, remote_control=False
+            )
         _create_producer_dyd_file(target / "Zone3", "Producer.dyd", topology, validation_type, 3)
 
     else:
         raise ValueError("Unsupported template name")
+
+
+def fill_producer_dyd(dyd_file: Path, libs: dict, terminals: dict, rename: dict = None) -> None:
+    """Inject concrete libs and generator terminals into a placeholder DYD (Excel-driven flow).
+
+    Parameters
+    ----------
+    dyd_file: Path
+        DYD file to edit in place.
+    libs: dict
+        ``{blackBoxModel id -> concrete lib}`` (id after any rename).
+    terminals: dict
+        ``{generator id -> concrete terminal}``; the generator's terminal and its remote-control
+        ports are replaced accordingly.
+    rename: dict, optional
+        ``{old id -> new id}`` applied first to ids/``parId`` and ``connect`` endpoints (e.g. the
+        generic ``Wind_Turbine`` skeleton -> ``PV_Array``).
+    """
+    parser = etree.XMLParser(remove_blank_text=True)
+    tree = etree.parse(str(dyd_file), parser)
+    root = tree.getroot()
+    ns = etree.QName(root).namespace
+
+    rename = rename or {}
+    for bbmodel in root.iterfind(f"{{{ns}}}blackBoxModel"):
+        old = bbmodel.get("id")
+        if old in rename:
+            if bbmodel.get("parId") == old:
+                bbmodel.set("parId", rename[old])
+            bbmodel.set("id", rename[old])
+    for connect in root.iterfind(f"{{{ns}}}connect"):
+        for attr in ("id1", "id2"):
+            if connect.get(attr) in rename:
+                connect.set(attr, rename[connect.get(attr)])
+
+    for bbmodel in root.iterfind(f"{{{ns}}}blackBoxModel"):
+        if bbmodel.get("id") in libs:
+            bbmodel.set("lib", libs[bbmodel.get("id")])
+
+    placeholder_ports = _remote_control_ports(PPM_TERMINAL)
+    for gen_id, terminal in terminals.items():
+        concrete_ports = _remote_control_ports(terminal)
+        replacements = {PPM_TERMINAL: terminal}
+        for key in placeholder_ports:
+            replacements[placeholder_ports[key]] = concrete_ports[key]
+        for connect in root.iterfind(f"{{{ns}}}connect"):
+            if gen_id in (connect.get("id1"), connect.get("id2")):
+                for attr in ("var1", "var2"):
+                    if connect.get(attr) in replacements:
+                        connect.set(attr, replacements[connect.get(attr)])
+
+    # Drop the "Replace the placeholder ..." instruction comments once filled.
+    for comment in root.xpath("//comment()"):
+        if (comment.text or "").strip().startswith("Replace"):
+            comment.getparent().remove(comment)
+
+    write_producer_dyd(root, dyd_file)
 
 
 def check_dynamic_models(target: Path, template: str) -> bool:

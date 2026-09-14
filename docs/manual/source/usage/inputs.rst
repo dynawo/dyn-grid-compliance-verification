@@ -84,9 +84,9 @@ For information on the DYD and PAR file formats, refer to the
 .. _gfm_producer_input:
 
 GFM Producer Input (.ini file)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``dycov generateEnvelopes`` command takes a dedicated ``.ini`` file that
+The ``dycov generate_gfm_envelopes`` command takes a dedicated ``.ini`` file that
 describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
 nominal and operational parameters, and a ``[GFM Parameters]`` section for
 the core GFM control constants.
@@ -140,7 +140,7 @@ CSV output alongside the merged envelope:
 
 
 Supported Dynamic Models
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Dynawo supports a wide variety of equipment models, and parameter names vary
 across models even when they refer to the same physical quantity. For example,
@@ -405,97 +405,58 @@ transformers are fixed-ratio.
 Generating input files
 ----------------------
 
-Starting from scratch? The ``dycov generate`` command walks you through the
-process of creating all the input files interactively, so you do not need to
-build the DYD, PAR, and INI files manually.
+If you have the RTE workbook describing the installation, ``dycov
+excel2inputs`` writes every input file from it in one step:
 
-The guided process works in stages:
+.. code-block:: console
 
-1. **DYD file** — DyCoV generates a template with placeholder model names and
-   comments listing the available options for each component. Edit the file to
-   replace the placeholders with the actual Dynawo model names you want to use,
-   then press Enter to continue. DyCoV will validate the file before proceeding.
+   dycov excel2inputs Producer.xlsx
 
-   Example of a generated DYD template:
+The workbook is the single source of truth: the model comes from its
+``Model Map`` sheet, the electrical values from the ``Zone1a`` and ``Zone3``
+sheets, the control parameters from the block sheets that ``Général`` selects,
+and the reference curves from the two ``Signaux`` sheets. The command writes
+two trees next to the workbook — or under ``--output``, if you give one:
 
-   .. code-block:: xml
+.. code-block:: text
 
-      <?xml version='1.0' encoding='UTF-8'?>
-      <dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
-        <!--Topology: S+Aux-->
-        <!--Replace: 'XFMR_DYNAMIC_MODEL', options: ['TransformerFixedRatio', 'TransformerRatioTapChanger']-->
-        <dyn:blackBoxModel id="Main_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="Main_Xfmr"/>
-        <!--Replace: 'BUS_DYNAMIC_MODEL', options: ['InfiniteBus', 'InfiniteBusFromTable', 'Bus']-->
-        <dyn:blackBoxModel id="Int_Bus" lib="BUS_DYNAMIC_MODEL" parFile="Producer.par" parId="Int_Bus"/>
-        <dyn:blackBoxModel id="AuxLoad_Xfmr" lib="XFMR_DYNAMIC_MODEL" parFile="Producer.par" parId="AuxLoad_Xfmr"/>
-        <!--Replace: 'LOAD_DYNAMIC_MODEL', options: ['LoadAlphaBeta']-->
-        <dyn:blackBoxModel id="Aux_Load" lib="LOAD_DYNAMIC_MODEL" parFile="Producer.par" parId="Aux_Load"/>
-        <!--Replace: 'SM_DYNAMIC_MODEL', options: ['GeneratorSynchronousFourWindingsTGov1SexsPss2a', ...]-->
-        <dyn:blackBoxModel id="Synch_Gen" lib="SM_DYNAMIC_MODEL" parFile="Producer.par" parId="Synch_Gen"/>
-        <dyn:connect id1="Main_Xfmr" var1="transformer_terminal2" id2="BusPDR" var2="bus_terminal"/>
-        <dyn:connect id1="Int_Bus" var1="bus_terminal" id2="Main_Xfmr" var2="transformer_terminal1"/>
-        <dyn:connect id1="AuxLoad_Xfmr" var1="transformer_terminal2" id2="Int_Bus" var2="bus_terminal"/>
-        <dyn:connect id1="Aux_Load" var1="load_terminal" id2="AuxLoad_Xfmr" var2="transformer_terminal1"/>
-        <dyn:connect id1="Synch_Gen" var1="generator_terminal" id2="Int_Bus" var2="bus_terminal"/>
-      </dyn:dynamicModelsArchitecture>
+   Dynawo/Zone1/Producer.{dyd,par,ini}
+   Dynawo/Zone3/Producer.{dyd,par,ini}
+   ReferenceCurves/Producer/CurvesFiles.ini + one .dict per test + the .csv files
 
-2. **PAR file** — DyCoV generates a parameter file with all the parameters
-   required by the models chosen in step 1. Parameters without default values
-   appear first and must be filled in; those with defaults are pre-filled but
-   can be changed. Press Enter when done; DyCoV validates the file.
+which is exactly what ``dycov validate`` expects, as ``-m Dynawo`` and
+``ReferenceCurves``.
 
-   .. code-block:: xml
+If you do not need to keep those files, ``dycov validate`` and ``dycov
+performance`` take the workbook directly and do the conversion themselves:
 
-      <?xml version='1.0' encoding='UTF-8'?>
-      <parametersSet xmlns="http://www.rte-france.com/dynawo">
-        <set id="AuxLoad_Xfmr">
-          <par type="DOUBLE" name="transformer_BPu" value=""/>
-          <par type="DOUBLE" name="transformer_RPu" value=""/>
-          <par type="DOUBLE" name="transformer_XPu" value=""/>
-          ...
-        </set>
-      </parametersSet>
+.. code-block:: console
 
-3. **INI file** — DyCoV fills in the topology and leaves the remaining
-   parameters (nominal voltage, power limits, etc.) for you to complete.
-   Press Enter when done; DyCoV validates the file.
+   dycov validate --excel Producer.xlsx
+   dycov performance --excel Producer.xlsx
 
-   .. code-block:: ini
+Performance is a zone-3 workflow and needs no reference curves, so of
+everything the conversion writes it uses only ``Dynawo/Zone3``. In both
+commands the workbook replaces the other inputs: giving a model, curves or a
+reference directory alongside it is refused.
 
-      [DEFAULT]
-      # p_{max_unite} injection as defined by the DTR in MW
-      p_max_injection_at_PDR =
-      # p_{max_unite} consumption as defined by the DTR in MW (only for BESS)
-      p_max_consumption_at_PDR =
-      # u_nom is the nominal voltage at the PDR bus (in kV)
-      # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
-      u_nom_at_PDR =
-      # q_max is the maximum reactive power at the PDR bus (in MVar)
-      q_max_at_PDR =
-      # q_min is the minimum reactive power at the PDR bus (in MVar)
-      q_min_at_PDR =
-      # Active power sharing per generator unit (%).  Values must be between 0 and 1.
-      P_sharing_[GEN_ID] =
-      # Reactive power sharing per generator unit (%).  Values must be between 0 and 1.
-      Q_sharing_[GEN_ID] =
-      # topology
-      topology = S+Aux
+The inputs are generated into a temporary directory that is removed when the
+run ends — the only input you keep is the workbook, and the report names it
+instead of the directory that no longer exists. The conversion is checked
+before the validation starts: if the workbook leaves the curve metadata of a
+test blank, the run stops there saying which tests are affected, rather than
+failing later when DyCoV tries to read the reference curves.
 
-4. **Curve files** — DyCoV creates a ``ReferenceCurves/`` directory with a
-   DICT file for each test and a ``CurvesFiles.ini`` for you to fill in with
-   the paths to your curve files and the column mapping. Press Enter when done;
-   DyCoV validates both the file and the curve paths.
+The run reports what it could not complete rather than failing silently: the
+blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
+files named in the sheets that were not found in the results folder, and the
+tests whose curve metadata is still blank. A row that is needed and is absent,
+empty or not a number is refused naming the sheet, the row and what was found,
+so an unfilled workbook says so instead of producing half a model.
 
-   .. code-block:: ini
-
-      [Curves-Files]
-      PCS_RTE-I2.USetPointStep.AReactance =
-      PCS_RTE-I2.USetPointStep.BReactance =
-      ...
-
-      [Curves-Dictionary]
-      time =
-      BusPDR_BUS_Voltage =
-      BusPDR_BUS_ActivePower =
-      BusPDR_BUS_ReactivePower =
-      ...
+Every sheet, row and header name the command looks for lives in a
+configuration file, ``excel_names.ini``. A copy of it, fully commented out,
+sits in your configuration directory (``~/.config/dycov`` on Linux,
+``%LOCALAPPDATA%\dycov`` on Windows): uncomment a name there and the command
+reads your spelling instead of the one shipped, with no need to wait for a new
+release.

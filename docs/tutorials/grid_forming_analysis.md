@@ -203,7 +203,7 @@ Each subdirectory represents:
 GFM analysis is executed using the dedicated command:
 
 ```bash
-dycov generateEnvelopes
+dycov generate_gfm_envelopes
 ```
 
 ---
@@ -213,7 +213,7 @@ dycov generateEnvelopes
 From a directory containing a valid GFM input file:
 
 ```bash
-dycov generateEnvelopes -i Producer.ini
+dycov generate_gfm_envelopes -i Producer.ini
 ```
 
 DyCoV computes:
@@ -225,7 +225,7 @@ By default, the results are written to a `Results/` directory created next to
 the input file; use `-o` to choose a different location:
 
 ```bash
-dycov generateEnvelopes -i Producer.ini -o gfm_results
+dycov generate_gfm_envelopes -i Producer.ini -o gfm_results
 ```
 
 ### 6.3 EMT mode
@@ -235,7 +235,7 @@ Pass `-e`/`--emt` to generate envelopes for comparison against EMT
 simulations instead:
 
 ```bash
-dycov generateEnvelopes -i Producer.ini -e
+dycov generate_gfm_envelopes -i Producer.ini -e
 ```
 
 In EMT mode, the envelopes and the PCC signal are shifted in time by the

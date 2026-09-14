@@ -20,7 +20,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     """Sets up the command-line argument parsers for the DYCOV tool.
 
     This function defines the main parser and its subparsers for various
-    DYCOV commands like validate, performance, generate, compile, and anonymize.
+    DYCOV commands like validate, performance, excel2inputs and anonymize.
 
     Returns
     -------
@@ -49,10 +49,10 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
 
-    _add_generate_envelopes_subparser(subparsers)
+    _add_generate_gfm_envelopes_subparser(subparsers)
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
-    _add_generate_subparser(subparsers)
+    _add_excel2inputs_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
 
     return main_parser
@@ -359,10 +359,44 @@ def _add_curves_argument(
     )
 
 
+def _add_excel_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+    as_option: bool = False,
+) -> None:
+    """Adds the 'excel' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    as_option: bool
+        Add it as '-e' / '--excel' instead of as the positional argument, for the commands whose
+        input can also be a model or a set of curves.
+    """
+    help_msg = "Path to the workbook describing the model."
+    if explain:
+        help_msg += f" {explain}"
+    names = ("-e", "--excel") if as_option else ("excel",)
+    _add_argument(
+        parser,
+        *names,
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
+    )
+
+
 def _add_reference_argument(
     parser: argparse.ArgumentParser,
     explain: str = "",
     is_required: bool = False,
+    nargs: Optional[str] = None,
 ) -> None:
     """Adds the 'reference' argument to the given parser.
 
@@ -374,6 +408,8 @@ def _add_reference_argument(
         Additional explanation for the help message.
     is_required: bool
         Whether the argument is required.
+    nargs: Optional[str]
+        Use '?' to let the positional be omitted, as when the curves come from a workbook.
     """
     help_msg = "Path to the directory containing the reference curves to be used."
     if explain:
@@ -384,6 +420,7 @@ def _add_reference_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        nargs=nargs,
     )
 
 
@@ -599,16 +636,16 @@ def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'generateEnvelopes' subparser to the given subparsers action.
+def _add_generate_gfm_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'generate_gfm_envelopes' subparser to the given subparsers action.
 
     Parameters
     ----------
     subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'generateEnvelopes' subparser will be added.
+        The subparsers action to which the 'generate_gfm_envelopes' subparser will be added.
     """
     envelops = subparsers.add_parser(
-        "generateEnvelopes",
+        "generate_gfm_envelopes",
         help="create all the envelopes based on the description of the different test cases",
     )
     _add_ini_argument(envelops, is_required=True)
@@ -617,7 +654,7 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
     _add_pcs_argument(envelops)
     _add_only_dtr_argument(envelops)
     _add_functional_testing_argument(envelops)
-    dycov_logging.get_logger("CliParsers").debug("Added 'generateEnvelopes' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'generate_gfm_envelopes' subparser.")
 
 
 def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -631,12 +668,29 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
     validate = subparsers.add_parser(
         "validate",
         help="Validate a Dynawo model against a set of curves.",
+        # One line per way of calling it: the inputs exclude each other, which argparse cannot
+        # express on its own.
+        usage=(
+            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]\n"
+            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]"
+        ),
     )
-    model_or_curves = validate.add_mutually_exclusive_group(required=False)
     _add_launcher_argument(validate)
-    _add_model_argument(model_or_curves)
-    _add_curves_argument(model_or_curves, explain="(when using curves instead of an RMS model)")
-    _add_reference_argument(validate, is_required=True)
+    validate_inputs = validate.add_argument_group("input options (give one)")
+    _add_model_argument(validate_inputs)
+    _add_curves_argument(validate_inputs, explain="(when using curves instead of an RMS model)")
+    _add_excel_argument(
+        validate_inputs,
+        as_option=True,
+        explain=(
+            "The model and its reference curves are generated from it, so neither the model, "
+            "the curves nor the reference directory are given."
+        ),
+    )
+    _add_reference_argument(validate, nargs="?")
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
@@ -655,12 +709,26 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     performance = subparsers.add_parser(
         "performance",
         help="Analyze the performance of a Dynawo model (or its results).",
+        # One line per way of calling it: a model may be drawn against the producer curves, but a
+        # workbook replaces both.
+        usage=(
+            "dycov performance -e EXCEL  [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov performance -m MODEL  [-c CURVES] [-h] [-l LAUNCHER] [-o OUTPUT]"
+            " [-p PCS] [-od]\n"
+            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+        ),
     )
     _add_launcher_argument(performance)
-    _add_model_argument(performance)
+    performance_inputs = performance.add_argument_group("input options (give one)")
+    _add_model_argument(performance_inputs)
     _add_curves_argument(
-        performance,
+        performance_inputs,
         explain="(if a model is also provided, these are used only for graphing)",
+    )
+    _add_excel_argument(
+        performance_inputs,
+        as_option=True,
+        explain=("The model is generated from it, so neither the model nor the curves are given."),
     )
     _add_output_argument(performance)
     _add_pcs_argument(performance)
@@ -669,23 +737,27 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     dycov_logging.get_logger("CliParsers").debug("Added 'performance' subparser.")
 
 
-def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'generate' subparser to the given subparsers action.
+def _add_excel2inputs_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'excel2inputs' subparser to the given subparsers action.
 
     Parameters
     ----------
     subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'generate' subparser will be added.
+        The subparsers action to which the 'excel2inputs' subparser will be added.
     """
-    generate = subparsers.add_parser(
-        "generate",
-        help="Create all the necessary input files through a guided process.",
+    excel2inputs = subparsers.add_parser(
+        "excel2inputs",
+        help="Create the input files of a model from the workbook that describes it.",
     )
-    _add_launcher_argument(generate)
-    _add_output_argument(generate, is_required=True)
-    _add_topology_argument(generate, is_required=True)
-    _add_validation_argument(generate, is_required=True)
-    dycov_logging.get_logger("CliParsers").debug("Added 'generate' subparser.")
+    _add_excel_argument(excel2inputs, is_required=True)
+    _add_output_argument(
+        excel2inputs,
+        explain=(
+            "The Dynawo and ReferenceCurves trees are written under it; "
+            "defaults to the directory holding the workbook."
+        ),
+    )
+    dycov_logging.get_logger("CliParsers").debug("Added 'excel2inputs' subparser.")
 
 
 def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
