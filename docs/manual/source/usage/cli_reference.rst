@@ -45,13 +45,13 @@ producer curves are drawn in the figures as an overlay.
 
 ----
 
-dycov generateEnvelopes
------------------------
+dycov generate_gfm_envelopes
+----------------------------
 
 Analytically computes GFM admissible response envelopes. No Dynawo model
 required — only a ``Producer.ini`` file.
 
-.. include:: helps/generateEnvelopes.rst
+.. include:: helps/generate_gfm_envelopes.rst
 
 ----
 

@@ -49,7 +49,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
 
-    _add_generate_envelopes_subparser(subparsers)
+    _add_generate_gfm_envelopes_subparser(subparsers)
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
     _add_excel2inputs_subparser(subparsers)
@@ -636,16 +636,16 @@ def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'generateEnvelopes' subparser to the given subparsers action.
+def _add_generate_gfm_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'generate_gfm_envelopes' subparser to the given subparsers action.
 
     Parameters
     ----------
     subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'generateEnvelopes' subparser will be added.
+        The subparsers action to which the 'generate_gfm_envelopes' subparser will be added.
     """
     envelops = subparsers.add_parser(
-        "generateEnvelopes",
+        "generate_gfm_envelopes",
         help="create all the envelopes based on the description of the different test cases",
     )
     _add_ini_argument(envelops, is_required=True)
@@ -654,7 +654,7 @@ def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) ->
     _add_pcs_argument(envelops)
     _add_only_dtr_argument(envelops)
     _add_functional_testing_argument(envelops)
-    dycov_logging.get_logger("CliParsers").debug("Added 'generateEnvelopes' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'generate_gfm_envelopes' subparser.")
 
 
 def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:

@@ -22,7 +22,7 @@ simulation and requires no Dynawo model.
 
 
 Supported disturbance cases
-----------------------------
+---------------------------
 
 DyCoV currently supports four predefined disturbance families:
 
@@ -43,7 +43,7 @@ DyCoV currently supports four predefined disturbance families:
 
 
 Standard mode vs. Hybrid mode
--------------------------------
+-----------------------------
 
 DyCoV automatically detects the operating mode from the parameters defined in
 the ``[GFM Parameters]`` section of the input file.
@@ -71,7 +71,7 @@ Basic usage
 
 .. code-block:: console
 
-   dycov generateEnvelopes -i <path_to_input.ini>
+   dycov generate_gfm_envelopes -i <path_to_input.ini>
 
 By default, results are written to a ``Results/`` directory created next to
 the input file (inside the directory that contains it). To specify a
@@ -79,7 +79,7 @@ different output directory, use ``-o``:
 
 .. code-block:: console
 
-   dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini -o gfm_results
+   dycov generate_gfm_envelopes -i examples/GFM/Overdamped/Producer.ini -o gfm_results
 
 The tool reads the parameters from the INI file, computes the envelopes for
 all supported disturbance cases, and writes the results under the output
@@ -94,7 +94,7 @@ against EMT simulations instead:
 
 .. code-block:: console
 
-   dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini -e
+   dycov generate_gfm_envelopes -i examples/GFM/Overdamped/Producer.ini -e
 
 In EMT mode, the envelopes and the PCC signal are shifted in time by the
 ``emt_delay`` value (in seconds) read from the ``[GFM Parameters]`` section of
@@ -106,7 +106,7 @@ define it explicitly. Without ``-e``, ``emt_delay`` has no effect.
 .. _gfm_outputs:
 
 Understanding the outputs
---------------------------
+-------------------------
 
 Results are organized hierarchically under ``Results/``:
 

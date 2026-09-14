@@ -92,7 +92,7 @@ for GFM units.
 **Mandatory inputs:**
 - Analytical configuration parameters only.
 
-**CLI entry point:** `dycov generateEnvelopes`
+**CLI entry point:** `dycov generate_gfm_envelopes`
 
 **Outputs (current status):**
 
