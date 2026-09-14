@@ -6,7 +6,7 @@ DyCoV has three main workflows, each with its own entry point:
 
 * For :ref:`RMS Model Validation <model_validation>`: ``dycov validate``
 * For :ref:`Electric Performance Verification <perf_verification>`: ``dycov performance``
-* For :ref:`Grid-Forming envelope generation <gfm_envelopes_cmd>`: ``dycov generateEnvelopes``
+* For :ref:`Grid-Forming envelope generation <gfm_envelopes_cmd>`: ``dycov generate_gfm_envelopes``
 
 There are also two utility commands: ``dycov excel2inputs`` to write the input
 files from the workbook that describes the installation, and ``dycov
@@ -49,7 +49,7 @@ You would use the command ``dycov validate``:
 .. _perf_verification:
 
 Electric Performance Verification
-----------------------------------
+---------------------------------
 
 Electric performance verification checks whether an installation meets the
 dynamic performance requirements defined in the RTE DTR PCS. Unlike model
@@ -81,16 +81,16 @@ files is documented in this manual.
 .. _gfm_envelopes_cmd:
 
 GFM Envelope Generation
-------------------------
+-----------------------
 
 Grid-Forming (GFM) analysis is a purely analytical workflow — no dynamic
 simulation is involved. Given the key parameters of a GFM unit (inertia,
 damping, effective reactance), the tool computes the admissible upper and
 lower response envelopes for specific grid disturbances.
 
-You would use the command ``dycov generateEnvelopes``:
+You would use the command ``dycov generate_gfm_envelopes``:
 
-.. include:: helps/generateEnvelopes.rst
+.. include:: helps/generate_gfm_envelopes.rst
 
 The output consists of CSV files with the envelope data, static PNG figures,
 and interactive HTML plots.
@@ -101,7 +101,7 @@ and interactive HTML plots.
 
 
 Generate Producer Input Files
-------------------------------
+-----------------------------
 
 If you have the workbook describing the installation, ``dycov excel2inputs``
 writes every input file from it in one step — both zones and the

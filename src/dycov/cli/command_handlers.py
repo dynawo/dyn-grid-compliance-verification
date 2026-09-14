@@ -28,10 +28,10 @@ from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation
 
 
-def handle_generate_envelopes_command(
+def handle_generate_gfm_envelopes_command(
     parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> int:
-    """Handles the 'generateEnvelopes' command.
+    """Handles the 'generate_gfm_envelopes' command.
 
     Initializes and runs a envelope generation based on the provided arguments.
 
@@ -42,7 +42,7 @@ def handle_generate_envelopes_command(
     args: argparse.Namespace
         Parsed command-line arguments.
     """
-    dycov_logging.get_logger("CommandHandlers").info("Handling 'generateEnvelopes' command.")
+    dycov_logging.get_logger("CommandHandlers").info("Handling 'generate_gfm_envelopes' command.")
     producer_ini: Optional[Path] = None
     output_dir: Optional[Path] = None
 
@@ -53,12 +53,14 @@ def handle_generate_envelopes_command(
 
     if not producer_ini:
         dycov_logging.get_logger("CommandHandlers").error(
-            "Missing arguments for 'generateEnvelopes' command."
+            "Missing arguments for 'generate_gfm_envelopes' command."
         )
-        parser.error("Missing arguments. Try 'dycov generateEnvelopes -h' for more information.")
+        parser.error(
+            "Missing arguments. Try 'dycov generate_gfm_envelopes -h' for more information."
+        )
         return
 
-    result_code = _generate_envelopes(
+    result_code = _generate_gfm_envelopes(
         output_dir=output_dir,
         producer_ini=producer_ini,
         emt=emt,
@@ -515,7 +517,7 @@ def _run_verification(
     return 1
 
 
-def _generate_envelopes(
+def _generate_gfm_envelopes(
     output_dir: Path,
     producer_ini: Path,
     emt: bool,

@@ -84,9 +84,9 @@ For information on the DYD and PAR file formats, refer to the
 .. _gfm_producer_input:
 
 GFM Producer Input (.ini file)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``dycov generateEnvelopes`` command takes a dedicated ``.ini`` file that
+The ``dycov generate_gfm_envelopes`` command takes a dedicated ``.ini`` file that
 describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
 nominal and operational parameters, and a ``[GFM Parameters]`` section for
 the core GFM control constants.
@@ -140,7 +140,7 @@ CSV output alongside the merged envelope:
 
 
 Supported Dynamic Models
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Dynawo supports a wide variety of equipment models, and parameter names vary
 across models even when they refer to the same physical quantity. For example,

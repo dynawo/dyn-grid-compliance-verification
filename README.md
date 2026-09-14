@@ -276,7 +276,7 @@ For a complete description of this analysis workflow, see: [Grid‑Forming (GFM)
 Run:
 
 ```bash
-dycov generateEnvelopes -i examples/GFM/Overdamped/Producer.ini
+dycov generate_gfm_envelopes -i examples/GFM/Overdamped/Producer.ini
 ```
 
 This will:
