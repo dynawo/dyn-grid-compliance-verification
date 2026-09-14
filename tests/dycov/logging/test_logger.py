@@ -19,7 +19,37 @@ from dycov.logging.custom_formatter import CustomFormatter
 from dycov.logging.logger import DycovLogger
 
 
+@pytest.fixture
+def registered_logger():
+    """Registering a logger mutates the process-wide manager, so undo it afterwards to keep
+    these level changes from leaking into other tests."""
+    created = []
+
+    def _register(name: str) -> DycovLogger:
+        created.append(name)
+        return logging.getLogger(name)
+
+    yield _register
+
+    for name in created:
+        leaked = [
+            entry
+            for entry in logging.Logger.manager.loggerDict
+            if entry == name or entry.startswith(f"{name}.")
+        ]
+        for entry in leaked:
+            logger = logging.Logger.manager.loggerDict.pop(entry)
+            for handler in getattr(logger, "handlers", []):
+                handler.close()
+
+
 class TestDycovLogger:
+    def test_unconfigured_logger_inherits_level(self, registered_logger):
+        logger = registered_logger("third_party_logger")
+
+        assert isinstance(logger, DycovLogger)
+        assert logger.level == logging.NOTSET
+
     @pytest.mark.skip
     def test_logger_initializes_with_console_and_file_handlers(self):
         logger = DycovLogger("test_logger")
@@ -46,12 +76,29 @@ class TestDycovLogger:
             assert isinstance(stream_handler.formatter, CustomFormatter)
             assert isinstance(file_handler.formatter, logging.Formatter)
 
-    def test_child_logger_inherits_log_level(self):
-        logger = DycovLogger("parent_logger")
-        logger.setLevel(logging.WARNING)
+    def test_child_logger_inherits_log_level(self, registered_logger):
+        logger = registered_logger("parent_logger")
+        logger.setLevel(logging.DEBUG)
+
         child_logger = logger.get_logger("child")
-        assert child_logger.getEffectiveLevel() == logger.getEffectiveLevel()
-        assert child_logger.getEffectiveLevel() == logging.WARNING
+
+        assert child_logger.getEffectiveLevel() == logging.DEBUG
+
+    def test_child_logger_follows_level_set_after_its_creation(self, registered_logger, tmp_path):
+        logger = registered_logger("early_child_logger")
+        child_logger = logger.get_logger("Early")
+
+        logger.init_handlers(
+            file_log_level=logging.DEBUG,
+            file_formatter="%(levelname)s:%(message)s",
+            file_max_bytes=1024,
+            console_log_level=logging.DEBUG,
+            console_formatter="%(levelname)s:%(message)s",
+            log_dir=tmp_path,
+            disable_console=True,
+        )
+
+        assert child_logger.isEnabledFor(logging.DEBUG)
 
     @pytest.mark.skip
     def test_console_output_uses_custom_formatter_with_colorama(self):
