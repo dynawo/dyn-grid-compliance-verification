@@ -55,16 +55,6 @@ required — only a ``Producer.ini`` file.
 
 ----
 
-dycov generate
---------------
-
-Interactive wizard that generates the input files (DYD, PAR, INI, DICT)
-needed to run a validation.
-
-.. include:: helps/generate.rst
-
-----
-
 dycov excel2inputs
 ------------------
 

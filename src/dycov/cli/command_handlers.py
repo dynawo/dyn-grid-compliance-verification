@@ -17,7 +17,6 @@ from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
-from dycov.core.input_template import InputTemplateGenerator
 from dycov.curves import anonymizer
 from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.excel import generator as excel_generator
@@ -274,43 +273,6 @@ def handle_performance_command(
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
-    return result_code
-
-
-def handle_generate_command(
-    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> int:
-    """Handles the 'generate' command.
-
-    Creates necessary input files through a guided process.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The argument parser instance.
-    args: argparse.Namespace
-        Parsed command-line arguments.
-    dwo_launcher: Path
-        Path to the Dynawo launcher.
-    """
-    dycov_logging.get_logger("CommandHandlers").info("Handling 'generate' command.")
-    try:
-        # Generate input templates
-        generator = InputTemplateGenerator()
-        result_code = generator.create_input_template(
-            launcher_dwo=dwo_launcher,
-            target=Path(args.output),
-            topology=args.topology,
-            template=args.validation,
-        )
-        dycov_logging.get_logger("CommandHandlers").info("Input files generated successfully.")
-    except Exception as e:
-        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
-            dycov_logging.get_logger("CommandHandlers").exception("Error generating input files")
-        else:
-            dycov_logging.get_logger("CommandHandlers").error(f"Error generating input files: {e}")
-        parser.error(f"Failed to generate input files: {e}")
-        result_code = 1
     return result_code
 
 
