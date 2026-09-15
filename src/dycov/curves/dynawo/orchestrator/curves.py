@@ -23,23 +23,14 @@ from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, model_parameters
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging import dycov_logging
-from dycov.model.parameters import DisconnectionModel, SimulationError, SimulationResult
+from dycov.model.parameters import DisconnectionModel, SimulationOutcomeError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 
 _CURVES_CSV = "curves/curves.csv"
 
-_ERROR_MAP = {
-    "Fault simulation fails": SimulationError.FAULT_SIMULATION_FAILS,
-    "Fault dip unachievable": SimulationError.FAULT_DIP_UNACHIEVABLE,
-}
-
 SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 SolverParam = namedtuple("SolverParam", "actual default")
-
-
-def _to_simulation_error(message: str) -> SimulationError | None:
-    return _ERROR_MAP.get(message)
 
 
 class DynawoCurves(ProducerCurves):
@@ -341,6 +332,14 @@ class DynawoCurves(ProducerCurves):
         -------
         tuple[str, dict, SimulationResult, pd.DataFrame]
             (jobs_output_dir, event_params, simulation_result, curves)
+
+        Raises
+        ------
+        ValueError
+            If the model cannot be set up at all, a rejected configuration value
+            being the usual cause. Only the outcomes reported as
+            ``SimulationOutcomeError`` are turned into a failed
+            ``SimulationResult``; anything else aborts the run.
         """
         self.__reset_solver()
         output_dir, jobs_output_dir = self.__prepare_oc_validation(
@@ -416,8 +415,8 @@ class DynawoCurves(ProducerCurves):
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",
             )
-        except ValueError as e:
-            error_message = _to_simulation_error(str(e))
+        except SimulationOutcomeError as e:
+            error_message = e.error
 
         simulation_result = SimulationResult(
             is_test_applicable,
