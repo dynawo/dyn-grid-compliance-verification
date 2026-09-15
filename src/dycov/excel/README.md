@@ -144,9 +144,10 @@ transformer) → `TransformerRatioTapChanger`.
 - **Deferred:** the multi-generator `M` family. The builders are already
   parametrized to *N* generators, but the Excel cannot yet say *which model*
   each duplicated `Zone1<x>` is (RTE questions Q5). Also the IEC decoupling
-  protections' LVRT/HVRT tables (`TabletUunder/UoverUwtfilt*`): the template
-  offers the four thresholds but not the curves, so those take Dynawo's
-  defaults.
+  protections' LVRT/HVRT curves (`Tablet*wtfilt*`, 25 points × 2 values per
+  model): they are rows like any other, but the template offers only the four
+  thresholds, so the curves take Dynawo's placeholder defaults until it carries
+  them.
 - **No parameter validation.** RTE ships a complete template; the tool does not
   check values or completeness. Empty control cells are omitted (Dynawo applies
   its default); the tool only reports which submodels are present/missing.
