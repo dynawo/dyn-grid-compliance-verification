@@ -15,7 +15,8 @@ set:
 The generation **core is standard-agnostic**: the family (WECC / IEC) is confined to a thin
 front-end that parses the family's Excel and resolves the selected variants to a concrete Dynawo
 model class; everything downstream depends only on the resolved model, the Excel values and the
-topology. WECC is the first — and today only — front-end.
+topology. Both families are in use, on the same core and the same names file: the IEC template
+keeps the shared sheets' names and describes its own blocks in its own sheets.
 
 The tool does **not** validate Excel parameter values or completeness — RTE ships a complete
 template. Its only checking role is at the **submodel** level (§9).
@@ -273,9 +274,18 @@ and `ParamsPCS.mo`):
   `PPCLocal = false` the plant applies `RLvTrPu` on one side of its internal network or the other,
   never twice and never nowhere. So `Zone3`'s only external transformer is the main one.
 
-`ConverterLVControl` also states the side the converter control measures on, hence the converter's
-own nominal voltage (`Un2` when `True`, `Un1` when `False`), which the values the user types are
-per-unit of.
+`ConverterLVControl` also states the side the converter control measures on, hence the base the
+control values the user types are per-unit of: `Un2` when `True`, `Un1` when `False`. The INI's
+nominal voltage is a different magnitude — the node the zone connects at — and is always `Un1` in
+Zone1 and `Un_PDR` in Zone3.
+
+**Which parameters carry that branch is the Dynawo dictionary's answer**, not the code's: the
+converter set asks `dynawo_translator` for the model's `TransformerResistance` / `Reactance` /
+`Conductance` / `Susceptance`, so a family that spells them differently (WECC `R/XLvTrPu` in both
+levels, IEC `R/XLvTrPu` in the plant and `R/X/G/BesPu` in the turbine) is an entry in
+`curves/dynawo/dictionary/{Power_Park,Storage}.ini`. A model whose entry is missing is refused by
+name. None of these parameters has a `defaultValue` in the descriptors, so they are written
+whatever the flag says — zeroed where the flag moves the transformer out of the model.
 
 The **main HTB/HTA transformer** (`Main_Xfmr`) is always present in `Zone3`, as a
 `TransformerRatioTapChanger` from `Z_cc_TP` on base `SnZone3` with `NbTap = N_prises + 1` and
@@ -380,17 +390,17 @@ nothing and raises no error.
 
 ### 11. Pending, roughly
 
-- **IEC front-end.** A second Excel family on the same core. The plant models share the WECC seam
-  (`ConverterLVControl` / `PPCLocal` with the same four combinations), so the electrical rules
-  carry over; the unit models expose no `R/XLvTrPu`, so in Zone1 the group transformer can only be
-  the external block. If the IEC template keeps the shared sheets' names, nothing else is needed;
-  if it renames them, the names file becomes one profile per family.
+- **IEC decoupling-protection tables.** The template's `GridProtection` block offers the four
+  thresholds (`UOverPu`, `UUnderPu`, `fOverPu`, `fUnderPu`) but not the LVRT/HVRT curves behind
+  them, which Dynawo takes as up to seven `TabletUunderUwtfilt<i><j>` points and three
+  `TabletUover…` ones. They all carry a `defaultValue`, so a workbook that omits them still runs —
+  on Dynawo's curves, not the user's. They are tables, not scalars, so giving them rows is a
+  template decision before it is a tool one.
 - **`M` topologies.** `Général` holds one block selection, so it resolves one plant/turbine pair,
   while an `M` plant needs a model per generator in both zones — `examples/Model/Wind/WECC4` has
   two different ones. Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing in the
   workbook says which model each generator is. It needs a design before it can be asked of RTE.
-- **Packaging.** The tool runs standalone from `tools/`, and the intent is to reach the user as a
-  DyCoV subcommand (with an alias so it can also be called on its own), which keeps the topology
-  catalog in one place at the price of requiring DyCoV. Becoming a self-contained installable would
-  instead mean vendoring DyCoV's producer-file builders, and with them a second copy of that
-  catalog.
+- **Standalone packaging.** The generator ships as the `excel2inputs` subcommand, which keeps the
+  topology catalog in one place at the price of requiring DyCoV. Reaching the user as a
+  self-contained installable would instead mean vendoring DyCoV's producer-file builders, and with
+  them a second copy of that catalog.
