@@ -390,12 +390,15 @@ nothing and raises no error.
 
 ### 11. Pending, roughly
 
-- **IEC decoupling-protection tables.** The template's `GridProtection` block offers the four
+- **IEC decoupling-protection curves.** The template's `GridProtection` block offers the four
   thresholds (`UOverPu`, `UUnderPu`, `fOverPu`, `fUnderPu`) but not the LVRT/HVRT curves behind
-  them, which Dynawo takes as up to seven `TabletUunderUwtfilt<i><j>` points and three
-  `TabletUover…` ones. They all carry a `defaultValue`, so a workbook that omits them still runs —
-  on Dynawo's curves, not the user's. They are tables, not scalars, so giving them rows is a
-  template decision before it is a tool one.
+  them. Dynawo spells each curve as ordinary scalar parameters, a magnitude and a time per point
+  (`Tablet<curve>wtfilt<point><1|2>`): 8 points over-voltage, 7 under-voltage, 4 over-frequency
+  and 6 under-frequency, so 50 rows per model in both editions. Nothing in the tool has to change
+  to write them — they are rows of a block like any other — and they all carry a `defaultValue`,
+  so a workbook that omits them still runs, on Dynawo's placeholder curves rather than the user's.
+  What is open is the template's layout: how many points of each curve to expose, and what an
+  unused point holds.
 - **`M` topologies.** `Général` holds one block selection, so it resolves one plant/turbine pair,
   while an `M` plant needs a model per generator in both zones — `examples/Model/Wind/WECC4` has
   two different ones. Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing in the
