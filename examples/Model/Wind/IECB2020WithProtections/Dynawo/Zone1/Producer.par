@@ -136,6 +136,19 @@
     <par type="DOUBLE" name="WT_BesPu" value="0"/>
     <!-- General -->
     <par type="DOUBLE" name="WT_SNom" value="4.0"/>
+    <!-- Parameters not available in the Excel template -->
+    <par type="DOUBLE" name="WT_TabletUoverUwtfilt11" value="1.0"/>
+    <par type="DOUBLE" name="WT_TabletUoverUwtfilt12" value="2.0"/>
+    <par type="DOUBLE" name="WT_TabletUoverUwtfilt21" value="1.5"/>
+    <par type="DOUBLE" name="WT_TabletUoverUwtfilt22" value="2.0"/>
+    <par type="DOUBLE" name="WT_TabletUoverUwtfilt31" value="2.0"/>
+    <par type="DOUBLE" name="WT_TabletUoverUwtfilt32" value="2.0"/>
+    <par type="DOUBLE" name="WT_TabletUunderUwtfilt11" value="0.0"/>
+    <par type="DOUBLE" name="WT_TabletUunderUwtfilt12" value="2.0"/>
+    <par type="DOUBLE" name="WT_TabletUunderUwtfilt21" value="0.5"/>
+    <par type="DOUBLE" name="WT_TabletUunderUwtfilt22" value="2.0"/>
+    <par type="DOUBLE" name="WT_TabletUunderUwtfilt31" value="1.0"/>
+    <par type="DOUBLE" name="WT_TabletUunderUwtfilt32" value="2.0"/>
   </set>
 
   <set id="Group_Xfmr">
