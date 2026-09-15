@@ -169,7 +169,12 @@ template's placeholder in the results-folder cell.
 
 Every example under `examples/` is the output of its own workbook, so
 regenerating one reproduces it file for file — which is also how the golden test
-keeps the two in step.
+keeps the two in step. The exception is the two `IEC*2020WithProtections` cases:
+their PAR keeps, under a `Parameters not available in the Excel template`
+heading, the decoupling protection curves the template has no rows for.
+Regenerating them drops those rows, and the protection then trips on Dynawo's
+placeholder curves (0.33 s instead of 2 s), disconnecting the turbine in tests
+that used to ride through.
 
 ## Tests
 
