@@ -48,6 +48,16 @@ def test_each_zone_declares_the_node_it_connects_at(tmp_path, zone1, zone3):
     assert (z1["q_min_at_pdr"], z3["q_min_at_pdr"]) == (zone1["Qmin_z1"], zone3["Qmin_PDR"])
 
 
+def test_zone1_describes_its_own_node_and_not_the_pdr(tmp_path, zone1, zone3):
+    # Zone 1's node is internal to the plant, so neither the PDR nor its list of levels applies.
+    _write(tmp_path, zone1, zone3)
+
+    text = (tmp_path / "Zone1" / "Producer.ini").read_text()
+
+    assert "# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV" in text
+    assert "Allowed values" not in text
+
+
 def test_zone1_is_a_single_unit_whatever_the_plant_topology(tmp_path, zone1, zone3):
     z1, z3 = _write(tmp_path, zone1, zone3)
 
