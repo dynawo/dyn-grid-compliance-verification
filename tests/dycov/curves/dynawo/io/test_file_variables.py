@@ -23,7 +23,7 @@ class DummyProducerCurves(ProducerCurves):
     def __init__(self, producer):
         self._producer = producer
 
-    def obtain_value(self, value_definition):
+    def obtain_value(self, value_definition, origin=None):
         # For test, just return the value_definition as float if possible, else as is
         try:
             return float(value_definition)

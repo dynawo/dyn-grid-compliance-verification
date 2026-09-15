@@ -77,7 +77,7 @@ def _make_owner(producer: MagicMock | None = None) -> MagicMock:
     owner._solver_id = "IDA"
     owner._solver_lib = "dynawo_SolverIDA"
     owner.get_generator_u_dim.return_value = 20.0
-    owner.obtain_value.side_effect = lambda v: float(v)
+    owner.obtain_value.side_effect = lambda v, origin=None: float(v)
     owner.complete_unit_characteristics = MagicMock()
     return owner
 
@@ -365,7 +365,7 @@ class TestGetEventParameters:
         gen = _make_gen(s_nom=50.0)
         producer = _make_producer(s_nom=50.0, generators=[gen])
         owner = _make_owner(producer)
-        owner.obtain_value.side_effect = lambda v: 0.1  # raw step
+        owner.obtain_value.side_effect = lambda v, origin=None: 0.1  # raw step
         setup = _make_setup(owner, s_nref=100.0)
         self._setup_config(
             mock_config,
@@ -405,7 +405,7 @@ class TestGetEventParameters:
         gens = [_make_gen(s_nom=90.0, ppc_local=False) for _ in range(2)]
         producer = _make_producer(s_nom=180.0, generators=gens)
         owner = _make_owner(producer)
-        owner.obtain_value.side_effect = lambda v: 0.75  # raw step (SnRef base)
+        owner.obtain_value.side_effect = lambda v, origin=None: 0.75  # raw step (SnRef base)
         setup = _make_setup(owner, s_nref=100.0)
         self._setup_config(
             mock_config,
@@ -424,7 +424,7 @@ class TestGetEventParameters:
         gen = _make_gen(s_nom=50.0)
         producer = _make_producer(s_nom=50.0, generators=[gen])
         owner = _make_owner(producer)
-        owner.obtain_value.side_effect = lambda v: 0.02
+        owner.obtain_value.side_effect = lambda v, origin=None: 0.02
         setup = _make_setup(owner, s_nref=100.0)
         self._setup_config(
             mock_config,
@@ -612,6 +612,18 @@ class TestGetPdr:
         setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
 
         producer.set_consumption.assert_called_once_with(False)
+
+    @patch(f"{_MS}.config")
+    def test_unresolvable_pdr_raises_naming_the_option(self, mock_config):
+        setup = _make_setup()
+        self._config_for_pdr(mock_config, p_cfg="0.5*Pnom")
+
+        with pytest.raises(ValueError) as error:
+            setup._get_pdr("PCS1", "BM1", "OC1", u_dim=20.0)
+
+        message = str(error.value)
+        assert "Pnom" in message
+        assert "'pdr_P'" in message
 
     @patch(f"{_MS}.config")
     def test_active_power_uses_pmax_with_pdr_sign(self, mock_config):
