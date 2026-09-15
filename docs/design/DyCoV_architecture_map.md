@@ -42,7 +42,11 @@ non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` 
 resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_characteristics`/`obtain_value`
 (`curves.py`, backing `setpoint_step_value` and the `{{step_event_*}}` TSO placeholders), and the report
 `reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
-registry entry. Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
+registry entry. `obtain_value` only resolves definitions that reference a magnitude (a `*`, or a
+possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
+A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
+(the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
+Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`).
 
 ## Numerical layer (mutated many times, persisted to disk)
