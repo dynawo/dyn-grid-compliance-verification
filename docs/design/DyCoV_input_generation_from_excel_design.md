@@ -398,7 +398,11 @@ nothing and raises no error.
   to write them — they are rows of a block like any other — and they all carry a `defaultValue`,
   so a workbook that omits them still runs, on Dynawo's placeholder curves rather than the user's.
   What is open is the template's layout: how many points of each curve to expose, and what an
-  unused point holds.
+  unused point holds. Until then the two `IEC*2020WithProtections` examples keep their curves by
+  hand, under a `Parameters not available in the Excel template` heading at the end of the
+  generator set, and are the only examples their workbook does not reproduce in full: the
+  placeholder curves allow 0.33 s where theirs allow 2 s, which disconnects the turbine in the
+  500 ms and 800 ms voltage dips and in Zone 3's `GridVoltageDip`.
 - **`M` topologies.** `Général` holds one block selection, so it resolves one plant/turbine pair,
   while an `M` plant needs a model per generator in both zones — `examples/Model/Wind/WECC4` has
   two different ones. Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing in the
