@@ -204,6 +204,19 @@
     <par type="DOUBLE" name="WPP_BLvTrPu" value="0"/>
     <!-- General -->
     <par type="DOUBLE" name="WPP_SNom" value="90.0"/>
+    <!-- Parameters not available in the Excel template -->
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt11" value="1.0"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt12" value="2.0"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt21" value="1.5"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt22" value="2.0"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt31" value="2.0"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt32" value="2.0"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt11" value="0.0"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt12" value="2.0"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt21" value="0.5"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt22" value="2.0"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt31" value="1.0"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt32" value="2.0"/>
   </set>
 
   <set id="Main_Xfmr">
