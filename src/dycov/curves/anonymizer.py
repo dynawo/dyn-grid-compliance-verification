@@ -27,6 +27,15 @@ MIN_SCALE = 0.0003
 TIME_PRECISION = 6
 ORIGINAL_IMPLEMENTATION = False  # Set to True to use the original noise application method
 
+# What tells a numerical oscillation apart from a response: swings of at least this size,
+# alternating faster than this period, repeated at least this many times in a row.
+RIPPLE_GATE = 0.01  # pu
+RIPPLE_PERIOD = 0.1  # s
+RIPPLE_SWINGS = 6
+# The span is filtered on a uniform grid and blended back over this margin at each end.
+RIPPLE_GRID = 1e-3  # s
+RIPPLE_MARGIN = 0.1  # s
+
 
 def anonymize(
     output_folder: Path,
@@ -35,6 +44,7 @@ def anonymize(
     results: Optional[Path] = None,
     curves_folder: Optional[Path] = None,
     compression: Optional[float] = None,
+    deripple: Optional[float] = None,
 ) -> None:
     """Creates a set of anonymized curves from the input set of curves.
 
@@ -58,10 +68,13 @@ def anonymize(
     compression: Optional[float]
         Relative epsilon for curve simplification, as a fraction of each signal's
         range. If None, no compression is applied. Defaults to None.
+    deripple: Optional[float]
+        Cut-off frequency, in Hz, of the filter that removes the oscillation the simulation
+        adds. If None, the curves keep it. Defaults to None.
     """
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
-        f"and frequency {frequency} Hz and compression {compression}"
+        f"and frequency {frequency} Hz, compression {compression} and deripple {deripple}"
     )
     if curves_folder is None:
         curves_folder = output_folder
@@ -96,7 +109,7 @@ def anonymize(
 
         metadata: Dict[str, Dict] = _extract_metadata_from_logs(curves_path)
         _create_dict_files_if_not_exist(curves_path, metadata)
-        _process_curves(curves_path, output_path, noisestd, frequency, compression)
+        _process_curves(curves_path, output_path, noisestd, frequency, compression, deripple)
 
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymization completed. Anonymized curves saved to {output_folder}"
@@ -187,6 +200,181 @@ def _ensure_min_points(df: pd.DataFrame, min_points: int = 10) -> pd.DataFrame:
         densified[col] = np.concatenate((values, np.interp(t_interior, t_grid, values)))[order]
 
     return pd.DataFrame(densified)[df.columns]
+
+
+def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
+    """Finds the time spans where a signal oscillates faster than any response it can have.
+
+    A simulation artefact swings back and forth, above the gate and faster than the period,
+    many times in a row; a response to the event swings once. Only the runs are returned, so
+    a single excursion, however large, is left alone.
+
+    Parameters
+    ----------
+    time: np.ndarray
+        Time instants of the signal.
+    values: np.ndarray
+        Values of the signal.
+
+    Returns
+    -------
+    List[tuple]
+        (start, end) of every span that oscillates, empty when the signal does not.
+    """
+    turns = []
+    last_extreme = values[0]
+    direction = 0
+    for instant, value in zip(time, values):
+        if abs(value - last_extreme) < RIPPLE_GATE:
+            continue
+        new_direction = 1 if value > last_extreme else -1
+        if direction and new_direction != direction:
+            turns.append(instant)
+        direction = new_direction
+        last_extreme = value
+
+    spans = []
+    run_start = None
+    run_length = 0
+    for turn, next_turn in zip(turns, turns[1:]):
+        if next_turn - turn <= RIPPLE_PERIOD:
+            run_start = turn if run_start is None else run_start
+            run_length += 1
+            continue
+        if run_length >= RIPPLE_SWINGS:
+            spans.append((run_start, turn))
+        run_start, run_length = None, 0
+    if run_length >= RIPPLE_SWINGS:
+        spans.append((run_start, turns[-1]))
+
+    return spans
+
+
+def _blend_weights(time: np.ndarray, spans: List[tuple]) -> np.ndarray:
+    """Builds the weight of the filtered signal: one inside a span, zero away from it.
+
+    The weight ramps up and down over a margin at each end, so that the filtered stretch
+    joins the untouched signal without a step.
+
+    Parameters
+    ----------
+    time: np.ndarray
+        Time instants of the signal.
+    spans: List[tuple]
+        (start, end) of every span to filter.
+
+    Returns
+    -------
+    np.ndarray
+        The weight of the filtered signal at each instant.
+    """
+    weights = np.zeros(len(time))
+    for start, end in spans:
+        rising = (time >= start - RIPPLE_MARGIN) & (time < start)
+        falling = (time > end) & (time <= end + RIPPLE_MARGIN)
+        weights[(time >= start) & (time <= end)] = 1.0
+        weights[rising] = np.maximum(
+            weights[rising], (time[rising] - start + RIPPLE_MARGIN) / RIPPLE_MARGIN
+        )
+        weights[falling] = np.maximum(
+            weights[falling], (end + RIPPLE_MARGIN - time[falling]) / RIPPLE_MARGIN
+        )
+    return weights
+
+
+def _remove_spikes(values: np.ndarray) -> np.ndarray:
+    """Replaces the one-sample excursions of a signal by their surroundings.
+
+    A sample that departs from both of its neighbours while they agree with each other is
+    the solver's, not the model's. A step of the event departs from the previous sample and
+    stays there, so it is not one of these.
+
+    Parameters
+    ----------
+    values: np.ndarray
+        Values of the signal.
+
+    Returns
+    -------
+    np.ndarray
+        The signal without its one-sample excursions.
+    """
+    if len(values) < 3:
+        return values
+
+    previous, current, following = values[:-2], values[1:-1], values[2:]
+    spikes = (
+        (np.abs(current - previous) > RIPPLE_GATE)
+        & (np.abs(current - following) > RIPPLE_GATE)
+        & (np.abs(following - previous) <= RIPPLE_GATE)
+    )
+
+    without_spikes = values.copy()
+    without_spikes[1:-1][spikes] = 0.5 * (previous[spikes] + following[spikes])
+    return without_spikes
+
+
+def _deripple_signal(time: np.ndarray, values: np.ndarray, cutoff: float) -> np.ndarray:
+    """Removes from a signal the oscillation its simulation added, leaving the rest as it is.
+
+    The oscillating spans are filtered with a zero-phase low-pass: a causal one would shift
+    the transient in time, and the criteria measure exactly that.
+
+    Parameters
+    ----------
+    time: np.ndarray
+        Time instants of the signal.
+    values: np.ndarray
+        Values of the signal.
+    cutoff: float
+        Cut-off frequency of the filter, in Hz. It must sit below the oscillation.
+
+    Returns
+    -------
+    np.ndarray
+        The signal without the oscillation.
+    """
+    values = _remove_spikes(values)
+    spans = _ripple_spans(time, values)
+    if not spans:
+        return values
+
+    instants, first_of_instant = np.unique(time, return_index=True)
+    grid = np.arange(instants[0], instants[-1], RIPPLE_GRID)
+    smooth = lowpass_filter(
+        np.interp(grid, instants, values[first_of_instant]), fc=cutoff, fs=1 / RIPPLE_GRID
+    )
+
+    # The run is bounded by turning points, and the oscillation reaches half a swing beyond
+    # each of them: filter that too, or what is left at the edges still oscillates.
+    reach = [(start - RIPPLE_PERIOD, end + RIPPLE_PERIOD) for start, end in spans]
+    weights = _blend_weights(time, reach)
+    return values * (1 - weights) + np.interp(time, grid, smooth) * weights
+
+
+def _deripple_curves(df: pd.DataFrame, cutoff: float) -> pd.DataFrame:
+    """Removes the simulation's oscillation from every signal of a curve.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Curve to clean, with a "time" column.
+    cutoff: float
+        Cut-off frequency of the filter, in Hz.
+
+    Returns
+    -------
+    pd.DataFrame
+        The curve without the oscillation.
+    """
+    time = df["time"].to_numpy(dtype=float)
+    cleaned = {"time": time}
+    for column in df.columns:
+        if column == "time":
+            continue
+        cleaned[column] = _deripple_signal(time, df[column].to_numpy(dtype=float), cutoff)
+
+    return pd.DataFrame(cleaned)[df.columns]
 
 
 def _get_files(path: Path, extensions: List[str]) -> List[Path]:
@@ -601,6 +789,7 @@ def _process_curves(
     noisestd: float,
     frequency: float,
     compression: Optional[float] = None,
+    deripple: Optional[float] = None,
 ) -> None:
     """Processes all curve files in the specified folder, applies noise if
     `noisestd` is not None, and saves the anonymized curves and updated
@@ -621,6 +810,9 @@ def _process_curves(
         applied.
     compression: Optional[float] = 0.001
         Relative epsilon for RDP compression. If None, no compression is applied.
+    deripple: Optional[float]
+        Cut-off frequency, in Hz, of the filter that removes the oscillation the simulation
+        adds. If None, the curves keep it.
     """
     curve_extensions = [
         "*.[eE][xX][pP]",
@@ -646,6 +838,12 @@ def _process_curves(
 
         if importer.config.has_section("Curves-Dictionary"):
             df_imported_curve = importer.get_curves_dataframe(zone=0, remove_file=False)
+
+            if deripple is not None:
+                dycov_logging.get_logger("Anonymizer").debug(
+                    f"Removing the simulation oscillation from {curves_path.stem}"
+                )
+                df_imported_curve = _deripple_curves(df_imported_curve, deripple)
 
             if noisestd is not None and noisestd > 0:
                 dycov_logging.get_logger("Anonymizer").debug(

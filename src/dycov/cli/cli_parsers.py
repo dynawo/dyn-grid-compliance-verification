@@ -597,6 +597,27 @@ def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--deripple' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-d",
+        "--deripple",
+        arg_type=float,
+        default=None,
+        help_msg="Cut-off frequency, in Hz, of the filter that removes the oscillation the"
+        " simulation adds to the curves. It must sit well below that oscillation, which the"
+        " examples show between 12 and 17 Hz (suggested: 5.0)."
+        " Default: None (the curves keep the oscillation).",
+    )
+
+
 def _add_generate_gfm_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
     """Adds the 'generate_gfm_envelopes' subparser to the given subparsers action.
 
@@ -758,4 +779,5 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_frequency_argument(anonymize)
     _add_results_argument(anonymize)
     _add_compression_argument(anonymize)
+    _add_deripple_argument(anonymize)
     dycov_logging.get_logger("CliParsers").debug("Added 'anonymize' subparser.")
