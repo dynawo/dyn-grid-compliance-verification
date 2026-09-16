@@ -406,9 +406,62 @@ class PerformanceValidator(Validator):
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
 
+    def __calculate_response_characteristics(
+        self,
+        compliance_values: dict,
+        t_event_start: float,
+        time_clear: float,
+    ):
+        measurement_name = "BusPDR_BUS_ActivePower"
+        try:
+            res_reaction_time, res_reaction_target = common.get_reached_time(
+                0.1,
+                self.__curve_list("time"),
+                self.__curve_list(measurement_name),
+                time_clear,
+            )
+            compliance_values["calc_reaction_time"] = res_reaction_time + (
+                time_clear - t_event_start
+            )
+            compliance_values["calc_reaction_target"] = {measurement_name: res_reaction_target}
+        except Exception:
+            pass
+
+        try:
+            res_rise_time, res_rise_target = common.get_reached_time(
+                0.9,
+                self.__curve_list("time"),
+                self.__curve_list(measurement_name),
+                time_clear,
+            )
+            compliance_values["calc_rise_time"] = res_rise_time + (time_clear - t_event_start)
+            compliance_values["calc_rise_target"] = {measurement_name: res_rise_target}
+        except Exception:
+            pass
+
+        try:
+            res_settling_time, _, res_settling_min, res_settling_max, calc_ss_value = (
+                common.get_settling_time(
+                    0.05,
+                    self.__curve_list("time"),
+                    self.__curve_list(measurement_name),
+                    time_clear,
+                )
+            )
+            compliance_values["calc_settling_time"] = res_settling_time + (
+                time_clear - t_event_start
+            )
+            compliance_values["calc_ss_value"] = calc_ss_value
+            compliance_values["calc_settling_tube"] = {
+                measurement_name: [res_settling_min, res_settling_max]
+            }
+        except Exception:
+            pass
+
     def __calculate(
         self,
         t_event_start: float,
+        time_clear: float,
     ) -> dict:
         compliance_values = {}
 
@@ -416,6 +469,7 @@ class PerformanceValidator(Validator):
         self.__calculate_avr(compliance_values, t_event_start)
         self.__calculate_frequency(compliance_values)
         self.__calculate_others(compliance_values, t_event_start)
+        self.__calculate_response_characteristics(compliance_values, t_event_start, time_clear)
 
         return compliance_values
 
@@ -679,6 +733,18 @@ class PerformanceValidator(Validator):
         self.__check_disconnections(results, simulation_path, has_dynamic_model)
         self.__check_others(results, is_stable, is_ppm, compliance_values)
 
+        for key in [
+            "calc_reaction_time",
+            "calc_reaction_target",
+            "calc_rise_time",
+            "calc_rise_target",
+            "calc_settling_time",
+            "calc_ss_value",
+            "calc_settling_tube",
+        ]:
+            if key in compliance_values:
+                results[key] = compliance_values[key]
+
         return results
 
     def validate(
@@ -772,6 +838,7 @@ class PerformanceValidator(Validator):
         # Check operational point validations
         validation_values = self.__calculate(
             t_event,
+            time_clear,
         )
 
         results = self.__check(
@@ -784,6 +851,13 @@ class PerformanceValidator(Validator):
             or self.get_sim_type() == MODEL_VALIDATION_PPM,
             validation_values,
         )
+
+        exclusion_windows = self._get_exclusion_windows()
+        results["event_exclusion_window_start"] = exclusion_windows.event_start
+        results["event_exclusion_window_end"] = exclusion_windows.event_end
+        if exclusion_windows.clear_start != 0.0 or exclusion_windows.clear_end != 0.0:
+            results["clear_exclusion_window_start"] = exclusion_windows.clear_start
+            results["clear_exclusion_window_end"] = exclusion_windows.clear_end
 
         if self.get_sim_type() == ELECTRIC_PERFORMANCE_SM:
             results["first_steady_pos"] = max(
