@@ -9,7 +9,6 @@
 #
 import configparser
 import re
-import statistics
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -21,11 +20,15 @@ from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.sigpro.sigpro import lowpass_filter
 
-NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
+# The noise is what makes a reference look measured, and that only matters where the test
+# looks: just before the event, during it, and along the response that follows. Away from
+# there it buys nothing and costs an order of magnitude in the size of every curve, because
+# it is of the same order as the epsilon of the simplification and RDP has to track it.
+NOISE_LEAD = 1.0  # s before the event
+NOISE_TAIL = 10.0  # s after it
 # One microsecond: finer than the 1 ms grid the curves are resampled to before any check.
 TIME_PRECISION = 6
-ORIGINAL_IMPLEMENTATION = False  # Set to True to use the original noise application method
 
 # What tells a numerical oscillation apart from a response: swings of at least this size,
 # alternating faster than this period, repeated at least this many times in a row.
@@ -649,34 +652,6 @@ def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
     return metadata
 
 
-def _get_event_period_indices(
-    df_imported_curve: pd.DataFrame, noise_event_start: float, noise_event_end: float
-) -> tuple[int, int, int]:
-    """Get the number of samples before, during and after the event window.
-
-    Parameters
-    ----------
-    df_imported_curve: pd.DataFrame
-        The DataFrame containing the curve data, including a 'time' column.
-    noise_event_start: float
-        The start time of the event window.
-    noise_event_end: float
-        The end time of the event window.
-
-    Returns
-    -------
-    tuple[int, int, int]
-        Number of samples before, during and after the event window.
-    """
-    time = df_imported_curve["time"]
-    before_event_idx = df_imported_curve[time <= noise_event_start].shape[0]
-    during_event_idx = df_imported_curve[
-        (time > noise_event_start) & (time <= noise_event_end)
-    ].shape[0]
-    after_event_idx = len(df_imported_curve) - before_event_idx - during_event_idx
-    return before_event_idx, during_event_idx, after_event_idx
-
-
 def _apply_noise_to_curves(
     df_imported_curve: pd.DataFrame,
     noisestd: float,
@@ -687,8 +662,8 @@ def _apply_noise_to_curves(
 ) -> None:
     """Applies noise to the curve data in the DataFrame.
 
-    Noise is reduced before and after the event and full during the event.
-    The noise is then smoothed using a low-pass filter.
+    Noise is applied around the event, and nowhere else. The noise is then smoothed using
+    a low-pass filter.
 
     Parameters
     ----------
@@ -708,8 +683,14 @@ def _apply_noise_to_curves(
     noise_event_start = event_time
     noise_event_end = event_time + event_duration
 
+    time_values = df_imported_curve["time"].to_numpy()
+    noise_weights = _blend_weights(
+        time_values, [(noise_event_start - NOISE_LEAD, noise_event_end + NOISE_TAIL)]
+    )
+    noise_window = noise_weights > 0.0
+
     # Calculate resampling frequency from the time column in the DataFrame
-    time_step = np.mean(np.diff(df_imported_curve["time"].to_numpy()))
+    time_step = np.mean(np.diff(time_values))
     resampling_fs = 1 / time_step
     dycov_logging.get_logger("Anonymizer").debug(
         f"Calculated resampling frequency: {resampling_fs} Hz"
@@ -728,48 +709,19 @@ def _apply_noise_to_curves(
 
         dycov_logging.get_logger("Anonymizer").debug(f"Applying noise to column: {column}")
 
-        before_event_idx, during_event_idx, after_event_idx = _get_event_period_indices(
-            df_imported_curve, noise_event_start, noise_event_end
-        )
+        # Robust local scale using rolling MAD
+        def local_scale(series: np.ndarray, window: int) -> np.ndarray:
+            w = max(3, window | 1)
+            s = pd.Series(series)
+            med = s.rolling(w, center=True, min_periods=1).median()
+            mad = (s - med).abs().rolling(w, center=True, min_periods=1).median()
+            return np.maximum(mad.to_numpy(), MIN_SCALE)
 
-        if ORIGINAL_IMPLEMENTATION:
-            median_col = statistics.median(values.tolist())
-            # Prevent excessive noise on small signals
-            if abs(median_col) < MIN_SCALE:
-                median_col = MIN_SCALE if median_col >= 0 else -MIN_SCALE
+        window_seconds = 0.5
+        window_samples = max(3, int(window_seconds * resampling_fs))
+        scale = local_scale(values, window_samples)
 
-            noise_before = (
-                np.random.normal(0.0, noisestd, before_event_idx) * median_col / NOISE_DAMPING
-            )
-            noise_during = np.random.normal(0.0, noisestd, during_event_idx) * median_col
-            noise_after = (
-                np.random.normal(0.0, noisestd, after_event_idx) * median_col / NOISE_DAMPING
-            )
-        else:
-            # Robust local scale using rolling MAD
-            def local_scale(series: np.ndarray, window: int) -> np.ndarray:
-                w = max(3, window | 1)
-                s = pd.Series(series)
-                med = s.rolling(w, center=True, min_periods=1).median()
-                mad = (s - med).abs().rolling(w, center=True, min_periods=1).median()
-                return np.maximum(mad.to_numpy(), MIN_SCALE)
-
-            window_seconds = 0.5
-            window_samples = max(3, int(window_seconds * resampling_fs))
-            scale = local_scale(values, window_samples)
-
-            noise_before = np.random.normal(0.0, noisestd, before_event_idx) * (
-                scale[:before_event_idx] / NOISE_DAMPING
-            )
-            noise_during = (
-                np.random.normal(0.0, noisestd, during_event_idx)
-                * scale[before_event_idx : before_event_idx + during_event_idx]
-            )
-            noise_after = np.random.normal(0.0, noisestd, after_event_idx) * (
-                scale[-after_event_idx:] / NOISE_DAMPING
-            )
-
-        noise = np.concatenate((noise_before, noise_during, noise_after))
+        noise = np.random.normal(0.0, noisestd, len(values)) * scale * noise_weights
 
         # Smooth noise using constant padding to stabilize boundaries
         noise_smoothed = lowpass_filter(
@@ -777,7 +729,9 @@ def _apply_noise_to_curves(
             fc=frequency,
             fs=resampling_fs,
         )
-        noise_smoothed = noise_smoothed - np.mean(noise_smoothed)
+        # The mean is removed where the noise lives: subtracting it from the whole signal
+        # would shift the steady state of a curve that is only noisy around its event.
+        noise_smoothed = (noise_smoothed - np.mean(noise_smoothed[noise_window])) * noise_weights
 
         # Apply noise to the column
         df_imported_curve[column] = values + noise_smoothed
@@ -829,10 +783,7 @@ def _process_curves(
         curves_cfg.read(dict_file)
 
         event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
-        if ORIGINAL_IMPLEMENTATION:
-            fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
-        else:
-            fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
+        fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
 
         importer = CurvesImporter(curves_folder, curves_path.stem, False)
 
