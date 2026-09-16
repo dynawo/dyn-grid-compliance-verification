@@ -46,7 +46,7 @@ def format_time_error(
         A tuple (formatted_value, footnote_defined), so callers can chain
         footnote_defined across successive calls in the same table.
     """
-    if results[key] == "-":
+    if results.get(key, "-") == "-":
         if not footnote_defined:
             note = (
                 "\\footnote{Not Calculated because the reference value "
@@ -54,7 +54,7 @@ def format_time_error(
             )
         else:
             note = "\\footnotemark[\\value{footnote}]"
-        return f"{note}{results[key]}".strip(), True
+        return f"{note}{results.get(key, '-')}".strip(), True
     else:
         return (
             format_value(

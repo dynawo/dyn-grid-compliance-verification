@@ -852,12 +852,15 @@ class PerformanceValidator(Validator):
             validation_values,
         )
 
-        exclusion_windows = self._get_exclusion_windows()
-        results["event_exclusion_window_start"] = exclusion_windows.event_start
-        results["event_exclusion_window_end"] = exclusion_windows.event_end
-        if exclusion_windows.clear_start != 0.0 or exclusion_windows.clear_end != 0.0:
-            results["clear_exclusion_window_start"] = exclusion_windows.clear_start
-            results["clear_exclusion_window_end"] = exclusion_windows.clear_end
+        try:
+            exclusion_windows = self._get_exclusion_windows()
+            results["event_exclusion_window_start"] = exclusion_windows.event_start
+            results["event_exclusion_window_end"] = exclusion_windows.event_end
+            if exclusion_windows.clear_start != 0.0 or exclusion_windows.clear_end != 0.0:
+                results["clear_exclusion_window_start"] = exclusion_windows.clear_start
+                results["clear_exclusion_window_end"] = exclusion_windows.clear_end
+        except KeyError:
+            pass
 
         if self.get_sim_type() == ELECTRIC_PERFORMANCE_SM:
             results["first_steady_pos"] = max(
