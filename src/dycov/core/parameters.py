@@ -9,14 +9,14 @@
 #
 
 import atexit
-from datetime import datetime, timedelta
 import getpass
 import logging
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import threading
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 from dycov.configuration.cfg import config
