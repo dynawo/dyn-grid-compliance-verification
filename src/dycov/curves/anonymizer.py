@@ -23,6 +23,8 @@ from dycov.sigpro.sigpro import lowpass_filter
 
 NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
+# One microsecond: finer than the 1 ms grid the curves are resampled to before any check.
+TIME_PRECISION = 6
 ORIGINAL_IMPLEMENTATION = False  # Set to True to use the original noise application method
 
 
@@ -697,7 +699,7 @@ def _is_nearly_flat(series: np.ndarray, threshold: float) -> bool:
     return (np.ptp(series) <= threshold) or (np.nanstd(series) <= threshold / 3.0)
 
 
-def _save_curve(curves: pd.DataFrame, path: Path, precision: int = 9):
+def _save_curve(curves: pd.DataFrame, path: Path, precision: int = TIME_PRECISION):
     # Create a copy to avoid modifying the original DataFrame
     curves_to_save = curves.copy()
 
@@ -756,6 +758,75 @@ def _rdp_mask_numpy(points: np.ndarray, epsilon: float) -> np.ndarray:
     return mask
 
 
+def _simplify_segment(segment: pd.DataFrame, compression: float) -> pd.DataFrame:
+    """Reduce a segment to the samples its signals need to keep their shape.
+
+    The signals of a curve share one time grid, so the segment keeps the union of what each
+    of them asks for, with epsilon = compression * signal_range.
+
+    Parameters
+    ----------
+    segment: pd.DataFrame
+        Piece of the curve to reduce, with a "time" column.
+    compression: float
+        Relative epsilon, as a fraction of each signal's range.
+
+    Returns
+    -------
+    pd.DataFrame
+        The reduced segment, its ends always kept.
+    """
+    if len(segment) <= 2:
+        return segment
+
+    time_values = segment["time"].to_numpy()
+    keep = {0, len(segment) - 1}
+    for column in segment.columns:
+        if column == "time":
+            continue
+        values = segment[column].to_numpy()
+        signal_range = float(np.ptp(values))
+        if signal_range < 1e-12:
+            continue
+        mask = _rdp_mask_numpy(np.column_stack([time_values, values]), compression * signal_range)
+        keep.update(np.where(mask)[0].tolist())
+
+    return segment.iloc[sorted(keep)].reset_index(drop=True)
+
+
+def _restore_event_points(
+    segment: pd.DataFrame, simplified: pd.DataFrame, min_points: int
+) -> pd.DataFrame:
+    """Bring the event segment back to `min_points` samples of the original curve.
+
+    The epsilon knows the shape of a signal but not where the test looks, and the event is
+    where it looks: a segment reduced below this floor is refilled with evenly spaced
+    samples of the original, never with interpolated ones.
+
+    Parameters
+    ----------
+    segment: pd.DataFrame
+        The event segment before reducing it.
+    simplified: pd.DataFrame
+        The same segment after reducing it.
+    min_points: int
+        Number of samples the event segment must keep.
+
+    Returns
+    -------
+    pd.DataFrame
+        The reduced segment, refilled when it fell below the floor.
+    """
+    if len(segment) <= min_points:
+        return segment
+    if len(simplified) >= min_points:
+        return simplified
+
+    refill = np.linspace(0, len(segment) - 1, min_points).astype(int)
+    kept = np.where(segment["time"].isin(simplified["time"]).to_numpy())[0]
+    return segment.iloc[sorted(set(kept.tolist()) | set(refill.tolist()))].reset_index(drop=True)
+
+
 def _simplify_curves(
     df: pd.DataFrame,
     event_time: float,
@@ -763,113 +834,44 @@ def _simplify_curves(
     compression: float = 0.005,
     min_event_points: int = 20,
 ) -> pd.DataFrame:
+    """Reduce a curve to the samples that carry its shape.
+
+    The curve is cut into what precedes the event, the event itself and what follows, so
+    that the event can be held to its own floor of samples; every piece is then reduced the
+    same way.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Input time series with a "time" column.
+    event_time: float
+        Start time of the event.
+    event_duration: float
+        Duration of the event.
+    compression: float
+        Relative epsilon, as a fraction of each signal's range.
+    min_event_points: int
+        Minimum number of samples to keep in the event segment.
+
+    Returns
+    -------
+    pd.DataFrame
+        The reduced curve.
     """
-    Explanation:
-        Simplifies a time series by collapsing flat regions and applying RDP
-        only during the event. Flat regions are reduced to two points using
-        a relative threshold based on `compression`. RDP uses epsilon =
-        compression * signal_range.
+    time_values = df["time"].to_numpy()
+    before = df[time_values <= event_time].reset_index(drop=True)
+    during = df[
+        (time_values > event_time) & (time_values <= event_time + event_duration)
+    ].reset_index(drop=True)
+    after = df[time_values > event_time + event_duration].reset_index(drop=True)
 
-    Parameters:
-        df : pd.DataFrame
-            Input time series with a 'time' column.
-        event_time : float
-            Start time of the event.
-        event_duration : float
-            Duration of the event.
-        compression : float
-            Relative epsilon for RDP and flat detection.
-        min_event_points : int
-            Minimum points to keep in the event zone.
-
-    Return:
-        pd.DataFrame
-            Simplified time series.
-    """
-
-    def collapse_flat(values, compression, flat_multipler):
-        """Return indices keeping only endpoints of flat subsegments."""
-        n = len(values)
-        if n <= 2:
-            return list(range(n))
-
-        signal_range = np.ptp(values)
-        flat_tol = compression * signal_range * flat_multipler
-
-        keep = []
-        start = 0
-        in_flat = False
-
-        for i in range(1, n):
-            dy = abs(values[i] - values[i - 1])
-
-            if dy <= flat_tol:
-                if not in_flat:
-                    in_flat = True
-                    start = i - 1
-            else:
-                if in_flat:
-                    keep.append(start)
-                    keep.append(i - 1)
-                    in_flat = False
-                keep.append(i)
-
-        if in_flat:
-            keep.append(start)
-            keep.append(n - 1)
-
-        return sorted(set(keep))
-
-    def apply_rdp(time_seg, values_seg, compression):
-        """Apply RDP with epsilon = compression * signal_range."""
-        signal_range = np.ptp(values_seg)
-        if signal_range < 1e-12:
-            return np.arange(len(values_seg))
-
-        epsilon = compression * signal_range
-        pts = np.column_stack([time_seg, values_seg])
-        mask = _rdp_mask_numpy(pts, epsilon)
-        return np.where(mask)[0]
-
-    time_vals = df["time"].to_numpy()
-
-    before_mask = time_vals <= event_time
-    during_mask = (time_vals > event_time) & (time_vals <= event_time + event_duration)
-    after_mask = time_vals > event_time + event_duration
-
-    df_before = df[before_mask].reset_index(drop=True)
-    df_during = df[during_mask].reset_index(drop=True)
-    df_after = df[after_mask].reset_index(drop=True)
-
-    def simplify_segment(df_seg, use_rdp, flat_multipler=0.01):
-        if len(df_seg) <= 2:
-            return df_seg
-
-        time_seg = df_seg["time"].to_numpy()
-        n = len(df_seg)
-
-        keep = set([0, n - 1])
-
-        for col in df_seg.columns:
-            if col == "time":
-                continue
-
-            values = df_seg[col].to_numpy()
-
-            if not use_rdp:
-                flat_idx = collapse_flat(values, compression, flat_multipler)
-                keep.update(flat_idx)
-
-            if use_rdp:
-                rdp_idx = apply_rdp(time_seg, values, compression)
-                keep.update(rdp_idx)
-
-        final_idx = sorted(keep)
-        return df_seg.iloc[final_idx].reset_index(drop=True)
-
-    df_before_s = simplify_segment(df_before, use_rdp=False)
-    df_during_s = simplify_segment(df_during, use_rdp=True)
-    df_after_s = simplify_segment(df_after, use_rdp=False)
-
-    df_final = pd.concat([df_before_s, df_during_s, df_after_s], ignore_index=True)
-    return df_final
+    return pd.concat(
+        [
+            _simplify_segment(before, compression),
+            _restore_event_points(
+                during, _simplify_segment(during, compression), min_event_points
+            ),
+            _simplify_segment(after, compression),
+        ],
+        ignore_index=True,
+    )
