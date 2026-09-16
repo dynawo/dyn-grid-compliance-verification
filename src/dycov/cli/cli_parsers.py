@@ -535,7 +535,7 @@ def _add_noisestd_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=float,
         default=0.0,
         help_msg="Standard deviation of the noise added to the curves, in pu"
-        " (recommended range: [0.01, 0.1]).",
+        " (default: 0.0, recommended range: [0.01, 0.1]).",
     )
 
 
@@ -591,7 +591,7 @@ def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
         "--compression",
         arg_type=float,
         default=None,
-        help_msg="Relative epsilon for curve simplification using the Visvalingam-Whyatt"
+        help_msg="Relative epsilon for curve simplification using the Ramer-Douglas-Peucker"
         " algorithm, as a fraction of each signal's range"
         " (e.g. 0.001 = 0.1%%). Default: None (no compression).",
     )
