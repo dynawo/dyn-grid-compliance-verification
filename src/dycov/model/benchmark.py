@@ -346,12 +346,19 @@ class Benchmark:
         )
         event_markers = [EventMarker(source_key="time_85U")] if has_85u else []
 
+        tolerance_band = None
+        if "time_5U" in validations:
+            tolerance_band = FinalValueBand(upper=5.0, lower=5.0, color="#c44e52")
+        elif "time_10U" in validations:
+            tolerance_band = FinalValueBand(upper=10.0, lower=10.0, color="#55a868")
+
         self._figures_description.append(
             FigureDescription(
                 name="fig_V",
                 variables=[{"type": "bus", "variable": "Voltage"}],
                 ylabel="V (pu base Unom)",
                 event_markers=event_markers,
+                tolerance_band=tolerance_band,
             )
         )
 
