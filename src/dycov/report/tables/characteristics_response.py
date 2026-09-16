@@ -83,13 +83,16 @@ def _time_error(
         apply_formatter=True,
         default_value="",
     )
-    check = printable.format_compound_check(results[variable + "_check"])
+    check_value = results.get(variable + "_check", "-")
+    check = printable.format_compound_check(check_value)
     errors_map.append(
         [
             name,
             simulated_time,
             reference_time,
-            abs_error if results[variable + "_check"] else f"\\textcolor{{red}}{{ {abs_error} }}",
+            abs_error
+            if results.get(variable + "_check", True)
+            else f"\\textcolor{{red}}{{ {abs_error} }}",
             threshold,
             check,
         ]
