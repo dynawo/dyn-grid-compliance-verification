@@ -19,12 +19,15 @@ import pytest
 from dycov.curves.anonymizer import (
     _create_curves_files_ini_if_not_exists,
     _create_dict_file_if_not_exists,
+    _deripple_curves,
     _ensure_min_points,
     _extract_metadata_from_logs,
     _get_event_period_indices,
     _interior_times,
     _is_nearly_flat,
     _rdp_mask_numpy,
+    _remove_spikes,
+    _ripple_spans,
     _save_curve,
     _simplify_curves,
     anonymize,
@@ -599,3 +602,88 @@ def test_anonymize_with_compression_keeps_the_time_range(tmp_dirs):
     assert df["time"].iloc[0] == pytest.approx(src["time"].iloc[0])
     assert df["time"].iloc[-1] == pytest.approx(src["time"].iloc[-1])
     assert len(df) <= len(src)
+
+
+# ---------------------------
+# Simulation oscillation
+# ---------------------------
+
+
+@pytest.fixture()
+def rippled_curve() -> pd.DataFrame:
+    """A step, then half a second of the oscillation a converter model adds to it."""
+    t = np.arange(0.0, 10.0, 1e-3)
+    burst = (t >= 5.0) & (t < 5.5)
+    return pd.DataFrame(
+        {
+            "time": t,
+            "signal1": np.where(t < 5.0, 1.0, 0.5) + burst * 0.4 * np.sin(2 * np.pi * 15.0 * t),
+        }
+    )
+
+
+def test_ripple_spans_finds_the_oscillation(rippled_curve):
+    spans = _ripple_spans(rippled_curve["time"].to_numpy(), rippled_curve["signal1"].to_numpy())
+
+    assert len(spans) == 1
+    assert spans[0][0] >= 5.0
+    assert spans[0][1] <= 5.6
+
+
+def test_ripple_spans_ignores_a_curve_that_only_steps():
+    t = np.arange(0.0, 10.0, 1e-3)
+    values = np.where(t < 5.0, 1.0, 0.5)
+
+    assert _ripple_spans(t, values) == []
+
+
+def test_remove_spikes_replaces_a_one_sample_excursion():
+    values = np.array([1.0, 1.0, 1.0, 2.5, 1.0, 1.0])
+
+    without_spikes = _remove_spikes(values)
+
+    assert without_spikes[3] == pytest.approx(1.0)
+    assert list(without_spikes[:3]) == [1.0, 1.0, 1.0]
+
+
+def test_remove_spikes_keeps_a_step():
+    values = np.array([1.0, 1.0, 1.0, 0.5, 0.5, 0.5])
+
+    assert list(_remove_spikes(values)) == list(values)
+
+
+def test_deripple_curves_removes_the_oscillation(rippled_curve):
+    result = _deripple_curves(rippled_curve, cutoff=5.0)
+
+    assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []
+
+
+def test_deripple_curves_leaves_the_rest_of_the_curve_alone(rippled_curve):
+    result = _deripple_curves(rippled_curve, cutoff=5.0)
+
+    time = rippled_curve["time"].to_numpy()
+    away = (time < 4.8) | (time > 5.8)
+    difference = np.abs(
+        result["signal1"].to_numpy()[away] - rippled_curve["signal1"].to_numpy()[away]
+    )
+    assert float(difference.max()) < 1e-3
+
+
+def test_deripple_curves_keeps_every_sample(rippled_curve):
+    result = _deripple_curves(rippled_curve, cutoff=5.0)
+
+    assert list(result["time"]) == list(rippled_curve["time"])
+    assert list(result.columns) == list(rippled_curve.columns)
+
+
+def test_anonymize_deripples_the_curves_when_asked(tmp_dirs, rippled_curve):
+    curves, out = tmp_dirs
+    rippled_curve.to_csv(curves / "rippled.csv", sep=";", index=False)
+    (curves / "rippled.log").write_text(
+        "sim_t_event_start=5.0\nfault_duration=0.5\nfrequency_sampling=50.0\n", encoding="utf-8"
+    )
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves, deripple=5.0)
+
+    result = pd.read_csv(out / "rippled.csv", sep=";")
+    assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []
