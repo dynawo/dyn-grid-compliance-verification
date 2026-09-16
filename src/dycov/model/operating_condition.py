@@ -9,6 +9,7 @@
 #
 
 import logging
+import json
 from pathlib import Path
 
 from dycov.configuration.cfg import config
@@ -79,9 +80,12 @@ class OperatingCondition:
         if not validator.has_validations():
             results["compliance"] = None
 
-        if dycov_logging.get_logger("OperatingCondition").getEffectiveLevel() != logging.DEBUG:
-            with open(working_oc_dir / "results.json", "w") as outfile:
-                outfile.write(str(results))
+        if dycov_logging.get_logger("OperatingCondition").getEffectiveLevel() == logging.DEBUG:
+            keys_to_exclude = {"curves", "reference_curves", "curves_error"}
+            results_for_json = {k: v for k, v in results.items() if k not in keys_to_exclude}
+
+            with open(working_oc_dir / "results.json", "w", encoding="utf-8") as outfile:
+                json.dump(results_for_json, outfile, indent=4)
 
         return results
 
