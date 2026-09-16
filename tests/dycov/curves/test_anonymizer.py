@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,7 @@ from dycov.curves.anonymizer import (
     _create_curves_files_ini_if_not_exists,
     _create_dict_file_if_not_exists,
     _ensure_min_points,
+    _extract_metadata_from_logs,
     _get_event_period_indices,
     _interior_times,
     _is_nearly_flat,
@@ -182,6 +184,41 @@ def test_ini_and_dict_created(tmp_path):
 
     assert (curves / "CurvesFiles.ini").exists()
     assert (curves / "curveA.dict").exists()
+
+
+def test_metadata_comes_from_the_simulation_record(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+
+    create_flat_csv_and_log(curves, "curveA")
+    metadata = _extract_metadata_from_logs(curves)
+
+    assert metadata["curveA"]["sim_t_event_start"] == 1.0
+    assert metadata["curveA"]["fault_duration"] == 2.0
+    assert metadata["curveA"]["frequency_sampling"] == 50.0
+
+
+def test_dict_created_without_a_simulation_record_warns(tmp_path, caplog):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = curves / "curveA.csv"
+    csv.write_text("time;signal1\n0.0;1.0\n", encoding="utf-8")
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file_if_not_exists(csv, {})
+
+    assert "No simulation record found" in caplog.text
+    assert "sim_t_event_start = 0.0" in (curves / "curveA.dict").read_text()
+
+
+def test_metadata_without_a_simulation_record_is_empty(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    (curves / "curveA.csv").write_text("time;signal1\n0.0;1.0\n", encoding="utf-8")
+
+    metadata = _extract_metadata_from_logs(curves)
+
+    assert metadata == {}
 
 
 def test_empty_folder_does_not_fail(tmp_path):

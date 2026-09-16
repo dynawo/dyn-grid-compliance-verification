@@ -368,9 +368,11 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
         )
         return
 
-    # Ensure metadata for this stem exists, provide defaults if not.
-    # This scenario should ideally not happen if _extract_metadata_from_log is
-    # called first for all relevant logs, but acts as a safeguard.
+    if csv_file.stem not in metadata:
+        dycov_logging.get_logger("Anonymizer").warning(
+            f"No simulation record found for {csv_file.name}: its dictionary declares the event "
+            f"at t = 0, which is almost certainly wrong. Check the results directory."
+        )
     stem_metadata = metadata.get(
         csv_file.stem,
         {
@@ -446,10 +448,10 @@ def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
         }
         with open(log_file, "r") as log_f:
             for line in log_f:
-                if "sim_t_event_start" in line:
-                    metadata[stem]["sim_t_event_start"] = float(line.split("=")[-1])
-                elif "fault_duration" in line:
-                    metadata[stem]["fault_duration"] = float(line.split("=")[-1])
+                for name in ("sim_t_event_start", "fault_duration", "frequency_sampling"):
+                    if name in line:
+                        metadata[stem][name] = float(line.split("=")[-1])
+                        break
         log_file.unlink()  # Delete the log file after extraction
         dycov_logging.get_logger("Anonymizer").debug(
             f"Extracted metadata from {log_file} and deleted it."
