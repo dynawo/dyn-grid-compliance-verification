@@ -115,6 +115,9 @@ Curve Anonymizer
 
 The anonymizer produces a version of your curves with generic signal names
 and an added noise signal, useful for sharing data without exposing
-proprietary information. You would use the command ``dycov anonymize``:
+proprietary information. With ``--deripple`` it also removes the oscillation a
+simulation adds to its own curves, which a reference curve should not carry:
+the signal is left untouched wherever it does not oscillate. You would use the
+command ``dycov anonymize``:
 
 .. include:: helps/anonymize.rst
