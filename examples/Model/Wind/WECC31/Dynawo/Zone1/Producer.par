@@ -156,8 +156,8 @@
     <par type="DOUBLE" name="WT3_Spd4" value="1"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WT3_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT3_RLvTrPu" value="0.015"/>
-    <par type="DOUBLE" name="WT3_XLvTrPu" value="0.06"/>
+    <par type="DOUBLE" name="WT3_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT3_XLvTrPu" value="0"/>
     <!-- General -->
     <par type="DOUBLE" name="WT3_SNom" value="4.0"/>
   </set>
