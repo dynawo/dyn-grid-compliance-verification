@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 
+import os
 import atexit
 import getpass
 import logging
@@ -23,6 +24,14 @@ from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
+
+
+def _is_process_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
 
 
 def _purge_stale_temp_dirs(
@@ -42,8 +51,21 @@ def _purge_stale_temp_dirs(
                 if exclude is not None and path == exclude:
                     continue
                 st = entry.stat()
+
                 if st.st_mtime <= threshold:
-                    shutil.rmtree(path, ignore_errors=True)
+                    pid_file = path / "run.pid"
+                    process_active = False
+
+                    if pid_file.exists():
+                        try:
+                            pid = int(pid_file.read_text().strip())
+                            if _is_process_running(pid):
+                                process_active = True
+                        except ValueError:
+                            pass
+
+                    if not process_active:
+                        shutil.rmtree(path, ignore_errors=True)
             except Exception:
                 pass
     except Exception:
@@ -87,6 +109,9 @@ class Parameters:
         prefix = f"{tmp_path}_{username}_"
         _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(minutes=30))
         self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
+
+        pid_file = self._working_dir / "run.pid"
+        pid_file.write_text(str(os.getpid()))
 
         # The parameter is initialized in the child class
         self._producer: Optional[Producer] = None
