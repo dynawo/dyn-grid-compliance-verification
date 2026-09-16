@@ -1118,6 +1118,47 @@ def test_validate_without_reference_curves_marks_the_results_as_incomplete(tmp_p
     assert "reference_curves" not in results
 
 
+def test_validate_without_reference_curves_skips_the_comparison(tmp_path):
+    curves_manager = _make_window_manager(windows_raise=True)
+    curves_manager._curves["reference"] = pd.DataFrame()
+    validator = _make_validator(
+        validations=["mae_voltage_1P"], zone=3, curves_manager=curves_manager
+    )
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 1.0,
+        "connect_to": "ActivePowerSetpointPu",
+        "step_value": 0.1,
+    }
+
+    results = validator.validate("oc", tmp_path, "outputs", event_params, has_reference=False)
+
+    assert results["is_invalid_test"] is False
+    assert results["sim_t_event_start"] == 1.0
+
+
+def test_validate_without_reference_curves_reports_the_checks_as_not_available(tmp_path):
+    curves_manager = _make_window_manager(windows_raise=True)
+    curves_manager._curves["reference"] = pd.DataFrame()
+    validator = _make_validator(
+        validations=["active_power_recovery", "reaction_time"],
+        zone=3,
+        curves_manager=curves_manager,
+    )
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 1.0,
+        "connect_to": "ActivePowerSetpointPu",
+        "step_value": 0.1,
+    }
+
+    results = validator.validate("oc", tmp_path, "outputs", event_params, has_reference=False)
+
+    assert results["t_P90_check"] == "N/A"
+    assert results["reaction_time_check"] == "N/A"
+    assert results["compliance"] is False
+
+
 def test_validate_reports_the_setpoint_tracking_flag_to_the_signal_processing(tmp_path):
     curves_manager = _make_window_manager()
     validator = _make_validator(

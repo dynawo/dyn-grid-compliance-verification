@@ -462,6 +462,15 @@ class ModelValidator(Validator):
 
         return results
 
+    def __without_reference(self, start_event: float) -> dict:
+        """Every check of this validator compares against a reference curve.
+
+        Without one there is nothing to compute, but the test is still reported: each check
+        is marked as not available. The test itself is not invalid, so that the benchmark can
+        report it as missing its reference curves.
+        """
+        return {"t_event_start": start_event, "is_invalid_test": False}
+
     def __create_results(
         self,
         compliance_values: dict,
@@ -778,15 +787,19 @@ class ModelValidator(Validator):
             check_results["setpoint_tracking_reactive_power_name"] = "Q"
 
         if compliance_list.contains_key(["active_power_recovery"], self._validations):
-            check_results["t_P90_error"] = compliance_values["t_P90_error"]
-            t_P90_threshold = min(compliance_values["t_P90_ref"] * 0.1, 100 / 1000)
-            check_results["t_P90_threshold"] = t_P90_threshold
-            check_results["t_P90_check"] = (
-                compliance_values["t_P90_error"] < t_P90_threshold
-                if (compliance_values["t_P90_ref"] > 0)
-                else True
-            )
-            check_results["compliance"] &= check_results["t_P90_check"]
+            if "t_P90_error" in compliance_values:
+                check_results["t_P90_error"] = compliance_values["t_P90_error"]
+                t_P90_threshold = min(compliance_values["t_P90_ref"] * 0.1, 100 / 1000)
+                check_results["t_P90_threshold"] = t_P90_threshold
+                check_results["t_P90_check"] = (
+                    compliance_values["t_P90_error"] < t_P90_threshold
+                    if (compliance_values["t_P90_ref"] > 0)
+                    else True
+                )
+                check_results["compliance"] &= check_results["t_P90_check"]
+            else:
+                check_results["t_P90_check"] = "N/A"
+                check_results["compliance"] = False
 
         return check_results
 
@@ -876,14 +889,18 @@ class ModelValidator(Validator):
         if event_params["connect_to"] == "NetworkFrequencyPu":
             freq_peak = float(event_params["step_value"])
 
-        model_results = self.__calculate(
-            self._producer.get_zone(),
-            event_params["start_time"],
-            event_params["duration_time"],
-            freq0,
-            freq_peak,
-            event_params["connect_to"],
-            abs(self._setpoint_variation),
+        model_results = (
+            self.__calculate(
+                self._producer.get_zone(),
+                event_params["start_time"],
+                event_params["duration_time"],
+                freq0,
+                freq_peak,
+                event_params["connect_to"],
+                abs(self._setpoint_variation),
+            )
+            if has_reference
+            else self.__without_reference(event_params["start_time"])
         )
 
         results = self.__check(

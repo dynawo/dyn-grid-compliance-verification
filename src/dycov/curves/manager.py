@@ -303,6 +303,35 @@ class CurvesManager:
             availability=availability,
         )
 
+    def __process_calculated_curves(
+        self,
+        csv_calculated_curves: pd.DataFrame,
+        working_path: Path,
+        event_params: dict,
+        setpoint_tracking_controlled_magnitude: bool,
+    ) -> None:
+        """Window and filter the calculated curves when there is no reference to compare with.
+
+        There is nothing to align to and no common time grid to reach, but the windows are
+        still needed: they bound the exclusion zones and every check made on the calculated
+        curves alone.
+        """
+        f_cutoff = config.get_float("GridCode", "cutoff", 15.0)
+        calculated_curves = sigpro.resample_to_fixed_step(csv_calculated_curves)
+        calculated_windows = signal_windows.calculate(
+            list(calculated_curves["time"]),
+            event_params["start_time"],
+            event_params["duration_time"],
+            setpoint_tracking_controlled_magnitude,
+        )
+        self._curves["calculated"] = sigpro.filter_curves(
+            calculated_curves, calculated_windows["sigpro"], f_cutoff
+        )
+        self._windows["calculated"] = calculated_windows
+
+        if dycov_logging.get_logger("Curves Manager").getEffectiveLevel() == logging.DEBUG:
+            self.__save_curve(self._curves["calculated"], working_path / "signal.csv")
+
     def apply_signal_processing(
         self,
         working_path: Path,
@@ -348,7 +377,14 @@ class CurvesManager:
         csv_reference_curves = self.__get_before_filters_curves("reference")
         if csv_reference_curves is None:
             dycov_logging.get_logger("Curves Manager").warning(
-                "Signal processing cannot be applied because reference curves are not available"
+                "Signal processing is applied to the calculated curves only, "
+                "because reference curves are not available"
+            )
+            self.__process_calculated_curves(
+                csv_calculated_curves,
+                working_path,
+                event_params,
+                setpoint_tracking_controlled_magnitude,
             )
             return
 
@@ -500,10 +536,12 @@ class CurvesManager:
             A dataframe with the selected window of reference curves.
         """
         t_from_calc, t_to_calc = self.__get_validation_windows("calculated", windows)
+        calculated = signal_windows.get(self.get_curves("calculated"), t_from_calc, t_to_calc)
+        if "validate" not in self._windows["reference"]:
+            return calculated, pd.DataFrame()
+
         t_from_ref, t_to_ref = self.__get_validation_windows("reference", windows)
-        return signal_windows.get(
-            self.get_curves("calculated"), t_from_calc, t_to_calc
-        ), signal_windows.get(self.get_curves("reference"), t_from_ref, t_to_ref)
+        return calculated, signal_windows.get(self.get_curves("reference"), t_from_ref, t_to_ref)
 
     def get_generator_u_dim(self) -> float:
         """Get the generator Udim.
