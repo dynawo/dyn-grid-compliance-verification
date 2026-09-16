@@ -84,6 +84,16 @@ class DummyCurvesManager:
     def get_curves(self, curve: str) -> pd.DataFrame:
         return self._curves[curve]
 
+    def get_exclusion_windows(self):
+        from unittest.mock import MagicMock
+
+        mock_windows = MagicMock()
+        mock_windows.event_start = 0.0
+        mock_windows.event_end = 0.0
+        mock_windows.clear_start = 0.0
+        mock_windows.clear_end = 0.0
+        return mock_windows
+
 
 class DummyElement:
     def __init__(self, element_id):
@@ -587,7 +597,7 @@ def test_calculate_gathers_every_enabled_validation():
         calculated=_make_avr_curves([1.0] * 5, [1.0] * 5),
     )
 
-    compliance_values = validator._PerformanceValidator__calculate(1.0)
+    compliance_values = validator._PerformanceValidator__calculate(1.0, 1.15)
 
     assert compliance_values["time_5u"] == pytest.approx(1.0)
     assert compliance_values["AVR_5_check"] is True
