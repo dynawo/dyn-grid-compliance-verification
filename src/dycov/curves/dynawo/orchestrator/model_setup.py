@@ -495,7 +495,8 @@ class ModelSetup:
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
             step_value = self._owner.obtain_value(
-                str(config.get_value(config_section, "setpoint_step_value"))
+                str(config.get_value(config_section, "setpoint_step_value")),
+                origin=(config_section, "setpoint_step_value"),
             )
             if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
                 step_value = [step_value * self._s_nref / gen.s_nom for gen in producer.generators]

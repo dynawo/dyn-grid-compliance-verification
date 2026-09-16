@@ -20,6 +20,7 @@ from dycov.curves.dynawo.orchestrator.bisection import (
     BisectionEngine,
 )
 from dycov.curves.voltage_dip import VoltDipResult
+from dycov.model.parameters import SimulationError, SimulationOutcomeError
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -379,8 +380,10 @@ class TestFindBoltedFault:
         simulate_fn = MagicMock(return_value=_succeed_outcome())
 
         with _fake_isolated_copy(engine):
-            with pytest.raises(ValueError, match="Voltage curve missing"):
+            with pytest.raises(SimulationOutcomeError, match="Voltage curve missing") as error:
                 self._find(engine, simulate_fn, MagicMock())
+
+        assert error.value.error == SimulationError.VOLTAGE_CURVE_MISSING
 
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_residual_voltage")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
@@ -600,7 +603,9 @@ class TestFindHizFault:
         with _fake_isolated_copy(engine):
             with patch.object(engine, "_is_bisection_complete", return_value=True):
                 with patch.object(engine, "_modify_fault"):
-                    with pytest.raises(ValueError, match="Voltage curve missing"):
+                    with pytest.raises(
+                        SimulationOutcomeError, match="Voltage curve missing"
+                    ) as error:
                         engine.find_hiz_fault(
                             Path("/out"),
                             Path("/work"),
@@ -613,6 +618,8 @@ class TestFindHizFault:
                             simulate_fn,
                             reset_fn,
                         )
+
+        assert error.value.error == SimulationError.VOLTAGE_CURVE_MISSING
 
     def _run_until_correct(self, engine, mock_cvd, simulate_outcomes, classifications):
         """Runs find_hiz_fault with the given simulation/classification sequences."""

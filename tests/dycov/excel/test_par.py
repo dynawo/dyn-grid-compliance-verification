@@ -21,23 +21,43 @@ from dycov.excel import par
 def test_converter_par_set_prefix_control_snom(zone1, named):
     control = [{"name": "Kqp", "type": "DOUBLE", "value": "1"}]
 
-    par_id, params = par.converter_par_set("PV_Array", "photovoltaics_", control, zone1, "100")
+    par_id, params = par.converter_par_set(
+        "PV_Array",
+        "photovoltaics_",
+        control,
+        zone1,
+        "100",
+        "PhotovoltaicsWeccCurrentSourceNoPlantControl",
+    )
 
     values = named(params)
     assert par_id == "PV_Array"
     assert values["photovoltaics_Kqp"] == "1"  # control param, prefixed, value verbatim
     assert values["photovoltaics_ConverterLVControl"] == "true"
     assert values["photovoltaics_SNom"] == pytest.approx(100.0)
-    # The model's own transformer is always emitted, from the group transformer's Z_cc_TG.
-    assert values["photovoltaics_XLvTrPu"] == pytest.approx(0.1)
+    # With LV control the unit's own branch is zeroed: the external block is its transformer.
+    assert values["photovoltaics_XLvTrPu"] == pytest.approx(0.0)
     assert values["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
 
 
 def test_converter_par_set_writes_ppclocal_only_for_the_plant_model(zone1, named):
     # PPCLocal has no template row: the plant (Zone3) models define it, the turbine ones do not.
-    _id, turbine = par.converter_par_set("PV_Array", "photovoltaics_", [], zone1, "100")
+    _id, turbine = par.converter_par_set(
+        "PV_Array",
+        "photovoltaics_",
+        [],
+        zone1,
+        "100",
+        "PhotovoltaicsWeccCurrentSourceNoPlantControl",
+    )
     _id, plant = par.converter_par_set(
-        "PV_Array", "photovoltaics_", [], zone1, "100", plant_model=True
+        "PV_Array",
+        "photovoltaics_",
+        [],
+        zone1,
+        "100",
+        "PhotovoltaicsWeccCurrentSource",
+        plant_model=True,
     )
 
     assert "photovoltaics_PPCLocal" not in named(turbine)
@@ -48,10 +68,21 @@ def test_converter_par_set_writes_ppclocal_only_for_the_plant_model(zone1, named
 def test_converter_par_set_lvtr_is_on_the_model_base_not_snref(zone1, named):
     # Z_cc_TG is pu on SnZone1 and the model reads RLvTrPu on its own SNom, so the value is never
     # rebased to SnRef and comes out the same for the turbine and the plant.
-    zone1.update({"SnZone1": "4", "Z_cc_TG": "0.06185", "R_cc_TG / X_cc_TG": "0.25"})
+    zone1.update(
+        {
+            "SnZone1": "4",
+            "Z_cc_TG": "0.06185",
+            "R_cc_TG / X_cc_TG": "0.25",
+            "ConverterLVControl": "False",
+        }
+    )
 
-    _id, turbine = par.converter_par_set("Wind_Turbine", "WT4B_", [], zone1, zone1["SnZone1"])
-    _id, plant = par.converter_par_set("Wind_Turbine", "WTG4B_", [], zone1, "90", plant_model=True)
+    _id, turbine = par.converter_par_set(
+        "Wind_Turbine", "WT4B_", [], zone1, zone1["SnZone1"], "WT4BWeccCurrentSource"
+    )
+    _id, plant = par.converter_par_set(
+        "Wind_Turbine", "WTG4B_", [], zone1, "90", "WTG4BWeccCurrentSource", plant_model=True
+    )
 
     assert named(turbine)["WT4B_XLvTrPu"] == pytest.approx(0.06, abs=1e-4)
     assert named(turbine)["WT4B_RLvTrPu"] == pytest.approx(0.015, abs=1e-4)
@@ -60,16 +91,69 @@ def test_converter_par_set_lvtr_is_on_the_model_base_not_snref(zone1, named):
 
 
 def test_converter_par_set_writes_the_model_transformer_whatever_the_flag(zone1, named):
-    # The parameters have no Dynawo default, so they are written even when the model zeroes the
-    # branch and the external block carries the transformer (ConverterLVControl=True).
+    # The parameters have no Dynawo default, so they are written either way: with the value when
+    # the converter controls on the MV side, and zeroed when its transformer is the external block.
     zone1.update({"ConverterLVControl": "False", "Z_cc_TG": "0.05"})
 
-    _id, params = par.converter_par_set("PV_Array", "photovoltaics_", [], zone1, "100")
+    _id, params = par.converter_par_set(
+        "PV_Array",
+        "photovoltaics_",
+        [],
+        zone1,
+        "100",
+        "PhotovoltaicsWeccCurrentSourceNoPlantControl",
+    )
 
     values = named(params)
     assert values["photovoltaics_ConverterLVControl"] == "false"
     assert values["photovoltaics_XLvTrPu"] == pytest.approx(0.05)  # Z_cc_TG, on the model's base
     assert values["photovoltaics_RLvTrPu"] == pytest.approx(0.0)
+
+
+def test_converter_par_set_zeroes_the_unit_branch_under_lv_control(zone1, named):
+    # Nothing reads it: the unit has no PCS branch, and its own transformer is the external block.
+    zone1.update({"ConverterLVControl": "True", "Z_cc_TG": "0.05"})
+
+    _id, turbine = par.converter_par_set(
+        "PV_Array",
+        "photovoltaics_",
+        [],
+        zone1,
+        "100",
+        "PhotovoltaicsWeccCurrentSourceNoPlantControl",
+    )
+    _id, plant = par.converter_par_set(
+        "PV_Array",
+        "photovoltaics_",
+        [],
+        zone1,
+        "100",
+        "PhotovoltaicsWeccCurrentSource",
+        plant_model=True,
+    )
+
+    assert named(turbine)["photovoltaics_XLvTrPu"] == pytest.approx(0.0)
+    # The plant does read it, through its PCS branch, so there it keeps the value.
+    assert named(plant)["photovoltaics_XLvTrPu"] == pytest.approx(0.05)
+
+
+def test_converter_par_set_names_the_transformer_as_each_family_does(zone1, named):
+    zone1.update({"ConverterLVControl": "False", "Z_cc_TG": "0.05"})
+
+    _id, unit = par.converter_par_set(
+        "Wind_Turbine", "WT_", [], zone1, "4", "IECWT4BCurrentSource2020"
+    )
+    _id, plant = par.converter_par_set(
+        "Wind_Turbine", "WPP_", [], zone1, "90", "IECWPP4BCurrentSource2020", plant_model=True
+    )
+
+    # The IEC unit has no LV-transformer branch: it takes the impedance on the series one.
+    assert named(unit)["WT_XesPu"] == pytest.approx(0.05)
+    assert "WT_XLvTrPu" not in named(unit)
+    assert named(plant)["WPP_XLvTrPu"] == pytest.approx(0.05)
+    # Both declare a shunt the workbook does not describe: a transformer with no shunt branch.
+    assert named(unit)["WT_GesPu"] == 0
+    assert named(plant)["WPP_BLvTrPu"] == 0
 
 
 def test_main_transformer_par_set(zone3, named):

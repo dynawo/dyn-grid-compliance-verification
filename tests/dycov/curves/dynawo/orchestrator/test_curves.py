@@ -23,6 +23,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
+from dycov.model.parameters import SimulationError, SimulationOutcomeError
+
 # We patch at the orchestrator module level throughout.
 _MODULE = "dycov.curves.dynawo.orchestrator.curves"
 
@@ -491,19 +493,19 @@ class TestObtainSimulatedCurve:
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.config")
-    def test_value_error_captured_in_simulation_result(self, mc, mock_mvd):
+    def test_simulation_outcome_error_captured_in_simulation_result(self, mc, mock_mvd):
         mc.get_value.side_effect = _cfg_get_value
         mc.get_float.side_effect = _cfg_get_float
         mc.get_boolean.return_value = False
 
         curves, ms, be, outcome, _ = self._prepare()
-        ms.complete_model.side_effect = ValueError("Fault simulation fails")
+        ms.complete_model.side_effect = SimulationOutcomeError(
+            "Fault simulation fails", SimulationError.FAULT_SIMULATION_FAILS
+        )
         curves._DynawoCurves__prepare_oc_validation = MagicMock(
             return_value=(Path("/out"), Path("/jobs"))
         )
         curves._DynawoCurves__reset_solver = MagicMock()
-
-        from dycov.model.parameters import SimulationError
 
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             _, _, sim_result, _ = curves.obtain_simulated_curve(
@@ -511,6 +513,26 @@ class TestObtainSimulatedCurve:
             )
 
         assert sim_result.error == SimulationError.FAULT_SIMULATION_FAILS
+
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_rejected_value_definition_aborts_the_run(self, mc, mock_mvd):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_boolean.return_value = False
+
+        curves, ms, be, outcome, _ = self._prepare()
+        ms.complete_model.side_effect = ValueError(
+            "Unknown magnitude 'Pnom' in value definition '0.5*Pnom'."
+        )
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
+            with pytest.raises(ValueError, match="Unknown magnitude 'Pnom'"):
+                curves.obtain_simulated_curve(Path("/work"), "prod", "PCS1", "BM1", "OC1", 1.0)
 
     @patch(f"{_MODULE}.measure_voltage_dip", return_value=0.25)
     @patch(f"{_MODULE}.config")
