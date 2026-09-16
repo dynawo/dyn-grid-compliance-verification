@@ -428,6 +428,61 @@ def test_simplify_curves_keeps_more_points_with_a_tighter_compression(step_curve
     assert len(tight) >= len(loose)
 
 
+@pytest.fixture()
+def multi_signal_curve() -> pd.DataFrame:
+    """Several signals sharing one time grid, the shape of a generated curve set."""
+    t = np.linspace(0.0, 100.0, 5001)
+    return pd.DataFrame(
+        {
+            "time": t,
+            "voltage": np.where(t < 30.0, 1.0, 0.02),
+            "power": 0.8 + 0.01 * np.sin(2 * np.pi * t / 10.0),
+            "current": np.where(t < 30.0, 0.8, 1.2),
+        }
+    )
+
+
+def test_simplify_curves_reduces_a_curve_of_several_signals(multi_signal_curve):
+    result = _simplify_curves(
+        multi_signal_curve, event_time=30.0, event_duration=0.0, compression=0.01
+    )
+
+    assert len(result) < len(multi_signal_curve) / 10
+
+
+@pytest.fixture()
+def ramp_curve() -> pd.DataFrame:
+    """A straight line, which RDP reduces to its two ends whatever the epsilon."""
+    t = np.linspace(0.0, 100.0, 5001)
+    return pd.DataFrame({"time": t, "voltage": 0.01 * t})
+
+
+def test_simplify_curves_keeps_the_event_above_its_floor(ramp_curve):
+    result = _simplify_curves(
+        ramp_curve,
+        event_time=30.0,
+        event_duration=5.0,
+        compression=0.01,
+        min_event_points=20,
+    )
+
+    event = result[(result["time"] > 30.0) & (result["time"] <= 35.0)]
+    assert len(event) >= 20
+
+
+def test_simplify_curves_refills_the_event_with_original_samples(ramp_curve):
+    result = _simplify_curves(
+        ramp_curve,
+        event_time=30.0,
+        event_duration=5.0,
+        compression=0.01,
+        min_event_points=20,
+    )
+
+    event = result[(result["time"] > 30.0) & (result["time"] <= 35.0)]
+    assert set(event["time"]).issubset(set(ramp_curve["time"]))
+
+
 def test_simplify_curves_handles_a_constant_signal(step_curve):
     df = pd.DataFrame({"time": step_curve["time"], "voltage": np.ones(len(step_curve))})
 
@@ -498,6 +553,17 @@ def test_save_curve_writes_time_first_with_the_requested_precision(tmp_path):
     assert lines[0] == "time;signal1"
     assert lines[1].startswith("0.000;")
     assert lines[2].startswith("0.250;")
+
+
+def test_save_curve_writes_the_time_with_microsecond_precision(tmp_path):
+    df = pd.DataFrame({"time": [0.0, 0.0005], "signal1": [1.0, 1.0]})
+    path = tmp_path / "curve.csv"
+
+    _save_curve(df, path)
+
+    lines = path.read_text(encoding="utf-8").strip().splitlines()
+    assert lines[1].startswith("0.000000;")
+    assert lines[2].startswith("0.000500;")
 
 
 def test_save_curve_does_not_modify_the_input(tmp_path):
