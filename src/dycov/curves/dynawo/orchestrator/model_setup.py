@@ -92,6 +92,7 @@ class ModelSetup:
         self.tso_loads: list = []
         self.has_line: bool = False
         self.curves_dict: dict = {}
+        self.pdr: Optional[PdrParams] = None
 
         # Dynawo file handlers (re-created per operating condition)
         self._jobs_file = None
@@ -495,7 +496,8 @@ class ModelSetup:
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
             step_value = self._owner.obtain_value(
-                str(config.get_value(config_section, "setpoint_step_value"))
+                str(config.get_value(config_section, "setpoint_step_value")),
+                origin=(config_section, "setpoint_step_value"),
             )
             if connect_event_to in ["ActivePowerSetpointPu", "ReactivePowerSetpointPu"]:
                 step_value = [step_value * self._s_nref / gen.s_nom for gen in producer.generators]
@@ -640,7 +642,7 @@ class ModelSetup:
         )
 
         u_dim = self._owner.get_generator_u_dim()
-        pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
+        pdr = self.pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
         line_rpu, line_xpu = self._get_line(pcs_name, bm_name, oc_name)
 
         tso_lines = []

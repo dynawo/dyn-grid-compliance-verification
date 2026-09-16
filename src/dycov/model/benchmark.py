@@ -50,6 +50,18 @@ class Summary:
 _FAILED_RESULTS: dict = {"compliance": False, "curves": None}
 
 
+def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
+    match error:
+        case SimulationError.FAULT_SIMULATION_FAILS:
+            return Compliance.FaultSimulationFails
+        case SimulationError.FAULT_DIP_UNACHIEVABLE:
+            return Compliance.FaultDipUnachievable
+        case SimulationError.VOLTAGE_CURVE_MISSING:
+            return Compliance.VoltageCurveMissing
+        case _:
+            return Compliance.InvalidTest
+
+
 def _compliance_for_missing_curves(availability: CurvesAvailability) -> Compliance:
     match availability:
         case CurvesAvailability.NO_PRODUCER:
@@ -690,6 +702,81 @@ class Benchmark:
 
         return success, results, compliance
 
+    def __validate_operating_condition(
+        self, op_cond: OperatingCondition
+    ) -> tuple[bool, Compliance, dict]:
+        """Run one operating condition and turn its outcome into a compliance and its results.
+
+        Returns
+        -------
+        tuple[bool, Compliance, dict]
+            (success of the operating condition, its compliance, its results)
+        """
+        curves_result = self.__get_curves_check_result(
+            self._validator.get_measurement_names(),
+            self._name,
+            op_cond.get_name(),
+        )
+        sim = curves_result.simulation_result
+        dycov_logging.get_logger("Benchmark").debug(
+            f"Success: {sim.success} "
+            f"Has curves: {curves_result.availability} "
+            f"Time exceeds: {sim.time_exceeds} "
+            f"Error: {sim.error} "
+        )
+
+        op_cond_success = False
+        if sim.error is not None:
+            compliance = _compliance_for_simulation_error(sim.error)
+            results = {**_FAILED_RESULTS}
+        elif not sim.appicable:
+            compliance = Compliance.NotApplicableTest
+            results = {**_FAILED_RESULTS}
+        elif sim.time_exceeds:
+            compliance = Compliance.SimulationTimeOut
+            results = {**_FAILED_RESULTS}
+        elif curves_result.availability == CurvesAvailability.ALL:
+            op_cond_success, results, compliance = self.__validate(
+                op_cond,
+                curves_result.working_oc_dir,
+                curves_result.jobs_output_dir,
+                curves_result.event_params,
+                sim.success,
+                sim.has_simulated_curves,
+            )
+            results["solver"] = self._curves_manager.get_solver()
+        elif curves_result.availability == CurvesAvailability.NO_REFERENCE:
+            op_cond_success, results, compliance = self.__validate(
+                op_cond,
+                curves_result.working_oc_dir,
+                curves_result.jobs_output_dir,
+                curves_result.event_params,
+                sim.success,
+                sim.has_simulated_curves,
+                has_reference=False,
+            )
+            if compliance.show_report():
+                compliance = _compliance_for_missing_curves(curves_result.availability)
+            results["solver"] = self._curves_manager.get_solver()
+        else:
+            compliance = _compliance_for_missing_curves(curves_result.availability)
+            results = {**_FAILED_RESULTS}
+
+        results["missed_columns"] = self._curves_manager.get_missed_curves("reference")
+        if results["missed_columns"] and compliance.show_report():
+            compliance = Compliance.InvalidTest
+        results["summary"] = compliance
+
+        if self._validator.is_defined_imax_reac():
+            gen_imax = self._curves_manager.get_generators_imax()
+            voltage_dip = self._curves_manager.get_voltage_dip()
+            if voltage_dip is not None and gen_imax is not None:
+                results["reactive_current_target"] = {
+                    key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
+                }
+
+        return op_cond_success, compliance, results
+
     def validate(
         self,
         summary_list: list,
@@ -725,74 +812,16 @@ class Benchmark:
                     benchmark=self._name,
                     oc=op_cond.get_name(),
                 )
-            curves_result = self.__get_curves_check_result(
-                self._validator.get_measurement_names(),
-                self._name,
-                op_cond.get_name(),
-            )
-            sim = curves_result.simulation_result
-            dycov_logging.get_logger("Benchmark").debug(
-                f"Success: {sim.success} "
-                f"Has curves: {curves_result.availability} "
-                f"Time exceeds: {sim.time_exceeds} "
-                f"Error: {sim.error} "
-            )
-
-            if sim.error is not None:
+            try:
+                op_cond_success, compliance, results = self.__validate_operating_condition(op_cond)
+            except Exception as error:
+                dycov_logging.get_logger("Benchmark").error(
+                    f"Operating condition not evaluated: {error}"
+                )
+                op_cond_success = False
                 compliance = Compliance.InvalidTest
-                match sim.error:
-                    case SimulationError.FAULT_SIMULATION_FAILS:
-                        compliance = Compliance.FaultSimulationFails
-                    case SimulationError.FAULT_DIP_UNACHIEVABLE:
-                        compliance = Compliance.FaultDipUnachievable
-                    case _:
-                        pass
-                results = {**_FAILED_RESULTS}
-            elif not sim.appicable:
-                compliance = Compliance.NotApplicableTest
-                results = {**_FAILED_RESULTS}
-            elif sim.time_exceeds:
-                compliance = Compliance.SimulationTimeOut
-                results = {**_FAILED_RESULTS}
-            elif curves_result.availability == CurvesAvailability.ALL:
-                op_cond_success, results, compliance = self.__validate(
-                    op_cond,
-                    curves_result.working_oc_dir,
-                    curves_result.jobs_output_dir,
-                    curves_result.event_params,
-                    sim.success,
-                    sim.has_simulated_curves,
-                )
-                results["solver"] = self._curves_manager.get_solver()
-                success |= op_cond_success
-            elif curves_result.availability == CurvesAvailability.NO_REFERENCE:
-                op_cond_success, results, compliance = self.__validate(
-                    op_cond,
-                    curves_result.working_oc_dir,
-                    curves_result.jobs_output_dir,
-                    curves_result.event_params,
-                    sim.success,
-                    sim.has_simulated_curves,
-                    has_reference=False,
-                )
-                if compliance.show_report():
-                    compliance = _compliance_for_missing_curves(curves_result.availability)
-                results["solver"] = self._curves_manager.get_solver()
-                success |= op_cond_success
-            else:
-                compliance = _compliance_for_missing_curves(curves_result.availability)
-                results = {**_FAILED_RESULTS}
-
-            results["summary"] = compliance
-            results["missed_columns"] = self._curves_manager.get_missed_curves("reference")
-
-            if self._validator.is_defined_imax_reac():
-                gen_imax = self._curves_manager.get_generators_imax()
-                voltage_dip = self._curves_manager.get_voltage_dip()
-                if voltage_dip is not None and gen_imax is not None:
-                    results["reactive_current_target"] = {
-                        key: min(2 * voltage_dip, gen_imax[key]) for key in gen_imax
-                    }
+                results = {**_FAILED_RESULTS, "summary": compliance, "missed_columns": []}
+            success |= op_cond_success
 
             summary_list.append(
                 Summary(
