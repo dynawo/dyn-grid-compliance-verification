@@ -748,6 +748,12 @@ class PerformanceValidator(Validator):
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
             }
         """
+        self._curves_manager.apply_signal_processing(
+            working_path,
+            event_params,
+            False,
+        )
+
         # Validations common to all Pcs
         (
             steady_p,
