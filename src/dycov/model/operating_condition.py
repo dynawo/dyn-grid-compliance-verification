@@ -8,8 +8,8 @@
 #     demiguelm@aia.es
 #
 
-import logging
 import json
+import logging
 from pathlib import Path
 
 from dycov.configuration.cfg import config
