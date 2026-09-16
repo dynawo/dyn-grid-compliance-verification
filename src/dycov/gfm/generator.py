@@ -7,8 +7,9 @@
 #     demiguelm@aia.es
 
 import logging
+import signal
+import multiprocessing
 import sys
-from multiprocessing import Pool
 from pathlib import Path
 
 from dycov.configuration.cfg import config
@@ -16,6 +17,12 @@ from dycov.files import manage_files
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging import dycov_logging
 from dycov.model.pcs import Pcs
+
+
+def _gfm_worker_initializer(log_level):
+    """Workers ignore SIGINT; main process coordinates shutdown."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    logging.getLogger().setLevel(log_level)
 
 
 def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
@@ -169,7 +176,13 @@ class GFMGeneration:
             dycov_logging.get_logger("GFMGeneration").info(
                 f"Generating envelopes in parallel using {num_processes} processes."
             )
-            with Pool(processes=num_processes) as pool:
+            current_log_level = logging.getLogger().getEffectiveLevel()
+
+            with multiprocessing.Pool(
+                processes=num_processes,
+                initializer=_gfm_worker_initializer,
+                initargs=(current_log_level,),
+            ) as pool:
                 pool.map(_generate_pcs, self._pcs_list)
         else:
             dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")

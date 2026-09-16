@@ -9,6 +9,7 @@
 #
 
 import logging
+import multiprocessing
 import operator
 import os
 import shutil
@@ -70,9 +71,11 @@ def _open_document(file: Path, is_testing: bool) -> None:
         )
 
 
-def _worker_initializer():
+def _worker_initializer(log_level):
     """Workers ignore SIGINT; main process coordinates shutdown."""
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    logging.getLogger().setLevel(log_level)
 
 
 def _validate_pcs(pcs_args) -> tuple:
@@ -360,7 +363,14 @@ class Validation:
                 f"Validating PCS in parallel using {num_processes} processes."
             )
             # Use an initializer so only the main process handles SIGINT
-            with Pool(processes=num_processes, initializer=_worker_initializer) as pool:
+            current_log_level = logging.getLogger().getEffectiveLevel()
+
+            with multiprocessing.Pool(
+                processes=num_processes,
+                initializer=_worker_initializer,
+                initargs=(current_log_level,),
+            ) as pool:
+                results = pool.map(_validate_pcs, self._pcs_list)
                 try:
                     results = pool.map(_validate_pcs, self._pcs_list)
                     pool.close()
