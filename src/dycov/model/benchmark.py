@@ -50,6 +50,18 @@ class Summary:
 _FAILED_RESULTS: dict = {"compliance": False, "curves": None}
 
 
+def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
+    match error:
+        case SimulationError.FAULT_SIMULATION_FAILS:
+            return Compliance.FaultSimulationFails
+        case SimulationError.FAULT_DIP_UNACHIEVABLE:
+            return Compliance.FaultDipUnachievable
+        case SimulationError.VOLTAGE_CURVE_MISSING:
+            return Compliance.VoltageCurveMissing
+        case _:
+            return Compliance.InvalidTest
+
+
 def _compliance_for_missing_curves(availability: CurvesAvailability) -> Compliance:
     match availability:
         case CurvesAvailability.NO_PRODUCER:
@@ -715,14 +727,7 @@ class Benchmark:
 
         op_cond_success = False
         if sim.error is not None:
-            compliance = Compliance.InvalidTest
-            match sim.error:
-                case SimulationError.FAULT_SIMULATION_FAILS:
-                    compliance = Compliance.FaultSimulationFails
-                case SimulationError.FAULT_DIP_UNACHIEVABLE:
-                    compliance = Compliance.FaultDipUnachievable
-                case _:
-                    pass
+            compliance = _compliance_for_simulation_error(sim.error)
             results = {**_FAILED_RESULTS}
         elif not sim.appicable:
             compliance = Compliance.NotApplicableTest
