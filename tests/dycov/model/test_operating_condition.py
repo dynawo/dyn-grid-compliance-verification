@@ -76,7 +76,8 @@ def test_initialize(monkeypatch, tmp_path):
 
 
 def test_validate_with_simulated_curves(monkeypatch, tmp_path):
-    _set_logger_level(monkeypatch, logging.INFO)
+    # Changed to DEBUG: we expect the diagnostic results.json to be created
+    _set_logger_level(monkeypatch, logging.DEBUG)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(u_dim=2.0)
 
@@ -95,7 +96,8 @@ def test_validate_with_simulated_curves(monkeypatch, tmp_path):
 
 
 def test_validate_without_validations(monkeypatch, tmp_path):
-    _set_logger_level(monkeypatch, logging.DEBUG)
+    # Changed to INFO: we expect the diagnostic results.json NOT to be created
+    _set_logger_level(monkeypatch, logging.INFO)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(has_validations=False)
 
