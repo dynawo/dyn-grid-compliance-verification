@@ -92,6 +92,7 @@ class ModelSetup:
         self.tso_loads: list = []
         self.has_line: bool = False
         self.curves_dict: dict = {}
+        self.pdr: Optional[PdrParams] = None
 
         # Dynawo file handlers (re-created per operating condition)
         self._jobs_file = None
@@ -641,7 +642,7 @@ class ModelSetup:
         )
 
         u_dim = self._owner.get_generator_u_dim()
-        pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
+        pdr = self.pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
         line_rpu, line_xpu = self._get_line(pcs_name, bm_name, oc_name)
 
         tso_lines = []
