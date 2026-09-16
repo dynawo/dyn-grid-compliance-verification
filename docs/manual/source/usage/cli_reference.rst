@@ -75,7 +75,8 @@ dycov anonymize
 
 Produces an anonymized version of a set of curves, replacing signal names
 with generic identifiers, adding a noise signal and, on request, removing the
-oscillation the simulation adds to them.
+oscillation the simulation adds or reducing the curves to the samples that
+carry their shape.
 
 .. include:: helps/anonymize.rst
 
