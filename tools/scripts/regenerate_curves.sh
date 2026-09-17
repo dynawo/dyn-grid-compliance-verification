@@ -21,8 +21,11 @@ source "$script_dir/models.sh"
 # simulation that produced them, and no larger than they need to be. These are the values that
 # shape them, each measured on the examples rather than chosen:
 #   - the oscillation sits between 12 and 17 Hz, and only a cut-off this low removes it;
-#   - this epsilon keeps a quarter of the samples and moves no compared magnitude by more than
-#     0.002 pu, a twentieth of the tolerance the criteria apply.
+#   - this epsilon keeps a fiftieth of the samples, and 343 of the 386 curves under a tenth,
+#     while no compared magnitude moves by more than 0.004 pu where the test looks and 0.001
+#     away from it, against tolerances of 0.08 and 0.002. What resists it is not the epsilon's
+#     doing: a curve that never settles carries shape in every sample, and the worst of them
+#     still keeps seven tenths.
 NOISE_STD=0.01
 NOISE_FREQUENCY=15.0
 DERIPPLE_CUTOFF=5.0
