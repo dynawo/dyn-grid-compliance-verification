@@ -9,6 +9,7 @@
 #
 
 import atexit
+import fcntl
 import getpass
 import logging
 import os
@@ -24,14 +25,6 @@ from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
-
-
-def _is_process_running(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
 
 
 def _purge_stale_temp_dirs(
@@ -53,16 +46,24 @@ def _purge_stale_temp_dirs(
                 st = entry.stat()
 
                 if st.st_mtime <= threshold:
-                    pid_file = path / "run.pid"
                     process_active = False
-
-                    if pid_file.exists():
-                        try:
-                            pid = int(pid_file.read_text().strip())
-                            if _is_process_running(pid):
-                                process_active = True
-                        except ValueError:
-                            pass
+                    fd = -1
+                    try:
+                        # Attempt to lock the directory to check if the owner is still alive
+                        fd = os.open(path, os.O_RDONLY)
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except OSError:
+                        # If an OSError (like BlockingIOError) is raised, the directory is
+                        # locked by a living process
+                        process_active = True
+                    finally:
+                        if fd != -1:
+                            try:
+                                # Unlock and close if we successfully acquired it
+                                fcntl.flock(fd, fcntl.LOCK_UN)
+                                os.close(fd)
+                            except OSError:
+                                pass
 
                     if not process_active:
                         shutil.rmtree(path, ignore_errors=True)
@@ -107,11 +108,13 @@ class Parameters:
         username = getpass.getuser()
         base_dir = Path.cwd()
         prefix = f"{tmp_path}_{username}_"
+
         _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(minutes=30))
         self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
 
-        pid_file = self._working_dir / "run.pid"
-        pid_file.write_text(str(os.getpid()))
+        # Lock the working directory directly instead of relying on a PID file
+        self._lock_fd = os.open(self._working_dir, os.O_RDONLY)
+        fcntl.flock(self._lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
         # The parameter is initialized in the child class
         self._producer: Optional[Producer] = None
@@ -223,8 +226,20 @@ class Parameters:
         Idempotent and safe to call multiple times.
         """
         wd: Optional[Path] = getattr(self, "_working_dir", None)
+
+        # Release the directory lock and close the file descriptor before cleanup
+        if hasattr(self, "_lock_fd") and self._lock_fd is not None:
+            try:
+                fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
+                os.close(self._lock_fd)
+            except OSError:
+                pass
+            finally:
+                self._lock_fd = None
+
         if not wd:
             return
+
         try:
             if (
                 not preserve_on_debug
