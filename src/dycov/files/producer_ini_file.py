@@ -105,14 +105,18 @@ def write_producer_ini_file(
     values: dict,
     gen_sharing: dict,
     include_consumption: bool = False,
+    zone: int = 0,
 ) -> None:
     """Write a value-filled INI (Excel-driven flow) using the shared layout.
 
     Thin wrapper over ``_create_producer_ini_file``; the only difference from the blank template
     is the data (``values`` and per-generator ``gen_sharing`` ``{id -> (P_sharing, Q_sharing)}``).
-    Set ``include_consumption`` for BESS (adds ``p_max_consumption_at_PDR``).
+    Set ``include_consumption`` for BESS (adds ``p_max_consumption_at_PDR``), and ``zone`` to the
+    zone being written, which decides how the nominal voltage is described.
     """
-    _create_producer_ini_file(target, filename, topology, values, gen_sharing, include_consumption)
+    _create_producer_ini_file(
+        target, filename, topology, values, gen_sharing, include_consumption, zone
+    )
 
 
 def _check_ini_parameters(target: Path, filename: str) -> bool:
