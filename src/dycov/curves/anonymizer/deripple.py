@@ -70,7 +70,34 @@ def _remove_spikes(values: np.ndarray) -> np.ndarray:
     return without_spikes
 
 
-def _deripple_signal(time: np.ndarray, values: np.ndarray, cutoff: float) -> np.ndarray:
+def _filtered_weights(time: np.ndarray, spans: List[tuple], event_time: float) -> np.ndarray:
+    """How much of the filtered signal replaces the original, at each instant.
+
+    The filter has no phase, so it carries what happens in a span to both of its sides. A
+    span that begins with the event must not be entered before it, or the reference answers
+    a fault that has not happened yet.
+    """
+    reach = [
+        (start - RIPPLE_PERIOD, end + RIPPLE_PERIOD) for start, end in spans if end < event_time
+    ]
+    weights = blend_weights(time, reach)
+
+    caused_by_event = [
+        (max(start - RIPPLE_PERIOD, event_time), end + RIPPLE_PERIOD)
+        for start, end in spans
+        if end >= event_time
+    ]
+    if caused_by_event:
+        after_event = blend_weights(time, caused_by_event)
+        after_event[time < event_time] = 0.0
+        weights = np.maximum(weights, after_event)
+
+    return weights
+
+
+def _deripple_signal(
+    time: np.ndarray, values: np.ndarray, cutoff: float, event_time: float
+) -> np.ndarray:
     values = _remove_spikes(values)
     spans = _ripple_spans(time, values)
     if not spans:
@@ -82,19 +109,18 @@ def _deripple_signal(time: np.ndarray, values: np.ndarray, cutoff: float) -> np.
         np.interp(grid, instants, values[first_of_instant]), fc=cutoff, fs=1 / RIPPLE_GRID
     )
 
-    # The run is bounded by turning points, and the oscillation reaches half a swing beyond
-    # each of them: filter that too, or what is left at the edges still oscillates.
-    reach = [(start - RIPPLE_PERIOD, end + RIPPLE_PERIOD) for start, end in spans]
-    weights = blend_weights(time, reach)
+    weights = _filtered_weights(time, spans, event_time)
     return values * (1 - weights) + np.interp(time, grid, smooth) * weights
 
 
-def deripple_curves(df: pd.DataFrame, cutoff: float) -> pd.DataFrame:
+def deripple_curves(df: pd.DataFrame, cutoff: float, event_time: float) -> pd.DataFrame:
     time = df["time"].to_numpy(dtype=float)
     cleaned = {"time": time}
     for column in df.columns:
         if column == "time":
             continue
-        cleaned[column] = _deripple_signal(time, df[column].to_numpy(dtype=float), cutoff)
+        cleaned[column] = _deripple_signal(
+            time, df[column].to_numpy(dtype=float), cutoff, event_time
+        )
 
     return pd.DataFrame(cleaned)[df.columns]

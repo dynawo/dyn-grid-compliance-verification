@@ -186,7 +186,7 @@ def _anonymized_curve(
         dycov_logging.get_logger("Anonymizer").debug(
             f"Removing the simulation oscillation from {name}"
         )
-        curve = deripple_curves(curve, deripple)
+        curve = deripple_curves(curve, deripple, event_time)
 
     if compression is not None:
         original_len = len(curve)
