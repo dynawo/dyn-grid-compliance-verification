@@ -14,12 +14,16 @@ from typing import Dict, List
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
 
+# The extensions the importer reads, spelt for a case-insensitive glob.
+CURVE_EXTENSIONS = ["*.[eE][xX][pP]", "*.[cC][sS][vV]", "*.[cC][fF][fF]", "*.[dD][aA][tT]"]
 
-def get_files(path: Path, extensions: List[str]) -> List[Path]:
-    all_files = []
-    for ext in extensions:
-        all_files.extend(path.glob(ext))
-    return all_files
+
+def curve_files(path: Path) -> List[Path]:
+    return [file for extension in CURVE_EXTENSIONS for file in path.glob(extension)]
+
+
+def log_files(path: Path) -> List[Path]:
+    return list(path.glob("*.log"))
 
 
 def copy_from_pipeline(results: Path, target_folder: Path) -> None:
@@ -62,16 +66,10 @@ def create_curves_files_ini(curves_folder: Path) -> None:
         return
 
     curves_files_content: Dict[str, str] = {}
-    curve_extensions = [
-        "*.[eE][xX][pP]",
-        "*.[cC][sS][vV]",
-        "*.[cC][fF][fF]",
-        "*.[dD][aA][tT]",
-    ]
-    for curves_file in get_files(curves_folder, curve_extensions):
+    for curves_file in curve_files(curves_folder):
         curves_files_content[curves_file.stem] = f"{curves_file.stem}{curves_file.suffix.lower()}"
 
-    for curves_log in get_files(curves_folder, ["*.log"]):
+    for curves_log in log_files(curves_folder):
         if curves_log.stem not in curves_files_content:
             curves_files_content[curves_log.stem] = f"{curves_log.stem}.csv"
 
@@ -108,13 +106,7 @@ def create_curves_files_ini(curves_folder: Path) -> None:
 
 
 def create_dict_files(curves_folder: Path, metadata: Dict[str, Dict]) -> None:
-    curve_extensions = [
-        "*.[eE][xX][pP]",
-        "*.[cC][sS][vV]",
-        "*.[cC][fF][fF]",
-        "*.[dD][aA][tT]",
-    ]
-    for curves_file in get_files(curves_folder, curve_extensions):
+    for curves_file in curve_files(curves_folder):
         _create_dict_file_if_not_exists(curves_file, metadata)
 
 

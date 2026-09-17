@@ -13,6 +13,8 @@ import re
 from pathlib import Path
 from typing import Dict, Optional
 
+import pandas as pd
+
 from dycov.curves.anonymizer.deripple import deripple_curves
 from dycov.curves.anonymizer.noise import apply_noise_to_curves
 from dycov.curves.anonymizer.reduce import cap_rate, ensure_min_points, simplify_curves
@@ -21,8 +23,8 @@ from dycov.curves.anonymizer.sources import (
     copy_from_pipeline,
     create_curves_files_ini,
     create_dict_files,
+    curve_files,
     extract_metadata_from_logs,
-    get_files,
 )
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.files import manage_files
@@ -80,11 +82,8 @@ def anonymize(
         copy_from_pipeline(results, curves_folder)
 
     # Detect producer dirs AFTER copying, so files are already in place
-    curve_extensions = ["*.[eE][xX][pP]", "*.[cC][sS][vV]", "*.[cC][fF][fF]", "*.[dD][aA][tT]"]
     producer_dirs = [
-        d
-        for d in sorted(curves_folder.iterdir())
-        if d.is_dir() and any(get_files(d, curve_extensions))
+        d for d in sorted(curves_folder.iterdir()) if d.is_dir() and any(curve_files(d))
     ]
     if not producer_dirs:
         producer_dirs = [curves_folder]
@@ -116,81 +115,105 @@ def _process_curves(
     compression: Optional[float] = None,
     deripple: Optional[float] = None,
 ) -> None:
-    curve_extensions = [
-        "*.[eE][xX][pP]",
-        "*.[cC][sS][vV]",
-        "*.[cC][fF][fF]",
-        "*.[dD][aA][tT]",
-    ]
-    for curves_path in get_files(curves_folder, curve_extensions):
+    for curves_path in curve_files(curves_folder):
         dycov_logging.get_logger("Anonymizer").debug(f"Processing curve file: {curves_path.name}")
-        dict_file = curves_path.parent / f"{curves_path.stem}.dict"
+        _process_curve(
+            curves_path, curves_folder, output_folder, noisestd, frequency, compression, deripple
+        )
 
-        curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        curves_cfg.optionxform = str
-        curves_cfg.read(dict_file)
 
-        event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
-        fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
+def _process_curve(
+    curves_path: Path,
+    curves_folder: Path,
+    output_folder: Path,
+    noisestd: float,
+    frequency: float,
+    compression: Optional[float],
+    deripple: Optional[float],
+) -> None:
+    dict_file = curves_path.parent / f"{curves_path.stem}.dict"
+    importer = CurvesImporter(curves_folder, curves_path.stem, False)
+    if not importer.config.has_section("Curves-Dictionary"):
+        dycov_logging.get_logger("Anonymizer").warning(
+            f"No 'Curves-Dictionary' section found in {dict_file}. Skipping curve processing."
+        )
+        return
 
-        importer = CurvesImporter(curves_folder, curves_path.stem, False)
+    event_time, event_duration = _declared_event(dict_file)
+    curve = _anonymized_curve(
+        importer.get_curves_dataframe(zone=0, remove_file=False),
+        curves_path.stem,
+        event_time,
+        event_duration,
+        noisestd,
+        frequency,
+        compression,
+        deripple,
+    )
 
-        if importer.config.has_section("Curves-Dictionary"):
-            df_imported_curve = importer.get_curves_dataframe(zone=0, remove_file=False)
+    output_csv_path = output_folder / f"{curves_path.stem}.csv"
+    save_curve(curve, output_csv_path)
+    dycov_logging.get_logger("Anonymizer").debug(f"Saved anonymized curve to {output_csv_path}")
 
-            if deripple is not None:
-                dycov_logging.get_logger("Anonymizer").debug(
-                    f"Removing the simulation oscillation from {curves_path.stem}"
-                )
-                df_imported_curve = deripple_curves(df_imported_curve, deripple)
+    output_dict_path = output_folder / f"{curves_path.stem}.dict"
+    _save_dictionary(dict_file, importer, output_dict_path)
+    dycov_logging.get_logger("Anonymizer").debug(
+        f"Saved updated dictionary file to {output_dict_path}"
+    )
 
-            if compression is not None:
-                original_len = len(df_imported_curve)
-                df_imported_curve = simplify_curves(
-                    df_imported_curve,
-                    event_time=event_time,
-                    event_duration=fault_duration,
-                    compression=compression,
-                )
-                df_imported_curve = cap_rate(df_imported_curve, event_time, fault_duration)
-                dycov_logging.get_logger("Anonymizer").debug(
-                    f"Simplified {curves_path.stem}: "
-                    f"{original_len} → {len(df_imported_curve)} points "
-                    f"({100 * len(df_imported_curve) / original_len:.1f}%)"
-                )
 
-            # The noise goes on the samples that survive, so that it makes the curve unlike the
-            # simulation without making it any larger.
-            if noisestd is not None and noisestd > 0:
-                dycov_logging.get_logger("Anonymizer").debug(
-                    f"Applying noise to {curves_path.stem}"
-                )
-                apply_noise_to_curves(
-                    df_imported_curve, noisestd, frequency, event_time, fault_duration
-                )
+def _declared_event(dict_file: Path) -> tuple:
+    curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    curves_cfg.optionxform = str
+    curves_cfg.read(dict_file)
+    return (
+        float(curves_cfg.get("Curves-Metadata", "sim_t_event_start")),
+        float(curves_cfg.get("Curves-Metadata", "fault_duration")),
+    )
 
-            df_imported_curve = ensure_min_points(df_imported_curve, min_points=10)
-            df_imported_curve = df_imported_curve.set_index("time")
-            output_csv_path = output_folder / f"{curves_path.stem}.csv"
-            save_curve(df_imported_curve.reset_index(), output_csv_path)
-            dycov_logging.get_logger("Anonymizer").debug(
-                f"Saved anonymized curve to {output_csv_path}"
-            )
 
-            with open(dict_file, "r") as file:
-                filedata = file.read()
+def _anonymized_curve(
+    curve: pd.DataFrame,
+    name: str,
+    event_time: float,
+    event_duration: float,
+    noisestd: float,
+    frequency: float,
+    compression: Optional[float],
+    deripple: Optional[float],
+) -> pd.DataFrame:
+    if deripple is not None:
+        dycov_logging.get_logger("Anonymizer").debug(
+            f"Removing the simulation oscillation from {name}"
+        )
+        curve = deripple_curves(curve, deripple)
 
-            for original_id, dict_name in importer.config.items("Curves-Dictionary"):
-                # Use word boundaries to avoid replacing parts of other names
-                filedata = re.sub(r"\b{}\b".format(re.escape(dict_name)), original_id, filedata)
+    if compression is not None:
+        original_len = len(curve)
+        curve = simplify_curves(
+            curve,
+            event_time=event_time,
+            event_duration=event_duration,
+            compression=compression,
+        )
+        curve = cap_rate(curve, event_time, event_duration)
+        dycov_logging.get_logger("Anonymizer").debug(
+            f"Simplified {name}: {original_len} → {len(curve)} points "
+            f"({100 * len(curve) / original_len:.1f}%)"
+        )
 
-            output_dict_path = output_folder / f"{curves_path.stem}.dict"
-            with open(output_dict_path, "w") as file:
-                file.write(filedata)
-            dycov_logging.get_logger("Anonymizer").debug(
-                f"Saved updated dictionary file to {output_dict_path}"
-            )
-        else:
-            dycov_logging.get_logger("Anonymizer").warning(
-                f"No 'Curves-Dictionary' section found in {dict_file}. Skipping curve processing."
-            )
+    # The noise goes on the samples that survive, so that it makes the curve unlike the
+    # simulation without making it any larger.
+    if noisestd is not None and noisestd > 0:
+        dycov_logging.get_logger("Anonymizer").debug(f"Applying noise to {name}")
+        apply_noise_to_curves(curve, noisestd, frequency, event_time, event_duration)
+
+    return ensure_min_points(curve, min_points=10)
+
+
+def _save_dictionary(dict_file: Path, importer: CurvesImporter, output_path: Path) -> None:
+    filedata = dict_file.read_text()
+    for original_id, dict_name in importer.config.items("Curves-Dictionary"):
+        # Use word boundaries to avoid replacing parts of other names
+        filedata = re.sub(r"\b{}\b".format(re.escape(dict_name)), original_id, filedata)
+    output_path.write_text(filedata)
