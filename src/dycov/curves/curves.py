@@ -45,16 +45,6 @@ def get_cfg_oc_name(pcs_name: str, bm_name: str, oc_name: str) -> str:
     return pcs_bm_name + CASE_SEPARATOR + oc_name
 
 
-def _magnitude_name(value_definition: str) -> str:
-    return value_definition.strip().lstrip("+-").strip()
-
-
-def _references_base_magnitude(
-    value_definition: str, unit_characteristics: dict[str, float]
-) -> bool:
-    return "*" in value_definition or _magnitude_name(value_definition) in unit_characteristics
-
-
 class ProducerCurves:
     """
     ProducerCurves is responsible for managing and calculating various characteristics
@@ -76,41 +66,26 @@ class ProducerCurves:
         self._line_Xpu = 0.0
         self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
 
-    def obtain_value(
-        self, value_definition: str, origin: Optional[tuple[str, str]] = None
-    ) -> Union[str, float]:
+    def obtain_value(self, value_definition: str) -> Union[str, float]:
         """Calculate the final value from a definition.
-
-        Definitions that reference a base magnitude are resolved against the
-        registry of unit characteristics; the rest are configuration values that
-        Dynawo consumes verbatim (a solver name, an integer, a boolean) and are
-        returned unchanged.
 
         Parameters
         ----------
         value_definition: str
             Description of the required value
-        origin: Optional[tuple[str, str]]
-            (section, key) of the configuration option the definition was read
-            from, used to point the user to the offending file and line when the
-            definition is rejected.
 
         Returns
         -------
         Union[str, float]
             Final value.
-
-        Raises
-        ------
-        ValueError
-            If the definition references a base magnitude but cannot be resolved.
         """
         unit_characteristics = self.get_unit_characteristics()
-        if not _references_base_magnitude(value_definition, unit_characteristics):
-            return value_definition
-        return model_parameters.resolve_value_definition(
-            value_definition, unit_characteristics, origin=origin
-        )
+        if "*" in value_definition:
+            parts = value_definition.split("*")
+            multiplier = float(parts[0])
+            value = parts[1]
+            return multiplier * unit_characteristics.get(value, 0.0)
+        return unit_characteristics.get(value_definition, value_definition)
 
     def complete_unit_characteristics(self, line_Xpu: float) -> None:
         """Complete the parameters used as unit characteristics.
@@ -195,10 +170,7 @@ class ProducerCurves:
             return 0.0
 
         producer = self.get_producer()
-        value = self.obtain_value(
-            str(setpoint_variation), origin=(config_key, "setpoint_step_value")
-        )
-        return float(value) * self._s_nref / producer.s_nom
+        return float(self.obtain_value(str(setpoint_variation))) * self._s_nref / producer.s_nom
 
     @abstractmethod
     def get_solver(self) -> dict:

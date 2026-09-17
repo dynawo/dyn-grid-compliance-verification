@@ -46,7 +46,7 @@ class FileVariables:
         self._event_section = f"{bm_section}.{oc_section}.Event"
         self._tool_variables = tool_variables
 
-    def __obtain_value(self, value_definition: str, section: str, key: str) -> str:
+    def __obtain_value(self, value_definition: str) -> str:
         """
         Obtains the actual value from a value definition using the dynawo_curves object.
 
@@ -54,17 +54,13 @@ class FileVariables:
         ----------
         value_definition: str
             The definition of the value to obtain.
-        section: str
-            The configuration section the definition was read from.
-        key: str
-            The configuration key the definition was read from.
 
         Returns
         -------
         str
             The obtained value.
         """
-        value = self._dynawo_curves.obtain_value(value_definition, origin=(section, key))
+        value = self._dynawo_curves.obtain_value(value_definition)
         return str(value)
 
     def __get_value_from_section(self, section: str, key: str, generator_type: str) -> str:
@@ -91,10 +87,10 @@ class FileVariables:
         # Prioritize key specific to generator type
         key_type = f"{key}_{generator_type}"
         if config.has_option(section, key_type):
-            return self.__obtain_value(config.get_value(section, key_type), section, key_type)
+            return self.__obtain_value(config.get_value(section, key_type))
         # Fallback to general key if type-specific key is not found
         elif config.has_option(section, key):
-            return self.__obtain_value(config.get_value(section, key), section, key)
+            return self.__obtain_value(config.get_value(section, key))
         return None
 
     def __get_variable_value(self, key: str) -> str:
@@ -135,7 +131,7 @@ class FileVariables:
                 return value
         # As a last resort, check the global 'Dynawo' section
         if config.has_option("Dynawo", key):
-            value = self.__obtain_value(config.get_value("Dynawo", key), "Dynawo", key)
+            value = self.__obtain_value(config.get_value("Dynawo", key))
             return value
 
         return None

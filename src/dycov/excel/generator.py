@@ -97,11 +97,7 @@ def _zone1_par_sets(
 ) -> list:
     """The unit and, unless its own transformer reaches the internal node, the group one."""
     s_nom = P.numbers("Zone1", zone1)("s_nom")
-    sets = [
-        par.converter_par_set(
-            gen_id, resolved["zone1_prefix"], control, zone1, s_nom, resolved["zone1_lib"]
-        )
-    ]
+    sets = [par.converter_par_set(gen_id, resolved["zone1_prefix"], control, zone1, s_nom)]
     if lv_control:
         sets.append(par.group_transformer_par_set(GROUP_XFMR_ID, zone1, s_nom))
     else:
@@ -124,7 +120,6 @@ def _zone3_par_sets(
             control,
             zone1,
             P.numbers("Zone3", zone3)("s_nom"),
-            resolved["zone3_lib"],
             plant_model=True,
         ),
         par.main_transformer_par_set(MAIN_XFMR_ID, zone3),

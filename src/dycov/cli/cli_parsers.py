@@ -535,7 +535,7 @@ def _add_noisestd_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=float,
         default=0.0,
         help_msg="Standard deviation of the noise added to the curves, in pu"
-        " (default: 0.0, recommended range: [0.01, 0.1]).",
+        " (recommended range: [0.01, 0.1]).",
     )
 
 
@@ -591,30 +591,9 @@ def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
         "--compression",
         arg_type=float,
         default=None,
-        help_msg="Relative epsilon for curve simplification using the Ramer-Douglas-Peucker"
+        help_msg="Relative epsilon for curve simplification using the Visvalingam-Whyatt"
         " algorithm, as a fraction of each signal's range"
         " (e.g. 0.001 = 0.1%%). Default: None (no compression).",
-    )
-
-
-def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the '--deripple' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    """
-    _add_argument(
-        parser,
-        "-d",
-        "--deripple",
-        arg_type=float,
-        default=None,
-        help_msg="Cut-off frequency, in Hz, of the filter that removes the oscillation the"
-        " simulation adds to the curves. It must sit well below that oscillation, which the"
-        " examples show between 12 and 17 Hz (suggested: 5.0)."
-        " Default: None (the curves keep the oscillation).",
     )
 
 
@@ -779,5 +758,4 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_frequency_argument(anonymize)
     _add_results_argument(anonymize)
     _add_compression_argument(anonymize)
-    _add_deripple_argument(anonymize)
     dycov_logging.get_logger("CliParsers").debug("Added 'anonymize' subparser.")

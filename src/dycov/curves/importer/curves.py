@@ -185,10 +185,7 @@ class ImportedCurves(ProducerCurves):
         if config.has_option(config_section, "setpoint_step_value"):
             step_value = (
                 float(
-                    self.obtain_value(
-                        str(config.get_value(config_section, "setpoint_step_value")),
-                        origin=(config_section, "setpoint_step_value"),
-                    )
+                    self.obtain_value(str(config.get_value(config_section, "setpoint_step_value")))
                 )
                 * self.get_snref()
                 / self.get_producer().s_nom

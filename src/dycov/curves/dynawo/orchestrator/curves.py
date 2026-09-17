@@ -7,7 +7,6 @@
 # omsg@aia.es
 # demiguelm@aia.es
 #
-import logging
 from collections import namedtuple
 from pathlib import Path
 
@@ -20,22 +19,27 @@ from dycov.curves.dynawo.orchestrator.bisection import BisectionEngine
 from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
-from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, model_parameters
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging import dycov_logging
-from dycov.logging.simulation_logger import SimulationLogger
-from dycov.model.parameters import DisconnectionModel, SimulationOutcomeError, SimulationResult
+from dycov.model.parameters import DisconnectionModel, SimulationError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 
 _CURVES_CSV = "curves/curves.csv"
-# The record of a test is a handful of lines; the cap only guards against a runaway file.
-_SIMULATION_LOG_MAX_BYTES = 1024 * 1024
+
+_ERROR_MAP = {
+    "Fault simulation fails": SimulationError.FAULT_SIMULATION_FAILS,
+    "Fault dip unachievable": SimulationError.FAULT_DIP_UNACHIEVABLE,
+}
 
 SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 SolverParam = namedtuple("SolverParam", "actual default")
+
+
+def _to_simulation_error(message: str) -> SimulationError | None:
+    return _ERROR_MAP.get(message)
 
 
 class DynawoCurves(ProducerCurves):
@@ -306,53 +310,6 @@ class DynawoCurves(ProducerCurves):
     # Public interface (ProducerCurves)
     # ------------------------------------------------------------------
 
-    def __initial_state(self) -> dict:
-        """The operating point the simulation starts from, named as the curves of its zone."""
-        pdr = self._setup.pdr
-        if pdr is None:
-            return {}
-
-        zone = self._producer.get_zone()
-        return {
-            f"init_{to_output_name(f'BusPDR_BUS_{magnitude}', zone)}": value
-            for magnitude, value in (
-                ("Voltage", pdr.u),
-                ("VoltagePhase", pdr.u_phase),
-                ("ActivePower", pdr.p),
-                ("ReactivePower", pdr.q),
-            )
-        }
-
-    def __log_simulation_inputs(self, working_oc_dir: Path, event_params: dict) -> None:
-        """Record next to the curves of a test what its simulation ran with.
-
-        `dycov anonymize` rebuilds the [Curves-Metadata] section of the dictionaries it
-        generates by reading this file: without it every generated curve set declares its
-        event at t = 0 and no warning is raised.
-        """
-        simulation_logger = SimulationLogger("Simulation")
-        simulation_logger.init_handlers(
-            logging.INFO, "%(message)s", _SIMULATION_LOG_MAX_BYTES, working_oc_dir
-        )
-
-        curves_metadata = {
-            "is_field_measurements": False,
-            "sim_t_event_start": event_params.get("start_time"),
-            "fault_duration": event_params.get("duration_time"),
-            "frequency_sampling": config.get_float("GridCode", "cutoff", 15.0),
-        }
-        simulation_inputs = {
-            "simulation_start": self._simulation_start,
-            "simulation_stop": self._simulation_stop,
-            "event_connected_to": event_params.get("connect_to"),
-            "event_step_value": event_params.get("step_value"),
-        } | {f"solver_{name}": value.actual for name, value in self.get_solver().items()}
-
-        for name, value in (curves_metadata | self.__initial_state() | simulation_inputs).items():
-            simulation_logger.info(f"{name} = {value}")
-
-        simulation_logger.close_handlers()
-
     def obtain_simulated_curve(
         self,
         working_oc_dir: Path,
@@ -384,14 +341,6 @@ class DynawoCurves(ProducerCurves):
         -------
         tuple[str, dict, SimulationResult, pd.DataFrame]
             (jobs_output_dir, event_params, simulation_result, curves)
-
-        Raises
-        ------
-        ValueError
-            If the model cannot be set up at all, a rejected configuration value
-            being the usual cause. Only the outcomes reported as
-            ``SimulationOutcomeError`` are turned into a failed
-            ``SimulationResult``; anything else aborts the run.
         """
         self.__reset_solver()
         output_dir, jobs_output_dir = self.__prepare_oc_validation(
@@ -467,11 +416,8 @@ class DynawoCurves(ProducerCurves):
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",
             )
-        except SimulationOutcomeError as e:
-            error_message = e.error
-
-        if event_params:
-            self.__log_simulation_inputs(working_oc_dir, event_params)
+        except ValueError as e:
+            error_message = _to_simulation_error(str(e))
 
         simulation_result = SimulationResult(
             is_test_applicable,

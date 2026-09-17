@@ -1,9 +1,7 @@
 # DyCoV — Dynamic grid Compliance Verification
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-
-- Repository: <https://github.com/dynawo/dyn-grid-compliance-verification>
-- Documentation: in this repository, under [docs/](docs/README.md)
+[![Documentation](https://readthedocs.org/projects/sphinx/badge/?version=master)](https://dycov.github.io/index.html)
 
 DyCoV is an engineering-oriented framework designed to support grid connection
 studies through automated dynamic simulations and compliance checks.  
@@ -17,29 +15,6 @@ connection studies.
 DyCoV is not a simulation tool itself — it leverages Dynawo to perform simulations
 and focuses on automated validation and compliance assessment workflows.
 
-DyCoV is developed by [Grupo AIA](https://www.aia.es) for
-[RTE](https://www.rte-france.com), the French TSO whose grid code (DTR) defines the
-compliance criteria it checks. Its purpose is to make those checks reproducible: the
-same tests, run the same way, by the producer preparing a connection request and by
-the TSO reviewing it.
-
----
-
-## Contents
-
-- [How DyCoV works](#how-dycov-works)
-- [About DyCoV](#about-dycov)
-- [Getting started](#getting-started)
-- [Inputs and outputs](#inputs-and-outputs)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Documentation](#documentation)
-- [Reference manuals](#reference-manuals)
-- [Workshop](#workshop)
-- [Contributing](#contributing)
-- [License](#license)
-- [Roadmap](#roadmap)
-- [Contact](#contact)
 
 ---
 
@@ -385,21 +360,6 @@ These sessions are particularly useful after completing the Quick start section.
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for branching 
 conventions, code style, CI requirements, and the PR workflow.
 
-Bug reports and feature requests go to
-[GitHub Issues](https://github.com/dynawo/dyn-grid-compliance-verification/issues);
-templates are provided for both.
-
----
-
-## License
-
-DyCoV is released under the [Mozilla Public License 2.0](LICENSE): you may use, modify
-and redistribute it, including commercially, provided that the files it covers stay
-under the same license when you modify them.
-
-(c) 2023/24 RTE, developed by Grupo AIA. Contributors are listed in
-[AUTHORS.txt](AUTHORS.txt).
-
 ---
 
 ## Roadmap
@@ -434,6 +394,5 @@ The following roadmap outlines the main development directions currently guiding
 
 For questions, support, or contributions, please refer to the project repository or contact the maintainers.
 
-* Bug reports and feature requests: [GitHub Issues](https://github.com/dynawo/dyn-grid-compliance-verification/issues)
 * Electrical modeling inquiries (RTE): <rte-r-d-raccordement@rte-france.com>
 * Software issues and questions (AIA): <dycov@aia.es>

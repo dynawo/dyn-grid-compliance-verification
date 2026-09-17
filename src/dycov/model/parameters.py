@@ -20,21 +20,6 @@ from typing import Optional
 class SimulationError(IntEnum):
     FAULT_SIMULATION_FAILS = 1
     FAULT_DIP_UNACHIEVABLE = 2
-    VOLTAGE_CURVE_MISSING = 3
-
-
-class SimulationOutcomeError(ValueError):
-    """Raised when a simulation ran but did not yield a usable result.
-
-    Carries the ``SimulationError`` to report for the operating condition. Being a
-    distinct type keeps the outcomes a test may legitimately end with apart from
-    the errors — a rejected configuration value, for instance — that must abort
-    the run.
-    """
-
-    def __init__(self, message: str, error: SimulationError):
-        super().__init__(message)
-        self.error = error
 
 
 class CurvesAvailability(IntEnum):

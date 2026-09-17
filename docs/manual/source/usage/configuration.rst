@@ -239,8 +239,7 @@ e.g. ``-0.5*Pmax``). The base magnitudes are (all names case-sensitive):
 
 Any base magnitude is accepted in any key — the tool does not restrict, say,
 voltage keys to voltage magnitudes. A definition that cannot be parsed, or
-that names an unknown magnitude, aborts the run with an error identifying the
-configuration file and option it was read from.
+that names an unknown magnitude, is rejected and the affected test fails.
 
 ``Snom`` and ``Unom`` use the same base as the HTML and report figures (powers in
 per-unit of :math:`S_{nom}`, voltage in per-unit of :math:`U_{nom}`), so the

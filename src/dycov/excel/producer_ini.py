@@ -70,7 +70,7 @@ def write_ini(
         values["Zone1"][_CONSUMPTION_KEY] = z1_value("p_max_consumption")
         values["Zone3"][_CONSUMPTION_KEY] = z3_value("p_max_consumption")
 
-    for zone, zone_topology, number in (("Zone1", "S", 1), ("Zone3", topology, 3)):
+    for zone, zone_topology in (("Zone1", "S"), ("Zone3", topology)):
         write_producer_ini_file(
             root / zone,
             f"{producer_name}.ini",
@@ -78,5 +78,4 @@ def write_ini(
             values[zone],
             gen_sharing=sharing,
             include_consumption=include_consumption,
-            zone=number,
         )

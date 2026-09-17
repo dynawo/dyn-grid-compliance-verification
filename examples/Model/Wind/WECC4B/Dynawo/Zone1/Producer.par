@@ -109,8 +109,8 @@
     <par type="DOUBLE" name="WT4B_OmegaMinPu" value="0.5"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WT4B_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4B_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WT4B_XLvTrPu" value="0.06"/>
     <!-- General -->
     <par type="DOUBLE" name="WT4B_SNom" value="4.0"/>
   </set>

@@ -117,8 +117,8 @@
     <par type="DOUBLE" name="WT4A_tpWTGTb" value="0.5"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WT4A_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0"/>
-    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT4A_RLvTrPu" value="0.015"/>
+    <par type="DOUBLE" name="WT4A_XLvTrPu" value="0.06"/>
     <!-- General -->
     <par type="DOUBLE" name="WT4A_SNom" value="4.0"/>
   </set>

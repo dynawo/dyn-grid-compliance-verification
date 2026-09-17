@@ -26,7 +26,6 @@ from dycov.curves.voltage_dip import (
 )
 from dycov.files import manage_files, replace_placeholders
 from dycov.logging import dycov_logging
-from dycov.model.parameters import SimulationError, SimulationOutcomeError
 from dycov.model.producer import Producer
 from dycov.validation import common
 
@@ -226,7 +225,7 @@ class BisectionEngine:
 
         Raises
         ------
-        SimulationOutcomeError
+        ValueError
             If no fault value yields a successful simulation, or if the required
             voltage dip cannot be achieved within the bisection tolerance.
         """
@@ -306,21 +305,15 @@ class BisectionEngine:
             dycov_logging.get_logger("Bisection").error(
                 "The simulation fails with any value for the fault"
             )
-            raise SimulationOutcomeError(
-                "Fault simulation fails", SimulationError.FAULT_SIMULATION_FAILS
-            )
+            raise ValueError("Fault simulation fails")
         if voltage_dip_classification == VoltDipResult.COLUMN_MISSING:
             dycov_logging.get_logger("Bisection").error(
                 "The expected voltage curve is missing in the simulation output"
             )
-            raise SimulationOutcomeError(
-                "Voltage curve missing", SimulationError.VOLTAGE_CURVE_MISSING
-            )
+            raise ValueError("Voltage curve missing")
         elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
             dycov_logging.get_logger("Bisection").error("The required dip was not achieved")
-            raise SimulationOutcomeError(
-                "Fault dip unachievable", SimulationError.FAULT_DIP_UNACHIEVABLE
-            )
+            raise ValueError("Fault dip unachievable")
 
         last_fault_rpu = self._fault_rpu_from_xpu(last_fault_xpu, fault_r_factor)
         self._modify_fault(
@@ -406,7 +399,7 @@ class BisectionEngine:
 
         Raises
         ------
-        SimulationOutcomeError
+        ValueError
             If no fault value yields a successful simulation, or if no converging
             impedance keeps the residual voltage under the threshold.
         """
@@ -485,24 +478,18 @@ class BisectionEngine:
             dycov_logging.get_logger("Bisection").error(
                 "The simulation fails with any value for the fault"
             )
-            raise SimulationOutcomeError(
-                "Fault simulation fails", SimulationError.FAULT_SIMULATION_FAILS
-            )
+            raise ValueError("Fault simulation fails")
         if residual_classification == VoltDipResult.COLUMN_MISSING:
             dycov_logging.get_logger("Bisection").error(
                 "The expected voltage curve is missing in the simulation output"
             )
-            raise SimulationOutcomeError(
-                "Voltage curve missing", SimulationError.VOLTAGE_CURVE_MISSING
-            )
+            raise ValueError("Voltage curve missing")
         if accepted_fault_xpu is None:
             dycov_logging.get_logger("Bisection").error(
                 "No converging fault impedance keeps the residual voltage under "
                 f"{max_residual_voltage} pu"
             )
-            raise SimulationOutcomeError(
-                "Fault dip unachievable", SimulationError.FAULT_DIP_UNACHIEVABLE
-            )
+            raise ValueError("Fault dip unachievable")
 
         accepted_fault_rpu = self._fault_rpu_from_xpu(accepted_fault_xpu, fault_r_factor)
         self._modify_fault(

@@ -38,7 +38,7 @@ class DummyProducerCurves(ProducerCurves):
     def get_producer(self) -> DummyProducer:
         return self._producer
 
-    def obtain_value(self, value_definition: str, origin=None):
+    def obtain_value(self, value_definition: str):
         # FileVariables may call this; keep simple passthrough
         return value_definition
 

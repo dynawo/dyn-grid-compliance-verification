@@ -113,26 +113,6 @@ def test_build_oc_notices_with_warnings():
     assert watermark == "\\SetWatermarkText{}"
 
 
-def test_build_oc_notices_without_reference_curves():
-    notices, watermark = report._build_oc_notices(
-        {"missed_columns": [], "incomplete_curves": True}
-    )
-
-    assert "\\noindent\\textcolor{red}{Missing curves:}" in notices
-    assert "no reference curves" in notices
-    assert watermark == "\\SetWatermarkText{INVALID}"
-
-
-def test_build_oc_notices_without_reference_curves_and_with_missed_columns():
-    notices, watermark = report._build_oc_notices(
-        {"missed_columns": ["BusPDR_BUS_Voltage"], "incomplete_curves": True}
-    )
-
-    assert notices.count("Missing curves:") == 1
-    assert "\\item \\textcolor{red}{BusPDR\\_BUS\\_Voltage}" in notices
-    assert watermark == "\\SetWatermarkText{INVALID}"
-
-
 def test_build_oc_notices_with_missed_columns_and_warnings():
     notices, watermark = report._build_oc_notices(
         {"missed_columns": ["BusPDR_BUS_Voltage"], "warnings": ["A warning"]}

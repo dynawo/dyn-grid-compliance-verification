@@ -154,8 +154,8 @@
     <par type="BOOL" name="WTG4B_PPCLocal" value="false"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WTG4B_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.015247347000000005"/>
-    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.08217306100000003"/>
+    <par type="DOUBLE" name="WTG4B_RLvTrPu" value="0.015247347000000003"/>
+    <par type="DOUBLE" name="WTG4B_XLvTrPu" value="0.08217306100000002"/>
     <!-- General -->
     <par type="DOUBLE" name="WTG4B_SNom" value="90.0"/>
   </set>

@@ -10,12 +10,6 @@
 
 from pathlib import Path
 
-import pytest
-
-from dycov.model.benchmark import _compliance_for_simulation_error
-from dycov.model.compliance import Compliance
-from dycov.model.parameters import SimulationError
-
 
 def test_initialize_validations(monkeypatch):
     from dycov.model.benchmark import Benchmark
@@ -113,15 +107,3 @@ def test_get_figures_description(monkeypatch):
     res = bm.get_figures_description()
 
     assert res is None
-
-
-@pytest.mark.parametrize(
-    "error, expected",
-    [
-        (SimulationError.FAULT_SIMULATION_FAILS, Compliance.FaultSimulationFails),
-        (SimulationError.FAULT_DIP_UNACHIEVABLE, Compliance.FaultDipUnachievable),
-        (SimulationError.VOLTAGE_CURVE_MISSING, Compliance.VoltageCurveMissing),
-    ],
-)
-def test_compliance_for_simulation_error(error, expected):
-    assert _compliance_for_simulation_error(error) == expected

@@ -17,7 +17,6 @@ class Compliance(Enum):
     FaultDipUnachievable = 10
     SimulationTimeOut = 11
     NotApplicableTest = 12
-    VoltageCurveMissing = 13
 
     def to_str(self) -> str:
         """Return a human-readable string representation of the compliance status.
@@ -52,8 +51,6 @@ class Compliance(Enum):
             return "Simulation time out"
         elif self == Compliance.NotApplicableTest:
             return "Not applicable test"
-        elif self == Compliance.VoltageCurveMissing:
-            return "Missing the simulated voltage curve"
 
     def show_report(self) -> bool:
         """Indicate whether this compliance status should generate a report.

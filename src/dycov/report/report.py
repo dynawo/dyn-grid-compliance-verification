@@ -261,13 +261,8 @@ def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
     of an operating-condition report page. Only missing curves invalidate the page."""
     notices = ""
     watermark = r"\SetWatermarkText{}"
-    missing_curves = list(oc_results["missed_columns"])
-    if oc_results.get("incomplete_curves"):
-        missing_curves.insert(
-            0, "no reference curves, the checks against a reference were not run"
-        )
-    if missing_curves:
-        notices += _build_notice_block("red", "Missing curves:", missing_curves)
+    if oc_results["missed_columns"]:
+        notices += _build_notice_block("red", "Missing curves:", oc_results["missed_columns"])
         watermark = r"\SetWatermarkText{INVALID}"
     if oc_results.get("warnings"):
         notices += _build_notice_block("orange", "Warnings:", oc_results["warnings"])

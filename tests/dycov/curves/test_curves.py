@@ -14,7 +14,6 @@ from types import SimpleNamespace
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.files import model_parameters
 
 
 def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0, zone=3):
@@ -87,39 +86,10 @@ def test_obtain_value_resolves_pmax_alias():
     assert curves.obtain_value("0.5*PmaxInjection") == pytest.approx(0.4)
 
 
-def test_obtain_value_resolves_signed_magnitude():
-    curves = _Curves(_producer(p_max_pu=0.8))
-
-    assert curves.obtain_value("-Pmax") == pytest.approx(-0.8)
-
-
-def test_obtain_value_unknown_magnitude_raises():
+def test_obtain_value_passes_through_unknown_token():
     curves = _Curves(_producer())
 
-    with pytest.raises(ValueError, match="Pnom"):
-        curves.obtain_value("0.5*Pnom")
-
-
-def test_obtain_value_names_the_configuration_option(monkeypatch):
-    monkeypatch.setattr(
-        model_parameters,
-        "config",
-        SimpleNamespace(describe_option=lambda section, key: f"'{key}' in section [{section}]"),
-    )
-    curves = _Curves(_producer())
-
-    with pytest.raises(ValueError) as error:
-        curves.obtain_value("0.5*Pnom", origin=("PCS1.BM1.OC1.Event", "setpoint_step_value"))
-
-    assert "'setpoint_step_value' in section [PCS1.BM1.OC1.Event]" in str(error.value)
-
-
-@pytest.mark.parametrize("opaque", ["SomeSolverName", "KLU", "True", "2", "-1", "1e-6"])
-def test_obtain_value_passes_through_opaque_dynawo_values(opaque):
-    """Values that name no base magnitude reach Dynawo verbatim, keeping their type."""
-    curves = _Curves(_producer())
-
-    assert curves.obtain_value(opaque) == opaque
+    assert curves.obtain_value("SomeSolverName") == "SomeSolverName"
 
 
 def test_get_generator_u_dim_zone1_reports_unom(monkeypatch):

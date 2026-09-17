@@ -1,135 +1,87 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <!-- Unit parameters -->
   <set id="Wind_Turbine">
-    <!-- QControl_2020 -->
-    <par type="INT" name="WT_MqG" value="1"/>
-    <par type="INT" name="WT_Mqfrt" value="1"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kpq" value="1.1"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kiq" value="2.25"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kpu" value="2"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kiu" value="10"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kpufrt" value="2"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kqv" value="2"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_IqH1Pu" value="1.05"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_IqMaxPu" value="1.05"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_IqMinPu" value="-1.05"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_IqPostPu" value="0"/>
-    <par type="DOUBLE" name="WT_tPost" value="0"/>
-    <par type="DOUBLE" name="WT_tQord" value="0.05"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UMaxPu" value="1.1"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UMinPu" value="0.9"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_URef0Pu" value="0"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UqDipPu" value="0.9"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UqRisePu" value="1.1"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_DUdb1Pu" value="-0.1"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_DUdb2Pu" value="0.1"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_RDropPu" value="0"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_XDropPu" value="0"/>
-    <par type="DOUBLE" name="WT_tUss" value="1"/>
-    <!-- PControl_4A2020 -->
-    <!-- Base unit: SNom -->
-    <par type="DOUBLE" name="WT_Kpaw" value="1000"/>
-    <par type="BOOL" name="WT_MpUScale" value="false"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UpDipPu" value="0"/>
-    <!-- Base unit: SNom -->
-    <par type="DOUBLE" name="WT_DPMaxP4APu" value="1"/>
-    <par type="DOUBLE" name="WT_tPOrdP4A" value="0.1"/>
-    <par type="DOUBLE" name="WT_tPWTRef4A" value="0.01"/>
-    <!-- Base unit: SNom -->
-    <par type="DOUBLE" name="WT_DPRefMax4APu" value="100"/>
-    <!-- Base unit: SNom -->
-    <par type="DOUBLE" name="WT_DPRefMin4APu" value="-100"/>
-    <!-- CurrentLimiter_2020 -->
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_IMaxPu" value="1.3"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_IMaxDipPu" value="1.3"/>
-    <!-- Base unit: Un2, SNom -->
-    <par type="DOUBLE" name="WT_Kpqu" value="20"/>
-    <par type="BOOL" name="WT_MdfsLim" value="false"/>
-    <par type="BOOL" name="WT_Mqpri" value="true"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UpquMaxPu" value="1.1"/>
-    <!-- QLimiter_2020 -->
-    <par type="BOOL" name="WT_QlConst" value="true"/>
-    <!-- Base unit: SNom -->
-    <par type="DOUBLE" name="WT_QMaxPu" value="0.8"/>
-    <!-- Base unit: SNom -->
-    <par type="DOUBLE" name="WT_QMinPu" value="-0.8"/>
+    <!-- Electrical -->
+    <par type="DOUBLE" name="WT_BesPu" value="0"/>
+    <par type="DOUBLE" name="WT_GesPu" value="0"/>
+    <par type="DOUBLE" name="WT_ResPu" value="0"/>
+    <par type="DOUBLE" name="WT_XesPu" value="0"/>
     <!-- Control -->
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_DipMaxPu" value="1"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_DiqMaxPu" value="100"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_DiqMinPu" value="-100"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kipaw" value="100"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kiqaw" value="100"/>
     <par type="DOUBLE" name="WT_tG" value="0.01"/>
-    <!-- PLL -->
-    <par type="DOUBLE" name="WT_tPll" value="0.01"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UPll1Pu" value="999"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UPll2Pu" value="0.13"/>
-    <!-- Simulation -->
-    <par type="DOUBLE" name="WT_tS" value="0.001"/>
-    <!-- MeasurementC_2020 -->
-    <!-- Base unit: fNom -->
+    <!-- MeasurementC -->
     <par type="DOUBLE" name="WT_DfcMaxPu" value="1"/>
-    <par type="DOUBLE" name="WT_tUcFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tfcFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tIcFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tPcFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tQcFilt" value="0.01"/>
-    <!-- MeasurementP_2020 -->
-    <!-- Base unit: fNom -->
+    <par type="DOUBLE" name="WT_tUcFilt" value="0.01"/>
+    <!-- MeasurementP -->
     <par type="DOUBLE" name="WT_DfpMaxPu" value="1"/>
-    <par type="DOUBLE" name="WT_tUpFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tfpFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tIpFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tPpFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tQpFilt" value="0.01"/>
+    <par type="DOUBLE" name="WT_tUpFilt" value="0.01"/>
+    <!-- PLL -->
+    <par type="DOUBLE" name="WT_tPll" value="0.01"/>
+    <par type="DOUBLE" name="WT_UPll1Pu" value="999"/>
+    <par type="DOUBLE" name="WT_UPll2Pu" value="0.13"/>
+    <!-- PControl -->
+    <par type="DOUBLE" name="WT_DPMaxP4APu" value="1"/>
+    <par type="DOUBLE" name="WT_DPRefMax4APu" value="100"/>
+    <par type="DOUBLE" name="WT_DPRefMin4APu" value="-100"/>
+    <par type="DOUBLE" name="WT_Kpaw" value="1000"/>
+    <par type="BOOL" name="WT_MpUScale" value="false"/>
+    <par type="DOUBLE" name="WT_tPWTRef4A" value="0.01"/>
+    <par type="DOUBLE" name="WT_tPOrdP4A" value="0.1"/>
+    <par type="DOUBLE" name="WT_UpDipPu" value="0"/>
+    <!-- CurrentLimiter -->
+    <par type="DOUBLE" name="WT_IMaxDipPu" value="1.3"/>
+    <par type="DOUBLE" name="WT_IMaxPu" value="1.3"/>
+    <par type="DOUBLE" name="WT_Kpqu" value="20"/>
+    <par type="BOOL" name="WT_MdfsLim" value="false"/>
+    <par type="BOOL" name="WT_Mqpri" value="true"/>
+    <par type="DOUBLE" name="WT_UpquMaxPu" value="1.1"/>
+    <!-- QControl -->
+    <par type="DOUBLE" name="WT_DUdb1Pu" value="-0.1"/>
+    <par type="DOUBLE" name="WT_DUdb2Pu" value="0.1"/>
+    <par type="DOUBLE" name="WT_IqH1Pu" value="1.05"/>
+    <par type="DOUBLE" name="WT_IqMaxPu" value="1.05"/>
+    <par type="DOUBLE" name="WT_IqMinPu" value="-1.05"/>
+    <par type="DOUBLE" name="WT_IqPostPu" value="0"/>
+    <par type="DOUBLE" name="WT_Kiq" value="2.25"/>
+    <par type="DOUBLE" name="WT_Kiu" value="10"/>
+    <par type="DOUBLE" name="WT_Kpq" value="1.1"/>
+    <par type="DOUBLE" name="WT_Kpu" value="2"/>
+    <par type="DOUBLE" name="WT_Kpufrt" value="2"/>
+    <par type="DOUBLE" name="WT_Kqv" value="2"/>
+    <par type="INT" name="WT_Mqfrt" value="1"/>
+    <par type="INT" name="WT_MqG" value="1"/>
+    <par type="DOUBLE" name="WT_RDropPu" value="0"/>
+    <par type="DOUBLE" name="WT_tPost" value="0"/>
+    <par type="DOUBLE" name="WT_tQord" value="0.05"/>
+    <par type="DOUBLE" name="WT_tUss" value="1"/>
+    <par type="DOUBLE" name="WT_UMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="WT_UMinPu" value="0.9"/>
+    <par type="DOUBLE" name="WT_UqDipPu" value="0.9"/>
+    <par type="DOUBLE" name="WT_UqRisePu" value="1.1"/>
+    <par type="DOUBLE" name="WT_URef0Pu" value="0"/>
+    <par type="DOUBLE" name="WT_XDropPu" value="0"/>
+    <!-- QLimiter -->
+    <par type="BOOL" name="WT_QlConst" value="true"/>
+    <par type="DOUBLE" name="WT_QMaxPu" value="1.0"/>
+    <par type="DOUBLE" name="WT_QMinPu" value="-1.0"/>
     <!-- GridProtection -->
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UOverPu" value="1.35"/>
-    <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT_UUnderPu" value="0.9"/>
-    <!-- Base unit: fNom -->
     <par type="DOUBLE" name="WT_fOverPu" value="1.1"/>
-    <!-- Base unit: fNom -->
     <par type="DOUBLE" name="WT_fUnderPu" value="0.9"/>
-    <!-- LV Transformer -->
-    <par type="BOOL" name="WT_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT_ResPu" value="0"/>
-    <par type="DOUBLE" name="WT_XesPu" value="0"/>
-    <par type="DOUBLE" name="WT_GesPu" value="0"/>
-    <par type="DOUBLE" name="WT_BesPu" value="0"/>
-    <!-- General -->
-    <par type="DOUBLE" name="WT_SNom" value="4.0"/>
-    <!-- Parameters not available in the Excel template -->
+    <par type="DOUBLE" name="WT_UOverPu" value="1.1"/>
+    <par type="DOUBLE" name="WT_UUnderPu" value="0.9"/>
     <par type="DOUBLE" name="WT_TabletUoverUwtfilt11" value="1.0"/>
     <par type="DOUBLE" name="WT_TabletUoverUwtfilt12" value="2.0"/>
     <par type="DOUBLE" name="WT_TabletUoverUwtfilt21" value="1.5"/>
@@ -142,14 +94,17 @@
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt22" value="2.0"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt31" value="1.0"/>
     <par type="DOUBLE" name="WT_TabletUunderUwtfilt32" value="2.0"/>
+    <!-- General -->
+    <par type="DOUBLE" name="WT_SNom" value="4"/>
+    <par type="DOUBLE" name="WT_tS" value="0.001"/>
   </set>
-
+  <!-- tfo -->
   <set id="Group_Xfmr">
-    <!-- impedances in pu, base SnRef = 100 MVA -->
-    <par type="DOUBLE" name="transformer_RPu" value="0.38181750000000003"/>
-    <par type="DOUBLE" name="transformer_XPu" value="2.111145"/>
-    <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
-    <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
+    <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
+    <par type="DOUBLE" name="transformer_RPu" value="0.000303"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.027162"/>
+    <par type="DOUBLE" name="transformer_BPu" value="0"/>
+    <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_rTfoPu" value="1.0"/>
   </set>
 </parametersSet>

@@ -8,22 +8,20 @@ sim_t_event_start = 20.0
 fault_duration = 1.5
 # Frequency sampling of the reference curves
 frequency_sampling = 15
-# The maximum injected current of a generator, when the curves come from field measurements:
-#    <generator>_GEN_MaxInjectedCurrentPu =
 
 [Curves-Dictionary]
-# To represent a signal that is in raw abc three-phase form, the affected signal must be
-# tripled and the suffixes _a, _b and _c must be added as in the following example:
+# To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
+# and the suffixes _a, _b and _c must be added as in the following example:
 #    SignalName_a =
 #    SignalName_b =
 #    SignalName_c =
 time = time
-BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
 BusPDR_BUS_ActivePower = BusPDR_BUS_ActivePower
 BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
 BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
 BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
+BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
+Main_Xfmr_XFMR_Tap = Main_Xfmr_XFMR_Tap
 PV_Array_GEN_MagnitudeControlledByAVRPu = Wind_Turbine_GEN_MagnitudeControlledByAVRPu
 PV_Array_GEN_VoltageSetpointPu = Wind_Turbine_GEN_VoltageSetpointPu
-Main_Xfmr_XFMR_Tap = Main_Xfmr_XFMR_Tap
 NetworkFrequencyPu = NetworkFrequencyPu

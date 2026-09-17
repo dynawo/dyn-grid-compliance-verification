@@ -14,10 +14,9 @@ per-topology builders (`dycov/files/producer_*_file.py`) and filling the parts
 DyCoV cannot know beforehand: the concrete model `lib`s and prefix, the
 electrical values, and the topology wiring.
 
-The architecture is **standard-agnostic**: only a thin front-end (parse the
+The architecture is **standard-agnostic**: only a thin WECC front-end (parse the
 Excel + resolve the variant selection to a Dynawo model) is family-specific;
-everything downstream is shared, and both the WECC and the IEC templates go
-through it. See the full design in
+everything downstream is shared. See the full design in
 [`docs/design/DyCoV_input_generation_from_excel_design.md`](../../../docs/design/DyCoV_input_generation_from_excel_design.md).
 
 ## Usage
@@ -86,19 +85,18 @@ or how the `Model Map` key is formed). It reads:
   makes model resolution **install-independent** (RTE decision Q1, path *b*):
   the tool reads the `lib`s from the sheet rather than from a Dynawo
   installation.
-- **`Zone1a`** — the generator and its step-up transformer, described once
-  (`Z_cc_TG`, `R_cc_TG / X_cc_TG`, `r_TG`), plus `ConverterLVControl`, `Un1`,
-  `Un2`, `SnZone1`, …; name in col A, value in col C.
+- **`Zone1a`** — the generator, its internal `LvTr` (`Z_cc_LvTr`,
+  `R_cc_LvTr / X_cc_LvTr`) and its external step-up transformer (`Z_cc_TG`,
+  `r_TG`), plus `ConverterLVControl`, `Un1`, `Un2`, `SnZone1`, …; name in col A,
+  value in col C.
 - **`Zone3`** — the aggregated plant (`Topologie`, PDR limits, the main
   transformer `Z_cc_TP`/`N_prises`, the optional auxiliary load and collector
   line); name in col B, value in col D.
 - **`Signaux zone 1` / `Signaux zone 3`** — per zone: the quantities to provide
   with the `.csv` column holding each, the DTR cases to run with the `.csv` file
   of each and its curve metadata, and the folder those files live in.
-- **Control sheets** — one per family (`REPC`, `REEC`, `REGC`, … in WECC;
-  `Contrôle de parc`, `Contrôle Q`, `Limiteurs`, … in IEC) — holding the
-  selected variant's parameters (bare names; the model prefix is prepended on
-  output).
+- **Control sheets** (`REPC`, `REEC`, `REGC`, …) — the selected variant's
+  parameters (bare names; the model prefix is prepended on output).
 
 ## What it produces
 
@@ -114,13 +112,12 @@ or how the `Model Map` key is formed). It reads:
   the control parameters of the blocks that declare that zone in `Général`'s
   `Zone` column, **in the workbook's own order** (sheet → table → parameter), so
   the output is reproducible and diffs stay stable; a run where no block
-  declares `Zone1` is refused rather than emitting an incomplete `Zone1`. The
-  group transformer is described once (`Z_cc_TG`/`r_TG`) and `ConverterLVControl`
-  says where it acts: `True` zeroes the converter's own branch and emits the
-  external `Group_Xfmr` (`TransformerFixedRatio`); `False` keeps it inside the
-  model and drops the block. Which parameters hold that branch is read from the
-  Dynawo dictionary (`TransformerResistance`, …), so a family that spells them
-  differently is an entry there and not a branch here. Each parameter carries
+  declares `Zone1` is refused rather than emitting an incomplete `Zone1`. Per
+  Zone1 unit it emits **two** transformers from separate `Zone1a` fields — the
+  converter's internal `LvTr` (`RLvTrPu`/`XLvTrPu` from `Z_cc_LvTr`) and the
+  external `StepUp_Xfmr` (`TransformerFixedRatio` from `Z_cc_TG`/`r_TG`).
+  `ConverterLVControl` sets the converter's nominal voltage in the INI
+  (`u_nom_at_PDR` = `Un2` if `True`, `Un1` if `False`). Each parameter carries
   the Excel-derived comments of the `dynawo_par` format (its origin sheet, the
   `table | variant`, and any per-parameter comment / base unit), and the Excel
   `type` is mapped to the Dynawo convention (`double → DOUBLE`,
@@ -140,14 +137,10 @@ transformer) → `TransformerRatioTapChanger`.
 ## Scope and non-goals
 
 - **In scope now:** the single-`Zone1` topologies — `S`, `S+Aux`, `S+i`,
-  `S+Aux+i` — for the WECC PV, wind and BESS models and the IEC wind ones.
+  `S+Aux+i` — for PV, wind and BESS WECC models.
 - **Deferred:** the multi-generator `M` family. The builders are already
   parametrized to *N* generators, but the Excel cannot yet say *which model*
-  each duplicated `Zone1<x>` is (RTE questions Q5). Also the IEC decoupling
-  protections' LVRT/HVRT curves (`Tablet*wtfilt*`, 25 points × 2 values per
-  model): they are rows like any other, but the template offers only the four
-  thresholds, so the curves take Dynawo's placeholder defaults until it carries
-  them.
+  each duplicated `Zone1<x>` is (RTE questions Q5).
 - **No parameter validation.** RTE ships a complete template; the tool does not
   check values or completeness. Empty control cells are omitted (Dynawo applies
   its default); the tool only reports which submodels are present/missing.
@@ -167,14 +160,11 @@ A `Model-*` example describes both zones plus its reference curves; a
 The performance examples carry no reference curves, so their workbooks keep the
 template's placeholder in the results-folder cell.
 
-Every example under `examples/` is the output of its own workbook, so
-regenerating one reproduces it file for file — which is also how the golden test
-keeps the two in step. The exception is the two `IEC*2020WithProtections` cases:
-their PAR keeps, under a `Parameters not available in the Excel template`
-heading, the decoupling protection curves the template has no rows for.
-Regenerating them drops those rows, and the protection then trips on Dynawo's
-placeholder curves (0.33 s instead of 2 s), disconnecting the turbine in tests
-that used to ride through.
+Regenerating an example reproduces its files, with one known exception: the
+auxiliary transformer's `transformer_RPu`/`XPu` differ in the last bit
+(`1.0000000000000008e-05` vs `…004e-05`), because the workbook holds the
+short-circuit impedance and the R/X ratio and splitting them again is not
+bit-exact. It is float noise, not a modelling difference.
 
 ## Tests
 
