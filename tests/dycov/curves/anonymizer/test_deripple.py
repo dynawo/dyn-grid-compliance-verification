@@ -61,13 +61,13 @@ def test_remove_spikes_keeps_a_step():
 
 
 def test_deripple_curves_removes_the_oscillation(rippled_curve):
-    result = deripple_curves(rippled_curve, cutoff=5.0)
+    result = deripple_curves(rippled_curve, cutoff=5.0, event_time=5.0)
 
     assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []
 
 
 def test_deripple_curves_leaves_the_rest_of_the_curve_alone(rippled_curve):
-    result = deripple_curves(rippled_curve, cutoff=5.0)
+    result = deripple_curves(rippled_curve, cutoff=5.0, event_time=5.0)
 
     time = rippled_curve["time"].to_numpy()
     away = (time < 4.8) | (time > 5.8)
@@ -78,10 +78,31 @@ def test_deripple_curves_leaves_the_rest_of_the_curve_alone(rippled_curve):
 
 
 def test_deripple_curves_keeps_every_sample(rippled_curve):
-    result = deripple_curves(rippled_curve, cutoff=5.0)
+    result = deripple_curves(rippled_curve, cutoff=5.0, event_time=5.0)
 
     assert list(result["time"]) == list(rippled_curve["time"])
     assert list(result.columns) == list(rippled_curve.columns)
+
+
+def test_deripple_curves_change_nothing_before_the_event(rippled_curve):
+    result = deripple_curves(rippled_curve, cutoff=5.0, event_time=5.0)
+
+    time = rippled_curve["time"].to_numpy()
+    before = time < 5.0
+    assert list(result["signal1"].to_numpy()[before]) == list(
+        rippled_curve["signal1"].to_numpy()[before]
+    )
+
+
+def test_deripple_curves_still_smooths_a_ripple_of_its_own(rippled_curve):
+    """An oscillation that does not come from the event is filtered where it sits."""
+    result = deripple_curves(rippled_curve, cutoff=5.0, event_time=9.0)
+
+    time = rippled_curve["time"].to_numpy()
+    burst = (time >= 5.0) & (time < 5.5)
+    assert float(np.ptp(result["signal1"].to_numpy()[burst])) < float(
+        np.ptp(rippled_curve["signal1"].to_numpy()[burst])
+    )
 
 
 def test_anonymize_deripples_the_curves_when_asked(tmp_dirs, rippled_curve):
