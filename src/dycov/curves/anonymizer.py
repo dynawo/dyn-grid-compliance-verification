@@ -27,6 +27,19 @@ MIN_SCALE = 0.0003
 # it is of the same order as the epsilon of the simplification and RDP has to track it.
 NOISE_LEAD = 1.0  # s before the event
 NOISE_TAIL = 10.0  # s after it
+NOISE_GRID = 1e-3  # s
+# An event that never clears is declared as lasting longer than the simulation. What the test
+# looks at is still the response to it, not the hours it would go on for.
+EVENT_SPAN = 10.0  # s at most
+
+# A reference is a record of measurements, and no instrument samples faster than its own rate.
+# Without a rate of its own a curve is stored as densely as the solver happened to step, which
+# is what a numerical residue too small to matter costs: it is kept sample by sample.
+MAX_RATE = 200.0  # Hz, away from the event
+MAX_RATE_EVENT = 1000.0  # Hz, where the test looks
+# A rate says how often a signal is read, and a step is not read: both of its ends are kept
+# whatever the rate, or the instant a fault appears is stored as a ramp of one interval.
+EDGE_FRACTION = 0.01  # of the range of a signal
 # One microsecond: finer than the 1 ms grid the curves are resampled to before any check.
 TIME_PRECISION = 6
 
@@ -120,23 +133,6 @@ def anonymize(
 
 
 def _interior_times(t_grid: np.ndarray, min_points: int) -> np.ndarray:
-    """Chooses times to insert into `t_grid` so that it reaches `min_points` samples.
-
-    The new times go inside the longest intervals, splitting each into equal parts.
-    Zero-length intervals admit no interior point and are left alone.
-
-    Parameters
-    ----------
-    t_grid: np.ndarray
-        Existing time grid, sorted and possibly with duplicated timestamps.
-    min_points: int
-        Number of samples the grid must reach.
-
-    Returns
-    -------
-    np.ndarray
-        Sorted times to insert, empty if no interval can be subdivided.
-    """
     lengths = np.diff(t_grid)
     splits = {index: 0 for index, length in enumerate(lengths) if length > 0.0}
     if not splits:
@@ -157,26 +153,6 @@ def _interior_times(t_grid: np.ndarray, min_points: int) -> np.ndarray:
 
 
 def _ensure_min_points(df: pd.DataFrame, min_points: int = 10) -> pd.DataFrame:
-    """Ensures that the curve has at least `min_points` samples.
-
-    Too few samples make the interpolation applied downstream drift, turning a steady tail
-    into a slowly rising or falling one. The curve is densified, not resampled: existing
-    samples are kept untouched and new ones are interpolated in between, so a discontinuity
-    encoded as a pair of duplicated timestamps survives.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Curve to densify, with a "time" column.
-    min_points: int
-        Minimum number of samples of the returned curve.
-
-    Returns
-    -------
-    pd.DataFrame
-        The curve with at least `min_points` samples, or the input curve when it cannot be
-        densified (no samples, or a single instant repeated).
-    """
     if len(df) >= min_points or df.empty:
         return df
 
@@ -206,24 +182,6 @@ def _ensure_min_points(df: pd.DataFrame, min_points: int = 10) -> pd.DataFrame:
 
 
 def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
-    """Finds the time spans where a signal oscillates faster than any response it can have.
-
-    A simulation artefact swings back and forth, above the gate and faster than the period,
-    many times in a row; a response to the event swings once. Only the runs are returned, so
-    a single excursion, however large, is left alone.
-
-    Parameters
-    ----------
-    time: np.ndarray
-        Time instants of the signal.
-    values: np.ndarray
-        Values of the signal.
-
-    Returns
-    -------
-    List[tuple]
-        (start, end) of every span that oscillates, empty when the signal does not.
-    """
     turns = []
     last_extreme = values[0]
     direction = 0
@@ -254,23 +212,6 @@ def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
 
 
 def _blend_weights(time: np.ndarray, spans: List[tuple]) -> np.ndarray:
-    """Builds the weight of the filtered signal: one inside a span, zero away from it.
-
-    The weight ramps up and down over a margin at each end, so that the filtered stretch
-    joins the untouched signal without a step.
-
-    Parameters
-    ----------
-    time: np.ndarray
-        Time instants of the signal.
-    spans: List[tuple]
-        (start, end) of every span to filter.
-
-    Returns
-    -------
-    np.ndarray
-        The weight of the filtered signal at each instant.
-    """
     weights = np.zeros(len(time))
     for start, end in spans:
         rising = (time >= start - RIPPLE_MARGIN) & (time < start)
@@ -286,22 +227,6 @@ def _blend_weights(time: np.ndarray, spans: List[tuple]) -> np.ndarray:
 
 
 def _remove_spikes(values: np.ndarray) -> np.ndarray:
-    """Replaces the one-sample excursions of a signal by their surroundings.
-
-    A sample that departs from both of its neighbours while they agree with each other is
-    the solver's, not the model's. A step of the event departs from the previous sample and
-    stays there, so it is not one of these.
-
-    Parameters
-    ----------
-    values: np.ndarray
-        Values of the signal.
-
-    Returns
-    -------
-    np.ndarray
-        The signal without its one-sample excursions.
-    """
     if len(values) < 3:
         return values
 
@@ -318,25 +243,6 @@ def _remove_spikes(values: np.ndarray) -> np.ndarray:
 
 
 def _deripple_signal(time: np.ndarray, values: np.ndarray, cutoff: float) -> np.ndarray:
-    """Removes from a signal the oscillation its simulation added, leaving the rest as it is.
-
-    The oscillating spans are filtered with a zero-phase low-pass: a causal one would shift
-    the transient in time, and the criteria measure exactly that.
-
-    Parameters
-    ----------
-    time: np.ndarray
-        Time instants of the signal.
-    values: np.ndarray
-        Values of the signal.
-    cutoff: float
-        Cut-off frequency of the filter, in Hz. It must sit below the oscillation.
-
-    Returns
-    -------
-    np.ndarray
-        The signal without the oscillation.
-    """
     values = _remove_spikes(values)
     spans = _ripple_spans(time, values)
     if not spans:
@@ -356,20 +262,6 @@ def _deripple_signal(time: np.ndarray, values: np.ndarray, cutoff: float) -> np.
 
 
 def _deripple_curves(df: pd.DataFrame, cutoff: float) -> pd.DataFrame:
-    """Removes the simulation's oscillation from every signal of a curve.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Curve to clean, with a "time" column.
-    cutoff: float
-        Cut-off frequency of the filter, in Hz.
-
-    Returns
-    -------
-    pd.DataFrame
-        The curve without the oscillation.
-    """
     time = df["time"].to_numpy(dtype=float)
     cleaned = {"time": time}
     for column in df.columns:
@@ -381,20 +273,6 @@ def _deripple_curves(df: pd.DataFrame, cutoff: float) -> pd.DataFrame:
 
 
 def _get_files(path: Path, extensions: List[str]) -> List[Path]:
-    """Retrieves all files in a directory that match any of the specified extensions.
-
-    Parameters
-    ----------
-    path: Path
-        The directory to search for files.
-    extensions: list
-        A list of file extensions (e.g., ["*.exp", "*.csv"]).
-
-    Returns
-    -------
-    list
-        A list of Path objects for the matching files.
-    """
     all_files = []
     for ext in extensions:
         all_files.extend(path.glob(ext))
@@ -402,16 +280,6 @@ def _get_files(path: Path, extensions: List[str]) -> List[Path]:
 
 
 def _copy_from_path_from_pipeline(results: Path, target_folder: Path) -> None:
-    """Copies 'curves_calculated.csv' and 'dycov.log' files from the results
-    directory to the target folder, renaming them based on their relative path.
-
-    Parameters
-    ----------
-    results: Path
-        The root directory containing the simulation results.
-    target_folder: Path
-        The destination folder where the files will be copied.
-    """
     for producer_path in results.iterdir():
         if producer_path.is_dir() and producer_path.name != "Reports":
             dycov_logging.get_logger("Anonymizer").debug(
@@ -426,16 +294,6 @@ def _copy_from_path_from_pipeline(results: Path, target_folder: Path) -> None:
 
 
 def _copy_from_path_from_producer(results: Path, target_folder: Path) -> None:
-    """Copies 'curves_calculated.csv' and 'dycov.log' files from the producer results
-    directory to the producer target folder, renaming them based on their relative path.
-
-    Parameters
-    ----------
-    results: Path
-        The root directory containing the simulation results.
-    target_folder: Path
-        The destination folder where the files will be copied.
-    """
     # Define file types to copy and their target suffixes
     files_to_copy = {
         "curves_calculated.csv": ".csv",
@@ -453,17 +311,6 @@ def _copy_from_path_from_producer(results: Path, target_folder: Path) -> None:
 
 
 def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
-    """Creates a 'CurvesFiles.ini' file in the specified curves folder if it does
-    not already exist.
-
-    This file lists the available curve files and defines default dictionary
-    sections.
-
-    Parameters
-    ----------
-    curves_folder: Path
-        The directory where the 'CurvesFiles.ini' file should be created.
-    """
     curves_files_ini_path = curves_folder / "CurvesFiles.ini"
     if curves_files_ini_path.exists():
         dycov_logging.get_logger("Anonymizer").debug(
@@ -518,17 +365,6 @@ def _create_curves_files_ini_if_not_exists(curves_folder: Path) -> None:
 
 
 def _create_dict_files_if_not_exist(curves_folder: Path, metadata: Dict[str, Dict]) -> None:
-    """Ensures each supported curve file has a corresponding .dict file, creating
-    it if it doesn't exist.
-
-    Parameters
-    ----------
-    curves_folder: Path
-        The directory containing the original curve files.
-    metadata: Dict[str, Dict]
-        A dictionary containing metadata for various curve files, keyed by their
-        stem.
-    """
     curve_extensions = [
         "*.[eE][xX][pP]",
         "*.[cC][sS][vV]",
@@ -540,20 +376,6 @@ def _create_dict_files_if_not_exist(curves_folder: Path, metadata: Dict[str, Dic
 
 
 def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -> None:
-    """Creates a corresponding .dict file for a given .csv file if it doesn't
-    already exist.
-
-    This .dict file includes metadata extracted from log files and a default
-    Curves-Dictionary section with headers from the CSV.
-
-    Parameters
-    ----------
-    csv_file: Path
-        The path to the CSV file for which a .dict file is to be created.
-    metadata: Dict[str, Dict]
-        A dictionary containing metadata for various curve files, keyed by their
-        stem.
-    """
     dict_file = csv_file.with_suffix(".dict")
     if dict_file.exists():
         dycov_logging.get_logger("Anonymizer").debug(
@@ -617,19 +439,6 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
 
 
 def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
-    """Extracts 'sim_t_event_start' and 'fault_duration' parameters from log
-    files and stores them in the metadata dictionary. Log files are then deleted.
-
-    Parameters
-    ----------
-    curves_folder: Path
-        The directory containing the log files to parse.
-
-    Returns
-    -------
-    Dict[str, Dict]
-        The dictionary containing the extracted metadata, keyed by log file stem.
-    """
     metadata: Dict[str, Dict] = {}
     for log_file in curves_folder.glob("*.log"):
         stem = log_file.stem
@@ -660,28 +469,8 @@ def _apply_noise_to_curves(
     event_duration: float,
     flat_threshold: float = 1e-4,
 ) -> None:
-    """Applies noise to the curve data in the DataFrame.
-
-    Noise is applied around the event, and nowhere else. The noise is then smoothed using
-    a low-pass filter.
-
-    Parameters
-    ----------
-    df_imported_curve: pd.DataFrame
-        The DataFrame containing the curve data, including a 'time' column.
-    noisestd: float
-        Standard deviation of the noise to be applied.
-    frequency: float
-        Cut-off frequency for the low-pass filter (in Hz).
-    event_time: float
-        The start time of the event.
-    event_duration: float
-        The duration of the event.
-    flat_threshold: float = 1e-4,
-        Threshold to consider the signal nearly flat.
-    """
     noise_event_start = event_time
-    noise_event_end = event_time + event_duration
+    noise_event_end = event_time + min(event_duration, EVENT_SPAN)
 
     time_values = df_imported_curve["time"].to_numpy()
     noise_weights = _blend_weights(
@@ -689,12 +478,15 @@ def _apply_noise_to_curves(
     )
     noise_window = noise_weights > 0.0
 
-    # Calculate resampling frequency from the time column in the DataFrame
-    time_step = np.mean(np.diff(time_values))
-    resampling_fs = 1 / time_step
-    dycov_logging.get_logger("Anonymizer").debug(
-        f"Calculated resampling frequency: {resampling_fs} Hz"
+    # The noise is drawn and filtered on a grid of its own, and only then read at the samples
+    # of the curve: a reduced curve no longer has a step for the filter to work with.
+    noise_grid = np.arange(time_values[0], time_values[-1] + NOISE_GRID, NOISE_GRID)
+    grid_weights = _blend_weights(
+        noise_grid, [(noise_event_start - NOISE_LEAD, noise_event_end + NOISE_TAIL)]
     )
+
+    span = time_values[-1] - time_values[0]
+    samples_per_second = len(time_values) / span if span > 0 else 1.0
 
     for column in df_imported_curve.columns:
         if column == "time":
@@ -718,17 +510,18 @@ def _apply_noise_to_curves(
             return np.maximum(mad.to_numpy(), MIN_SCALE)
 
         window_seconds = 0.5
-        window_samples = max(3, int(window_seconds * resampling_fs))
+        window_samples = max(3, int(window_seconds * samples_per_second))
         scale = local_scale(values, window_samples)
 
-        noise = np.random.normal(0.0, noisestd, len(values)) * scale * noise_weights
+        noise = np.random.normal(0.0, noisestd, len(noise_grid)) * grid_weights
 
         # Smooth noise using constant padding to stabilize boundaries
         noise_smoothed = lowpass_filter(
             noise,
             fc=frequency,
-            fs=resampling_fs,
+            fs=1.0 / NOISE_GRID,
         )
+        noise_smoothed = np.interp(time_values, noise_grid, noise_smoothed) * scale
         # The mean is removed where the noise lives: subtracting it from the whole signal
         # would shift the steady state of a curve that is only noisy around its event.
         noise_smoothed = (noise_smoothed - np.mean(noise_smoothed[noise_window])) * noise_weights
@@ -745,29 +538,6 @@ def _process_curves(
     compression: Optional[float] = None,
     deripple: Optional[float] = None,
 ) -> None:
-    """Processes all curve files in the specified folder, applies noise if
-    `noisestd` is not None, and saves the anonymized curves and updated
-    dictionary files to the output folder.
-
-    Parameters
-    ----------
-    curves_folder: Path
-        The directory containing the original curve files and their .dict files.
-    output_folder: Path
-        The directory where the processed (anonymized) curves and .dict files
-        will be saved.
-    noisestd: float
-        Standard deviation of the noise to be applied. If None, no noise is
-        applied.
-    frequency: float
-        Cut-off frequency for the low-pass filter (in Hz), used if noise is
-        applied.
-    compression: Optional[float] = 0.001
-        Relative epsilon for RDP compression. If None, no compression is applied.
-    deripple: Optional[float]
-        Cut-off frequency, in Hz, of the filter that removes the oscillation the simulation
-        adds. If None, the curves keep it.
-    """
     curve_extensions = [
         "*.[eE][xX][pP]",
         "*.[cC][sS][vV]",
@@ -796,14 +566,6 @@ def _process_curves(
                 )
                 df_imported_curve = _deripple_curves(df_imported_curve, deripple)
 
-            if noisestd is not None and noisestd > 0:
-                dycov_logging.get_logger("Anonymizer").debug(
-                    f"Applying noise to {curves_path.stem}"
-                )
-                _apply_noise_to_curves(
-                    df_imported_curve, noisestd, frequency, event_time, fault_duration
-                )
-
             if compression is not None:
                 original_len = len(df_imported_curve)
                 df_imported_curve = _simplify_curves(
@@ -812,10 +574,21 @@ def _process_curves(
                     event_duration=fault_duration,
                     compression=compression,
                 )
+                df_imported_curve = _cap_rate(df_imported_curve, event_time, fault_duration)
                 dycov_logging.get_logger("Anonymizer").debug(
                     f"Simplified {curves_path.stem}: "
                     f"{original_len} → {len(df_imported_curve)} points "
                     f"({100 * len(df_imported_curve) / original_len:.1f}%)"
+                )
+
+            # The noise goes on the samples that survive, so that it makes the curve unlike the
+            # simulation without making it any larger.
+            if noisestd is not None and noisestd > 0:
+                dycov_logging.get_logger("Anonymizer").debug(
+                    f"Applying noise to {curves_path.stem}"
+                )
+                _apply_noise_to_curves(
+                    df_imported_curve, noisestd, frequency, event_time, fault_duration
                 )
 
             df_imported_curve = _ensure_min_points(df_imported_curve, min_points=10)
@@ -868,9 +641,6 @@ def _save_curve(curves: pd.DataFrame, path: Path, precision: int = TIME_PRECISIO
 
 
 def _rdp_mask_numpy(points: np.ndarray, epsilon: float) -> np.ndarray:
-    """Iterative RDP using numpy vectorized distance calculation.
-    Returns a boolean mask of points to keep.
-    """
     mask = np.zeros(len(points), dtype=bool)
     mask[0] = True
     mask[-1] = True
@@ -910,23 +680,6 @@ def _rdp_mask_numpy(points: np.ndarray, epsilon: float) -> np.ndarray:
 
 
 def _simplify_segment(segment: pd.DataFrame, compression: float) -> pd.DataFrame:
-    """Reduce a segment to the samples its signals need to keep their shape.
-
-    The signals of a curve share one time grid, so the segment keeps the union of what each
-    of them asks for, with epsilon = compression * signal_range.
-
-    Parameters
-    ----------
-    segment: pd.DataFrame
-        Piece of the curve to reduce, with a "time" column.
-    compression: float
-        Relative epsilon, as a fraction of each signal's range.
-
-    Returns
-    -------
-    pd.DataFrame
-        The reduced segment, its ends always kept.
-    """
     if len(segment) <= 2:
         return segment
 
@@ -948,25 +701,8 @@ def _simplify_segment(segment: pd.DataFrame, compression: float) -> pd.DataFrame
 def _restore_event_points(
     segment: pd.DataFrame, simplified: pd.DataFrame, min_points: int
 ) -> pd.DataFrame:
-    """Bring the event segment back to `min_points` samples of the original curve.
-
-    The epsilon knows the shape of a signal but not where the test looks, and the event is
-    where it looks: a segment reduced below this floor is refilled with evenly spaced
-    samples of the original, never with interpolated ones.
-
-    Parameters
-    ----------
-    segment: pd.DataFrame
-        The event segment before reducing it.
-    simplified: pd.DataFrame
-        The same segment after reducing it.
-    min_points: int
-        Number of samples the event segment must keep.
-
-    Returns
-    -------
-    pd.DataFrame
-        The reduced segment, refilled when it fell below the floor.
+    """The epsilon knows the shape of a signal but not where the test looks: the event is held
+    to a floor of samples, and refilled with samples of the original, never interpolated ones.
     """
     if len(segment) <= min_points:
         return segment
@@ -985,30 +721,6 @@ def _simplify_curves(
     compression: float = 0.005,
     min_event_points: int = 20,
 ) -> pd.DataFrame:
-    """Reduce a curve to the samples that carry its shape.
-
-    The curve is cut into what precedes the event, the event itself and what follows, so
-    that the event can be held to its own floor of samples; every piece is then reduced the
-    same way.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Input time series with a "time" column.
-    event_time: float
-        Start time of the event.
-    event_duration: float
-        Duration of the event.
-    compression: float
-        Relative epsilon, as a fraction of each signal's range.
-    min_event_points: int
-        Minimum number of samples to keep in the event segment.
-
-    Returns
-    -------
-    pd.DataFrame
-        The reduced curve.
-    """
     time_values = df["time"].to_numpy()
     before = df[time_values <= event_time].reset_index(drop=True)
     during = df[
@@ -1026,3 +738,38 @@ def _simplify_curves(
         ],
         ignore_index=True,
     )
+
+
+def _edge_samples(df: pd.DataFrame) -> np.ndarray:
+    edges = np.zeros(len(df), dtype=bool)
+    for column in df.columns:
+        if column == "time":
+            continue
+        values = df[column].to_numpy()
+        signal_range = float(np.ptp(values))
+        if signal_range < 1e-12:
+            continue
+        steps = np.abs(np.diff(values)) > EDGE_FRACTION * signal_range
+        edges[:-1] |= steps
+        edges[1:] |= steps
+    return edges
+
+
+def _cap_rate(df: pd.DataFrame, event_time: float, event_duration: float) -> pd.DataFrame:
+    if len(df) <= 2:
+        return df
+
+    time_values = df["time"].to_numpy()
+    window = (time_values >= event_time - NOISE_LEAD) & (
+        time_values <= event_time + min(event_duration, EVENT_SPAN) + NOISE_TAIL
+    )
+    rates = np.where(window, MAX_RATE_EVENT, MAX_RATE)
+
+    interval = np.floor(time_values * rates).astype(np.int64)
+    keep = np.empty(len(df), dtype=bool)
+    keep[0] = True
+    keep[1:] = (interval[1:] != interval[:-1]) | (rates[1:] != rates[:-1])
+    keep |= _edge_samples(df)
+    keep[-1] = True
+
+    return df[keep].reset_index(drop=True)
