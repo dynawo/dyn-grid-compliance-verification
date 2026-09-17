@@ -16,7 +16,6 @@ import shutil
 import signal
 import subprocess
 import sys
-from multiprocessing import Pool
 from operator import attrgetter
 from pathlib import Path
 
@@ -368,7 +367,7 @@ class Validation:
             with multiprocessing.Pool(
                 processes=num_processes,
                 initializer=_worker_initializer,
-                initargs=(current_log_level,),
+                initargs=(current_log_level,)
             ) as pool:
                 results = pool.map(_validate_pcs, self._pcs_list)
                 try:
