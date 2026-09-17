@@ -8,6 +8,8 @@
 #     demiguelm@aia.es
 #
 
+from typing import Iterator
+
 import numpy as np
 import pandas as pd
 
@@ -112,19 +114,24 @@ def _rdp_mask_numpy(points: np.ndarray, epsilon: float) -> np.ndarray:
     return mask
 
 
+def _signals(df: pd.DataFrame) -> Iterator[tuple]:
+    """Every signal that moves, with the range that scales the tolerances applied to it."""
+    for column in df.columns:
+        if column == "time":
+            continue
+        values = df[column].to_numpy()
+        signal_range = float(np.ptp(values))
+        if signal_range >= 1e-12:
+            yield values, signal_range
+
+
 def _simplify_segment(segment: pd.DataFrame, compression: float) -> pd.DataFrame:
     if len(segment) <= 2:
         return segment
 
     time_values = segment["time"].to_numpy()
     keep = {0, len(segment) - 1}
-    for column in segment.columns:
-        if column == "time":
-            continue
-        values = segment[column].to_numpy()
-        signal_range = float(np.ptp(values))
-        if signal_range < 1e-12:
-            continue
+    for values, signal_range in _signals(segment):
         mask = _rdp_mask_numpy(np.column_stack([time_values, values]), compression * signal_range)
         keep.update(np.where(mask)[0].tolist())
 
@@ -175,13 +182,7 @@ def simplify_curves(
 
 def _edge_samples(df: pd.DataFrame) -> np.ndarray:
     edges = np.zeros(len(df), dtype=bool)
-    for column in df.columns:
-        if column == "time":
-            continue
-        values = df[column].to_numpy()
-        signal_range = float(np.ptp(values))
-        if signal_range < 1e-12:
-            continue
+    for values, signal_range in _signals(df):
         steps = np.abs(np.diff(values)) > EDGE_FRACTION * signal_range
         edges[:-1] |= steps
         edges[1:] |= steps
