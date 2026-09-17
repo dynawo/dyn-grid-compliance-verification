@@ -17,7 +17,10 @@ import pandas as pd
 import pytest
 
 from dycov.curves.anonymizer import (
+    MAX_RATE,
+    MAX_RATE_EVENT,
     _apply_noise_to_curves,
+    _cap_rate,
     _create_curves_files_ini_if_not_exists,
     _create_dict_file_if_not_exists,
     _deripple_curves,
@@ -705,3 +708,62 @@ def test_anonymize_deripples_the_curves_when_asked(tmp_dirs, rippled_curve):
 
     result = pd.read_csv(out / "rippled.csv", sep=";")
     assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []
+
+
+# ---------------------------
+# Sampling rate
+# ---------------------------
+
+
+@pytest.fixture()
+def dense_curve() -> pd.DataFrame:
+    """A minute sampled every 0.2 ms, denser than any instrument would record."""
+    t = np.arange(0.0, 60.0, 0.0002)
+    return pd.DataFrame({"time": t, "signal1": np.where(t < 30.0, 1.0, 0.5)})
+
+
+def samples_per_second(times: np.ndarray, low: float, high: float) -> float:
+    return len(times[(times >= low) & (times <= high)]) / (high - low)
+
+
+def test_cap_rate_holds_the_rate_away_from_the_event(dense_curve):
+    result = _cap_rate(dense_curve, event_time=30.0, event_duration=0.0)
+
+    assert samples_per_second(result["time"].to_numpy(), 5.0, 25.0) <= MAX_RATE + 1
+
+
+def test_cap_rate_samples_the_event_finer(dense_curve):
+    result = _cap_rate(dense_curve, event_time=30.0, event_duration=0.0)
+
+    rate = samples_per_second(result["time"].to_numpy(), 31.0, 39.0)
+    assert MAX_RATE < rate <= MAX_RATE_EVENT + 1
+
+
+def test_cap_rate_bounds_an_event_that_never_clears(dense_curve):
+    result = _cap_rate(dense_curve, event_time=30.0, event_duration=9999.0)
+
+    assert samples_per_second(result["time"].to_numpy(), 51.0, 59.0) <= MAX_RATE + 1
+
+
+def test_cap_rate_keeps_both_ends_of_a_step():
+    t = np.arange(0.0, 20.0, 0.0002)
+    curve = pd.DataFrame({"time": t, "signal1": np.where(t < 5.0, 1.0, 0.2)})
+
+    result = _cap_rate(curve, event_time=15.0, event_duration=0.0)
+
+    times = result["time"].to_numpy()
+    edge = int(np.argmax(result["signal1"].to_numpy() < 1.0))
+    assert times[edge] - times[edge - 1] == pytest.approx(0.0002, abs=1e-9)
+
+
+def test_noise_costs_no_samples(tmp_dirs):
+    curves, out = tmp_dirs
+    create_nonflat_csv_and_log(curves, "nf")
+    quiet = out.parent / "quiet"
+
+    anonymize(out, noisestd=0.01, frequency=10.0, curves_folder=curves, compression=0.0001)
+    anonymize(quiet, noisestd=0.0, frequency=10.0, curves_folder=curves, compression=0.0001)
+
+    noisy_curve = pd.read_csv(out / "nf.csv", sep=";")
+    quiet_curve = pd.read_csv(quiet / "nf.csv", sep=";")
+    assert len(noisy_curve) == len(quiet_curve)
