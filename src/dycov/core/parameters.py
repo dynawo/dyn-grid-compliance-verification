@@ -8,12 +8,15 @@
 #     demiguelm@aia.es
 #
 
+import os
+import fcntl
 import atexit
 import getpass
 import logging
 import shutil
 import tempfile
 import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -25,29 +28,39 @@ from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 
 
-def _purge_stale_temp_dirs(
-    base_dir: Path, prefix: str, older_than: timedelta, exclude: Optional[Path] = None
-) -> None:
-    try:
-        now = datetime.now().timestamp()
-        threshold = now - older_than.total_seconds()
-        for entry in base_dir.iterdir():
-            try:
-                if not entry.is_dir():
-                    continue
-                name = entry.name
-                if not name.startswith(prefix):
-                    continue
-                path = base_dir / name
-                if exclude is not None and path == exclude:
-                    continue
-                st = entry.stat()
-                if st.st_mtime <= threshold:
-                    shutil.rmtree(path, ignore_errors=True)
-            except Exception:
-                pass
-    except Exception:
-        pass
+def _purge_stale_temp_dirs(base_dir: Path, prefix: str, older_than: timedelta):
+    """
+    Removes temporary directories that are older than the specified time limit
+    and are not currently locked by an active process.
+    """
+    now = time.time()
+    for p in base_dir.glob(f"{prefix}*"):
+        if p.is_dir():
+            mtime = p.stat().st_mtime
+
+            # Check if the directory is older than the allowed limit
+            if now - mtime > older_than.total_seconds():
+                try:
+                    # Open the directory to obtain a file descriptor
+                    fd = os.open(str(p), os.O_RDONLY)
+                    try:
+                        # Attempt to acquire an exclusive, non-blocking lock
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+                        # If the lock is acquired, the process that created
+                        # the directory is no longer alive. It is safe to purge.
+                        shutil.rmtree(p, ignore_errors=True)
+
+                    except BlockingIOError:
+                        # If a BlockingIOError is raised, the directory is currently
+                        # locked by a live run. We skip it.
+                        pass
+                    finally:
+                        # Always close the file descriptor
+                        os.close(fd)
+                except OSError:
+                    # This can happen if the directory disappears or due to permissions
+                    pass
 
 
 # Global abort flag to coordinate graceful shutdown across threads
@@ -87,6 +100,11 @@ class Parameters:
         prefix = f"{tmp_path}_{username}_"
         _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(minutes=30))
         self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
+
+        # Lock the working directory. We keep the file descriptor (self._lock_fd)
+        # open for the lifetime of the run so the OS maintains the lock.
+        self._lock_fd = os.open(str(self._working_dir), os.O_RDONLY)
+        fcntl.flock(self._lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
         # The parameter is initialized in the child class
         self._producer: Optional[Producer] = None
