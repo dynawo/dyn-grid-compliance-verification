@@ -37,6 +37,19 @@ fail() {
     exit 1
 }
 
+# Replacing the results of a previous run is asked for, never assumed: a run of every example
+# takes too long to lose by accident.
+confirm_replacement() {
+    [ -d "$1" ] && [ -n "$(ls -A "$1")" ] || return 0
+
+    local answer=""
+    [ -t 0 ] || fail "$1 holds a previous run: remove it, or choose another output path."
+    printf "%b" "${RED}$1 holds a previous run.${NC} Replace it? [y/N] "
+    read -r answer || true
+    [[ "$answer" == [yY] ]] || fail "Nothing was replaced."
+    rm -rf "${1:?}"
+}
+
 usage() {
     echo "Regenerates every reference and producer curve of the Model examples."
     echo "Usage: $0 [options]"
@@ -58,6 +71,7 @@ usage() {
     echo "    so a failed run leaves them untouched. Every curve of a directory is removed before"
     echo "    the new ones are copied, so a test that is no longer run leaves none behind."
     echo "  • The dictionaries stay; only the event they declare is brought up to date."
+    echo "  • A working path that holds a previous run is replaced only after confirmation."
 }
 
 launcher="dynawo.sh"
@@ -79,6 +93,7 @@ examples_path="./examples"
 
 results_path="$working_path/Results"
 curves_path="$working_path/Curves"
+confirm_replacement "$working_path"
 mkdir -p "$working_path"
 
 user_config="$script_dir/release.ini"
@@ -100,38 +115,59 @@ log_msg "Running the ${#examples[@]} Model examples..."
 #     would produce fewer tests, and the curves of the rest would be replaced by nothing.
 python3 - "$results_path/test_tool.log" "${examples[@]}" << 'PYCODE' ||
 import configparser
+import re
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 TEMPLATES = Path("src/dycov/templates/PCS/model")
+MODEL_DIR = re.compile(r"\*\*\*Model dir: examples/Model/(.+?)/Dynawo\*\*\*")
 
 log_path, examples = Path(sys.argv[1]), sys.argv[2:]
 
 
-def declared_tests(family: str) -> int:
-    """How many operating conditions the PCS of a family declare, which is what must run."""
-    total = 0
-    for description in sorted((TEMPLATES / family).glob("*/PCSDescription.ini")):
+def declared_tests(family: str) -> set:
+    """The operating conditions the PCS of a family declare, which is what must run."""
+    declared = set()
+    for description in sorted((TEMPLATES / family).glob("[!.]*/PCSDescription.ini")):
         pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         pcs_config.optionxform = str
         pcs_config.read(description)
         for pcs, benchmarks in pcs_config.items("PCS-Benchmarks"):
             for benchmark in benchmarks.split(","):
                 conditions = pcs_config.get("PCS-OperatingConditions", f"{pcs}.{benchmark}")
-                total += len(conditions.split(","))
-    return total
+                declared.update((pcs, benchmark, oc) for oc in conditions.split(","))
+    return declared
 
 
-expected = sum(declared_tests("BESS" if example.startswith("BESS/") else "PPM")
-               for example in examples)
-executed = sum(
-    1
-    for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
-    if line.startswith("Producer") and "PCS_RTE-" in line
-)
+def executed_tests(log_path: Path) -> dict:
+    """The tests each example reports. An example whose zones are split among producers
+    reports the same test once per producer, so they are gathered as a set."""
+    executed = defaultdict(set)
+    example = None
+    for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        model_dir = MODEL_DIR.search(line)
+        if model_dir:
+            example = model_dir.group(1)
+        elif example and line.startswith("Producer") and "PCS_RTE-" in line:
+            executed[example].add(tuple(line.split()[1:4]))
+    return executed
 
-print(f"Tests: {executed} executed, {expected} declared by the PCS of the examples.")
-sys.exit(0 if executed == expected else 1)
+
+executed = executed_tests(log_path)
+declared_total = covered_total = 0
+missing = {}
+for example in examples:
+    declared = declared_tests("BESS" if example.startswith("BESS/") else "PPM")
+    declared_total += len(declared)
+    covered_total += len(declared & executed[example])
+    if declared - executed[example]:
+        missing[example] = sorted(declared - executed[example])
+
+print(f"Tests: {covered_total} executed, {declared_total} declared by the PCS of the examples.")
+for example, tests in missing.items():
+    print(f"  {example} never ran " + ", ".join(".".join(test) for test in tests))
+sys.exit(1 if missing else 0)
 PYCODE
     fail "The run did not cover every test: something is selecting what to verify. The curves
 of the repository are left untouched."
