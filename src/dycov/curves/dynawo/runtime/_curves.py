@@ -17,7 +17,6 @@ import numpy as np
 import pandas as pd
 
 from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
-from dycov.logging import dycov_logging
 
 _FREQUENCY_PATTERNS = [
     r".*NetworkFrequencyPu$",
@@ -55,59 +54,6 @@ def load_raw_curves(input_file: Path) -> pd.DataFrame:
     """
     df = pd.read_csv(input_file, sep=";")
     return df.loc[:, ~df.columns.str.contains("^Unnamed")]
-
-
-def _get_requested_columns(variable_translations: dict) -> dict:
-    """Get the Dynawo columns asked for in the CRV file, mapped to the tool curves each one feeds.
-
-    Parameters
-    ----------
-    variable_translations : dict
-        A dictionary holding both the Dynawo columns requested, mapped to the list of tool curves
-        built from them, and those tool curves, mapped to their sign convention.
-
-    Returns
-    -------
-    dict
-        The requested Dynawo columns and the tool curves that depend on each one.
-    """
-    return {
-        column: curves
-        for column, curves in variable_translations.items()
-        if isinstance(curves, list)
-    }
-
-
-def report_unserved_requests(
-    variable_translations: dict, df_curves_imported: pd.DataFrame
-) -> None:
-    """Warn about every curve requested in the CRV file that Dynawo did not write.
-
-    Dynawo silently ignores a request for a variable that the model does not have, so a variable
-    renamed in a new Dynawo release would otherwise drop a curve, and the figures drawn from it,
-    without a trace.
-
-    Parameters
-    ----------
-    variable_translations : dict
-        A dictionary mapping the requested Dynawo columns to the tool curves built from them.
-    df_curves_imported : pd.DataFrame
-        The DataFrame containing the raw curves that Dynawo did write.
-    """
-    unserved = {
-        column: curves
-        for column, curves in _get_requested_columns(variable_translations).items()
-        if column not in df_curves_imported.columns
-    }
-    if not unserved:
-        return
-
-    requests = ", ".join(
-        f"{column} ({', '.join(curves)})" for column, curves in sorted(unserved.items())
-    )
-    dycov_logging.get_logger("DynawoSimulator").warning(
-        f"Dynawo did not provide the requested curves: {requests}"
-    )
 
 
 def get_network_frequency_curve(curves_translation: dict) -> None:
@@ -604,6 +550,5 @@ def create_curves(
     """
 
     df_curves_imported = load_raw_curves(input_file)
-    report_unserved_requests(variable_translations, df_curves_imported)
     df_curves = translate_curves(variable_translations, df_curves_imported)
     return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref, f_nom)

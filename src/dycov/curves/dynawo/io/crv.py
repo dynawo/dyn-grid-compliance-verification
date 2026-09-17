@@ -67,6 +67,8 @@ def create_curves_file(
     )
 
     _add_measurements_curves(curves_root, curves_dict)
+    if zone == 1:
+        _add_bus_curves(curves_root, curves_dict)
     _add_xfmrs_curves(curves_root, xfmrs, curves_dict)
 
     if tso_loads:
@@ -202,6 +204,31 @@ def _add_measurements_curves(curves_root: etree.Element, curves_dict: dict) -> N
     _add_curve_to_file(
         curves_root, "Measurements", "ReactivePower", "BUS", -1, "measurements_QPu", curves_dict
     )
+
+
+def _add_bus_curves(curves_root: etree.Element, curves_dict: dict) -> None:
+    """Adds bus-related curves to the XML root and curves dictionary.
+
+    Parameters
+    ----------
+    curves_root : etree.Element
+        The root XML element for curves.
+    curves_dict : dict
+        The dictionary to which curve entries will be added.
+    """
+    sign, dynawo_variable = dynawo_translator.get_dynawo_variable(
+        "InfiniteBus", "NetworkFrequencyPu"
+    )
+    if dynawo_variable:
+        _add_curve_to_file(
+            curves_root,
+            "InfiniteBus",
+            "NetworkFrequencyPu",
+            "BUS",
+            sign,
+            dynawo_variable,
+            curves_dict,
+        )
 
 
 def _add_pdr_curves(curves_root: etree.Element, connected_to_pdr: list, curves_dict: dict) -> None:

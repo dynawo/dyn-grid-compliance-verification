@@ -50,30 +50,7 @@ performed without the Git history still report the right version.
 
 ## Generating a Release
 
-### 1. Regenerate the example curves
-
-The reference and producer curves under `examples/Model` are regenerated once per release, and
-this is where it belongs: any fix that moves a verdict invalidates the curves shipped with the
-previous release, so they are regenerated after the last fix that goes into the release and
-before the tag.
-
-```bash
-./tools/scripts/regenerate_curves.sh
-```
-
-That single command covers the 17 Model examples: it runs each of them in a home directory of
-its own, so that no local configuration filters what is verified, anonymizes the results and
-replaces every CSV under their `ReferenceCurves` directories and under
-`examples/Model/ProducerCurves`. It needs the virtualenv active and a Dynawo launcher
-(`-l` selects another one), and it runs every test of every example, so it is the longest step
-of a release. See [../tools/scripts/README.md](../tools/scripts/README.md) for its options.
-
-Read its guard before trusting the outcome: the command compares the tests the run executed
-against those the PCS of the examples declare, and stops without touching the repository when
-they differ, because half a regeneration is worse than none. Commit the curves it replaced
-before tagging: the build script refuses to run with a dirty working tree.
-
-### 2. Create and push the tag
+### 1. Create and push the tag first
 
 ```bash
 git tag v0.9.3
@@ -83,7 +60,7 @@ git push origin v0.9.3
 The build script refuses to run unless HEAD is exactly on the tag and the working tree is
 clean.
 
-### 3. Run the build script from the repository root
+### 2. Run the build script from the repository root
 
 ```bash
 ./installers/prepare_release.sh VERSION DYNAWO_DIR [--dry-run]

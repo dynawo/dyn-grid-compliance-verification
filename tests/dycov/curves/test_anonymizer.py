@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -16,15 +17,17 @@ import pandas as pd
 import pytest
 
 from dycov.curves.anonymizer import (
-    _apply_noise_to_curves,
     _create_curves_files_ini_if_not_exists,
     _create_dict_file_if_not_exists,
+    _deripple_curves,
     _ensure_min_points,
-    _get_event_period_indices,
     _extract_metadata_from_logs,
+    _get_event_period_indices,
     _interior_times,
     _is_nearly_flat,
     _rdp_mask_numpy,
+    _remove_spikes,
+    _ripple_spans,
     _save_curve,
     _simplify_curves,
     anonymize,
@@ -159,33 +162,6 @@ def test_no_noise_on_almost_flat_signal(tmp_dirs):
     assert len(out_sig) >= 10
 
 
-@pytest.fixture()
-def long_curve() -> pd.DataFrame:
-    """A hundred seconds of a moving signal, with its event at t = 20 s."""
-    t = np.arange(0.0, 100.0, 0.01)
-    return pd.DataFrame({"time": t, "signal1": np.where(t < 20.0, 1.0, 0.5) + 0.01 * np.sin(t)})
-
-
-def test_noise_reaches_the_event(long_curve):
-    noisy = long_curve.copy()
-
-    _apply_noise_to_curves(noisy, 0.1, 10.0, event_time=20.0, event_duration=0.5)
-
-    during = (long_curve["time"] >= 20.0) & (long_curve["time"] <= 20.5)
-    difference = np.abs(noisy["signal1"].to_numpy() - long_curve["signal1"].to_numpy())
-    assert difference[during].max() > 0.0
-
-
-def test_no_noise_away_from_the_event(long_curve):
-    noisy = long_curve.copy()
-
-    _apply_noise_to_curves(noisy, 0.1, 10.0, event_time=20.0, event_duration=0.5)
-
-    away = (long_curve["time"] < 18.0) | (long_curve["time"] > 35.0)
-    difference = np.abs(noisy["signal1"].to_numpy() - long_curve["signal1"].to_numpy())
-    assert difference[away].max() == 0.0
-
-
 # ---------------------------
 # File generation tests
 # ---------------------------
@@ -211,6 +187,41 @@ def test_ini_and_dict_created(tmp_path):
 
     assert (curves / "CurvesFiles.ini").exists()
     assert (curves / "curveA.dict").exists()
+
+
+def test_metadata_comes_from_the_simulation_record(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+
+    create_flat_csv_and_log(curves, "curveA")
+    metadata = _extract_metadata_from_logs(curves)
+
+    assert metadata["curveA"]["sim_t_event_start"] == 1.0
+    assert metadata["curveA"]["fault_duration"] == 2.0
+    assert metadata["curveA"]["frequency_sampling"] == 50.0
+
+
+def test_dict_created_without_a_simulation_record_warns(tmp_path, caplog):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = curves / "curveA.csv"
+    csv.write_text("time;signal1\n0.0;1.0\n", encoding="utf-8")
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file_if_not_exists(csv, {})
+
+    assert "No simulation record found" in caplog.text
+    assert "sim_t_event_start = 0.0" in (curves / "curveA.dict").read_text()
+
+
+def test_metadata_without_a_simulation_record_is_empty(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    (curves / "curveA.csv").write_text("time;signal1\n0.0;1.0\n", encoding="utf-8")
+
+    metadata = _extract_metadata_from_logs(curves)
+
+    assert metadata == {}
 
 
 def test_empty_folder_does_not_fail(tmp_path):
@@ -417,6 +428,61 @@ def test_simplify_curves_keeps_more_points_with_a_tighter_compression(step_curve
     assert len(tight) >= len(loose)
 
 
+@pytest.fixture()
+def multi_signal_curve() -> pd.DataFrame:
+    """Several signals sharing one time grid, the shape of a generated curve set."""
+    t = np.linspace(0.0, 100.0, 5001)
+    return pd.DataFrame(
+        {
+            "time": t,
+            "voltage": np.where(t < 30.0, 1.0, 0.02),
+            "power": 0.8 + 0.01 * np.sin(2 * np.pi * t / 10.0),
+            "current": np.where(t < 30.0, 0.8, 1.2),
+        }
+    )
+
+
+def test_simplify_curves_reduces_a_curve_of_several_signals(multi_signal_curve):
+    result = _simplify_curves(
+        multi_signal_curve, event_time=30.0, event_duration=0.0, compression=0.01
+    )
+
+    assert len(result) < len(multi_signal_curve) / 10
+
+
+@pytest.fixture()
+def ramp_curve() -> pd.DataFrame:
+    """A straight line, which RDP reduces to its two ends whatever the epsilon."""
+    t = np.linspace(0.0, 100.0, 5001)
+    return pd.DataFrame({"time": t, "voltage": 0.01 * t})
+
+
+def test_simplify_curves_keeps_the_event_above_its_floor(ramp_curve):
+    result = _simplify_curves(
+        ramp_curve,
+        event_time=30.0,
+        event_duration=5.0,
+        compression=0.01,
+        min_event_points=20,
+    )
+
+    event = result[(result["time"] > 30.0) & (result["time"] <= 35.0)]
+    assert len(event) >= 20
+
+
+def test_simplify_curves_refills_the_event_with_original_samples(ramp_curve):
+    result = _simplify_curves(
+        ramp_curve,
+        event_time=30.0,
+        event_duration=5.0,
+        compression=0.01,
+        min_event_points=20,
+    )
+
+    event = result[(result["time"] > 30.0) & (result["time"] <= 35.0)]
+    assert set(event["time"]).issubset(set(ramp_curve["time"]))
+
+
 def test_simplify_curves_handles_a_constant_signal(step_curve):
     df = pd.DataFrame({"time": step_curve["time"], "voltage": np.ones(len(step_curve))})
 
@@ -468,6 +534,15 @@ def test_is_nearly_flat(series, expected):
     assert bool(_is_nearly_flat(series, threshold=1e-4)) is expected
 
 
+def test_get_event_period_indices_splits_the_window():
+    df = pd.DataFrame({"time": np.arange(0.0, 10.0, 1.0)})
+
+    before, during, after = _get_event_period_indices(df, 2.0, 5.0)
+
+    assert (before, during, after) == (3, 3, 4)
+    assert before + during + after == len(df)
+
+
 def test_save_curve_writes_time_first_with_the_requested_precision(tmp_path):
     df = pd.DataFrame({"signal1": [1.5, 2.5], "time": [0.0, 0.25]})
     path = tmp_path / "curve.csv"
@@ -478,6 +553,17 @@ def test_save_curve_writes_time_first_with_the_requested_precision(tmp_path):
     assert lines[0] == "time;signal1"
     assert lines[1].startswith("0.000;")
     assert lines[2].startswith("0.250;")
+
+
+def test_save_curve_writes_the_time_with_microsecond_precision(tmp_path):
+    df = pd.DataFrame({"time": [0.0, 0.0005], "signal1": [1.0, 1.0]})
+    path = tmp_path / "curve.csv"
+
+    _save_curve(df, path)
+
+    lines = path.read_text(encoding="utf-8").strip().splitlines()
+    assert lines[1].startswith("0.000000;")
+    assert lines[2].startswith("0.000500;")
 
 
 def test_save_curve_does_not_modify_the_input(tmp_path):
@@ -516,3 +602,88 @@ def test_anonymize_with_compression_keeps_the_time_range(tmp_dirs):
     assert df["time"].iloc[0] == pytest.approx(src["time"].iloc[0])
     assert df["time"].iloc[-1] == pytest.approx(src["time"].iloc[-1])
     assert len(df) <= len(src)
+
+
+# ---------------------------
+# Simulation oscillation
+# ---------------------------
+
+
+@pytest.fixture()
+def rippled_curve() -> pd.DataFrame:
+    """A step, then half a second of the oscillation a converter model adds to it."""
+    t = np.arange(0.0, 10.0, 1e-3)
+    burst = (t >= 5.0) & (t < 5.5)
+    return pd.DataFrame(
+        {
+            "time": t,
+            "signal1": np.where(t < 5.0, 1.0, 0.5) + burst * 0.4 * np.sin(2 * np.pi * 15.0 * t),
+        }
+    )
+
+
+def test_ripple_spans_finds_the_oscillation(rippled_curve):
+    spans = _ripple_spans(rippled_curve["time"].to_numpy(), rippled_curve["signal1"].to_numpy())
+
+    assert len(spans) == 1
+    assert spans[0][0] >= 5.0
+    assert spans[0][1] <= 5.6
+
+
+def test_ripple_spans_ignores_a_curve_that_only_steps():
+    t = np.arange(0.0, 10.0, 1e-3)
+    values = np.where(t < 5.0, 1.0, 0.5)
+
+    assert _ripple_spans(t, values) == []
+
+
+def test_remove_spikes_replaces_a_one_sample_excursion():
+    values = np.array([1.0, 1.0, 1.0, 2.5, 1.0, 1.0])
+
+    without_spikes = _remove_spikes(values)
+
+    assert without_spikes[3] == pytest.approx(1.0)
+    assert list(without_spikes[:3]) == [1.0, 1.0, 1.0]
+
+
+def test_remove_spikes_keeps_a_step():
+    values = np.array([1.0, 1.0, 1.0, 0.5, 0.5, 0.5])
+
+    assert list(_remove_spikes(values)) == list(values)
+
+
+def test_deripple_curves_removes_the_oscillation(rippled_curve):
+    result = _deripple_curves(rippled_curve, cutoff=5.0)
+
+    assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []
+
+
+def test_deripple_curves_leaves_the_rest_of_the_curve_alone(rippled_curve):
+    result = _deripple_curves(rippled_curve, cutoff=5.0)
+
+    time = rippled_curve["time"].to_numpy()
+    away = (time < 4.8) | (time > 5.8)
+    difference = np.abs(
+        result["signal1"].to_numpy()[away] - rippled_curve["signal1"].to_numpy()[away]
+    )
+    assert float(difference.max()) < 1e-3
+
+
+def test_deripple_curves_keeps_every_sample(rippled_curve):
+    result = _deripple_curves(rippled_curve, cutoff=5.0)
+
+    assert list(result["time"]) == list(rippled_curve["time"])
+    assert list(result.columns) == list(rippled_curve.columns)
+
+
+def test_anonymize_deripples_the_curves_when_asked(tmp_dirs, rippled_curve):
+    curves, out = tmp_dirs
+    rippled_curve.to_csv(curves / "rippled.csv", sep=";", index=False)
+    (curves / "rippled.log").write_text(
+        "sim_t_event_start=5.0\nfault_duration=0.5\nfrequency_sampling=50.0\n", encoding="utf-8"
+    )
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves, deripple=5.0)
+
+    result = pd.read_csv(out / "rippled.csv", sep=";")
+    assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []

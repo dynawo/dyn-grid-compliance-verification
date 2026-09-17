@@ -9,6 +9,7 @@
 #
 import configparser
 import re
+import statistics
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -20,17 +21,20 @@ from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.sigpro.sigpro import lowpass_filter
 
+NOISE_DAMPING = 100
 MIN_SCALE = 0.0003
-ORIGINAL_IMPLEMENTATION = False  # Set to True to use the original noise application method
-
-# The noise is what makes a reference look measured, and that only matters where the test
-# looks: just before the event, during it, and along the response that follows. Away from
-# there it buys nothing and costs an order of magnitude in the size of every curve, because
-# it is of the same order as the epsilon of the simplification and RDP has to track it.
-NOISE_LEAD = 1.0  # s before the event
-NOISE_TAIL = 10.0  # s after it
 # One microsecond: finer than the 1 ms grid the curves are resampled to before any check.
 TIME_PRECISION = 6
+ORIGINAL_IMPLEMENTATION = False  # Set to True to use the original noise application method
+
+# What tells a numerical oscillation apart from a response: swings of at least this size,
+# alternating faster than this period, repeated at least this many times in a row.
+RIPPLE_GATE = 0.01  # pu
+RIPPLE_PERIOD = 0.1  # s
+RIPPLE_SWINGS = 6
+# The span is filtered on a uniform grid and blended back over this margin at each end.
+RIPPLE_GRID = 1e-3  # s
+RIPPLE_MARGIN = 0.1  # s
 
 
 def anonymize(
@@ -40,6 +44,7 @@ def anonymize(
     results: Optional[Path] = None,
     curves_folder: Optional[Path] = None,
     compression: Optional[float] = None,
+    deripple: Optional[float] = None,
 ) -> None:
     """Creates a set of anonymized curves from the input set of curves.
 
@@ -63,10 +68,13 @@ def anonymize(
     compression: Optional[float]
         Relative epsilon for curve simplification, as a fraction of each signal's
         range. If None, no compression is applied. Defaults to None.
+    deripple: Optional[float]
+        Cut-off frequency, in Hz, of the filter that removes the oscillation the simulation
+        adds. If None, the curves keep it. Defaults to None.
     """
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
-        f"and frequency {frequency} Hz and compression {compression}"
+        f"and frequency {frequency} Hz, compression {compression} and deripple {deripple}"
     )
     if curves_folder is None:
         curves_folder = output_folder
@@ -101,7 +109,7 @@ def anonymize(
 
         metadata: Dict[str, Dict] = _extract_metadata_from_logs(curves_path)
         _create_dict_files_if_not_exist(curves_path, metadata)
-        _process_curves(curves_path, output_path, noisestd, frequency, compression)
+        _process_curves(curves_path, output_path, noisestd, frequency, compression, deripple)
 
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymization completed. Anonymized curves saved to {output_folder}"
@@ -192,6 +200,181 @@ def _ensure_min_points(df: pd.DataFrame, min_points: int = 10) -> pd.DataFrame:
         densified[col] = np.concatenate((values, np.interp(t_interior, t_grid, values)))[order]
 
     return pd.DataFrame(densified)[df.columns]
+
+
+def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
+    """Finds the time spans where a signal oscillates faster than any response it can have.
+
+    A simulation artefact swings back and forth, above the gate and faster than the period,
+    many times in a row; a response to the event swings once. Only the runs are returned, so
+    a single excursion, however large, is left alone.
+
+    Parameters
+    ----------
+    time: np.ndarray
+        Time instants of the signal.
+    values: np.ndarray
+        Values of the signal.
+
+    Returns
+    -------
+    List[tuple]
+        (start, end) of every span that oscillates, empty when the signal does not.
+    """
+    turns = []
+    last_extreme = values[0]
+    direction = 0
+    for instant, value in zip(time, values):
+        if abs(value - last_extreme) < RIPPLE_GATE:
+            continue
+        new_direction = 1 if value > last_extreme else -1
+        if direction and new_direction != direction:
+            turns.append(instant)
+        direction = new_direction
+        last_extreme = value
+
+    spans = []
+    run_start = None
+    run_length = 0
+    for turn, next_turn in zip(turns, turns[1:]):
+        if next_turn - turn <= RIPPLE_PERIOD:
+            run_start = turn if run_start is None else run_start
+            run_length += 1
+            continue
+        if run_length >= RIPPLE_SWINGS:
+            spans.append((run_start, turn))
+        run_start, run_length = None, 0
+    if run_length >= RIPPLE_SWINGS:
+        spans.append((run_start, turns[-1]))
+
+    return spans
+
+
+def _blend_weights(time: np.ndarray, spans: List[tuple]) -> np.ndarray:
+    """Builds the weight of the filtered signal: one inside a span, zero away from it.
+
+    The weight ramps up and down over a margin at each end, so that the filtered stretch
+    joins the untouched signal without a step.
+
+    Parameters
+    ----------
+    time: np.ndarray
+        Time instants of the signal.
+    spans: List[tuple]
+        (start, end) of every span to filter.
+
+    Returns
+    -------
+    np.ndarray
+        The weight of the filtered signal at each instant.
+    """
+    weights = np.zeros(len(time))
+    for start, end in spans:
+        rising = (time >= start - RIPPLE_MARGIN) & (time < start)
+        falling = (time > end) & (time <= end + RIPPLE_MARGIN)
+        weights[(time >= start) & (time <= end)] = 1.0
+        weights[rising] = np.maximum(
+            weights[rising], (time[rising] - start + RIPPLE_MARGIN) / RIPPLE_MARGIN
+        )
+        weights[falling] = np.maximum(
+            weights[falling], (end + RIPPLE_MARGIN - time[falling]) / RIPPLE_MARGIN
+        )
+    return weights
+
+
+def _remove_spikes(values: np.ndarray) -> np.ndarray:
+    """Replaces the one-sample excursions of a signal by their surroundings.
+
+    A sample that departs from both of its neighbours while they agree with each other is
+    the solver's, not the model's. A step of the event departs from the previous sample and
+    stays there, so it is not one of these.
+
+    Parameters
+    ----------
+    values: np.ndarray
+        Values of the signal.
+
+    Returns
+    -------
+    np.ndarray
+        The signal without its one-sample excursions.
+    """
+    if len(values) < 3:
+        return values
+
+    previous, current, following = values[:-2], values[1:-1], values[2:]
+    spikes = (
+        (np.abs(current - previous) > RIPPLE_GATE)
+        & (np.abs(current - following) > RIPPLE_GATE)
+        & (np.abs(following - previous) <= RIPPLE_GATE)
+    )
+
+    without_spikes = values.copy()
+    without_spikes[1:-1][spikes] = 0.5 * (previous[spikes] + following[spikes])
+    return without_spikes
+
+
+def _deripple_signal(time: np.ndarray, values: np.ndarray, cutoff: float) -> np.ndarray:
+    """Removes from a signal the oscillation its simulation added, leaving the rest as it is.
+
+    The oscillating spans are filtered with a zero-phase low-pass: a causal one would shift
+    the transient in time, and the criteria measure exactly that.
+
+    Parameters
+    ----------
+    time: np.ndarray
+        Time instants of the signal.
+    values: np.ndarray
+        Values of the signal.
+    cutoff: float
+        Cut-off frequency of the filter, in Hz. It must sit below the oscillation.
+
+    Returns
+    -------
+    np.ndarray
+        The signal without the oscillation.
+    """
+    values = _remove_spikes(values)
+    spans = _ripple_spans(time, values)
+    if not spans:
+        return values
+
+    instants, first_of_instant = np.unique(time, return_index=True)
+    grid = np.arange(instants[0], instants[-1], RIPPLE_GRID)
+    smooth = lowpass_filter(
+        np.interp(grid, instants, values[first_of_instant]), fc=cutoff, fs=1 / RIPPLE_GRID
+    )
+
+    # The run is bounded by turning points, and the oscillation reaches half a swing beyond
+    # each of them: filter that too, or what is left at the edges still oscillates.
+    reach = [(start - RIPPLE_PERIOD, end + RIPPLE_PERIOD) for start, end in spans]
+    weights = _blend_weights(time, reach)
+    return values * (1 - weights) + np.interp(time, grid, smooth) * weights
+
+
+def _deripple_curves(df: pd.DataFrame, cutoff: float) -> pd.DataFrame:
+    """Removes the simulation's oscillation from every signal of a curve.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Curve to clean, with a "time" column.
+    cutoff: float
+        Cut-off frequency of the filter, in Hz.
+
+    Returns
+    -------
+    pd.DataFrame
+        The curve without the oscillation.
+    """
+    time = df["time"].to_numpy(dtype=float)
+    cleaned = {"time": time}
+    for column in df.columns:
+        if column == "time":
+            continue
+        cleaned[column] = _deripple_signal(time, df[column].to_numpy(dtype=float), cutoff)
+
+    return pd.DataFrame(cleaned)[df.columns]
 
 
 def _get_files(path: Path, extensions: List[str]) -> List[Path]:
@@ -375,9 +558,11 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
         )
         return
 
-    # Ensure metadata for this stem exists, provide defaults if not.
-    # This scenario should ideally not happen if _extract_metadata_from_log is
-    # called first for all relevant logs, but acts as a safeguard.
+    if csv_file.stem not in metadata:
+        dycov_logging.get_logger("Anonymizer").warning(
+            f"No simulation record found for {csv_file.name}: its dictionary declares the event "
+            f"at t = 0, which is almost certainly wrong. Check the results directory."
+        )
     stem_metadata = metadata.get(
         csv_file.stem,
         {
@@ -453,15 +638,43 @@ def _extract_metadata_from_logs(curves_folder: Path) -> Dict[str, Dict]:
         }
         with open(log_file, "r") as log_f:
             for line in log_f:
-                if "sim_t_event_start" in line:
-                    metadata[stem]["sim_t_event_start"] = float(line.split("=")[-1])
-                elif "fault_duration" in line:
-                    metadata[stem]["fault_duration"] = float(line.split("=")[-1])
+                for name in ("sim_t_event_start", "fault_duration", "frequency_sampling"):
+                    if name in line:
+                        metadata[stem][name] = float(line.split("=")[-1])
+                        break
         log_file.unlink()  # Delete the log file after extraction
         dycov_logging.get_logger("Anonymizer").debug(
             f"Extracted metadata from {log_file} and deleted it."
         )
     return metadata
+
+
+def _get_event_period_indices(
+    df_imported_curve: pd.DataFrame, noise_event_start: float, noise_event_end: float
+) -> tuple[int, int, int]:
+    """Get the number of samples before, during and after the event window.
+
+    Parameters
+    ----------
+    df_imported_curve: pd.DataFrame
+        The DataFrame containing the curve data, including a 'time' column.
+    noise_event_start: float
+        The start time of the event window.
+    noise_event_end: float
+        The end time of the event window.
+
+    Returns
+    -------
+    tuple[int, int, int]
+        Number of samples before, during and after the event window.
+    """
+    time = df_imported_curve["time"]
+    before_event_idx = df_imported_curve[time <= noise_event_start].shape[0]
+    during_event_idx = df_imported_curve[
+        (time > noise_event_start) & (time <= noise_event_end)
+    ].shape[0]
+    after_event_idx = len(df_imported_curve) - before_event_idx - during_event_idx
+    return before_event_idx, during_event_idx, after_event_idx
 
 
 def _apply_noise_to_curves(
@@ -474,8 +687,8 @@ def _apply_noise_to_curves(
 ) -> None:
     """Applies noise to the curve data in the DataFrame.
 
-    Noise is applied around the event, and nowhere else. The noise is then smoothed using
-    a low-pass filter.
+    Noise is reduced before and after the event and full during the event.
+    The noise is then smoothed using a low-pass filter.
 
     Parameters
     ----------
@@ -495,14 +708,8 @@ def _apply_noise_to_curves(
     noise_event_start = event_time
     noise_event_end = event_time + event_duration
 
-    time_values = df_imported_curve["time"].to_numpy()
-    noise_weights = _blend_weights(
-        time_values, [(noise_event_start - NOISE_LEAD, noise_event_end + NOISE_TAIL)]
-    )
-    noise_window = noise_weights > 0.0
-
     # Calculate resampling frequency from the time column in the DataFrame
-    time_step = np.mean(np.diff(time_values))
+    time_step = np.mean(np.diff(df_imported_curve["time"].to_numpy()))
     resampling_fs = 1 / time_step
     dycov_logging.get_logger("Anonymizer").debug(
         f"Calculated resampling frequency: {resampling_fs} Hz"
@@ -521,19 +728,48 @@ def _apply_noise_to_curves(
 
         dycov_logging.get_logger("Anonymizer").debug(f"Applying noise to column: {column}")
 
-        # Robust local scale using rolling MAD
-        def local_scale(series: np.ndarray, window: int) -> np.ndarray:
-            w = max(3, window | 1)
-            s = pd.Series(series)
-            med = s.rolling(w, center=True, min_periods=1).median()
-            mad = (s - med).abs().rolling(w, center=True, min_periods=1).median()
-            return np.maximum(mad.to_numpy(), MIN_SCALE)
+        before_event_idx, during_event_idx, after_event_idx = _get_event_period_indices(
+            df_imported_curve, noise_event_start, noise_event_end
+        )
 
-        window_seconds = 0.5
-        window_samples = max(3, int(window_seconds * resampling_fs))
-        scale = local_scale(values, window_samples)
+        if ORIGINAL_IMPLEMENTATION:
+            median_col = statistics.median(values.tolist())
+            # Prevent excessive noise on small signals
+            if abs(median_col) < MIN_SCALE:
+                median_col = MIN_SCALE if median_col >= 0 else -MIN_SCALE
 
-        noise = np.random.normal(0.0, noisestd, len(values)) * scale * noise_weights
+            noise_before = (
+                np.random.normal(0.0, noisestd, before_event_idx) * median_col / NOISE_DAMPING
+            )
+            noise_during = np.random.normal(0.0, noisestd, during_event_idx) * median_col
+            noise_after = (
+                np.random.normal(0.0, noisestd, after_event_idx) * median_col / NOISE_DAMPING
+            )
+        else:
+            # Robust local scale using rolling MAD
+            def local_scale(series: np.ndarray, window: int) -> np.ndarray:
+                w = max(3, window | 1)
+                s = pd.Series(series)
+                med = s.rolling(w, center=True, min_periods=1).median()
+                mad = (s - med).abs().rolling(w, center=True, min_periods=1).median()
+                return np.maximum(mad.to_numpy(), MIN_SCALE)
+
+            window_seconds = 0.5
+            window_samples = max(3, int(window_seconds * resampling_fs))
+            scale = local_scale(values, window_samples)
+
+            noise_before = np.random.normal(0.0, noisestd, before_event_idx) * (
+                scale[:before_event_idx] / NOISE_DAMPING
+            )
+            noise_during = (
+                np.random.normal(0.0, noisestd, during_event_idx)
+                * scale[before_event_idx : before_event_idx + during_event_idx]
+            )
+            noise_after = np.random.normal(0.0, noisestd, after_event_idx) * (
+                scale[-after_event_idx:] / NOISE_DAMPING
+            )
+
+        noise = np.concatenate((noise_before, noise_during, noise_after))
 
         # Smooth noise using constant padding to stabilize boundaries
         noise_smoothed = lowpass_filter(
@@ -541,9 +777,7 @@ def _apply_noise_to_curves(
             fc=frequency,
             fs=resampling_fs,
         )
-        # The mean is removed where the noise lives: subtracting it from the whole signal
-        # would shift the steady state of a curve that is only noisy around its event.
-        noise_smoothed = (noise_smoothed - np.mean(noise_smoothed[noise_window])) * noise_weights
+        noise_smoothed = noise_smoothed - np.mean(noise_smoothed)
 
         # Apply noise to the column
         df_imported_curve[column] = values + noise_smoothed
@@ -555,6 +789,7 @@ def _process_curves(
     noisestd: float,
     frequency: float,
     compression: Optional[float] = None,
+    deripple: Optional[float] = None,
 ) -> None:
     """Processes all curve files in the specified folder, applies noise if
     `noisestd` is not None, and saves the anonymized curves and updated
@@ -575,6 +810,9 @@ def _process_curves(
         applied.
     compression: Optional[float] = 0.001
         Relative epsilon for RDP compression. If None, no compression is applied.
+    deripple: Optional[float]
+        Cut-off frequency, in Hz, of the filter that removes the oscillation the simulation
+        adds. If None, the curves keep it.
     """
     curve_extensions = [
         "*.[eE][xX][pP]",
@@ -591,12 +829,21 @@ def _process_curves(
         curves_cfg.read(dict_file)
 
         event_time = float(curves_cfg.get("Curves-Metadata", "sim_t_event_start"))
-        fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
+        if ORIGINAL_IMPLEMENTATION:
+            fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration")) + 5.0
+        else:
+            fault_duration = float(curves_cfg.get("Curves-Metadata", "fault_duration"))
 
         importer = CurvesImporter(curves_folder, curves_path.stem, False)
 
         if importer.config.has_section("Curves-Dictionary"):
             df_imported_curve = importer.get_curves_dataframe(zone=0, remove_file=False)
+
+            if deripple is not None:
+                dycov_logging.get_logger("Anonymizer").debug(
+                    f"Removing the simulation oscillation from {curves_path.stem}"
+                )
+                df_imported_curve = _deripple_curves(df_imported_curve, deripple)
 
             if noisestd is not None and noisestd > 0:
                 dycov_logging.get_logger("Anonymizer").debug(
@@ -652,7 +899,7 @@ def _is_nearly_flat(series: np.ndarray, threshold: float) -> bool:
     return (np.ptp(series) <= threshold) or (np.nanstd(series) <= threshold / 3.0)
 
 
-def _save_curve(curves: pd.DataFrame, path: Path, precision: int = 9):
+def _save_curve(curves: pd.DataFrame, path: Path, precision: int = TIME_PRECISION):
     # Create a copy to avoid modifying the original DataFrame
     curves_to_save = curves.copy()
 
@@ -711,6 +958,75 @@ def _rdp_mask_numpy(points: np.ndarray, epsilon: float) -> np.ndarray:
     return mask
 
 
+def _simplify_segment(segment: pd.DataFrame, compression: float) -> pd.DataFrame:
+    """Reduce a segment to the samples its signals need to keep their shape.
+
+    The signals of a curve share one time grid, so the segment keeps the union of what each
+    of them asks for, with epsilon = compression * signal_range.
+
+    Parameters
+    ----------
+    segment: pd.DataFrame
+        Piece of the curve to reduce, with a "time" column.
+    compression: float
+        Relative epsilon, as a fraction of each signal's range.
+
+    Returns
+    -------
+    pd.DataFrame
+        The reduced segment, its ends always kept.
+    """
+    if len(segment) <= 2:
+        return segment
+
+    time_values = segment["time"].to_numpy()
+    keep = {0, len(segment) - 1}
+    for column in segment.columns:
+        if column == "time":
+            continue
+        values = segment[column].to_numpy()
+        signal_range = float(np.ptp(values))
+        if signal_range < 1e-12:
+            continue
+        mask = _rdp_mask_numpy(np.column_stack([time_values, values]), compression * signal_range)
+        keep.update(np.where(mask)[0].tolist())
+
+    return segment.iloc[sorted(keep)].reset_index(drop=True)
+
+
+def _restore_event_points(
+    segment: pd.DataFrame, simplified: pd.DataFrame, min_points: int
+) -> pd.DataFrame:
+    """Bring the event segment back to `min_points` samples of the original curve.
+
+    The epsilon knows the shape of a signal but not where the test looks, and the event is
+    where it looks: a segment reduced below this floor is refilled with evenly spaced
+    samples of the original, never with interpolated ones.
+
+    Parameters
+    ----------
+    segment: pd.DataFrame
+        The event segment before reducing it.
+    simplified: pd.DataFrame
+        The same segment after reducing it.
+    min_points: int
+        Number of samples the event segment must keep.
+
+    Returns
+    -------
+    pd.DataFrame
+        The reduced segment, refilled when it fell below the floor.
+    """
+    if len(segment) <= min_points:
+        return segment
+    if len(simplified) >= min_points:
+        return simplified
+
+    refill = np.linspace(0, len(segment) - 1, min_points).astype(int)
+    kept = np.where(segment["time"].isin(simplified["time"]).to_numpy())[0]
+    return segment.iloc[sorted(set(kept.tolist()) | set(refill.tolist()))].reset_index(drop=True)
+
+
 def _simplify_curves(
     df: pd.DataFrame,
     event_time: float,
@@ -718,113 +1034,44 @@ def _simplify_curves(
     compression: float = 0.005,
     min_event_points: int = 20,
 ) -> pd.DataFrame:
+    """Reduce a curve to the samples that carry its shape.
+
+    The curve is cut into what precedes the event, the event itself and what follows, so
+    that the event can be held to its own floor of samples; every piece is then reduced the
+    same way.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Input time series with a "time" column.
+    event_time: float
+        Start time of the event.
+    event_duration: float
+        Duration of the event.
+    compression: float
+        Relative epsilon, as a fraction of each signal's range.
+    min_event_points: int
+        Minimum number of samples to keep in the event segment.
+
+    Returns
+    -------
+    pd.DataFrame
+        The reduced curve.
     """
-    Explanation:
-        Simplifies a time series by collapsing flat regions and applying RDP
-        only during the event. Flat regions are reduced to two points using
-        a relative threshold based on `compression`. RDP uses epsilon =
-        compression * signal_range.
+    time_values = df["time"].to_numpy()
+    before = df[time_values <= event_time].reset_index(drop=True)
+    during = df[
+        (time_values > event_time) & (time_values <= event_time + event_duration)
+    ].reset_index(drop=True)
+    after = df[time_values > event_time + event_duration].reset_index(drop=True)
 
-    Parameters:
-        df : pd.DataFrame
-            Input time series with a 'time' column.
-        event_time : float
-            Start time of the event.
-        event_duration : float
-            Duration of the event.
-        compression : float
-            Relative epsilon for RDP and flat detection.
-        min_event_points : int
-            Minimum points to keep in the event zone.
-
-    Return:
-        pd.DataFrame
-            Simplified time series.
-    """
-
-    def collapse_flat(values, compression, flat_multipler):
-        """Return indices keeping only endpoints of flat subsegments."""
-        n = len(values)
-        if n <= 2:
-            return list(range(n))
-
-        signal_range = np.ptp(values)
-        flat_tol = compression * signal_range * flat_multipler
-
-        keep = []
-        start = 0
-        in_flat = False
-
-        for i in range(1, n):
-            dy = abs(values[i] - values[i - 1])
-
-            if dy <= flat_tol:
-                if not in_flat:
-                    in_flat = True
-                    start = i - 1
-            else:
-                if in_flat:
-                    keep.append(start)
-                    keep.append(i - 1)
-                    in_flat = False
-                keep.append(i)
-
-        if in_flat:
-            keep.append(start)
-            keep.append(n - 1)
-
-        return sorted(set(keep))
-
-    def apply_rdp(time_seg, values_seg, compression):
-        """Apply RDP with epsilon = compression * signal_range."""
-        signal_range = np.ptp(values_seg)
-        if signal_range < 1e-12:
-            return np.arange(len(values_seg))
-
-        epsilon = compression * signal_range
-        pts = np.column_stack([time_seg, values_seg])
-        mask = _rdp_mask_numpy(pts, epsilon)
-        return np.where(mask)[0]
-
-    time_vals = df["time"].to_numpy()
-
-    before_mask = time_vals <= event_time
-    during_mask = (time_vals > event_time) & (time_vals <= event_time + event_duration)
-    after_mask = time_vals > event_time + event_duration
-
-    df_before = df[before_mask].reset_index(drop=True)
-    df_during = df[during_mask].reset_index(drop=True)
-    df_after = df[after_mask].reset_index(drop=True)
-
-    def simplify_segment(df_seg, use_rdp, flat_multipler=0.01):
-        if len(df_seg) <= 2:
-            return df_seg
-
-        time_seg = df_seg["time"].to_numpy()
-        n = len(df_seg)
-
-        keep = set([0, n - 1])
-
-        for col in df_seg.columns:
-            if col == "time":
-                continue
-
-            values = df_seg[col].to_numpy()
-
-            if not use_rdp:
-                flat_idx = collapse_flat(values, compression, flat_multipler)
-                keep.update(flat_idx)
-
-            if use_rdp:
-                rdp_idx = apply_rdp(time_seg, values, compression)
-                keep.update(rdp_idx)
-
-        final_idx = sorted(keep)
-        return df_seg.iloc[final_idx].reset_index(drop=True)
-
-    df_before_s = simplify_segment(df_before, use_rdp=False)
-    df_during_s = simplify_segment(df_during, use_rdp=True)
-    df_after_s = simplify_segment(df_after, use_rdp=False)
-
-    df_final = pd.concat([df_before_s, df_during_s, df_after_s], ignore_index=True)
-    return df_final
+    return pd.concat(
+        [
+            _simplify_segment(before, compression),
+            _restore_event_points(
+                during, _simplify_segment(during, compression), min_event_points
+            ),
+            _simplify_segment(after, compression),
+        ],
+        ignore_index=True,
+    )

@@ -230,6 +230,45 @@ def test_save_curves_zone1_renames_bus_columns(tmp_path):
     assert list(cm._curves["calculated"].columns)[1] == "BusPDR_BUS_Voltage"
 
 
+def _manager_for_signal_processing(reference: pd.DataFrame) -> CurvesManager:
+    time = [step / 1000 for step in range(4001)]
+    calculated = pd.DataFrame(
+        {
+            "time": time,
+            "BusPDR_BUS_Voltage": [1.0 if t < 2.0 else 0.5 for t in time],
+        }
+    )
+    cm = CurvesManager.__new__(CurvesManager)
+    cm._before_filters_curves = {"calculated": calculated, "reference": reference}
+    cm._curves = {"calculated": pd.DataFrame(), "reference": reference}
+    cm._windows = {}
+    return cm
+
+
+def test_apply_signal_processing_without_reference_filters_the_calculated_curves(tmp_path):
+    cm = _manager_for_signal_processing(pd.DataFrame())
+
+    cm.apply_signal_processing(tmp_path, {"start_time": 2.0, "duration_time": 1.0}, False)
+
+    assert not cm.get_curves("calculated").empty
+    assert "validate" in cm._windows["calculated"]
+    assert "reference" not in cm._windows
+
+
+def test_get_curves_by_windows_without_reference_returns_an_empty_reference():
+    cm = CurvesManager.__new__(CurvesManager)
+    cm._curves = {
+        "calculated": pd.DataFrame({"time": [0.0, 1.0, 2.0], "BusPDR_BUS_Voltage": [1, 1, 1]}),
+        "reference": pd.DataFrame(),
+    }
+    cm._windows = {"calculated": {"validate": {"during": (0.0, 2.0)}}, "reference": {}}
+
+    calculated, reference = cm.get_curves_by_windows("during")
+
+    assert not calculated.empty
+    assert reference.empty
+
+
 def test_save_curves_zone3_keeps_bus_columns(tmp_path):
     cm = _manager_with_curves(zone=3)
 
