@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from dycov.curves.dynawo.runtime import _curves as curves_module
 from dycov.curves.dynawo.runtime._curves import (
     ABS_TOLERANCE_FACTOR,
     VOLTAGE_DIP_THRESHOLD,
@@ -20,6 +21,7 @@ from dycov.curves.dynawo.runtime._curves import (
     _get_modulus,
     create_curves,
     prepare_complex_column,
+    report_unserved_requests,
     translate_curves,
 )
 
@@ -267,3 +269,99 @@ def test_injector_terminal_currents_zeroed_below_voltage_guard():
 
 def test_voltage_guard_matches_documented_value():
     assert ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD == pytest.approx(2e-4)
+
+
+# -------------------------------------------------------------------
+# UNSERVED REQUEST TESTS
+# -------------------------------------------------------------------
+
+
+class RecordingLogger:
+    def __init__(self):
+        self.messages = []
+
+    def warning(self, message):
+        self.messages.append(message)
+
+
+@pytest.fixture
+def recorded_warnings(monkeypatch):
+    logger = RecordingLogger()
+    monkeypatch.setattr(curves_module.dycov_logging, "get_logger", lambda name: logger)
+    return logger.messages
+
+
+def test_a_request_dynawo_did_not_serve_is_warned_with_the_curves_it_feeds(recorded_warnings):
+    variable_translations = {
+        "Main_Xfmr_transformer_tap": ["Main_Xfmr_XFMR_Tap"],
+        "Main_Xfmr_XFMR_Tap": 1,
+    }
+    df_curves_imported = pd.DataFrame({"time": [0.0, 1.0]})
+
+    report_unserved_requests(variable_translations, df_curves_imported)
+
+    assert recorded_warnings == [
+        "Dynawo did not provide the requested curves: "
+        "Main_Xfmr_transformer_tap (Main_Xfmr_XFMR_Tap)"
+    ]
+
+
+def test_every_unserved_request_is_named_in_a_single_warning(recorded_warnings):
+    variable_translations = {
+        "InfiniteBus_infiniteBus_omegaRefPu": ["InfiniteBus_BUS_NetworkFrequencyPu"],
+        "Main_Xfmr_transformer_tap": ["Main_Xfmr_XFMR_Tap"],
+    }
+    df_curves_imported = pd.DataFrame({"time": [0.0, 1.0]})
+
+    report_unserved_requests(variable_translations, df_curves_imported)
+
+    assert recorded_warnings == [
+        "Dynawo did not provide the requested curves: "
+        "InfiniteBus_infiniteBus_omegaRefPu (InfiniteBus_BUS_NetworkFrequencyPu), "
+        "Main_Xfmr_transformer_tap (Main_Xfmr_XFMR_Tap)"
+    ]
+
+
+def test_a_served_request_is_not_warned_about(recorded_warnings):
+    variable_translations = {
+        "Measurements_measurements_UPu": ["BusPDR_BUS_Voltage"],
+        "BusPDR_BUS_Voltage": 1,
+    }
+    df_curves_imported = pd.DataFrame(
+        {"time": [0.0, 1.0], "Measurements_measurements_UPu": [1.0, 1.0]}
+    )
+
+    report_unserved_requests(variable_translations, df_curves_imported)
+
+    assert recorded_warnings == []
+
+
+def test_a_sign_convention_entry_is_not_taken_for_a_request(recorded_warnings):
+    variable_translations = {"BusPDR_BUS_Voltage": 1, "BusPDR_BUS_ActivePower": -1}
+    df_curves_imported = pd.DataFrame({"time": [0.0, 1.0]})
+
+    report_unserved_requests(variable_translations, df_curves_imported)
+
+    assert recorded_warnings == []
+
+
+def test_create_curves_reports_the_requests_dynawo_did_not_serve(
+    monkeypatch, recorded_warnings, tmp_path
+):
+    input_file = tmp_path / "curves.csv"
+    input_file.write_text("time;Measurements_measurements_UPu\n0.0;1.0\n1.0;1.0\n")
+    variable_translations = {
+        "Measurements_measurements_UPu": ["BusPDR_BUS_Voltage"],
+        "BusPDR_BUS_Voltage": 1,
+        "Main_Xfmr_transformer_tap": ["Main_Xfmr_XFMR_Tap"],
+    }
+    monkeypatch.setattr(
+        curves_module, "build_output_curves", lambda *args, **kwargs: pd.DataFrame()
+    )
+
+    create_curves(variable_translations, input_file, [], 100.0, 100.0, 50.0)
+
+    assert recorded_warnings == [
+        "Dynawo did not provide the requested curves: "
+        "Main_Xfmr_transformer_tap (Main_Xfmr_XFMR_Tap)"
+    ]

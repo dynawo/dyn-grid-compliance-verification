@@ -70,6 +70,9 @@ and `line_XPu` (DTR reactance-table base `a`/`b`).
 `create_curves(variable_translations, input_file, generators, s_nom, s_nref, f_nom)`: reads `;`-separated
 `curves.csv` (`time` first col), combines complex `_re`/`_im` pairs, applies sign conventions + unit scaling.
 Core PCC signals come from the `Measurements` pseudo-model columns (`Measurements_BUS_*`).
+Dynawo drops a request for a variable its model does not have without failing, so
+`report_unserved_requests` warns for every `.crv` request absent from `curves.csv`, naming the tool
+curves that request feeds.
 
 ## Working directory layout
 
