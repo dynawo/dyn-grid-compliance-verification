@@ -12,6 +12,8 @@ import json
 import logging
 from pathlib import Path
 
+import numpy as np
+
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
@@ -85,7 +87,13 @@ class OperatingCondition:
             results_for_json = {k: v for k, v in results.items() if k not in keys_to_exclude}
 
             with open(working_oc_dir / "results.json", "w", encoding="utf-8") as outfile:
-                json.dump(results_for_json, outfile, indent=4)
+                json.dump(
+                    results_for_json,
+                    outfile,
+                    indent=4,
+                    # Safely convert NumPy generic types (like np.bool_) to standard Python types
+                    default=lambda obj: obj.item() if isinstance(obj, np.generic) else obj,
+                )
 
         return results
 

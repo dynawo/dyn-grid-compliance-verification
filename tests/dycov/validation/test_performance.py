@@ -84,13 +84,6 @@ class DummyCurvesManager:
     def get_curves(self, curve: str) -> pd.DataFrame:
         return self._curves[curve]
 
-    def apply_signal_processing(self, working_path, event_params, *args, **kwargs):
-        """
-        Simulates signal processing for the tests,
-        avoiding the AttributeError when initializing the exclusion windows.
-        """
-        pass
-
 
 class DummyElement:
     def __init__(self, element_id):
