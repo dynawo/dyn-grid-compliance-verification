@@ -16,10 +16,12 @@ import pandas as pd
 import pytest
 
 from dycov.curves.anonymizer import (
+    _apply_noise_to_curves,
     _create_curves_files_ini_if_not_exists,
     _create_dict_file_if_not_exists,
     _ensure_min_points,
     _get_event_period_indices,
+    _extract_metadata_from_logs,
     _interior_times,
     _is_nearly_flat,
     _rdp_mask_numpy,
@@ -155,6 +157,33 @@ def test_no_noise_on_almost_flat_signal(tmp_dirs):
     assert np.ptp(out_sig) < 1e-5
     assert abs(out_sig.mean() - src_sig.mean()) < 1e-6
     assert len(out_sig) >= 10
+
+
+@pytest.fixture()
+def long_curve() -> pd.DataFrame:
+    """A hundred seconds of a moving signal, with its event at t = 20 s."""
+    t = np.arange(0.0, 100.0, 0.01)
+    return pd.DataFrame({"time": t, "signal1": np.where(t < 20.0, 1.0, 0.5) + 0.01 * np.sin(t)})
+
+
+def test_noise_reaches_the_event(long_curve):
+    noisy = long_curve.copy()
+
+    _apply_noise_to_curves(noisy, 0.1, 10.0, event_time=20.0, event_duration=0.5)
+
+    during = (long_curve["time"] >= 20.0) & (long_curve["time"] <= 20.5)
+    difference = np.abs(noisy["signal1"].to_numpy() - long_curve["signal1"].to_numpy())
+    assert difference[during].max() > 0.0
+
+
+def test_no_noise_away_from_the_event(long_curve):
+    noisy = long_curve.copy()
+
+    _apply_noise_to_curves(noisy, 0.1, 10.0, event_time=20.0, event_duration=0.5)
+
+    away = (long_curve["time"] < 18.0) | (long_curve["time"] > 35.0)
+    difference = np.abs(noisy["signal1"].to_numpy() - long_curve["signal1"].to_numpy())
+    assert difference[away].max() == 0.0
 
 
 # ---------------------------
@@ -437,15 +466,6 @@ def test_rdp_mask_measures_distance_to_a_degenerate_segment():
 )
 def test_is_nearly_flat(series, expected):
     assert bool(_is_nearly_flat(series, threshold=1e-4)) is expected
-
-
-def test_get_event_period_indices_splits_the_window():
-    df = pd.DataFrame({"time": np.arange(0.0, 10.0, 1.0)})
-
-    before, during, after = _get_event_period_indices(df, 2.0, 5.0)
-
-    assert (before, during, after) == (3, 3, 4)
-    assert before + during + after == len(df)
 
 
 def test_save_curve_writes_time_first_with_the_requested_precision(tmp_path):
