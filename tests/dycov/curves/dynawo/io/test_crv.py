@@ -59,7 +59,6 @@ def test_create_curves_file_electric_performance_sm():
         curve_models = [
             c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
         ]
-        assert "InfiniteBus" in curve_models
         assert "Measurements" in curve_models
         assert "Gen" in curve_models
         assert any("Gen" in k for k in curves_dict)
@@ -98,6 +97,27 @@ def test_create_curves_file_with_all_equipment_types():
         assert "Gen" in models
         assert any("Measurements" in k for k in curves_dict)
         assert any("Gen" in k for k in curves_dict)
+
+
+def test_zone_1_asks_the_infinite_bus_for_no_curve(tmp_path):
+    curves_dict = create_curves_file(
+        tmp_path,
+        "curves_z1.xml",
+        [DummyEquipment("Xfmr", lib="TransformerFixedRatio")],
+        [DummyEquipment("Gen", lib="GeneratorSynchronousFourWindingsTGov1SexsPss2a")],
+        [],
+        [],
+        ELECTRIC_PERFORMANCE_SM,
+        1,
+        "USetpoint",
+    )
+
+    root = parse_curves_file(tmp_path / "curves_z1.xml")
+    models = [
+        c.attrib["model"] for c in root.findall(".//{http://www.rte-france.com/dynawo}curve")
+    ]
+    assert "InfiniteBus" not in models
+    assert not any("InfiniteBus" in key for key in curves_dict)
 
 
 def test_create_curves_file_invalid_sim_type_and_zone():
