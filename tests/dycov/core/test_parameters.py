@@ -1,11 +1,9 @@
+import fcntl
 import os
 import time
-import fcntl
-import pytest
 from datetime import timedelta
 from pathlib import Path
 
-# Adjust the import path based on where the function is located
 from dycov.core.parameters import _purge_stale_temp_dirs
 
 

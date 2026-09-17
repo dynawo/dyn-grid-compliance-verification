@@ -8,16 +8,16 @@
 #     demiguelm@aia.es
 #
 
-import os
-import fcntl
 import atexit
+import fcntl
 import getpass
 import logging
+import os
 import shutil
 import tempfile
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
