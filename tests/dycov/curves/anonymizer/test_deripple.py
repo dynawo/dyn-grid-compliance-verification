@@ -116,3 +116,16 @@ def test_anonymize_deripples_the_curves_when_asked(tmp_dirs, rippled_curve):
 
     result = pd.read_csv(out / "rippled.csv", sep=";")
     assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) == []
+
+
+def test_anonymize_keeps_the_oscillation_when_asked_for_no_deripple(tmp_dirs, rippled_curve):
+    curves, out = tmp_dirs
+    rippled_curve.to_csv(curves / "rippled.csv", sep=";", index=False)
+    (curves / "rippled.log").write_text(
+        "sim_t_event_start=5.0\nfault_duration=0.5\nfrequency_sampling=50.0\n", encoding="utf-8"
+    )
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves, deripple=0, compression=0)
+
+    result = pd.read_csv(out / "rippled.csv", sep=";")
+    assert _ripple_spans(result["time"].to_numpy(), result["signal1"].to_numpy()) != []
