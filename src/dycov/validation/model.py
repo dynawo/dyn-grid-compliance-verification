@@ -47,21 +47,6 @@ def _get_column_name(
     return "Q"
 
 
-def _get_measurement_name(
-    modified_setpoint: str,
-) -> str:
-    if modified_setpoint == "ActivePowerSetpointPu":
-        return "BusPDR_BUS_ActivePower"
-    if modified_setpoint == "ReactivePowerSetpointPu":
-        return "BusPDR_BUS_ReactivePower"
-    if modified_setpoint == "VoltageSetpointPu":
-        return "BusPDR_BUS_Voltage"
-    if modified_setpoint == "NetworkFrequencyPu":
-        return "NetworkFrequencyPu"
-
-    return "BusPDR_BUS_ReactivePower"
-
-
 class ModelValidator(Validator):
     def __init__(
         self,
@@ -431,7 +416,7 @@ class ModelValidator(Validator):
                 results,
             )
 
-            measurement_name = _get_measurement_name(modified_setpoint)
+            measurement_name = common.get_measurement_name(modified_setpoint)
             self.__compare_event_times(
                 measurement_name,
                 start_event,
