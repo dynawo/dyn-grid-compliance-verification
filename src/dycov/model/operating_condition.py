@@ -88,7 +88,6 @@ class OperatingCondition:
                 results_for_json,
                 outfile,
                 indent=4,
-                # Safely convert NumPy generic types (like np.bool_) to standard Python types
                 default=lambda obj: obj.item() if isinstance(obj, np.generic) else obj,
             )
 
