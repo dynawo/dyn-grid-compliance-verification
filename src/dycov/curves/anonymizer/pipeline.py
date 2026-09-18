@@ -60,11 +60,11 @@ def anonymize(
         Path of a set of curves. If not provided, `output_folder` will be used
         as the source for curves. Defaults to None.
     compression: Optional[float]
-        Relative epsilon for curve simplification, as a fraction of each signal's
-        range. If None, no compression is applied. Defaults to None.
+        Relative epsilon for curve simplification, as a fraction of each signal's range,
+        which also holds the curve to a sampling rate. Zero keeps every sample.
     deripple: Optional[float]
         Cut-off frequency, in Hz, of the filter that removes the oscillation the simulation
-        adds. If None, the curves keep it. Defaults to None.
+        adds. Zero keeps the oscillation.
     """
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
@@ -182,13 +182,13 @@ def _anonymized_curve(
     compression: Optional[float],
     deripple: Optional[float],
 ) -> pd.DataFrame:
-    if deripple is not None:
+    if deripple:
         dycov_logging.get_logger("Anonymizer").debug(
             f"Removing the simulation oscillation from {name}"
         )
         curve = deripple_curves(curve, deripple, event_time)
 
-    if compression is not None:
+    if compression:
         original_len = len(curve)
         curve = simplify_curves(
             curve,
