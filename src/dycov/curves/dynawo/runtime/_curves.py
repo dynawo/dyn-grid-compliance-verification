@@ -386,6 +386,45 @@ def _extract_and_scale_power_columns(
     _drop_columns(df_curves, list(columns.keys()))
 
 
+def _get_controlled_point_curves(
+    snref: float,
+    snom: float,
+    generators: list,
+    df_curves: pd.DataFrame,
+    curves_dict: dict,
+) -> None:
+    """Rebase the power the converter injects at the point its control measures.
+
+    Dynawo reports it in s_nref pu and the criteria compare powers in SNom pu.
+
+    Parameters
+    ----------
+    snref : float
+        The reference apparent power, used for base conversion of the power curves.
+    snom : float
+        The nominal apparent power, used for base conversion of the power curves.
+    generators : list
+        A list of generator objects, which contain information about the generator IDs.
+    df_curves : pd.DataFrame
+        The DataFrame containing the translated curves.
+    curves_dict : dict
+        A dictionary to store the converted power curves.
+    """
+    for generator in generators:
+        active_power_col = f"{generator.id}_GEN_ActivePowerControlledPu"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerControlledPu"
+
+        if not all(col in df_curves.columns for col in (active_power_col, reactive_power_col)):
+            continue
+
+        _extract_and_scale_power_columns(
+            df_curves,
+            curves_dict,
+            {active_power_col: active_power_col, reactive_power_col: reactive_power_col},
+            snref / snom,
+        )
+
+
 def _get_tso_synchronous_condenser_curves(
     snref: float,
     snom: float,
@@ -560,6 +599,7 @@ def build_output_curves(
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
     _get_injector_terminal_curves(s_nref, s_nom, generators, df_curves, curves_dict)
+    _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)
     _get_tso_load_curves(s_nref, s_nom, df_curves, curves_dict)
     convert_columns(df_curves, curves_dict, f_nom)
