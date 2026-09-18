@@ -74,7 +74,8 @@ PCS I16 in the RTE DTR.
    accept both namings. The converter-output node of the Zone 1 unit model,
    between the unit and its transformer, is named **InternalNode2** (the node
    called *Node2* in the DTR); the injector-terminal signals
-   (``*_GEN_IpInjTerminal``, ``*_GEN_IqInjTerminal``, ``*_GEN_UPuInjTerminal``)
+   (``*_GEN_ActiveCurrentInjTerminal``, ``*_GEN_ReactiveCurrentInjTerminal``,
+   ``*_GEN_VoltageInjTerminal``)
    are measured there.
 
 For information on the DYD and PAR file formats, refer to the

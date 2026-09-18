@@ -313,8 +313,12 @@ def _get_injector_terminal_curves(
     df_curves: pd.DataFrame,
     curves_dict: dict,
 ) -> None:
-    """Calculate the active and reactive current curves for generator injectors based on the
-    voltage and power curves, applying the appropriate base conversion.
+    """Derive the active and reactive current curves of the generator injectors from the power
+    and voltage curves Dynawo provides, applying the appropriate base conversion.
+
+    Dynawo gives a power at the injector terminal, so the current is a curve the tool computes,
+    and it carries its own name: the dictionary declares what Dynawo provides, this function
+    emits what the criteria compare.
 
     Parameters
     ----------
@@ -336,37 +340,35 @@ def _get_injector_terminal_curves(
     columns_to_remove = []
 
     for generator in generators:
-        voltage_col = f"{generator.id}_GEN_UPuInjTerminal"
-        active_current_col = f"{generator.id}_GEN_IpInjTerminal"
-        reactive_current_col = f"{generator.id}_GEN_IqInjTerminal"
+        voltage_col = f"{generator.id}_GEN_VoltageInjTerminal"
+        active_power_col = f"{generator.id}_GEN_ActivePowerInjTerminal"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerInjTerminal"
 
         has_all_columns = (
             voltage_col in df_curves.columns
-            and active_current_col in df_curves.columns
-            and reactive_current_col in df_curves.columns
+            and active_power_col in df_curves.columns
+            and reactive_power_col in df_curves.columns
         )
         if not has_all_columns:
             continue
 
-        active_current = np.multiply(
-            df_curves[active_current_col].to_numpy(dtype=float), snref / snom
-        )
-        reactive_current = np.multiply(
-            df_curves[reactive_current_col].to_numpy(dtype=float), snref / snom
+        active_power = np.multiply(df_curves[active_power_col].to_numpy(dtype=float), snref / snom)
+        reactive_power = np.multiply(
+            df_curves[reactive_power_col].to_numpy(dtype=float), snref / snom
         )
         voltage = _get_modulus(df_curves[voltage_col].tolist())
         voltage_array = np.array(voltage, dtype=float)
 
         curves_dict[voltage_col] = voltage
         valid_mask = np.isfinite(voltage_array) & (np.abs(voltage_array) > abs_tol)
-        curves_dict[active_current_col] = np.divide(
-            active_current, voltage_array, out=np.zeros_like(active_current), where=valid_mask
+        curves_dict[f"{generator.id}_GEN_ActiveCurrentInjTerminal"] = np.divide(
+            active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
         ).tolist()
-        curves_dict[reactive_current_col] = np.divide(
-            reactive_current, voltage_array, out=np.zeros_like(reactive_current), where=valid_mask
+        curves_dict[f"{generator.id}_GEN_ReactiveCurrentInjTerminal"] = np.divide(
+            reactive_power, voltage_array, out=np.zeros_like(reactive_power), where=valid_mask
         ).tolist()
 
-        columns_to_remove.extend([voltage_col, active_current_col, reactive_current_col])
+        columns_to_remove.extend([voltage_col, active_power_col, reactive_power_col])
 
     _drop_columns(df_curves, columns_to_remove)
 
