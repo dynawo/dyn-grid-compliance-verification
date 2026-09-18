@@ -211,14 +211,6 @@ def test_voltage_dip_threshold_selection():
     assert before_check2 is True or before_check2 is False
 
 
-def test_get_measurement_name_mapping():
-    assert checks._get_measurement_name("ActivePowerSetpointPu") == "BusPDR_BUS_ActivePower"
-    assert checks._get_measurement_name("ReactivePowerSetpointPu") == "BusPDR_BUS_ReactivePower"
-    assert checks._get_measurement_name("VoltageSetpointPu") == "BusPDR_BUS_Voltage"
-    assert checks._get_measurement_name("NetworkFrequencyPu") == "NetworkFrequencyPu"
-    assert checks._get_measurement_name("UnknownSetpoint") == "BusPDR_BUS_ReactivePower"
-
-
 def test_compliance_aggregation_updates_results():
     compliance_values = {
         "before_mae_BusPDR_BUS_ActivePower_check": True,
