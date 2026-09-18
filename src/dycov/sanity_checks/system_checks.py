@@ -37,13 +37,9 @@ def check_launchers(launcher_dwo: Path) -> None:
     error_txt = ""
     if not shutil.which(str(launcher_dwo)):  # shutil.which expects a string
         error_txt += "Dynawo not found.\n"
+
     if not shutil.which("pdflatex"):
         error_txt += "PdfLatex not found.\n"
-    if not shutil.which("cmake"):
-        error_txt += "CMake not found.\n"
-    # TODO: for Windows, add an analogous check for the presence of the VS2019 compiler.
-    if os.name == "posix" and not shutil.which("g++"):
-        error_txt += "G++ not found.\n"
 
     if len(error_txt) > 0:
         raise OSError(error_txt)

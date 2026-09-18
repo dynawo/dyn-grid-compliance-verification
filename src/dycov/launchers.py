@@ -16,7 +16,6 @@ from typing import Optional
 from dycov.cli.cli_parsers import setup_cli_parsers
 from dycov.cli.command_handlers import (
     handle_anonymize_command,
-    handle_compile_command,
     handle_excel2inputs_command,
     handle_generate_gfm_envelopes_command,
     handle_performance_command,
@@ -129,8 +128,6 @@ class DycovCLI:
             ret = handle_generate_gfm_envelopes_command(parser, args)
         elif args.command == "validate":
             ret = handle_validate_command(parser, args, dynawo_launcher_path)
-        elif args.command == "compile":
-            ret = handle_compile_command(parser, args, dynawo_launcher_path)
         elif args.command == "performance":
             ret = handle_performance_command(parser, args, dynawo_launcher_path)
         elif args.command == "excel2inputs":
