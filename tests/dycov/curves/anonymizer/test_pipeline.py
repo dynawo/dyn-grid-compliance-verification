@@ -90,3 +90,14 @@ def test_noise_costs_no_samples(tmp_dirs):
     noisy_curve = pd.read_csv(out / "nf.csv", sep=";")
     quiet_curve = pd.read_csv(quiet / "nf.csv", sep=";")
     assert len(noisy_curve) == len(quiet_curve)
+
+
+def test_zero_compression_keeps_every_sample(tmp_dirs):
+    """Each stage is asked off with a zero, now that none of them defaults to off."""
+    curves, out = tmp_dirs
+    source = create_nonflat_csv_and_log(curves, "nf")
+    original = pd.read_csv(source, sep=";")
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves, compression=0)
+
+    assert len(pd.read_csv(out / "nf.csv", sep=";")) == len(original)
