@@ -17,7 +17,6 @@ from typing import Optional
 
 from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.excel import names as excel_names
 from dycov.files import manage_files
 from dycov.logging import dycov_logging, enable_warning_capture
@@ -352,19 +351,6 @@ class DycovInitializer:
             return False
 
         return True
-
-    def _prepare_dynawo_models(self, launcher_dwo: Path) -> None:
-        """
-        Precompiles Dynawo models.
-
-        Parameters
-        ----------
-        launcher_dwo: Path
-            Path to the Dynawo launcher.
-        """
-        is_aborted = precompile(launcher_dwo)
-        if is_aborted:
-            sys.exit(1)
 
     def _check_config_file(self, tool_config_file: Path, user_config_file: Path):
         """

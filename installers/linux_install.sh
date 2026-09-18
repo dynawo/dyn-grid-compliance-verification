@@ -205,7 +205,7 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip gcc g++ cmake make pdflatex latexmk git awk uv sha256sum; do
+for cmd in curl unzip make pdflatex latexmk git awk uv sha256sum; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1
@@ -255,16 +255,6 @@ if [[ "$INSTALL_DYNAWO" == true ]]; then
     rm -rf "$DYNAWO_ZIP_FILE"
     color_msg "Dynawo installed."
 
-    # PATCH FOR GCC > 11
-    # Use -dumpversion for reliable major version extraction
-    GNU_MAJOR=$(g++ -dumpversion | cut -d"." -f1)
-    if [ "$GNU_MAJOR" -gt 11 ]; then
-        BOOST_HEADER=./dynawo/include/boost/thread/pthread/thread_data.hpp
-        if [ -f "$BOOST_HEADER" ] && grep -q '#if PTHREAD_STACK_MIN > 0$' "$BOOST_HEADER"; then
-            color_msg "Applying compatibility patch for Boost and GCC > 11..."
-            sed --in-place=.ORIG -E 's/^#if PTHREAD_STACK_MIN > 0$/#ifdef PTHREAD_STACK_MIN/' "$BOOST_HEADER"
-        fi
-    fi
 fi
 
 ################################################################################
