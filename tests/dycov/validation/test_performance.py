@@ -84,16 +84,6 @@ class DummyCurvesManager:
     def get_curves(self, curve: str) -> pd.DataFrame:
         return self._curves[curve]
 
-    def get_exclusion_windows(self):
-        from unittest.mock import MagicMock
-
-        mock_windows = MagicMock()
-        mock_windows.event_start = 0.0
-        mock_windows.event_end = 0.0
-        mock_windows.clear_start = 0.0
-        mock_windows.clear_end = 0.0
-        return mock_windows
-
 
 class DummyElement:
     def __init__(self, element_id):
