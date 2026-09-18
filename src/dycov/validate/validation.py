@@ -52,11 +52,6 @@ def _open_document(file: Path, is_testing: bool) -> None:
     if is_testing:
         return
 
-    if os.name == "nt":
-        dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
-        subprocess.run(["start", file], shell=True)
-        return
-
     if not (shutil.which("xdg-open") and os.environ.get("DISPLAY")):
         dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
         return
