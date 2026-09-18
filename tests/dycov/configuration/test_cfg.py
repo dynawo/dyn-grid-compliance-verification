@@ -205,23 +205,21 @@ def test_describe_option_without_a_source_file_names_section_and_key(tmp_path, e
     assert description == "'pdr_Q' in section [PCS.Model]"
 
 
-def test_load_pcs_config_inheritance_guard(tmp_path, empty_parsers):
+def test_load_pcs_config_keeps_a_value_set_by_a_previous_file(tmp_path, empty_parsers):
     default_config, user_config, pcs_config = empty_parsers
-
-    base_file = tmp_path / "base_pcs.ini"
-    base_file.write_text("[TestSection]\ntest_key = original_value\n")
-
-    alias_file = tmp_path / "alias_pcs.ini"
-    alias_file.write_text(
-        "[MyAlias]\ntest_key = alias_default_value\n\n[TestSection]\ninherit = MyAlias\n"
+    pcs_dir = tmp_path / "PCS" / "model"
+    pcs_dir.mkdir(parents=True)
+    (tmp_path / "PCS" / "PCS_aliases.ini").write_text(
+        "[MyAlias]\ntest_key = alias_default_value\nalias_only = alias_value\n"
     )
-
+    first_file = pcs_dir / "first_pcs.ini"
+    first_file.write_text("[TestSection]\ntest_key = original_value\n")
+    second_file = pcs_dir / "second_pcs.ini"
+    second_file.write_text("[TestSection]\ninherit = MyAlias\n")
     cfg = Config(tmp_path, default_config, user_config, pcs_config)
 
-    cfg.load_pcs_config(base_file)
-    cfg.load_pcs_config(alias_file)
+    cfg.load_pcs_config(first_file)
+    cfg.load_pcs_config(second_file)
 
-    final_value = cfg._pcs_config.get("TestSection", "test_key")
-    assert final_value == "original_value", (
-        "The original value was overwritten by the alias default. The inheritance guard failed."
-    )
+    assert cfg.get_value("TestSection", "test_key") == "original_value"
+    assert cfg.get_value("TestSection", "alias_only") == "alias_value"
