@@ -58,6 +58,32 @@ def test_save_curve_gives_a_step_two_instants(tmp_path):
     assert list(saved["signal1"]) == [1.0, 1.0, 0.0, 0.0]
 
 
+def test_save_curve_separates_a_step_that_lands_on_the_next_sample(tmp_path):
+    """Separating a pair can collide with the sample that follows it, one microsecond away."""
+    df = pd.DataFrame(
+        {
+            "time": [19.999996, 19.999996, 19.999997, 19.999998],
+            "signal1": [1.0, 0.5, 0.5, 0.5],
+        }
+    )
+
+    save_curve(df, tmp_path / "chain.csv")
+
+    saved = pd.read_csv(tmp_path / "chain.csv", sep=";")
+    instants = saved["time"].to_numpy()
+    assert len(set(instants)) == len(instants)
+    assert list(instants) == sorted(instants)
+
+
+def test_save_curve_separates_instants_that_the_precision_would_merge(tmp_path):
+    df = pd.DataFrame({"time": [0.0, 1.0000001, 1.0000002], "signal1": [1.0, 1.0, 0.0]})
+
+    save_curve(df, tmp_path / "rounded.csv")
+
+    instants = pd.read_csv(tmp_path / "rounded.csv", sep=";")["time"].to_numpy()
+    assert len(set(instants)) == 3
+
+
 def test_save_curve_keeps_what_the_step_leaves_behind(tmp_path):
     """The resampling of the validation drops repeated instants, so a step written on one
     instant loses the value the curve holds after it."""
