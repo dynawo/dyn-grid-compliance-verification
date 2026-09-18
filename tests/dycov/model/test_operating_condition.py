@@ -61,15 +61,6 @@ def _make_oc(monkeypatch, working_dir):
     return OperatingCondition(DummyParams(working_dir), "PCS", "Bench", "OC")
 
 
-def _set_logger_level(monkeypatch, level):
-    """Force the module logger to a fixed level (results.json is only written above DEBUG)."""
-    logger = logging.getLogger(f"test-oc-{level}")
-    logger.setLevel(level)
-
-    if hasattr(oc_module, "dycov_logging"):
-        monkeypatch.setattr(oc_module.dycov_logging, "get_logger", lambda name: logger)
-
-
 def test_initialize(monkeypatch, tmp_path):
     oc = _make_oc(monkeypatch, tmp_path)
 
@@ -81,8 +72,8 @@ def test_initialize(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize("log_level", [logging.INFO, logging.DEBUG])
-def test_validate_with_simulated_curves(monkeypatch, tmp_path, log_level):
-    _set_logger_level(monkeypatch, log_level)
+def test_validate_with_simulated_curves(caplog, monkeypatch, tmp_path, log_level):
+    caplog.set_level(log_level, logger="DyCoV.OperatingCondition")
 
     oc = _make_oc(monkeypatch, tmp_path)
 
@@ -111,8 +102,6 @@ def test_validate_with_simulated_curves(monkeypatch, tmp_path, log_level):
 
 
 def test_validate_without_validations(monkeypatch, tmp_path):
-    # Changed to INFO: we expect the diagnostic results.json NOT to be created
-    _set_logger_level(monkeypatch, logging.INFO)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(has_validations=False)
 
@@ -129,7 +118,6 @@ def test_validate_without_validations(monkeypatch, tmp_path):
 
 
 def test_validate_without_simulated_curves(monkeypatch, tmp_path):
-    _set_logger_level(monkeypatch, logging.INFO)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(u_dim=3.0)
 
