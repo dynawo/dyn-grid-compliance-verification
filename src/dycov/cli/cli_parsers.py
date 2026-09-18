@@ -742,24 +742,6 @@ def _add_excel2inputs_subparser(subparsers: argparse._SubParsersAction) -> None:
     dycov_logging.get_logger("CliParsers").debug("Added 'excel2inputs' subparser.")
 
 
-def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'compile' subparser to the given subparsers action.
-
-    Parameters
-    ----------
-    subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'compile' subparser will be added.
-    """
-    compile_model = subparsers.add_parser(
-        "compile",
-        help="Compile custom Modelica models.",
-    )
-    _add_launcher_argument(compile_model)
-    _add_dynamic_model_argument(compile_model)
-    _add_force_argument(compile_model)
-    dycov_logging.get_logger("CliParsers").debug("Added 'compile' subparser.")
-
-
 def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     """Adds the 'anonymize' subparser to the given subparsers action.
 
