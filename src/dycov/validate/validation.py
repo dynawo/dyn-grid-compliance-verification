@@ -9,13 +9,13 @@
 #
 
 import logging
+import multiprocessing
 import operator
 import os
 import shutil
 import signal
 import subprocess
 import sys
-from multiprocessing import Pool
 from operator import attrgetter
 from pathlib import Path
 
@@ -70,9 +70,19 @@ def _open_document(file: Path, is_testing: bool) -> None:
         )
 
 
-def _worker_initializer():
-    """Workers ignore SIGINT; main process coordinates shutdown."""
+def _worker_initializer(log_level):
+    """Workers ignore SIGINT; main process coordinates shutdown.
+    Also configures a basic console logger for forkserver compatibility."""
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    if not root_logger.hasHandlers():
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)
 
 
 def _validate_pcs(pcs_args) -> tuple:
@@ -351,7 +361,7 @@ class Validation:
         """
         return Path(__file__).parent.parent
 
-    def _validate(self, use_parallel: bool = False, num_processes: int = 4) -> list:
+    def _validate(self, use_parallel: bool = False, num_processes: int = 4) -> tuple[list, dict]:
         summary_list = []
         report_results = {}
 
@@ -360,7 +370,13 @@ class Validation:
                 f"Validating PCS in parallel using {num_processes} processes."
             )
             # Use an initializer so only the main process handles SIGINT
-            with Pool(processes=num_processes, initializer=_worker_initializer) as pool:
+            current_log_level = logging.getLogger().getEffectiveLevel()
+
+            with multiprocessing.Pool(
+                processes=num_processes,
+                initializer=_worker_initializer,
+                initargs=(current_log_level,),
+            ) as pool:
                 try:
                     results = pool.map(_validate_pcs, self._pcs_list)
                     pool.close()
@@ -378,6 +394,7 @@ class Validation:
                     )
                     # Propagate conventional exit code for SIGINT
                     raise SystemExit(130)
+
             # Collect results only if we reached here (no interrupt)
             for producer_name, pcs_name, summary, pcs_results in results:
                 summary_list.extend(summary)
