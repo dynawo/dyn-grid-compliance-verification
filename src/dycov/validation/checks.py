@@ -19,21 +19,6 @@ from dycov.validation import common, threshold_variables
 NOT_COMPUTABLE = "N/A"
 
 
-def _get_measurement_name(
-    modified_setpoint: str,
-) -> str:
-    if modified_setpoint == "ActivePowerSetpointPu":
-        return "BusPDR_BUS_ActivePower"
-    if modified_setpoint == "ReactivePowerSetpointPu":
-        return "BusPDR_BUS_ReactivePower"
-    if modified_setpoint == "VoltageSetpointPu":
-        return "BusPDR_BUS_Voltage"
-    if modified_setpoint == "NetworkFrequencyPu":
-        return "NetworkFrequencyPu"
-
-    return "BusPDR_BUS_ReactivePower"
-
-
 def _check_value_by_threshold(mxre: float, threshold: float) -> bool:
     return mxre < threshold
 
@@ -126,7 +111,7 @@ def _check_setpoint_tracking(
 ) -> dict:
     return _check_setpoint_tracking_by_window(
         compliance_values,
-        _get_measurement_name(modified_setpoint),
+        common.get_measurement_name(modified_setpoint),
         error,
     )
 

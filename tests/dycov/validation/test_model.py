@@ -13,11 +13,11 @@ import pandas as pd
 import pytest
 
 from dycov.model.parameters import ExclusionWindows
+from dycov.validation.common import get_measurement_name
 from dycov.validation.model import (
     ModelValidator,
     _check_value_by_threshold,
     _get_column_name,
-    _get_measurement_name,
 )
 
 MODEL_MODULE = "dycov.validation.model"
@@ -217,7 +217,7 @@ def test_get_column_name_maps_every_setpoint(modified_setpoint, expected):
     ],
 )
 def test_get_measurement_name_maps_every_setpoint(modified_setpoint, expected):
-    assert _get_measurement_name(modified_setpoint) == expected
+    assert get_measurement_name(modified_setpoint) == expected
 
 
 def test_check_value_by_threshold_is_strict():
