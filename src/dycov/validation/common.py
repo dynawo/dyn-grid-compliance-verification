@@ -977,3 +977,18 @@ def get_time_lag(
     # The curves now are not in per unit => the error is big
     ramp_time_lag = max(abs(time - ideal_time))
     return ramp_time_lag
+
+
+def get_measurement_name(
+    modified_setpoint: str,
+) -> str:
+    if modified_setpoint == "ActivePowerSetpointPu":
+        return "BusPDR_BUS_ActivePower"
+    if modified_setpoint == "ReactivePowerSetpointPu":
+        return "BusPDR_BUS_ReactivePower"
+    if modified_setpoint == "VoltageSetpointPu":
+        return "BusPDR_BUS_Voltage"
+    if modified_setpoint == "NetworkFrequencyPu":
+        return "NetworkFrequencyPu"
+
+    return "BusPDR_BUS_ReactivePower"
