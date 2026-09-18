@@ -23,13 +23,14 @@ def _separated_instants(time: np.ndarray, precision: int) -> np.ndarray:
     A simulation writes a discontinuity as two samples sharing one instant. Whoever reads the
     curve back keeps one of them — the resampling of the validation keeps the first — so the
     other end of the step is lost, and with it the value the curve holds from there on.
+
+    Separating one pair can land on the sample that follows, so every instant is pushed by as
+    much as the ones before it need, and the curve ends up strictly increasing.
     """
-    separated = time.astype(float).copy()
     step = 10.0**-precision
-    repeated = np.flatnonzero(np.diff(separated) <= 0.0)
-    for index in repeated:
-        separated[index + 1] = separated[index] + step
-    return separated
+    rounded = np.round(time.astype(float), precision)
+    room = step * np.arange(len(rounded))
+    return np.maximum.accumulate(rounded - room) + room
 
 
 def save_curve(curves: pd.DataFrame, path: Path, precision: int = TIME_PRECISION):
