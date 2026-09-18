@@ -503,8 +503,8 @@ class Benchmark:
             FigureDescription(
                 name="fig_I",
                 variables=[
-                    {"type": "generator", "variable": "IpInjTerminal"},
-                    {"type": "generator", "variable": "IqInjTerminal"},
+                    {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
+                    {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
                 ],
                 ylabel=i_label,
                 tolerance_band=tolerance_band,
@@ -519,7 +519,7 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_UIt",
-                variables=[{"type": "generator", "variable": "UPuInjTerminal"}],
+                variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
                 ylabel="V (pu base Unom)",
             )
         )

@@ -95,11 +95,11 @@ def test_build_oc_notices_without_missing_or_warnings():
 
 def test_build_oc_notices_with_missed_columns():
     notices, watermark = report._build_oc_notices(
-        {"missed_columns": ["Wind_Turbine_GEN_IpInjTerminal"]}
+        {"missed_columns": ["Wind_Turbine_GEN_ActiveCurrentInjTerminal"]}
     )
 
     assert "\\noindent\\textcolor{red}{Missing curves:}" in notices
-    assert "\\item \\textcolor{red}{Wind\\_Turbine\\_GEN\\_IpInjTerminal}" in notices
+    assert "\\item \\textcolor{red}{Wind\\_Turbine\\_GEN\\_ActiveCurrentInjTerminal}" in notices
     assert watermark == "\\SetWatermarkText{INVALID}"
 
 

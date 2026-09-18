@@ -553,7 +553,7 @@ def calculate_curves_errors(
 
 def _has_voltage_below_guard(curves: pd.DataFrame, abs_tol: float) -> bool:
     for column in curves.columns:
-        if not column.endswith("_GEN_UPuInjTerminal"):
+        if not column.endswith("_GEN_VoltageInjTerminal"):
             continue
         voltage = np.abs(curves[column].to_numpy(dtype=float))
         finite_voltage = voltage[np.isfinite(voltage)]

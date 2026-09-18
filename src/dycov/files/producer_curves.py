@@ -126,8 +126,8 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
         curves_dictionary += (
             f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
             f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
-            f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
-            f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
+            f"{gen_ppm.get('id')}_GEN_ActiveCurrentInjTerminal = \n"
+            f"{gen_ppm.get('id')}_GEN_ReactiveCurrentInjTerminal = \n"
         )
 
     curves_dictionary += (
@@ -270,8 +270,8 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
             curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"
         for gen_ppm in gens:
             curves_dictionary += (
-                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_ActiveCurrentInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_ReactiveCurrentInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
                 f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
             )

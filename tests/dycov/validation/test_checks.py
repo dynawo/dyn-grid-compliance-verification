@@ -449,7 +449,7 @@ def _terminal_frame(voltages):
     return pd.DataFrame(
         {
             "time": np.linspace(0, 1, len(voltages)),
-            "Wind_Turbine_GEN_UPuInjTerminal": voltages,
+            "Wind_Turbine_GEN_VoltageInjTerminal": voltages,
         }
     )
 

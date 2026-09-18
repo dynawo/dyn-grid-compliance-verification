@@ -1185,7 +1185,7 @@ def test_validate_reports_the_setpoint_tracking_flag_to_the_signal_processing(tm
 
 def _make_guard_manager(injector_voltage):
     calculated = _make_pdr_curves()
-    calculated["WT_GEN_UPuInjTerminal"] = injector_voltage
+    calculated["WT_GEN_VoltageInjTerminal"] = injector_voltage
     return _make_window_manager(calculated=calculated)
 
 
