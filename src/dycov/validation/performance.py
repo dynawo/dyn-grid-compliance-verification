@@ -748,6 +748,7 @@ class PerformanceValidator(Validator):
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
             }
         """
+
         # Validations common to all Pcs
         (
             steady_p,
