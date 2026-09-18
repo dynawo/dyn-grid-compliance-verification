@@ -587,12 +587,40 @@ def test_calculate_gathers_every_enabled_validation():
         calculated=_make_avr_curves([1.0] * 5, [1.0] * 5),
     )
 
-    compliance_values = validator._PerformanceValidator__calculate(1.0, 1.15)
+    compliance_values = validator._PerformanceValidator__calculate(
+        {"connect_to": "VoltageSetpointPu"}, 1.0, 1.15
+    )
 
     assert compliance_values["time_5u"] == pytest.approx(1.0)
     assert compliance_values["AVR_5_check"] is True
     assert compliance_values["check_freq1"] is True
     assert compliance_values["is_invalid_test"] is False
+
+
+def test_calculate_measures_the_response_on_the_curve_the_event_drives():
+    validator = _make_validator(
+        calculated=_make_pdr_curves(reactive_power=[0.1, 0.1, 0.3, 0.5, 0.5]),
+    )
+
+    compliance_values = validator._PerformanceValidator__calculate(
+        {"connect_to": "ReactivePowerSetpointPu"}, 1.0, 1.15
+    )
+
+    assert list(compliance_values["calc_reaction_target"]) == ["BusPDR_BUS_ReactivePower"]
+    assert list(compliance_values["calc_rise_target"]) == ["BusPDR_BUS_ReactivePower"]
+    assert list(compliance_values["calc_settling_tube"]) == ["BusPDR_BUS_ReactivePower"]
+    assert compliance_values["calc_reaction_time"] == pytest.approx(1.0)
+
+
+def test_calculate_measures_no_response_without_the_curve_the_event_drives():
+    validator = _make_validator(calculated=_make_pdr_curves())
+
+    compliance_values = validator._PerformanceValidator__calculate(
+        {"connect_to": "NetworkFrequencyPu"}, 1.0, 1.15
+    )
+
+    assert "calc_reaction_time" not in compliance_values
+    assert "calc_settling_tube" not in compliance_values
 
 
 # ---------------------------------------------------------------------------
@@ -990,7 +1018,11 @@ def test_check_others_avr_and_frequency():
 # ---------------------------------------------------------------------------
 
 
-VALIDATE_EVENT_PARAMS = {"start_time": 1.0, "duration_time": 0.1}
+VALIDATE_EVENT_PARAMS = {
+    "start_time": 1.0,
+    "duration_time": 0.1,
+    "connect_to": "VoltageSetpointPu",
+}
 
 
 def test_validate_a_power_park_module(tmp_path):
