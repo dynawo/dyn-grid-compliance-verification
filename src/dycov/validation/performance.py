@@ -409,57 +409,53 @@ class PerformanceValidator(Validator):
     def __calculate_response_characteristics(
         self,
         compliance_values: dict,
+        event_params: dict,
         t_event_start: float,
         time_clear: float,
-    ):
-        measurement_name = "BusPDR_BUS_ActivePower"
-        try:
-            res_reaction_time, res_reaction_target = common.get_reached_time(
-                0.1,
-                self.__curve_list("time"),
-                self.__curve_list(measurement_name),
+    ) -> None:
+        measurement_name = common.get_measurement_name(event_params["connect_to"])
+        time_curve = self.__curve_list("time")
+        measurement_curve = self.__curve_list(measurement_name)
+        if not time_curve or not measurement_curve:
+            return
+
+        event_duration = time_clear - t_event_start
+
+        res_reaction_time, res_reaction_target = common.get_reached_time(
+            0.1,
+            time_curve,
+            measurement_curve,
+            time_clear,
+        )
+        compliance_values["calc_reaction_time"] = res_reaction_time + event_duration
+        compliance_values["calc_reaction_target"] = {measurement_name: res_reaction_target}
+
+        res_rise_time, res_rise_target = common.get_reached_time(
+            0.9,
+            time_curve,
+            measurement_curve,
+            time_clear,
+        )
+        compliance_values["calc_rise_time"] = res_rise_time + event_duration
+        compliance_values["calc_rise_target"] = {measurement_name: res_rise_target}
+
+        res_settling_time, _, res_settling_min, res_settling_max, calc_ss_value = (
+            common.get_settling_time(
+                0.05,
+                time_curve,
+                measurement_curve,
                 time_clear,
             )
-            compliance_values["calc_reaction_time"] = res_reaction_time + (
-                time_clear - t_event_start
-            )
-            compliance_values["calc_reaction_target"] = {measurement_name: res_reaction_target}
-        except Exception:
-            pass
-
-        try:
-            res_rise_time, res_rise_target = common.get_reached_time(
-                0.9,
-                self.__curve_list("time"),
-                self.__curve_list(measurement_name),
-                time_clear,
-            )
-            compliance_values["calc_rise_time"] = res_rise_time + (time_clear - t_event_start)
-            compliance_values["calc_rise_target"] = {measurement_name: res_rise_target}
-        except Exception:
-            pass
-
-        try:
-            res_settling_time, _, res_settling_min, res_settling_max, calc_ss_value = (
-                common.get_settling_time(
-                    0.05,
-                    self.__curve_list("time"),
-                    self.__curve_list(measurement_name),
-                    time_clear,
-                )
-            )
-            compliance_values["calc_settling_time"] = res_settling_time + (
-                time_clear - t_event_start
-            )
-            compliance_values["calc_ss_value"] = calc_ss_value
-            compliance_values["calc_settling_tube"] = {
-                measurement_name: [res_settling_min, res_settling_max]
-            }
-        except Exception:
-            pass
+        )
+        compliance_values["calc_settling_time"] = res_settling_time + event_duration
+        compliance_values["calc_ss_value"] = calc_ss_value
+        compliance_values["calc_settling_tube"] = {
+            measurement_name: [res_settling_min, res_settling_max]
+        }
 
     def __calculate(
         self,
+        event_params: dict,
         t_event_start: float,
         time_clear: float,
     ) -> dict:
@@ -469,7 +465,9 @@ class PerformanceValidator(Validator):
         self.__calculate_avr(compliance_values, t_event_start)
         self.__calculate_frequency(compliance_values)
         self.__calculate_others(compliance_values, t_event_start)
-        self.__calculate_response_characteristics(compliance_values, t_event_start, time_clear)
+        self.__calculate_response_characteristics(
+            compliance_values, event_params, t_event_start, time_clear
+        )
 
         return compliance_values
 
@@ -837,6 +835,7 @@ class PerformanceValidator(Validator):
 
         # Check operational point validations
         validation_values = self.__calculate(
+            event_params,
             t_event,
             time_clear,
         )
