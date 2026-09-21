@@ -792,3 +792,11 @@ def test_get_time_lag_restricts_the_comparison_to_the_ramp_window():
 def test_get_time_lag_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
         common.get_time_lag([0, 1, 2], [1, 2], sim_t_event_start=1, event_duration=1)
+
+
+def test_get_measurement_name_mapping():
+    assert common.get_measurement_name("ActivePowerSetpointPu") == "BusPDR_BUS_ActivePower"
+    assert common.get_measurement_name("ReactivePowerSetpointPu") == "BusPDR_BUS_ReactivePower"
+    assert common.get_measurement_name("VoltageSetpointPu") == "BusPDR_BUS_Voltage"
+    assert common.get_measurement_name("NetworkFrequencyPu") == "NetworkFrequencyPu"
+    assert common.get_measurement_name("UnknownSetpoint") == "BusPDR_BUS_ReactivePower"

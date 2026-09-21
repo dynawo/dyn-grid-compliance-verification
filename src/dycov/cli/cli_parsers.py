@@ -533,9 +533,9 @@ def _add_noisestd_argument(parser: argparse.ArgumentParser) -> None:
         "-n",
         "--noisestd",
         arg_type=float,
-        default=0.0,
+        default=0.01,
         help_msg="Standard deviation of the noise added to the curves, in pu"
-        " (default: 0.0, recommended range: [0.01, 0.1]).",
+        " (default: 0.01, 0 to add none).",
     )
 
 
@@ -552,9 +552,11 @@ def _add_frequency_argument(parser: argparse.ArgumentParser) -> None:
         "-fr",
         "--frequency",
         arg_type=float,
-        default=3.0,
-        help_msg="Cut-off frequency of the filter used for smoothing the noise,"
-        " in Hz (default: 3.0, recommended range: [1.0, 5.0]).",
+        default=15.0,
+        help_msg="Cut-off frequency of the filter used for smoothing the noise, in Hz. The"
+        " verification filters every curve at the 'cutoff' of its configuration, 15.0 Hz by"
+        " default, so noise above that is erased before anything is checked, and noise well"
+        " below it reads as a slow wobble instead of a measurement (default: 15.0).",
     )
 
 
@@ -590,10 +592,11 @@ def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
         "-comp",
         "--compression",
         arg_type=float,
-        default=None,
+        default=0.00005,
         help_msg="Relative epsilon for curve simplification using the Ramer-Douglas-Peucker"
         " algorithm, as a fraction of each signal's range"
-        " (e.g. 0.001 = 0.1%%). Default: None (no compression).",
+        " (e.g. 0.001 = 0.1%%). Default: 0.00005, 0 to keep every sample."
+        " It also holds the curve to a sampling rate, finer around the event.",
     )
 
 
@@ -607,14 +610,14 @@ def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
     """
     _add_argument(
         parser,
-        "-d",
+        "-dr",
         "--deripple",
         arg_type=float,
-        default=None,
+        default=5.0,
         help_msg="Cut-off frequency, in Hz, of the filter that removes the oscillation the"
         " simulation adds to the curves. It must sit well below that oscillation, which the"
-        " examples show between 12 and 17 Hz (suggested: 5.0)."
-        " Default: None (the curves keep the oscillation).",
+        " examples show between 12 and 17 Hz."
+        " Default: 5.0, 0 to keep the oscillation.",
     )
 
 

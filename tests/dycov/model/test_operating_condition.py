@@ -9,7 +9,11 @@
 #
 """Tests for the OperatingCondition validation orchestration."""
 
+import json
 import logging
+
+import numpy as np
+import pytest
 
 from dycov.configuration.cfg import Config
 from dycov.model import operating_condition as oc_module
@@ -57,14 +61,6 @@ def _make_oc(monkeypatch, working_dir):
     return OperatingCondition(DummyParams(working_dir), "PCS", "Bench", "OC")
 
 
-def _set_logger_level(monkeypatch, level):
-    """Force the module logger to a fixed level (results.json is only written above DEBUG)."""
-    logger = logging.getLogger(f"test-oc-{level}")
-    logger.setLevel(level)
-
-    monkeypatch.setattr(oc_module.dycov_logging, "get_logger", lambda name: logger)
-
-
 def test_initialize(monkeypatch, tmp_path):
     oc = _make_oc(monkeypatch, tmp_path)
 
@@ -75,10 +71,14 @@ def test_initialize(monkeypatch, tmp_path):
     assert oc._working_dir == tmp_path
 
 
-def test_validate_with_simulated_curves(monkeypatch, tmp_path):
-    _set_logger_level(monkeypatch, logging.INFO)
+@pytest.mark.parametrize("log_level", [logging.INFO, logging.DEBUG])
+def test_validate_with_simulated_curves(caplog, monkeypatch, tmp_path, log_level):
+    caplog.set_level(log_level, logger="DyCoV.OperatingCondition")
+
     oc = _make_oc(monkeypatch, tmp_path)
-    validator = DummyValidator(u_dim=2.0)
+
+    mock_results = {"compliance": np.bool_(True), "udim": 2.0}
+    validator = DummyValidator(results=mock_results, u_dim=2.0)
 
     results = oc.validate(
         validator,
@@ -89,13 +89,19 @@ def test_validate_with_simulated_curves(monkeypatch, tmp_path):
     )
 
     assert validator.initialized is True
-    assert results["compliance"] is True
+    assert results["compliance"]
     assert results["udim"] == 2.0
-    assert (tmp_path / "results.json").exists()
+
+    json_file = tmp_path / "results.json"
+    assert json_file.exists(), f"results.json should be written when level is {log_level}"
+
+    with open(json_file, "r", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert saved_data["compliance"] is True
 
 
 def test_validate_without_validations(monkeypatch, tmp_path):
-    _set_logger_level(monkeypatch, logging.DEBUG)
     oc = _make_oc(monkeypatch, tmp_path)
     validator = DummyValidator(has_validations=False)
 
@@ -108,7 +114,7 @@ def test_validate_without_validations(monkeypatch, tmp_path):
     )
 
     assert results["compliance"] is None
-    assert not (tmp_path / "results.json").exists()
+    assert (tmp_path / "results.json").exists()
 
 
 def test_validate_without_simulated_curves(monkeypatch, tmp_path):
@@ -126,6 +132,7 @@ def test_validate_without_simulated_curves(monkeypatch, tmp_path):
     assert results["compliance"] is False
     assert results["curves"] is None
     assert results["udim"] == 3.0
+    assert not (tmp_path / "results.json").exists()
 
 
 def test_generate(monkeypatch, tmp_path):

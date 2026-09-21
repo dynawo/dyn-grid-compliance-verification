@@ -51,7 +51,7 @@ def _ramp_error(
 def _time_error(
     results: dict, name: str, variable: str, errors_map: list, footnote_defined: bool = False
 ) -> bool:
-    if "calc_" + variable not in results:
+    if "calc_" + variable not in results or variable + "_check" not in results:
         return footnote_defined
 
     simulated_time = printable.format_value(
