@@ -21,8 +21,11 @@ source "$script_dir/models.sh"
 # simulation that produced them, and no larger than they need to be. These are the values that
 # shape them, each measured on the examples rather than chosen:
 #   - the oscillation sits between 12 and 17 Hz, and only a cut-off this low removes it;
-#   - this epsilon keeps a quarter of the samples and moves no compared magnitude by more than
-#     0.002 pu, a twentieth of the tolerance the criteria apply.
+#   - this epsilon keeps a fiftieth of the samples, and 343 of the 386 curves under a tenth,
+#     while no compared magnitude moves by more than 0.004 pu where the test looks and 0.001
+#     away from it, against tolerances of 0.08 and 0.002. What resists it is not the epsilon's
+#     doing: a curve that never settles carries shape in every sample, and the worst of them
+#     still keeps seven tenths.
 NOISE_STD=0.01
 NOISE_FREQUENCY=15.0
 DERIPPLE_CUTOFF=5.0
@@ -58,6 +61,8 @@ usage() {
     echo "  -o, --output:   working path for the runs and the anonymized curves"
     echo "                  (default: ../RegeneratedCurves)"
     echo "  -j, --jobs:     max parallel runs (default: 4)"
+    echo "      --reuse:    anonymize the run already in the working path instead of running"
+    echo "                  the examples again, for a change that only touches the anonymizer"
     echo "  -h, --help:     display this help"
     echo
     echo "Notes:"
@@ -77,12 +82,14 @@ usage() {
 launcher="dynawo.sh"
 working_path="../RegeneratedCurves"
 jobs=4
+reuse=false
 
 while (($#)); do
     case "$1" in
         -l | --launcher)    launcher=$2;     shift 2 ;;
         -o | --output)      working_path=$2; shift 2 ;;
         -j | --jobs)        jobs=$2;         shift 2 ;;
+        --reuse)            reuse=true;      shift ;;
         -h | --help)        usage; exit 0 ;;
         *)                  echo "$1: invalid option."; usage; exit 1 ;;
     esac
@@ -93,7 +100,9 @@ examples_path="./examples"
 
 results_path="$working_path/Results"
 curves_path="$working_path/Curves"
-confirm_replacement "$working_path"
+if [ "$reuse" = false ]; then
+    confirm_replacement "$working_path"
+fi
 mkdir -p "$working_path"
 
 user_config="$script_dir/release.ini"
@@ -107,9 +116,15 @@ mkdir -p "$HOME"
 declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}")
 
 # 1. Run every example, which is what writes curves_calculated.csv and its simulation record.
-log_msg "Running the ${#examples[@]} Model examples..."
-"$script_dir/test_tool.sh" -v -l "$launcher" -e "$examples_path" -o "$results_path" \
-    -j "$jobs" --user-config "$user_config"
+#    Nothing the anonymizer does changes a simulation, so a run already made can be reused.
+if [ "$reuse" = true ]; then
+    log_msg "Reusing the run of ${#examples[@]} Model examples in $results_path..."
+    [ -f "$results_path/test_tool.log" ] || fail "There is no run to reuse in $results_path."
+else
+    log_msg "Running the ${#examples[@]} Model examples..."
+    "$script_dir/test_tool.sh" -v -l "$launcher" -e "$examples_path" -o "$results_path" \
+        -j "$jobs" --user-config "$user_config"
+fi
 
 # 1b. Count what ran. A selection of PCS, of benchmarks or of operating conditions anywhere
 #     would produce fewer tests, and the curves of the rest would be replaced by nothing.
