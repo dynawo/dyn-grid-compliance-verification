@@ -66,7 +66,8 @@ def _get_curve_names(
                 curve_names.extend(["BusPDR" + "_BUS_" + name["variable"]])
 
     ip_names = [n for n in curve_names if "ActiveCurrentInjTerminal" in n]
-    if ip_names:
+    iq_names = [n for n in curve_names if "ReactiveCurrentInjTerminal" in n]
+    if ip_names and iq_names:
         mag_names = [col for col in curves.columns if "modIInjTerminal" in col]
         for insert_pos, mag_name in enumerate(mag_names):
             curve_names.insert(insert_pos, mag_name)
