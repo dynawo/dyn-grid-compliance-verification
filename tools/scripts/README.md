@@ -193,9 +193,9 @@ tools/scripts/regenerate_curves.sh --launcher "$DYNAWOPATH/dynawo.sh"
 Run `--help` for the options. Three things are worth knowing before using it:
 
 *   **The oscillation goes.** A reference curve should not carry the oscillation of the
-    simulation that produced it, so the de-rippling is applied by default, with a 5 Hz cut-off.
-    The conditions whose model oscillates then report Non-compliant, which is what the criterion
-    says about them. `--no-deripple` ships the curves as the simulation produced them.
+    simulation that produced it, so the script de-ripples with a 5 Hz cut-off, and says so in
+    its own `--help`. The conditions whose model oscillates then report Non-compliant, which is
+    what the criterion says about them.
 *   **Nothing is replaced until everything is in place.** The curves of the repository are only
     touched once every example has been anonymized and checked, so a failed run leaves the
     shipped curves untouched. Every curve of a producer directory is removed before the new ones
