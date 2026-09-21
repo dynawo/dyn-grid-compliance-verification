@@ -398,9 +398,15 @@ class ModelValidator(Validator):
             step_magnitude = 1.0
         try:
             results = {
-                "before": calculate_errors(self._get_curves_by_windows("before"), step_magnitude),
-                "during": calculate_errors(self._get_curves_by_windows("during"), step_magnitude),
-                "after": calculate_errors(self._get_curves_by_windows("after"), step_magnitude),
+                "before": calculate_errors(
+                    self._get_curves_by_windows("before"), step_magnitude, zone
+                ),
+                "during": calculate_errors(
+                    self._get_curves_by_windows("during"), step_magnitude, zone
+                ),
+                "after": calculate_errors(
+                    self._get_curves_by_windows("after"), step_magnitude, zone
+                ),
                 "is_invalid_test": common.is_invalid_test(
                     list(self._get_calculated_curve_by_name(("time"))),
                     list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
@@ -416,7 +422,9 @@ class ModelValidator(Validator):
                 results,
             )
 
-            measurement_name = common.get_measurement_name(modified_setpoint)
+            measurement_name = common.get_measurement_name(
+                modified_setpoint, zone, self._get_calculated_curves().columns
+            )
             self.__compare_event_times(
                 measurement_name,
                 start_event,
@@ -716,6 +724,7 @@ class ModelValidator(Validator):
         compliance_values: dict,
         modified_setpoint: str,
     ) -> dict:
+        zone = self._producer.get_zone()
         check_results = self.__create_results(compliance_values)
 
         self.__check_times(check_results, compliance_values)
@@ -748,6 +757,7 @@ class ModelValidator(Validator):
                 modified_setpoint,
                 "controlled_magnitude",
                 check_results,
+                zone,
             )
             check_results["setpoint_tracking_controlled_magnitude_name"] = _get_column_name(
                 modified_setpoint
@@ -759,6 +769,7 @@ class ModelValidator(Validator):
                 "ActivePowerSetpointPu",
                 "active_power",
                 check_results,
+                zone,
             )
             check_results["setpoint_tracking_active_power_name"] = "P"
 
@@ -768,6 +779,7 @@ class ModelValidator(Validator):
                 "ReactivePowerSetpointPu",
                 "reactive_power",
                 check_results,
+                zone,
             )
             check_results["setpoint_tracking_reactive_power_name"] = "Q"
 
