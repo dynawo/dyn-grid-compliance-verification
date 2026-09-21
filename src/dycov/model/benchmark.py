@@ -30,7 +30,7 @@ from dycov.report.types import (
     FinalValueBand,
     FrequencyBand,
 )
-from dycov.validation import compliance_list
+from dycov.validation import compared_curves, compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
 
@@ -395,7 +395,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_P",
-                variables="BusPDR_BUS_ActivePower",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "active_power"
+                ),
                 ylabel=p_label,
                 tolerance_band=tolerance_band,
             )
@@ -414,7 +416,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_Q",
-                variables="BusPDR_BUS_ReactivePower",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "reactive_power"
+                ),
                 ylabel=q_label,
             )
         )
@@ -432,7 +436,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_Ip",
-                variables="BusPDR_BUS_ActiveCurrent",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "active_current"
+                ),
                 ylabel=ip_label,
             )
         )
@@ -450,7 +456,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_Iq",
-                variables="BusPDR_BUS_ReactiveCurrent",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "reactive_current"
+                ),
                 ylabel=iq_label,
             )
         )
