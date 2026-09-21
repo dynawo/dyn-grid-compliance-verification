@@ -360,3 +360,36 @@ def test_voltage_with_v_returns_true():
 
 def test_network_frequency_with_omega_returns_true():
     assert is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
+
+
+def _make_injector_current_curves():
+    """The Zone 1 injector currents, with the magnitude column the report adds beforehand."""
+    return pd.DataFrame(
+        {
+            "time": [0, 1, 2],
+            "WT_GEN_ActiveCurrentInjTerminal": [0.8, 0.6, 0.4],
+            "WT_GEN_ReactiveCurrentInjTerminal": [0.1, 0.3, 0.5],
+            "WT_GEN_modIInjTerminal": [0.81, 0.67, 0.64],
+        }
+    )
+
+
+def test_get_curve_names_draws_the_magnitude_with_both_components():
+    variables = [
+        {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
+        {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+    ]
+
+    names = html._get_curve_names(variables, _make_injector_current_curves())
+
+    assert "WT_GEN_modIInjTerminal" in names
+
+
+def test_get_curve_names_leaves_the_magnitude_out_of_the_active_current_figure():
+    variables = [{"type": "generator", "variable": "ActiveCurrentInjTerminal"}]
+
+    names = html._get_curve_names(variables, _make_injector_current_curves())
+
+    # The magnitude is the resultant of both components, so it belongs only to the figure
+    # that draws both.
+    assert names == ["WT_GEN_ActiveCurrentInjTerminal"]
