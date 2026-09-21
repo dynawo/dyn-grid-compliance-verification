@@ -138,6 +138,22 @@ def resolve_all(zone: int, columns: Iterable[str]) -> list[tuple[ComparedCurve, 
     return resolved
 
 
+def plot_variables(zone: int, label: str):
+    """The ``variables`` a report figure needs to draw the curve a zone compares under a label.
+
+    A curve of the generating unit is drawn for every unit the curves carry, so it is named by
+    its suffix; one of the bus is a single column, named in full.
+    """
+    for curve in for_zone(zone):
+        if curve.label != label:
+            continue
+        if curve.selector.startswith(_GENERATOR_SELECTOR):
+            variable = curve.selector[len(_GENERATOR_SELECTOR) :]
+            return [{"type": "generator", "variable": variable}]
+        return curve.selector
+    return None
+
+
 def by_label(label: str) -> ComparedCurve | None:
     """The compared curve stored under a label, from any zone."""
     for curve in every_curve():
