@@ -1,8 +1,20 @@
+# `tools/scripts` — shell tooling for **dycov**
+
+| Script | What it does |
+| --- | --- |
+| `test_tool.sh` | Runs the bundled examples: model validation, performance verification and envelope generation. Documented below. |
+| `regenerate_curves.sh` | Regenerates the curves shipped with the Model examples, the last step before a release. See the final section. |
+| `models.sh` | The catalogue of Model examples, sourced by both of the above. Adding an example is one edit here. |
+| `extract_curves.sh` | Pulls the curves of a results tree into a flat directory. |
+| `run_complexity_analysis.sh` | Runs the complexity analysis of `tools/analysis`. |
+
+***
+
 # `test_tool.sh` — Integration Runner for **dycov**
 
 This script orchestrates automated runs of **dycov** to **validate models**, **verify performance**, and **generate envelopes** across the project’s examples. It supports filtering by **IEC** and **WECC** families, controls input/output locations, and runs tasks **in parallel** to speed up execution. At the end of the run, it also **summarizes Overall Result counts** and produces CSV and optional charts.
 
-> **Path:** `tests_integration/test_tool.sh`  
+> **Path:** `tools/scripts/test_tool.sh`  
 > **Phases:**
 >
 > *   **Validation** — `dycov validate` for Wind / Photovoltaics / BESS
@@ -21,7 +33,7 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 >
 > ```bash
 > export DYNAWOPATH=/opt/dynawo/bin
-> tests_integration/test_tool.sh --launcher "$DYNAWOPATH/dynawo.sh"
+> tools/scripts/test_tool.sh --launcher "$DYNAWOPATH/dynawo.sh"
 > ```
 
 ***
@@ -29,7 +41,7 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 ## 2) Quick Start
 
 ```bash
-tests_integration/test_tool.sh
+tools/scripts/test_tool.sh
 ```
 
 Running with **no options** will:
@@ -125,24 +137,24 @@ Running with **no options** will:
 
 ```bash
 # Full run (IEC + WECC; all validations; default paths)
-tests_integration/test_tool.sh
+tools/scripts/test_tool.sh
 
 # Clean run (remove previous results, then run everything)
-tests_integration/test_tool.sh --remove
+tools/scripts/test_tool.sh --remove
 
 # Only Validation on IEC, custom launcher & output
-tests_integration/test_tool.sh --iec --validate \
+tools/scripts/test_tool.sh --iec --validate \
   --launcher /opt/dynawo/bin/dynawo.sh \
   --output ./Results_Validate_IEC
 
 # Performance only on WECC
-tests_integration/test_tool.sh --wecc --performance --output ./Results_Perf_WECC
+tools/scripts/test_tool.sh --wecc --performance --output ./Results_Perf_WECC
 
 # Envelope generation only (GFM)
-tests_integration/test_tool.sh --generate
+tools/scripts/test_tool.sh --generate
 
 # Custom examples path
-tests_integration/test_tool.sh --examples /home/marcos/project/examples
+tools/scripts/test_tool.sh --examples /home/marcos/project/examples
 ```
 
 ***
@@ -160,3 +172,36 @@ tests_integration/test_tool.sh --examples /home/marcos/project/examples
 *   Parallelism: commands are dispatched via `xargs -P 4 -I { } bash -c "{ }"`. Adjust `-P` for concurrency.
 *   Function exports: `run_dycov_validate`, `run_dycov_performance`, `run_dycov_generate` are `export -f` so `xargs` can invoke them in subshells.
 *   Timing: each sub-command prints elapsed seconds; the total time is reported at the end.
+
+***
+
+# `regenerate_curves.sh` — the curves the examples ship
+
+The reference curves under `examples/Model/**/ReferenceCurves`, and the producer curves under
+`examples/Model/ProducerCurves`, are regenerated once per release, from the tool itself. This
+command does the three stages in one go:
+
+1.  Runs every Model example through `test_tool.sh`, which writes `curves_calculated.csv` and
+    the simulation record of each test.
+2.  Anonymizes each results tree with `dycov anonymize`.
+3.  Replaces the curves in the repository, and updates the event metadata of their dictionaries.
+
+```bash
+tools/scripts/regenerate_curves.sh --launcher "$DYNAWOPATH/dynawo.sh"
+```
+
+Run `--help` for the options. Three things are worth knowing before using it:
+
+*   **The oscillation goes.** A reference curve should not carry the oscillation of the
+    simulation that produced it, so the script de-ripples with a 5 Hz cut-off, and says so in
+    its own `--help`. The conditions whose model oscillates then report Non-compliant, which is
+    what the criterion says about them.
+*   **Nothing is replaced until everything is in place.** The curves of the repository are only
+    touched once every example has been anonymized and checked, so a failed run leaves the
+    shipped curves untouched. Every curve of a producer directory is removed before the new ones
+    are copied, so a test that is no longer run leaves none behind.
+*   **The dictionaries stay**, but the event they declare is corrected to the one the run used:
+    a stale instant or duration silently misplaces every window computed from it.
+
+Review the result with `git status` and `git diff --stat` before committing: a regeneration that
+moves a verdict is telling you something about the examples, not only about the curves.

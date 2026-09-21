@@ -69,8 +69,8 @@
     <par type="DOUBLE" name="photovoltaics_XSourcePu" value="0.01"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="photovoltaics_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0.015"/>
-    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/>
+    <par type="DOUBLE" name="photovoltaics_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0"/>
     <!-- General -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="0.25"/>
   </set>

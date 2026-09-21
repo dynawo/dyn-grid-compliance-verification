@@ -13,11 +13,11 @@ import pandas as pd
 import pytest
 
 from dycov.model.parameters import ExclusionWindows
+from dycov.validation.common import get_measurement_name
 from dycov.validation.model import (
     ModelValidator,
     _check_value_by_threshold,
     _get_column_name,
-    _get_measurement_name,
 )
 
 MODEL_MODULE = "dycov.validation.model"
@@ -217,7 +217,7 @@ def test_get_column_name_maps_every_setpoint(modified_setpoint, expected):
     ],
 )
 def test_get_measurement_name_maps_every_setpoint(modified_setpoint, expected):
-    assert _get_measurement_name(modified_setpoint) == expected
+    assert get_measurement_name(modified_setpoint) == expected
 
 
 def test_check_value_by_threshold_is_strict():
@@ -1116,6 +1116,47 @@ def test_validate_without_reference_curves_marks_the_results_as_incomplete(tmp_p
 
     assert results["incomplete_curves"] is True
     assert "reference_curves" not in results
+
+
+def test_validate_without_reference_curves_skips_the_comparison(tmp_path):
+    curves_manager = _make_window_manager(windows_raise=True)
+    curves_manager._curves["reference"] = pd.DataFrame()
+    validator = _make_validator(
+        validations=["mae_voltage_1P"], zone=3, curves_manager=curves_manager
+    )
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 1.0,
+        "connect_to": "ActivePowerSetpointPu",
+        "step_value": 0.1,
+    }
+
+    results = validator.validate("oc", tmp_path, "outputs", event_params, has_reference=False)
+
+    assert results["is_invalid_test"] is False
+    assert results["sim_t_event_start"] == 1.0
+
+
+def test_validate_without_reference_curves_reports_the_checks_as_not_available(tmp_path):
+    curves_manager = _make_window_manager(windows_raise=True)
+    curves_manager._curves["reference"] = pd.DataFrame()
+    validator = _make_validator(
+        validations=["active_power_recovery", "reaction_time"],
+        zone=3,
+        curves_manager=curves_manager,
+    )
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 1.0,
+        "connect_to": "ActivePowerSetpointPu",
+        "step_value": 0.1,
+    }
+
+    results = validator.validate("oc", tmp_path, "outputs", event_params, has_reference=False)
+
+    assert results["t_P90_check"] == "N/A"
+    assert results["reaction_time_check"] == "N/A"
+    assert results["compliance"] is False
 
 
 def test_validate_reports_the_setpoint_tracking_flag_to_the_signal_processing(tmp_path):
