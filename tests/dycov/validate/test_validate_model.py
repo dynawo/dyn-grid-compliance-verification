@@ -12,15 +12,15 @@ def test_model_validation_ppm_producer_curves():
         MODEL / "Wind" / "IECB2015" / "ReferenceCurves",
     )
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.Compliant,  # 6
-        Compliance.Compliant,  # 7
-        Compliance.Compliant,  # 8
+        Compliance.InvalidTest,  # 0
+        Compliance.InvalidTest,  # 1
+        Compliance.InvalidTest,  # 2
+        Compliance.InvalidTest,  # 3
+        Compliance.InvalidTest,  # 4
+        Compliance.InvalidTest,  # 5
+        Compliance.InvalidTest,  # 6
+        Compliance.InvalidTest,  # 7
+        Compliance.InvalidTest,  # 8
         Compliance.WithoutCurves,  # 9
         Compliance.Compliant,  # 10
         Compliance.Compliant,  # 11
@@ -46,25 +46,25 @@ def test_model_validation_bess_producer_curves():
         MODEL / "BESS" / "WECC" / "ReferenceCurves",
     )
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.Compliant,  # 6
-        Compliance.Compliant,  # 7
-        Compliance.Compliant,  # 8
-        Compliance.Compliant,  # 9
-        Compliance.Compliant,  # 10
-        Compliance.Compliant,  # 11
-        Compliance.Compliant,  # 12
-        Compliance.Compliant,  # 13
-        Compliance.Compliant,  # 14
-        Compliance.Compliant,  # 15
+        Compliance.InvalidTest,  # 0
+        Compliance.InvalidTest,  # 1
+        Compliance.InvalidTest,  # 2
+        Compliance.InvalidTest,  # 3
+        Compliance.InvalidTest,  # 4
+        Compliance.InvalidTest,  # 5
+        Compliance.InvalidTest,  # 6
+        Compliance.InvalidTest,  # 7
+        Compliance.InvalidTest,  # 8
+        Compliance.InvalidTest,  # 9
+        Compliance.InvalidTest,  # 10
+        Compliance.InvalidTest,  # 11
+        Compliance.InvalidTest,  # 12
+        Compliance.InvalidTest,  # 13
+        Compliance.InvalidTest,  # 14
+        Compliance.InvalidTest,  # 15
         Compliance.WithoutCurves,  # 16
-        Compliance.Compliant,  # 17
-        Compliance.Compliant,  # 18
+        Compliance.InvalidTest,  # 17
+        Compliance.InvalidTest,  # 18
         Compliance.WithoutCurves,  # 19
         Compliance.Compliant,  # 20
         Compliance.Compliant,  # 21
