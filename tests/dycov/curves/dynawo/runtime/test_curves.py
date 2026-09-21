@@ -269,14 +269,34 @@ def test_the_injector_currents_are_emitted_under_their_own_name():
     assert "GEN1_GEN_ReactivePowerInjTerminal" not in curves_dict
 
 
-def test_injector_terminal_currents_zeroed_below_voltage_guard():
+def test_injector_terminal_currents_divide_however_small_the_voltage_is():
     class Generator:
         def __init__(self, id_):
             self.id = id_
 
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_VoltageInjTerminal": [complex(1e-4, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_VoltageInjTerminal": [complex(1e-6, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerInjTerminal": [1e-6, 1.0],
+            "GEN1_GEN_ReactivePowerInjTerminal": [5e-7, 0.5],
+        }
+    )
+    curves_dict = {}
+
+    _get_injector_terminal_curves(100.0, 100.0, [Generator("GEN1")], df_curves, curves_dict)
+
+    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([1.0, 1.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.5, 0.5])
+
+
+def test_injector_terminal_currents_are_zero_only_where_the_voltage_is():
+    class Generator:
+        def __init__(self, id_):
+            self.id = id_
+
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageInjTerminal": [complex(0.0, 0.0), complex(1.0, 0.0)],
             "GEN1_GEN_ActivePowerInjTerminal": [1.0, 1.0],
             "GEN1_GEN_ReactivePowerInjTerminal": [0.5, 0.5],
         }
