@@ -43,6 +43,8 @@ usage() {
     echo "  -g, --generate: execute only envelope generation (GFM)"
     echo "  -j, --jobs: max parallel processes per phase (default: 4)"
     echo "  --user-config: configuration file for every run (default: the one of the user)"
+    echo "  -d, --debug: run with the log level at DEBUG, which also keeps in every test"
+    echo "               directory the curves the criteria compare (signal.csv, reference.csv)"
     echo "  -h, --help: display this help"
     echo
     echo "Notes:"
@@ -62,12 +64,12 @@ run_dycov_validate() {
     local model_name=$5
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
-    dycov ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing
     end=$(date +%s)
     log_msg "Validate: $model_name Elapsed Time: $((end - start)) seconds"
 }
@@ -125,12 +127,12 @@ run_dycov_performance() {
     local model_name=$5
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
-    dycov ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing
     end=$(date +%s)
     log_msg "Verify: $topology - $model_name Elapsed Time: $((end - start)) seconds"
 }
@@ -326,11 +328,13 @@ performance=false
 generate=false
 any_exec_flag=false
 remove=false     # by default, do NOT remove Results path
+debug=false      # by default, the log level is the one of the configuration
 examples_path="./examples"
 results_path="../Results"
 max_parallel=4  # default
 DYCOV_USER_CONFIG=""  # empty: every run reads the configuration of the user
-export DYCOV_USER_CONFIG
+DYCOV_DEBUG=""  # empty: the tool logs at the level of its configuration
+export DYCOV_USER_CONFIG DYCOV_DEBUG
 
 while (($#)); do
     case "$1" in
@@ -385,6 +389,10 @@ while (($#)); do
             DYCOV_USER_CONFIG=$2
             shift 2
             ;;
+        -d | --debug)
+            debug=true
+            shift
+            ;;
         *)
             echo "$1: invalid option."
             usage
@@ -398,6 +406,10 @@ if [ "$any_exec_flag" = false ]; then
     validate=true
     performance=true
     generate=true
+fi
+
+if [ "$debug" = true ]; then
+    DYCOV_DEBUG="-d"
 fi
 
 if [ "$remove" = true ]; then
