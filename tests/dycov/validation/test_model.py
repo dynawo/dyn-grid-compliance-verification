@@ -415,11 +415,12 @@ def test_check_ramp_only_checks_the_enabled_validations():
 # ---------------------------------------------------------------------------
 
 
-def _make_step_manager():
+def _make_step_manager(zone=3):
     """Calculated active power steps 1 s after the event, the reference one 2 s after."""
     time = [0.0, 1.0, 2.0, 3.0, 4.0]
-    calculated = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [0.0, 0.0, 1.0, 1.0, 1.0]})
-    reference = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [0.0, 0.0, 0.0, 1.0, 1.0]})
+    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledPu"
+    calculated = pd.DataFrame({"time": time, name: [0.0, 0.0, 1.0, 1.0, 1.0]})
+    reference = pd.DataFrame({"time": time, name: [0.0, 0.0, 0.0, 1.0, 1.0]})
     return DummyCurvesManager(calculated=calculated, reference=reference)
 
 
@@ -505,11 +506,12 @@ def test_compare_event_times_without_validations_only_stores_the_event_start():
 
 def test_active_power_recovery_error_compares_the_p90_instants():
     validator = _make_validator(
-        validations=["active_power_recovery"], curves_manager=_make_step_manager()
+        zone=3, validations=["active_power_recovery"], curves_manager=_make_step_manager()
     )
     results = {}
 
     validator._ModelValidator__active_power_recovery_error(
+        zone=3,
         start_event=0.0,
         duration_event=3.0,
         results=results,
@@ -520,11 +522,45 @@ def test_active_power_recovery_error_compares_the_p90_instants():
     assert results["t_P90_error"] == pytest.approx(1.0)
 
 
-def test_active_power_recovery_error_skipped_when_the_validation_is_disabled():
-    validator = _make_validator(curves_manager=_make_step_manager())
+def test_active_power_recovery_error_in_zone1_reads_the_controlled_point():
+    validator = _make_validator(
+        validations=["active_power_recovery"], curves_manager=_make_step_manager(zone=1)
+    )
     results = {}
 
     validator._ModelValidator__active_power_recovery_error(
+        zone=1,
+        start_event=0.0,
+        duration_event=3.0,
+        results=results,
+    )
+
+    assert results["t_P90_ref"] == pytest.approx(2.0)
+    assert results["t_P90_error"] == pytest.approx(1.0)
+
+
+def test_active_power_recovery_error_skipped_without_the_active_power_curve():
+    validator = _make_validator(
+        zone=1, validations=["active_power_recovery"], curves_manager=_make_step_manager()
+    )
+    results = {}
+
+    validator._ModelValidator__active_power_recovery_error(
+        zone=1,
+        start_event=0.0,
+        duration_event=3.0,
+        results=results,
+    )
+
+    assert results == {}
+
+
+def test_active_power_recovery_error_skipped_when_the_validation_is_disabled():
+    validator = _make_validator(zone=3, curves_manager=_make_step_manager())
+    results = {}
+
+    validator._ModelValidator__active_power_recovery_error(
+        zone=3,
         start_event=0.0,
         duration_event=3.0,
         results=results,
@@ -622,12 +658,12 @@ def _make_mae_curves(measurement_name):
 
 
 def test_calculate_mean_absolute_error_for_voltage():
-    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
     curves = _make_mae_curves("BusPDR_BUS_Voltage")
     results = {}
 
     validator._ModelValidator__calculate_mean_absolute_error(
-        "BusPDR_BUS_Voltage", curves, 0.1, results
+        3, "BusPDR_BUS_Voltage", curves, 0.1, results
     )
 
     # Averaged over the three samples after the calculated settling instant.
@@ -637,14 +673,14 @@ def test_calculate_mean_absolute_error_for_voltage():
 
 
 def test_calculate_mean_absolute_error_for_power_covers_both_components():
-    validator = _make_validator(validations=["mean_absolute_error_power_1P"])
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_power_1P"])
     calculated, reference = _make_mae_curves("BusPDR_BUS_ActivePower")
     calculated["BusPDR_BUS_ReactivePower"] = [0.1, 0.1, 0.1, 0.1]
     reference["BusPDR_BUS_ReactivePower"] = [0.1, 0.1, 0.1, 0.1]
     results = {}
 
     validator._ModelValidator__calculate_mean_absolute_error(
-        "BusPDR_BUS_ActivePower", (calculated, reference), 0.1, results
+        3, "BusPDR_BUS_ActivePower", (calculated, reference), 0.1, results
     )
 
     assert results["mae_active_power_1P"] == pytest.approx(0.04 / 3)
@@ -656,14 +692,14 @@ def test_calculate_mean_absolute_error_for_power_covers_both_components():
 
 
 def test_calculate_mean_absolute_error_for_injection_covers_both_components():
-    validator = _make_validator(validations=["mean_absolute_error_injection_1P"])
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_injection_1P"])
     calculated, reference = _make_mae_curves("BusPDR_BUS_ActiveCurrent")
     calculated["BusPDR_BUS_ReactiveCurrent"] = [0.1, 0.1, 0.1, 0.1]
     reference["BusPDR_BUS_ReactiveCurrent"] = [0.1, 0.1, 0.1, 0.1]
     results = {}
 
     validator._ModelValidator__calculate_mean_absolute_error(
-        "BusPDR_BUS_ActiveCurrent", (calculated, reference), 0.1, results
+        3, "BusPDR_BUS_ActiveCurrent", (calculated, reference), 0.1, results
     )
 
     assert results["mae_active_current_1P"] == pytest.approx(0.04 / 3)
@@ -673,20 +709,20 @@ def test_calculate_mean_absolute_error_for_injection_covers_both_components():
 
 
 def test_calculate_mean_absolute_error_reports_a_curve_still_moving_as_not_stabilized():
-    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
     calculated, reference = _make_mae_curves("BusPDR_BUS_Voltage")
     calculated["BusPDR_BUS_Voltage"] = [1.0, 1.0, 1.02, 1.06]
     results = {}
 
     validator._ModelValidator__calculate_mean_absolute_error(
-        "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
+        3, "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
     )
 
     assert results["mae_voltage_1P_stabilized"] is False
 
 
 def test_calculate_mean_absolute_error_judges_the_stabilization_on_the_whole_after_window():
-    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
     time = [float(instant) for instant in range(21)]
     voltage = [1.0] * 21
     voltage[18] = 1.5
@@ -695,7 +731,7 @@ def test_calculate_mean_absolute_error_judges_the_stabilization_on_the_whole_aft
     results = {}
 
     validator._ModelValidator__calculate_mean_absolute_error(
-        "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
+        3, "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
     )
 
     # The settling slice begins at the excursion and is flat from the next sample on, so it
@@ -706,7 +742,7 @@ def test_calculate_mean_absolute_error_judges_the_stabilization_on_the_whole_aft
 def test_calculate_mean_absolute_error_reports_not_stabilized_when_stability_is_undecidable(
     monkeypatch,
 ):
-    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
     curves = _make_mae_curves("BusPDR_BUS_Voltage")
 
     def _raise(time_curve, curve, thr_ss_tol):
@@ -716,7 +752,7 @@ def test_calculate_mean_absolute_error_reports_not_stabilized_when_stability_is_
     results = {}
 
     validator._ModelValidator__calculate_mean_absolute_error(
-        "BusPDR_BUS_Voltage", curves, 0.1, results
+        3, "BusPDR_BUS_Voltage", curves, 0.1, results
     )
 
     assert results["mae_voltage_1P_stabilized"] is False

@@ -46,6 +46,15 @@ def _get_column_name(
     return "Q"
 
 
+_MEAN_ABSOLUTE_ERROR_VALIDATIONS = {
+    "voltage": "mean_absolute_error_voltage",
+    "active_power": "mean_absolute_error_power_1P",
+    "reactive_power": "mean_absolute_error_power_1P",
+    "active_current": "mean_absolute_error_injection_1P",
+    "reactive_current": "mean_absolute_error_injection_1P",
+}
+
+
 class ModelValidator(Validator):
     def __init__(
         self,
@@ -64,6 +73,7 @@ class ModelValidator(Validator):
 
     def __active_power_recovery_error(
         self,
+        zone: int,
         start_event: float,
         duration_event: float,
         results: dict,
@@ -71,10 +81,15 @@ class ModelValidator(Validator):
         if not compliance_list.contains_key(["active_power_recovery"], self._validations):
             return
 
+        measurement_name = compared_curves.column_of(
+            zone, "active_power", self._get_calculated_curves().columns
+        )
+        if measurement_name is None:
+            return
+
         # In order to perform the calculation we must have as a starting point in time
         # an instant of time within the fault.
         start_reached_time = start_event + duration_event / 3
-        measurement_name = "BusPDR_BUS_ActivePower"
         t_P90_calc, _ = common.get_reached_time(
             0.9,
             list(self._get_calculated_curve_by_name(("time"))),
@@ -236,6 +251,7 @@ class ModelValidator(Validator):
 
     def __calculate_mean_absolute_error(
         self,
+        zone: int,
         measurement_name: str,
         curves: tuple[pd.DataFrame, pd.DataFrame],
         setpoint_variation: float,
@@ -259,127 +275,37 @@ class ModelValidator(Validator):
         )
 
         thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
-        if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
-            calculated_curve = list(calculated_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
-            reference_curve = list(reference_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
-            results["mae_voltage_1P"] = common.mean_absolute_error(
-                calculated_curve,
-                reference_curve,
+        for curve in compared_curves.for_zone(zone):
+            validation = _MEAN_ABSOLUTE_ERROR_VALIDATIONS.get(curve.label)
+            if validation is None or not compliance_list.contains_key(
+                [validation], self._validations
+            ):
+                continue
+
+            column = compared_curves.column_of(zone, curve.label, calculated_curves.columns)
+            if column is None or column not in reference_curves:
+                continue
+
+            results[f"mae_{curve.label}_1P"] = common.mean_absolute_error(
+                list(calculated_curves[column])[res_settlin_t_pos:],
+                list(reference_curves[column])[res_settlin_t_pos:],
                 1.0,
             )
-            results["mae_voltage_1P_stabilized"] = self.__is_stabilized(
+            results[f"mae_{curve.label}_1P_stabilized"] = self.__is_stabilized(
                 calculated_curves,
-                "BusPDR_BUS_Voltage",
+                column,
                 thr_ss_tol,
             )
 
-            calculated_ss = np.average(
-                list(calculated_curves["BusPDR_BUS_Voltage"])[res_settlin_t_pos:]
-            )
-            reference_ss = np.average(
-                list(reference_curves["BusPDR_BUS_Voltage"])[ref_settlin_t_pos:]
-            )
-            results["ss_error_voltage_1P"] = abs(calculated_ss - reference_ss)
+            calculated_ss = np.average(list(calculated_curves[column])[res_settlin_t_pos:])
+            reference_ss = np.average(list(reference_curves[column])[ref_settlin_t_pos:])
+            results[f"ss_error_{curve.label}_1P"] = abs(calculated_ss - reference_ss)
 
-        if compliance_list.contains_key(["mean_absolute_error_power_1P"], self._validations):
-            calculated_curve = list(calculated_curves["BusPDR_BUS_ActivePower"])[
-                res_settlin_t_pos:
-            ]
-            reference_curve = list(reference_curves["BusPDR_BUS_ActivePower"])[res_settlin_t_pos:]
-            results["mae_active_power_1P"] = common.mean_absolute_error(
-                calculated_curve,
-                reference_curve,
-                1.0,
-            )
-            results["mae_active_power_1P_stabilized"] = self.__is_stabilized(
-                calculated_curves,
-                "BusPDR_BUS_ActivePower",
-                thr_ss_tol,
-            )
-
-            calculated_ss = np.average(
-                list(calculated_curves["BusPDR_BUS_ActivePower"])[res_settlin_t_pos:]
-            )
-            reference_ss = np.average(
-                list(reference_curves["BusPDR_BUS_ActivePower"])[ref_settlin_t_pos:]
-            )
-            results["ss_error_active_power_1P"] = abs(calculated_ss - reference_ss)
-
-            calculated_curve = list(calculated_curves["BusPDR_BUS_ReactivePower"])[
-                res_settlin_t_pos:
-            ]
-            reference_curve = list(reference_curves["BusPDR_BUS_ReactivePower"])[
-                res_settlin_t_pos:
-            ]
-            results["mae_reactive_power_1P"] = common.mean_absolute_error(
-                calculated_curve,
-                reference_curve,
-                1.0,
-            )
-            results["mae_reactive_power_1P_stabilized"] = self.__is_stabilized(
-                calculated_curves,
-                "BusPDR_BUS_ReactivePower",
-                thr_ss_tol,
-            )
-
-            calculated_ss = np.average(
-                list(calculated_curves["BusPDR_BUS_ReactivePower"])[res_settlin_t_pos:]
-            )
-            reference_ss = np.average(
-                list(reference_curves["BusPDR_BUS_ReactivePower"])[ref_settlin_t_pos:]
-            )
-            results["ss_error_reactive_power_1P"] = abs(calculated_ss - reference_ss)
-
-        if compliance_list.contains_key(["mean_absolute_error_injection_1P"], self._validations):
-            calculated_curve = list(calculated_curves["BusPDR_BUS_ActiveCurrent"])[
-                res_settlin_t_pos:
-            ]
-            reference_curve = list(reference_curves["BusPDR_BUS_ActiveCurrent"])[
-                res_settlin_t_pos:
-            ]
-            results["mae_active_current_1P"] = common.mean_absolute_error(
-                calculated_curve,
-                reference_curve,
-                1.0,
-            )
-            results["mae_active_current_1P_stabilized"] = self.__is_stabilized(
-                calculated_curves,
-                "BusPDR_BUS_ActiveCurrent",
-                thr_ss_tol,
-            )
-
-            calculated_ss = np.average(
-                list(calculated_curves["BusPDR_BUS_ActiveCurrent"])[res_settlin_t_pos:]
-            )
-            reference_ss = np.average(
-                list(reference_curves["BusPDR_BUS_ActiveCurrent"])[ref_settlin_t_pos:]
-            )
-            results["ss_error_active_current_1P"] = abs(calculated_ss - reference_ss)
-
-            calculated_curve = list(calculated_curves["BusPDR_BUS_ReactiveCurrent"])[
-                res_settlin_t_pos:
-            ]
-            reference_curve = list(reference_curves["BusPDR_BUS_ReactiveCurrent"])[
-                res_settlin_t_pos:
-            ]
-            results["mae_reactive_current_1P"] = common.mean_absolute_error(
-                calculated_curve,
-                reference_curve,
-                1.0,
-            )
-            results["mae_reactive_current_1P_stabilized"] = self.__is_stabilized(
-                calculated_curves,
-                "BusPDR_BUS_ReactiveCurrent",
-                thr_ss_tol,
-            )
-
-            calculated_ss = np.average(
-                list(calculated_curves["BusPDR_BUS_ReactiveCurrent"])[res_settlin_t_pos:]
-            )
-            reference_ss = np.average(
-                list(reference_curves["BusPDR_BUS_ReactiveCurrent"])[ref_settlin_t_pos:]
-            )
-            results["ss_error_reactive_current_1P"] = abs(calculated_ss - reference_ss)
+    def __calculated_compared_curve(self, zone: int, label: str) -> list:
+        """The samples of the calculated curve this zone compares under a label."""
+        curves = self._get_calculated_curves()
+        column = compared_curves.column_of(zone, label, curves.columns)
+        return list(curves[column]) if column else []
 
     def __calculate(
         self,
@@ -408,14 +334,15 @@ class ModelValidator(Validator):
                 ),
                 "is_invalid_test": common.is_invalid_test(
                     list(self._get_calculated_curve_by_name(("time"))),
-                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_Voltage"))),
-                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_ActivePower"))),
-                    list(self._get_calculated_curve_by_name(("BusPDR_BUS_ReactivePower"))),
+                    self.__calculated_compared_curve(zone, "voltage"),
+                    self.__calculated_compared_curve(zone, "active_power"),
+                    self.__calculated_compared_curve(zone, "reactive_power"),
                     start_event,
                 ),
             }
 
             self.__active_power_recovery_error(
+                zone,
                 start_event,
                 duration_event,
                 results,
@@ -440,6 +367,7 @@ class ModelValidator(Validator):
             )
             calculate_curves_errors(zone, self._is_field_measurements, results)
             self.__calculate_mean_absolute_error(
+                zone,
                 measurement_name,
                 self._get_curves_by_windows("after"),
                 setpoint_variation,
