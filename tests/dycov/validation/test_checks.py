@@ -55,7 +55,7 @@ def valid_curves():
 def test_calculate_errors_with_valid_curves(valid_curves):
     calculated, reference = valid_curves
     step_magnitude = 1.0
-    results = checks.calculate_errors((calculated, reference), step_magnitude)
+    results = checks.calculate_errors((calculated, reference), step_magnitude, 3)
     assert "BusPDR_BUS_ActivePower" in results
     assert "me" in results["BusPDR_BUS_ActivePower"]
     assert "mae" in results["BusPDR_BUS_ActivePower"]
@@ -109,7 +109,7 @@ def test_complete_setpoint_tracking_populates_results():
     }
     results = {"compliance": True}
     checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results
+        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results, 3
     )
     assert "before_mae_tc_BusPDR_BUS_ActivePower_value" in results
     assert "during_mae_tc_BusPDR_BUS_ActivePower_value" in results
@@ -123,7 +123,7 @@ def test_calculate_errors_with_empty_curves():
     calculated = pd.DataFrame({"time": []})
     reference = pd.DataFrame({"time": []})
     step_magnitude = 1.0
-    results = checks.calculate_errors((calculated, reference), step_magnitude)
+    results = checks.calculate_errors((calculated, reference), step_magnitude, 3)
     assert results == {}
 
 
@@ -159,7 +159,7 @@ def test_setpoint_tracking_with_missing_during_window():
     }
     results = {"compliance": True}
     checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results
+        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results, 3
     )
     assert "during_mae_tc_BusPDR_BUS_ActivePower_value" not in results
 
@@ -259,7 +259,7 @@ def test_functions_with_unexpected_data_types():
 def test_calculate_errors_returns_error_positions(valid_curves):
     calculated, reference = valid_curves
     step_magnitude = 1.0
-    results = checks.calculate_errors((calculated, reference), step_magnitude)
+    results = checks.calculate_errors((calculated, reference), step_magnitude, 3)
     assert "tmxe" in results["BusPDR_BUS_ActivePower"]
     assert "ymxe" in results["BusPDR_BUS_ActivePower"]
     assert isinstance(results["BusPDR_BUS_ActivePower"]["tmxe"], (float, np.floating))
@@ -398,11 +398,11 @@ def test_threshold_checks_and_compliance_status_for_all_measurements():
     }
     results = {"compliance": True}
     checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results
+        compliance_values, "ActivePowerSetpointPu", "BusPDR_BUS_ActivePower", results, 3
     )
     print(results)
     checks.complete_setpoint_tracking(
-        compliance_values, "ReactivePowerSetpointPu", "BusPDR_BUS_ReactivePower", results
+        compliance_values, "ReactivePowerSetpointPu", "BusPDR_BUS_ReactivePower", results, 3
     )
     print(results)
     assert results["compliance"] is True
@@ -549,7 +549,7 @@ def test_calculate_errors_skips_a_measurement_without_reference_values():
     calculated = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [1.0, 2.0, 3.0]})
     reference = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [np.nan] * 3})
 
-    results = checks.calculate_errors((calculated, reference), 1.0)
+    results = checks.calculate_errors((calculated, reference), 1.0, 3)
 
     assert results == {}
 
@@ -561,7 +561,7 @@ def test_calculate_errors_reports_a_measurement_missing_from_the_simulation(monk
     calculated = pd.DataFrame({"time": time})
     reference = pd.DataFrame({"time": time, "BusPDR_BUS_ActivePower": [1.0, 2.0]})
 
-    results = checks.calculate_errors((calculated, reference), 1.0)
+    results = checks.calculate_errors((calculated, reference), 1.0, 3)
 
     assert results == {}
     assert logger.errors == ["Curve BusPDR_BUS_ActivePower not found in simulation results."]
@@ -574,7 +574,7 @@ def test_complete_setpoint_tracking_with_an_absent_measurement_is_not_computable
     results = {"compliance": True}
 
     checks.complete_setpoint_tracking(
-        _windowed_compliance_values(), "VoltageSetpointPu", "voltage", results
+        _windowed_compliance_values(), "VoltageSetpointPu", "voltage", results, 3
     )
 
     for window in WINDOWS:
@@ -589,7 +589,7 @@ def test_complete_setpoint_tracking_with_an_absent_measurement_saves_no_value():
     results = {"compliance": True}
 
     checks.complete_setpoint_tracking(
-        _windowed_compliance_values(), "VoltageSetpointPu", "voltage", results
+        _windowed_compliance_values(), "VoltageSetpointPu", "voltage", results, 3
     )
 
     assert "before_mxe_tc_voltage_value" not in results
@@ -604,7 +604,7 @@ def test_complete_setpoint_tracking_keeps_not_computable_over_a_later_window():
     results = {"compliance": True}
 
     checks.complete_setpoint_tracking(
-        compliance_values, "ActivePowerSetpointPu", "active_power", results
+        compliance_values, "ActivePowerSetpointPu", "active_power", results, 3
     )
 
     assert results["before_mxe_tc_active_power_check"] is True
@@ -617,7 +617,7 @@ def test_complete_setpoint_tracking_within_the_thresholds_saves_the_position():
     results = {"compliance": True}
 
     checks.complete_setpoint_tracking(
-        _windowed_compliance_values(), "ActivePowerSetpointPu", "active_power", results
+        _windowed_compliance_values(), "ActivePowerSetpointPu", "active_power", results, 3
     )
 
     # Only MXE carries a position; MAE and ME have no per-sample instant
@@ -636,7 +636,7 @@ def test_complete_setpoint_tracking_without_thresholds_aggregates_nothing(monkey
     results = {"compliance": True}
 
     checks.complete_setpoint_tracking(
-        _windowed_compliance_values(), "ActivePowerSetpointPu", "active_power", results
+        _windowed_compliance_values(), "ActivePowerSetpointPu", "active_power", results, 3
     )
 
     assert results["before_mxe_tc_active_power_value"] == pytest.approx(0.001)
@@ -705,8 +705,17 @@ ALL_MEASUREMENTS = [
     "NetworkFrequencyPu",
 ]
 
+ZONE_1_MEASUREMENTS = [
+    "BusPDR_BUS_Voltage",
+    "Gen_GEN_VoltageInjTerminal",
+    "Gen_GEN_ActivePowerControlledPu",
+    "Gen_GEN_ReactivePowerControlledPu",
+    "Gen_GEN_ActiveCurrentInjTerminal",
+    "Gen_GEN_ReactiveCurrentInjTerminal",
+]
 
-def _all_measurements_compliance_values(value=0.001):
+
+def _all_measurements_compliance_values(value=0.001, measurements=ALL_MEASUREMENTS):
     return {
         window: {
             measurement: {
@@ -716,14 +725,14 @@ def _all_measurements_compliance_values(value=0.001):
                 "tmxe": 0.5,
                 "ymxe": 1.5,
             }
-            for measurement in ALL_MEASUREMENTS
+            for measurement in measurements
         }
         for window in WINDOWS
     }
 
 
 def test_calculate_curves_errors_fills_every_window_of_zone_1():
-    results = _all_measurements_compliance_values()
+    results = _all_measurements_compliance_values(measurements=ZONE_1_MEASUREMENTS)
 
     checks.calculate_curves_errors(1, is_field_measurements=False, results=results)
 
@@ -745,7 +754,7 @@ def test_calculate_curves_errors_adds_the_frequency_in_zone_3():
 
 def test_calculate_curves_errors_leaves_the_voltage_unchecked():
     # The DTR defines no voltage threshold, so the error is reported but not checked
-    results = _all_measurements_compliance_values()
+    results = _all_measurements_compliance_values(measurements=ZONE_1_MEASUREMENTS)
 
     checks.calculate_curves_errors(1, is_field_measurements=False, results=results)
 
@@ -776,6 +785,6 @@ def test_calculate_errors_ignores_curves_outside_the_measurement_list():
     calculated = pd.DataFrame({"time": time, "Wind_Turbine_GEN_InternalAngle": [0.1, 0.1]})
     reference = pd.DataFrame({"time": time, "Wind_Turbine_GEN_InternalAngle": [0.2, 0.2]})
 
-    results = checks.calculate_errors((calculated, reference), 1.0)
+    results = checks.calculate_errors((calculated, reference), 1.0, 3)
 
     assert results == {}

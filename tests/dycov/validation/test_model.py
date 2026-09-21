@@ -134,10 +134,10 @@ def _make_pdr_curves(voltage=None, active_power=None):
     )
 
 
-def _make_window_manager(calculated=None, windows_raise=False):
+def _make_window_manager(calculated=None, windows_raise=False, reference=None):
     """Curves manager whose three windows serve the same pair of curves."""
     calculated = calculated if calculated is not None else _make_pdr_curves()
-    reference = _make_pdr_curves()
+    reference = reference if reference is not None else _make_pdr_curves()
     windows = {window: (calculated, reference) for window in ("before", "during", "after")}
     return DummyCurvesManager(
         calculated=calculated,
@@ -824,7 +824,7 @@ def test_calculate_populates_the_window_errors_and_the_validity_flag():
     validator = _make_validator(curves_manager=_make_window_manager())
 
     results = validator._ModelValidator__calculate(
-        zone=1,
+        zone=3,
         start_event=1.0,
         duration_event=1.0,
         freq0=1.0,
@@ -846,7 +846,7 @@ def test_calculate_normalizes_a_zero_setpoint_variation():
     validator = _make_validator(curves_manager=_make_window_manager(calculated=calculated))
 
     results = validator._ModelValidator__calculate(
-        zone=1,
+        zone=3,
         start_event=1.0,
         duration_event=1.0,
         freq0=1.0,
@@ -1001,11 +1001,12 @@ def test_check_voltage_dips_without_the_window_checks_reports_not_available(meas
 
 def test_check_setpoint_tracking_names_every_tracked_magnitude():
     validator = _make_validator(
+        zone=3,
         validations=[
             "setpoint_tracking_controlled_magnitude",
             "setpoint_tracking_active_power",
             "setpoint_tracking_reactive_power",
-        ]
+        ],
     )
     window_errors = {
         "BusPDR_BUS_Voltage": {"mae": 0.001, "me": 0.001, "mxe": 0.001},
@@ -1183,10 +1184,22 @@ def test_validate_reports_the_setpoint_tracking_flag_to_the_signal_processing(tm
 # ---------------------------------------------------------------------------
 
 
+def _make_zone1_curves(injector_voltage=None):
+    """The curves Zone 1 compares: the node 1 voltage plus the converter magnitudes."""
+    curves = _make_pdr_curves()
+    curves["WT_GEN_VoltageInjTerminal"] = injector_voltage or [1.0, 1.0, 1.0, 1.0]
+    curves["WT_GEN_ActivePowerControlledPu"] = [0.5, 0.5, 0.6, 0.6]
+    curves["WT_GEN_ReactivePowerControlledPu"] = [0.1, 0.1, 0.1, 0.1]
+    curves["WT_GEN_ActiveCurrentInjTerminal"] = [0.5, 0.5, 0.6, 0.6]
+    curves["WT_GEN_ReactiveCurrentInjTerminal"] = [0.1, 0.1, 0.1, 0.1]
+    return curves
+
+
 def _make_guard_manager(injector_voltage):
-    calculated = _make_pdr_curves()
-    calculated["WT_GEN_VoltageInjTerminal"] = injector_voltage
-    return _make_window_manager(calculated=calculated)
+    return _make_window_manager(
+        calculated=_make_zone1_curves(injector_voltage),
+        reference=_make_zone1_curves(),
+    )
 
 
 GUARD_EVENT_PARAMS = {
