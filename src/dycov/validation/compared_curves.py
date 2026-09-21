@@ -138,6 +138,13 @@ def resolve_all(zone: int, columns: Iterable[str]) -> list[tuple[ComparedCurve, 
     return resolved
 
 
+def matches_column(selector: str, column: str) -> bool:
+    """Whether a curve column is the one a selector identifies."""
+    if selector.startswith(_GENERATOR_SELECTOR):
+        return column.endswith(selector)
+    return column == selector
+
+
 def curve_names(zone: int, generator_ids: Iterable[str]) -> list[str]:
     """The name of every curve a zone compares, one per generating unit where it belongs.
 
