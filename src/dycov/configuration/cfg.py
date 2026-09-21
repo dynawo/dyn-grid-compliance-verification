@@ -139,9 +139,6 @@ class Config:
             self._pcs_config.read(pcs_path, encoding="utf-8")
             self._pcs_files.append(str(pcs_path))
 
-            single_pcs_config = configparser.ConfigParser()
-            single_pcs_config.read(pcs_path, encoding="utf-8")
-
             pcs_aliases_path = Path(pcs_path).resolve().parent.parent
             aliases_files = [str(p) for p in pcs_aliases_path.rglob("*aliases*") if p.is_file()]
 
@@ -156,7 +153,7 @@ class Config:
                         for key_to_inherit, value_to_inherit in aliases_config.items(
                             alias_section_name
                         ):
-                            if not single_pcs_config.has_option(section_to_modify, key_to_inherit):
+                            if not self._pcs_config.has_option(section_to_modify, key_to_inherit):
                                 self._pcs_config.set(
                                     section_to_modify, key_to_inherit, value_to_inherit
                                 )

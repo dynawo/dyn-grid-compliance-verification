@@ -19,6 +19,8 @@ log_msg() {
 }
 export -f log_msg
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/models.sh"
+
 parallel_run() {
     local -n cmds=$1
 
@@ -40,6 +42,9 @@ usage() {
     echo "  -p, --performance: execute only performance verification"
     echo "  -g, --generate: execute only envelope generation (GFM)"
     echo "  -j, --jobs: max parallel processes per phase (default: 4)"
+    echo "  --user-config: configuration file for every run (default: the one of the user)"
+    echo "  -d, --debug: run with the log level at DEBUG, which also keeps in every test"
+    echo "               directory the curves the criteria compare (signal.csv, reference.csv)"
     echo "  -h, --help: display this help"
     echo
     echo "Notes:"
@@ -59,52 +64,38 @@ run_dycov_validate() {
     local model_name=$5
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
-    dycov validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing
     end=$(date +%s)
     log_msg "Validate: $model_name Elapsed Time: $((end - start)) seconds"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_validate
 
-launch_validate() {
-    declare -a wind_models=()
-    declare -a photo_models=()
-    declare -a bess_models=()
+# Writes the selected examples, one per line, and nothing else: its output is read as data.
+selected_model_examples() {
+    declare -a examples=()
     if [ "$iec_models" = true ]; then
-        log_msg "INFO: Including IEC models for Model validation."
-        wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
+        examples+=("${MODEL_EXAMPLES_IEC[@]}")
     fi
     if [ "$wecc_models" = true ]; then
-        log_msg "INFO: Including WECC models for Model validation."
-        wind_models+=("WECC31" "WECC32" "WECC4A" "WECC4B" "WECC4")
-        photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2" "WECCVoltageSource3" "WECCVoltageSource4")
-        bess_models+=("WECC")
+        examples+=("${MODEL_EXAMPLES_WECC[@]}")
     fi
+    printf '%s\n' "${examples[@]}"
+}
 
+launch_validate() {
     local -a validation_commands=()
 
-    # Model validation for BESS models
-    for bess_model in "${bess_models[@]}"; do
-        local cmd="run_dycov_validate \"$launcher\" \"$examples_path/Model/BESS/$bess_model/Dynawo\" \"$examples_path/Model/BESS/$bess_model/ReferenceCurves\" \"$results_path/Model/BESS/$bess_model\" \"$bess_model\""
+    log_msg "INFO: Model validation of: $(selected_model_examples | tr '\n' ' ')"
+    while read -r example; do
+        local cmd="run_dycov_validate \"$launcher\" \"$examples_path/Model/$example/Dynawo\" \"$examples_path/Model/$example/ReferenceCurves\" \"$results_path/Model/$example\" \"${example##*/}\""
         validation_commands+=("$cmd")
-    done
-
-    # Model validation for Photovoltaics models
-    for photo_model in "${photo_models[@]}"; do
-        local cmd="run_dycov_validate \"$launcher\" \"$examples_path/Model/Photovoltaics/$photo_model/Dynawo\" \"$examples_path/Model/Photovoltaics/$photo_model/ReferenceCurves\" \"$results_path/Model/Photovoltaics/$photo_model\" \"$photo_model\""
-        validation_commands+=("$cmd")
-    done
-
-    # Model validation for Wind models
-    for wind_model in "${wind_models[@]}"; do
-        local cmd="run_dycov_validate \"$launcher\" \"$examples_path/Model/Wind/$wind_model/Dynawo\" \"$examples_path/Model/Wind/$wind_model/ReferenceCurves\" \"$results_path/Model/Wind/$wind_model\" \"$wind_model\""
-        validation_commands+=("$cmd")
-    done
+    done < <(selected_model_examples)
 
     # Execute commands in parallel with xargs, limiting to 4 processes
     log_msg "INFO: Starting parallel Model validation with max $max_parallel processes..."
@@ -113,39 +104,13 @@ launch_validate() {
 }
 
 launch_model_as_performance() {
-    declare -a wind_models=()
-    declare -a photo_models=()
-    declare -a bess_models=()
-    if [ "$iec_models" = true ]; then
-        log_msg "INFO: Including IEC models for Performance validation."
-        wind_models+=("IECA2015" "IECA2020" "IECA2020WithProtections" "IECB2015" "IECB2020" "IECB2020WithProtections")
-    fi
-    if [ "$wecc_models" = true ]; then
-        log_msg "INFO: Including WECC models for Performance validation."
-        wind_models+=("WECC31" "WECC32" "WECC4A" "WECC4B" "WECC4")
-        photo_models+=("WECCCurrentSource" "WECCVoltageSource1" "WECCVoltageSource2" "WECCVoltageSource3" "WECCVoltageSource4")
-        bess_models+=("WECC")
-    fi
-
     local -a validation_commands=()
 
-    # Performance validation for BESS models
-    for bess_model in "${bess_models[@]}"; do
-        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/BESS/$bess_model/Dynawo/Zone3\" \"$results_path/Performance/BESS/$bess_model\" \"Model\" \"$bess_model\""
+    log_msg "INFO: Performance verification with the Model examples: $(selected_model_examples | tr '\n' ' ')"
+    while read -r example; do
+        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/$example/Dynawo/Zone3\" \"$results_path/Performance/$example\" \"Model\" \"${example##*/}\""
         validation_commands+=("$cmd")
-    done
-
-    # Performance validation for Photovoltaics models
-    for photo_model in "${photo_models[@]}"; do
-        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Photovoltaics/$photo_model/Dynawo/Zone3\" \"$results_path/Performance/Photovoltaics/$photo_model\" \"Model\" \"$photo_model\""
-        validation_commands+=("$cmd")
-    done
-
-    # Performance validation for Wind models
-    for wind_model in "${wind_models[@]}"; do
-        local cmd="run_dycov_performance \"$launcher\" \"$examples_path/Model/Wind/$wind_model/Dynawo/Zone3\" \"$results_path/Performance/Wind/$wind_model\" \"Model\" \"$wind_model\""
-        validation_commands+=("$cmd")
-    done
+    done < <(selected_model_examples)
 
     # Execute commands in parallel with xargs, limiting to 4 processes
     log_msg "INFO: Starting parallel performance verification with Model examples with max $max_parallel processes..."
@@ -162,12 +127,12 @@ run_dycov_performance() {
     local model_name=$5
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
-    dycov performance -l "$launcher" -m "$model_path" -o "$output_path" --testing
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing
     end=$(date +%s)
     log_msg "Verify: $topology - $model_name Elapsed Time: $((end - start)) seconds"
 }
@@ -363,9 +328,13 @@ performance=false
 generate=false
 any_exec_flag=false
 remove=false     # by default, do NOT remove Results path
+debug=false      # by default, the log level is the one of the configuration
 examples_path="./examples"
 results_path="../Results"
 max_parallel=4  # default
+DYCOV_USER_CONFIG=""  # empty: every run reads the configuration of the user
+DYCOV_DEBUG=""  # empty: the tool logs at the level of its configuration
+export DYCOV_USER_CONFIG DYCOV_DEBUG
 
 while (($#)); do
     case "$1" in
@@ -416,6 +385,14 @@ while (($#)); do
             max_parallel=$2
             shift 2
             ;;
+        --user-config)
+            DYCOV_USER_CONFIG=$2
+            shift 2
+            ;;
+        -d | --debug)
+            debug=true
+            shift
+            ;;
         *)
             echo "$1: invalid option."
             usage
@@ -429,6 +406,10 @@ if [ "$any_exec_flag" = false ]; then
     validate=true
     performance=true
     generate=true
+fi
+
+if [ "$debug" = true ]; then
+    DYCOV_DEBUG="-d"
 fi
 
 if [ "$remove" = true ]; then

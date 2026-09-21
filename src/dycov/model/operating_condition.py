@@ -8,15 +8,16 @@
 #     demiguelm@aia.es
 #
 
-import logging
+import json
 from pathlib import Path
+
+import numpy as np
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.curves import get_cfg_oc_name
 from dycov.gfm.gfm import GridForming
-from dycov.logging import dycov_logging
 
 
 class OperatingCondition:
@@ -79,9 +80,16 @@ class OperatingCondition:
         if not validator.has_validations():
             results["compliance"] = None
 
-        if dycov_logging.get_logger("OperatingCondition").getEffectiveLevel() != logging.DEBUG:
-            with open(working_oc_dir / "results.json", "w") as outfile:
-                outfile.write(str(results))
+        keys_to_exclude = {"curves", "reference_curves", "curves_error"}
+        results_for_json = {k: v for k, v in results.items() if k not in keys_to_exclude}
+
+        with open(working_oc_dir / "results.json", "w", encoding="utf-8") as outfile:
+            json.dump(
+                results_for_json,
+                outfile,
+                indent=4,
+                default=lambda obj: obj.item() if isinstance(obj, np.generic) else obj,
+            )
 
         return results
 

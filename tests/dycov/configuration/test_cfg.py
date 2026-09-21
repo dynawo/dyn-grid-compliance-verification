@@ -203,3 +203,23 @@ def test_describe_option_without_a_source_file_names_section_and_key(tmp_path, e
     description = cfg.describe_option("PCS.Model", "pdr_Q")
 
     assert description == "'pdr_Q' in section [PCS.Model]"
+
+
+def test_load_pcs_config_keeps_a_value_set_by_a_previous_file(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    pcs_dir = tmp_path / "PCS" / "model"
+    pcs_dir.mkdir(parents=True)
+    (tmp_path / "PCS" / "PCS_aliases.ini").write_text(
+        "[MyAlias]\ntest_key = alias_default_value\nalias_only = alias_value\n"
+    )
+    first_file = pcs_dir / "first_pcs.ini"
+    first_file.write_text("[TestSection]\ntest_key = original_value\n")
+    second_file = pcs_dir / "second_pcs.ini"
+    second_file.write_text("[TestSection]\ninherit = MyAlias\n")
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+
+    cfg.load_pcs_config(first_file)
+    cfg.load_pcs_config(second_file)
+
+    assert cfg.get_value("TestSection", "test_key") == "original_value"
+    assert cfg.get_value("TestSection", "alias_only") == "alias_value"
