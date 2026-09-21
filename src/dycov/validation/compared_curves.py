@@ -138,6 +138,21 @@ def resolve_all(zone: int, columns: Iterable[str]) -> list[tuple[ComparedCurve, 
     return resolved
 
 
+def curve_names(zone: int, generator_ids: Iterable[str]) -> list[str]:
+    """The name of every curve a zone compares, one per generating unit where it belongs.
+
+    These are the internal names; the reference dictionaries the user fills spell the bus the
+    way the zone's outputs do, so the caller renames them with ``curves.naming``.
+    """
+    names = []
+    for curve in for_zone(zone):
+        if curve.selector.startswith(_GENERATOR_SELECTOR):
+            names.extend(f"{generator_id}{curve.selector}" for generator_id in generator_ids)
+        else:
+            names.append(curve.selector)
+    return names
+
+
 def plot_variables(zone: int, label: str):
     """The ``variables`` a report figure needs to draw the curve a zone compares under a label.
 
