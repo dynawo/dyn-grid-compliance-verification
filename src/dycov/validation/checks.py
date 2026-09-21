@@ -7,11 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import numpy as np
 import pandas as pd
 
-from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
-from dycov.curves.naming import ZONE1_INJECTOR_NODE_LABEL
 from dycov.logging import dycov_logging
 from dycov.validation import common, compared_curves, threshold_variables
 
@@ -531,48 +528,3 @@ def calculate_curves_errors(
     }
     for curve, column in compared_curves.resolve_all(zone, measured):
         _calculate_curve_errors(column, curve.label, is_field_measurements, results)
-
-
-def _has_voltage_below_guard(curves: pd.DataFrame, abs_tol: float) -> bool:
-    for column in curves.columns:
-        if not column.endswith("_GEN_VoltageInjTerminal"):
-            continue
-        voltage = np.abs(curves[column].to_numpy(dtype=float))
-        finite_voltage = voltage[np.isfinite(voltage)]
-        if finite_voltage.size and finite_voltage.min() <= abs_tol:
-            return True
-    return False
-
-
-def get_injector_voltage_guard_warnings(
-    calculated_curves: pd.DataFrame,
-    reference_curves: pd.DataFrame,
-) -> list[str]:
-    """Warns when an injector terminal voltage falls below the numerical guard used to
-    compute the terminal currents (Ip = P/U, Iq = Q/U), which zeroes them out.
-
-    Parameters
-    ----------
-    calculated_curves : pd.DataFrame
-        Calculated curves.
-    reference_curves : pd.DataFrame
-        Reference curves.
-
-    Returns
-    -------
-    list[str]
-        One warning message per curve set whose injector terminal voltage crosses the guard.
-    """
-    abs_tol = ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD
-    warnings = []
-    for label, curves in (("calculated", calculated_curves), ("reference", reference_curves)):
-        if curves is None or curves.empty:
-            continue
-        if _has_voltage_below_guard(curves, abs_tol):
-            warnings.append(
-                f"Computation of Ip/Iq at {ZONE1_INJECTOR_NODE_LABEL} is probably not "
-                f"consistent for this test: the {label} injector terminal voltage falls "
-                f"below the {abs_tol:.1e} pu numerical guard; check the transformer "
-                "impedance value."
-            )
-    return warnings

@@ -269,8 +269,6 @@ def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
     if missing_curves:
         notices += _build_notice_block("red", "Missing curves:", missing_curves)
         watermark = r"\SetWatermarkText{INVALID}"
-    if oc_results.get("warnings"):
-        notices += _build_notice_block("orange", "Warnings:", oc_results["warnings"])
     return notices, watermark
 
 
