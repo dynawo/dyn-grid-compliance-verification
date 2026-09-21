@@ -23,7 +23,7 @@ from dycov.curves.dynawo.io.table import TableFile
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
-from dycov.files import model_parameters, omega_file, tso_file
+from dycov.files import model_parameters, omega_file, tso_file, value_registry
 from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams, LoadInit, LoadParams, PdrParams, PimodelParams
 
@@ -756,12 +756,12 @@ class ModelSetup:
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
         )
-        model_parameters.write_pdr_comment(
+        value_registry.write_pdr_comment(
             working_oc_dir,
             producer.get_producer_par().name,
             pdr,
         )
-        model_parameters.write_pdr_comment(
+        value_registry.write_pdr_comment(
             working_oc_dir,
             _TSO_PAR,
             pdr,

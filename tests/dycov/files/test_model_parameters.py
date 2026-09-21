@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 from lxml import etree
 
-from dycov.files import model_parameters
+from dycov.files import model_parameters, value_registry
 from dycov.model.parameters import LoadInit
 
 _NS = "http://www.rte-france.com/dynawo"
@@ -55,7 +55,7 @@ def test_get_event_times_normal(tmp_path):
     etree.SubElement(root, f"{{{_NS}}}par", name="event_tEvent", value="2.5")
     _write_xml(root, tmp_path / "case1.par")
 
-    t1, t2 = model_parameters.get_event_times(tmp_path, "case1", 0.5, 10.0)
+    t1, t2 = value_registry.get_event_times(tmp_path, "case1", 0.5, 10.0)
 
     assert t1 == 1.5
     assert t2 == 2.5
@@ -66,7 +66,7 @@ def test_get_event_times_missing_values(tmp_path):
     etree.SubElement(root, f"{{{_NS}}}par", name="step_tStep", value="{step}")
     _write_xml(root, tmp_path / "case2.par")
 
-    t1, t2 = model_parameters.get_event_times(tmp_path, "case2", 0.5, 10.0)
+    t1, t2 = value_registry.get_event_times(tmp_path, "case2", 0.5, 10.0)
 
     assert math.isnan(t1)
     assert math.isnan(t2)
@@ -580,7 +580,7 @@ def test_find_output_dir(tmp_path):
     etree.SubElement(root, f"{{{_NS}}}outputs", directory="outdir")
     _write_xml(root, tmp_path / "file.jobs")
 
-    res = model_parameters.find_output_dir(tmp_path, "file")
+    res = value_registry.find_output_dir(tmp_path, "file")
 
     assert res == "outdir"
 
