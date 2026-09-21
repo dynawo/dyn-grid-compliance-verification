@@ -40,6 +40,12 @@ if [ -d "/opt/dycov/examples" ] && [ ! -d "$USER_HOME/examples" ]; then
     chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/examples"
 fi
 
+if [ -d "/opt/dycov/workbooks" ] && [ ! -d "$USER_HOME/workbooks" ]; then
+    echo "Copying workbooks to $USER_HOME/workbooks..."
+    cp -r /opt/dycov/workbooks "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/workbooks"
+fi
+
 if [ -d "/opt/dycov/manual" ] && [ ! -d "$USER_HOME/manual" ]; then
     echo "Copying manual to $USER_HOME/manual..."
     cp -r /opt/dycov/manual "$USER_HOME/"
@@ -70,6 +76,7 @@ echo -e " Dycov Container Environment"
 echo -e "-----------------------------------------------------------"
 echo -e " User:      $dycov_USER ($dycov_UID)"
 echo -e " Examples:  ~/examples"
+echo -e " Workbooks: ~/workbooks  (blank, one per standard)"
 echo -e " Tutorials: ~/tutorials/README.md  (start here)"
 echo -e " Install:   ~/installation/README.md"
 echo -e " Manual:    ~/manual/html/index.html  (HTML)"

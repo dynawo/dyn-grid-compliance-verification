@@ -364,6 +364,8 @@ deactivate
 ################################################################################
 color_msg "Step 5: Installing examples, tutorials and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
+# Blank workbooks to describe an installation in, one per standard.
+cp -a "$TMP_LOCAL_REPO"/workbooks "$INSTALL_DIR"/
 # User-facing tutorials and installation guides (only the *.md files, so their
 # relative cross-links work: tutorials/README.md links to ../installation/).
 # Build helpers (md2pdf.sh, listings-setup.tex) are not installed.
@@ -407,7 +409,7 @@ exec 6>&- 7>&-
 echo -e ""
 echo -e "${GREEN}INSTALLATION COMPLETED SUCCESSFULLY!${NC}"
 echo -e "${GREEN}To start using the tool, run: source $INSTALL_DIR/activate_dycov${NC}"
-echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
+echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Workbooks: $INSTALL_DIR/workbooks  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
 if [ -d "$INSTALL_DIR/tools/dynawo_par" ]; then
     echo -e "${GREEN}Dynawo PAR utility: python $INSTALL_DIR/tools/dynawo_par/generate_par.py --excel <file.xlsx>${NC}"
 fi
