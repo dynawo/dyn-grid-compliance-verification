@@ -320,6 +320,12 @@ def _get_injector_terminal_curves(
     and it carries its own name: the dictionary declares what Dynawo provides, this function
     emits what the criteria compare.
 
+    The injector terminal sits behind the unit's own impedance, so its voltage is never
+    exactly zero and the division always has an answer, however small the voltage gets: the
+    power vanishes with it and the quotient is the current all the same. Zero is guarded
+    against because nothing forbids it, not because it is expected — unlike the connection
+    point, which a bolted fault does take to zero.
+
     Parameters
     ----------
     snref : float
@@ -336,7 +342,6 @@ def _get_injector_terminal_curves(
         A dictionary to store the calculated current curves. The function will add entries to this
         dictionary for the active and reactive current curves of the generator injectors.
     """
-    abs_tol = ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD
     columns_to_remove = []
 
     for generator in generators:
@@ -360,7 +365,7 @@ def _get_injector_terminal_curves(
         voltage_array = np.array(voltage, dtype=float)
 
         curves_dict[voltage_col] = voltage
-        valid_mask = np.isfinite(voltage_array) & (np.abs(voltage_array) > abs_tol)
+        valid_mask = np.isfinite(voltage_array) & (voltage_array != 0.0)
         curves_dict[f"{generator.id}_GEN_ActiveCurrentInjTerminal"] = np.divide(
             active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
         ).tolist()
