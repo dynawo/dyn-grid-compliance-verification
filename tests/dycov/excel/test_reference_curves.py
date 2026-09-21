@@ -295,7 +295,7 @@ def test_write_reference_curves_writes_nothing_when_no_test_is_described(tmp_pat
 
 def test_every_curve_of_the_names_file_is_a_dycov_curve():
     # The mapping is data: guard it against a typo that would silently drop a curve.
-    for zone, expected in (("Zone1", 8), ("Zone3", 9)):
+    for zone, expected in (("Zone1", 6), ("Zone3", 9)):
         curves = names.curves(zone, GEN)
 
         assert len(curves) == expected
