@@ -26,4 +26,4 @@ BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
 Bess_GEN_MagnitudeControlledByAVRPu = Bess_GEN_MagnitudeControlledByAVRPu
 Bess_GEN_VoltageSetpointPu = Bess_GEN_VoltageSetpointPu
 Main_Xfmr_XFMR_Tap = Main_Xfmr_XFMR_Tap
-NetworkFrequencyPu = NetworkFrequencyPu
+NetworkFrequencyPu=Wind_Turbine_GEN_NetworkFrequencyPu

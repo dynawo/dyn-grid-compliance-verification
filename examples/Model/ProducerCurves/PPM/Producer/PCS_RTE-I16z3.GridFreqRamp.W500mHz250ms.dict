@@ -21,4 +21,4 @@ BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
 BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
 BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
 BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
-NetworkFrequencyPu = NetworkFrequencyPu
+NetworkFrequencyPu=Wind_Turbine_GEN_NetworkFrequencyPu
