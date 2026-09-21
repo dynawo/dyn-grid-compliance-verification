@@ -107,6 +107,19 @@ _SETPOINT_LABELS = {
 }
 
 
+def in_zone(zone: int, label: str) -> ComparedCurve | None:
+    """The curve a zone compares under a label."""
+    return next((curve for curve in for_zone(zone) if curve.label == label), None)
+
+
+def column_of(zone: int, label: str, columns: Iterable[str]) -> str | None:
+    """The column that carries a zone's compared curve, or None when no column does."""
+    curve = in_zone(zone, label)
+    if curve is None:
+        return None
+    return next((column for column in columns if curve.matches(column)), None)
+
+
 def for_setpoint(zone: int, modified_setpoint: str, columns: Iterable[str]) -> str:
     """The column a setpoint step is tracked on: the magnitude the setpoint drives, in this zone.
 
@@ -114,14 +127,10 @@ def for_setpoint(zone: int, modified_setpoint: str, columns: Iterable[str]) -> s
     the selector itself when no column carries it, so the caller reports it as not computable.
     """
     label = _SETPOINT_LABELS.get(modified_setpoint, "reactive_power")
-    for curve in for_zone(zone):
-        if curve.label != label:
-            continue
-        for column in columns:
-            if curve.matches(column):
-                return column
-        return curve.selector
-    return modified_setpoint
+    curve = in_zone(zone, label)
+    if curve is None:
+        return modified_setpoint
+    return column_of(zone, label, columns) or curve.selector
 
 
 def resolve_all(zone: int, columns: Iterable[str]) -> list[tuple[ComparedCurve, str]]:
@@ -166,14 +175,12 @@ def plot_variables(zone: int, label: str):
     A curve of the generating unit is drawn for every unit the curves carry, so it is named by
     its suffix; one of the bus is a single column, named in full.
     """
-    for curve in for_zone(zone):
-        if curve.label != label:
-            continue
-        if curve.selector.startswith(_GENERATOR_SELECTOR):
-            variable = curve.selector[len(_GENERATOR_SELECTOR) :]
-            return [{"type": "generator", "variable": variable}]
-        return curve.selector
-    return None
+    curve = in_zone(zone, label)
+    if curve is None:
+        return None
+    if curve.selector.startswith(_GENERATOR_SELECTOR):
+        return [{"type": "generator", "variable": curve.selector[len(_GENERATOR_SELECTOR) :]}]
+    return curve.selector
 
 
 def by_label(label: str) -> ComparedCurve | None:
