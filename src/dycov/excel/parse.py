@@ -12,6 +12,7 @@
 - ``read_selected_key``: the Excel-computed Model-Map key, read from the derived table of the
   configuration sheet (the tool has no knowledge of which blocks form the key);
 - ``resolve_models``: that key -> Dynawo ``lib`` + prefix (per zone), by looking up the Model Map;
+- ``resolve_multi_models``: plant key and turbine keys -> Dynawo ``lib`` + prefix (per zone);
 - ``parse_zone``: the electrical tables, locating the value column per sheet (the two differ);
 - ``parse_control_params``: the selected control parameters, flat, in workbook order;
 - ``technology`` / ``template_for``: derive PV/BESS/Wind and the DyCoV template;
@@ -124,6 +125,47 @@ def resolve_models(workbook: dict) -> dict:
             f"{', '.join(sorted(table)) or '(none)'}"
         )
     return {"key": key, **table[key]}
+
+
+def resolve_multi_models(workbook: dict, zone1_sheets: list[str]) -> dict:
+    """Resolve the selected variants for the Zone3 (plant) and every Zone1<x> (turbines).
+
+    Returns ``{"zone3": {"key", "zone3_lib", ...},
+    "zone1": {"Zone1a": {"key", "zone1_lib", ...}}}``.
+    Raises if any key is not present in the ``Model Map``.
+    """
+    plant_key = read_selected_key(workbook)
+    table = _read_model_map(workbook)
+
+    if plant_key not in table:
+        raise ValueError(
+            f"Variant combination not found in '{MODEL_MAP_SHEET}': {plant_key!r}."
+            f"Pick a combination "
+            f"Dynawo has a model for in the 'Choix' column of 'Général', among: "
+            f"{', '.join(sorted(table)) or '(none)'}"
+        )
+
+    resolved = {"zone3": {"key": plant_key, **table[plant_key]}, "zone1": {}}
+    model_key_row = names.row("Zone1", "model_key")
+
+    for sheet in zone1_sheets:
+        zone_data = parse_zone(workbook, sheet)
+
+        # Fallback to global plant_key if the specific Model_Variant row is missing
+        if model_key_row in zone_data:
+            gen_key = zone_text(zone_data, model_key_row)
+        else:
+            gen_key = plant_key
+
+        if gen_key not in table:
+            raise ValueError(
+                f"Variant combination not found in '{MODEL_MAP_SHEET}': {gen_key!r}"
+                f"(read from sheet '{sheet}')."
+            )
+
+        resolved["zone1"][sheet] = {"key": gen_key, **table[gen_key]}
+
+    return resolved
 
 
 # ---------------------------------------------------------------------------

@@ -16,25 +16,34 @@ import configparser
 from dycov.excel import producer_ini as ini
 
 
-def _read(path):
-    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+def _read_ini(path):
+    """Helper to read the generated INI file and return its DEFAULT section as a dict."""
+    parser = configparser.ConfigParser()
     parser.read(path)
-    return {key: value.strip() for key, value in parser["DEFAULT"].items()}
+    return dict(parser["DEFAULT"])
 
 
 def _write(tmp_path, zone1, zone3, gen_id="PV_Array", include_consumption=False):
     for zone in ("Zone1", "Zone3"):
         (tmp_path / zone).mkdir(exist_ok=True)
+
+    # Wrap the single test generator into the new list format
+    generators = [{"gen_id": gen_id, "zone1_data": zone1}]
+
     ini.write_ini(
         tmp_path,
         "Producer",
         "S+Aux",
-        zone1,
+        generators,
         zone3,
-        gen_id,
         include_consumption=include_consumption,
     )
-    return _read(tmp_path / "Zone1" / "Producer.ini"), _read(tmp_path / "Zone3" / "Producer.ini")
+
+    # Read and return the generated INI files as dictionaries so tests can subscript them
+    return (
+        _read_ini(tmp_path / "Zone1" / "Producer.ini"),
+        _read_ini(tmp_path / "Zone3" / "Producer.ini"),
+    )
 
 
 def test_each_zone_declares_the_node_it_connects_at(tmp_path, zone1, zone3):
