@@ -239,7 +239,6 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
     curves_dictionary = (
         "[Curves-Dictionary] \n"
         "time = \n"
-        "NetworkFrequencyPu = \n"
         "# To represent a signal that is in raw abc three-phase form, the affected signal must "
         "be tripled \n"
         "# and the suffixes _a, _b and _c must be added as in the following example: \n"
@@ -257,6 +256,12 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
             "InternalNode1_BUS_ActiveCurrent = \n"
             "InternalNode1_BUS_ReactiveCurrent = \n"
         )
+        for gen_ppm in gens:
+            curves_dictionary += (
+                f"{gen_ppm.get('id')}_GEN_UPuInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
+            )
     else:
         curves_dictionary += (
             "\n\n# Wind Turbines or PV Arrays in Zone3 \n[Curves-Dictionary-Zone3] \n"
@@ -265,6 +270,7 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
             "BusPDR_BUS_ReactivePower = \n"
             "BusPDR_BUS_ActiveCurrent = \n"
             "BusPDR_BUS_ReactiveCurrent = \n"
+            "NetworkFrequencyPu = \n"  # Variable de frecuencia restaurada solo para Zona 3
         )
         for xfmr in xfmrs:
             curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"
@@ -272,8 +278,10 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
             curves_dictionary += (
                 f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
+                f"{gen_ppm.get('id')}_GEN_UPuInjTerminal = \n"
                 f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
                 f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
+                f"{gen_ppm.get('id')}_GEN_NetworkFrequencyPu = \n"
             )
 
     return curves_dictionary
