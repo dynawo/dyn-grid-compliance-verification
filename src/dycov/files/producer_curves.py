@@ -13,12 +13,11 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.curves import naming
+from dycov.curves import requested_curves
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
 from dycov.files.model_parameters import find_bbmodel_by_type, find_bbmodels
 from dycov.logging import dycov_logging
-from dycov.validation import compared_curves
 
 
 def _find_tap_changer_xfmrs(producer_dyd_root: etree.Element) -> list:
@@ -250,31 +249,16 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
         "#    SignalName_c = \n"
     )
 
-    if zone == "Zone1":
-        curves_dictionary += (
-            "\n\n# Wind Turbines or PV Arrays in Zone1 \n[Curves-Dictionary-Zone1] \n"
-        )
-        generator_ids = [gen.get("id") for gen in gens]
-        for name in compared_curves.curve_names(1, generator_ids):
-            curves_dictionary += f"{naming.to_output_name(name, 1)} = \n"
-    else:
-        curves_dictionary += (
-            "\n\n# Wind Turbines or PV Arrays in Zone3 \n[Curves-Dictionary-Zone3] \n"
-            "BusPDR_BUS_Voltage = \n"
-            "BusPDR_BUS_ActivePower = \n"
-            "BusPDR_BUS_ReactivePower = \n"
-            "BusPDR_BUS_ActiveCurrent = \n"
-            "BusPDR_BUS_ReactiveCurrent = \n"
-        )
-        for xfmr in xfmrs:
-            curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"
-        for gen_ppm in gens:
-            curves_dictionary += (
-                f"{gen_ppm.get('id')}_GEN_ActiveCurrentInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_ReactiveCurrentInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-                f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
-            )
+    zone_number = 1 if zone == "Zone1" else 3
+    curves_dictionary += (
+        f"\n\n# Wind Turbines or PV Arrays in {zone} \n[Curves-Dictionary-{zone}] \n"
+    )
+    for name in requested_curves.for_zone(
+        zone_number,
+        [gen.get("id") for gen in gens],
+        [xfmr.get("id") for xfmr in xfmrs],
+    ):
+        curves_dictionary += f"{name} = \n"
 
     return curves_dictionary
 
