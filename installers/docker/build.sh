@@ -36,6 +36,11 @@ if [[ ! -f "start_dycov.sh" ]]; then
     exit 1
 fi
 
+if [[ ! -f "dycov-open" ]]; then
+    echo "ERROR: dycov-open not found in installers/docker/"
+    exit 1
+fi
+
 if [[ ! -f "$ROOT_DIR/pyproject.toml" ]]; then
     echo "ERROR: pyproject.toml not found at $ROOT_DIR"
     exit 1
@@ -212,14 +217,15 @@ cp -a "$ROOT_DIR/docs/installation"/*.md "$TEMP_DIR/installation/"
 
 
 ########################################
-# 8. Copy Dockerfile + start script
+# 8. Copy Dockerfile + runtime scripts
 ########################################
 
 cp Dockerfile "$TEMP_DIR/"
 cp start_dycov.sh "$TEMP_DIR/"
+cp dycov-open "$TEMP_DIR/"
 # Normalize the exec bit so the build context is deterministic regardless of the
 # host checkout's file mode (Windows/WSL, git archive, core.fileMode=false, ...).
-chmod 0755 "$TEMP_DIR/start_dycov.sh"
+chmod 0755 "$TEMP_DIR/start_dycov.sh" "$TEMP_DIR/dycov-open"
 
 
 ########################################
