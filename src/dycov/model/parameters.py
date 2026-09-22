@@ -7,40 +7,233 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from collections import namedtuple
 from dataclasses import dataclass
+from enum import IntEnum
+from pathlib import Path
+from typing import Optional
 
-Line_params = namedtuple("Line_params", ["id", "lib", "connectedPdr", "R", "X", "B", "G"])
-Xfmr_params = namedtuple("Xfmr_params", ["id", "lib", "R", "X", "B", "G", "rTfo", "par_id"])
-Load_params = namedtuple(
-    "Load_params", ["id", "lib", "connectedXmfr", "P", "Q", "U", "UPhase", "Alpha", "Beta"]
-)
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+
+class SimulationError(IntEnum):
+    FAULT_SIMULATION_FAILS = 1
+    FAULT_DIP_UNACHIEVABLE = 2
+    VOLTAGE_CURVE_MISSING = 3
+
+
+class SimulationOutcomeError(ValueError):
+    """Raised when a simulation ran but did not yield a usable result.
+
+    Carries the ``SimulationError`` to report for the operating condition. Being a
+    distinct type keeps the outcomes a test may legitimately end with apart from
+    the errors — a rejected configuration value, for instance — that must abort
+    the run.
+    """
+
+    def __init__(self, message: str, error: SimulationError):
+        super().__init__(message)
+        self.error = error
+
+
+class CurvesAvailability(IntEnum):
+    ALL = 0
+    NO_PRODUCER = 1
+    NO_REFERENCE = 2
+    NONE = 3
+
+
+# ---------------------------------------------------------------------------
+# Network model dataclasses
+# ---------------------------------------------------------------------------
 
 
 @dataclass
-class Gen_params:
+class Terminal:
+    """Electrical terminal initial conditions and connections."""
+
+    connected_equipment: str
+    u0: float = 1.0
+    u_phase0: float = 0.0
+    p0: float = 0.0
+    q0: float = 0.0
+
+
+@dataclass
+class Equipment:
+    """Base class for network equipment parameters."""
+
     id: str
     lib: str
-    connectedXmfr: str
-    SNom: float
-    IMax: float
     par_id: str
-    P: float
-    Q: float
-    VoltageDroop: float
-    UseVoltageDroop: bool
+    terminals: tuple[Terminal, ...]
 
 
-Pdr_equipments = namedtuple("Pdr_equipments", ["id", "var"])
-Pdr_params = namedtuple("Pdr_params", ["U", "S", "P", "Q"])
-Pimodel_params = namedtuple("Pimodel_params", ["Ytr", "Ysh1", "Ysh2"])
-Gen_init = namedtuple("Gen_init", ["id", "P0", "Q0", "U0", "UPhase0"])
-Load_init = namedtuple("Load_init", ["id", "lib", "P0", "Q0", "U0", "UPhase0"])
+@dataclass
+class BusParams(Equipment):
+    """Parameters of an electrical bus."""
 
-Simulation_result = namedtuple(
-    "Simulation_result", ["success", "time_exceeds", "has_simulated_curves", "error_message"]
-)
-Stability = namedtuple("Stability", ["p", "q", "v", "theta", "pi"])
-Disconnection_Model = namedtuple(
-    "Disconnection_Model", ["auxload", "auxload_xfmr", "stepup_xfmrs", "gen_intline"]
-)
+    v_min: float
+    v_max: float
+
+
+@dataclass
+class LineParams(Equipment):
+    """Parameters of a transmission line."""
+
+    r: float
+    x: float
+    b: float
+    g: float
+
+
+@dataclass
+class XfmrParams(Equipment):
+    """Parameters of a transformer."""
+
+    r: float
+    x: float
+    b: float
+    g: float
+    r_tfo: float
+    alpha_tfo: float
+
+
+@dataclass
+class LoadParams(Equipment):
+    """Parameters of a load model."""
+
+    p: float
+    q: float
+    u: float
+    u_phase: float
+    alpha: float
+    beta: float
+
+
+@dataclass
+class GenParams(Equipment):
+    """Parameters of a generator model."""
+
+    s_nom: float
+    i_max: float
+    p: float
+    q: float
+    voltage_droop: float
+    use_voltage_droop: bool
+    ppc_local: bool = True
+    converter_lv_control: bool = True
+    p_min: Optional[float] = None
+    p_max: Optional[float] = None
+    q_min: Optional[float] = None
+    q_max: Optional[float] = None
+
+
+# ---------------------------------------------------------------------------
+# Simulation / validation result dataclasses
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PdrEquipments:
+    """PDR equipment identifier and associated variable."""
+
+    id: str
+    var: str
+
+
+@dataclass
+class PdrParams:
+    """Electrical quantities at the PDR connection point."""
+
+    u: float
+    u_phase: float
+    s: float
+    p: float
+    q: float
+
+
+@dataclass(frozen=True)
+class PimodelParams:
+    """Equivalent PI model parameters."""
+
+    y_tr: float
+    y_sh1: float
+    y_sh2: float
+
+
+@dataclass(frozen=True)
+class GenInit:
+    """Initial conditions for a generator."""
+
+    id: str
+    p0: float
+    q0: float
+    u0: float
+    u_phase0: float
+
+
+@dataclass(frozen=True)
+class LoadInit:
+    """Initial conditions for a load."""
+
+    id: str
+    lib: str
+    p0: float
+    q0: float
+    u0: float
+    u_phase0: float
+
+
+@dataclass(frozen=True)
+class SimulationResult:
+    """Outcome of a simulation execution."""
+
+    appicable: bool
+    success: bool
+    time_exceeds: bool
+    has_simulated_curves: bool
+    error: Optional[SimulationError] = None
+
+
+@dataclass(frozen=True)
+class Stability:
+    """Steady-state stability indicators."""
+
+    p: float
+    q: float
+    v: float
+    theta: float
+    pi: float
+
+
+@dataclass(frozen=True)
+class DisconnectionModel:
+    """Elements subject to disconnection during simulation."""
+
+    auxload: object
+    auxload_xfmr: object
+    connection_xfmrs: object
+    gen_intline: object
+
+
+@dataclass(frozen=True)
+class ExclusionWindows:
+    """Time windows excluded from analysis."""
+
+    event_start: float
+    event_end: float
+    clear_start: float
+    clear_end: float
+
+
+@dataclass(frozen=True)
+class CurvesCheckResult:
+    """Result of curve availability and consistency checks."""
+
+    working_oc_dir: Path
+    jobs_output_dir: Path
+    event_params: dict
+    simulation_result: SimulationResult
+    availability: CurvesAvailability

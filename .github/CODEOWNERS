@@ -1,0 +1,8 @@
+# CODEOWNERS
+#
+# These users are suggested as reviewers for all pull requests.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Former maintainer (kept for reference, not an active reviewer): @Philibert92
+
+* @louisg-rte @marcosmc @jl-marin @guiuomsfont-aia

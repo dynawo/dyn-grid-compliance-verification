@@ -41,7 +41,6 @@ def test_create_map_with_complete_valid_results():
     table = characteristics_response.create_map(results)
     # There should be 6 rows: 4 time errors + 2 ramp errors
     assert len(table) == 6
-    # Check structure of first row (Reaction time)
     row = table[0]
     assert row[0] == "Reaction time"
     assert isinstance(row[1], str)
@@ -49,7 +48,6 @@ def test_create_map_with_complete_valid_results():
     assert isinstance(row[3], str)
     assert isinstance(row[4], str)
     assert isinstance(row[5], str)
-    # Check that ramp error row is present and formatted
     ramp_row = table[4]
     assert ramp_row[0] == "Ramp time lag"
     assert ramp_row[3] == "0.12"
@@ -92,6 +90,28 @@ def test_ramp_error_with_valid_ramp_keys():
     assert row[3].startswith("\\textcolor{red}{")
     assert row[4] == "0.44"
     assert row[5] == "\\textcolor{red}{ False }"
+
+
+def test_create_map_repeated_not_calculated_reuses_footnote():
+    results = {
+        "calc_reaction_time": 1.23,
+        "ref_reaction_time": 1.20,
+        "reaction_time_error": "-",
+        "reaction_time_thr": 0.05,
+        "reaction_time_check": "True",
+        "calc_rise_time": 2.34,
+        "ref_rise_time": 2.30,
+        "rise_time_error": "-",
+        "rise_time_thr": 0.06,
+        "rise_time_check": "True",
+    }
+    table = characteristics_response.create_map(results)
+    assert len(table) == 2
+    assert table[0][3].startswith(
+        "\\footnote{Not Calculated because the reference value "
+        "is exactly zero or very close to zero.}"
+    )
+    assert table[1][3].startswith("\\footnotemark[\\value{footnote}]")
 
 
 def test_create_map_with_missing_keys():

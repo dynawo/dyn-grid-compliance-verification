@@ -2,6 +2,8 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Three Phase Fault %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    {{ waterMarkText }}
+
     \renewcommand{\DTRPcs}{Benchmark1} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{Benchmark 1}
     \renewcommand{\OCname}{OperatingCondition2}
@@ -45,6 +47,11 @@
     Go to  {{ linkPCSIz1Benchmark1OperatingCondition2 }}
 
     \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilizedPCSIz1Benchmark1OperatingCondition2 }}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
     \begin{center}
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
@@ -61,6 +68,8 @@
     \end{center}
 
     \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
 
     \noindent Compliance thresholds on the curves:
     \begin{center}

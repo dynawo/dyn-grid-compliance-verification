@@ -10,7 +10,7 @@ from dycov.core.global_variables import (
 )
 
 
-def _get_pcs_name(pcs_name, simulation_type):
+def _get_pcs_name(pcs_name: str, simulation_type: int) -> str:
     pcs = pcs_name.replace("PCS_", "")
     if simulation_type == ELECTRIC_PERFORMANCE_SM:
         return pcs + "SM"
@@ -22,7 +22,7 @@ def _get_pcs_name(pcs_name, simulation_type):
     return pcs
 
 
-def _get_pcs_figures(pcs):
+def _get_pcs_figures(pcs: str):
     with open(Path(__file__).parent / "figures.json", "r") as f:
         figures = json.load(f)
 
@@ -32,13 +32,27 @@ def _get_pcs_figures(pcs):
     return []
 
 
-def _create_pcs_figures(path, pcs, producer):
+def _create_pcs_figures(path: Path, pcs: str, producer: str) -> None:
     figures = _get_pcs_figures(pcs)
     for figure in figures:
         shutil.copy(path / "fig_placeholder.pdf", path / f"{producer}_{figure}")
 
 
-def create_figures(path, producer, pcs_name, simulation_type):
+def create_figures(path: Path, producer: str, pcs_name: str, simulation_type: int) -> None:
+    """Create the figures for the report. This is a placeholder implementation that copies a
+    placeholder PDF file for each figure defined in the figures.json template.
+
+    Parameters
+    ----------
+    path : Path
+        Path to the directory where the figures should be created.
+    producer : str
+        Producer name.
+    pcs_name : str
+        PCS name.
+    simulation_type : int
+        Simulation type identifier.
+    """
     pcs = _get_pcs_name(pcs_name, simulation_type)
     _create_pcs_figures(path, pcs, producer)
 

@@ -13,23 +13,23 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Optional
 
-from dycov.logging.logging import dycov_logging
+import shtab
 
-_LOGGER = dycov_logging.get_logger("CliParsers")
+from dycov.logging import dycov_logging
 
 
 def setup_cli_parsers() -> argparse.ArgumentParser:
     """Sets up the command-line argument parsers for the DYCOV tool.
 
     This function defines the main parser and its subparsers for various
-    DYCOV commands like validate, performance, generate, compile, and anonymize.
+    DYCOV commands like validate, performance, excel2inputs and anonymize.
 
     Returns
     -------
     argparse.ArgumentParser
         The configured argument parser.
     """
-    _LOGGER.info("Setting up CLI parsers.")
+    dycov_logging.get_logger("CliParsers").info("Setting up CLI parsers.")
     main_parser = argparse.ArgumentParser(
         prog="dycov",
         description="Dynamic grid Compliance Verification tool.",
@@ -44,16 +44,22 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
         version=f"%(prog)s {version('dycov')}",
         help="Show program's version number and exit.",
     )
+    shtab.add_argument_to(
+        main_parser,
+        "--print-completion",
+        help="Print the shell completion script for the tool and exit.",
+    )
     _add_debug_argument(main_parser)
+    _add_diagnostic_argument(main_parser)
+    _add_user_config_argument(main_parser)
 
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
 
-    _add_generate_envelopes_subparser(subparsers)
+    _add_generate_gfm_envelopes_subparser(subparsers)
     _add_validate_subparser(subparsers)
     _add_performance_subparser(subparsers)
-    _add_generate_subparser(subparsers)
-    _add_compile_subparser(subparsers)
+    _add_excel2inputs_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
 
     return main_parser
@@ -69,6 +75,7 @@ def _add_argument(
     choices: Optional[list] = None,
     nargs: Optional[str] = None,
     is_required: bool = False,
+    completion: Optional[dict] = None,
 ) -> None:
     """Helper function to add an argument to a parser, dynamically including only
     non-None parameters and handling 'required' based on argument type (positional
@@ -94,6 +101,8 @@ def _add_argument(
         The number of command-line arguments that should be consumed.
     is_required: bool
         Whether the argument is required.
+    completion: Optional[dict]
+        The kind of value the shell completes for the argument, as one of shtab's constants.
     """
     kwargs = {"help": help_msg}
 
@@ -114,8 +123,44 @@ def _add_argument(
     if nargs:
         kwargs["nargs"] = nargs
 
-    parser.add_argument(*args, **kwargs)
-    _LOGGER.debug(f"Added argument {args} to parser with help: {help_msg}")
+    argument = parser.add_argument(*args, **kwargs)
+    if completion:
+        argument.complete = completion
+    dycov_logging.get_logger("CliParsers").debug(
+        f"Added argument {args} to parser with help: {help_msg}"
+    )
+
+
+def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--user-config' argument to override the default user configuration file."""
+    _add_argument(
+        parser,
+        "--user-config",
+        help_msg=(
+            "Path to a custom user configuration file. Overrides the default user config location."
+        ),
+        arg_type=Path,
+        default=None,
+        completion=shtab.FILE,
+    )
+
+
+def _add_diagnostic_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--diagnostic' argument to the parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    parser.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help=(
+            "Run in diagnostic mode: enables debug logging, "
+            "forces serial execution and dumps full configuration and PCS."
+        ),
+    )
 
 
 def _add_debug_argument(parser: argparse.ArgumentParser) -> None:
@@ -153,6 +198,7 @@ def _add_launcher_argument(parser: argparse.ArgumentParser) -> None:
             "provided, the tool will try to find it from the PATH "
             "environment variable."
         ),
+        completion=shtab.FILE,
     )
 
 
@@ -182,6 +228,7 @@ def _add_ini_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.FILE,
     )
 
 
@@ -236,6 +283,7 @@ def _add_model_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -265,36 +313,7 @@ def _add_output_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
-    )
-
-
-def _add_topology_argument(
-    parser: argparse.ArgumentParser,
-    explain: str = "",
-    is_required: bool = False,
-) -> None:
-    """Adds the '--topology' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    explain: str
-        Additional explanation for the help message.
-    is_required: bool
-        Whether the argument is required.
-    """
-    help_msg = "Choice of topology to implement in the DYD file"
-    if explain:
-        help_msg += f" {explain}"
-    _add_argument(
-        parser,
-        "-t",
-        "--topology",
-        arg_type=Path,
-        help_msg=help_msg,
-        is_required=is_required,
-        choices=["S", "S+i", "S+Aux", "S+Aux+i", "M", "M+i", "M+Aux", "M+Aux+i"],
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -324,6 +343,41 @@ def _add_curves_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
+        completion=shtab.DIRECTORY,
+    )
+
+
+def _add_excel_argument(
+    parser: argparse.ArgumentParser,
+    explain: str = "",
+    is_required: bool = False,
+    as_option: bool = False,
+) -> None:
+    """Adds the 'excel' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    explain: str
+        Additional explanation for the help message.
+    is_required: bool
+        Whether the argument is required.
+    as_option: bool
+        Add it as '-e' / '--excel' instead of as the positional argument, for the commands whose
+        input can also be a model or a set of curves.
+    """
+    help_msg = "Path to the workbook describing the model."
+    if explain:
+        help_msg += f" {explain}"
+    names = ("-e", "--excel") if as_option else ("excel",)
+    _add_argument(
+        parser,
+        *names,
+        arg_type=Path,
+        help_msg=help_msg,
+        is_required=is_required,
+        completion=shtab.FILE,
     )
 
 
@@ -331,6 +385,7 @@ def _add_reference_argument(
     parser: argparse.ArgumentParser,
     explain: str = "",
     is_required: bool = False,
+    nargs: Optional[str] = None,
 ) -> None:
     """Adds the 'reference' argument to the given parser.
 
@@ -342,6 +397,8 @@ def _add_reference_argument(
         Additional explanation for the help message.
     is_required: bool
         Whether the argument is required.
+    nargs: Optional[str]
+        Use '?' to let the positional be omitted, as when the curves come from a workbook.
     """
     help_msg = "Path to the directory containing the reference curves to be used."
     if explain:
@@ -352,37 +409,8 @@ def _add_reference_argument(
         arg_type=Path,
         help_msg=help_msg,
         is_required=is_required,
-    )
-
-
-def _add_validation_argument(
-    parser: argparse.ArgumentParser,
-    explain: str = "",
-    is_required: bool = False,
-) -> None:
-    """Adds the '--validation' argument to the given parser.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The parser to which the argument will be added.
-    explain: str
-        Additional explanation for the help message.
-    is_required: bool
-        Whether the argument is required.
-    """
-    help_msg = "Choice of process, performance verification (SM, PPM or BESS) "
-    help_msg += "vs. RMS model validation (PPM or BESS)"
-    if explain:
-        help_msg += f" {explain}"
-    _add_argument(
-        parser,
-        "-v",
-        "--validation",
-        arg_type=Path,
-        help_msg=help_msg,
-        is_required=is_required,
-        choices=["performance_SM", "performance_PPM", "model_PPM", "model_BESS"],
+        nargs=nargs,
+        completion=shtab.DIRECTORY,
     )
 
 
@@ -451,6 +479,27 @@ def _add_functional_testing_argument(parser: argparse.ArgumentParser) -> None:
         help_msg="Path to the baseline directory containing verified CSVs to compare against the output.",
     )
 
+def _add_functional_testing_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--functional_tests' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-t",
+        "--functional_tests",
+        arg_type=str,
+        help_msg=(
+            "Path to the baseline directory containing verified CSVs "
+            "to compare against the output."
+        ),
+        completion=shtab.DIRECTORY,
+    )
+
+
 def _add_dynamic_model_argument(parser: argparse.ArgumentParser) -> None:
     """Adds the '--dynamic-model' argument to the given parser.
 
@@ -499,9 +548,9 @@ def _add_noisestd_argument(parser: argparse.ArgumentParser) -> None:
         "-n",
         "--noisestd",
         arg_type=float,
-        default=0.0,
+        default=0.01,
         help_msg="Standard deviation of the noise added to the curves, in pu"
-        " (recommended range: [0.01, 0.1]).",
+        " (default: 0.01, 0 to add none).",
     )
 
 
@@ -518,9 +567,11 @@ def _add_frequency_argument(parser: argparse.ArgumentParser) -> None:
         "-fr",
         "--frequency",
         arg_type=float,
-        default=3.0,
-        help_msg="Cut-off frequency of the filter used for smoothing the noise,"
-        " in Hz (default: 3.0, recommended range: [1.0, 5.0]).",
+        default=15.0,
+        help_msg="Cut-off frequency of the filter used for smoothing the noise, in Hz. The"
+        " verification filters every curve at the 'cutoff' of its configuration, 15.0 Hz by"
+        " default, so noise above that is erased before anything is checked, and noise well"
+        " below it reads as a slow wobble instead of a measurement (default: 15.0).",
     )
 
 
@@ -539,29 +590,71 @@ def _add_results_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=Path,
         help_msg="Path to a verification results directory. If provided,"
         " 'curves_calculated.csv' and 'dycov.log' files will be copied from here.",
+        completion=shtab.DIRECTORY,
     )
 
 
-def _add_generate_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'generateEnvelopes' subparser to the given subparsers action.
+def _add_compression_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--compression' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-comp",
+        "--compression",
+        arg_type=float,
+        default=0.00005,
+        help_msg="Relative epsilon for curve simplification using the Ramer-Douglas-Peucker"
+        " algorithm, as a fraction of each signal's range"
+        " (e.g. 0.001 = 0.1%%). Default: 0.00005, 0 to keep every sample."
+        " It also holds the curve to a sampling rate, finer around the event.",
+    )
+
+
+def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--deripple' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-dr",
+        "--deripple",
+        arg_type=float,
+        default=5.0,
+        help_msg="Cut-off frequency, in Hz, of the filter that removes the oscillation the"
+        " simulation adds to the curves. It must sit well below that oscillation, which the"
+        " examples show between 12 and 17 Hz."
+        " Default: 5.0, 0 to keep the oscillation.",
+    )
+
+
+def _add_generate_gfm_envelopes_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'generate_gfm_envelopes' subparser to the given subparsers action.
 
     Parameters
     ----------
     subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'generateEnvelopes' subparser will be added.
+        The subparsers action to which the 'generate_gfm_envelopes' subparser will be added.
     """
     envelops = subparsers.add_parser(
-        "generateEnvelopes",
+        "generate_gfm_envelopes",
         help="create all the envelopes based on the description of the different test cases",
     )
-    _add_debug_argument(envelops)
     _add_ini_argument(envelops, is_required=True)
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
     _add_pcs_argument(envelops)
     _add_only_dtr_argument(envelops)
     _add_functional_testing_argument(envelops)
-    _LOGGER.debug("Added 'generateEnvelopes' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'generate_gfm_envelopes' subparser.")
 
 
 def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -575,18 +668,34 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
     validate = subparsers.add_parser(
         "validate",
         help="Validate a Dynawo model against a set of curves.",
+        # One line per way of calling it: the inputs exclude each other, which argparse cannot
+        # express on its own.
+        usage=(
+            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]\n"
+            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]"
+        ),
     )
-    model_or_curves = validate.add_mutually_exclusive_group(required=False)
-    _add_debug_argument(validate)
     _add_launcher_argument(validate)
-    _add_model_argument(model_or_curves)
-    _add_curves_argument(model_or_curves, explain="(when using curves instead of an RMS model)")
-    _add_reference_argument(validate, is_required=True)
+    validate_inputs = validate.add_argument_group("input options (give one)")
+    _add_model_argument(validate_inputs)
+    _add_curves_argument(validate_inputs, explain="(when using curves instead of an RMS model)")
+    _add_excel_argument(
+        validate_inputs,
+        as_option=True,
+        explain=(
+            "The model and its reference curves are generated from it, so neither the model, "
+            "the curves nor the reference directory are given."
+        ),
+    )
+    _add_reference_argument(validate, nargs="?")
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
     _add_testing_argument(validate)
-    _LOGGER.debug("Added 'validate' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'validate' subparser.")
 
 
 def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -600,39 +709,55 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     performance = subparsers.add_parser(
         "performance",
         help="Analyze the performance of a Dynawo model (or its results).",
+        # One line per way of calling it: a model may be drawn against the producer curves, but a
+        # workbook replaces both.
+        usage=(
+            "dycov performance -e EXCEL  [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov performance -m MODEL  [-c CURVES] [-h] [-l LAUNCHER] [-o OUTPUT]"
+            " [-p PCS] [-od]\n"
+            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+        ),
     )
-    _add_debug_argument(performance)
     _add_launcher_argument(performance)
-    _add_model_argument(performance)
+    performance_inputs = performance.add_argument_group("input options (give one)")
+    _add_model_argument(performance_inputs)
     _add_curves_argument(
-        performance,
+        performance_inputs,
         explain="(if a model is also provided, these are used only for graphing)",
+    )
+    _add_excel_argument(
+        performance_inputs,
+        as_option=True,
+        explain=("The model is generated from it, so neither the model nor the curves are given."),
     )
     _add_output_argument(performance)
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)
     _add_testing_argument(performance)
-    _LOGGER.debug("Added 'performance' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'performance' subparser.")
 
 
-def _add_generate_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'generate' subparser to the given subparsers action.
+def _add_excel2inputs_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'excel2inputs' subparser to the given subparsers action.
 
     Parameters
     ----------
     subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'generate' subparser will be added.
+        The subparsers action to which the 'excel2inputs' subparser will be added.
     """
-    generate = subparsers.add_parser(
-        "generate",
-        help="Create all the necessary input files through a guided process.",
+    excel2inputs = subparsers.add_parser(
+        "excel2inputs",
+        help="Create the input files of a model from the workbook that describes it.",
     )
-    _add_debug_argument(generate)
-    _add_launcher_argument(generate)
-    _add_output_argument(generate, is_required=True)
-    _add_topology_argument(generate, is_required=True)
-    _add_validation_argument(generate, is_required=True)
-    _LOGGER.debug("Added 'generate' subparser.")
+    _add_excel_argument(excel2inputs, is_required=True)
+    _add_output_argument(
+        excel2inputs,
+        explain=(
+            "The Dynawo and ReferenceCurves trees are written under it; "
+            "defaults to the directory holding the workbook."
+        ),
+    )
+    dycov_logging.get_logger("CliParsers").debug("Added 'excel2inputs' subparser.")
 
 
 def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -647,11 +772,10 @@ def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
         "compile",
         help="Compile custom Modelica models.",
     )
-    _add_debug_argument(compile_model)
     _add_launcher_argument(compile_model)
     _add_dynamic_model_argument(compile_model)
     _add_force_argument(compile_model)
-    _LOGGER.debug("Added 'compile' subparser.")
+    dycov_logging.get_logger("CliParsers").debug("Added 'compile' subparser.")
 
 
 def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
@@ -667,10 +791,11 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
         help="Generate a new set of curves from a given one, using generic "
         "variable names and with (optional) noise added.",
     )
-    _add_debug_argument(anonymize)
     _add_curves_argument(anonymize, is_required=False)
     _add_output_argument(anonymize)
     _add_noisestd_argument(anonymize)
     _add_frequency_argument(anonymize)
     _add_results_argument(anonymize)
-    _LOGGER.debug("Added 'anonymize' subparser.")
+    _add_compression_argument(anonymize)
+    _add_deripple_argument(anonymize)
+    dycov_logging.get_logger("CliParsers").debug("Added 'anonymize' subparser.")

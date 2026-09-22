@@ -8,51 +8,75 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
-from dycov.curves.dynawo.translator import dynawo_translator
-from dycov.model.parameters import Gen_params
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.logging import dycov_logging
+from dycov.model.parameters import GenParams
 
 
 def _connect_generator_by_lib(
-    dyd_root: etree.Element, ns: str, omega_lib, generator: Gen_params, grp: str
+    dyd_root: etree.Element, ns: str, omega_lib, generator: GenParams, grp: str
 ) -> None:
     if omega_lib is None:
+        dycov_logging.get_logger("Omega File").debug(
+            f"Connect gen={generator.id} to InfiniteBusFromTable"
+        )
         _connect_generator_to_infinitebus(dyd_root, ns, generator)
     elif "DYNModelOmegaRef" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(
+            f"Connect gen={generator.id} to DYNModelOmegaRef"
+        )
         _connect_generator_to_dynmodelomegaref(dyd_root, ns, generator, grp)
     elif "SetPoint" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to SetPoint")
         _connect_generator_to_setpoint(dyd_root, ns, generator)
+    elif "Ramp" == omega_lib:
+        dycov_logging.get_logger("Omega File").debug(f"Connect gen={generator.id} to Ramp")
+        _connect_generator_to_ramp(dyd_root, ns, generator, grp)
+
+
+def _connect_generator_to_ramp(
+    dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
+) -> None:
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
+    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
 
 
 def _connect_generator_to_dynmodelomegaref(
-    dyd_root: etree.Element, ns: str, generator: Gen_params, grp: str
+    dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "RotorSpeedPu")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value")
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value"
+        )
 
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
-    _connect_generator(
-        dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
-    )
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
+        )
 
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "Running")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}")
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}_value"
+        )
 
 
-def _connect_generator_to_setpoint(
-    dyd_root: etree.Element, ns: str, generator: Gen_params
-) -> None:
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+def _connect_generator_to_setpoint(dyd_root: etree.Element, ns: str, generator: GenParams) -> None:
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     if variable:
         _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "setPoint_setPoint")
 
 
 def _connect_generator_to_infinitebus(
-    dyd_root: etree.Element, ns: str, generator: Gen_params
+    dyd_root: etree.Element, ns: str, generator: GenParams
 ) -> None:
-    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyPu")
+    _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     _connect_generator(
         dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
     )
@@ -72,7 +96,7 @@ def _connect_generator(
     )
 
 
-def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> int:
+def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> Optional[int]:
     if grp is None:
         return grp
 
@@ -119,20 +143,20 @@ def complete_omega(
     parset = None
     grp = None
     omega_ref = dyd_root.find(f"{{{dyd_ns}}}blackBoxModel[@id='OmegaRef']")
+
     if omega_ref is not None:
         lib = omega_ref.get("lib")
         par_id = omega_ref.get("parId")
         parset = par_root.find(f"{{{par_ns}}}set[@id='{par_id}']")
         nbGen = parset.find(f"{{{par_ns}}}par[@name='nbGen']")
         if nbGen is not None:
-            grp = int(nbGen.get("value"))
+            grp = int(nbGen.get("value")) - 1
+        dycov_logging.get_logger("Omega File").debug(f"OmegaRef lib={lib} par_id={par_id}")
 
+    dycov_logging.get_logger("Omega File").debug(f"Generators {len(generators)}")
     for generator in generators:
+        dycov_logging.get_logger("Omega File").debug(f"Generator {generator.id}")
         _connect_generator_by_lib(dyd_root, dyd_ns, lib, generator, grp)
-        grp = _add_generator_weight(parset, par_ns, grp)
-
-    if grp:
-        nbGen.set("value", str(grp))
 
     par_tree.write(path / par_file, pretty_print=True)
     dyd_tree.write(path / dyd_file, pretty_print=True)

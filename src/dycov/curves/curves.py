@@ -9,14 +9,15 @@
 #
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
-from dycov.model.parameters import Disconnection_Model, Simulation_result
+from dycov.files import model_parameters
+from dycov.model.parameters import DisconnectionModel, SimulationResult
 from dycov.model.producer import Producer
 
 
@@ -44,6 +45,16 @@ def get_cfg_oc_name(pcs_name: str, bm_name: str, oc_name: str) -> str:
     return pcs_bm_name + CASE_SEPARATOR + oc_name
 
 
+def _magnitude_name(value_definition: str) -> str:
+    return value_definition.strip().lstrip("+-").strip()
+
+
+def _references_base_magnitude(
+    value_definition: str, unit_characteristics: dict[str, float]
+) -> bool:
+    return "*" in value_definition or _magnitude_name(value_definition) in unit_characteristics
+
+
 class ProducerCurves:
     """
     ProducerCurves is responsible for managing and calculating various characteristics
@@ -63,32 +74,43 @@ class ProducerCurves:
     ):
         self._producer = producer
         self._line_Xpu = 0.0
+        self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
 
-    def obtain_value(self, value_definition: str) -> Union[str, float]:
+    def obtain_value(
+        self, value_definition: str, origin: Optional[tuple[str, str]] = None
+    ) -> Union[str, float]:
         """Calculate the final value from a definition.
+
+        Definitions that reference a base magnitude are resolved against the
+        registry of unit characteristics; the rest are configuration values that
+        Dynawo consumes verbatim (a solver name, an integer, a boolean) and are
+        returned unchanged.
 
         Parameters
         ----------
         value_definition: str
             Description of the required value
+        origin: Optional[tuple[str, str]]
+            (section, key) of the configuration option the definition was read
+            from, used to point the user to the offending file and line when the
+            definition is rejected.
 
         Returns
         -------
         Union[str, float]
             Final value.
+
+        Raises
+        ------
+        ValueError
+            If the definition references a base magnitude but cannot be resolved.
         """
         unit_characteristics = self.get_unit_characteristics()
-        if "*" in value_definition:
-            # Split the value definition by '*'
-            parts = value_definition.split("*")
-            # The first part is the multiplier
-            multiplier = float(parts[0])
-            # The second part is the value to be multiplied
-            value = parts[1]
-            # Return the product of the multiplier and the value from unit characteristics
-            return multiplier * unit_characteristics.get(value, 0.0)
-        # Return the value from unit characteristics or the value definition itself if not found
-        return unit_characteristics.get(value_definition, value_definition)
+        if not _references_base_magnitude(value_definition, unit_characteristics):
+            return value_definition
+        return model_parameters.resolve_value_definition(
+            value_definition, unit_characteristics, origin=origin
+        )
 
     def complete_unit_characteristics(self, line_Xpu: float) -> None:
         """Complete the parameters used as unit characteristics.
@@ -108,13 +130,19 @@ class ProducerCurves:
         dict[str, float]
             set of unit characteristics.
         """
-        producer = self.get_producer()
-        return {
-            "Pmax": producer.p_max_pu,
-            "Qmax": producer.q_max_pu,
-            "Udim": self.get_generator_u_dim() / producer.u_nom,
-            "line_XPu": self._line_Xpu,
-        }
+        return model_parameters.unit_characteristics(
+            self.get_producer(), self.get_generator_u_dim(), self._line_Xpu
+        )
+
+    def get_snref(self) -> float:
+        """Get the reference power (S_nref).
+
+        Returns
+        -------
+        float
+            Reference power (S_nref).
+        """
+        return self._s_nref
 
     def get_producer(self) -> Producer:
         """Get the producer instance.
@@ -129,12 +157,18 @@ class ProducerCurves:
     def get_generator_u_dim(self) -> float:
         """Get the Udim.
 
+        Zone 1's internal node voltage is not normalized against the DTR's PDR
+        voltage-level list (that classification only applies at the PDR, Zone 3),
+        so Zone 1 has no Udim to report: its own nominal voltage is used instead.
+
         Returns
         -------
         float
             Udim.
         """
         producer = self.get_producer()
+        if producer.get_zone() == 1:
+            return producer.u_nom
         return generator_variables.get_generator_u_dim(producer.u_nom)
 
     def get_setpoint_variation(self, pcs_bm_oc_name: str) -> float:
@@ -150,22 +184,21 @@ class ProducerCurves:
         float
             Setpoint variation.
         """
-        # Check if there is a high impedance fault or a bolted fault
         if config.get_boolean(pcs_bm_oc_name, "hiz_fault") or config.get_boolean(
             pcs_bm_oc_name, "bolted_fault"
         ):
-            # If either fault is present, return 0.0 as the setpoint variation
             return 0.0
 
-        # Retrieve the setpoint step value from the configuration
         config_key = pcs_bm_oc_name + ".Event"
         setpoint_variation = config.get_value(config_key, "setpoint_step_value")
         if not setpoint_variation:
-            # If no setpoint variation is found, return 0.0
             return 0.0
 
-        # Calculate and return the final setpoint variation value
-        return float(self.obtain_value(str(setpoint_variation)))
+        producer = self.get_producer()
+        value = self.obtain_value(
+            str(setpoint_variation), origin=(config_key, "setpoint_step_value")
+        )
+        return float(value) * self._s_nref / producer.s_nom
 
     @abstractmethod
     def get_solver(self) -> dict:
@@ -202,7 +235,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         curves: Path,
-    ) -> tuple[float, pd.DataFrame]:
+    ) -> tuple[Optional[float], pd.DataFrame]:
         """Obtain the reference curves.
 
         Parameters
@@ -222,8 +255,9 @@ class ProducerCurves:
 
         Returns
         -------
-        float
-            Instant of time when the event is triggered
+        Optional[float]
+            Instant of time when the event is triggered, or None if the reference
+            curves could not be imported
         DataFrame
            Curves imported from the file
         """
@@ -238,7 +272,7 @@ class ProducerCurves:
         bm_name: str,
         oc_name: str,
         reference_event_start_time: float,
-    ) -> tuple[str, dict, Simulation_result, pd.DataFrame]:
+    ) -> tuple[str, dict, SimulationResult, pd.DataFrame]:
         """Obtain the simulated curves.
 
         Parameters
@@ -262,7 +296,7 @@ class ProducerCurves:
             Simulation output dir
         dict
             Event parameters
-        Simulation_result
+        SimulationResult
             Information about the simulation result.
         DataFrame
            Simulation calculated curves
@@ -288,6 +322,10 @@ class ProducerCurves:
             Simulation output dir
         fault_duration: float
             Fault duration in seconds
+        bm_name: str
+            Benchmark name
+        oc_name: str
+            Operating Condition name
 
         Returns
         -------
@@ -297,16 +335,27 @@ class ProducerCurves:
         pass
 
     @abstractmethod
-    def get_disconnection_model(self) -> Disconnection_Model:
+    def get_voltage_dip(self) -> float | None:
+        """Get the voltage dip.
+
+        Returns
+        -------
+        float | None
+            The voltage dip value.
+        """
+        pass
+
+    @abstractmethod
+    def get_disconnection_model(self) -> DisconnectionModel:
         """Get all equipment in the model that can be disconnected in the simulation.
 
         This method should be implemented by subclasses to return an instance
-        of the Disconnection_Model class, which contains the equipment that can be
+        of the DisconnectionModel class, which contains the equipment that can be
         disconnected.
 
         Returns
         -------
-        Disconnection_Model
+        DisconnectionModel
             Equipment that can be disconnected.
         """
         pass

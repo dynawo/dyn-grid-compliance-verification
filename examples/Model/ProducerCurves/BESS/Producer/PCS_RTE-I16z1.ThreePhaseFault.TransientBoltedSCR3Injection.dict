@@ -1,0 +1,27 @@
+[Curves-Metadata]
+# True when the reference curves are field measurements
+is_field_measurements = False
+# Instant of time at which the event or fault starts
+# Variable sim_t_event_start is called simply sim_t_event in the DTR
+sim_t_event_start = 30.0
+# Duration of the event or fault
+fault_duration = 0.150
+# Frequency sampling of the reference curves
+frequency_sampling = 15
+
+[Curves-Dictionary]
+# To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
+# and the suffixes _a, _b and _c must be added as in the following example:
+#    SignalName_a =
+#    SignalName_b =
+#    SignalName_c =
+time = time
+InternalNode1_BUS_ActivePower = InternalNode1_BUS_ActivePower
+InternalNode1_BUS_ReactivePower = InternalNode1_BUS_ReactivePower
+InternalNode1_BUS_ActiveCurrent = InternalNode1_BUS_ActiveCurrent
+InternalNode1_BUS_ReactiveCurrent = InternalNode1_BUS_ReactiveCurrent
+InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage
+Bess_GEN_IpInjTerminal = Bess_GEN_IpInjTerminal 
+Bess_GEN_IqInjTerminal = Bess_GEN_IqInjTerminal 
+Bess_GEN_UPuInjTerminal = Bess_GEN_UPuInjTerminal 
+NetworkFrequencyPu = NetworkFrequencyPu

@@ -1,0 +1,28 @@
+#!/bin/bash
+# Custom merge driver for example CSV files (ReferenceCurves and ProducerCurves).
+#
+# Policy:
+#   - Merging a feature branch INTO master: keep the incoming branch version (theirs).
+#   - Updating a feature branch FROM master: keep the master version (ours).
+#
+# Git passes three temp files:
+#   %O = common ancestor
+#   %A = current branch version  (the file git will use as the result)
+#   %B = incoming branch version
+#
+# Overwriting %A with %B means "theirs wins".
+# Leaving %A untouched means "ours wins".
+
+ANCESTOR="$1"
+CURRENT="$2"
+INCOMING="$3"
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$CURRENT_BRANCH" = "master" ]; then
+    cp "$INCOMING" "$CURRENT"
+else
+    true
+fi
+
+exit 0

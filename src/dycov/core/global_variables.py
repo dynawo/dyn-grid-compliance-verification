@@ -36,3 +36,10 @@ MODEL_VALIDATION_BESS = 12
 REPORT_NAME = "report.tex"
 # Separator used for distinguishing different cases or identifiers.
 CASE_SEPARATOR = "."
+
+# --- Numerical Guards ---
+# Voltage-dip comparison tolerance, in pu.
+VOLTAGE_DIP_THRESHOLD = 0.002
+# Factor converting the relative tolerance above into the absolute tolerance that
+# guards divisions by near-zero voltages (0.1 * 0.002 = 2e-4 pu).
+ABS_TOLERANCE_FACTOR = 0.1

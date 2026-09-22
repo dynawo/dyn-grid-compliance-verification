@@ -25,7 +25,15 @@
 \usepackage{caption}
 \usepackage{amstext}
 \usepackage{ifthen}
+\usepackage{tabularx}
+\usepackage{draftwatermark}
 
+%% Watermark defaults
+\SetWatermarkText{}
+\SetWatermarkScale{1.3}
+\SetWatermarkLightness{0.9}
+\SetWatermarkAngle{45}
+\SetWatermarkColor{red}
 
 %% More sensible colors for hyperref links:
 \hypersetup{
@@ -98,15 +106,15 @@
     {{summary_description}}
 
     \begin{center}
-        \begin{tabular}{ccccc}
+        \begin{tabularx}{\textwidth}{l l l l l}
             \toprule
-            PCS & Benchmark & Operating Condition & Overall Result \\
+            Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
             \midrule
             \BLOCK{for row in summaryReport}
-            {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
             \BLOCK{endfor}
             \bottomrule
-        \end{tabular}
+        \end{tabularx}
     \end{center}
 
     \BLOCK{for report in reports}

@@ -2,6 +2,8 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Voltage Step %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    {{ waterMarkText }}
+
     \renewcommand{\DTRPcs}{GridVoltageStep} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{Grid Voltage Step}
     \renewcommand{\OCname}{DropInjection}
@@ -12,10 +14,10 @@
     Checks for compliant behavior of the generating unit under a grid scenario where there
     is a $10\%$ voltage step decrease on AC source.
 
-    \GridCircuitZone
+    \GridCircuitZoneSetPoint
 
     \begin{description}
-        \item Initial conditions used at the PDR bus:
+        \item Initial conditions used at InternalNode1:
         \begin{itemize}
             \item $P = 0.5*P_\text{max\_injection\_unite}$
             \item $Q = Q_\text{max}$
@@ -39,11 +41,19 @@
         \end{tabular}
     \end{center}
 
+    \GridSimulationHeaderZone{
+        \GridCurvesDescriptionZone
+    }
     \GridCurvesZone
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z1GridVoltageStepDropInjection }}
 
     \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilizedPCSI16z1GridVoltageStepDropInjection }}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
     \begin{center}
         \scriptsize
         \begin{tabular}{lcccccc}
@@ -60,6 +70,8 @@
     \end{center}
 
     \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
 
     \noindent Compliance thresholds on the curves:
     \begin{center}

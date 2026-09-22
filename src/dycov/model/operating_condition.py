@@ -8,15 +8,16 @@
 #     demiguelm@aia.es
 #
 
-import logging
+import json
 from pathlib import Path
+
+import numpy as np
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.curves import get_cfg_oc_name
 from dycov.gfm.gfm import GridForming
-from dycov.logging.logging import dycov_logging
 
 
 class OperatingCondition:
@@ -59,8 +60,9 @@ class OperatingCondition:
         working_oc_dir: Path,
         jobs_output_dir: Path,
         event_params: dict,
+        has_reference: bool = True,
     ) -> dict:
-        validator.complete_parameters(
+        validator.initialize_validation_params(
             working_oc_dir,
             jobs_output_dir,
             event_params,
@@ -72,15 +74,22 @@ class OperatingCondition:
             working_oc_dir,
             jobs_output_dir,
             event_params,
+            has_reference=has_reference,
         )
 
-        # Operational point without defining its validations
         if not validator.has_validations():
             results["compliance"] = None
 
-        if dycov_logging.getEffectiveLevel() != logging.DEBUG:
-            with open(working_oc_dir / "results.json", "w") as outfile:
-                outfile.write(str(results))
+        keys_to_exclude = {"curves", "reference_curves", "curves_error"}
+        results_for_json = {k: v for k, v in results.items() if k not in keys_to_exclude}
+
+        with open(working_oc_dir / "results.json", "w", encoding="utf-8") as outfile:
+            json.dump(
+                results_for_json,
+                outfile,
+                indent=4,
+                default=lambda obj: obj.item() if isinstance(obj, np.generic) else obj,
+            )
 
         return results
 
@@ -90,9 +99,9 @@ class OperatingCondition:
         working_path: Path,
         jobs_output_dir: Path,
         event_params: dict,
-        success: bool,
         has_simulated_curves: bool,
-    ) -> tuple[bool, dict]:
+        has_reference: bool = True,
+    ) -> dict:
         """Validate the Benchmark.
 
         Parameters
@@ -103,38 +112,38 @@ class OperatingCondition:
             Simulator output path.
         event_params: dict
             Event parameters
-        success: bool
-            True if simulation is success
         has_simulated_curves: bool
             True if simulation calculated curves
-        curves: dict
-            Calculated and reference curves
+        has_reference: bool
+            Whether all reference curves are available.
 
         Returns
         -------
-        bool
-            True if OperatingCondition can be validated, False otherwise
         dict
             Validation results of the OperatingCondition
         """
         if has_simulated_curves:
-            # Validate results
             results = self.__validate(
                 validator,
                 working_path,
                 jobs_output_dir,
                 event_params,
+                has_reference=has_reference,
             )
         else:
             results = {"compliance": False, "curves": None}
 
         results["udim"] = validator.get_generator_u_dim()
-        return success, results
+        return results
 
-    def generate(
-        self,
-        working_path: Path,
-    ):
+    def generate(self, working_path: Path) -> None:
+        """Execute the GFM module for the current operating condition.
+
+        Parameters
+        ----------
+        working_path: Path
+            Working path.
+        """
         gfm = GridForming()
         gfm.generate(
             working_path,

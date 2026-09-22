@@ -10,10 +10,7 @@
 from pathlib import Path
 
 from dycov.core.parameters import Parameters
-from dycov.logging.logging import dycov_logging
 from dycov.validate.producer import ModelProducer
-
-LOGGER = dycov_logging.get_logger("Execution Parameters")
 
 
 class ValidationParameters(Parameters):
@@ -50,6 +47,7 @@ class ValidationParameters(Parameters):
         output_dir: Path,
         only_dtr: bool,
         verification_type: int,
+        producer_workbook: Path = None,
     ):
         # Inputs parameters
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
@@ -58,6 +56,7 @@ class ValidationParameters(Parameters):
         self._producer = ModelProducer(
             producer_model, producer_curves_path, reference_curves_path, verification_type
         )
+        self._producer_workbook = producer_workbook
 
     def get_sim_type(self) -> int:
         """Get the executed validation type.

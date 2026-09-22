@@ -109,7 +109,7 @@
         \item Active power supplied at the connection point (obtained from
         the controllable Infinite Bus on TSO side).
         \item Rotor speed.
-        \item Magnitude controlled by the AVR.
+        \item Magnitude controlled by the Plant-level voltage regulation.
         \item Generator's internal angle.
     \end{itemize}
 
@@ -132,8 +132,8 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Ustator_PCS_RTE-I6.GridVoltageDip.Qzero}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Stator voltage magnitude, in pu. The gray dotted line show
-            the AVR setpoint.
+            \small Stator voltage magnitude. The gray dotted line show
+            the Plant-level voltage regulation setpoint.
         \end{minipage}
     \end{minipage}
 
@@ -200,7 +200,7 @@
     \begin{description}
         \item[Settling time $T_{10P}$:] time at which the suplied real power
         P stays within the +/-10\% tube centered on the final value of P.
-        \item[Rise time $T_{85U}$:] time at which the the voltage at the
+        \item[Rise time $T_{85U}$:] time at which the voltage at the
         PDR bus returns back above 0.85pu, regardless of any possible
         overshooting/undershooting that may take place later on.
     \end{description}

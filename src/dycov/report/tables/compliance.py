@@ -10,6 +10,18 @@
 from dycov.report import printable
 
 
+def _non_compliant_time_note(footnote_defined: bool) -> tuple:
+    """Returns the LaTeX markup for the "non-compliant time" footnote.
+
+    The first call defines the footnote text; later calls reuse the same note via
+    \\footnotemark[\\value{footnote}] (resolves in a single compilation pass, unlike
+    \\ref) to avoid repeating an identical footnote for every row in the same table.
+    """
+    if not footnote_defined:
+        return "\\footnote{If non-compliant, time at which this happens.}", True
+    return "\\footnotemark[\\value{footnote}]", True
+
+
 def _add_simple_times(results: dict, compliance_map: list):
     if "time_5U" in results:
         time_5U = printable.format_value(results, "time_5U", apply_formatter=True)
@@ -80,6 +92,7 @@ def create_map(results: dict) -> list:
     """
 
     compliance_map = []
+    footnote_defined = False
     if "no_disconnection_gen" in results:
         no_disconnection_gen = printable.format_value(results, "no_disconnection_gen")
         compliance_map.append(
@@ -98,10 +111,11 @@ def create_map(results: dict) -> list:
     if "freq1" in results:
         freq1 = printable.format_value(results, "freq1", add_seconds_unit=True)
         check = printable.format_value(results, "freq1_check")
+        note, footnote_defined = _non_compliant_time_note(footnote_defined)
         compliance_map.append(
             [
                 "Frequency remains within [49, 51] Hz",
-                f"\\footnote{{If non-compliant, time at which this happens.}}{freq1}",
+                f"{note}{freq1}",
                 check,
             ]
         )
@@ -110,26 +124,28 @@ def create_map(results: dict) -> list:
             results, "AVR_5", apply_formatter=True, add_seconds_unit=True
         )
         check = printable.format_value(results, "AVR_5_check")
+        note, footnote_defined = _non_compliant_time_note(footnote_defined)
         compliance_map.append(
             [
-                "Stator voltage within $\pm 5\%$ of setpoint",
-                f"\\footnote{{If non-compliant, time at which this happens.}}{AVR_5}",
+                r"Stator voltage within $\pm 5\%$ of setpoint",
+                f"{note}{AVR_5}",
                 check,
             ]
         )
     if "static_diff" in results:
         static_diff = printable.format_value(results, "static_diff", apply_formatter=True)
         check = printable.format_value(results, "static_diff_check")
-        compliance_map.append(["$\epsilon < 0.2 \%$", static_diff, check])
+        compliance_map.append([r"$\epsilon < 0.2 \%$", static_diff, check])
     if "imax_reac" in results:
         imax_reac = printable.format_value(
             results, "imax_reac", apply_formatter=True, add_seconds_unit=True
         )
         check = printable.format_value(results, "imax_reac_check")
+        note, footnote_defined = _non_compliant_time_note(footnote_defined)
         compliance_map.append(
             [
-                "Reactive inj.\ prioritized if Imax reached",
-                f"\\footnote{{If non-compliant, time at which this happens.}}{imax_reac}",
+                r"Reactive inj.\ prioritized if Imax reached",
+                f"{note}{imax_reac}",
                 check,
             ]
         )

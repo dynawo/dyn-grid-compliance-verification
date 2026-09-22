@@ -8,22 +8,21 @@ sim_t_event_start = 30.0
 fault_duration = 0.150
 # Frequency sampling of the reference curves
 frequency_sampling = 15
+# The maximum injected current of a generator, when the curves come from field measurements:
+#    <generator>_GEN_MaxInjectedCurrentPu =
 
 [Curves-Dictionary]
-# To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
-# and the suffixes _a, _b and _c must be added as in the following example:
-#    BusPDR_BUS_Voltage_a =
-#    BusPDR_BUS_Voltage_b =
-#    BusPDR_BUS_Voltage_c =
+# To represent a signal that is in raw abc three-phase form, the affected signal must be
+# tripled and the suffixes _a, _b and _c must be added as in the following example:
+#    SignalName_a =
+#    SignalName_b =
+#    SignalName_c =
 time = time
-BusPDR_BUS_ActivePower = BusPDR_BUS_ActivePower
-BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
-BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
-BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
-BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
-NetworkFrequencyPu = NetworkFrequencyPu
-StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_XFMR_Tap
-Wind_Turbine_GEN_InjectedActiveCurrent = Wind_Turbine_GEN_InjectedActiveCurrent
-Wind_Turbine_GEN_InjectedReactiveCurrent = Wind_Turbine_GEN_InjectedReactiveCurrent
-Wind_Turbine_GEN_InjectedCurrent = Wind_Turbine_GEN_InjectedCurrent
-Wind_Turbine_GEN_MagnitudeControlledByAVRPu = Wind_Turbine_GEN_MagnitudeControlledByAVRPu
+InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage
+PV_Array_GEN_UPuInjTerminal = Wind_Turbine_GEN_UPuInjTerminal
+InternalNode1_BUS_ActivePower = InternalNode1_BUS_ActivePower
+InternalNode1_BUS_ReactivePower = InternalNode1_BUS_ReactivePower
+InternalNode1_BUS_ActiveCurrent = InternalNode1_BUS_ActiveCurrent
+InternalNode1_BUS_ReactiveCurrent = InternalNode1_BUS_ReactiveCurrent
+PV_Array_GEN_IpInjTerminal = Wind_Turbine_GEN_IpInjTerminal
+PV_Array_GEN_IqInjTerminal = Wind_Turbine_GEN_IqInjTerminal

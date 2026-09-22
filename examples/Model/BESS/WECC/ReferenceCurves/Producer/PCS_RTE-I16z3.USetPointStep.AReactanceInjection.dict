@@ -8,23 +8,22 @@ sim_t_event_start = 20.0
 fault_duration = 0.0
 # Frequency sampling of the reference curves
 frequency_sampling = 15
+# The maximum injected current of a generator, when the curves come from field measurements:
+#    <generator>_GEN_MaxInjectedCurrentPu =
 
 [Curves-Dictionary]
-# To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
-# and the suffixes _a, _b and _c must be added as in the following example:
-#    BusPDR_BUS_Voltage_a =
-#    BusPDR_BUS_Voltage_b =
-#    BusPDR_BUS_Voltage_c =
+# To represent a signal that is in raw abc three-phase form, the affected signal must be
+# tripled and the suffixes _a, _b and _c must be added as in the following example:
+#    SignalName_a =
+#    SignalName_b =
+#    SignalName_c =
 time = time
+BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
 BusPDR_BUS_ActivePower = BusPDR_BUS_ActivePower
 BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
 BusPDR_BUS_ActiveCurrent = BusPDR_BUS_ActiveCurrent
 BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
-BusPDR_BUS_Voltage = BusPDR_BUS_Voltage
-StepUp_Xfmr_XFMR_Tap = StepUp_Xfmr_XFMR_Tap
 Bess_GEN_MagnitudeControlledByAVRPu = Bess_GEN_MagnitudeControlledByAVRPu
-Bess_GEN_AVRSetpointPu = Bess_GEN_AVRSetpointPu
-Bess_GEN_InjectedActiveCurrent = Bess_GEN_InjectedActiveCurrent
-Bess_GEN_InjectedReactiveCurrent = Bess_GEN_InjectedReactiveCurrent
-Bess_GEN_InjectedCurrent = Bess_GEN_InjectedCurrent
+Bess_GEN_VoltageSetpointPu = Bess_GEN_VoltageSetpointPu
+Main_Xfmr_XFMR_Tap = Main_Xfmr_XFMR_Tap
 NetworkFrequencyPu = NetworkFrequencyPu

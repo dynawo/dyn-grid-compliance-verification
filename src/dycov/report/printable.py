@@ -16,9 +16,9 @@ def format_time_error(
     apply_formatter: bool = False,
     add_seconds_unit: bool = False,
     default_value: str = "\\textemdash",
-) -> str:
-    """Gets a value for its key and formats it, if it is the character '-', add a
-    footnote to the value.
+    footnote_defined: bool = False,
+) -> tuple:
+    """Get and format a time-related value, adding a Latex footnote when the value is '-'.
 
     Parameters
     ----------
@@ -34,20 +34,33 @@ def format_time_error(
         Add units of seconds.
     default_value: str
         Default return value if the key does not exist.
+    footnote_defined: bool
+        True if the "not calculated" footnote has already been defined earlier in the
+        same table; the note is then reused via \\footnotemark[\\value{footnote}]
+        instead of being repeated, since \\footnotemark resolves in a single
+        compilation pass, unlike \\ref.
 
     Returns
     -------
-    str
-        A formatted value
+    tuple
+        A tuple (formatted_value, footnote_defined), so callers can chain
+        footnote_defined across successive calls in the same table.
     """
     if results[key] == "-":
-        return (
-            f"\\footnote{{Not Calculated because the reference value "
-            f"is exactly zero or very close to zero.}}{results[key]}".strip()
-        )
+        if not footnote_defined:
+            note = (
+                "\\footnote{Not Calculated because the reference value "
+                "is exactly zero or very close to zero.}"
+            )
+        else:
+            note = "\\footnotemark[\\value{footnote}]"
+        return f"{note}{results[key]}".strip(), True
     else:
-        return format_value(
-            results, key, minimum_value, apply_formatter, add_seconds_unit, default_value
+        return (
+            format_value(
+                results, key, minimum_value, apply_formatter, add_seconds_unit, default_value
+            ),
+            footnote_defined,
         )
 
 
@@ -60,6 +73,8 @@ def format_value(
     default_value: str = "\\textemdash",
 ) -> str:
     """Gets a value for its key and formats it.
+
+    If the key contains "_check", the value is formatted using format_latex_check.
 
     Parameters
     ----------
@@ -99,7 +114,22 @@ def format_value(
     return ret_val
 
 
-def format_compound_check(value: str) -> str:
+def format_compound_check(value: str | bool) -> str:
+    """Formats a compound check variable based on its value.
+    * If value is "N/A" return the value in curly braces
+    * Else apply the boolean check formatter to the value
+
+    Parameters
+    ----------
+    value: str | bool
+        Value to format.
+
+    Returns
+    -------
+    str
+        The value in curly braces if it is "N/A", else the boolean value formatted with
+        format_latex_check
+    """
     if value == "N/A":
         return f"{{ {value} }}"
     else:

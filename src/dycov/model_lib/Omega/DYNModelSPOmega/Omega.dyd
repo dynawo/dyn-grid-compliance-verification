@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
-  <!-- Benchmark Case -->
-  <dyn:blackBoxModel id="OmegaRef" lib="DYNModelOmegaRef" parFile="Omega.par" parId="OmegaRef"/>
-  <dyn:blackBoxModel id="SPOmega" lib="SPOmega" parFile="Omega.par" parId="SetPointOmega"/>
-  <dyn:connect id1="SPOmega" var1="setPointOmega_omegaPu_value" id2="OmegaRef" var2="omega_grp_0_value"/>
-  <dyn:connect id1="SPOmega" var1="setPointOmega_omegaRefPu_value" id2="OmegaRef" var2="omegaRef_grp_0_value"/>
-  <dyn:connect id1="SPOmega" var1="setPointOmega_running" id2="OmegaRef" var2="running_grp_0"/>
-</dyn:dynamicModelsArchitecture>

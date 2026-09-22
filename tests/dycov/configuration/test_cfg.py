@@ -12,17 +12,15 @@ import configparser
 
 import pytest
 
-from dycov.configuration.cfg import Config
+from dycov.configuration.cfg import Config, _user_config_path
 
 
 @pytest.fixture
 def config_with_priority(tmp_path):
-    # Create three config parsers with different priorities
     default_config = configparser.ConfigParser()
     user_config = configparser.ConfigParser()
     pcs_config = configparser.ConfigParser()
 
-    # Add sections and keys
     default_config.add_section("section")
     default_config.set("section", "key", "default_value")
     pcs_config.add_section("section")
@@ -30,9 +28,7 @@ def config_with_priority(tmp_path):
     user_config.add_section("section")
     user_config.set("section", "key", "user_value")
 
-    # Add a key only in pcs_config
     pcs_config.set("section", "pcs_only", "pcs_only_value")
-    # Add a key only in default_config
     default_config.set("section", "default_only", "default_only_value")
 
     return Config(tmp_path, default_config, user_config, pcs_config)
@@ -53,7 +49,6 @@ def test_load_pcs_config_updates_parser(tmp_path):
     default_config = configparser.ConfigParser()
     config_dir = tmp_path
 
-    # Write a pcs config file
     pcs_file = tmp_path / "pcs.ini"
     with pcs_file.open("w") as f:
         f.write("[pcs_section]\nfoo=bar\n")
@@ -134,3 +129,97 @@ def test_get_list_empty_or_missing_returns_empty_list(tmp_path):
     assert cfg.get_list("empty_section", "missing") == []
     # Missing section returns empty list
     assert cfg.get_list("no_section", "no_key") == []
+
+
+@pytest.fixture
+def empty_parsers():
+    return (
+        configparser.ConfigParser(),
+        configparser.ConfigParser(),
+        configparser.ConfigParser(),
+    )
+
+
+def test_user_config_path_does_not_depend_on_the_platform(tmp_path):
+    assert _user_config_path(tmp_path) == tmp_path / "config.ini"
+
+
+def test_describe_option_reports_user_config_file_and_line(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    user_file = tmp_path / "config.ini"
+    user_file.write_text("[Global]\nfoo = 1\n\n[GridCode]\npdr_P = 0.5*Pmax\n")
+    user_config.read(user_file)
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+
+    description = cfg.describe_option("GridCode", "pdr_P")
+
+    assert description == f"'pdr_P' in section [GridCode] of '{user_file}', line 5"
+
+
+def test_describe_option_reports_pcs_file_and_line(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    pcs_file = tmp_path / "PCSDescription.ini"
+    pcs_file.write_text("[PCS.Model]\npdr_U = Udim\npdr_Q = 0.0\n")
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+    cfg.load_pcs_config(pcs_file)
+
+    description = cfg.describe_option("PCS.Model", "pdr_Q")
+
+    assert description == f"'pdr_Q' in section [PCS.Model] of '{pcs_file}', line 3"
+
+
+def test_describe_option_prefers_the_user_config_over_the_pcs_file(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    user_file = tmp_path / "config.ini"
+    user_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    user_config.read(user_file)
+    pcs_file = tmp_path / "PCSDescription.ini"
+    pcs_file.write_text("[PCS.Model]\npdr_Q = 0.0\n")
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+    cfg.load_pcs_config(pcs_file)
+
+    description = cfg.describe_option("PCS.Model", "pdr_Q")
+
+    assert str(user_file) in description
+    assert str(pcs_file) not in description
+
+
+def test_describe_option_ignores_the_same_key_in_another_section(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    pcs_file = tmp_path / "PCSDescription.ini"
+    pcs_file.write_text("[Other]\npdr_Q = 0.0\n\n[PCS.Model]\npdr_Q = 0.5\n")
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+    cfg.load_pcs_config(pcs_file)
+
+    description = cfg.describe_option("PCS.Model", "pdr_Q")
+
+    assert description.endswith("line 5")
+
+
+def test_describe_option_without_a_source_file_names_section_and_key(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+
+    description = cfg.describe_option("PCS.Model", "pdr_Q")
+
+    assert description == "'pdr_Q' in section [PCS.Model]"
+
+
+def test_load_pcs_config_keeps_a_value_set_by_a_previous_file(tmp_path, empty_parsers):
+    default_config, user_config, pcs_config = empty_parsers
+    pcs_dir = tmp_path / "PCS" / "model"
+    pcs_dir.mkdir(parents=True)
+    (tmp_path / "PCS" / "PCS_aliases.ini").write_text(
+        "[MyAlias]\ntest_key = alias_default_value\nalias_only = alias_value\n"
+    )
+    first_file = pcs_dir / "first_pcs.ini"
+    first_file.write_text("[TestSection]\ntest_key = original_value\n")
+    second_file = pcs_dir / "second_pcs.ini"
+    second_file.write_text("[TestSection]\ninherit = MyAlias\n")
+    cfg = Config(tmp_path, default_config, user_config, pcs_config)
+
+    cfg.load_pcs_config(first_file)
+    cfg.load_pcs_config(second_file)
+
+    assert cfg.get_value("TestSection", "test_key") == "original_value"
+    assert cfg.get_value("TestSection", "alias_only") == "alias_value"

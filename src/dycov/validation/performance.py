@@ -9,6 +9,7 @@
 #
 from pathlib import Path
 
+import numpy as np
 from lxml import etree
 
 from dycov.configuration.cfg import config
@@ -19,6 +20,7 @@ from dycov.core.global_variables import (
 )
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
+from dycov.logging import dycov_logging
 from dycov.model.parameters import Stability
 from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
@@ -79,7 +81,7 @@ class PerformanceValidator(Validator):
         self,
         curves_manager: CurvesManager,
         producer: Producer,
-        stable_time: float,
+        thr_ss_tol: float,
         validations: list,
         is_field_measurements: bool,
         pcs_name: str,
@@ -88,14 +90,14 @@ class PerformanceValidator(Validator):
         super().__init__(
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
-        self._stable_time = stable_time
+        self._thr_ss_tol = thr_ss_tol
 
     def __curve_list(self, curve_name: str) -> list:
         return list(self._get_calculated_curve_by_name(curve_name))
 
     def __run_common_tests(
         self,
-        stable_time: float,
+        thr_ss_tol: float,
         is_ppm: bool,
     ) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
@@ -103,35 +105,33 @@ class PerformanceValidator(Validator):
         steady_v, first_steady_pos_v = common.is_stable(
             self.__curve_list("time"),
             self.__curve_list(bus_pdr_voltage),
-            stable_time,
+            thr_ss_tol,
         )
 
         steady_p, first_steady_pos_p = common.is_stable(
             self.__curve_list("time"),
             self.__curve_list("BusPDR_BUS_ActivePower"),
-            stable_time,
+            thr_ss_tol,
         )
 
         steady_q, first_steady_pos_q = common.is_stable(
             self.__curve_list("time"),
             self.__curve_list("BusPDR_BUS_ReactivePower"),
-            stable_time,
+            thr_ss_tol,
         )
 
         stable_theta = False
         first_stable_pos_theta = 0
         pass_pi = False
         if not is_ppm:
-            stable_theta, first_stable_pos_theta, pass_pi = self._check_theta_stability(
-                stable_time
-            )
+            stable_theta, first_stable_pos_theta, pass_pi = self._check_theta_stability(thr_ss_tol)
 
         if not steady_p:
-            self._log_message("warning", "P has not reached steady state")
+            dycov_logging.get_logger("Performance").warning("P has not reached steady state")
         if not steady_q:
-            self._log_message("warning", "Q has not reached steady state")
+            dycov_logging.get_logger("Performance").warning("Q has not reached steady state")
         if not steady_v:
-            self._log_message("warning", "V has not reached steady state")
+            dycov_logging.get_logger("Performance").warning("V has not reached steady state")
 
         return (
             steady_p,
@@ -145,7 +145,7 @@ class PerformanceValidator(Validator):
             pass_pi,
         )
 
-    def _check_theta_stability(self, stable_time: float) -> tuple[bool, int, bool]:
+    def _check_theta_stability(self, thr_ss_tol: float) -> tuple[bool, int, bool]:
         stable_theta = True
         first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
         pass_pi = True
@@ -156,7 +156,7 @@ class PerformanceValidator(Validator):
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
                 self.__curve_list("time"),
                 self.__curve_list(key),
-                stable_time,
+                thr_ss_tol,
             )
 
             # Check +- Pi
@@ -170,9 +170,11 @@ class PerformanceValidator(Validator):
             pass_pi &= gen_pass_pi
 
         if not stable_theta:
-            self._log_message("warning", "Theta has not reached stabilization")
+            dycov_logging.get_logger("Performance").warning("Theta has not reached stabilization")
         if not pass_pi:
-            self._log_message("warning", "Theta has not met the success criterion")
+            dycov_logging.get_logger("Performance").warning(
+                "Theta has not met the success criterion"
+            )
 
         return stable_theta, first_stable_pos_theta, pass_pi
 
@@ -278,7 +280,7 @@ class PerformanceValidator(Validator):
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
+                avr_setpoint = generator_id + "_GEN_" + "VoltageSetpointPu"
                 gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
                     self.__curve_list("time"),
                     self.__curve_list(magnitude_controlled_by_avr),
@@ -300,7 +302,7 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["freq_1"], self._validations):
             check_freq1 = True
             time_freq1 = -1
-            f_nom = config.get_float("Global", "f_nom", 50.0)
+            f_nom = config.get_float("Dynawo", "f_nom", 50.0)
             filter_col = self.__get_filtered_columns("_GEN_NetworkFrequencyPu")
             for curve_name in filter_col:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
@@ -326,7 +328,6 @@ class PerformanceValidator(Validator):
             self.__curve_list("BusPDR_BUS_ActivePower"),
             self.__curve_list("BusPDR_BUS_ReactivePower"),
             t_event_start,
-            self._get_log_title(),
         )
 
         if compliance_list.contains_key(["static_diff"], self._validations):
@@ -339,7 +340,7 @@ class PerformanceValidator(Validator):
             for curve_name in filter_col:
                 generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
                 magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "AVRSetpointPu"
+                avr_setpoint = generator_id + "_GEN_" + "VoltageSetpointPu"
 
                 static_diff = common.get_static_diff(
                     self.__curve_list(magnitude_controlled_by_avr),
@@ -352,30 +353,111 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["imax_reac"], self._validations):
             imax_reac = -1
             imax_reac_check = True
-            filter_col = self.__get_filtered_columns("_GEN_InjectedCurrent")
-            for curve_name in filter_col:
-                generator_id = curve_name.replace("_GEN_InjectedCurrent", "")
-                injected_current = generator_id + "_GEN_" + "InjectedCurrent"
-                injected_active_current = generator_id + "_GEN_" + "InjectedActiveCurrent"
+
+            time_curve = self.__curve_list("time")
+
+            active_current = {
+                c.replace("_GEN_IpInjTerminal", ""): c
+                for c in self.__get_filtered_columns("_GEN_IpInjTerminal")
+            }
+            reactive_current = {
+                c.replace("_GEN_IqInjTerminal", ""): c
+                for c in self.__get_filtered_columns("_GEN_IqInjTerminal")
+            }
+
+            # Columns names are expected to be in the format:
+            #   - <generator_id>_GEN_IpInjTerminal
+            #   - <generator_id>_GEN_IqInjTerminal
+            # so we can match them based on the generator_id extracted from the column name
+            generator_ids = sorted(set(active_current.keys()) & set(reactive_current.keys()))
+            for generator_id in generator_ids:
+                ip = self.__curve_list(active_current[generator_id])
+                iq = self.__curve_list(reactive_current[generator_id])
+
+                if ip is None or iq is None:
+                    continue
+
+                n = min(len(time_curve), len(ip), len(iq))
+                if n == 0:
+                    continue
+
+                t = time_curve[:n]
+                ip = np.array(ip[:n], dtype=float)  # None → NaN
+                iq = np.array(iq[:n], dtype=float)  # None → NaN
+
+                # I = sqrt(Ip² + Iq²), NaN where either component was None
+                current_magnitude = np.hypot(ip, iq)
+                # Replace NaN (originated from None values) with 0.0
+                current_magnitude = np.where(np.isnan(current_magnitude), 0.0, current_magnitude)
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
-                    self._generators_imax[generator_id],
-                    self.__curve_list("time"),
-                    self.__curve_list(injected_current),
-                    self.__curve_list(injected_active_current),
+                    self._generators_imax.get(generator_id),
+                    t,
+                    current_magnitude,
+                    ip,
                 )
+
+                # Track worst (minimum) violating value across all generators
                 if not imax_gen_reac_check:
-                    if imax_reac_check:
+                    imax_reac_check = False
+                    if imax_reac == -1 or imax_gen_reac < imax_reac:
                         imax_reac = imax_gen_reac
-                        imax_reac_check = imax_gen_reac_check
-                    elif imax_gen_reac < imax_reac:
-                        imax_reac = imax_gen_reac
+
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
 
+    def __calculate_response_characteristics(
+        self,
+        compliance_values: dict,
+        event_params: dict,
+        t_event_start: float,
+        time_clear: float,
+    ) -> None:
+        measurement_name = common.get_measurement_name(event_params["connect_to"])
+        time_curve = self.__curve_list("time")
+        measurement_curve = self.__curve_list(measurement_name)
+        if not time_curve or not measurement_curve:
+            return
+
+        event_duration = time_clear - t_event_start
+
+        res_reaction_time, res_reaction_target = common.get_reached_time(
+            0.1,
+            time_curve,
+            measurement_curve,
+            time_clear,
+        )
+        compliance_values["calc_reaction_time"] = res_reaction_time + event_duration
+        compliance_values["calc_reaction_target"] = {measurement_name: res_reaction_target}
+
+        res_rise_time, res_rise_target = common.get_reached_time(
+            0.9,
+            time_curve,
+            measurement_curve,
+            time_clear,
+        )
+        compliance_values["calc_rise_time"] = res_rise_time + event_duration
+        compliance_values["calc_rise_target"] = {measurement_name: res_rise_target}
+
+        res_settling_time, _, res_settling_min, res_settling_max, calc_ss_value = (
+            common.get_settling_time(
+                0.05,
+                time_curve,
+                measurement_curve,
+                time_clear,
+            )
+        )
+        compliance_values["calc_settling_time"] = res_settling_time + event_duration
+        compliance_values["calc_ss_value"] = calc_ss_value
+        compliance_values["calc_settling_tube"] = {
+            measurement_name: [res_settling_min, res_settling_max]
+        }
+
     def __calculate(
         self,
+        event_params: dict,
         t_event_start: float,
+        time_clear: float,
     ) -> dict:
         compliance_values = {}
 
@@ -383,6 +465,9 @@ class PerformanceValidator(Validator):
         self.__calculate_avr(compliance_values, t_event_start)
         self.__calculate_frequency(compliance_values)
         self.__calculate_others(compliance_values, t_event_start)
+        self.__calculate_response_characteristics(
+            compliance_values, event_params, t_event_start, time_clear
+        )
 
         return compliance_values
 
@@ -543,7 +628,9 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "gen"
             )
             for disconnection in disconnection_list:
-                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
+                dycov_logging.get_logger("Performance").debug(
+                    f"Timeline disconnection. Model: {disconnection}"
+                )
 
             if not results["no_disconnection_gen"]:
                 if self._disconnection_model.gen_intline is None:
@@ -551,7 +638,7 @@ class PerformanceValidator(Validator):
                 else:
                     gen_intline_id = self._disconnection_model.gen_intline.id
                 disconneted_xfmr = list(
-                    set(self._disconnection_model.stepup_xfmrs) & set(disconnection_list)
+                    set(self._disconnection_model.connection_xfmrs) & set(disconnection_list)
                 )
                 if len(disconneted_xfmr) == 0 and gen_intline_id not in disconnection_list:
                     results["no_disconnection_gen"] = True
@@ -566,7 +653,9 @@ class PerformanceValidator(Validator):
                 simulation_path / "timeLine/timeline.xml", "load"
             )
             for disconnection in disconnection_list:
-                self._log_message("debug", f"Timeline disconnection. Model: {disconnection}")
+                dycov_logging.get_logger("Performance").debug(
+                    f"Timeline disconnection. Model: {disconnection}"
+                )
 
             if not results["no_disconnection_load"]:
                 if self._disconnection_model.auxload_xfmr is None:
@@ -642,6 +731,18 @@ class PerformanceValidator(Validator):
         self.__check_disconnections(results, simulation_path, has_dynamic_model)
         self.__check_others(results, is_stable, is_ppm, compliance_values)
 
+        for key in [
+            "calc_reaction_time",
+            "calc_reaction_target",
+            "calc_rise_time",
+            "calc_rise_target",
+            "calc_settling_time",
+            "calc_ss_value",
+            "calc_settling_tube",
+        ]:
+            if key in compliance_values:
+                results[key] = compliance_values[key]
+
         return results
 
     def validate(
@@ -650,6 +751,7 @@ class PerformanceValidator(Validator):
         working_path: Path,
         sim_output_path: str,
         event_params: dict,
+        has_reference: bool = True,
     ) -> dict:
         """Electric Performance Verification.
 
@@ -663,6 +765,8 @@ class PerformanceValidator(Validator):
             Simulator output path.
         event_params: dict
             Event parameters
+        has_reference: bool, optional
+            Indicates whether reference curves are available for the validation.
 
         Returns
         -------
@@ -700,9 +804,10 @@ class PerformanceValidator(Validator):
                 'stabilized': bool,  # Stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
                 'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
-                'AVR_5_check': bool,  # AVR 5% check status (if applicable)
-                'AVR_5': float,  # AVR 5% value (if applicable)
-                'AVR_5_crvs': list,  # AVR 5% curves (if applicable)
+                'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
+                    (if applicable)
+                'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
+                'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
             }
@@ -719,7 +824,7 @@ class PerformanceValidator(Validator):
             first_stable_pos_theta,
             pass_pi,
         ) = self.__run_common_tests(
-            self._stable_time,
+            self._thr_ss_tol,
             self.get_sim_type() == ELECTRIC_PERFORMANCE_PPM
             or self.get_sim_type() == MODEL_VALIDATION_PPM,
         )
@@ -730,7 +835,9 @@ class PerformanceValidator(Validator):
 
         # Check operational point validations
         validation_values = self.__calculate(
+            event_params,
             t_event,
+            time_clear,
         )
 
         results = self.__check(

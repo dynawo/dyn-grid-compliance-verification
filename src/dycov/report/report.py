@@ -11,12 +11,16 @@
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import time
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
+from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
     CASE_SEPARATOR,
@@ -28,10 +32,10 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.curves.dynawo.dynawo import DynawoSimulator
-from dycov.files.manage_files import copy_latex_files, move_report
-from dycov.logging.logging import dycov_logging
+from dycov.files import manage_files, model_parameters
+from dycov.logging import dycov_logging
 from dycov.report import figure, html
+from dycov.report.curve_classification import get_curve_style
 from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import (
     active_power_recovery,
@@ -47,6 +51,90 @@ from dycov.report.tables import (
 from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
+
+
+# --- Process registry for LaTeX compilation ---
+class _ReportProcRegistry:
+    """Tracks LaTeX (pdflatex) subprocesses to allow graceful termination."""
+
+    procs: list[subprocess.Popen] = []
+
+    @classmethod
+    def add(cls, p: subprocess.Popen) -> None:
+        cls.procs.append(p)
+
+    @classmethod
+    def discard(cls, p: subprocess.Popen) -> None:
+        try:
+            cls.procs.remove(p)
+        except ValueError:
+            pass
+
+
+def terminate_all_children(timeout: float = 5.0) -> None:
+    """Terminate any running pdflatex processes (best-effort, idempotent)."""
+    procs = [p for p in list(_ReportProcRegistry.procs) if p and p.poll() is None]
+    if not procs:
+        return
+    for p in procs:
+        try:
+            if os.name == "nt":
+                p.terminate()
+            else:
+                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+        except Exception:
+            try:
+                p.terminate()
+            except Exception:
+                pass
+    deadline = time.time() + max(0.0, timeout)
+    for p in procs:
+        rem = deadline - time.time()
+        if rem <= 0:
+            break
+        try:
+            p.wait(timeout=rem)
+        except Exception:
+            pass
+    for p in procs:
+        if p.poll() is None:
+            try:
+                if os.name == "nt":
+                    subprocess.run(
+                        f"taskkill /F /T /PID {p.pid}",
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        check=False,
+                    )
+                else:
+                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+            except Exception:
+                pass
+
+
+def _run_pdflatex(working_path: Path, report_name_noext: str):
+    """Run pdflatex in a controllable way (as a process group) so we can terminate it on abort."""
+    proc = subprocess.Popen(
+        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_noext],
+        cwd=working_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        preexec_fn=os.setsid if os.name != "nt" else None,
+    )
+    _ReportProcRegistry.add(proc)
+    try:
+        stdout, stderr = proc.communicate()
+
+        class _CP:
+            def __init__(self, returncode, stdout, stderr):
+                self.returncode = returncode
+                self.stdout = stdout
+                self.stderr = stderr
+
+        return _CP(proc.returncode, stdout, stderr)
+    finally:
+        _ReportProcRegistry.discard(proc)
 
 
 def _get_verification_type(sim_type: int) -> str:
@@ -70,7 +158,7 @@ def _create_pcs_reports(
     pcs_results: dict,
     output_path: Path,
     working_path: Path,
-) -> list:
+) -> bool:
     pcs = pcs_results["pcs"]
     producer = pcs.get_producer()
     producer.set_zone(pcs.get_zone(), pcs_results["producer"])
@@ -97,7 +185,8 @@ def _get_reports(
 ) -> list:
     reports = []
     for pcs in sorted_summary:
-        pcs_results = report_results[f"{pcs.producer_name}_{pcs.pcs}"]
+        key = f"{pcs.producer_name}_{pcs.pcs}"
+        pcs_results = report_results[key]
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
         if any(report_name.replace(".tex", "") in report for report in reports):
             continue
@@ -128,9 +217,13 @@ def _copy_pcs_latex_files(
     )
 
     if latex_user_path.exists():
-        copy_latex_files(latex_user_path, working_path, pcs_results["producer"].replace("_", ""))
+        manage_files.copy_latex_files(
+            latex_user_path, working_path, pcs_results["producer"].replace("_", "")
+        )
     if latex_tool_path.exists():
-        copy_latex_files(latex_tool_path, working_path, pcs_results["producer"].replace("_", ""))
+        manage_files.copy_latex_files(
+            latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
+        )
 
     if not (latex_tool_path.exists() or latex_user_path.exists()):
         dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
@@ -150,12 +243,45 @@ def _create_pcs_figures(
     )
 
 
+def _build_notice_block(color: str, title: str, items: list) -> str:
+    escaped_items = [item.replace("_", r"\_") for item in items]
+    item_lines = "\n".join(
+        f"    \\item \\textcolor{{{color}}}{{{item}}}" for item in escaped_items
+    )
+    return (
+        f"\\noindent\\textcolor{{{color}}}{{{title}}}\n"
+        "\\begin{itemize}\n"
+        f"{item_lines}\n"
+        "\\end{itemize}\n"
+    )
+
+
+def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
+    """Builds the notices block (missing curves and warnings) and the watermark command
+    of an operating-condition report page. Only missing curves invalidate the page."""
+    notices = ""
+    watermark = r"\SetWatermarkText{}"
+    missing_curves = list(oc_results["missed_columns"])
+    if oc_results.get("incomplete_curves"):
+        missing_curves.insert(
+            0, "no reference curves, the checks against a reference were not run"
+        )
+    if missing_curves:
+        notices += _build_notice_block("red", "Missing curves:", missing_curves)
+        watermark = r"\SetWatermarkText{INVALID}"
+    if oc_results.get("warnings"):
+        notices += _build_notice_block("orange", "Warnings:", oc_results["warnings"])
+    return notices, watermark
+
+
 def _pcs_replace(
     working_path: Path, pcs_results: dict, report_name: str, producer: ModelProducer
 ) -> int:
     # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
     #  eliminating potentially problematic characters and unnecessary information.
     producer_name = pcs_results["producer"].replace("_", "")
+
+    _render_zone1_circuits(working_path, producer)
 
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
@@ -194,6 +320,9 @@ def _pcs_replace(
         subst_dict = subst_dict | {"ssem" + operating_condition_: steady_state_error_map}
         subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
         subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
+        if "stabilized" in oc_results:
+            stabilized = "stable" if oc_results["stabilized"] else "\textcolor{red}{unstable}"
+            subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
@@ -203,13 +332,15 @@ def _pcs_replace(
         oc_report = config.get_value(operating_condition, "report_name")
         if oc_report is not None:
             oc_report_name = f"{producer_name}.{oc_report}"
-            # Process only "Compliant" and "Non-compliant" results;
-            # thus ignoring FAILED simulations:
             if oc_results["summary"].show_report():
                 subreports.append(f"\\input{{{oc_report_name.replace('.tex', '')}}}")
 
-            oc_template = _get_template(working_path, oc_report_name)
             oc_subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
+            notices_block, watermark = _build_oc_notices(oc_results)
+            oc_subst_dict2 |= {"missedColumns": notices_block}
+            oc_subst_dict2 |= {"waterMarkText": watermark}
+
+            oc_template = _get_template(working_path, oc_report_name)
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
 
     subst_dict = subst_dict | {"subReports": subreports}
@@ -244,6 +375,68 @@ def _get_template(path, template_file):
     return template
 
 
+def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
+    """Render the Zone-1 circuit schematics, hiding the Group_Xfmr when absent.
+
+    Zone 1 omits the external group transformer when ConverterLVControl is false: the
+    converter's own transformer already reaches the internal node, so the schematic
+    must not draw an external one.
+    """
+    group_xfmrs = getattr(producer, "group_xfmrs", None)
+    has_group_xfmr = group_xfmrs is None or len(group_xfmrs) > 0
+    for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
+        if (working_path / tikz_name).exists():
+            tikz_template = _get_template(working_path, tikz_name)
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(str(working_path / tikz_name))
+
+
+def _get_iq_last_val(plot_curves: list) -> float | None:
+    """Return the last value of the first Iq curve found, or None."""
+    for curve in plot_curves:
+        if "IqInjTerminal" in curve["name"]:
+            return curve["curve"][-1]
+    return None
+
+
+def _add_current_magnitude(plot_curves: list) -> None:
+    """Compute |I| = hypot(Ip, Iq) and append it to plot_curves if both are present."""
+    ip_curves = [c for c in plot_curves if "IpInjTerminal" in c["name"]]
+    iq_curves = [c for c in plot_curves if "IqInjTerminal" in c["name"]]
+    if not ip_curves or not iq_curves:
+        return
+
+    curve_style = get_curve_style("modIInjTerminal")
+    insert_pos = 0
+    for ip, iq in zip(ip_curves, iq_curves):
+        gen_id = ip["name"].split("_GEN_")[0] if "_GEN_" in ip["name"] else ""
+        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        plot_curves.insert(
+            insert_pos,
+            {
+                "name": mag_name,
+                "curve": list(np.hypot(ip["curve"], iq["curve"])),
+                "color": curve_style.color,
+                "style": curve_style.style,
+            },
+        )
+        insert_pos += 1
+
+
+def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of curves with current_magnitude columns added if Ip and Iq are present."""
+    ip_cols = [c for c in curves.columns if "IpInjTerminal" in c]
+    iq_cols = [c for c in curves.columns if "IqInjTerminal" in c]
+    if not ip_cols or not iq_cols:
+        return curves
+
+    curves = curves.copy()
+    for ip_col, iq_col in zip(ip_cols, iq_cols):
+        gen_id = ip_col.split("_GEN_")[0] if "_GEN_" in ip_col else ""
+        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        curves[mag_name] = np.hypot(curves[ip_col], curves[iq_col])
+    return curves
+
+
 def _generate_figures(
     working_path: Path,
     producer_name: str,
@@ -253,54 +446,61 @@ def _generate_figures(
     operating_condition: str,
     xmin: float,
     xmax: float,
+    zone: int = 0,
 ) -> tuple[list, list]:
     plotted_curves = list()
     figures = list()
 
-    curves = oc_results["curves"]
+    curves = _inject_current_magnitude_df(oc_results["curves"])
     if "reference_curves" in oc_results:
         reference_curves = oc_results["reference_curves"]
     else:
         reference_curves = None
 
     for figure_description in figures_description[figure_key]:
-        plot_curves = figure.get_curves2plot(figure_description[1], curves)
+        plot_curves = figure.get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
+        _add_current_magnitude(plot_curves)
+        iq_last_val = _get_iq_last_val(plot_curves)
 
         plot_reference_curves = None
         if reference_curves is not None:
             plot_reference_curves = figure.get_curves2plot(
-                figure_description[1], reference_curves, is_reference=True
+                figure_description.variables, reference_curves, is_reference=True
             )
         figure.create_plot(
             list(curves["time"]),
-            figure_description[1],
+            figure_description,
             plot_curves,
             list(reference_curves["time"]) if reference_curves is not None else None,
             plot_reference_curves,
             {"min": xmin, "max": xmax},
-            working_path / (f"{producer_name}_{figure_description[0]}_{operating_condition}.pdf"),
-            figure_description[2],
+            working_path
+            / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
             oc_results,
-            figure_description[3],
-            f"{figure_description[0]}.{operating_condition}",
+            band_ref_val=iq_last_val,
         )
 
         try:
             html_curves, div_id, html_figure = html.plotly_figures(
-                figure_description, curves, reference_curves, oc_results
+                figure_description,
+                curves,
+                reference_curves,
+                oc_results,
+                band_ref_val=iq_last_val,
+                zone=zone,
             )
             plotted_curves.extend(html_curves)
             if html_figure:
                 figures.append((div_id, html_figure))
         except Exception as e:
             dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: "
+                f"{figure_description.name}.{operating_condition}: "
                 "A non fatal error occurred while generating the plotly figures"
             )
-            dycov_logging.get_logger("Report").error(
-                f"{figure_description[0]}.{operating_condition}: {e}"
+            dycov_logging.get_logger("Report").exception(
+                f"{figure_description.name}.{operating_condition}: {e}"
             )
 
     return plotted_curves, figures
@@ -331,7 +531,6 @@ def _create_full_tex(
     producer: Producer
         Producer model
     """
-
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
@@ -344,18 +543,14 @@ def _create_full_tex(
         if oc_results["curves"] is None:
             continue
 
-        unit_characteristics = {
-            "Pmax": producer.p_max_pu,
-            "Qmax": producer.q_max_pu,
-            "Udim": oc_results["udim"] / producer.u_nom,
-        }
+        unit_characteristics = model_parameters.unit_characteristics(producer, oc_results["udim"])
+        unit_characteristics["Unom"] = producer.u_nom
 
         xmin, xmax = figure.get_common_time_range(
             operating_condition,
             unit_characteristics,
             figures_description,
             oc_results,
-            operating_condition,
         )
         if config.get_boolean("Debug", "show_figs_t0", False):
             xmin = None
@@ -371,10 +566,15 @@ def _create_full_tex(
             operating_condition,
             xmin,
             xmax,
+            zone=pcs_results.get("zone", 0),
         )
         try:
             if config.get_boolean("Debug", "plot_all_curves_in_html", False):
-                figures.extend(html.plotly_all_curves(plotted_curves, oc_results))
+                figures.extend(
+                    html.plotly_all_curves(
+                        plotted_curves, oc_results, zone=pcs_results.get("zone", 0)
+                    )
+                )
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
         except Exception as e:
             dycov_logging.get_logger("Report").error(
@@ -392,12 +592,15 @@ def _summary_log(
     dynawo_version: str,
     model_template: str,
     reference_template: str,
+    model_is_workbook: bool = False,
 ) -> None:
     header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
+    header_txt += f"***Dycov version: {version} commit: {commit_id}***\n"
     if dynawo_version:
         header_txt += f"***Dynawo version: {dynawo_version}***\n"
     if model_template:
-        header_txt += f"***Model dir: {model_template}***\n"
+        label = "Workbook" if model_is_workbook else "Model dir"
+        header_txt += f"***{label}: {model_template}***\n"
     if reference_template:
         header_txt += f"***Reference curves dir: {reference_template}***\n"
 
@@ -420,9 +623,47 @@ def _summary_log(
     dycov_logging.get_logger("Report").info(f"{header_txt + body_txt}")
 
 
+def _clean(working_path: Path):
+    extensions_to_clean = [
+        "*.toc",
+        "*.aux",
+        "*.out",
+        "*.bbl",
+        "*.blg",
+        "*.run.xml",
+        "*.bcf",
+    ]
+    # If the PDF report exists delete all log files
+    pdf_file = working_path / (REPORT_NAME.split(CASE_SEPARATOR)[0] + ".pdf")
+    if pdf_file.exists():
+        extensions_to_clean.append("*.log")
+
+    for ext in extensions_to_clean:
+        for file_to_delete in working_path.glob(ext):
+            try:
+                file_to_delete.unlink()
+            except OSError as e:
+                dycov_logging.get_logger("Report").warning(f"Error deleting {file_to_delete}: {e}")
+
+
 def prepare_pcs_report(
     pcs_results: dict, parameters: ValidationParameters, path_latex_files: Path
-):
+) -> None:
+    """Prepares the report for the PCS validation.
+
+    This includes copying LaTeX templates, generating figures, and creating
+    intermediate PCS reports
+
+
+    Parameters
+    ----------
+    pcs_results: dict
+        Results of the PCS validation
+    parameters: ValidationParameters
+        Validation parameters
+    path_latex_files: Path
+        Path to the LaTex templates
+    """
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 
@@ -450,6 +691,7 @@ def create_pdf(
     report_results: dict,
     parameters: ValidationParameters,
     path_latex_files: Path,
+    dry_run: bool = False,
 ) -> None:
     """Creates the dycov final report.
 
@@ -463,6 +705,8 @@ def create_pdf(
         Temporal working path
     path_latex_files: Path
         Path to the LaTex templates
+    dry_run: bool
+        If True, skip the actual PDF generation (useful for testing/report design)
     """
 
     output_path = parameters.get_working_dir() / "Reports"
@@ -482,24 +726,42 @@ def create_pdf(
     now = time.time()
     timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(now))
     summary_description += f"Run on: {timestamp} \\\\"
+    summary_description += f"Dycov version: {version} commit: {commit_id} \\\\"
 
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
         dynawo_version = str(
-            DynawoSimulator().get_dynawo_version(parameters.get_launcher_dwo())
-        ).replace("\\", "\\\\")
+            manage_files.get_dynawo_version(parameters.get_launcher_dwo())
+        ).replace("\\", "\\textbackslash")
         summary_description += f"Dynawo version: {dynawo_version} \\\\"
 
-    model_template = str(producer.get_producer_path()).replace("\\", "\\\\")
-    summary_description += f"Model dir: {model_template} \\\\"
+    workbook = parameters.get_producer_workbook()
+    if workbook:
+        # The model and its reference curves were generated into a directory that is removed
+        # when the run ends, so the input worth naming is the workbook they came from.
+        model_template = str(workbook).replace("\\", "\\textbackslash")
+        reference_template = None
+        summary_description += f"Workbook: {model_template} \\\\"
+    else:
+        model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
+        summary_description += f"Model dir: {model_template} \\\\"
 
-    reference_template = None
-    if producer.has_reference_curves_path():
-        reference_template = str(producer.get_reference_path()).replace("\\", "\\\\")
-        summary_description += f"Reference curves dir: {reference_template} \\\\"
+        reference_template = None
+        if producer.has_reference_curves_path():
+            reference_template = str(producer.get_reference_path()).replace(
+                "\\", "\\textbackslash"
+            )
+            summary_description += f"Reference curves dir: {reference_template} \\\\"
 
-    _summary_log(sorted_summary, timestamp, dynawo_version, model_template, reference_template)
+    _summary_log(
+        sorted_summary,
+        timestamp,
+        dynawo_version,
+        model_template,
+        reference_template,
+        model_is_workbook=bool(workbook),
+    )
     summary_map = summary.create_map(sorted_summary)
 
     # Extracting zones from the PCS data in the summary to identify the relevant "common" files
@@ -509,6 +771,7 @@ def create_pdf(
     commonz3_include = ""
     if 1 in zones:
         commonz1_include = "\\input{{commonz1}}"
+
     if 3 in zones:
         commonz3_include = "\\input{{commonz3}}"
 
@@ -525,59 +788,21 @@ def create_pdf(
         }
     ).dump(str(working_path / REPORT_NAME))
 
-    report_name_ = REPORT_NAME.replace(".tex", "")
-    proc = subprocess.run(
-        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
-        cwd=working_path,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    proc = subprocess.run(
-        ["pdflatex", "-shell-escape", "-halt-on-error", report_name_],
-        cwd=working_path,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    if dry_run:
+        dycov_logging.get_logger("Report").info("Dry run enabled - skipping PDF generation.")
+        return
 
-    if dycov_logging.getEffectiveLevel() == logging.DEBUG:
-        if os.name == "nt":
-            proc = subprocess.run(
-                [
-                    "del",
-                    "*.toc",
-                    "*.aux",
-                    "*.log",
-                    "*.out",
-                    "*.bbl",
-                    "*.blg",
-                    "*.run.xml",
-                    "*.bcf",
-                ],
-                cwd=working_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        else:
-            proc = subprocess.run(
-                [
-                    "rm",
-                    "-f",
-                    "*.toc",
-                    "*.aux",
-                    "*.log",
-                    "*.out",
-                    "*.bbl",
-                    "*.blg",
-                    "*.run.xml",
-                    "*.bcf",
-                ],
-                cwd=working_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+    report_name_ = REPORT_NAME.replace(".tex", "")
+    proc = _run_pdflatex(working_path, report_name_)
+    proc = _run_pdflatex(working_path, report_name_)
+
+    if dycov_logging.get_logger("Report").getEffectiveLevel() != logging.DEBUG:
+        _clean(working_path)
 
     dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
-    if move_report(working_path, output_path, REPORT_NAME):
-        dycov_logging.get_logger("Report").info("PDF done.")
-    else:
-        raise LatexReportException("PDFLatex Error.")
+    report_moved = manage_files.move_report(working_path, output_path, REPORT_NAME)
+    if proc.returncode != 0 or not report_moved:
+        dycov_logging.get_logger("Report").error("PDFLatex Error.")
+        raise LatexReportException("pdflatex did not produce the final report.")
+
+    dycov_logging.get_logger("Report").info("PDF done.")

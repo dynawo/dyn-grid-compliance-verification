@@ -10,13 +10,12 @@
 
 import configparser
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from dycov.logging.logging import dycov_logging
-
-LOGGER = dycov_logging.get_logger("Cfg")
+from dycov.logging import dycov_logging
 
 
 @dataclass(frozen=True)
@@ -38,12 +37,16 @@ class Config:
         Parser for the user-specific configuration.
     _pcs_config: configparser.ConfigParser
         Parser for the Performance Checking Sheet (PCS) configuration.
+    _pcs_files: list[str]
+        Paths of the PCS configuration files read so far, used to locate an option
+        in its source file when reporting errors.
     """
 
     _config_dir: Path
     _default_config: configparser.ConfigParser
     _user_config: configparser.ConfigParser
     _pcs_config: configparser.ConfigParser
+    _pcs_files: list[str] = field(default_factory=list)
 
     def _is_valid_value(self, value: str) -> bool:
         """Internal helper to validate if a string value is not None or empty.
@@ -97,6 +100,26 @@ class Config:
 
         return None
 
+    def load_user_config(self, user_config_path: Path) -> None:
+        """Load the user-specific configuration file.
+
+        Parameters
+        ----------
+        user_config_path: Path
+            Path to the user configuration file to read.
+        """
+        dycov_logging.get_logger("Cfg").info(
+            "Loading user configuration from: %s", user_config_path
+        )
+        try:
+            self._user_config.read(user_config_path, encoding="utf-8")
+            dycov_logging.get_logger("Cfg").info("Successfully loaded user configuration.")
+        except Exception as e:
+            dycov_logging.get_logger("Cfg").error(
+                "Error loading user configuration from %s: %s", user_config_path, e
+            )
+            raise
+
     def load_pcs_config(self, pcs_path: str) -> None:
         """Load the Performance Checking Sheet (PCS) configuration file. It
         also implements an inheritance mechanism using alias files.
@@ -111,12 +134,10 @@ class Config:
         pcs_path: str
             Path to the PCS configuration file to read.
         """
-        LOGGER.info("Loading PCS configuration from: %s", pcs_path)
+        dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", pcs_path)
         try:
             self._pcs_config.read(pcs_path, encoding="utf-8")
-
-            single_pcs_config = configparser.ConfigParser()
-            single_pcs_config.read(pcs_path, encoding="utf-8")
+            self._pcs_files.append(str(pcs_path))
 
             pcs_aliases_path = Path(pcs_path).resolve().parent.parent
             aliases_files = [str(p) for p in pcs_aliases_path.rglob("*aliases*") if p.is_file()]
@@ -132,19 +153,22 @@ class Config:
                         for key_to_inherit, value_to_inherit in aliases_config.items(
                             alias_section_name
                         ):
-                            if not single_pcs_config.has_option(section_to_modify, key_to_inherit):
+                            if not self._pcs_config.has_option(section_to_modify, key_to_inherit):
                                 self._pcs_config.set(
                                     section_to_modify, key_to_inherit, value_to_inherit
                                 )
                         self._pcs_config.remove_option(section_to_modify, "inherit")
                     else:
-                        LOGGER.warning(
-                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found in the alias files."
+                        dycov_logging.get_logger("Cfg").warning(
+                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found"
+                            " in the alias files."
                         )
 
-            LOGGER.info("Successfully loaded PCS configuration.")
+            dycov_logging.get_logger("Cfg").info("Successfully loaded PCS configuration.")
         except Exception as e:
-            LOGGER.error("Error loading PCS configuration from %s: %s", pcs_path, e)
+            dycov_logging.get_logger("Cfg").error(
+                "Error loading PCS configuration from %s: %s", pcs_path, e
+            )
             raise
 
     def get_config_dir(self) -> Path:
@@ -157,7 +181,7 @@ class Config:
         """
         return self._config_dir
 
-    def has_key(self, section: str, key: str) -> bool:
+    def has_option(self, section: str, key: str) -> bool:
         """Check if config contains the specified key within any configuration source.
 
         Parameters
@@ -178,6 +202,100 @@ class Config:
             or self._default_config.has_option(section, key)
         )
 
+    def describe_option(self, section: str, key: str) -> str:
+        """Locates an option in the configuration files, to point the user to its origin.
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Key within the section.
+
+        Returns
+        -------
+        str
+            Human-readable location of the option, naming the source file and line
+            number when they can be determined.
+        """
+        for path in self._option_files():
+            line = _find_option_line(path, section, key)
+            if line is not None:
+                return f"'{key}' in section [{section}] of '{path}', line {line}"
+
+        return f"'{key}' in section [{section}]"
+
+    def _option_files(self) -> list[Path]:
+        """Configuration files that may define an option, in precedence order."""
+        return [
+            _user_config_path(self._config_dir),
+            *(Path(pcs_file) for pcs_file in self._pcs_files),
+            _default_config_path(),
+        ]
+
+    def set_value(self, section: str, key: str, value: str) -> None:
+        """Sets (or overrides) a configuration value at runtime using the same
+        precedence policy as get_value().
+
+        The precedence to choose the target source mirrors get_value() by checking:
+        1. User config
+        2. PCS config
+        3. Default config
+
+        Concretely:
+        - If (section, key) exists with a valid (non-empty) value in user → pcs → default
+        (checked with _is_valid_value), the override is applied in that same source.
+        - If it does not exist in any source with a valid value, the key is created in
+        the user config.
+
+        This method updates the in-memory configuration and creates the section if it
+        does not exist. It does not persist values to disk.
+
+        Parameters
+        ----------
+        section : str
+            Section header.
+        key : str
+            Key within the section.
+        value : str
+            New value to set.
+
+        Returns
+        -------
+        None
+            The value is set in-memory. No value is returned.
+        """
+        target_parser = None
+
+        # user
+        if self._user_config.has_option(section, key):
+            current = self._user_config.get(section, key)
+            if self._is_valid_value(current):
+                target_parser = self._user_config
+
+        # pcs (solo si no se decidió aún)
+        if target_parser is None and self._pcs_config.has_option(section, key):
+            current = self._pcs_config.get(section, key)
+            if self._is_valid_value(current):
+                target_parser = self._pcs_config
+
+        # default (solo si no se decidió aún)
+        if target_parser is None and self._default_config.has_option(section, key):
+            current = self._default_config.get(section, key)
+            if self._is_valid_value(current):
+                target_parser = self._default_config
+
+        # Si no se encontró un valor válido en ningún origen, crear en user
+        if target_parser is None:
+            target_parser = self._user_config
+
+        # Asegurar la sección en el origen elegido
+        if not target_parser.has_section(section):
+            target_parser.add_section(section)
+
+        # Log old -> new y escribir
+        target_parser.set(section, key, value)
+
     def get_value(self, section: str, key: str, default: str = None) -> str:
         """Gets a configuration value for a given key and section.
 
@@ -197,12 +315,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            LOGGER.debug(
-                "Key '%s' not found in section '%s'. Using default value: '%s'",
-                key,
-                section,
-                default,
-            )
             return default
         return value
 
@@ -225,17 +337,11 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            LOGGER.debug(
-                "Key '%s' not found in section '%s'. Using default integer value: %s",
-                key,
-                section,
-                default,
-            )
             return default
         try:
             return int(value)
         except (ValueError, TypeError):
-            LOGGER.error(
+            dycov_logging.get_logger("Cfg").error(
                 f"Could not convert value '{value}' to integer for "
                 f"section '{section}', key '{key}'. Using default: {default}"
             )
@@ -260,17 +366,11 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            LOGGER.debug(
-                "Key '%s' not found in section '%s'. Using default float value: %s",
-                key,
-                section,
-                default,
-            )
             return default
         try:
             return float(value)
         except (ValueError, TypeError):
-            LOGGER.error(
+            dycov_logging.get_logger("Cfg").error(
                 f"Could not convert value '{value}' to float for "
                 f"section '{section}', key '{key}'. Using default: {default}",
             )
@@ -295,12 +395,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            LOGGER.debug(
-                "Key '%s' not found in section '%s'. Using default boolean value: %s",
-                key,
-                section,
-                default,
-            )
             return default
         return value.lower() == "true"
 
@@ -322,7 +416,6 @@ class Config:
         """
         value = self._get_config_value(section, key)
         if value is None:
-            LOGGER.debug("Key '%s' not found in section '%s'. Returning empty list.", key, section)
             return []
         return value.split(",")
 
@@ -360,6 +453,35 @@ class Config:
         return []
 
 
+def _user_config_path(config_dir: Path) -> Path:
+    """Path of the user configuration file."""
+    return config_dir / "config.ini"
+
+
+def _default_config_path() -> Path:
+    """Path of the default configuration file shipped with the package."""
+    return Path(__file__).resolve().parent / "defaultConfig.ini"
+
+
+def _find_option_line(path: Path, section: str, key: str) -> Optional[int]:
+    """Line number at which an option is defined in an INI file, None if absent."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    option_pattern = re.compile(rf"^\s*{re.escape(key)}\s*[:=]")
+    current_section = None
+    for number, line in enumerate(lines, start=1):
+        header = re.match(r"^\s*\[(?P<name>[^]]+)\]", line)
+        if header:
+            current_section = header.group("name").strip()
+        elif current_section == section and option_pattern.match(line):
+            return number
+
+    return None
+
+
 def _get_instance() -> Config:
     """Internal function to create and return a singleton Config instance.
 
@@ -371,11 +493,11 @@ def _get_instance() -> Config:
     Config
         A Config object initialized with default, user, and PCS config parsers.
     """
-    LOGGER.info("Initializing Config instance.")
+    logger = dycov_logging.get_logger("Cfg")
+    logger.info("Initializing Config instance.")
     config_dir = Path.home() / ("AppData/Local/dycov" if os.name == "nt" else ".config/dycov")
-    LOGGER.debug("Config directory set to: %s", config_dir)
+    logger.debug(f"Config directory set to: {config_dir}")
 
-    # Initialize ConfigParser objects for different configuration sources
     default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
     default_config.optionxform = str
     user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -384,32 +506,31 @@ def _get_instance() -> Config:
     pcs_config.optionxform = str
 
     # Load default configuration from the package
-    default_config_path = Path(__file__).resolve().parent / "defaultConfig.ini"
-    LOGGER.info("Loading default configuration from: %s", default_config_path)
+    default_config_path = _default_config_path()
+    logger.info(f"Loading default configuration from: {default_config_path}")
     try:
         if not default_config_path.exists():
-            LOGGER.warning("Default configuration file not found at: %s", default_config_path)
+            logger.warning(f"Default configuration file not found at: {default_config_path}")
         default_config.read(default_config_path)
-        LOGGER.info("Successfully loaded default configuration.")
+        logger.info("Successfully loaded default configuration.")
     except Exception as e:
-        LOGGER.error("Error loading default configuration from %s: %s", default_config_path, e)
+        logger.error(f"Error loading default configuration from {default_config_path}: {e}")
         raise
 
     # Load user configuration
-    user_config_file = config_dir / (
-        "config.ini" if os.name != "nt" else ""
-    )  # Adjusted for Windows not needing /config.ini suffix
-    LOGGER.info("Loading user configuration from: %s", user_config_file)
+    user_config_file = _user_config_path(config_dir)
+    logger.info(f"Loading user configuration from: {user_config_file}")
     try:
         if not user_config_file.exists():
-            LOGGER.debug(
-                "User configuration file not found at: %s (This is often expected)",
+            logger.debug(
+                f"User configuration file not found at: {user_config_file} "
+                "(This is often expected)",
                 user_config_file,
             )
         user_config.read(user_config_file)
-        LOGGER.info("Successfully loaded user configuration.")
+        logger.info("Successfully loaded user configuration.")
     except Exception as e:
-        LOGGER.warning("Could not load user configuration from %s: %s", user_config_file, e)
+        logger.warning(f"Could not load user configuration from {user_config_file}: {e}")
 
     return Config(config_dir, default_config, user_config, pcs_config)
 

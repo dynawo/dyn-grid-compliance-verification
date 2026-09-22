@@ -17,7 +17,11 @@ def append(
     compliance_test: str,
     subtests: list = None,
 ) -> None:
-    """Check if any key is contained in list of elements.
+    """Append a compliance test or its subtests to the target list if enabled.
+
+    The compliance test is added only if the given benchmark is enabled for the
+    specified validation type in the configuration
+
 
     Parameters
     ----------
@@ -40,7 +44,7 @@ def append(
 
 
 def contains_key(keys: list, elements: list) -> bool:
-    """Check if any key is contained in list of elements.
+    """Check whether any of the given keys is present in a list of elements.
 
     Parameters
     ----------
@@ -52,7 +56,7 @@ def contains_key(keys: list, elements: list) -> bool:
     Returns
     -------
     bool
-        True if any key is contained in the list of elements, False otherwise
+       True if any key is contained in the list of elements, False otherwise
     """
     for key in keys:
         if key in elements:

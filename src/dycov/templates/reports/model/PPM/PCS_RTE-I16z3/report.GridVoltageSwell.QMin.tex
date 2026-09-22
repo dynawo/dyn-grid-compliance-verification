@@ -1,6 +1,8 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I7 QMin %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {{ waterMarkText }}
+
     \renewcommand{\DTRPcs}{GridVoltageSwell} % DTR pcs definition
     \renewcommand{\OCname}{QMin}
 
@@ -68,11 +70,21 @@
         \end{tabular}
     \end{center}
 
+    \GridSimulationHeaderZthree{
+        \GridCurvesDescriptionZthree
+        \GridCurvesItZthreeDescriptionZthree
+    }
     \GridCurvesZthree
+    \GridCurvesItZthree
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z3GridVoltageSwellQMin }}
 
     \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilizedPCSI16z3GridVoltageSwellQMin }}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
 
     \begin{center}
         \scriptsize
@@ -90,6 +102,8 @@
     \end{center}
 
     \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
 
     \noindent Compliance thresholds on the curves:
     \begin{center}

@@ -2,6 +2,9 @@
 *~
 __pycache__/
 
+# Environment files
+.env
+
 #Coverage
 .coverage
 
@@ -12,6 +15,10 @@ __pycache__/
 /.idea
 *.iml
 
+# Tool logs
+*.log
+public_api_audit.txt
+
 # VS Code
 .vscode
 .vs/
@@ -20,6 +27,9 @@ __pycache__/
 dist/
 *.egg-info/
 build/
+installers/docker/temp*/
+release_*/
+src/dycov/_build_info.py
 
 # Exclude the recommended virtual env:
 dycov_venv/
@@ -28,8 +38,15 @@ dycov_venv/
 installers/Output
 
 # Exclude default results (for those cases when we run the tool in the src tree, which we shouldn't)
-Results/
+.DyCoV_Results*/
+Results*/
 
-# Exlude auto-generate docs
+# Exclude auto-generate docs
 docs/manual/source/usage/helps
 docs/manual_dev/source/man/_autosummary
+
+# Exclude Analyse Complexity tool output
+complexity_report/
+
+# dycov installation folder
+/dycov/

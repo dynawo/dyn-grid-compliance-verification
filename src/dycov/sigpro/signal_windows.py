@@ -50,7 +50,7 @@ def _get_exclusion_zones(
 
     return Exclusion_zones(
         t_windowLPF_excl_start,
-        t_windowLPF_excl_start,
+        t_windowLPF_excl_end,
         t_integrator_tol,
         t_faultLPF_excl,
         t_faultQS_excl,
@@ -119,7 +119,15 @@ def calculate(
     fault_duration: float,
     setpoint_tracking_controlled_magnitude: bool,
 ) -> dict:
-    """Calculate the positions to the windows.
+    """Calculate validation and signal-processing time windows for an event.
+
+    This function computes the "before", "during", and "after" time windows used
+    both for validation checks and for signal processing (e.g. low-pass filtering),
+    taking into account exclusion zones defined by the Grid Code configuration.
+
+    The exclusion rules depend on whether the setpoint tracking concerns a
+    controlled magnitude.
+
 
     Parameters
     ----------
@@ -144,7 +152,6 @@ def calculate(
         setpoint_tracking_controlled_magnitude,
     )
 
-    # Get the windows time values
     t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end = _get_windows_times(
         time_values,
         t_fault,
@@ -152,7 +159,6 @@ def calculate(
         exclusion_zones,
     )
 
-    # Get the windows time values for the low-pass filter
     tf_w1_init, tf_w1_end, tf_w2_init, tf_w2_end, tf_w3_init, tf_w3_end = (
         _get_filter_windows_times(time_values, t_fault, fault_duration)
     )
