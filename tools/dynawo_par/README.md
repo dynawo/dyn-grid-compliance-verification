@@ -18,8 +18,8 @@ See the full design in
 
 ## Requirements
 
-Python 3 only — **no third-party dependencies**. `.xlsx` files are parsed
-directly with the standard library (`zipfile` + `xml.etree`).
+DyCoV installed: the Excel parsing engine this tool imports lives in
+`dycov.excel.workbook`.
 
 ## Usage
 
