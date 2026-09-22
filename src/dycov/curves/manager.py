@@ -27,6 +27,7 @@ from dycov.model.parameters import (
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 from dycov.sigpro import signal_windows, sigpro
+from dycov.validation import compared_curves
 
 
 def _fix_after_windows(
@@ -177,7 +178,11 @@ class CurvesManager:
             return False
 
         self._missed_curves[curves_name] = []
-        missed_curves = [key for key in measurement_names if key not in curves]
+        missed_curves = [
+            name
+            for name in measurement_names
+            if not any(compared_curves.matches_column(name, column) for column in curves)
+        ]
         if missed_curves:
             dycov_logging.get_logger("Curves Manager").warning(
                 f"Test without {curves_name} curve for keys {missed_curves}"
