@@ -7,13 +7,10 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import numpy as np
 import pandas as pd
 
-from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
-from dycov.curves.naming import ZONE1_INJECTOR_NODE_LABEL
 from dycov.logging import dycov_logging
-from dycov.validation import common, threshold_variables
+from dycov.validation import common, compared_curves, threshold_variables
 
 # Reported when a magnitude is absent from the curves, so its check cannot be computed
 NOT_COMPUTABLE = "N/A"
@@ -108,10 +105,16 @@ def _check_setpoint_tracking(
     compliance_values: dict,
     modified_setpoint: str,
     error: str,
+    zone: int,
 ) -> dict:
+    measured = {
+        name
+        for window in ("before", "during", "after")
+        for name in (compliance_values.get(window) or {})
+    }
     return _check_setpoint_tracking_by_window(
         compliance_values,
-        common.get_measurement_name(modified_setpoint),
+        common.get_measurement_name(modified_setpoint, zone, measured),
         error,
     )
 
@@ -142,11 +145,13 @@ def _complete_setpoint_tracking_by_error(
     measurement: str,
     error: str,
     results: dict,
+    zone: int,
 ) -> None:
     windows = _check_setpoint_tracking(
         compliance_values,
         modified_setpoint=modified_setpoint,
         error=error,
+        zone=zone,
     )
     tracking_check = "setpoint_tracking_" + measurement + "_check"
     results.setdefault(tracking_check, True)
@@ -322,6 +327,7 @@ def _check_measurement_by_error_window(
 def calculate_errors(
     curves: tuple[pd.DataFrame, pd.DataFrame],
     step_magnitude: float,
+    zone: int,
 ) -> dict:
     """Calculates the error metrics (ME, MAE, MXE) and their associated positions by comparing
     the calculated curves with the reference curves.
@@ -333,22 +339,17 @@ def calculate_errors(
     step_magnitude : float
         The magnitude of the step change applied to the setpoint, used for normalizing the error
         values.
+    zone : int
+        The zone whose compared curves are the ones to measure.
 
     Returns
     -------
     dict
         A dictionary containing the error values for each measurement.
     """
-    measurement_names = [
-        "BusPDR_BUS_ActivePower",
-        "BusPDR_BUS_ReactivePower",
-        "BusPDR_BUS_ActiveCurrent",
-        "BusPDR_BUS_ReactiveCurrent",
-        "BusPDR_BUS_Voltage",
-        "NetworkFrequencyPu",
-    ]
     calculated_curves = curves[0]
     reference_curves = curves[1]
+    measurement_names = [column for _, column in compared_curves.resolve(zone, reference_curves)]
     results = {}
     if len(calculated_curves["time"]) == 0:
         return results
@@ -403,6 +404,7 @@ def complete_setpoint_tracking(
     modified_setpoint: str,
     measurement: str,
     results: dict,
+    zone: int,
 ) -> None:
     """Completes the setpoint tracking results for a specific measurement and error type by
     checking the compliance values and updating the results dictionary accordingly.
@@ -429,6 +431,7 @@ def complete_setpoint_tracking(
         measurement,
         "mae",
         results,
+        zone,
     )
 
     # ME
@@ -438,6 +441,7 @@ def complete_setpoint_tracking(
         measurement,
         "me",
         results,
+        zone,
     )
 
     # MXE
@@ -447,6 +451,7 @@ def complete_setpoint_tracking(
         measurement,
         "mxe",
         results,
+        zone,
     )
 
 
@@ -518,64 +523,8 @@ def calculate_curves_errors(
     results : dict
         A dictionary to store the calculated error values and compliance checks.
     """
-
-    _calculate_curve_errors(
-        "BusPDR_BUS_ActivePower", "active_power", is_field_measurements, results
-    )
-    _calculate_curve_errors(
-        "BusPDR_BUS_ReactivePower", "reactive_power", is_field_measurements, results
-    )
-    _calculate_curve_errors(
-        "BusPDR_BUS_ActiveCurrent", "active_current", is_field_measurements, results
-    )
-    _calculate_curve_errors(
-        "BusPDR_BUS_ReactiveCurrent", "reactive_current", is_field_measurements, results
-    )
-    _calculate_curve_errors("BusPDR_BUS_Voltage", "voltage", is_field_measurements, results)
-    if zone == 3:
-        _calculate_curve_errors("NetworkFrequencyPu", "frequency", is_field_measurements, results)
-
-
-def _has_voltage_below_guard(curves: pd.DataFrame, abs_tol: float) -> bool:
-    for column in curves.columns:
-        if not column.endswith("_GEN_UPuInjTerminal"):
-            continue
-        voltage = np.abs(curves[column].to_numpy(dtype=float))
-        finite_voltage = voltage[np.isfinite(voltage)]
-        if finite_voltage.size and finite_voltage.min() <= abs_tol:
-            return True
-    return False
-
-
-def get_injector_voltage_guard_warnings(
-    calculated_curves: pd.DataFrame,
-    reference_curves: pd.DataFrame,
-) -> list[str]:
-    """Warns when an injector terminal voltage falls below the numerical guard used to
-    compute the terminal currents (Ip = P/U, Iq = Q/U), which zeroes them out.
-
-    Parameters
-    ----------
-    calculated_curves : pd.DataFrame
-        Calculated curves.
-    reference_curves : pd.DataFrame
-        Reference curves.
-
-    Returns
-    -------
-    list[str]
-        One warning message per curve set whose injector terminal voltage crosses the guard.
-    """
-    abs_tol = ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD
-    warnings = []
-    for label, curves in (("calculated", calculated_curves), ("reference", reference_curves)):
-        if curves is None or curves.empty:
-            continue
-        if _has_voltage_below_guard(curves, abs_tol):
-            warnings.append(
-                f"Computation of Ip/Iq at {ZONE1_INJECTOR_NODE_LABEL} is probably not "
-                f"consistent for this test: the {label} injector terminal voltage falls "
-                f"below the {abs_tol:.1e} pu numerical guard; check the transformer "
-                "impedance value."
-            )
-    return warnings
+    measured = {
+        name for window in ("before", "during", "after") for name in results.get(window, {})
+    }
+    for curve, column in compared_curves.resolve_all(zone, measured):
+        _calculate_curve_errors(column, curve.label, is_field_measurements, results)

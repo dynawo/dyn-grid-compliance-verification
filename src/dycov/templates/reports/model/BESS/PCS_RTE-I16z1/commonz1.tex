@@ -44,13 +44,14 @@
 }
 %End snippet for the simulation section header
 
-%Snippet for the base figure descriptions (5 standard figures)
+%Snippet for the base figure descriptions (the six compared magnitudes)
 \newcommand{\GridCurvesDescriptionZone}{
-    \item Voltage at connection point.
-    \item Active power supplied at the connection point.
-    \item Reactive power supplied at the connection point.
-    \item Active current supplied at the connection point.
-    \item Reactive current supplied at the connection point.
+    \item Voltage at InternalNode1.
+    \item Active power injected by the converter at its control point.
+    \item Reactive power injected by the converter at its control point.
+    \item Active current injected at InternalNode2 (injector terminal).
+    \item Reactive current injected at InternalNode2 (injector terminal).
+    \item Voltage magnitude at InternalNode2 (injector terminal).
 }
 %End snippet for the base figure descriptions
 
@@ -58,13 +59,11 @@
 \newcommand{\GridCurvesItDescriptionZone}{
     \item Active, reactive, and magnitude currents at InternalNode2 (injector terminal),
     with all BESS units displayed on a single plot.
-    \item Voltage magnitude at InternalNode2 (injector terminal).
 }
 %End snippet for the It figure descriptions
 
-%Snippet for the base figures (5 standard figures)
-% NOTE: ends with Iq as a left-side minipage with no \hfill, so that \GridCurvesItZone
-% can pair I alongside it in the same row by starting directly with \hfill.
+%Snippet for the base figures (the six compared magnitudes)
+% NOTE: ends with a full row, so that \GridCurvesItZone opens a new one.
 \newcommand{\GridCurvesZone}{
 % For now we won't use floats for figures, to get more precise placement
     \noindent
@@ -81,7 +80,7 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Real power output P, measured at InternalNode1.
+            \small Real power output P, injected by the converter at its control point.
         \end{minipage}
     \end{minipage}
 %
@@ -90,7 +89,7 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive power output Q, measured at InternalNode1.
+            \small Reactive power output Q, injected by the converter at its control point.
         \end{minipage}
     \end{minipage}
     \hfill
@@ -98,7 +97,7 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Active current output Ip, measured at InternalNode1.
+            \small Active current output Ip, injected at InternalNode2 (injector terminal).
         \end{minipage}
     \end{minipage}
 %
@@ -107,32 +106,31 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive current output Iq, measured at InternalNode1.
+            \small Reactive current output Iq, injected at InternalNode2 (injector terminal).
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude at InternalNode2 (injector terminal).
         \end{minipage}
     \end{minipage}
 }
 %End snippet for the base figures
 
 %Snippet for the It figures (injector terminal figures)
-% NOTE: starts with \hfill to pair figure I alongside Iq from \GridCurvesZone in the same row.
-% This command must always be used immediately after \GridCurvesZone, with no blank line between them.
+% NOTE: opens a new row, so it must always be used immediately after \GridCurvesZone,
+% with no blank line between them.
 \newcommand{\GridCurvesItZone}{%
-    \hfill
+    \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
             \small Active (light blue), reactive (violet), and magnitude (yellow) currents at
             InternalNode2 (injector terminal). All BESS units shown on one plot.
-        \end{minipage}
-    \end{minipage}
-%
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Voltage magnitude at InternalNode2 (injector terminal).
         \end{minipage}
     \end{minipage}
 }

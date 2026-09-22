@@ -39,8 +39,8 @@ _METADATA_WITH_PLACEHOLDERS = (
     "sim_t_event_start =\n"
     "\n"
     "[Curves-Dictionary]\n"
-    "[WT_ID]_GEN_IpInjTerminal =\n"
-    "[WT_ID]_GEN_IqInjTerminal =\n"
+    "[WT_ID]_GEN_ActiveCurrentInjTerminal =\n"
+    "[WT_ID]_GEN_ReactiveCurrentInjTerminal =\n"
 )
 
 
