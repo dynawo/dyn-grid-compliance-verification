@@ -81,6 +81,14 @@ RUN echo 'export PATH="/opt/dynawo_install/dynawo:${PATH}"' > /etc/profile.d/dyc
 RUN dycov --print-completion bash > /etc/dycov-completion.bash \
  && echo '[ -n "${BASH_VERSION:-}" ] && . /etc/dycov-completion.bash' >> /etc/profile.d/dycov.sh
 
+# Under WSL, WSLg sets DISPLAY, so the tool reaches xdg-open and it finds no handler:
+# the image carries no viewer. Hand it the Windows shell. Docker has no DISPLAY, so
+# xdg-open is never reached there and BROWSER stays unset.
+COPY dycov-open /usr/local/bin/dycov-open
+RUN chmod 0755 /usr/local/bin/dycov-open \
+ && echo 'if [ -x /mnt/c/Windows/explorer.exe ]; then export BROWSER=/usr/local/bin/dycov-open; fi' \
+    >> /etc/profile.d/dycov.sh
+
 # Fourth layer:
 #   - Copy the pre-compiled manual (built by prepare_release.sh) into the image.
 ARG MANUAL_BUILD=manual_build
