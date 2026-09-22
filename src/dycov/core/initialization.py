@@ -9,16 +9,33 @@
 #
 
 import configparser
+import logging
+import platform
 import sys
-from importlib.metadata import version
 from pathlib import Path
+from typing import Optional
 
+from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.prepare_tool import precompile
+from dycov.curves.dynawo.tooling.prepare_tool import precompile
+from dycov.excel import names as excel_names
 from dycov.files import manage_files
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging, enable_warning_capture
 
-LOGGER = dycov_logging.get_logger("Initialization")
+
+def _get_linux_info() -> str:
+    try:
+        distro = platform.freedesktop_os_release()
+        name = distro.get("NAME", "Linux")
+        version_id = distro.get("VERSION_ID", "")
+    except Exception:
+        name = "Linux"
+        version_id = ""
+
+    kernel = platform.release()
+    arch = platform.machine()
+
+    return f"{name} {version_id}, kernel {kernel}, {arch}"
 
 
 class DycovInitializer:
@@ -31,31 +48,72 @@ class DycovInitializer:
     _DYCOV_CONFIG_SECTION = "dycov"
     _DYCOV_CONFIG_TYPE_KEY = "type"
     _DYCOV_CONFIG_VERSION_KEY = "version"
-    _DYCOV_TOOL_VERSION = "1.0.0.RC"
+    _DYCOV_TOOL_VERSION = "1.1.0"
 
-    def init(self, launcher_dwo: Path, debug: bool) -> None:
+    def init(self, user_config_path: Optional[Path], launcher_dwo: Path, debug: bool) -> None:
         """
         Initializes the DYCOV tool by setting up the user configuration path,
         templates, models, and logging.
 
         Parameters
         ----------
+        user_config_path: Optional[Path]
+            Path to the user configuration file.
         launcher_dwo: Path
             Path to the Dynawo launcher.
         debug: bool
             Flag to enable debug mode for logging.
         """
         tool_path = Path(__file__).resolve().parent.parent
-        self._setup_user_config(tool_path)
-        self._setup_templates_and_models(tool_path)
         self._initialize_logger(debug)
-        LOGGER.info(f"Starting DyCoV - version {version('dycov')}")
+        self._setup_user_config(tool_path, user_config_path)
+        self._setup_templates_and_models(tool_path)
+        self._log_execution_environment(launcher_dwo)
 
-        # Precompile Modelica models if a Dynawo launcher is provided.
+        if dycov_logging.get_logger("Initialization").isEnabledFor(logging.DEBUG):
+            from dycov.configuration.dump import dump_effective_config
+
+            dump_effective_config(config)
+
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as
+        the ability to compile them from within it.
+        Precompile Modelica models if a Dynawo launcher is provided.
+
+        Example:
         if launcher_dwo:
             self._prepare_dynawo_models(launcher_dwo)
+        """
 
-    def _setup_user_config(self, tool_path: Path):
+    def _log_execution_environment(self, launcher_dwo: Path | None) -> None:
+        logger = dycov_logging.get_logger("Initialization")
+
+        dynawo_version = manage_files.get_dynawo_version(launcher_dwo) if launcher_dwo else "N/A"
+        latex_version = manage_files.get_latex_version()
+        uv_version = manage_files.get_uv_version()
+
+        logger.info("Starting DyCoV")
+
+        logger.info("  DyCoV:")
+        logger.info("    version   : %s", version)
+        logger.info("    commit    : %s", commit_id)
+
+        logger.info("  System:")
+        if sys.platform.startswith("linux"):
+            logger.info("    OS        : %s", _get_linux_info())
+        else:
+            logger.info("    OS        : %s", platform.platform())
+
+        logger.info("  Runtime:")
+        logger.info("    Python    : %s", platform.python_version())
+
+        logger.info("  External tools:")
+        logger.info("    Dynawo    : %s", dynawo_version)
+        logger.info("    LaTeX     : %s", latex_version)
+        logger.info("    uv        : %s", uv_version)
+
+    def _setup_user_config(self, tool_path: Path, user_config_path: Optional[Path] = None):
         """
         Sets up the user configuration directory and files.
         This includes creating the config directory if it doesn't exist,
@@ -89,12 +147,37 @@ class DycovInitializer:
                     config.get_config_dir() / "config.ini",
                 )
 
+        self._setup_excel_dictionary(tool_path)
+
+        if user_config_path:
+            config.load_user_config(user_config_path)
+
+    def _setup_excel_dictionary(self, tool_path: Path):
+        """Put a copy of the workbook dictionary next to the user's configuration.
+
+        Every line arrives commented out, so the copy starts as a reference: uncommenting a name
+        is what makes the tool read the user's spelling instead of the one shipped.
+        """
+        user_dictionary = config.get_config_dir() / excel_names.NAMES_FILENAME
+        if not user_dictionary.is_file():
+            manage_files.create_config_file(
+                tool_path / "excel" / "dictionary" / excel_names.NAMES_FILENAME,
+                user_dictionary,
+            )
+
     def _setup_templates_and_models(self, tool_path: Path):
         """
         Sets up the template directories and user model dictionaries.
         """
         self._configure_templates(tool_path)
+
+        """
+        IMPORTANT:
+        All dynamic models have been removed from the tool, as well as
+        the ability to compile them from within it.
+
         self._configure_user_models()
+        """
 
     def _initialize_logger(self, debug: bool):
         """
@@ -105,16 +188,16 @@ class DycovInitializer:
         if not log_dir.is_dir():
             manage_files.create_dir(log_dir)
 
-        file_log_level = config.get_value("Global", "file_log_level")
+        file_log_level = config.get_int("Global", "file_log_level", 20)
         file_formatter = config.get_value("Global", "file_formatter")
         file_max_bytes = config.get_int("Global", "file_log_max_bytes", 50 * 1024 * 1024)
 
-        console_log_level = config.get_value("Global", "console_log_level")
+        console_log_level = config.get_int("Global", "console_log_level", 20)
         console_formatter = config.get_value("Global", "console_formatter")
 
         if debug:
-            file_log_level = "DEBUG"
-            console_log_level = "DEBUG"
+            file_log_level = 10  # DEBUG level
+            console_log_level = 10  # DEBUG level
 
         dycov_logging.init_handlers(
             file_log_level,
@@ -124,6 +207,7 @@ class DycovInitializer:
             console_formatter,
             log_dir,
         )
+        enable_warning_capture()
 
     def _template_cmd_config(self, template_path: Path):
         """
@@ -165,17 +249,17 @@ class DycovInitializer:
             self._copy_dummy_samples(tool_path, template)
 
         # Copy top-level READMEs and report-specific assets
-        manage_files.copy_files(tool_path / "templates" / "README.md", config_templates_dir)
+        manage_files.copy_from_path(tool_path / "templates" / "README.md", config_templates_dir)
         for template in templates_to_configure:
-            manage_files.copy_files(
+            manage_files.copy_from_path(
                 tool_path / "templates" / template / "README.md",
                 config_templates_dir / template,
             )
-        manage_files.copy_files(
+        manage_files.copy_from_path(
             tool_path / "templates" / "reports" / "TSO_logo.pdf",
             config_templates_dir / "reports",
         )
-        manage_files.copy_files(
+        manage_files.copy_from_path(
             tool_path / "templates" / "reports" / "fig_placeholder.pdf",
             config_templates_dir / "reports",
         )
@@ -192,9 +276,11 @@ class DycovInitializer:
                 dest = config.get_config_dir() / "templates" / source / category / ".DummySample"
                 if src.exists():
                     try:
-                        manage_files.copy_path(src, dest, dirs_exist_ok=True)
+                        manage_files.copy_directory(src, dest, dirs_exist_ok=True)
                     except Exception as e:
-                        LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
+                        dycov_logging.get_logger("Initialization").error(
+                            f"Failed to copy {src} to {dest}: {e}"
+                        )
             else:
                 for model in models:
                     src = tool_path / "templates" / source / category / model / ".DummySample"
@@ -208,9 +294,11 @@ class DycovInitializer:
                     )
                     if src.exists():
                         try:
-                            manage_files.copy_path(src, dest, dirs_exist_ok=True)
+                            manage_files.copy_directory(src, dest, dirs_exist_ok=True)
                         except Exception as e:
-                            LOGGER.error(f"Failed to copy {src} to {dest}: {e}")
+                            dycov_logging.get_logger("Initialization").error(
+                                f"Failed to copy {src} to {dest}: {e}"
+                            )
 
     def _configure_user_models(self):
         """
@@ -250,7 +338,10 @@ class DycovInitializer:
             return False
 
         cfg_parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        cfg_parser.read(config_file)
+        try:
+            cfg_parser.read(config_file)
+        except configparser.Error:
+            return False
         if not cfg_parser.has_option(self._DYCOV_CONFIG_SECTION, self._DYCOV_CONFIG_VERSION_KEY):
             return False
 
@@ -273,7 +364,7 @@ class DycovInitializer:
         """
         is_aborted = precompile(launcher_dwo)
         if is_aborted:
-            sys.exit()
+            sys.exit(1)
 
     def _check_config_file(self, tool_config_file: Path, user_config_file: Path):
         """
@@ -289,7 +380,8 @@ class DycovInitializer:
         """
         tool_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         tool_config.read(tool_config_file)
-        user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        # strict=False tolerates an already-duplicated file so it can be rewritten cleanly.
+        user_config = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
         user_config.read(user_config_file)
 
         deprecated_parameters = self._find_deprecated_parameters(tool_config, user_config)
@@ -317,7 +409,7 @@ class DycovInitializer:
         Logs warnings for deprecated parameters found in the user's configuration file.
         """
         for parameter in deprecated_parameters:
-            LOGGER.warning(
+            dycov_logging.get_logger("Initialization").warning(
                 f"Deprecated in {file_name}: section {parameter['section']} "
                 f"key {parameter['key']} value {parameter['value']}"
             )
@@ -366,13 +458,16 @@ class DycovInitializer:
             with open(config.get_config_dir() / "config.ini", "w") as output_file:
                 current_section = ""
                 for line in input_file:
-                    output_file.write(line)
-                    if line.strip().startswith("[") and line.strip().endswith("]"):
-                        current_section = line.strip()[1:-1]
-                    elif (
-                        "=" in line and "#" not in line.split("=")[0]
-                    ):  # Only consider lines with assignment, ignoring commented-out lines
+                    stripped = line.strip()
+                    if stripped.startswith("[") and stripped.endswith("]"):
+                        current_section = stripped[1:-1]
+                    elif "=" in line and "#" not in line.split("=")[0]:
+                        # [dycov] metadata always keeps the template value so version
+                        # advances; other sections take the user's value, written once
+                        # (in place of the template line, never in addition to it).
                         key = line.split("=")[0].strip()
-                        if user_config.has_option(current_section, key):
-                            # Overwrite with user's existing value if present.
+                        is_metadata = current_section == self._DYCOV_CONFIG_SECTION
+                        if not is_metadata and user_config.has_option(current_section, key):
                             output_file.write(f"{key} = {user_config.get(current_section, key)}\n")
+                            continue
+                    output_file.write(line)

@@ -11,7 +11,6 @@ from dycov.report.tables.results import _iterate_variables, create_map
 
 class TestResultsTable:
     def test_create_map_time_values_formatting(self):
-        # Only time keys present
         results = {
             "time_10U": 0.5,
             "time_5U": 1.0,
@@ -36,7 +35,6 @@ class TestResultsTable:
             assert row in result_map
 
     def test_create_map_with_no_expected_keys(self):
-        # No expected keys
         results = {"foo": 1, "bar": 2}
         result_map = create_map(results)
         assert result_map == []
@@ -71,7 +69,6 @@ class TestResultsTable:
             "time_cct": 7.890,
             "static_diff": 0.123,
         }
-        # Add all before/after keys for all variables
         for var in [
             "voltage",
             "active_power",
@@ -106,9 +103,7 @@ class TestResultsTable:
             ["$I_q$", "1", "1", "1", "1", "1", "1"],
         ]
         result = create_map(results)
-        # Check time rows
         assert result[: len(expected_time_rows)] == expected_time_rows
-        # Check variable rows (order and values)
         assert result[len(expected_time_rows) :] == expected_var_rows
 
     def test_create_map_with_during_keys(self):

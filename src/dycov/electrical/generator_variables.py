@@ -72,14 +72,21 @@ class GeneratorVariables:
             return "htb3"
         return "Invalid UNom"
 
+    def __require_known_type(self, u_nom: float) -> str:
+        generator_type = self.__get_generator_type(u_nom)
+        if generator_type == "Invalid UNom":
+            raise ValueError(
+                f"Unexpected nominal voltage ({u_nom} kV): it is not one of the DTR's "
+                "normalized PDR voltage levels (HTB1/HTB2/HTB3)."
+            )
+        return generator_type
+
     def __get_generator_variables(
         self, line_xtype: str, p_max: float, u_nom: float
     ) -> tuple[float, float]:
-        generator_type = self.__get_generator_type(u_nom)
-        x_dtr_tuple = self._x_dtr_switcher.get(generator_type, lambda: "Invalid Type").get(
-            line_xtype, lambda: "Invalid Type"
-        )
-        p_max_threshold = self._p_max_switcher.get(generator_type, lambda: "Invalid Type")
+        generator_type = self.__require_known_type(u_nom)
+        x_dtr_tuple = self._x_dtr_switcher[generator_type][line_xtype]
+        p_max_threshold = self._p_max_switcher[generator_type]
 
         if p_max < p_max_threshold:
             x_dtr = x_dtr_tuple[0]
@@ -115,11 +122,13 @@ class GeneratorVariables:
         -------
         float
             Generator sizing voltage (Udim)
-        """
-        generator_type = self.__get_generator_type(u_nom)
-        if generator_type == "Invalid UNom":
-            return "Invalid Type"
 
+        Raises
+        ------
+        ValueError
+            If ``u_nom`` is not one of the DTR's normalized PDR voltage levels.
+        """
+        self.__require_known_type(u_nom)
         udim_name = f"Udim_{int(u_nom)}kV"
         return config.get_float("GridCode", udim_name, 0.0)
 
@@ -135,12 +144,14 @@ class GeneratorVariables:
         -------
         float
             Short circuit current (Scc)
-        """
-        generator_type = self.__get_generator_type(u_nom)
-        if generator_type == "Invalid UNom":
-            return "Invalid Type"
 
-        return self._scc_switcher.get(generator_type, lambda: "Invalid Type")
+        Raises
+        ------
+        ValueError
+            If ``u_nom`` is not one of the DTR's normalized PDR voltage levels.
+        """
+        generator_type = self.__require_known_type(u_nom)
+        return self._scc_switcher[generator_type]
 
     def calculate_line_xpu(
         self, line_xtype: str, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float

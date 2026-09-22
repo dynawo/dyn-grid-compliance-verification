@@ -1,0 +1,81 @@
+#!/bin/bash
+#
+# start_dycov.sh: the entrypoint for the Dycov tool
+#
+# (c) 2023/24 RTE
+# Developed by Grupo AIA
+#
+
+# For saner programming:
+set -o nounset -o noclobber
+set -o errexit -o pipefail 
+
+# --- DEFAULTS FOR WSL STANDALONE ---
+# If running via Docker, these are injected by run_dycov_docker.sh.
+# If running via WSL, run_dycov_wsl.ps1 calls this script explicitly,
+# so these defaults apply in both standalone cases.
+dycov_UID=${dycov_UID:-1000}
+dycov_GID=${dycov_GID:-1000}
+dycov_USER=${dycov_USER:-"dycov_user"}
+dycov_GROUP=${dycov_GROUP:-"dycov_group"}
+
+# First create the specified user and group
+groupadd --force --gid "$dycov_GID" "$dycov_GROUP"
+
+# Check if user exists by UID
+if ! id -u "$dycov_UID" >/dev/null 2>&1; then
+    useradd --create-home --home "/home/$dycov_USER" --uid "$dycov_UID" --gid "$dycov_GID" \
+            --shell /bin/bash --no-log-init "$dycov_USER"
+    echo "Initialized user $dycov_USER ($dycov_UID)"
+else
+    # If user exists but name differs, purely cosmetic, but we proceed.
+    echo "User UID $dycov_UID already exists, skipping creation."
+fi
+
+# Copy examples and manual to user home so they are writable and ready to use
+USER_HOME="/home/$dycov_USER"
+if [ -d "/opt/dycov/examples" ] && [ ! -d "$USER_HOME/examples" ]; then
+    echo "Copying examples to $USER_HOME/examples..."
+    cp -r /opt/dycov/examples "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/examples"
+fi
+
+if [ -d "/opt/dycov/manual" ] && [ ! -d "$USER_HOME/manual" ]; then
+    echo "Copying manual to $USER_HOME/manual..."
+    cp -r /opt/dycov/manual "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/manual"
+fi
+
+if [ -d "/opt/dycov/tools" ] && [ ! -d "$USER_HOME/tools" ]; then
+    echo "Copying tools to $USER_HOME/tools..."
+    cp -r /opt/dycov/tools "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/tools"
+fi
+
+if [ -d "/opt/dycov/tutorials" ] && [ ! -d "$USER_HOME/tutorials" ]; then
+    echo "Copying tutorials to $USER_HOME/tutorials..."
+    cp -r /opt/dycov/tutorials "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/tutorials"
+fi
+
+if [ -d "/opt/dycov/installation" ] && [ ! -d "$USER_HOME/installation" ]; then
+    echo "Copying installation guides to $USER_HOME/installation..."
+    cp -r /opt/dycov/installation "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/installation"
+fi
+
+# Leave the user in an interactive shell
+echo -e "\n-----------------------------------------------------------"
+echo -e " Dycov Container Environment"
+echo -e "-----------------------------------------------------------"
+echo -e " User:      $dycov_USER ($dycov_UID)"
+echo -e " Examples:  ~/examples"
+echo -e " Tutorials: ~/tutorials/README.md  (start here)"
+echo -e " Install:   ~/installation/README.md"
+echo -e " Manual:    ~/manual/html/index.html  (HTML)"
+echo -e "            ~/manual/dycov.pdf        (PDF)"
+echo -e " Tools:     ~/tools/dynawo_par/generate_par.py  (Excel -> Dynawo PAR)"
+echo -e " Type 'exit' to quit."
+echo -e "-----------------------------------------------------------\n"
+
+exec su - "$dycov_USER"

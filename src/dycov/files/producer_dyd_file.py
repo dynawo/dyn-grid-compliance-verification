@@ -11,8 +11,8 @@ from pathlib import Path
 
 from lxml import etree
 
-from dycov.curves.dynawo.translator import dynawo_translator
-from dycov.logging.logging import dycov_logging
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.logging import dycov_logging
 
 PERFORMANCE_SM = 1
 PERFORMANCE_PPM = 2
@@ -35,12 +35,10 @@ MAIN_XFMR_ID = "Main_Xfmr"
 INT_BUS_ID = "Int_Bus"
 XFMR_AUX_ID = "AuxLoad_Xfmr"
 AUX_ID = "Aux_Load"
-XFMR_ID = "StepUp_Xfmr"
+GROUP_XFMR_ID = "Group_Xfmr"
 SM_ID = "Synch_Gen"
 PPM_ID = "Power_Park"
-XFMR1_ID = "StepUp_Xfmr_1"
 PPM1_ID = "Power_Park_1"
-XFMR2_ID = "StepUp_Xfmr_2"
 PPM2_ID = "Power_Park_2"
 BESS_ID = "Storage"
 BESS1_ID = "Storage_1"
@@ -67,6 +65,8 @@ PLACEHOLDER_MODELS = [
 ]
 
 PLACEHOLDER_TERMINALS = [PPM_TERMINAL]
+
+PARAMETERLESS_MODELS = [BUS_DYNAMIC_MODEL]
 
 
 def _add_terminal_options(dyd_root: etree.Element, terminal: str):
@@ -122,257 +122,252 @@ def _add_blackbox(
     id: str,
     lib: str,
     par_filename: str,
-    par_id: str,
+    par_id: str | None,
     show_comment: bool = False,
 ):
     if show_comment and lib in PLACEHOLDER_MODELS:
         _add_lib_options(dyd_root, lib)
 
+    par_attrs = {} if par_id is None else {"parFile": par_filename, "parId": par_id}
     etree.SubElement(
         dyd_root,
         f"{{{ns}}}blackBoxModel",
         id=id,
         lib=lib,
-        parFile=par_filename,
-        parId=par_id,
+        **par_attrs,
     )
 
 
 def _add_connection(
     dyd_root: etree.Element,
     ns: str,
-    id1: str,
-    var1: str,
-    id2: str,
-    var2: str,
+    id_from: str,
+    var_from: str,
+    id_to: str,
+    var_to: str,
     show_comment: bool = False,
 ):
     if show_comment:
-        if var1 in PLACEHOLDER_TERMINALS:
-            _add_terminal_options(dyd_root, var1)
-        elif var2 in PLACEHOLDER_TERMINALS:
-            _add_terminal_options(dyd_root, var2)
+        if var_from in PLACEHOLDER_TERMINALS:
+            _add_terminal_options(dyd_root, var_from)
+        elif var_to in PLACEHOLDER_TERMINALS:
+            _add_terminal_options(dyd_root, var_to)
 
     etree.SubElement(
         dyd_root,
         f"{{{ns}}}connect",
-        id1=id1,
-        var1=var1,
-        id2=id2,
-        var2=var2,
+        id1=id_from,
+        var1=var_from,
+        id2=id_to,
+        var2=var_to,
     )
 
 
-def _create_s_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
+TOPOLOGY_LAYOUTS = {
+    "S": {"units": 1, "aux_load": False, "int_line": False},
+    "S+i": {"units": 1, "aux_load": False, "int_line": True},
+    "S+Aux": {"units": 1, "aux_load": True, "int_line": False},
+    "S+Aux+i": {"units": 1, "aux_load": True, "int_line": True},
+    "M": {"units": 2, "aux_load": False, "int_line": False},
+    "M+i": {"units": 2, "aux_load": False, "int_line": True},
+    "M+Aux": {"units": 2, "aux_load": True, "int_line": False},
+    "M+Aux+i": {"units": 2, "aux_load": True, "int_line": True},
+}
+
+
+def _layout(topology: str) -> dict:
+    """Returns the layout of the selected topology, whichever way the caller spelled it."""
+    for name, layout in TOPOLOGY_LAYOUTS.items():
+        if name.casefold() == topology.casefold():
+            return layout
+
+    available = "".join(f"  - {name}\n" for name in TOPOLOGY_LAYOUTS)
+    raise ValueError(f"Select one of the 8 available topologies:\n{available}")
+
+
+def _generating_units(validation_type: int, units: int) -> list[tuple[str, str, str]]:
+    """Returns the (id, lib, terminal) of each generating unit of the producer."""
     if validation_type == PERFORMANCE_SM:
-        gen_id = SM_ID
-        gen_lib = SM_DYNAMIC_MODEL
-        gen_terminal = SM_TERMINAL
-    elif validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen_id = PPM_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
+        return [(SM_ID, SM_DYNAMIC_MODEL, SM_TERMINAL)]
+    if validation_type in (PERFORMANCE_PPM, VALIDATION_PPM):
+        lib, terminal, ids = PPM_DYNAMIC_MODEL, PPM_TERMINAL, (PPM_ID, PPM1_ID, PPM2_ID)
     else:
-        gen_id = BESS_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+        lib, terminal, ids = BESS_DYNAMIC_MODEL, BESS_TERMINAL, (BESS_ID, BESS1_ID, BESS2_ID)
+
+    if units == 1:
+        return [(ids[0], lib, terminal)]
+    return [(ids[i + 1], lib, terminal) for i in range(units)]
 
 
-def _create_saux_topology(
+class _DydWriter:
+    """Writes blackboxes and connections, showing each placeholder's options only once."""
+
+    def __init__(self, dyd_root: etree.Element, ns: str, par_filename: str):
+        self._dyd_root = dyd_root
+        self._ns = ns
+        self._par_filename = par_filename
+        self._documented = set()
+
+    def blackbox(self, id: str, lib: str) -> None:
+        par_id = None if lib in PARAMETERLESS_MODELS else id
+        _add_blackbox(
+            self._dyd_root, self._ns, id, lib, self._par_filename, par_id, self._first(lib)
+        )
+
+    def connect(self, id_from: str, var_from: str, id_to: str, var_to: str) -> None:
+        show = any(self._first(var) for var in (var_from, var_to) if var in PLACEHOLDER_TERMINALS)
+        _add_connection(self._dyd_root, self._ns, id_from, var_from, id_to, var_to, show)
+
+    def _first(self, key: str) -> bool:
+        if key in self._documented:
+            return False
+        self._documented.add(key)
+        return True
+
+
+def _remote_control_ports(gen_terminal: str) -> dict:
+    """PCC-monitoring port names derived from the gen terminal (works for the concrete
+    ``<prefix>terminal`` and the ``{MODEL_PREFIX}_terminal`` placeholder alike)."""
+    if gen_terminal.endswith("terminal"):
+        prefix = gen_terminal[: -len("terminal")]
+    else:
+        prefix = gen_terminal + "_"
+    return {
+        "uPccPu_re": f"{prefix}uPccPu_re",
+        "uPccPu_im": f"{prefix}uPccPu_im",
+        "PPccPu": f"{prefix}PPccPu",
+        "QPccPu": f"{prefix}QPccPu",
+    }
+
+
+def _plant_generators(validation_type: int, topology: str, n_generators: int = 2) -> list:
+    """The (id, terminal) of the plant generators that sense the PCC — only PPM/BESS (SM has no
+    plant control); ``n_generators`` of them in ``M``, one in ``S``."""
+    if validation_type in (PERFORMANCE_PPM, VALIDATION_PPM):
+        gen_base, gen_terminal = PPM_ID, PPM_TERMINAL
+    elif validation_type in (PERFORMANCE_BESS, VALIDATION_BESS):
+        gen_base, gen_terminal = BESS_ID, BESS_TERMINAL
+    else:
+        return []
+    if topology.casefold().startswith("m"):
+        return [(f"{gen_base}_{i}", gen_terminal) for i in range(1, n_generators + 1)]
+    return [(gen_base, gen_terminal)]
+
+
+def _add_remote_control(dyd_root: etree.Element, ns: str, gen_id: str, gen_terminal: str):
+    """Wire a plant generator's PCC measurements (U, P, Q) to the PDR bus. ``Measurements`` and
+    ``BusPDR`` are injected by DyCoV (referenced, not declared)."""
+    ports = _remote_control_ports(gen_terminal)
+    dyd_root.append(
+        etree.Comment(
+            "Remote voltage control: connect the plant's monitored voltage (UPcc) to the PDR bus"
+        )
+    )
+    _add_connection(dyd_root, ns, PDR_ID, f"{BUS_TERMINAL}_V_re", gen_id, ports["uPccPu_re"])
+    _add_connection(dyd_root, ns, PDR_ID, f"{BUS_TERMINAL}_V_im", gen_id, ports["uPccPu_im"])
+    dyd_root.append(
+        etree.Comment(
+            "Remote P/Q control: connect the plant's monitored flows (PPcc, QPcc) to the PDR bus"
+        )
+    )
+    dyd_root.append(
+        etree.Comment(
+            '(note this is done through a "measurements" object that is connected to the PDR bus)'
+        )
+    )
+    _add_connection(dyd_root, ns, "Measurements", "measurements_PPu", gen_id, ports["PPccPu"])
+    _add_connection(dyd_root, ns, "Measurements", "measurements_QPu", gen_id, ports["QPccPu"])
+
+
+def _create_zone1_topology(
     dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
-):
-    if validation_type == PERFORMANCE_SM:
-        gen_id = SM_ID
-        gen_lib = SM_DYNAMIC_MODEL
-        gen_terminal = SM_TERMINAL
-    elif validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen_id = PPM_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
+) -> None:
+    """Zone 1: a single unit behind its group transformer, up to the internal node.
+
+    The group transformer is only modelled explicitly when the unit's dynamic model does
+    not already reach the internal node through its own (ConverterLVControl).
+    """
+    writer = _DydWriter(dyd_root, ns, par_filename)
+    (gen_id, gen_lib, gen_terminal) = _generating_units(validation_type, 1)[0]
+
+    writer.blackbox(GROUP_XFMR_ID, XFMR_DYNAMIC_MODEL)
+    writer.blackbox(gen_id, gen_lib)
+
+    writer.connect(GROUP_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    writer.connect(gen_id, gen_terminal, GROUP_XFMR_ID, XFMR_TERMINAL1)
+
+
+def _create_zone3_topology(
+    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str, topology: str
+) -> None:
+    """Zone 3: PDR - Main_Xfmr - [IntNetwork_Line] - Int_Bus - generating units.
+
+    The group transformer of each unit lives inside its dynamic model, so the only
+    transformer in series with the PDR is the main one.
+    """
+    layout = _layout(topology)
+    writer = _DydWriter(dyd_root, ns, par_filename)
+    units = _generating_units(validation_type, layout["units"])
+
+    writer.blackbox(MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL)
+    if layout["int_line"]:
+        writer.blackbox(INT_LINE_ID, LINE_DYNAMIC_MODEL)
+    writer.blackbox(INT_BUS_ID, BUS_DYNAMIC_MODEL)
+    if layout["aux_load"]:
+        writer.blackbox(XFMR_AUX_ID, XFMR_DYNAMIC_MODEL)
+        writer.blackbox(AUX_ID, LOAD_DYNAMIC_MODEL)
+    for gen_id, gen_lib, _ in units:
+        writer.blackbox(gen_id, gen_lib)
+
+    writer.connect(MAIN_XFMR_ID, XFMR_TERMINAL2, PDR_ID, BUS_TERMINAL)
+    if layout["int_line"]:
+        writer.connect(INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
+        writer.connect(INT_BUS_ID, BUS_TERMINAL, INT_LINE_ID, LINE_TERMINAL1)
     else:
-        gen_id = BESS_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID, True)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+        writer.connect(INT_BUS_ID, BUS_TERMINAL, MAIN_XFMR_ID, XFMR_TERMINAL1)
+    if layout["aux_load"]:
+        writer.connect(XFMR_AUX_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
+        writer.connect(AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL1)
+    for gen_id, _, gen_terminal in units:
+        writer.connect(gen_id, gen_terminal, INT_BUS_ID, BUS_TERMINAL)
 
 
-def _create_si_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
-    if validation_type == PERFORMANCE_SM:
-        gen_id = SM_ID
-        gen_lib = SM_DYNAMIC_MODEL
-        gen_terminal = SM_TERMINAL
-    elif validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen_id = PPM_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
-    else:
-        gen_id = BESS_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
+def _group_spacing(xml_text: str) -> str:
+    """Insert a blank line at each group boundary (models | connections | voltage | P/Q control),
+    matching the examples: before a connection following a model, and before a comment following a
+    connection."""
+
+    def kind(line: str) -> str:
+        stripped = line.strip()
+        if stripped.startswith("<dyn:blackBoxModel"):
+            return "model"
+        if stripped.startswith("<dyn:connect"):
+            return "connect"
+        if stripped.startswith("<!--"):
+            return "comment"
+        return "other"
+
+    spaced = []
+    previous = "other"
+    for line in xml_text.splitlines():
+        current = kind(line)
+        if (current == "connect" and previous == "model") or (
+            current == "comment" and previous == "connect"
+        ):
+            spaced.append("")
+        spaced.append(line)
+        previous = current
+    return "\n".join(spaced) + "\n"
 
 
-def _create_sauxi_topology(
-    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
-):
-    if validation_type == PERFORMANCE_SM:
-        gen_id = SM_ID
-        gen_lib = SM_DYNAMIC_MODEL
-        gen_terminal = SM_TERMINAL
-    elif validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen_id = PPM_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
-    else:
-        gen_id = BESS_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID, True)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_ID)
-    _add_blackbox(dyd_root, ns, gen_id, gen_lib, par_filename, gen_id, True)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen_id, gen_terminal, XFMR_ID, XFMR_TERMINAL2, True)
-
-
-def _create_m_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
-    if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen1_id = PPM1_ID
-        gen2_id = PPM2_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
-    else:
-        gen1_id = BESS1_ID
-        gen2_id = BESS2_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
-
-
-def _create_maux_topology(
-    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
-):
-    if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen1_id = PPM1_ID
-        gen2_id = PPM2_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
-    else:
-        gen1_id = BESS1_ID
-        gen2_id = BESS2_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
-
-
-def _create_mi_topology(dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str):
-    if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen1_id = PPM1_ID
-        gen2_id = PPM2_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
-    else:
-        gen1_id = BESS1_ID
-        gen2_id = BESS2_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
-
-
-def _create_mauxi_topology(
-    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str
-):
-    if validation_type == PERFORMANCE_PPM or validation_type == VALIDATION_PPM:
-        gen1_id = PPM1_ID
-        gen2_id = PPM2_ID
-        gen_lib = PPM_DYNAMIC_MODEL
-        gen_terminal = PPM_TERMINAL
-    else:
-        gen1_id = BESS1_ID
-        gen2_id = BESS2_ID
-        gen_lib = BESS_DYNAMIC_MODEL
-        gen_terminal = BESS_TERMINAL
-    _add_blackbox(dyd_root, ns, INT_LINE_ID, LINE_DYNAMIC_MODEL, par_filename, INT_LINE_ID, True)
-    _add_blackbox(dyd_root, ns, MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL, par_filename, MAIN_XFMR_ID, True)
-    _add_blackbox(dyd_root, ns, INT_BUS_ID, BUS_DYNAMIC_MODEL, par_filename, INT_BUS_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR_AUX_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR_AUX_ID)
-    _add_blackbox(dyd_root, ns, AUX_ID, LOAD_DYNAMIC_MODEL, par_filename, AUX_ID, True)
-    _add_blackbox(dyd_root, ns, XFMR1_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR1_ID)
-    _add_blackbox(dyd_root, ns, gen1_id, gen_lib, par_filename, gen1_id, True)
-    _add_blackbox(dyd_root, ns, XFMR2_ID, XFMR_DYNAMIC_MODEL, par_filename, XFMR2_ID)
-    _add_blackbox(dyd_root, ns, gen2_id, gen_lib, par_filename, gen2_id)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL1, PDR_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, INT_LINE_ID, LINE_TERMINAL2, MAIN_XFMR_ID, XFMR_TERMINAL1)
-    _add_connection(dyd_root, ns, MAIN_XFMR_ID, XFMR_TERMINAL2, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR_AUX_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR1_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, XFMR2_ID, XFMR_TERMINAL1, INT_BUS_ID, BUS_TERMINAL)
-    _add_connection(dyd_root, ns, AUX_ID, LOAD_TERMINAL, XFMR_AUX_ID, XFMR_TERMINAL2)
-    _add_connection(dyd_root, ns, gen1_id, gen_terminal, XFMR1_ID, XFMR_TERMINAL2, True)
-    _add_connection(dyd_root, ns, gen2_id, gen_terminal, XFMR2_ID, XFMR_TERMINAL2)
+def write_producer_dyd(root: etree.Element, path: Path) -> None:
+    """Serialize a producer DYD, pretty-printed with blank lines between the logical groups
+    (``_group_spacing``)."""
+    normalized = etree.fromstring(etree.tostring(root), etree.XMLParser(remove_blank_text=True))
+    xml = etree.tostring(
+        normalized, encoding="UTF-8", pretty_print=True, xml_declaration=True
+    ).decode("utf-8")
+    Path(path).write_text(_group_spacing(xml), encoding="utf-8")
 
 
 def _check_dynamic_models(target: Path, filename: str) -> bool:
@@ -384,6 +379,7 @@ def _check_dynamic_models(target: Path, filename: str) -> bool:
         + dynawo_translator.get_line_models()
         + dynawo_translator.get_load_models()
         + dynawo_translator.get_transformer_models()
+        + ["Measurements"]
     )
 
     producer_dyd_tree = etree.parse(target / filename, etree.XMLParser(remove_blank_text=True))
@@ -410,6 +406,8 @@ def _create_producer_dyd_file(
     filename: str,
     topology: str,
     validation_type: int,
+    zone: int,
+    remote_control: bool = True,
 ) -> None:
     if (target / "Producer.dyd").exists():
         (target / "Producer.dyd").unlink()
@@ -421,39 +419,17 @@ def _create_producer_dyd_file(
     dyd_root.append(comment)
 
     par_filename = filename.replace(".dyd", ".par")
-    if "S".casefold() == topology.casefold():
-        _create_s_topology(dyd_root, ns, validation_type, par_filename)
-    elif "S+i".casefold() == topology.casefold():
-        _create_si_topology(dyd_root, ns, validation_type, par_filename)
-    elif "S+Aux".casefold() == topology.casefold():
-        _create_saux_topology(dyd_root, ns, validation_type, par_filename)
-    elif "S+Aux+i".casefold() == topology.casefold():
-        _create_sauxi_topology(dyd_root, ns, validation_type, par_filename)
-    elif "M".casefold() == topology.casefold():
-        _create_m_topology(dyd_root, ns, validation_type, par_filename)
-    elif "M+i".casefold() == topology.casefold():
-        _create_mi_topology(dyd_root, ns, validation_type, par_filename)
-    elif "M+Aux".casefold() == topology.casefold():
-        _create_maux_topology(dyd_root, ns, validation_type, par_filename)
-    elif "M+Aux+i".casefold() == topology.casefold():
-        _create_mauxi_topology(dyd_root, ns, validation_type, par_filename)
+    if zone == 1:
+        _layout(topology)
+        _create_zone1_topology(dyd_root, ns, validation_type, par_filename)
     else:
-        raise ValueError(
-            "Select one of the 8 available topologies:\n"
-            "  - S\n"
-            "  - S+i\n"
-            "  - S+Aux\n"
-            "  - S+Aux+i\n"
-            "  - M\n"
-            "  - M+i\n"
-            "  - M+Aux\n"
-            "  - M+Aux+i\n"
-        )
+        _create_zone3_topology(dyd_root, ns, validation_type, par_filename, topology)
 
-    dyd_tree = etree.ElementTree(
-        etree.fromstring(etree.tostring(dyd_root), etree.XMLParser(remove_blank_text=True))
-    )
-    dyd_tree.write(target / filename, encoding="utf-8", pretty_print=True, xml_declaration=True)
+    if remote_control:
+        for gen_id, gen_terminal in _plant_generators(validation_type, topology):
+            _add_remote_control(dyd_root, ns, gen_id, gen_terminal)
+
+    write_producer_dyd(dyd_root, target / filename)
 
 
 def create_producer_dyd_file(
@@ -483,25 +459,88 @@ def create_producer_dyd_file(
             validation_type = PERFORMANCE_PPM
         elif template == "performance_BESS":
             validation_type = PERFORMANCE_BESS
-        _create_producer_dyd_file(target, "Producer.dyd", topology, validation_type)
+        _create_producer_dyd_file(target, "Producer.dyd", topology, validation_type, 3)
 
     elif template.startswith("model"):
         validation_type = VALIDATION_PPM
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
         if topology.casefold().startswith("m"):
-            _create_producer_dyd_file(target / "Zone1", "Producer_G1.dyd", "S", validation_type)
-            _create_producer_dyd_file(target / "Zone1", "Producer_G2.dyd", "S", validation_type)
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer_G1.dyd", "S", validation_type, 1, remote_control=False
+            )
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer_G2.dyd", "S", validation_type, 1, remote_control=False
+            )
         else:
-            _create_producer_dyd_file(target / "Zone1", "Producer.dyd", "S", validation_type)
-        _create_producer_dyd_file(target / "Zone3", "Producer.dyd", topology, validation_type)
+            _create_producer_dyd_file(
+                target / "Zone1", "Producer.dyd", "S", validation_type, 1, remote_control=False
+            )
+        _create_producer_dyd_file(target / "Zone3", "Producer.dyd", topology, validation_type, 3)
 
     else:
         raise ValueError("Unsupported template name")
 
 
+def fill_producer_dyd(dyd_file: Path, libs: dict, terminals: dict, rename: dict = None) -> None:
+    """Inject concrete libs and generator terminals into a placeholder DYD (Excel-driven flow).
+
+    Parameters
+    ----------
+    dyd_file: Path
+        DYD file to edit in place.
+    libs: dict
+        ``{blackBoxModel id -> concrete lib}`` (id after any rename).
+    terminals: dict
+        ``{generator id -> concrete terminal}``; the generator's terminal and its remote-control
+        ports are replaced accordingly.
+    rename: dict, optional
+        ``{old id -> new id}`` applied first to ids/``parId`` and ``connect`` endpoints (e.g. the
+        generic ``Wind_Turbine`` skeleton -> ``PV_Array``).
+    """
+    parser = etree.XMLParser(remove_blank_text=True)
+    tree = etree.parse(str(dyd_file), parser)
+    root = tree.getroot()
+    ns = etree.QName(root).namespace
+
+    rename = rename or {}
+    for bbmodel in root.iterfind(f"{{{ns}}}blackBoxModel"):
+        old = bbmodel.get("id")
+        if old in rename:
+            if bbmodel.get("parId") == old:
+                bbmodel.set("parId", rename[old])
+            bbmodel.set("id", rename[old])
+    for connect in root.iterfind(f"{{{ns}}}connect"):
+        for attr in ("id1", "id2"):
+            if connect.get(attr) in rename:
+                connect.set(attr, rename[connect.get(attr)])
+
+    for bbmodel in root.iterfind(f"{{{ns}}}blackBoxModel"):
+        if bbmodel.get("id") in libs:
+            bbmodel.set("lib", libs[bbmodel.get("id")])
+
+    placeholder_ports = _remote_control_ports(PPM_TERMINAL)
+    for gen_id, terminal in terminals.items():
+        concrete_ports = _remote_control_ports(terminal)
+        replacements = {PPM_TERMINAL: terminal}
+        for key in placeholder_ports:
+            replacements[placeholder_ports[key]] = concrete_ports[key]
+        for connect in root.iterfind(f"{{{ns}}}connect"):
+            if gen_id in (connect.get("id1"), connect.get("id2")):
+                for attr in ("var1", "var2"):
+                    if connect.get(attr) in replacements:
+                        connect.set(attr, replacements[connect.get(attr)])
+
+    # Drop the "Replace the placeholder ..." instruction comments once filled.
+    for comment in root.xpath("//comment()"):
+        if (comment.text or "").strip().startswith("Replace"):
+            comment.getparent().remove(comment)
+
+    write_producer_dyd(root, dyd_file)
+
+
 def check_dynamic_models(target: Path, template: str) -> bool:
-    """Find placeholders in the DYD file .
+    """Check whether all dynamic models used in the DYD file are supported by the tool.
 
     Parameters
     ----------
@@ -518,7 +557,7 @@ def check_dynamic_models(target: Path, template: str) -> bool:
     Returns
     -------
     bool
-        True if there are placeholders in the DYD file
+        True if all dynamic models in the DYD file are supported, False otherwise
     """
 
     if template.startswith("model"):

@@ -238,8 +238,8 @@ The following 6 curves are the same for Sheets I3 and I4:
 3. Active power supplied at the connection point: sum of `line_P2Pu` over all
    lines on RTE side.
 4. Rotor speed: `generator_omegaPu`.
-5. AVR setpoint: `voltageRegulator_UsRefPu`.
-6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+5. Plant-level voltage regulation setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the Plant-level voltage regulation: `generator_UStatorPu_value`.
 
 
 ### Analyses to perform
@@ -303,8 +303,8 @@ These 6 curves are the same for Sheets I3 and I4:
 3. Active power supplied at the connection point: sum of `line_P2Pu` over all
    lines on RTE side.
 4. Rotor speed: `generator_omegaPu`.
-5. AVR setpoint: `voltageRegulator_UsRefPu`.
-6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+5. Plant-level voltage regulation setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the Plant-level voltage regulation: `generator_UStatorPu_value`.
 
 
 ### Analyses to perform
@@ -418,8 +418,8 @@ more, the generator's internal angle:
 3. Active power P supplied at the connection point.  Same as for the Q flow
    mentioned above.
 4. Rotor speed: `generator_omegaPu`.
-5. AVR setpoint: `voltageRegulator_UsRefPu`.
-6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+5. Plant-level voltage regulation setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the Plant-level voltage regulation: `generator_UStatorPu_value`.
 7. The generator's internal angle: `generator_thetaInternal_value`
 
 
@@ -529,8 +529,8 @@ more, the generator's internal angle (just like Sheet I6):
    object. [TODO: find out what variables are provided by this object
    in order to get the flow P.]
 4. Rotor speed: `generator_omegaPu`.
-5. AVR setpoint: `voltageRegulator_UsRefPu`.
-6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+5. Plant-level voltage regulation setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the Plant-level voltage regulation: `generator_UStatorPu_value`.
 7. The generator's internal angle: `generator_thetaInternal_value`
 
 
@@ -589,9 +589,9 @@ The curves:
 3. Active power supplied at the connection point: sum of `line_P2Pu` over all
    lines on RTE side.
 4. Rotor speed: `generator_omegaPu`.
-5. AVR setpoint: `voltageRegulator_UsRefPu`.
-6. Magnitude controlled by the AVR: `generator_UStatorPu_value`. Show with
-   dashed lines a +/-%5 tube centered around the AVR setpoint (this
+5. Plant-level voltage regulation setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the Plant-level voltage regulation: `generator_UStatorPu_value`. Show with
+   dashed lines a +/-%5 tube centered around the Plant-level voltage regulation setpoint (this
    corresponds to compliance check No. 2 below).
 7. Network frequency: `generator_omegaRefPu` (see note below). Show
    dashed horizontal lines marking the maximum excursion values
@@ -618,7 +618,7 @@ below.
    b) Check that the rotor angle `generator_theta` has stabilized to a
       steady-state value (presumably this angle should be within +/- 90º?).
       
-2. Check that the magnitude controlled by the AVR (`generator_UStatorPu_value`)
+2. Check that the magnitude controlled by the Plant-level voltage regulation (`generator_UStatorPu_value`)
    never deviates more than 5% from its setpoint. This deviation is calculated
    as:
      ```
@@ -679,8 +679,8 @@ dashed lines in curve 7** are representing different limits:
 3. Active power supplied at the connection point: sum of `load_PPu` over all
    loads connected at the PDR bus on RTE side.
 4. Rotor speed: `generator_omegaPu`.
-5. AVR setpoint: `voltageRegulator_UsRefPu`.
-6. Magnitude controlled by the AVR: `generator_UStatorPu_value`.
+5. Plant-level voltage regulation setpoint: `voltageRegulator_UsRefPu`.
+6. Magnitude controlled by the Plant-level voltage regulation: `generator_UStatorPu_value`.
 7. Network frequency, with dashed horizontal lines marking the
    compliance limits: 49 Hz and 51 Hz. Take this value from variable
    `generator_omegaRefPu`. Note that since in this case the Producer's
@@ -767,14 +767,14 @@ graph:
 4. The injected active and reactive currents, "id" and "iq": `*_injector_idPu`,
    `*_injector_iqPu` (for the case of the WindTurbine4AWeccCurrentSource model,
    for example). **Plot all PPM units on the same graph** (for now).
-5. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+5. Plant-level voltage regulation setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
    graph** (for now).
-6. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+6. Magnitude controlled by the Plant-level voltage regulation: modulus of `*_wecc_repc_uPu_re`
    `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
 7. The PPM's main transformer tap ratio: `tapChanger_tap_value` if it is a transformer with
    an automatic tap changer.
 
-[**TODO:** double check with RTE that the variables for the AVR and its
+[**TODO:** double check with RTE that the variables for the Plant-level voltage regulation and its
 controlled magnitude are the ones chosen here. These two graphs are used in the
 rest of the PPM sheets too.]
 
@@ -895,9 +895,9 @@ graph:
    [TODO: find out what variables are provided by this object, in order to get the PQ flows.]
 3. Active power P supplied at the connection point.  Same as for the Q flow
    mentioned above.
-4. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+4. Plant-level voltage regulation setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
    graph** (for now).
-5. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+5. Magnitude controlled by the Plant-level voltage regulation: modulus of `*_wecc_repc_uPu_re`
    `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
 
 
@@ -1008,9 +1008,9 @@ graph (the same as those in I6PPM):
 4. The injected active and reactive currents, "id" and "iq": `*_injector_idPu`,
    `*_injector_iqPu` (for the case of the WindTurbine4AWeccCurrentSource model,
    for example). **Plot all PPM units on the same graph** (for now).
-5. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+5. Plant-level voltage regulation setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
    graph** (for now).
-6. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+6. Magnitude controlled by the Plant-level voltage regulation: modulus of `*_wecc_repc_uPu_re`
    `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
 
 
@@ -1086,9 +1086,9 @@ graph:
 4. Network frequency, with dashed horizontal lines marking the
    compliance limits: 49 Hz and 51 Hz. Take this value from variable
    `generator_omegaRefPu`.
-5. AVR setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
+5. Plant-level voltage regulation setpoint: `*_wecc_repc_uRefPu_y`. **Plot all PPM units on the same
    graph** (for now).
-6. Magnitude controlled by the AVR: modulus of `*_wecc_repc_uPu_re`
+6. Magnitude controlled by the Plant-level voltage regulation: modulus of `*_wecc_repc_uPu_re`
    `*_wecc_repc_uPu_im`.  **Plot all PPM units on the same graph** (for now).
 
 

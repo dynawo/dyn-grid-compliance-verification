@@ -6,10 +6,21 @@
 \definecolor{dark-green}{RGB}{16,128,16}
 
 %Snippet for the circuits
-\newcommand{\GridCircuitZone}{
+\newcommand{\GridCircuitZoneFault}{
     The grid model and its operational point is as in the following schematic:
     \begin{center}
-        \includestandalone[width=0.8\textwidth]{circuit_z1.tikz}
+        \includestandalone[width=0.8\textwidth]{circuit_z1_fault.tikz}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+}
+
+\newcommand{\GridCircuitZoneSetPoint}{
+    The grid model and its operational point is as in the following schematic:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{circuit_z1_setpoint.tikz}
     \end{center}
     \begin{center}
         \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
@@ -18,81 +29,111 @@
 }
 %End snippet for the circuits
 
-%Snippet for the figures
-\newcommand{\GridCurvesZone}{
-
+%Snippet for the simulation section header
+% #1 = description items (one or more \GridCurvesXxxDescription commands)
+\newcommand{\GridSimulationHeaderZone}[1]{
     \subsubsection{Simulation}
     As required by the DTR PCS \DTRPcs, the figures below show the
     following magnitudes:
     \begin{itemize}
-        \item Voltage at connection point: modulus of the complex AC voltage at
-        the PDR bus.
-        \item Active power supplied at the connection point: sum of active power
-        over all lines on TSO side.
-        \item Reactive power supplied at the connection point: sum of reactive power
-        over all lines on TSO side.
-        \item Active current supplied at the connection point: sum of active power
-        over all lines on TSO side.
-        \item Reactive current supplied at the connection point: sum of reactive power
-        over all lines on TSO side.
-        \item Magnitude controlled by voltage control: modulus of the voltage at the REPC.
-        All PPM units are plotted on the same graph.
+        #1
     \end{itemize}
 
     \subsubsection{Simulation results}
     The blue line shows the calculated curve and the orange line shows the reference curve.
+}
+%End snippet for the simulation section header
 
+%Snippet for the base figure descriptions (5 standard figures)
+\newcommand{\GridCurvesDescriptionZone}{
+    \item Voltage at connection point.
+    \item Active power supplied at the connection point.
+    \item Reactive power supplied at the connection point.
+    \item Active current supplied at the connection point.
+    \item Reactive current supplied at the connection point.
+}
+%End snippet for the base figure descriptions
+
+%Snippet for the It figure descriptions (injector terminal figures)
+\newcommand{\GridCurvesItDescriptionZone}{
+    \item Active, reactive, and magnitude currents at InternalNode2 (injector terminal),
+    with all PPM units displayed on a single plot.
+    \item Voltage magnitude at InternalNode2 (injector terminal).
+}
+%End snippet for the It figure descriptions
+
+%Snippet for the base figures (5 standard figures)
+% NOTE: ends with Iq as a left-side minipage with no \hfill, so that \GridCurvesItZone
+% can pair I alongside it in the same row by starting directly with \hfill.
+\newcommand{\GridCurvesZone}{
 % For now we won't use floats for figures, to get more precise placement
     \noindent
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_V_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Voltage magnitude measured at the PDR bus.
+            \small Voltage magnitude measured at InternalNode1.
 %     The vertical dashed line marks the rise time $T_{85U}$.
         \end{minipage}
     \end{minipage}
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ustator_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Magnitude controlled by voltage control, in pu.
+            \small Real power output P, measured at InternalNode1.
         \end{minipage}
     \end{minipage}
 %
     \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Real power output P, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-    \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_Q_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive power output Q, measured at the PDR bus.
+            \small Reactive power output Q, measured at InternalNode1.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_Ip_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active current output Ip, measured at InternalNode1.
         \end{minipage}
     \end{minipage}
 %
     \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Ire_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \includegraphics[width=\textwidth]{\Producer_fig_Iq_PCS_RTE-I16z1.\DTRPcs.\OCname}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Active current output Ip, measured at the PDR bus.
-        \end{minipage}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{\Producer_fig_Iim_PCS_RTE-I16z1.\DTRPcs.\OCname}
-        \begin{minipage}[t]{0.8\textwidth}
-            \small Reactive current output Iq, measured at the PDR bus.
+            \small Reactive current output Iq, measured at InternalNode1.
         \end{minipage}
     \end{minipage}
 }
-%End of snippet for the figures
+%End snippet for the base figures
+
+%Snippet for the It figures (injector terminal figures)
+% NOTE: starts with \hfill to pair figure I alongside Iq from \GridCurvesZone in the same row.
+% This command must always be used immediately after \GridCurvesZone, with no blank line between them.
+\newcommand{\GridCurvesItZone}{%
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_I_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Active (light blue), reactive (violet), and magnitude (yellow) currents at
+            InternalNode2 (injector terminal). All PPM units shown on one plot.
+        \end{minipage}
+    \end{minipage}
+%
+    \vspace{0.5cm}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_UIt_PCS_RTE-I16z1.\DTRPcs.\OCname}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Voltage magnitude at InternalNode2 (injector terminal).
+        \end{minipage}
+    \end{minipage}
+}
+%End snippet for the It figures

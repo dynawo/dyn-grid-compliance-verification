@@ -9,7 +9,6 @@
 #
 from dycov.configuration.cfg import config
 
-
 # Mapping of measurement names to their respective prefixes used in configuration keys.
 # This dictionary is used to retrieve the appropriate prefix for a given measurement name.
 MEASUREMENT_PREFIX_MAP = {
@@ -86,10 +85,11 @@ def _get_voltage_dip_threshold_values_for_test(measurement_name: str) -> dict:
 
 def get_setpoint_tracking_threshold_values() -> dict:
     """
-    Get the setpoint tracking threshold values for different time windows.
+    Get the setpoint tracking threshold values used for electrical performance
+    verification against reference setpoints.
 
     Regardless of the nature of the reference signal, the maximum permissible errors on the
-    quantity tracked in pu (base setpoint variation level) are as follow:
+    quantity tracked in pu (base setpoint variation level) are as follows:
     | window | quantity tracked   |
     |--------|------|------|------|
     |        | MXE  | ME   | MAE  |

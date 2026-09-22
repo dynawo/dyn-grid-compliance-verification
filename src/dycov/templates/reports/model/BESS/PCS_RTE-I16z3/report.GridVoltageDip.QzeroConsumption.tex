@@ -1,6 +1,8 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PCS I6 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    {{ waterMarkText }}
+
     \renewcommand{\DTRPcs}{GridVoltageDip} % DTR pcs definition
     \renewcommand{\OCname}{QzeroConsumption}
 
@@ -94,11 +96,18 @@
         \end{tabular}
     \end{center}
 
+    \GridSimulationHeaderZthree{
+        \GridCurvesDescriptionZthree
+        \GridCurvesItZthreeDescriptionZthree
+    }
     \GridCurvesZthree
+    \GridCurvesItZthree
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z3GridVoltageDipQzeroConsumption }}
 
     \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilizedPCSI16z3GridVoltageDipQzeroConsumption }}
 
     \noindent Analysis of results for PCS \DTRPcs. Values extracted
     from the simulation:
@@ -119,6 +128,8 @@
     \end{center}
 
     \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
 
     \noindent Compliance thresholds on the curves:
     \begin{center}

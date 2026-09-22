@@ -22,22 +22,22 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
 )
 from dycov.files import model_parameters
-from dycov.logging.logging import dycov_logging
+from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
-    if not producer_config.has_option(section, "u_nom"):
-        raise ValueError("The parameter file must specify the u_nom")
-    if not producer_config.has_option(section, "q_min"):
-        raise ValueError("The parameter file must specify the q_min")
-    if not producer_config.has_option(section, "q_max"):
-        raise ValueError("The parameter file must specify the q_max")
-    if not producer_config.has_option(section, "p_max_injection"):
-        raise ValueError("The parameter file must specify the p_max_injection")
-    if needs_consumption and not producer_config.has_option(section, "p_max_consumption"):
-        raise ValueError("The parameter file must specify the p_max_consumption")
+    if not producer_config.has_option(section, "u_nom_at_PDR"):
+        raise ValueError("The parameter file must specify the u_nom_at_PDR")
+    if not producer_config.has_option(section, "q_min_at_PDR"):
+        raise ValueError("The parameter file must specify the q_min_at_PDR")
+    if not producer_config.has_option(section, "q_max_at_PDR"):
+        raise ValueError("The parameter file must specify the q_max_at_PDR")
+    if not producer_config.has_option(section, "p_max_injection_at_PDR"):
+        raise ValueError("The parameter file must specify the p_max_injection_at_PDR")
+    if needs_consumption and not producer_config.has_option(section, "p_max_consumption_at_PDR"):
+        raise ValueError("The parameter file must specify the p_max_consumption_at_PDR")
     if not producer_config.has_option(section, "topology"):
         raise ValueError("The parameter file must specify the topology")
 
@@ -63,7 +63,7 @@ class ModelProducer(Producer):
         reference_curves_path: Path,
         verification_type: int,
     ):
-        self._s_nref = config.get_float("GridCode", "s_nref", 100.0)
+        self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._producer_model_path = producer_model_path
         self._producer_curves_path = producer_curves_path
         self._reference_curves_path = reference_curves_path
@@ -96,6 +96,8 @@ class ModelProducer(Producer):
         elif verification_type == MODEL_VALIDATION:
             self.__set_model_validation_type()
 
+        file_checks.check_curves_metadata(self._producer_curves_path, self._reference_curves_path)
+
     def __set_electric_performance_type(self):
         #  Expected input example:
         #  Dynawo
@@ -123,6 +125,7 @@ class ModelProducer(Producer):
         ppm_models = 0
         bess_models = 0
         if self.is_dynawo_model():
+            self.__init_parameters()
             file_checks.check_performance_model(self._producer_model_path)
             (
                 generators,
@@ -136,6 +139,13 @@ class ModelProducer(Producer):
                 self.get_producer_par(),
                 self.__read_producer_ini(),
                 self._s_nref,
+            )
+            parameter_checks.check_producer_params_consistency(
+                generators,
+                p_max_pu=self.p_max_injection_pu,
+                q_max_pu=self.q_max_pu,
+                q_min_pu=self.q_min_pu,
+                s_nref=self._s_nref,
             )
             sm_models, ppm_models, bess_models = parameter_checks.check_generators(generators)
         else:
@@ -192,15 +202,15 @@ class ModelProducer(Producer):
         # │   ├── PCS_RTE-I16z3.USetPointStep.BReactance.dict
         # ├── Producer_G1
         # │   ├── CurvesFiles.ini
-        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-        # │   ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        # │   ├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
+        # │   ├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
         #  ...
         # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
         # │   ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
         # └── Producer_G2
         #     ├── CurvesFiles.ini
-        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.csv
-        #     ├── PCS_RTE-I16z1.GridFreqRamp.W500mHz250ms.dict
+        #     ├── PCS_RTE-I16z1.GridVoltageStep.Drop.csv
+        #     ├── PCS_RTE-I16z1.GridVoltageStep.Drop.dict
         #  ...
         #     ├── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.csv
         #     └── PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.dict
@@ -229,6 +239,7 @@ class ModelProducer(Producer):
         self._zone = 1
         generators_z1 = list()
         for self._filename in self.get_filenames(self._zone):
+            self.__init_parameters()
             (
                 generators,
                 _,
@@ -241,6 +252,13 @@ class ModelProducer(Producer):
                 self.get_producer_par(),
                 self.__read_producer_ini(),
                 self._s_nref,
+            )
+            parameter_checks.check_producer_params_consistency(
+                generators,
+                p_max_pu=self.p_max_injection_pu,
+                q_max_pu=self.q_max_pu,
+                q_min_pu=self.q_min_pu,
+                s_nref=self._s_nref,
             )
             generators_z1 += generators
         self._zone = 3
@@ -260,6 +278,14 @@ class ModelProducer(Producer):
                 self._s_nref,
             )
             generators_z3 += generators
+        self.__init_parameters()
+        parameter_checks.check_producer_params_consistency(
+            generators_z3,
+            p_max_pu=self.p_max_injection_pu,
+            q_max_pu=self.q_max_pu,
+            q_min_pu=self.q_min_pu,
+            s_nref=self._s_nref,
+        )
         sm_models, ppm_models, bess_models = parameter_checks.check_generators(
             generators_z1, generators_z3
         )
@@ -319,27 +345,29 @@ class ModelProducer(Producer):
         )
 
         self.p_max_injection_pu = (
-            float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
+            float(producer_config.get(default_section, "p_max_injection_at_PDR")) / self._s_nref
         )
         self.p_max_consumption_pu = 0.0
-        if producer_config.has_option(default_section, "p_max_consumption"):
+        if producer_config.has_option(default_section, "p_max_consumption_at_PDR"):
             self.p_max_consumption_pu = (
-                float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
+                float(producer_config.get(default_section, "p_max_consumption_at_PDR"))
+                / self._s_nref
             )
-        self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
-        self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
-        self.u_nom = float(producer_config.get(default_section, "u_nom"))
+        self.q_max_pu = float(producer_config.get(default_section, "q_max_at_PDR")) / self._s_nref
+        self.q_min_pu = float(producer_config.get(default_section, "q_min_at_PDR")) / self._s_nref
+        self.u_nom = float(producer_config.get(default_section, "u_nom_at_PDR"))
         self.topology = producer_config.get(default_section, "topology")
+        self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""
         # Read producer network
         (
             self.generators,
-            self.stepup_xfmrs,
+            self.group_xfmrs,
             self.aux_load,
             self.auxload_xfmr,
-            self.ppm_xfmr,
+            self.main_xfmr,
             self.intline,
         ) = model_parameters.get_producer_values(
             self.get_producer_dyd(),
@@ -347,23 +375,23 @@ class ModelProducer(Producer):
             self.__read_producer_ini(),
             self._s_nref,
         )
-        self._connected_to_pdr = model_parameters.get_connected_to_pdr(self.get_producer_dyd())
-        self.s_nom = sum(gen.SNom for gen in self.generators)
+        self.s_nom = sum(gen.s_nom for gen in self.generators)
 
         # Check sanity of the producer network
         topology_checks.check_topology(
+            self._zone,
             self.topology,
             self.generators,
-            self.stepup_xfmrs,
+            self.group_xfmrs,
             self.aux_load,
             self.auxload_xfmr,
-            self.ppm_xfmr,
+            self.main_xfmr,
             self.intline,
         )
-        parameter_checks.check_trafos(self.stepup_xfmrs)
+        parameter_checks.check_trafos(self.group_xfmrs)
         parameter_checks.check_auxiliary_load(self.aux_load)
         parameter_checks.check_trafo(self.auxload_xfmr)
-        parameter_checks.check_trafo(self.ppm_xfmr)
+        parameter_checks.check_trafo(self.main_xfmr)
         parameter_checks.check_internal_line(self.intline)
         parameter_checks.check_generators(self.generators)
 
@@ -429,15 +457,16 @@ class ModelProducer(Producer):
         dycov_logging.get_logger("Producer").error("No producer model has been defined")
         return list()
 
-    def set_consumption(self, consumption: float) -> None:
+    def set_consumption(self, consumption: bool) -> None:
         """The value of p_max_pu is defined depending on the
         operating mode: injection or consumption.
 
         Parameters
         ----------
-        consumption: float
-            If it is True use the Pmax Consumption
-            If it is False use the Pmax Injection
+        consumption: bool
+            If True use the maximum active power consumption.
+            If False use the maximum active power injection.
+
         """
         if consumption:
             # The maximum active power consumption value must be
@@ -446,7 +475,12 @@ class ModelProducer(Producer):
         else:
             self.p_max_pu = self.p_max_injection_pu
 
-    def get_element(self, id: str) -> tuple[str, str]:
+    @property
+    def s_nom_pu(self) -> float:
+        """Nominal apparent power in per-unit of s_nref."""
+        return self.s_nom / self._s_nref
+
+    def get_element(self, id: str) -> tuple[str | None, str | None]:
         """Get element information by id
 
         Parameters
@@ -456,21 +490,21 @@ class ModelProducer(Producer):
 
         Returns
         -------
-        str
+        str | None
             Element id
-        str
+        str | None
             Dynamic model library
         """
         for gen in self._generators:
             if id == gen.id:
                 return gen.id, gen.lib
 
-        for xmfr in self._stepup_xfmrs:
+        for xmfr in self._group_xfmrs:
             if id == xmfr.id:
                 return xmfr.id, xmfr.lib
 
-        if self._ppm_xfmr and id == self._ppm_xfmr.id:
-            return self._ppm_xfmr.id, self._ppm_xfmr.lib
+        if self._main_xfmr and id == self._main_xfmr.id:
+            return self._main_xfmr.id, self._main_xfmr.lib
 
         return None, None
 
@@ -514,12 +548,12 @@ class ModelProducer(Producer):
         self._filename = filename
         self.__init_parameters()
         parameter_checks.check_producer_params(
-            self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom
+            self.p_max_injection_pu, self.p_max_consumption_pu, self.u_nom, self._zone
         )
 
         if self.is_dynawo_model():
-            file_checks.check_well_formed_xml(self.get_producer_dyd())
-            file_checks.check_well_formed_xml(self.get_producer_par())
+            file_checks.validate_xml_syntax(self.get_producer_dyd())
+            file_checks.validate_xml_syntax(self.get_producer_par())
             if self.get_sim_type() > MODEL_VALIDATION:
                 file_checks.check_curves_files(
                     self._producer_model_path,
@@ -559,7 +593,7 @@ class ModelProducer(Producer):
         return self._is_user_curves
 
     def has_reference_curves_path(self) -> bool:
-        """Check if there are reference curves directory.
+        """Check if a reference curves directory is defined.
 
         Returns
         -------
@@ -625,7 +659,7 @@ class ModelProducer(Producer):
             pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
         return self.__get_file_by_pattern(pattern_dyd)
 
-    def get_producer_par(self):
+    def get_producer_par(self) -> Path:
         """Gets the Producer PAR file.
 
         Returns
@@ -660,12 +694,12 @@ class ModelProducer(Producer):
         return self._reference_curves_path.resolve()
 
     def set_generators(self, generators: list) -> None:
-        """Gets the Producer model generators.
+        """Sets the Producer model generators.
 
         Parameters
         ----------
         generators: list
-            Generators obtained from producer curves
+            Generators obtained from producer curves or model parsing.
         """
         self._generators = generators
 
@@ -687,22 +721,12 @@ class ModelProducer(Producer):
         list
             Transformers defined in the producer model
         """
-        xfmrs = self._stepup_xfmrs
+        xfmrs = self._group_xfmrs
         if self._auxload_xfmr:
             xfmrs.append(self._auxload_xfmr)
-        if self._ppm_xfmr:
-            xfmrs.append(self._ppm_xfmr)
+        if self._main_xfmr:
+            xfmrs.append(self._main_xfmr)
         return xfmrs
-
-    def get_connected_to_pdr(self) -> list:
-        """Gets the Producer models connected to the bus PDR.
-
-        Returns
-        -------
-        list
-            Equipments connected to the bus PDR
-        """
-        return self._connected_to_pdr
 
     def set_is_field_measurements(self, is_field_measurements: bool) -> None:
         """Sets if the curves are field measurements.

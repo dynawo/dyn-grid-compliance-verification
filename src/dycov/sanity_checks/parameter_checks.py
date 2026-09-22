@@ -12,12 +12,10 @@ This module contains functions for validating various numerical and configuratio
 parameters of Dynawo models, including generator, transformer, load, and simulation settings.
 """
 
-from typing import List
-
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.translator import dynawo_translator
-from dycov.logging.logging import dycov_logging
-from dycov.model.parameters import Gen_params, Line_params, Load_params, Xfmr_params
+from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.logging import dycov_logging
+from dycov.model.parameters import GenParams, LineParams, LoadParams, XfmrParams
 from dycov.validation import common
 
 
@@ -41,15 +39,18 @@ def check_t_fault(start_time: float, event_time: float, range_len: float) -> Non
         )
 
 
-def check_pre_stable(time: List[float], curve: List[float]) -> None:
+def check_pre_stable(time: list[float], curve: list[float]) -> None:
     """Check that the curve is stable.
 
     Parameters
     ----------
+    time: list
+        Time instants of the pre window curve.
     curve: list
         Pre window curve.
     """
-    stable, _ = common.is_stable(time, curve, time[-1] - time[0])
+    thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
+    stable, _ = common.is_stable(time, curve, thr_ss_tol)
     if not stable:
         dycov_logging.get_logger("Sanity Checks").warning(
             "Unstable curve before the event is triggered."
@@ -57,9 +58,11 @@ def check_pre_stable(time: List[float], curve: List[float]) -> None:
 
 
 def check_sampling_interval(sampling_interval: float, cutoff: float) -> None:
-    """Check that the sampling interval and cut-off values do not exceed the maximum allowed value.
-    The maximum value for the sampling interval is determined by 2 times the filter Cut-off
-    frequency.
+    """Check that the sampling interval is compatible with the filter cut-off frequency.
+
+    The sampling interval must satisfy the Nyquist criterion, i.e. it must be
+    smaller than or equal to 1 / (2 * cutoff).
+
 
     Parameters
     ----------
@@ -76,12 +79,16 @@ def check_sampling_interval(sampling_interval: float, cutoff: float) -> None:
 
 
 def check_producer_params(
-    p_max_injection_pu: float, p_max_consumption_pu: float, u_nom: float
+    p_max_injection_pu: float, p_max_consumption_pu: float, u_nom: float, zone: int = 0
 ) -> None:
     """Check whether the user-supplied model values are consistent:
     * The value of maximum active power generation must be greater or equal than 0.
     * The value of maximum active power consumption must be greater or equal than 0.
-    * The nominal voltage value is defined in the configuration file.
+    * The nominal voltage value is defined in the configuration file, at the PDR (zone 0 or 3).
+
+    The DTR only normalizes the connection voltage at the PDR (Fiche I16, Zone 3): Zone 1
+    (système de production d'énergie) characterizes its equivalent network by SCR/Zcc and a
+    free local voltage, so the check is skipped there.
 
     Parameters
     ----------
@@ -91,6 +98,9 @@ def check_producer_params(
         Maximum active power consumption.
     u_nom: float
         Nominal voltage.
+    zone: int
+        Zone being validated (0: performance/PDR, 1: model validation Zone 1, 3: model
+        validation Zone 3). Defaults to 0 (PDR).
     """
     if p_max_injection_pu < 0:
         raise ValueError(
@@ -100,6 +110,8 @@ def check_producer_params(
         raise ValueError(
             "The value of maximum active power consumption must be greater or equal than 0."
         )
+    if zone == 1:
+        return
     Udims = (
         config.get_list("GridCode", "HTB1_Udims")
         + config.get_list("GridCode", "HTB2_Udims")
@@ -109,11 +121,85 @@ def check_producer_params(
         + config.get_list("GridCode", "HTB3_External_Udims")
     )
     if str(u_nom) not in Udims:
-        raise ValueError("Unexpected nominal voltage in the PDR Bus.")
+        raise ValueError("Unexpected nominal voltage at the PDR bus.")
+
+
+def check_producer_params_consistency(
+    generators: list[GenParams],
+    p_max_pu: float = 0.0,
+    q_max_pu: float = 0.0,
+    q_min_pu: float = 0.0,
+    rel_tol: float = 1e-6,
+    abs_tol: float = 1e-9,
+    s_nref: float = 100.0,
+) -> None:
+    """
+    Check whether parameters from Producer.INI are consistent with those from Producer.PAR,
+    using RTE's rule: INI values may differ as long as they are more restrictive.
+
+    More restrictive rules:
+      - Pmax_ini <= Sum(Pmax_par)
+      - Qmax_ini <= Sum(Qmax_par)
+      - Qmin_ini >= Sum(Qmin_par)
+
+    Parameters
+    ----------
+    generators: list
+        Generator parameters list.
+    p_max_pu: float
+        Maximum active power in PDR (INI) in per unit.
+    q_max_pu: float
+        Maximum reactive power in PDR (INI) in per unit.
+    q_min_pu: float
+        Minimum reactive power in PDR (INI) in per unit.
+    rel_tol: float
+        Relative tolerance.
+    abs_tol: float
+        Absolute tolerance.
+    """
+
+    # Aggregate PAR values
+    gen_p_max = sum(g.p_max * g.s_nom / s_nref for g in generators if g.p_max is not None)
+    gen_q_max = sum(g.q_max * g.s_nom / s_nref for g in generators if g.q_max is not None)
+    gen_q_min = sum(g.q_min * g.s_nom / s_nref for g in generators if g.q_min is not None)
+
+    log = dycov_logging.get_logger("Sanity Checks")
+    has_error = False
+
+    # --- Pmax check ---
+    if gen_p_max != 0:
+        # INI must be <= PAR (more restrictive)
+        if p_max_pu > gen_p_max + max(abs_tol, rel_tol * abs(gen_p_max)):
+            log.error(
+                f"Inconsistency in Pmax: INI={p_max_pu} is less restrictive than PAR={gen_p_max}"
+            )
+            has_error = True
+
+    # --- Qmax check ---
+    if gen_q_max != 0:
+        if q_max_pu > gen_q_max + max(abs_tol, rel_tol * abs(gen_q_max)):
+            log.error(
+                f"Inconsistency in Qmax: INI={q_max_pu} is less restrictive than PAR={gen_q_max}"
+            )
+            has_error = True
+
+    # --- Qmin check ---
+    if gen_q_min != 0:
+        # For Qmin, "more restrictive" means INI >= PAR
+        if q_min_pu < gen_q_min - max(abs_tol, rel_tol * abs(gen_q_min)):
+            log.error(
+                f"Inconsistency in Qmin: INI={q_min_pu} is less restrictive than PAR={gen_q_min}"
+            )
+            has_error = True
+
+    if has_error:
+        raise ValueError(
+            "Inconsistency detected: INI values are less restrictive than PAR values."
+        )
 
 
 def check_generators(
-    generators_z1: List[Gen_params], generators_z3: List[Gen_params] = None
+    generators_z1: list[GenParams], generators_z3: list[GenParams] = None
 ) -> tuple[int, int, int]:
     """Check whether the user-supplied generators parameters are consistent:
     * The number of generators in each zone must be the same.
@@ -139,16 +225,11 @@ def check_generators(
                 "The model validation must contain the same number of generators in both zones."
             )
 
-    sm_models = 0
-    ppm_models = 0
-    bess_models = 0
-    for generator in generators:
-        if generator.lib in dynawo_translator.get_synchronous_machine_models():
-            sm_models += 1
-        if generator.lib in dynawo_translator.get_power_park_models():
-            ppm_models += 1
-        if generator.lib in dynawo_translator.get_storage_models():
-            bess_models += 1
+    sm_models = sum(
+        1 for g in generators if g.lib in dynawo_translator.get_synchronous_machine_models()
+    )
+    ppm_models = sum(1 for g in generators if g.lib in dynawo_translator.get_power_park_models())
+    bess_models = sum(1 for g in generators if g.lib in dynawo_translator.get_storage_models())
 
     total = len(generators)
     if sm_models < total and ppm_models < total and bess_models < total:
@@ -158,9 +239,9 @@ def check_generators(
     return sm_models, ppm_models, bess_models
 
 
-def check_trafos(xfmrs: List[Xfmr_params]) -> None:
+def check_trafos(xfmrs: list[XfmrParams]) -> None:
     """Check whether the user-supplied transformers parameters are consistent:
-    * The admittance of each transformer must be greater than 0.
+    * The reactance of each transformer must be greater than 0.
 
     Parameters
     ----------
@@ -171,53 +252,57 @@ def check_trafos(xfmrs: List[Xfmr_params]) -> None:
         check_trafo(xfmr)
 
 
-def check_trafo(xfmrs: Xfmr_params) -> None:
-    """Check whether the user-supplied tranformer parameters are consistent:
-    * The admittance of the transformer must be greater than 0.
+def check_trafo(xfmr: XfmrParams) -> None:
+    """Check whether the user-supplied transformer parameters are consistent:
+    * The reactance of the transformer must be greater than 0.
 
     Parameters
     ----------
-    xfmr: Xfmr_params
+    xfmr: XfmrParams
         Transformer parameters.
     """
-    if xfmrs and xfmrs.X <= 0:
+    if xfmr and xfmr.x <= 0:
+        raise ValueError(f"The reactance of the transformer {xfmr.id} must be greater than zero.")
+
+    if xfmr and xfmr.alpha_tfo != 0.0:
         raise ValueError(
-            f"The admittance of the transformer {xfmrs.id} must be greater than zero."
+            f"The alphaTfo parameter of the transformer {xfmr.id} must be equal to zero."
         )
 
 
-def check_auxiliary_load(load: Load_params) -> None:
+def check_auxiliary_load(load: LoadParams) -> None:
     """Check whether the user-supplied auxiliary load parameters are consistent:
     * The active flow of the auxiliary load must be greater than zero.
+    * Auxiliary load expected to be defined with non-zero alpha and beta values.
 
     Parameters
     ----------
-    load: Load_params
+    load: LoadParams
         Auxiliary load parameters.
     """
     if load is None:
         return
-    if load.P <= 0:
+    if load.p <= 0:
         raise ValueError("The active flow of the auxiliary load must be greater than zero.")
-    if load.Alpha is not None and load.Alpha == 0 and load.Beta is not None and load.Beta == 0:
+    if load.alpha is not None and load.alpha == 0 and load.beta is not None and load.beta == 0:
         dycov_logging.get_logger("Sanity Checks").warning(
             "The auxiliary load is defined with alpha = 0 and beta = 0, "
             "this configuration can cause unexpected results in bolted fault tests."
         )
 
 
-def check_internal_line(line: Line_params) -> None:
+def check_internal_line(line: LineParams) -> None:
     """Check whether the user-supplied internal line parameters are consistent:
-    * The reactance and admittance of the internal line must be greater than zero.
+    * The resistance and reactance of the internal line must be greater than zero.
 
     Parameters
     ----------
-    line: Line_params
+    line: LineParams
         Internal line parameters.
     """
-    if line and (line.R <= 0 or line.X <= 0):
+    if line and (line.r <= 0 or line.x <= 0):
         raise ValueError(
-            "The reactance and admittance of the internal line must be greater than zero."
+            "The resistance and reactance of the internal line must be greater than zero."
         )
 
 
@@ -236,7 +321,7 @@ def check_simulation_duration(time: float) -> None:
         )
 
 
-def check_solver(id: str, lib: str):
+def check_solver(id: str, lib: str) -> None:
     """Check if a solver allowed by the tool has been configured.
 
     Parameters

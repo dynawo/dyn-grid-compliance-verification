@@ -2,6 +2,8 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Three Phase Fault %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    {{ waterMarkText }}
+
     \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
     \renewcommand{\DTRPcsLong}{Three Phase Fault}
     \renewcommand{\OCname}{TransientBoltedSCR3QminConsumption}
@@ -12,10 +14,10 @@
     Checks for compliant behavior of the generating unit under a grid scenario where there
     is a transient three-phase earth fault.
 
-    \GridCircuitZone
+    \GridCircuitZoneFault
 
     \begin{description}
-        \item Initial conditions used at the PDR bus:
+        \item Initial conditions used at InternalNode1:
         \begin{itemize}
             \item $P = P_\text{max\_consumption\_unite}$
             \item $Q = Q_\text{min}$
@@ -40,11 +42,21 @@
         \end{tabular}
     \end{center}
 
+    \GridSimulationHeaderZone{
+        \GridCurvesDescriptionZone
+        \GridCurvesItDescriptionZone
+    }
     \GridCurvesZone
+    \GridCurvesItZone
     \\[2\baselineskip]
     Go to  {{ linkPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminConsumption }}
 
     \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilizedPCSI16z1ThreePhaseFaultTransientBoltedSCR3QminConsumption }}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
     \begin{center}
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
@@ -61,6 +73,8 @@
     \end{center}
 
     \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
 
     \noindent Compliance thresholds on the curves:
     \begin{center}

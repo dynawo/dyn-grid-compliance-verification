@@ -8,21 +8,78 @@
 #     demiguelm@aia.es
 #
 
+import atexit
+import fcntl
 import getpass
+import logging
+import os
 import shutil
 import tempfile
-import time
-import uuid
+import threading
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
+from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
 from dycov.files import manage_files
+from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 
 
-class Parameters:
-    """Parent class to define the common parameters.
+def _purge_stale_temp_dirs(
+    base_dir: Path, prefix: str, older_than: timedelta, exclude: Optional[Path] = None
+) -> None:
+    try:
+        now = datetime.now().timestamp()
+        threshold = now - older_than.total_seconds()
+        for entry in base_dir.iterdir():
+            try:
+                if not entry.is_dir():
+                    continue
+                name = entry.name
+                if not name.startswith(prefix):
+                    continue
+                path = base_dir / name
+                if exclude is not None and path == exclude:
+                    continue
+                st = entry.stat()
 
+                if st.st_mtime <= threshold:
+                    process_active = False
+                    fd = -1
+                    try:
+                        # Attempt to lock the directory to check if the owner is still alive
+                        fd = os.open(path, os.O_RDONLY)
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except OSError:
+                        # If an OSError (like BlockingIOError) is raised, the directory is
+                        # locked by a living process
+                        process_active = True
+                    finally:
+                        if fd != -1:
+                            try:
+                                # Unlock and close if we successfully acquired it
+                                fcntl.flock(fd, fcntl.LOCK_UN)
+                                os.close(fd)
+                            except OSError:
+                                pass
+
+                    if not process_active:
+                        shutil.rmtree(path, ignore_errors=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+# Global abort flag to coordinate graceful shutdown across threads
+ABORT_EVENT = threading.Event()
+
+
+class Parameters:
+    """
+    Parent class to define the common parameters.
     Args
     ----
     launcher_dwo: Path
@@ -45,24 +102,42 @@ class Parameters:
         self._selected_pcs = selected_pcs
         self._output_dir = output_dir
         self._only_dtr = only_dtr
+        self._producer_workbook = None
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
-        working_dir = Path(tempfile.gettempdir()) / f"{tmp_path}_{username}"
-        manage_files.create_dir(working_dir, clean_first=False, all=True)
+        base_dir = Path.cwd()
+        prefix = f"{tmp_path}_{username}_"
 
-        # Remove old executions
-        current_time = time.time()
-        for execution_path in working_dir.iterdir():
-            modification_time = execution_path.stat().st_mtime
-            # Delete old directories (24h)
-            if current_time - modification_time >= 24 * 3600:
-                shutil.rmtree(execution_path)
+        _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(minutes=30))
+        self._working_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=base_dir))
 
-        self._working_dir = working_dir / Path(str(uuid.uuid4()))
+        # Lock the working directory directly instead of relying on a PID file
+        self._lock_fd = os.open(self._working_dir, os.O_RDONLY)
+        fcntl.flock(self._lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
         # The parameter is initialized in the child class
-        self._producer = None
+        self._producer: Optional[Producer] = None
+
+        # --- Robust atexit cleanup bound to concrete path (not to object state) ---
+        wd = self._working_dir
+
+        def _cleanup_on_exit():
+            try:
+                # Preserve in DEBUG, remove otherwise (no logs emitted)
+                if dycov_logging.get_logger("Parameters").getEffectiveLevel() != logging.DEBUG:
+                    manage_files.remove_dir(wd)
+            except Exception:
+                try:
+                    manage_files.remove_dir(wd)
+                except Exception:
+                    pass
+
+        atexit.register(_cleanup_on_exit)
+
+        # Cleanup bookkeeping
+        self._cleanup_registered = False
+        self._register_cleanup_hooks()
 
     def get_launcher_dwo(self) -> Path:
         """Get the Dynawo launcher.
@@ -124,6 +199,16 @@ class Parameters:
         """
         return self._producer
 
+    def get_producer_workbook(self) -> Path:
+        """Get the workbook the producer inputs were generated from, when there is one.
+
+        Returns
+        -------
+        Path
+            Workbook the inputs come from, or None when they were given as files.
+        """
+        return self._producer_workbook
+
     def is_valid(self) -> bool:
         """Checks if the execution of the tool is valid.
 
@@ -133,3 +218,70 @@ class Parameters:
             True if it is a valid execution, False otherwise
         """
         pass
+
+    def cleanup_working_dir(self, preserve_on_debug: bool = True) -> None:
+        """
+        Deletes the working directory, or renames it to output_dir when running in DEBUG
+        and preserve_on_debug=True (to keep artifacts for inspection).
+        Idempotent and safe to call multiple times.
+        """
+        wd: Optional[Path] = getattr(self, "_working_dir", None)
+
+        # Release the directory lock and close the file descriptor before cleanup
+        if hasattr(self, "_lock_fd") and self._lock_fd is not None:
+            try:
+                fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
+                os.close(self._lock_fd)
+            except OSError:
+                pass
+            finally:
+                self._lock_fd = None
+
+        if not wd:
+            return
+
+        try:
+            if (
+                not preserve_on_debug
+                or dycov_logging.get_logger("Parameters").getEffectiveLevel() != logging.DEBUG
+            ):
+                manage_files.remove_dir(wd)
+        except Exception:
+            try:
+                manage_files.remove_dir(wd)
+            except Exception:
+                pass
+        finally:
+            self._working_dir = None
+
+    def __exit__(self, exc_type, exc, tb):
+        # On normal exit or exception, remove tmp unless you're debugging and want to keep it
+        self.cleanup_working_dir(preserve_on_debug=True)
+
+    # --- INTERNAL: hook registration ---
+    def _register_cleanup_hooks(self):
+        if self._cleanup_registered:
+            return
+
+        # Install centralized signal handlers via graceful_shutdown.install_signal_handlers
+        def _on_exit(exit_code: int) -> None:
+            """Minimal exit callback for signal handlers.
+            - Mark global abort
+            - Terminate external children (Dynawo + LaTeX)
+            - Exit from main thread using Pythonic exceptions so finally/atexit run
+            """
+            # 1) Mark global abort so long-running loops can break promptly
+            ABORT_EVENT.set()
+            # 2) Terminate external children (best-effort & idempotent)
+            terminate_all_children(timeout=5.0)
+            # 3) Exit only from the main thread
+            if threading.current_thread() is threading.main_thread():
+                if exit_code == 130:  # SIGINT
+                    raise KeyboardInterrupt()
+                else:  # SIGTERM/SIGHUP/SIGQUIT -> conventional code
+                    raise SystemExit(exit_code)
+            # Non-main threads: do nothing else; main will exit cleanly.
+
+        # Register handlers (SIGINT + SIGTERM/SIGHUP/SIGQUIT) only from main thread
+        install_signal_handlers(on_exit=_on_exit)
+        self._cleanup_registered = True

@@ -12,9 +12,12 @@ import errno
 import os
 import re
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
+from dycov.curves import naming
+from dycov.curves.importer.metadata import CurvesMetadata
 from dycov.curves.importer.reader import get_curves_reader
 
 
@@ -53,7 +56,6 @@ class CurvesImporter:
             self._default_curves.add_section("Curves-Dictionary-Zone1")
             self._default_curves.add_section("Curves-Dictionary-Zone3")
 
-        # Search for the dictionary file matching the pattern
         pattern = re.compile(rf".*.{re.escape(filename)}.[dD][iI][cC][tT]")
         files = [file for file in path.resolve().iterdir() if pattern.match(str(file))]
         if not files:
@@ -63,8 +65,8 @@ class CurvesImporter:
         self._curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._curves_cfg.optionxform = str
         self._curves_cfg.read(dict_file)
+        self._metadata = CurvesMetadata(self._curves_cfg, dict_file)
 
-        # Remove the dictionary file from the working directory if requested
         if remove_working_dict:
             dict_file.unlink()
 
@@ -116,7 +118,26 @@ class CurvesImporter:
                 if value != ""
             }
         )
+
+        # Zone 1 outputs name the connection bus "InternalNode1"; accept that naming
+        # in the dictionaries by translating it back to the internal bus name
+        if zone == 1:
+            curves_dict = {
+                channel: naming.to_internal_name(name) for channel, name in curves_dict.items()
+            }
         return curves_dict
+
+    @property
+    def metadata(self) -> CurvesMetadata:
+        """
+        Gets the metadata declared for the curves.
+
+        Returns
+        -------
+        CurvesMetadata
+            The metadata of the loaded curves configuration.
+        """
+        return self._metadata
 
     @property
     def config(self) -> configparser.ConfigParser:
@@ -129,6 +150,23 @@ class CurvesImporter:
             The loaded curves configuration.
         """
         return self._curves_cfg
+
+    def _get_time_channel_name(self) -> Optional[str]:
+        """Get the time channel name, if defined in the curves configuration.
+
+        Returns
+        -------
+        Optional[str]
+            The time channel name, or None if it is not defined.
+        """
+        section = "Curves-Dictionary"
+        if self._curves_cfg.has_section(section) and self._curves_cfg.has_option(section, "time"):
+            return self._curves_cfg.get(section, "time")
+        if self._default_curves.has_section(section) and self._default_curves.has_option(
+            section, "time"
+        ):
+            return self._default_curves.get(section, "time")
+        return None
 
     def get_curves_dataframe(self, zone: int, remove_file: bool = True) -> pd.DataFrame:
         """
@@ -150,16 +188,7 @@ class CurvesImporter:
         """
         curves_dict = self.__get_curves_dict(zone)
         df_dict = {}
-        section = "Curves-Dictionary"
-        time_name = None
-
-        # Determine the time channel name from curves_cfg or default_curves
-        if self._curves_cfg.has_section(section) and self._curves_cfg.has_option(section, "time"):
-            time_name = self._curves_cfg.get(section, "time")
-        elif self._default_curves.has_section(section) and self._default_curves.has_option(
-            section, "time"
-        ):
-            time_name = self._default_curves.get("Curves-Dictionary", "time")
+        time_name = self._get_time_channel_name()
 
         # Load curves using the appropriate reader
         curves_reader = get_curves_reader(self._path, self._filename, time_name)

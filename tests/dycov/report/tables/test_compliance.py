@@ -47,7 +47,6 @@ def test_create_map_all_keys_present():
     assert isinstance(table, list)
     # There should be 7 main checks + 5 simple times + 3 composed times = 18 rows
     assert len(table) == 15
-    # Check a few representative rows for correct structure and formatting
     assert table[0][0] == "Unit not disconnected by protections"
     assert table[0][2] in ("True", "\\textcolor{red}{ False }")
     assert table[3][0] == "Frequency remains within [49, 51] Hz"
@@ -106,6 +105,24 @@ def test_create_map_empty_results():
     results = {}
     table = create_map(results)
     assert table == []
+
+
+def test_create_map_repeated_non_compliant_time_note_reuses_footnote():
+    results = {
+        "freq1": 12.345,
+        "freq1_check": True,
+        "AVR_5": 0.123,
+        "AVR_5_check": False,
+        "imax_reac": 1.234,
+        "imax_reac_check": False,
+    }
+    table = create_map(results)
+    freq_row = next(row for row in table if row[0] == "Frequency remains within [49, 51] Hz")
+    avr_row = next(row for row in table if row[0].startswith("Stator voltage"))
+    imax_row = next(row for row in table if row[0].startswith("Reactive inj."))
+    assert freq_row[1].startswith("\\footnote{If non-compliant, time at which this happens.}")
+    assert avr_row[1].startswith("\\footnotemark[\\value{footnote}]")
+    assert imax_row[1].startswith("\\footnotemark[\\value{footnote}]")
 
 
 def test_create_map_missing_keys():

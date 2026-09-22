@@ -3,11 +3,10 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-#     marinjl@aia.es
-#     omsg@aia.es
-#     demiguelm@aia.es
+# marinjl@aia.es
+# omsg@aia.es
+# demiguelm@aia.es
 #
-
 import tempfile
 from pathlib import Path
 
@@ -17,43 +16,21 @@ import pandas as pd
 import pytest
 
 from dycov.configuration.cfg import config
+from dycov.report.curve_classification import is_controlled_magnitude
 from dycov.report.figure import (
     _add_curve2plot,
     _get_xrange,
+    _get_xrange_for_curve,
     _get_yrange,
-    _is_controlled_magnitude,
-    _plot_additional_curves,
-    _plot_response_characteristics,
     create_plot,
     get_common_time_range,
+    get_curves2plot,
 )
+from dycov.report.figure_decorations import draw_additional_curves, draw_response_characteristics
+from dycov.report.figure_renderer import MatplotlibRenderer
+from dycov.report.types import FigureDescription
 
 matplotlib.use("Agg")
-
-
-# Helper to reset config values after test
-class ConfigReset:
-    def __init__(self):
-        self._backup = {}
-
-    def set(self, section, key, value):
-        if not hasattr(config, "_user_config"):
-            return
-        if not config._user_config.has_section(section):
-            config._user_config.add_section(section)
-        self._backup[(section, key)] = (
-            config._user_config.get(section, key)
-            if config._user_config.has_option(section, key)
-            else None
-        )
-        config._user_config.set(section, key, str(value))
-
-    def remove(self, section, key):
-        if (section, key) in self._backup:
-            if self._backup[(section, key)] is None:
-                config._user_config.remove_option(section, key)
-            else:
-                config._user_config.set(section, key, self._backup[(section, key)])
 
 
 @pytest.fixture(autouse=True)
@@ -62,37 +39,66 @@ def cleanup_matplotlib():
     plt.close("all")
 
 
+@pytest.fixture
+def set_user_option():
+    """Yields a setter that writes options into the in-memory user config and
+    restores the previous state on teardown."""
+    parser = config._user_config
+    added_sections = []
+    backup = {}
+
+    def _set(section, key, value):
+        if not parser.has_section(section):
+            parser.add_section(section)
+            added_sections.append(section)
+        if (section, key) not in backup:
+            backup[(section, key)] = (
+                parser.get(section, key) if parser.has_option(section, key) else None
+            )
+        parser.set(section, key, str(value))
+
+    yield _set
+
+    for (section, key), old_value in backup.items():
+        if old_value is None:
+            parser.remove_option(section, key)
+        else:
+            parser.set(section, key, old_value)
+    for section in added_sections:
+        parser.remove_section(section)
+
+
 def test_create_plot_saves_expected_plot():
-    # Setup
     time = [0, 1, 2, 3, 4]
     curves = [{"curve": [0, 1, 2, 3, 4], "color": "#4c72b0", "style": "-"}]
     time_reference = [0, 1, 2, 3, 4]
     curves_reference = [{"curve": [0, 0.5, 1, 1.5, 2], "color": "#dd8452", "style": "-"}]
     time_range = {"min": 0, "max": 4}
-    additional_curves = ["10P", "freq_1"]
     results = {"AVR_5_crvs": [[1, 1, 1, 1, 1]], "time_85U": 2, "sim_t_event_start": 0}
     unit = "MW"
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = Path(tmpdir) / "plot.png"
+        figure_description = FigureDescription(
+            name="IpInjTerminal",
+            variables="IpInjTerminal",
+            ylabel=unit,
+        )
         create_plot(
             time,
-            "InjectedActiveCurrent",
+            figure_description,
             curves,
             time_reference,
             curves_reference,
             time_range,
             output_file,
-            additional_curves,
             results,
-            unit,
-            log_title="",
         )
         assert output_file.exists()
         assert output_file.stat().st_size > 0
 
 
 def test_get_common_time_range_includes_all_events():
-    # Setup
     time = [0, 1, 2, 3, 4]
     curves = {"time": time, "BusPDR_BUS_ActivePower": [0, 1, 2, 3, 4]}
     results = {
@@ -101,100 +107,151 @@ def test_get_common_time_range_includes_all_events():
         "sim_t_event_end": 3.0,
         "calc_settling_time": 3.5,
     }
-    figures_description = {"OC": [("desc", [{"type": "bus", "variable": "ActivePower"}])]}
+
+    figures_description = {
+        "OC": [
+            FigureDescription(
+                name="desc", variables=[{"type": "bus", "variable": "ActivePower"}], ylabel=""
+            )
+        ]
+    }
+
     unit_characteristics = {}
     operating_condition = "OC.Benchmark"
+
     xmin, xmax = get_common_time_range(
         operating_condition,
         unit_characteristics,
         figures_description,
         results,
-        log_title="",
     )
     assert xmin <= 1.0
     assert xmax >= 3.5
 
 
-def test_plot_functions_with_missing_config_values():
-    # Remove config values if present
-    reset = ConfigReset()
-    reset.set("Global", "graph_rel_tol", "")
-    reset.set("Global", "graph_abs_tol", "")
-    reset.set("Global", "graph_preevent_trange_pct", "")
-    reset.set("Global", "graph_postevent_trange_pct", "")
-    try:
-        # Should fallback to defaults and not raise
-        time_curve = [0, 1, 2, 3, 4]
-        curve = [1, 2, 3, 4, 5]
-        unit_characteristics = {}
-        operating_condition = "OC.Benchmark"
-        sim_t_event_end = 4
-        _get_xrange_for_curve = __import__(
-            "dycov.report.figure", fromlist=["_get_xrange_for_curve"]
-        )._get_xrange_for_curve
-        xmin, xmax = _get_xrange_for_curve(
-            operating_condition, unit_characteristics, time_curve, curve, sim_t_event_end
-        )
-        assert isinstance(xmin, (float, type(None)))
-        assert isinstance(xmax, (float, type(None)))
-    finally:
-        reset.remove("Global", "graph_rel_tol")
-        reset.remove("Global", "graph_abs_tol")
-        reset.remove("Global", "graph_preevent_trange_pct")
-        reset.remove("Global", "graph_postevent_trange_pct")
+def test_get_xrange_for_curve_falls_back_to_defaults_on_empty_values(set_user_option):
+    set_user_option("Figures", "graph_rel_tol", "")
+    set_user_option("Figures", "graph_abs_tol", "")
+    set_user_option("Figures", "graph_preevent_trange_pct", "")
+    set_user_option("Figures", "graph_postevent_trange_pct", "")
+    time_curve = [0, 1, 2, 3, 4]
+    curve = [0, 5, 5, 5, 5]
+    sim_t_event_end = 0.5
+
+    xmin, xmax = _get_xrange_for_curve("OC.Benchmark", {}, time_curve, curve, sim_t_event_end)
+
+    # Settling at t=1, defaults 15%/20% of the [t_event, t_SS] window (min 1s)
+    assert xmin == pytest.approx(0.35)
+    assert xmax == pytest.approx(1.2)
+
+
+def test_get_xrange_for_curve_honors_figures_overrides(set_user_option):
+    set_user_option("Figures", "graph_preevent_trange_pct", "50")
+    set_user_option("Figures", "graph_postevent_trange_pct", "100")
+    time_curve = [0, 1, 2, 3, 4]
+    curve = [0, 5, 5, 5, 5]
+    sim_t_event_end = 0.5
+
+    xmin, xmax = _get_xrange_for_curve("OC.Benchmark", {}, time_curve, curve, sim_t_event_end)
+
+    assert xmin == pytest.approx(0.0)
+    assert xmax == pytest.approx(2.0)
 
 
 def test_add_curve2plot_applies_color_and_style():
     df = pd.DataFrame(
         {
-            "InjectedActiveCurrent": [1, 2, 3],
-            "InjectedReactiveCurrent": [4, 5, 6],
-            "AVRSetpointPu": [7, 8, 9],
+            "IpInjTerminal": [1, 2, 3],
+            "IqInjTerminal": [4, 5, 6],
+            "VoltageSetpointPu": [7, 8, 9],
             "Other": [10, 11, 12],
         }
     )
+
     plot_curves = []
-    _add_curve2plot("InjectedActiveCurrent", "InjectedActiveCurrent", df, plot_curves)
+
+    _add_curve2plot("IpInjTerminal", "IpInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#64b5cd"
-    _add_curve2plot("InjectedReactiveCurrent", "InjectedReactiveCurrent", df, plot_curves)
+
+    _add_curve2plot("IqInjTerminal", "IqInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8172b3"
-    _add_curve2plot("AVRSetpointPu", "AVRSetpointPu", df, plot_curves)
+
+    _add_curve2plot("VoltageSetpointPu", "VoltageSetpointPu", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8c8c8c"
+
     _add_curve2plot("Other", "Other", df, plot_curves)
     assert plot_curves[-1]["color"] == "#4c72b0"
 
 
-def test_get_yrange_applies_explicit_range_for_low_variation():
-    # Setup config for low variation threshold
-    reset = ConfigReset()
-    reset.set("Global", "graph_minvariaton_yrange_pct", "100")
-    reset.set("Global", "graph_bottom_yrange_pct", "10")
-    reset.set("Global", "graph_top_yrange_pct", "5")
-    try:
-        curve = [1, 1, 1, 1, 1]
-        yrange_min, yrange_max = _get_yrange([{"curve": curve}])
-        assert yrange_min is not None
-        assert yrange_max is not None
-        assert yrange_max > yrange_min
-    finally:
-        reset.remove("Global", "graph_minvariaton_yrange_pct")
-        reset.remove("Global", "graph_bottom_yrange_pct")
-        reset.remove("Global", "graph_top_yrange_pct")
+def test_get_curves2plot_reference_skips_setpoint_and_missing_columns():
+    reference = pd.DataFrame(
+        {
+            "BusPDR_BUS_Voltage": [1.0, 0.9],
+            "Wind_Turbine_GEN_VoltageSetpointPu": [1.0, 1.0],
+        }
+    )
+    variables = [
+        {"type": "bus", "variable": "Voltage"},
+        {"type": "bus", "variable": "ActivePower"},
+        {"type": "generator", "variable": "VoltageSetpointPu"},
+    ]
+
+    plot_curves = get_curves2plot(variables, reference, is_reference=True)
+
+    assert [curve["name"] for curve in plot_curves] == ["BusPDR_BUS_Voltage"]
+
+
+def test_get_yrange_applies_explicit_range_for_low_variation(set_user_option):
+    set_user_option("Figures", "graph_minvariation_yrange_pct", "100")
+    set_user_option("Figures", "graph_bottom_yrange_pct", "10")
+    set_user_option("Figures", "graph_top_yrange_pct", "5")
+    curve = [1, 1, 1, 1, 1]
+
+    yrange_min, yrange_max = _get_yrange([{"curve": curve}])
+
+    # Flat curve: variation replaced by 0.1*|midpoint|, expanded by 1.2 / 1.1
+    assert yrange_min == pytest.approx(0.94)
+    assert yrange_max == pytest.approx(1.055)
+
+
+def test_get_yrange_honors_figures_margins(set_user_option):
+    set_user_option("Figures", "graph_minvariation_yrange_pct", "100")
+    set_user_option("Figures", "graph_bottom_yrange_pct", "50")
+    set_user_option("Figures", "graph_top_yrange_pct", "25")
+    curve = [1.0, 1.1]
+
+    yrange_min, yrange_max = _get_yrange([{"curve": curve}])
+
+    assert yrange_min == pytest.approx(0.95)
+    assert yrange_max == pytest.approx(1.125)
+
+
+def test_get_yrange_auto_range_option_disables_explicit_range(set_user_option):
+    set_user_option("Figures", "graph_auto_range_yrange", "true")
+    curve = [1, 1, 1, 1, 1]
+
+    yrange_min, yrange_max = _get_yrange([{"curve": curve}])
+
+    assert yrange_min is None
+    assert yrange_max is None
+
+
+def test_graph_options_in_global_section_are_ignored(set_user_option):
+    set_user_option("Global", "graph_bottom_yrange_pct", "1000")
+    set_user_option("Global", "graph_top_yrange_pct", "1000")
+    curve = [1, 1, 1, 1, 1]
+
+    yrange_min, yrange_max = _get_yrange([{"curve": curve}])
+
+    # The [Figures] defaults apply; values under [Global] have no effect
+    assert yrange_min == pytest.approx(0.94)
+    assert yrange_max == pytest.approx(1.055)
 
 
 def test_plot_additional_curves_renders_all_types():
+    from dycov.report.types import DynamicBand, EventMarker, FinalValueBand, FrequencyBand
+
     time = [0, 1, 2, 3, 4]
-    additional_curves = [
-        "10P",
-        "5P",
-        "10Pfloor",
-        "5Pfloor",
-        "85U",
-        "freq_1",
-        "freq_200",
-        "freq_250",
-        "AVR5",
-    ]
     results = {
         "time_85U": 2,
         "sim_t_event_start": 0,
@@ -202,8 +259,18 @@ def test_plot_additional_curves_renders_all_types():
     }
     ymin, ymax = 0, 2
     last_val = 1
-    # Should not raise
-    _plot_additional_curves(time, additional_curves, results, last_val, ymin, ymax)
+
+    renderer = MatplotlibRenderer()
+    figure_description_test = FigureDescription(
+        name="test",
+        variables="BusPDR_BUS_ActivePower",
+        ylabel="",
+        tolerance_band=FinalValueBand(upper=10.0, lower=10.0, color="#55a868"),
+        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        dynamic_band=DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs"),
+        event_markers=[EventMarker(source_key="time_85U")],
+    )
+    draw_additional_curves(renderer, figure_description_test, time, last_val, results, ymin, ymax)
 
 
 def test_plot_response_characteristics_annotations():
@@ -217,51 +284,49 @@ def test_plot_response_characteristics_annotations():
         "calc_settling_time": 3.0,
         "calc_ss_value": 2.5,
     }
-    # Should not raise and should annotate
-    _plot_response_characteristics("BusPDR_BUS_ActivePower", results)
+
+    renderer = MatplotlibRenderer()
+    draw_response_characteristics(renderer, "BusPDR_BUS_ActivePower", results)
 
 
 def test_is_controlled_magnitude_identifies_correct_combinations():
-    assert _is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
-    assert _is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
-    assert _is_controlled_magnitude("BusPDR_BUS_ActivePower", "Q") is False
-    assert _is_controlled_magnitude("UnknownCurve", "P") is False
+    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
+    assert is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
+    assert is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
+    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "Q") is False
+    assert is_controlled_magnitude("UnknownCurve", "P") is False
 
 
 def test_plot_functions_with_unsupported_curve_types():
     # Should not raise
-    # Pass a dict as a curve
     try:
         _get_yrange([{"curve": {"a": 1, "b": 2}}])
     except Exception:
-        pass  # Acceptable: dicts can't be max/min'ed, but should not crash the whole suite
+        pass
 
-    # Pass an object as a curve
     class Dummy:
         pass
 
     try:
         _get_yrange([{"curve": Dummy()}])
     except Exception:
-        pass  # Acceptable
+        pass
 
 
 def test_get_xrange_aggregates_curve_ranges():
-    # Setup
     def fake_get_xrange_for_curve(
         operating_condition, unit_characteristics, time_curve, curve, sim_t_event_end
     ):
         return min(time_curve), max(time_curve)
 
-    # Patch in the function
     import dycov.report.figure as figure_mod
 
     orig = figure_mod._get_xrange_for_curve
     figure_mod._get_xrange_for_curve = fake_get_xrange_for_curve
+
     try:
         curves = [
             {"curve": [1, 2, 3]},
@@ -272,28 +337,29 @@ def test_get_xrange_aggregates_curve_ranges():
         operating_condition = "OC.Benchmark"
         unit_characteristics = {}
         sim_t_event_end = 2
+
         xmin, xmax = _get_xrange(
-            operating_condition, unit_characteristics, time_curve, curves, sim_t_event_end
+            operating_condition,
+            unit_characteristics,
+            time_curve,
+            curves,
+            sim_t_event_end,
         )
+
         assert xmin == 0
         assert xmax == 2
+
     finally:
         figure_mod._get_xrange_for_curve = orig
 
 
-def test_plot_functions_with_invalid_config_types():
-    # Set config values to invalid types
-    reset = ConfigReset()
-    reset.set("Global", "graph_minvariaton_yrange_pct", "not_a_number")
-    reset.set("Global", "graph_bottom_yrange_pct", "not_a_number")
-    reset.set("Global", "graph_top_yrange_pct", "not_a_number")
-    try:
-        curve = [1, 1, 1, 1, 1]
-        try:
-            _get_yrange([{"curve": curve}])
-        except Exception:
-            pass  # Acceptable: should not crash the suite
-    finally:
-        reset.remove("Global", "graph_minvariaton_yrange_pct")
-        reset.remove("Global", "graph_bottom_yrange_pct")
-        reset.remove("Global", "graph_top_yrange_pct")
+def test_get_yrange_falls_back_to_defaults_on_invalid_values(set_user_option):
+    set_user_option("Figures", "graph_minvariation_yrange_pct", "not_a_number")
+    set_user_option("Figures", "graph_bottom_yrange_pct", "not_a_number")
+    set_user_option("Figures", "graph_top_yrange_pct", "not_a_number")
+    curve = [1, 1, 1, 1, 1]
+
+    yrange_min, yrange_max = _get_yrange([{"curve": curve}])
+
+    assert yrange_min == pytest.approx(0.94)
+    assert yrange_max == pytest.approx(1.055)

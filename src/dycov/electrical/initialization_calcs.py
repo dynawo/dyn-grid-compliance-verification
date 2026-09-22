@@ -9,46 +9,246 @@
 #
 
 import cmath
+from itertools import zip_longest
 from math import sqrt
 
 from dycov.electrical.pimodel_parameters import line_pimodel, xfmr_pimodel
 from dycov.model import parameters as mp
 
-
-# TODO: double-check whether this function is really needed or not
-def _zero_imp_line(conn_line: mp.Pimodel_params) -> bool:
-    if cmath.isinf(conn_line.Ytr) and conn_line.Ysh1 == 0 and conn_line.Ysh2 == 0:
-        return True
-
-    return False
+PDR_IDS = ("Measurements", "BusPDR")
 
 
-# TODO: Is it necessary to take into account the possibility that the user enters P or Q as zero?
-def _solve_gen_circuits(
-    gens: tuple[mp.Gen_params, ...],
-    gen_xfmrs: tuple[mp.Xfmr_params, ...],
-    v_int: complex,
-    s_int: complex,
-) -> tuple[mp.Gen_init, ...]:
-    # Calc total P,Q for calculating the sharing factors below, in case there are several units
-    tot_P = 0
-    tot_Q = 0
-    for gen in gens:
-        tot_P += gen.P
-        tot_Q += gen.Q
+def init_calcs(
+    gens: tuple[mp.GenParams, ...],
+    gen_xfmrs: tuple[mp.XfmrParams, ...],
+    aux_load: mp.LoadParams,
+    auxload_xfmr: mp.XfmrParams,
+    main_xfmr: mp.XfmrParams,
+    int_line: mp.LineParams,
+    pdr: mp.PdrParams,
+    grid_line: mp.PimodelParams,
+    grid_load: mp.LoadParams,
+    pdr_load: mp.LoadParams = None,
+) -> mp.GenInit:
+    """Calculates initialization parameters for generators.
 
-    gens_init = []
-    for gen, gen_xfmr in zip(gens, gen_xfmrs):
-        # Each gen supplies his own proportional share of the total S injection
-        s_int_share = complex(s_int.real * gen.P / tot_P, s_int.imag * gen.Q / tot_Q)
-        xfmr = xfmr_pimodel(gen_xfmr)
-        v_gen, _, s_gen = _calc_pimodel(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, None, s_int_share)
-        gen_init = mp.Gen_init(
-            id=gen.id, P0=s_gen.real, Q0=s_gen.imag, U0=abs(v_gen), UPhase0=cmath.phase(v_gen)
+    Calculates initialization parameters for the producer's
+    generators, and also for the generator on the network side when it
+    is not modeled as an infinite bus.
+
+    Calculations explained in: doc/initialization/generator_initialization.pdf
+
+    Parameters
+    ----------
+    gens: tuple
+        Params of the producer's generating units
+    gen_xfmrs: tuple
+        Params of their group transformers (a tuple)
+    aux_load: LoadParams
+        Params of the auxiliary load (if present)
+    auxload_xfmr: XfmrParams
+        Params of the auxiliary load transformer (if present)
+    main_xfmr: XfmrParams
+        Params of the plant transformer (if present)
+    int_line: LineParams
+        Params of the "internal network" line (if present)
+    pdr: PdrParams
+        Params at the PDR bus (U, S)
+    grid_line: PimodelParams
+        Params of the equiv line on the grid side (zero-impedance if not used)
+    grid_load: LoadParams
+        Params of the equiv load on the grid side (if not Inf Bus, as in Pcs I8)
+    pdr_load: LoadParams
+        Params of the equiv load hanging directly from the PDR bus (as in the
+        Islanding PCS); it consumes part of the producer's delivery before it
+        enters the grid line
+
+    Returns
+    -------
+    GenInit
+        Params for the initialization of TSO's bus side (P, Q, U, angle)
+    """
+
+    v_pdr, grid_init = _solve_grid_side(pdr, grid_line, grid_load, pdr_load)
+
+    v_node, s_node, node_ids = _solve_main_xfmr(main_xfmr, v_pdr, pdr.s, PDR_IDS)
+    v_node, s_node, node_ids = _solve_int_line(int_line, v_node, s_node, node_ids)
+    s_node = _solve_aux_branch(aux_load, auxload_xfmr, v_node, s_node)
+    _solve_gen_circuits(gens, gen_xfmrs, v_node, s_node)
+
+    return grid_init
+
+
+def _solve_grid_side(
+    pdr: mp.PdrParams,
+    grid_line: mp.PimodelParams,
+    grid_load: mp.LoadParams,
+    pdr_load: mp.LoadParams,
+) -> tuple[complex, mp.GenInit]:
+    """Solves the grid side of the PDR bus and returns the PDR voltage and grid init.
+
+    Loads hanging directly from the PDR bus consume part of the producer's delivery
+    before it enters the grid line. When the grid line has impedance, the grid bus
+    becomes the angle reference and the PDR angle is re-set globally.
+    """
+    v_pdr = cmath.rect(abs(pdr.u), 0)
+    # Sign convention: we expect Pdr to be negative; therefore we need to flip its
+    # sign here. All other loadflows below do not need this, as they are looking in
+    # the opposite direction.
+    s_line = -pdr.s
+    if pdr_load is not None:
+        s_line = s_line - complex(pdr_load.p, pdr_load.q)
+
+    if _zero_imp_line(grid_line):
+        v_grid = v_pdr
+        s_grid = s_line
+    else:
+        v_grid, _, s_grid = _calc_pimodel(
+            grid_line.y_tr, grid_line.y_sh1, grid_line.y_sh2, v_pdr, None, s_line
         )
-        gens_init.append(gen_init)
+        pdr.u_phase = -cmath.phase(v_grid)
+        v_pdr = cmath.rect(abs(pdr.u), pdr.u_phase)
+        v_grid = cmath.rect(abs(v_grid), 0)
 
-    return gens_init
+    if grid_load is not None:
+        s_grid = s_grid - complex(grid_load.p, grid_load.q)
+
+    grid_init = mp.GenInit(id=None, p0=s_grid.real, q0=s_grid.imag, u0=abs(v_grid), u_phase0=0)
+    return v_pdr, grid_init
+
+
+def _solve_int_line(
+    int_line: mp.LineParams,
+    v_in: complex,
+    s_in: complex,
+    upstream_ids: tuple[str, ...],
+) -> tuple[complex, complex, tuple[str, ...]]:
+    """Pushes the flow through the internal network line, if there is one."""
+    if int_line is None:
+        return v_in, s_in, upstream_ids
+
+    near = _near_index_from_upstream(int_line, upstream_ids)
+    v_out, s_out = _push_through(int_line, line_pimodel(int_line), v_in, s_in, near)
+    return v_out, s_out, (int_line.id,)
+
+
+def _solve_main_xfmr(
+    main_xfmr: mp.XfmrParams,
+    v_in: complex,
+    s_in: complex,
+    upstream_ids: tuple[str, ...],
+) -> tuple[complex, complex, tuple[str, ...]]:
+    """Pushes the flow through the plant-level transformer, if there is one."""
+    if main_xfmr is None:
+        return v_in, s_in, upstream_ids
+
+    near = _near_index_from_upstream(main_xfmr, upstream_ids)
+    v_out, s_out = _push_through(main_xfmr, xfmr_pimodel(main_xfmr), v_in, s_in, near)
+    return v_out, s_out, (main_xfmr.id,)
+
+
+def _solve_aux_branch(
+    aux_load: mp.LoadParams,
+    auxload_xfmr: mp.XfmrParams,
+    v_node: complex,
+    s_node: complex,
+) -> complex:
+    """Solves the auxiliary load circuit and returns the flow left for the generators."""
+    if aux_load is None:
+        return s_node
+
+    pq = complex(aux_load.p, aux_load.q)
+    near = _near_index_from_downstream(auxload_xfmr, aux_load.id)
+    ytr, ysh_near, ysh_far = _oriented(xfmr_pimodel(auxload_xfmr), near)
+    i_aux, v_aux, _ = _calc_twobus_pf(ytr, ysh_near, ysh_far, v_node, pq)
+    _record(aux_load.terminals[0], v_aux, pq)
+
+    i_gens = s_node.conjugate() / v_node.conjugate() - i_aux
+    return v_node * i_gens.conjugate()
+
+
+def _solve_gen_circuits(
+    gens: tuple[mp.GenParams, ...],
+    gen_xfmrs: tuple[mp.XfmrParams, ...],
+    v_node: complex,
+    s_node: complex,
+) -> None:
+    """Shares the node flow among the units and solves each unit's circuit."""
+    shares = _share_among_units(gens, s_node)
+    for gen, gen_xfmr, s_share in zip_longest(gens, gen_xfmrs, shares):
+        _solve_gen_circuit(gen, gen_xfmr, v_node, s_share)
+
+
+def _share_among_units(gens: tuple[mp.GenParams, ...], s_node: complex) -> list[complex]:
+    """Splits the node flow among the units, in proportion to their declared P and Q."""
+    tot_p = 0
+    tot_q = 0
+    for gen in gens:
+        tot_p += gen.p
+        tot_q += gen.q
+
+    return [complex(s_node.real * gen.p / tot_p, s_node.imag * gen.q / tot_q) for gen in gens]
+
+
+def _solve_gen_circuit(
+    gen: mp.GenParams,
+    gen_xfmr: mp.XfmrParams,
+    v_node: complex,
+    s_share: complex,
+) -> None:
+    """Initializes one unit behind its transformer, or at the node when it has none."""
+    if gen_xfmr is None:
+        _record(gen.terminals[0], v_node, s_share)
+        return
+
+    near = _near_index_from_downstream(gen_xfmr, gen.id)
+    v_gen, s_gen = _push_through(gen_xfmr, xfmr_pimodel(gen_xfmr), v_node, s_share, near)
+    _record(gen.terminals[0], v_gen, s_gen)
+
+
+def _push_through(
+    equipment: mp.Equipment,
+    pimodel: mp.PimodelParams,
+    v_near: complex,
+    s_near: complex,
+    near_index: int,
+) -> tuple[complex, complex]:
+    """Solves a two-terminal pi model from its `near_index` side and records both ends.
+
+    The transformer pi model is asymmetric: its ratio lives on the declared terminal 1
+    side, so when the known bus faces terminal 2 the pi must be solved with its shunts
+    swapped.
+    """
+    ytr, ysh_near, ysh_far = _oriented(pimodel, near_index)
+    v_far, _, s_far = _calc_pimodel(ytr, ysh_near, ysh_far, v_near, None, s_near)
+    _record(equipment.terminals[near_index], v_near, s_near)
+    _record(equipment.terminals[1 - near_index], v_far, -s_far)
+    return v_far, s_far
+
+
+def _oriented(pimodel: mp.PimodelParams, near_index: int) -> tuple[complex, complex, complex]:
+    if near_index == 0:
+        return pimodel.y_tr, pimodel.y_sh1, pimodel.y_sh2
+    return pimodel.y_tr, pimodel.y_sh2, pimodel.y_sh1
+
+
+def _near_index_from_upstream(equipment: mp.Equipment, upstream_ids: tuple[str, ...]) -> int:
+    return 0 if equipment.terminals[0].connected_equipment in upstream_ids else 1
+
+
+def _near_index_from_downstream(equipment: mp.Equipment, downstream_id: str) -> int:
+    return 1 if equipment.terminals[0].connected_equipment == downstream_id else 0
+
+
+def _record(terminal: mp.Terminal, v: complex, s: complex) -> None:
+    terminal.u0 = abs(v)
+    terminal.u_phase0 = cmath.phase(v)
+    terminal.p0 = s.real
+    terminal.q0 = s.imag
+
+
+def _zero_imp_line(conn_line: mp.PimodelParams) -> bool:
+    return cmath.isinf(conn_line.y_tr) and conn_line.y_sh1 == 0 and conn_line.y_sh2 == 0
 
 
 def _calc_pimodel(
@@ -126,131 +326,3 @@ def _calc_twobus_pf(
     i1 = (v1 - v2) * ytr + v1 * ysh1
 
     return i1, v2, i2
-
-
-def init_calcs(
-    gens: tuple[mp.Gen_params, ...],
-    gen_xfmrs: tuple[mp.Xfmr_params, ...],
-    aux_load: mp.Load_params,
-    auxload_xfmr: mp.Xfmr_params,
-    ppm_xfmr: mp.Xfmr_params,
-    int_line: mp.Line_params,
-    pdr: mp.Pdr_params,
-    grid_line: mp.Pimodel_params,
-    grid_load: mp.Load_params,
-) -> tuple[mp.Gen_init, tuple[mp.Gen_init, ...], mp.Load_init]:
-    """Calculates initialization parameters for generators.
-
-    Calculates initialization parameters for the producer's
-    generators, and also for the generator on the network side when it
-    is not modeled as an infinite bus.
-
-    Calculations explained in: doc/initialization/generator_initialization.pdf
-
-    Parameters
-    ----------
-    gens: tuple
-        Params of the producer's generating units
-    gen_xfmrs: tuple
-        Params of their step-up transformers (a tuple)
-    aux_load: Load_params
-        Params of the auxiliary load (if present)
-    auxload_xfmr: Xfmr_params
-        Params of the auxiliary load transformer (if present)
-    ppm_xfmr: Xfmr_params
-        Params of the plant transformer (if present)
-    int_line: Line_params
-        Params of the "internal network" line (if present)
-    pdr: Pdr_params
-        Params at the PDR bus (U, S)
-    grid_line: Pimodel_params
-        Params of the equiv line on the grid side (zero-impedance if not used)
-    grid_load: Load_params
-        Params of the equiv load on the grid side (if not Inf Bus, as in Pcs I8)
-
-    Returns
-    -------
-    Gen_init
-        Params for the initialization of TSO's bus side (P, Q, U, angle)
-    tuple
-        Params for the producer's gen initialization (P, Q, U, angle)
-    Load_init
-        Params for the producer's aux load initialization (U, angle)
-    """
-
-    #####################################################################
-    # First loadflow: calculate voltage and current at the grid bus
-    # [THIS STEP IS COMMON TO ALL TOPOLOGIES]
-    #####################################################################
-    v_pdr = cmath.rect(abs(pdr.U), 0)
-    # Sign convention: we expect Pdr to be negative; therefore we need
-    # to flip its sign here in this call. All other loadflows below do
-    # not need this, as they are looking in the opposite direction.
-    if _zero_imp_line(grid_line):
-        v_grid = v_pdr
-        s_grid = -pdr.S
-    else:
-        v_grid, _, s_grid = _calc_pimodel(
-            grid_line.Ytr, grid_line.Ysh1, grid_line.Ysh2, v_pdr, None, -pdr.S
-        )
-        # Re-set phase angle globally. The grid sets the reference now:
-        angle = cmath.phase(v_grid)
-        v_pdr = cmath.rect(abs(pdr.U), -angle)
-        v_grid = cmath.rect(abs(v_grid), 0)
-    # If the grid bus is not Inf (as in Pcs I8), calc also the PQ init params of the equiv gen
-    if grid_load is not None:
-        s_grid = s_grid - complex(grid_load.P, grid_load.Q)
-    # We return both the grid bus voltage and PQ init params in one single object
-    grid_init = mp.Gen_init(id=None, P0=s_grid.real, Q0=s_grid.imag, U0=abs(v_grid), UPhase0=0)
-
-    ##########################################################################
-    # Second loadflow: calculate voltage and current at the other side of the
-    # internal network representation (if there is one).
-    # [THIS STEP IS COMMON TO ALL TOPOLOGIES]
-    ##########################################################################
-    if int_line is None:
-        v_int = v_pdr
-        s_int = pdr.S
-    else:
-        line = line_pimodel(int_line)
-        v_int, _, s_int = _calc_pimodel(line.Ytr, line.Ysh1, line.Ysh2, v_pdr, None, pdr.S)
-    # Next comes the plant-level transformer, if present
-    if ppm_xfmr is not None:
-        xfmr = line_pimodel(ppm_xfmr)
-        v_int, _, s_int = _calc_pimodel(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, None, s_int)
-
-    ##########################################################################
-    # Now things are different depending on the topology:
-    #
-    #   * Topologies S, S+i, M, M+i: perform a Third loadflow simply calculating
-    #     volt and current behind the step-up transformers.
-    #
-    #   * Topologies S+Aux, S+Aux+i, M+Aux, M+Aux+i:
-    #       - first calculate a Third loadflow for solving the Aux Load circuit
-    #       - then calculate a Fourth loadflow for the volt & current behind the
-    #         step-up transformers
-    #
-    ##########################################################################
-    gens_init = []
-    aux_load_init = None
-    if aux_load is None:
-        gens_init = _solve_gen_circuits(gens, gen_xfmrs, v_int, s_int)
-    else:
-        # solve first the powerflow for the aux load circuit
-        xfmr = xfmr_pimodel(auxload_xfmr)
-        pq = complex(aux_load.P, aux_load.Q)
-        i1_aux, v2_aux, _ = _calc_twobus_pf(xfmr.Ytr, xfmr.Ysh1, xfmr.Ysh2, v_int, pq)
-        aux_load_init = mp.Load_init(
-            id=aux_load.id,
-            lib=aux_load.lib,
-            P0=aux_load.P,
-            Q0=aux_load.Q,
-            U0=abs(v2_aux),
-            UPhase0=cmath.phase(v2_aux),
-        )
-        # Now we can solve the generators' circuits
-        i_gens = s_int.conjugate() / v_int.conjugate() - i1_aux
-        s_int_gens = v_int * i_gens.conjugate()
-        gens_init = _solve_gen_circuits(gens, gen_xfmrs, v_int, s_int_gens)
-
-    return grid_init, gens_init, aux_load_init

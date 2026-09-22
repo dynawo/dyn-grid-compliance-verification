@@ -114,11 +114,8 @@ class TestSteadyStateErrorTable:
             ],
         ):
             assert entry[0] == name
-            # Check formatted MAE value (rounded to 3 significant digits)
             assert entry[1] == f"{results[mae_key]:.3g}"
-            # Check formatted SS error value (rounded to 3 significant digits)
             assert entry[2] == f"{results[ss_key]:.3g}"
-            # Check check value is formatted as LaTeX True
             assert entry[3] == "{ True }"
 
     def test_steady_state_error_latex_coloring_on_failure(self):
