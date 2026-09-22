@@ -9,7 +9,6 @@ FROM python:3.13-slim-bookworm
 ARG dycov_PKG=dycov-0.8.1-py3-none-any.whl
 ARG dycov_EXAMPLES=examples
 ARG dycov_WORKBOOKS=workbooks
-ARG dycov_TOOLS=tools
 ARG dycov_TUTORIALS=tutorials
 ARG dycov_INSTALLATION=installation
 ARG DYNAWO_DIR_NAME=dynawo_build
@@ -40,10 +39,6 @@ COPY ./$dycov_EXAMPLES /opt/dycov/examples
 
 # Copy the blank workbooks an installation is described in.
 COPY ./$dycov_WORKBOOKS /opt/dycov/workbooks
-
-# Copy the standalone Dynawo PAR generation utility (tools/dynawo_par).
-# It is a dependency-free helper, not part of the dycov package.
-COPY ./$dycov_TOOLS /opt/dycov/tools
 
 # Copy the user-facing tutorials (Markdown). Kept as-is so their relative
 # cross-links work, including the link from tutorials/README.md to

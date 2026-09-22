@@ -53,10 +53,9 @@ fi
 TEMP_DIR=$(mktemp -d temp.XXXXXX)
 
 EXAMPLES_DIR="$TEMP_DIR/examples"
-TOOLS_DIR="$TEMP_DIR/tools"
 DYNAWO_DIR_NAME="$TEMP_DIR/dynawo_build"
 
-mkdir -p "$EXAMPLES_DIR" "$TOOLS_DIR" "$DYNAWO_DIR_NAME"
+mkdir -p "$EXAMPLES_DIR" "$DYNAWO_DIR_NAME"
 
 cleanup() {
     echo "Cleaning up temp directory..."
@@ -157,17 +156,6 @@ fi
 
 
 ########################################
-# 5b. Copy standalone tools (Dynawo PAR utility)
-########################################
-
-echo "Copying standalone tools..."
-if ! git -C "$ROOT_DIR" archive HEAD tools/dynawo_par | tar -x -C "$TOOLS_DIR" --strip-components=1; then
-    echo "ERROR: could not stage tools/dynawo_par from Git."
-    exit 1
-fi
-
-
-########################################
 # 6. Copy Dynawo
 ########################################
 
@@ -246,7 +234,6 @@ docker build \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
     --build-arg dycov_WORKBOOKS="workbooks" \
-    --build-arg dycov_TOOLS="tools" \
     --build-arg dycov_TUTORIALS="tutorials" \
     --build-arg dycov_INSTALLATION="installation" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \
