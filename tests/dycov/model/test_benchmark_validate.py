@@ -166,3 +166,39 @@ def test_missing_curves_make_the_summary_invalid(benchmark, monkeypatch):
     assert compliance == Compliance.InvalidTest
     assert results["summary"] == Compliance.InvalidTest
     assert results["missed_columns"] == ["BusPDR_BUS_Voltage"]
+
+
+def test_a_test_without_reference_curves_keeps_saying_so(benchmark, monkeypatch):
+    from dycov.model.compliance import Compliance
+    from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationResult
+
+    benchmark._curves_manager = DummyCurvesManager(missed_curves=["BusPDR_BUS_Voltage"])
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__get_curves_check_result",
+        lambda names, bm_name, oc_name: CurvesCheckResult(
+            working_oc_dir=Path("/tmp"),
+            jobs_output_dir=Path("/tmp"),
+            event_params={},
+            simulation_result=SimulationResult(
+                appicable=True, success=True, time_exceeds=False, has_simulated_curves=True
+            ),
+            availability=CurvesAvailability.NO_REFERENCE,
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__validate",
+        lambda *args, **kwargs: (True, {}, Compliance.Compliant),
+        raising=False,
+    )
+
+    _, compliance, results = benchmark._Benchmark__validate_operating_condition(
+        DummyOperatingCondition("First")
+    )
+
+    # The missing columns are why there is no reference: saying "invalid test" instead would
+    # discard the reason the tool already worked out.
+    assert compliance == Compliance.WithoutReferenceCurves
+    assert results["summary"] == Compliance.WithoutReferenceCurves

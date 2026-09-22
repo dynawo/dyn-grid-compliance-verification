@@ -1,6 +1,5 @@
 # RMS model validation with DyCoV
 
-**DyCoV version:** 1.2.0  
 **Scope:** RMS (phasor) model validation according to RTE PCS‑I16, including
 Zone 1 / Zone 3 validation, required inputs, execution workflow and result
 interpretation for both PPM and BESS installations.

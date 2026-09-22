@@ -65,8 +65,9 @@ def _get_curve_names(
             elif name["type"] == "bus":
                 curve_names.extend(["BusPDR" + "_BUS_" + name["variable"]])
 
-    ip_names = [n for n in curve_names if "IpInjTerminal" in n]
-    if ip_names:
+    ip_names = [n for n in curve_names if "ActiveCurrentInjTerminal" in n]
+    iq_names = [n for n in curve_names if "ReactiveCurrentInjTerminal" in n]
+    if ip_names and iq_names:
         mag_names = [col for col in curves.columns if "modIInjTerminal" in col]
         for insert_pos, mag_name in enumerate(mag_names):
             curve_names.insert(insert_pos, mag_name)
@@ -77,7 +78,7 @@ def _get_curve_names(
 def _has_iq_curve(variables) -> bool:
     if isinstance(variables, str):
         return False
-    return any("IqInjTerminal" in v.get("variable", "") for v in variables)
+    return any("ReactiveCurrentInjTerminal" in v.get("variable", "") for v in variables)
 
 
 def _plotly_figures(
@@ -91,7 +92,7 @@ def _plotly_figures(
     zone: int = 0,
 ):
     renderer = PlotlyRenderer(fig)
-    is_iq_curve = "IqInjTerminal" in curve_name
+    is_iq_curve = "ReactiveCurrentInjTerminal" in curve_name
     if is_iq_curve or not _has_iq_curve(figure_description.variables):
         last_val = (
             band_ref_val if band_ref_val is not None else calculated_curves[curve_name].iloc[-1]
