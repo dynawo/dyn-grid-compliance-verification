@@ -38,11 +38,7 @@ AUX_ID = "Aux_Load"
 GROUP_XFMR_ID = "Group_Xfmr"
 SM_ID = "Synch_Gen"
 PPM_ID = "Power_Park"
-PPM1_ID = "Power_Park_1"
-PPM2_ID = "Power_Park_2"
 BESS_ID = "Storage"
-BESS1_ID = "Storage_1"
-BESS2_ID = "Storage_2"
 
 SM_TERMINAL = "generator_terminal"
 PPM_TERMINAL = "PPM_TERMINAL"
@@ -175,11 +171,15 @@ TOPOLOGY_LAYOUTS = {
 }
 
 
-def _layout(topology: str) -> dict:
-    """Returns the layout of the selected topology, whichever way the caller spelled it."""
+def _layout(topology: str, n_generators: int = None) -> dict:
+    """Returns the layout of the selected topology, dynamically updating units
+    count for M topologies."""
     for name, layout in TOPOLOGY_LAYOUTS.items():
         if name.casefold() == topology.casefold():
-            return layout
+            result = layout.copy()
+            if topology.casefold().startswith("m") and n_generators is not None:
+                result["units"] = n_generators
+            return result
 
     available = "".join(f"  - {name}\n" for name in TOPOLOGY_LAYOUTS)
     raise ValueError(f"Select one of the 8 available topologies:\n{available}")
@@ -190,13 +190,13 @@ def _generating_units(validation_type: int, units: int) -> list[tuple[str, str, 
     if validation_type == PERFORMANCE_SM:
         return [(SM_ID, SM_DYNAMIC_MODEL, SM_TERMINAL)]
     if validation_type in (PERFORMANCE_PPM, VALIDATION_PPM):
-        lib, terminal, ids = PPM_DYNAMIC_MODEL, PPM_TERMINAL, (PPM_ID, PPM1_ID, PPM2_ID)
+        lib, terminal, base_id = PPM_DYNAMIC_MODEL, PPM_TERMINAL, PPM_ID
     else:
-        lib, terminal, ids = BESS_DYNAMIC_MODEL, BESS_TERMINAL, (BESS_ID, BESS1_ID, BESS2_ID)
+        lib, terminal, base_id = BESS_DYNAMIC_MODEL, BESS_TERMINAL, BESS_ID
 
     if units == 1:
-        return [(ids[0], lib, terminal)]
-    return [(ids[i + 1], lib, terminal) for i in range(units)]
+        return [(base_id, lib, terminal)]
+    return [(f"{base_id}_{i + 1}", lib, terminal) for i in range(units)]
 
 
 class _DydWriter:
@@ -298,14 +298,19 @@ def _create_zone1_topology(
 
 
 def _create_zone3_topology(
-    dyd_root: etree.Element, ns: str, validation_type: int, par_filename: str, topology: str
+    dyd_root: etree.Element,
+    ns: str,
+    validation_type: int,
+    par_filename: str,
+    topology: str,
+    n_generators: int = None,
 ) -> None:
     """Zone 3: PDR - Main_Xfmr - [IntNetwork_Line] - Int_Bus - generating units.
 
     The group transformer of each unit lives inside its dynamic model, so the only
     transformer in series with the PDR is the main one.
     """
-    layout = _layout(topology)
+    layout = _layout(topology, n_generators)
     writer = _DydWriter(dyd_root, ns, par_filename)
     units = _generating_units(validation_type, layout["units"])
 
@@ -408,6 +413,7 @@ def _create_producer_dyd_file(
     validation_type: int,
     zone: int,
     remote_control: bool = True,
+    n_generators: int = None,
 ) -> None:
     if (target / "Producer.dyd").exists():
         (target / "Producer.dyd").unlink()
@@ -420,13 +426,14 @@ def _create_producer_dyd_file(
 
     par_filename = filename.replace(".dyd", ".par")
     if zone == 1:
-        _layout(topology)
+        _layout(topology, n_generators)
         _create_zone1_topology(dyd_root, ns, validation_type, par_filename)
     else:
-        _create_zone3_topology(dyd_root, ns, validation_type, par_filename, topology)
+        _create_zone3_topology(dyd_root, ns, validation_type, par_filename, topology, n_generators)
 
     if remote_control:
-        for gen_id, gen_terminal in _plant_generators(validation_type, topology):
+        units_count = n_generators if n_generators is not None else 2
+        for gen_id, gen_terminal in _plant_generators(validation_type, topology, units_count):
             _add_remote_control(dyd_root, ns, gen_id, gen_terminal)
 
     write_producer_dyd(dyd_root, target / filename)
@@ -436,6 +443,7 @@ def create_producer_dyd_file(
     target: Path,
     topology: str,
     template: str,
+    n_generators: int = None,
 ) -> None:
     """Create a DYD file in target path with the selected topology.
 
@@ -452,6 +460,8 @@ def create_producer_dyd_file(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
+    n_generators: int, optional
+        Number of generating units identified from the topology.
     """
     if template.startswith("performance"):
         validation_type = PERFORMANCE_SM
@@ -459,24 +469,39 @@ def create_producer_dyd_file(
             validation_type = PERFORMANCE_PPM
         elif template == "performance_BESS":
             validation_type = PERFORMANCE_BESS
-        _create_producer_dyd_file(target, "Producer.dyd", topology, validation_type, 3)
+        _create_producer_dyd_file(
+            target, "Producer.dyd", topology, validation_type, 3, n_generators=n_generators
+        )
 
     elif template.startswith("model"):
         validation_type = VALIDATION_PPM
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
+
         if topology.casefold().startswith("m"):
-            _create_producer_dyd_file(
-                target / "Zone1", "Producer_G1.dyd", "S", validation_type, 1, remote_control=False
-            )
-            _create_producer_dyd_file(
-                target / "Zone1", "Producer_G2.dyd", "S", validation_type, 1, remote_control=False
-            )
+            units = n_generators if n_generators is not None else 2
+            for i in range(1, units + 1):
+                _create_producer_dyd_file(
+                    target / "Zone1",
+                    f"Producer_G{i}.dyd",
+                    "S",
+                    validation_type,
+                    1,
+                    remote_control=False,
+                )
         else:
             _create_producer_dyd_file(
                 target / "Zone1", "Producer.dyd", "S", validation_type, 1, remote_control=False
             )
-        _create_producer_dyd_file(target / "Zone3", "Producer.dyd", topology, validation_type, 3)
+
+        _create_producer_dyd_file(
+            target / "Zone3",
+            "Producer.dyd",
+            topology,
+            validation_type,
+            3,
+            n_generators=n_generators,
+        )
 
     else:
         raise ValueError("Unsupported template name")

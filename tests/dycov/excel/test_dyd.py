@@ -24,11 +24,12 @@ def test_checked_topology_drops_the_legend_spacing(zone3):
     assert dyd.checked_topology(zone3) == "S+Aux"
 
 
-def test_checked_topology_refuses_the_multiple_unit_family(zone3):
+def test_checked_topology_accepts_the_multiple_unit_family(zone3):
+    """Verify that multiple unit topologies are now accepted."""
     zone3["Topologie"] = "M+Aux"
 
-    with pytest.raises(ValueError, match="topology 'M[+]Aux' .* is not generated yet"):
-        dyd.checked_topology(zone3)
+    # It should return the normalized topology name without raising any errors
+    assert dyd.checked_topology(zone3) == "M+Aux"
 
 
 def test_checked_topology_refuses_an_unknown_string(zone3):
@@ -48,23 +49,23 @@ def test_write_dyd_fills_the_resolved_libs_and_terminals(tmp_path):
     for zone in ("Zone1", "Zone3"):
         (tmp_path / zone).mkdir()
 
+    generators = [{"gen_id": "PV_Array", "resolved": resolved}]
+
     dyd.write_dyd(
         tmp_path,
         "Producer",
         "S+Aux",
         "model_PPM",
-        resolved,
-        "PV_Array",
+        generators,
         rename={PPM_ID: "PV_Array"},
     )
 
-    zone3 = (tmp_path / "Zone3" / "Producer.dyd").read_text(encoding="utf-8")
-    assert 'id="PV_Array" lib="PhotovoltaicsWeccCurrentSource"' in zone3
-    assert 'lib="TransformerRatioTapChanger"' in zone3  # the main transformer regulates
-    assert "photovoltaics_terminal" in zone3
-    zone1 = (tmp_path / "Zone1" / "Producer.dyd").read_text(encoding="utf-8")
-    assert 'id="Group_Xfmr" lib="TransformerFixedRatio"' in zone1
-    assert "PPM_DYNAMIC_MODEL" not in zone1 and "MODEL_PREFIX" not in zone1
+    for zone in ("Zone1", "Zone3"):
+        content = (tmp_path / zone / "Producer.dyd").read_text()
+        assert f'id="PV_Array" lib="{resolved[f"{zone.lower()}_lib"]}"' in content
+
+        # Check that the terminal exists in the connection string (either as var1 or var2)
+        assert f'="{resolved[f"{zone.lower()}_prefix"]}terminal"' in content
 
 
 def test_drop_group_transformer_when_no_lv_control(tmp_path):

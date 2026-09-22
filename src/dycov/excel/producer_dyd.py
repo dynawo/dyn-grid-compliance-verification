@@ -34,7 +34,8 @@ _LIB_LINE = "Line"
 _LIB_LOAD = "LoadAlphaBeta"
 _LIB_BUS = "Bus"
 
-_SUPPORTED_TOPOLOGIES = ("S", "S+i", "S+Aux", "S+Aux+i")
+# Expanded to support multi-generator (M) topologies
+_SUPPORTED_TOPOLOGIES = ("S", "S+i", "S+Aux", "S+Aux+i", "M", "M+i", "M+Aux", "M+Aux+i")
 
 # The network blocks a topology may contain, with the lib each one takes.
 _NETWORK_LIBS = {
@@ -42,11 +43,6 @@ _NETWORK_LIBS = {
     "Aux_Load": _LIB_LOAD,
     "IntNetwork_Line": _LIB_LINE,
     "Int_Bus": _LIB_BUS,
-}
-# The transformer each zone has of its own: the unit's step-up, and the plant's regulated one.
-_ZONE_XFMR = {
-    "Zone1": (GROUP_XFMR_ID, _LIB_XFMR_FIXED),
-    "Zone3": (MAIN_XFMR_ID, _LIB_XFMR_OLTC),
 }
 
 _XFMR_TERMINAL2 = "transformer_terminal2"
@@ -72,8 +68,7 @@ def checked_topology(zone3: dict) -> str:
     if topology not in _SUPPORTED_TOPOLOGIES:
         raise ValueError(
             f"topology {topology!r} in sheet {P.sheet_of(zone3)!r} is not generated yet; "
-            f"supported: {', '.join(_SUPPORTED_TOPOLOGIES)}. The 'M' family describes several "
-            f"generating units and the tool emits one, so it is refused rather than truncated."
+            f"supported: {', '.join(_SUPPORTED_TOPOLOGIES)}."
         )
     return topology
 
@@ -83,8 +78,7 @@ def write_dyd(
     producer_name: str,
     topology: str,
     template: str,
-    resolved: dict,
-    gen_id: str,
+    generators: list[dict],
     rename: dict,
 ) -> None:
     """Write both zones' DYD: DyCoV's topology, with the resolved model filled in.
@@ -99,26 +93,47 @@ def write_dyd(
         Topology name, as ``checked_topology`` returns it.
     template: str
         DyCoV input template (``model_PPM`` or ``model_BESS``).
-    resolved: dict
-        Libs and prefixes of both zones, as ``parse.resolve_models`` returns them.
-    gen_id: str
-        Id the generator block takes, by technology.
+    generators: list[dict]
+        Information needed to build the topology for each generating unit.
     rename: dict
-        Block ids to rename first, when the template's generator id is not *gen_id*.
+        Block ids to rename first, when the template's generator id is not generic.
     """
-    create_producer_dyd_file(root, topology, template)
-    for zone, (xfmr_id, xfmr_lib) in _ZONE_XFMR.items():
-        lib = resolved["zone1_lib"] if zone == "Zone1" else resolved["zone3_lib"]
-        prefix = resolved["zone1_prefix"] if zone == "Zone1" else resolved["zone3_prefix"]
+    n_generators = len(generators)
+    create_producer_dyd_file(root, topology, template, n_generators=n_generators)
+
+    for zone in ("Zone1", "Zone3"):
+        libs = {**_NETWORK_LIBS}
+        terminals = {}
+
+        if zone == "Zone3":
+            libs[MAIN_XFMR_ID] = _LIB_XFMR_OLTC
+
+        for gen in generators:
+            gen_id = gen["gen_id"]
+            xfmr_id = gen.get("xfmr_id", GROUP_XFMR_ID)
+
+            if zone == "Zone1":
+                lib = gen["resolved"]["zone1_lib"]
+                prefix = gen["resolved"]["zone1_prefix"]
+                libs[xfmr_id] = _LIB_XFMR_FIXED
+            else:
+                lib = gen["resolved"]["zone3_lib"]
+                prefix = gen["resolved"]["zone3_prefix"]
+
+            libs[gen_id] = lib
+            terminals[gen_id] = f"{prefix}terminal"
+
         fill_producer_dyd(
             root / zone / f"{producer_name}.dyd",
-            libs={**_NETWORK_LIBS, xfmr_id: xfmr_lib, gen_id: lib},
-            terminals={gen_id: f"{prefix}terminal"},
+            libs=libs,
+            terminals=terminals,
             rename=rename,
         )
 
 
-def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> None:
+def drop_group_transformer(
+    dyd_file: Path, gen_id: str, gen_terminal: str, xfmr_id: str = GROUP_XFMR_ID
+) -> None:
     """Remove the group transformer and wire the generator to the node it fed.
 
     The unit's own transformer already reaches the internal node when
@@ -133,6 +148,8 @@ def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> No
         Id of the generator block.
     gen_terminal: str
         Terminal of the generator block, prefixed by its model.
+    xfmr_id: str
+        Id of the specific transformer block to remove. Defaults to GROUP_XFMR_ID.
     """
     parser = etree.XMLParser(remove_blank_text=True)
     tree = etree.parse(str(dyd_file), parser)
@@ -142,15 +159,17 @@ def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> No
     downstream = None
     for connect in list(root.iterfind(f"{{{ns}}}connect")):
         id1, var1, id2, var2 = (connect.get(k) for k in ("id1", "var1", "id2", "var2"))
-        if id1 == GROUP_XFMR_ID and var1 == _XFMR_TERMINAL2:
+        if id1 == xfmr_id and var1 == _XFMR_TERMINAL2:
             downstream = (id2, var2)
-        elif id2 == GROUP_XFMR_ID and var2 == _XFMR_TERMINAL2:
+        elif id2 == xfmr_id and var2 == _XFMR_TERMINAL2:
             downstream = (id1, var1)
-        if GROUP_XFMR_ID in (id1, id2):
+        if xfmr_id in (id1, id2):
             root.remove(connect)
+
     for bbmodel in list(root.iterfind(f"{{{ns}}}blackBoxModel")):
-        if bbmodel.get("id") == GROUP_XFMR_ID:
+        if bbmodel.get("id") == xfmr_id:
             root.remove(bbmodel)
+
     if downstream:
         etree.SubElement(
             root,
