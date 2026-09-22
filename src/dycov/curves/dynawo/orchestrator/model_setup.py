@@ -23,7 +23,7 @@ from dycov.curves.dynawo.io.table import TableFile
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
-from dycov.files import model_parameters, omega_file, tso_file, value_registry
+from dycov.files import model_parameters, omega_file, simulation_files, tso_file, value_registry
 from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams, LoadInit, LoadParams, PdrParams, PimodelParams
 
@@ -241,14 +241,14 @@ class ModelSetup:
         dycov_logging.get_logger("ModelSetup").debug(f"\tpdr_U={pdr_u_cfg}")
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
-        characteristics = model_parameters.unit_characteristics(producer, u_dim)
-        ini_pdr_p = model_parameters.resolve_value_definition(
+        characteristics = value_registry.unit_characteristics(producer, u_dim)
+        ini_pdr_p = value_registry.resolve_value_definition(
             pdr_p_cfg, characteristics, -1, (config_section, "pdr_P")
         )
-        ini_pdr_q = model_parameters.resolve_value_definition(
+        ini_pdr_q = value_registry.resolve_value_definition(
             pdr_q_cfg, characteristics, -1, (config_section, "pdr_Q")
         )
-        ini_pdr_u = model_parameters.resolve_value_definition(
+        ini_pdr_u = value_registry.resolve_value_definition(
             pdr_u_cfg, characteristics, origin=(config_section, "pdr_U")
         )
         return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
@@ -322,7 +322,7 @@ class ModelSetup:
         list[LoadInit]
         """
         producer = self._owner.get_producer()
-        power_chars = model_parameters.unit_characteristics(producer, u_dim)
+        power_chars = value_registry.unit_characteristics(producer, u_dim)
         # Load voltages are normalized by u_nom afterwards, so their bases stay in kV here.
         voltage_chars = {**power_chars, "Udim": u_dim, "Unom": producer.u_nom}
 
@@ -332,7 +332,7 @@ class ModelSetup:
             except ValueError:
                 cfg_value = config.get_value(config_section, param_name)
                 dycov_logging.get_logger("ModelSetup").debug(f"\t{param_name}={cfg_value}")
-                return model_parameters.resolve_value_definition(
+                return value_registry.resolve_value_definition(
                     cfg_value, characteristics, origin=(config_section, param_name)
                 )
 
@@ -756,12 +756,12 @@ class ModelSetup:
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
         )
-        value_registry.write_pdr_comment(
+        simulation_files.write_pdr_comment(
             working_oc_dir,
             producer.get_producer_par().name,
             pdr,
         )
-        value_registry.write_pdr_comment(
+        simulation_files.write_pdr_comment(
             working_oc_dir,
             _TSO_PAR,
             pdr,
