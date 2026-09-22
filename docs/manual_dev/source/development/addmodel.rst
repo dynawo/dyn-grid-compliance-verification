@@ -102,11 +102,15 @@ Control and frequency:
 * ``'MagnitudeControlledByAVRPu'``
     Voltage amplitude controlled by the AVR in per unit. Always required.
 
-Currents (required for Electrical Performance Verification and Model Validation):
+Injector terminal (required for Electrical Performance Verification and Model Validation).
+The dictionary declares what the Dynawo model provides; the tool divides the powers by the
+terminal voltage and emits the currents as ``'ActiveCurrentInjTerminal'`` and
+``'ReactiveCurrentInjTerminal'``:
 
-* ``'IpInjTerminal'`` — active current at the injector's LV terminal (pu).
-* ``'IqInjTerminal'`` — reactive current at the injector's LV terminal (pu).
-* ``'UPuInjTerminal'`` — voltage amplitude at the injector terminal (pu).
+* ``'ActivePowerInjTerminal'`` — active power at the injector's LV terminal (pu).
+* ``'ReactivePowerInjTerminal'`` — reactive power at the injector's LV terminal (pu).
+* ``'VoltageInjTerminalRe'`` / ``'VoltageInjTerminalIm'`` — the terminal voltage (pu),
+  whose amplitude the tool emits as ``'VoltageInjTerminal'``.
 * ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
   Electrical Performance Verification.
 

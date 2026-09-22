@@ -149,6 +149,12 @@ if ! git -C "$ROOT_DIR" archive HEAD examples | tar -x -C "$TEMP_DIR"; then
     exit 1
 fi
 
+echo "Copying workbooks..."
+if ! git -C "$ROOT_DIR" archive HEAD workbooks | tar -x -C "$TEMP_DIR"; then
+    echo "ERROR: could not stage workbooks from Git."
+    exit 1
+fi
+
 
 ########################################
 # 5b. Copy standalone tools (Dynawo PAR utility)
@@ -239,6 +245,7 @@ docker build \
     -t "dycov:$TAG" \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
+    --build-arg dycov_WORKBOOKS="workbooks" \
     --build-arg dycov_TOOLS="tools" \
     --build-arg dycov_TUTORIALS="tutorials" \
     --build-arg dycov_INSTALLATION="installation" \
