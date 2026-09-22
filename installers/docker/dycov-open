@@ -1,0 +1,4 @@
+#!/bin/sh
+# explorer.exe exits 1 even when it did open the file, so its status is discarded.
+/mnt/c/Windows/explorer.exe "$(wslpath -w "$1")" >/dev/null 2>&1
+exit 0
