@@ -36,9 +36,7 @@ def _make_zone1_curves(folder, columns=ZONE1_COLUMNS):
 def _curves_section(dict_file):
     section = dict_file.read_text().split("[Curves-Dictionary]")[-1]
     return [
-        line
-        for line in section.splitlines()
-        if line.strip() and not line.strip().startswith("#")
+        line for line in section.splitlines() if line.strip() and not line.strip().startswith("#")
     ]
 
 
