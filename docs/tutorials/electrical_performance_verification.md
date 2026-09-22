@@ -1,6 +1,5 @@
 # Electrical performance verification with DyCoV
 
-**DyCoV version:** 1.2.0  
 **Scope:** Electrical performance verification according to RTE dynamic PCSs,
 including applicable PCSs by technology, required inputs, execution workflows,
 and result interpretation using Dynawo simulations or producer curves.
