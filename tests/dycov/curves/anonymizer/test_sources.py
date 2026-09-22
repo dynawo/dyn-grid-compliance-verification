@@ -165,3 +165,25 @@ def test_a_curve_the_file_does_not_carry_is_left_empty_and_warned(tmp_path, capl
     assert "PV_Array_GEN_ActivePowerControlledPu = " in _curves_section(csv.with_suffix(".dict"))
     assert "PV_Array_GEN_ActivePowerControlledPu" in caplog.text
     assert "does not carry" in caplog.text
+
+
+def test_a_synchronous_compensator_is_not_taken_for_a_generating_unit(tmp_path, caplog):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = curves / "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4.csv"
+    csv.write_text(
+        "time;BusPDR_BUS_Voltage;BusPDR_BUS_ActivePower;BusPDR_BUS_ReactivePower;"
+        "BusPDR_BUS_ActiveCurrent;BusPDR_BUS_ReactiveCurrent;NetworkFrequencyPu;"
+        "SyncCompensator_GEN_FrequencyHz;SyncCompensator_GEN_TSO_ActivePower\n"
+        "0.0;1.0;0.5;0.1;0.5;0.1;50.0;50.0;0.1\n",
+        encoding="utf-8",
+    )
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file(csv, {})
+
+    written = csv.with_suffix(".dict").read_text()
+    # It shares the _GEN_ infix but carries none of the curves the zone asks of a unit.
+    assert "SyncCompensator_GEN_VoltageSetpointPu" not in written
+    assert "SyncCompensator_GEN_FrequencyHz = SyncCompensator_GEN_FrequencyHz" in written
+    assert "does not carry" not in caplog.text

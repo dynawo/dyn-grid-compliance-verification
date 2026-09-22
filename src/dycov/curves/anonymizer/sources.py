@@ -131,32 +131,19 @@ def _curve_lines(csv_file: Path) -> List[str]:
     curve file through its dictionary and would drop what the dictionary leaves out.
     """
     columns = _columns_of(csv_file)
-    requested = requested_curves.every_name(
-        _zone_of(csv_file),
-        _identifiers(columns, "_GEN_"),
-        _identifiers(columns, "_XFMR_"),
-    )
+    requested = requested_curves.for_columns(_zone_of(csv_file), columns)
 
     lines = [f"{name} = {name if name in columns else ''}\n" for name in requested]
     lines += [f"{column} = {column}\n" for column in columns if column not in requested]
 
-    unserved = [name for name in requested if name not in columns]
+    compared = requested_curves.compared_for_columns(_zone_of(csv_file), columns)
+    unserved = [name for name in compared if name not in columns]
     if unserved:
         dycov_logging.get_logger("Anonymizer").warning(
             f"{csv_file.name} does not carry {unserved}: their dictionary entries are left "
             "empty, and the validation will report those curves as missing."
         )
     return lines
-
-
-def _identifiers(columns: List[str], separator: str) -> List[str]:
-    """The equipment ids the columns name, in the order they first appear."""
-    identifiers = []
-    for column in columns:
-        identifier = column.split(separator)[0]
-        if separator in column and identifier not in identifiers:
-            identifiers.append(identifier)
-    return identifiers
 
 
 def _kept_metadata(dict_file: Path) -> Dict[str, str]:
