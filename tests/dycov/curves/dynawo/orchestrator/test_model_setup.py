@@ -735,6 +735,7 @@ class TestCompleteModel:
         with ExitStack() as stack:
             mock_mp = stack.enter_context(patch(f"{_MS}.model_parameters"))
             stack.enter_context(patch(f"{_MS}.value_registry"))
+            stack.enter_context(patch(f"{_MS}.simulation_files"))
             stack.enter_context(patch(f"{_MS}.init_calcs"))
             mock_of = stack.enter_context(patch(f"{_MS}.omega_file"))
             mock_tf = stack.enter_context(patch(f"{_MS}.tso_file"))
