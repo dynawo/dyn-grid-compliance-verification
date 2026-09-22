@@ -5,9 +5,9 @@ is_field_measurements = False
 # Variable sim_t_event_start is called simply sim_t_event in the DTR
 sim_t_event_start = 20.0
 # Duration of the event or fault
-fault_duration = 1.5
+fault_duration = 0.1
 # Frequency sampling of the reference curves
-frequency_sampling = 15
+frequency_sampling = 15.0
 
 [Curves-Dictionary]
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled

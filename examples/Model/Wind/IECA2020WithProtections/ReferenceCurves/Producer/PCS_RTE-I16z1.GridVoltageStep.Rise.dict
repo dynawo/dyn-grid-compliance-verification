@@ -7,7 +7,7 @@ sim_t_event_start = 30.0
 # Duration of the event or fault
 fault_duration = 0.0
 # Frequency sampling of the reference curves
-frequency_sampling = 15
+frequency_sampling = 15.0
 # The maximum injected current of a generator, when the curves come from field measurements:
 #    <generator>_GEN_MaxInjectedCurrentPu =
 
