@@ -56,3 +56,17 @@ def test_show_report_true_members():
 
     for member in Compliance:
         assert member.show_report() is (member in reported)
+
+
+def test_states_missing_curves_true_members():
+    from dycov.model.compliance import Compliance
+
+    missing = {
+        Compliance.WithoutCurves,
+        Compliance.WithoutReferenceCurves,
+        Compliance.WithoutProducerCurves,
+        Compliance.VoltageCurveMissing,
+    }
+
+    for member in Compliance:
+        assert member.states_missing_curves() is (member in missing)

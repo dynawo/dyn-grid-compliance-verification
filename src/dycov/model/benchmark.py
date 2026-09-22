@@ -778,7 +778,11 @@ class Benchmark:
             results = {**_FAILED_RESULTS}
 
         results["missed_columns"] = self._curves_manager.get_missed_curves("reference")
-        if results["missed_columns"] and compliance.show_report():
+        if (
+            results["missed_columns"]
+            and compliance.show_report()
+            and not compliance.states_missing_curves()
+        ):
             compliance = Compliance.InvalidTest
         results["summary"] = compliance
 
