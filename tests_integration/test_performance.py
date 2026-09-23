@@ -11,15 +11,15 @@ def test_perf_sm_dynawo_model():
         None,
     )
     assert [
-        Compliance.NonCompliant,  # 0
-        Compliance.NonCompliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.NonCompliant,  # 6
-        Compliance.Compliant,  # 7
-        Compliance.NonCompliant,  # 8
+        Compliance.NonCompliant,  # PCS_RTE-I2.USetPointStep.AReactance
+        Compliance.NonCompliant,  # PCS_RTE-I2.USetPointStep.BReactance
+        Compliance.Compliant,  # PCS_RTE-I3.LineTrip.2BReactance
+        Compliance.Compliant,  # PCS_RTE-I4.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMax
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMin
+        Compliance.Compliant,  # PCS_RTE-I8.LoadShedDisturbance.PmaxQzero
+        Compliance.NonCompliant,  # PCS_RTE-I10.Islanding.DeltaP10DeltaQ4
     ] == compliance
 
 
@@ -34,28 +34,28 @@ def test_perf_sm_complete():
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
 
     assert [
-        Compliance.NonCompliant,  # 0
-        Compliance.NonCompliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.NonCompliant,  # 6
-        Compliance.Compliant,  # 7
-        Compliance.NonCompliant,  # 8
+        Compliance.NonCompliant,  # PCS_RTE-I2.USetPointStep.AReactance
+        Compliance.NonCompliant,  # PCS_RTE-I2.USetPointStep.BReactance
+        Compliance.Compliant,  # PCS_RTE-I3.LineTrip.2BReactance
+        Compliance.Compliant,  # PCS_RTE-I4.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMax
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMin
+        Compliance.Compliant,  # PCS_RTE-I8.LoadShedDisturbance.PmaxQzero
+        Compliance.NonCompliant,  # PCS_RTE-I10.Islanding.DeltaP10DeltaQ4
     ] == compliance
 
 
 def test_perf_ppm_dynawo_model():
     compliance = execute_tool(PERFORMANCE / "SingleAux" / "WECC4B" / "Dynawo", None, None)
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.NonCompliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.NonCompliant,  # 6
+        Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.AReactance
+        Compliance.NonCompliant,  # PCS_RTE-I2.USetPointStep.BReactance
+        Compliance.Compliant,  # PCS_RTE-I5.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMax
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMin
+        Compliance.NonCompliant,  # PCS_RTE-I10.Islanding.DeltaP10DeltaQ4
     ] == compliance
 
 
@@ -66,13 +66,13 @@ def test_perf_ppm_curves():
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
 
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.Compliant,  # 5
-        Compliance.Compliant,  # 6
+        Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.AReactance
+        Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.BReactance
+        Compliance.Compliant,  # PCS_RTE-I5.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMax
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMin
+        Compliance.Compliant,  # PCS_RTE-I10.Islanding.DeltaP10DeltaQ4
     ] == compliance
 
 
@@ -87,11 +87,11 @@ def test_perf_ppm_complete():
         pytest.skip("Validation skipped: DYNAWOPATH not set and dynawo.sh not found.")
 
     assert [
-        Compliance.Compliant,  # 0
-        Compliance.Compliant,  # 1
-        Compliance.Compliant,  # 2
-        Compliance.Compliant,  # 3
-        Compliance.Compliant,  # 4
-        Compliance.NonCompliant,  # 5
-        Compliance.NonCompliant,  # 6
+        Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.AReactance
+        Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.BReactance
+        Compliance.Compliant,  # PCS_RTE-I5.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
+        Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMax
+        Compliance.NonCompliant,  # PCS_RTE-I7.GridVoltageSwell.QMin
+        Compliance.NonCompliant,  # PCS_RTE-I10.Islanding.DeltaP10DeltaQ4
     ] == compliance

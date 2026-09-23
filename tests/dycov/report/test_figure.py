@@ -80,8 +80,8 @@ def test_create_plot_saves_expected_plot():
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = Path(tmpdir) / "plot.png"
         figure_description = FigureDescription(
-            name="IpInjTerminal",
-            variables="IpInjTerminal",
+            name="ActiveCurrentInjTerminal",
+            variables="ActiveCurrentInjTerminal",
             ylabel=unit,
         )
         create_plot(
@@ -161,8 +161,8 @@ def test_get_xrange_for_curve_honors_figures_overrides(set_user_option):
 def test_add_curve2plot_applies_color_and_style():
     df = pd.DataFrame(
         {
-            "IpInjTerminal": [1, 2, 3],
-            "IqInjTerminal": [4, 5, 6],
+            "ActiveCurrentInjTerminal": [1, 2, 3],
+            "ReactiveCurrentInjTerminal": [4, 5, 6],
             "VoltageSetpointPu": [7, 8, 9],
             "Other": [10, 11, 12],
         }
@@ -170,10 +170,10 @@ def test_add_curve2plot_applies_color_and_style():
 
     plot_curves = []
 
-    _add_curve2plot("IpInjTerminal", "IpInjTerminal", df, plot_curves)
+    _add_curve2plot("ActiveCurrentInjTerminal", "ActiveCurrentInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#64b5cd"
 
-    _add_curve2plot("IqInjTerminal", "IqInjTerminal", df, plot_curves)
+    _add_curve2plot("ReactiveCurrentInjTerminal", "ReactiveCurrentInjTerminal", df, plot_curves)
     assert plot_curves[-1]["color"] == "#8172b3"
 
     _add_curve2plot("VoltageSetpointPu", "VoltageSetpointPu", df, plot_curves)

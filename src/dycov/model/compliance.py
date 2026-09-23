@@ -69,3 +69,18 @@ class Compliance(Enum):
             Compliance.FaultDipUnachievable,
             Compliance.WithoutReferenceCurves,
         ]
+
+    def states_missing_curves(self) -> bool:
+        """Indicate whether this compliance status already names the curves as what is missing.
+
+        Returns
+        -------
+        bool
+            True when the status itself says a curve set is missing or incomplete.
+        """
+        return self in [
+            Compliance.WithoutCurves,
+            Compliance.WithoutReferenceCurves,
+            Compliance.WithoutProducerCurves,
+            Compliance.VoltageCurveMissing,
+        ]
