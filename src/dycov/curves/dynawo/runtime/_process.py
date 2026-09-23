@@ -134,10 +134,11 @@ def find_timeline_error(log_path: Path) -> str | None:
     -------
     str | None
         The error Dynawo reported, without the timestamp and level it is logged with,
-        or None if it reported none.
+        or None if it reported none. A run that reports nothing at the configured log
+        level leaves no log file at all, which is the ordinary case.
     """
     if not log_path.is_file():
-        dycov_logging.get_logger("DynawoSimulator").warning(f"Log file not found at {log_path}")
+        dycov_logging.get_logger("DynawoSimulator").debug(f"Dynawo logged nothing at {log_path}")
         return None
     with open(log_path, "r") as log:
         for line in log:
