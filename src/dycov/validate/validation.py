@@ -150,7 +150,6 @@ class Validation:
         self._dry_run = dry_run
 
         # Environment Path
-        self._modelica_path = Path(config.get_value("Global", "modelica_path"))
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self._path_latex_files = config.get_value("Global", "latex_templates_path")
 

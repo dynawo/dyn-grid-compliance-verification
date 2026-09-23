@@ -141,8 +141,6 @@ that the application should perform:
     the grid model), for each PCS.  Several parameters of the PAR files, most of them
     concerning *initialization*, are templatized and instantiated at runtime using
     Jinja.
-    In addition, the subdir ``modelica_models/`` contains as Modelica dynamic models
-    that had to be built for some PCSs.
 
 * ``report``
     Code that manages and generates the final reports for the user. Uses Jinja to
