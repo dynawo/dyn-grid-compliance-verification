@@ -198,6 +198,29 @@ def test_retry_stops_at_the_first_successful_attempt(
     assert len(recorded_warnings) == successful_attempt - 1
 
 
+def test_the_small_network_parameters_are_declared_once_a_retry_adds_them(
+    monkeypatch, recorded_warnings, recorded_writes
+):
+    _patch_run_base(monkeypatch, successful_attempt=4)
+    solver = _ida_solver()
+
+    _run(SolverRetryStrategy(RetrySettings()), solver)
+
+    assert solver.added_parameters["mxiterAlg"] == "30"
+    assert solver.added_parameters["maximumNumberSlowStepIncrease"] == "100"
+
+
+def test_flipping_the_solver_drops_the_parameters_added_to_the_one_left_behind(
+    recorded_warnings, recorded_writes, failing_attempts
+):
+    solver = _ida_solver()
+
+    _run(SolverRetryStrategy(RetrySettings()), solver)
+
+    assert solver.solver_id == "SIM"
+    assert solver.added_parameters == {}
+
+
 def test_ida_retries_tune_the_ida_parameters(recorded_warnings, recorded_writes, failing_attempts):
     solver = _ida_solver()
     strategy = SolverRetryStrategy(RetrySettings())
