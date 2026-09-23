@@ -83,9 +83,10 @@ sudo apt install \
 
 ---
 
-### 3.3 Python (≥ 3.13) and uv
+### 3.3 Python (3.13 or 3.14) and uv
 
-DyCoV **requires Python version 3.13 or newer**.
+DyCoV runs on **Python 3.13 and Python 3.14**. The installer below provisions
+3.13.
 
 Install Git:
 
