@@ -10,7 +10,6 @@
 from pathlib import Path
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime.dynawo_precompile import precompile_models
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
 
@@ -90,7 +89,6 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
         True if execution was aborted during DDB preparation, False otherwise.
     """
     # Resolve paths
-    modelica_path = Path(config.get_value("Global", "modelica_path"))
     file_path = Path(__file__).resolve().parent.parent.parent
     user_models = config.get_config_dir() / "user_models"
     ddb_dir = config.get_config_dir() / "ddb"
@@ -106,23 +104,14 @@ def precompile(launcher_dwo: Path, model: str = None, force: bool = False) -> bo
         return any(path.glob("*.[xX][mM][lL]"))
 
     # Skip precompilation if both directories have no XML files
-    if not has_xml_files(file_path / modelica_path) and not has_xml_files(user_models):
+    if not has_xml_files(user_models):
         dycov_logging.get_logger("PrepareTool").info(
-            "No XML files found in modelica_path or user_models. Skipping precompile."
+            "No XML files found in user_models. Skipping precompile."
         )
         return False
 
     # Prepare DDB directory
     if _prepare_ddb_path(launcher_dwo, ddb_dir, force):
         return True
-
-    # Execute precompilation
-    precompile_models(
-        launcher_dwo,
-        file_path / modelica_path,
-        user_models,
-        model,
-        ddb_dir,
-    )
 
     return False

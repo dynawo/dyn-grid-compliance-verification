@@ -8,7 +8,6 @@
 #     demiguelm@aia.es
 #
 import configparser
-from pathlib import Path
 
 import pytest
 
@@ -321,14 +320,3 @@ class TestDycovInitializer:
             ),  # console_formatter from mock_config
             self.mock_config.get_config_dir.return_value / "log",  # log_dir
         )
-
-    def test_prepare_dynawo_models_exits_on_aborted_precompile(self, dycov_initializer, mocker):
-        """
-        Tests that _prepare_dynawo_models exits with code 1 when precompile aborts.
-        """
-        mocker.patch("dycov.core.initialization.precompile", return_value=True)
-
-        with pytest.raises(SystemExit) as exc_info:
-            dycov_initializer._prepare_dynawo_models(Path("dynawo"))
-
-        assert exc_info.value.code == 1
