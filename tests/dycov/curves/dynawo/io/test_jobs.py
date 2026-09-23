@@ -19,6 +19,7 @@ class DummyProducer:
     def __init__(self, dyd_name="producer.dyd", raise_on_dyd=False):
         self._dyd_name = dyd_name
         self._raise_on_dyd = raise_on_dyd
+        self.u_nom = 400.0
 
     def get_producer_dyd(self):
         if self._raise_on_dyd:
@@ -47,14 +48,74 @@ class DummyProducerCurves(ProducerCurves):
         return self._producer
 
 
+class DebuggingLogger:
+    def __init__(self, debugging):
+        self._debugging = debugging
+
+    def isEnabledFor(self, level):
+        return self._debugging
+
+
 @pytest.fixture
 def temp_working_dir(tmp_path):
     # Create a temporary working directory and a minimal TSOModel.jobs template
     jobs_file = tmp_path / "TSOModel.jobs"
     jobs_file.write_text(
-        "{{ solver_lib }}\n{{ solver_id }}\n{{ producer_dyd }}\n{{ custom_var }}\n"
+        "{{ solver_lib }}\n{{ solver_id }}\n{{ producer_dyd }}\n"
+        "{{ dynawo_log_level }}\n{{ custom_var }}\n"
     )
     return tmp_path
+
+
+@pytest.fixture
+def debugging(monkeypatch):
+    def set_debugging(value):
+        monkeypatch.setattr(
+            "dycov.curves.dynawo.io.jobs.dycov_logging.get_logger",
+            lambda name: DebuggingLogger(value),
+        )
+
+    return set_debugging
+
+
+@pytest.fixture
+def configured_log_level(monkeypatch):
+    def set_level(value):
+        from dycov.curves.dynawo.io import jobs
+
+        monkeypatch.setattr(
+            type(jobs.config),
+            "get_value",
+            lambda self, section, key, default=None: value if key == "log_level" else default,
+        )
+
+    return set_level
+
+
+def _complete(working_dir, event_params):
+    dynawo_curves = DummyProducerCurves(DummyProducer())
+    JobsFile(dynawo_curves, "BM", "OC").complete_file(
+        working_dir, "solverB", "libB.so", event_params
+    )
+    return (working_dir / "TSOModel.jobs").read_text()
+
+
+def test_dynawo_is_asked_for_the_configured_log_level(
+    temp_working_dir, event_params, debugging, configured_log_level
+):
+    debugging(False)
+    configured_log_level("ERROR")
+
+    assert "ERROR" in _complete(temp_working_dir, event_params)
+
+
+def test_debugging_dycov_asks_dynawo_to_debug_too(
+    temp_working_dir, event_params, debugging, configured_log_level
+):
+    debugging(True)
+    configured_log_level("ERROR")
+
+    assert "DEBUG" in _complete(temp_working_dir, event_params)
 
 
 @pytest.fixture
