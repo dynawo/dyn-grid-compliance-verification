@@ -19,7 +19,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
 
 from dycov.configuration.cfg import config
-from dycov.files import model_parameters
+from dycov.files import value_registry
 from dycov.logging import dycov_logging
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_decorations import (
@@ -94,7 +94,7 @@ def _get_xrange_for_curve(
         graph_scale = 1.0
     else:
         graph_scale = abs(
-            model_parameters.resolve_value_definition(
+            value_registry.resolve_value_definition(
                 str(reference_step_size),
                 unit_characteristics,
                 origin=(operating_condition, "reference_step_size"),
