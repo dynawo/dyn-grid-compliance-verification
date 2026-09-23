@@ -5,6 +5,7 @@
 # Developed by Grupo AIA
 #
 import math
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -721,43 +722,60 @@ class TestCompleteModel:
         has_line=False,
         event_params=None,
     ):
+        """
+        Runs the complete_model orchestration setup.
+        Uses ExitStack to manage multiple mock patches dynamically, preventing
+        the 'too many statically nested blocks' SyntaxError.
+        """
         owner = _make_owner(producer)
         setup = _make_setup(owner)
         event_params = event_params if event_params is not None else {"start_time": 5.0}
-        with (
-            patch(f"{_MS}.model_parameters") as mock_mp,
-            patch(f"{_MS}.init_calcs"),
-            patch(f"{_MS}.omega_file") as mock_of,
-            patch(f"{_MS}.tso_file") as mock_tf,
-            patch(f"{_MS}.crv") as mock_crv,
-            patch(f"{_MS}.config"),
-            patch(f"{_MS}.get_cfg_oc_name", return_value="PCS1.BM.OC"),
-            patch(f"{_MS}.generator_variables"),
-            patch(f"{_MS}.JobsFile") as mock_jobs,
-            patch(f"{_MS}.ParFile") as mock_par,
-            patch(f"{_MS}.DydFile") as mock_dyd,
-            patch(f"{_MS}.TableFile") as mock_table,
-            patch(f"{_MS}.SolversFile") as mock_solvers,
-            patch.object(setup, "_get_pdr"),
-            patch.object(setup, "_get_line", return_value=(0.01, 0.1)),
-            patch.object(setup, "_get_lines_for_initial_calcs"),
-            patch.object(setup, "_sort_group_xfmrs_to_generators", return_value=[]),
-            patch.object(setup, "_get_tso_loads", return_value=(None, None)),
-            patch.object(setup, "_get_event_parameters", return_value=event_params),
-            patch.object(setup, "_adjust_event_value"),
-            patch.object(setup, "_calculate_xv_values"),
-        ):
-            mock_mp.adjust_producer_init.return_value = applicable
-            mock_mp.get_pcs_load_params.return_value = []
-            mock_mp.get_pcs_lines_params.return_value = []
-            mock_mp.get_pcs_generators_params.return_value = []
+
+        # Initialize ExitStack to manage all our context managers (patches) safely
+        with ExitStack() as stack:
+            mock_pcs = stack.enter_context(patch(f"{_MS}.pcs_parameters"))
+            mock_init = stack.enter_context(patch(f"{_MS}.producer_init"))
+            stack.enter_context(patch(f"{_MS}.value_registry"))
+            stack.enter_context(patch(f"{_MS}.simulation_files"))
+            stack.enter_context(patch(f"{_MS}.init_calcs"))
+            mock_of = stack.enter_context(patch(f"{_MS}.omega_file"))
+            mock_tf = stack.enter_context(patch(f"{_MS}.tso_file"))
+            mock_crv = stack.enter_context(patch(f"{_MS}.crv"))
+            stack.enter_context(patch(f"{_MS}.config"))
+            stack.enter_context(patch(f"{_MS}.get_cfg_oc_name", return_value="PCS1.BM.OC"))
+            stack.enter_context(patch(f"{_MS}.generator_variables"))
+            mock_jobs = stack.enter_context(patch(f"{_MS}.JobsFile"))
+            mock_par = stack.enter_context(patch(f"{_MS}.ParFile"))
+            mock_dyd = stack.enter_context(patch(f"{_MS}.DydFile"))
+            mock_table = stack.enter_context(patch(f"{_MS}.TableFile"))
+            mock_solvers = stack.enter_context(patch(f"{_MS}.SolversFile"))
+
+            stack.enter_context(patch.object(setup, "_get_pdr"))
+            stack.enter_context(patch.object(setup, "_get_line", return_value=(0.01, 0.1)))
+            stack.enter_context(patch.object(setup, "_get_lines_for_initial_calcs"))
+            stack.enter_context(
+                patch.object(setup, "_sort_group_xfmrs_to_generators", return_value=[])
+            )
+            stack.enter_context(patch.object(setup, "_get_tso_loads", return_value=(None, None)))
+            stack.enter_context(
+                patch.object(setup, "_get_event_parameters", return_value=event_params)
+            )
+            stack.enter_context(patch.object(setup, "_adjust_event_value"))
+            stack.enter_context(patch.object(setup, "_calculate_xv_values"))
+
+            mock_init.adjust_producer_init.return_value = applicable
+            mock_pcs.get_pcs_load_params.return_value = []
+            mock_pcs.get_pcs_lines_params.return_value = []
+            mock_pcs.get_pcs_generators_params.return_value = []
             mock_crv.create_curves_file.return_value = {"var": "curve"}
+
             setup.has_line = has_line
             result = setup.complete_model(
                 Path("/work"), "PCS1", "BM", "OC", reference_event_start_time
             )
+
             mocks = dict(
-                mp=mock_mp,
+                pcs=mock_pcs,
                 of=mock_of,
                 tf=mock_tf,
                 crv=mock_crv,
@@ -767,6 +785,7 @@ class TestCompleteModel:
                 table=mock_table,
                 solvers=mock_solvers,
             )
+
         return setup, result, mocks
 
     def test_happy_path_completes_all_input_files(self):
@@ -804,10 +823,10 @@ class TestCompleteModel:
 
     def test_line_params_read_only_when_has_line(self):
         _, _, mocks = self._run(has_line=True)
-        mocks["mp"].get_pcs_lines_params.assert_called_once()
+        mocks["pcs"].get_pcs_lines_params.assert_called_once()
 
         _, _, mocks = self._run(has_line=False)
-        mocks["mp"].get_pcs_lines_params.assert_not_called()
+        mocks["pcs"].get_pcs_lines_params.assert_not_called()
 
     def test_aux_and_main_xfmrs_included_in_curves_file(self):
         producer = _make_producer()
@@ -954,8 +973,8 @@ class TestSortStepupXfmrs:
 
 
 class TestGetTsoLoads:
-    @patch(f"{_MS}.model_parameters")
-    def test_separates_pdr_and_grid_loads(self, mock_mp):
+    @patch(f"{_MS}.pcs_parameters")
+    def test_separates_pdr_and_grid_loads(self, mock_pcs):
         setup = _make_setup()
         pdr_tso = MagicMock(id="L1")
         pdr_tso.terminals = [MagicMock(connected_equipment="BusPDR")]
@@ -968,7 +987,7 @@ class TestGetTsoLoads:
         with patch.object(setup, "_complete_loads", return_value=[init_l1, init_l2]):
             setup._get_tso_loads("PCS1", "BM1", "OC1", u_dim=20.0)
 
-        pdr_call, grid_call = mock_mp.get_grid_load.call_args_list
+        pdr_call, grid_call = mock_pcs.get_grid_load.call_args_list
         assert pdr_call[0][0] == [init_l1]
         assert grid_call[0][0] == [init_l2]
 
