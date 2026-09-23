@@ -9,7 +9,6 @@
 #
 
 import configparser
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -495,7 +494,7 @@ def _get_instance() -> Config:
     """
     logger = dycov_logging.get_logger("Cfg")
     logger.info("Initializing Config instance.")
-    config_dir = Path.home() / ("AppData/Local/dycov" if os.name == "nt" else ".config/dycov")
+    config_dir = Path.home() / ".config/dycov"
     logger.debug(f"Config directory set to: {config_dir}")
 
     default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
