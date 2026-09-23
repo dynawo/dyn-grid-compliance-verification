@@ -14,12 +14,14 @@ import signal
 import subprocess
 import sys
 import textwrap
+from logging.handlers import RotatingFileHandler
 
 import pytest
 
 from dycov.logging import dycov_logging, worker_initializer
 
 FILE_FORMAT = "%(levelname)s|%(name)s|%(message)s"
+EXECUTION_LOG = "dycov_run.log"
 
 FORKSERVER_RUN = textwrap.dedent(
     '''
@@ -56,6 +58,13 @@ FORKSERVER_RUN = textwrap.dedent(
         ) as pool:
             pool.map(work, ["desde el forkserver"])
     '''
+)
+
+_POOL_START = "    context = multiprocessing.get_context"
+assert _POOL_START in FORKSERVER_RUN
+FORKSERVER_RUN_WITH_EXECUTION_LOG = FORKSERVER_RUN.replace(
+    _POOL_START,
+    f"    dycov_logging.add_run_handler(Path(sys.argv[1]))\n\n{_POOL_START}",
 )
 
 
@@ -152,3 +161,48 @@ def test_a_forkserver_worker_writes_into_the_log_of_the_run(tmp_path):
     assert "INFO|DyCoV.Worker|desde el forkserver" in (tmp_path / "dycov.log").read_text(
         encoding="utf-8"
     )
+
+
+def test_a_forkserver_worker_also_writes_into_the_log_of_the_execution(tmp_path):
+    script = tmp_path / "run.py"
+    script.write_text(FORKSERVER_RUN_WITH_EXECUTION_LOG, encoding="utf-8")
+
+    subprocess.run(
+        [sys.executable, str(script), str(tmp_path)], check=True, timeout=120, capture_output=True
+    )
+
+    assert "INFO|DyCoV.Worker|desde el forkserver" in (tmp_path / EXECUTION_LOG).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_a_worker_without_handlers_also_writes_into_the_log_of_the_execution(run_log, tmp_path):
+    dycov_logging.add_run_handler(tmp_path)
+    settings = dycov_logging.get_handler_settings()
+    _detach_handlers()
+
+    worker_initializer(settings)
+    _log_from_the_worker("desde el worker")
+
+    assert "INFO|DyCoV.Worker|desde el worker" in (tmp_path / EXECUTION_LOG).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_the_execution_log_is_not_rotated_while_several_processes_write_it(run_log, tmp_path):
+    dycov_logging.add_run_handler(tmp_path)
+
+    execution_handlers = [h for h in dycov_logging.handlers if h.get_name() == "run"]
+
+    assert execution_handlers
+    assert not any(isinstance(h, RotatingFileHandler) for h in execution_handlers)
+
+
+def test_closing_the_execution_log_leaves_the_shared_one(run_log, tmp_path):
+    dycov_logging.add_run_handler(tmp_path)
+
+    dycov_logging.close_run_handler()
+    _log_from_the_worker("solo en el compartido")
+
+    assert "solo en el compartido" in run_log.read_text(encoding="utf-8")
+    assert "run_log_dir" not in dycov_logging.get_handler_settings()
