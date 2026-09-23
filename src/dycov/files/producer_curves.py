@@ -13,6 +13,7 @@ from pathlib import Path
 
 from lxml import etree
 
+from dycov.curves import requested_curves
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
 from dycov.files.model_parameters import find_bbmodel_by_type, find_bbmodels
@@ -126,8 +127,8 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
         curves_dictionary += (
             f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
             f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
-            f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
-            f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
+            f"{gen_ppm.get('id')}_GEN_ActiveCurrentInjTerminal = \n"
+            f"{gen_ppm.get('id')}_GEN_ReactiveCurrentInjTerminal = \n"
         )
 
     curves_dictionary += (
@@ -239,6 +240,7 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
     curves_dictionary = (
         "[Curves-Dictionary] \n"
         "time = \n"
+        "NetworkFrequencyPu = \n"
         "# To represent a signal that is in raw abc three-phase form, the affected signal must "
         "be tripled \n"
         "# and the suffixes _a, _b and _c must be added as in the following example: \n"
@@ -247,42 +249,16 @@ def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
         "#    SignalName_c = \n"
     )
 
-    if zone == "Zone1":
-        curves_dictionary += (
-            "\n\n# Wind Turbines or PV Arrays in Zone1 \n[Curves-Dictionary-Zone1] \n"
-            "InternalNode1_BUS_Voltage = \n"
-            "InternalNode1_BUS_ActivePower = \n"
-            "InternalNode1_BUS_ReactivePower = \n"
-            "InternalNode1_BUS_ActiveCurrent = \n"
-            "InternalNode1_BUS_ReactiveCurrent = \n"
-        )
-        for gen_ppm in gens:
-            curves_dictionary += (
-                f"{gen_ppm.get('id')}_GEN_UPuInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
-            )
-    else:
-        curves_dictionary += (
-            "\n\n# Wind Turbines or PV Arrays in Zone3 \n[Curves-Dictionary-Zone3] \n"
-            "BusPDR_BUS_Voltage = \n"
-            "BusPDR_BUS_ActivePower = \n"
-            "BusPDR_BUS_ReactivePower = \n"
-            "BusPDR_BUS_ActiveCurrent = \n"
-            "BusPDR_BUS_ReactiveCurrent = \n"
-            "NetworkFrequencyPu = \n"  # Variable de frecuencia restaurada solo para Zona 3
-        )
-        for xfmr in xfmrs:
-            curves_dictionary += f"{xfmr.get('id')}_XFMR_Tap = \n"
-        for gen_ppm in gens:
-            curves_dictionary += (
-                f"{gen_ppm.get('id')}_GEN_IpInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_IqInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_UPuInjTerminal = \n"
-                f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
-                f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
-                f"{gen_ppm.get('id')}_GEN_NetworkFrequencyPu = \n"
-            )
+    zone_number = 1 if zone == "Zone1" else 3
+    curves_dictionary += (
+        f"\n\n# Wind Turbines or PV Arrays in {zone} \n[Curves-Dictionary-{zone}] \n"
+    )
+    for name in requested_curves.for_zone(
+        zone_number,
+        [gen.get("id") for gen in gens],
+        [xfmr.get("id") for xfmr in xfmrs],
+    ):
+        curves_dictionary += f"{name} = \n"
 
     return curves_dictionary
 

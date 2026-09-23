@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from dycov.files.model_parameters import extract_defined_value
+from dycov.files.value_registry import extract_defined_value
 
 
 @dataclass(frozen=True)
