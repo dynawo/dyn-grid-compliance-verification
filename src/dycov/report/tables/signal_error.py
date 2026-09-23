@@ -130,7 +130,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
         apply_formatter=True,
         default_value="",
     )
-    before_mxe_check = results["before_mxe_" + measurement + "_check"]
+    before_mxe_check = results.get("before_mxe_" + measurement + "_check")
     before_me = printable.format_value(
         results,
         "before_me_" + measurement + "_value",
@@ -138,7 +138,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
         apply_formatter=True,
         default_value="",
     )
-    before_me_check = results["before_me_" + measurement + "_check"]
+    before_me_check = results.get("before_me_" + measurement + "_check")
     before_mae = printable.format_value(
         results,
         "before_mae_" + measurement + "_value",
@@ -146,7 +146,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
         apply_formatter=True,
         default_value="",
     )
-    before_mae_check = results["before_mae_" + measurement + "_check"]
+    before_mae_check = results.get("before_mae_" + measurement + "_check")
     after_mxe = printable.format_value(
         results,
         "after_mxe_" + measurement + "_value",
@@ -154,7 +154,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
         apply_formatter=True,
         default_value="",
     )
-    after_mxe_check = results["after_mxe_" + measurement + "_check"]
+    after_mxe_check = results.get("after_mxe_" + measurement + "_check")
     after_me = printable.format_value(
         results,
         "after_me_" + measurement + "_value",
@@ -162,7 +162,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
         apply_formatter=True,
         default_value="",
     )
-    after_me_check = results["after_me_" + measurement + "_check"]
+    after_me_check = results.get("after_me_" + measurement + "_check")
     after_mae = printable.format_value(
         results,
         "after_mae_" + measurement + "_value",
@@ -170,7 +170,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
         apply_formatter=True,
         default_value="",
     )
-    after_mae_check = results["after_mae_" + measurement + "_check"]
+    after_mae_check = results.get("after_mae_" + measurement + "_check")
     check = printable.format_latex_check(results["voltage_dips_" + measurement + "_check"])
     if "during_mxe_" + measurement + "_value" in results:
         during_mxe = printable.format_value(
@@ -180,7 +180,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
             apply_formatter=True,
             default_value="",
         )
-        during_mxe_check = results["during_mxe_" + measurement + "_check"]
+        during_mxe_check = results.get("during_mxe_" + measurement + "_check")
         during_me = printable.format_value(
             results,
             "during_me_" + measurement + "_value",
@@ -188,7 +188,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
             apply_formatter=True,
             default_value="",
         )
-        during_me_check = results["during_me_" + measurement + "_check"]
+        during_me_check = results.get("during_me_" + measurement + "_check")
         during_mae = printable.format_value(
             results,
             "during_mae_" + measurement + "_value",
@@ -196,7 +196,7 @@ def _voltage_dips_error(results: dict, name: str, measurement: str, errors_map: 
             apply_formatter=True,
             default_value="",
         )
-        during_mae_check = results["during_mae_" + measurement + "_check"]
+        during_mae_check = results.get("during_mae_" + measurement + "_check")
         errors_map.append(
             [
                 name,
