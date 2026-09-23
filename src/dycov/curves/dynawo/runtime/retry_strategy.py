@@ -110,8 +110,8 @@ class SolverRetryStrategy:
         """What the attempt just made reported, to be quoted in the retry message."""
         if max_sim_time is not None and result.sim_time > max_sim_time:
             return f"took {result.sim_time:.1f}s, over the {max_sim_time}s limit"
-        if result.has_timeline_error:
-            return "Dynawo logged an error"
+        if result.timeline_error:
+            return result.timeline_error
         reported = (result.log or "").strip().splitlines()
         return reported[-1] if reported else "Dynawo did not report success"
 

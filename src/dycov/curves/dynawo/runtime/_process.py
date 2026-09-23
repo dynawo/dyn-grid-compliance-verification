@@ -21,6 +21,8 @@ from dycov.logging import dycov_logging
 
 ProcessOutcome = namedtuple("ProcessOutcome", "completed_successfully stderr elapsed_seconds")
 
+_ERROR_MARKER = "| ERROR |"
+
 
 class _ProcRegistry:
     """Simple process registry for DynawoSimulator child processes."""
@@ -120,36 +122,29 @@ def run_dynawo_process(
     )
 
 
-def has_error_timeline(pcs_name: str, bm_name: str, oc_name: str, log_path: Path) -> bool:
-    """Check if the Dynawo log file contains any error messages.
+def find_timeline_error(log_path: Path) -> str | None:
+    """Look in the Dynawo log file for the first error it reported.
 
     Parameters
     ----------
-    pcs_name : str
-        Name of the PCS.
-    bm_name : str
-        Name of the benchmark.
-    oc_name : str
-        Name of the operating condition.
     log_path : Path
         Path to the Dynawo log file.
 
     Returns
     -------
-    bool
-        True if an error message is found in the log file, False otherwise.
+    str | None
+        The error Dynawo reported, without the timestamp and level it is logged with,
+        or None if it reported none.
     """
     if not log_path.is_file():
         dycov_logging.get_logger("DynawoSimulator").warning(f"Log file not found at {log_path}")
-        return False
+        return None
     with open(log_path, "r") as log:
         for line in log:
             if "ERROR" in line:
-                dycov_logging.get_logger("DynawoSimulator").debug(
-                    f"{pcs_name}.{bm_name}.{oc_name}: Error found in: {line.strip()}"
-                )
-                return True
-    return False
+                _, marker, message = line.partition(_ERROR_MARKER)
+                return (message if marker else line).strip()
+    return None
 
 
 def _sigterm_all(procs: list[subprocess.Popen]) -> None:
