@@ -78,10 +78,7 @@ def terminate_all_children(timeout: float = 5.0) -> None:
         return
     for p in procs:
         try:
-            if os.name == "nt":
-                p.terminate()
-            else:
-                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         except Exception:
             try:
                 p.terminate()
@@ -99,16 +96,7 @@ def terminate_all_children(timeout: float = 5.0) -> None:
     for p in procs:
         if p.poll() is None:
             try:
-                if os.name == "nt":
-                    subprocess.run(
-                        f"taskkill /F /T /PID {p.pid}",
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        check=False,
-                    )
-                else:
-                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(p.pid), signal.SIGKILL)
             except Exception:
                 pass
 
@@ -120,7 +108,7 @@ def _run_pdflatex(working_path: Path, report_name_noext: str):
         cwd=working_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        preexec_fn=os.setsid if os.name != "nt" else None,
+        preexec_fn=os.setsid,
     )
     _ReportProcRegistry.add(proc)
     try:
