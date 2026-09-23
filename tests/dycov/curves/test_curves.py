@@ -14,7 +14,7 @@ from types import SimpleNamespace
 import pytest
 
 from dycov.curves.curves import ProducerCurves
-from dycov.files import model_parameters
+from dycov.files import value_registry
 
 
 def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0, zone=3):
@@ -102,7 +102,7 @@ def test_obtain_value_unknown_magnitude_raises():
 
 def test_obtain_value_names_the_configuration_option(monkeypatch):
     monkeypatch.setattr(
-        model_parameters,
+        value_registry,
         "config",
         SimpleNamespace(describe_option=lambda section, key: f"'{key}' in section [{section}]"),
     )

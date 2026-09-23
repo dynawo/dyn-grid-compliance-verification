@@ -1,6 +1,5 @@
 # Installing DyCoV using the provided distribution image
 
-**DyCoV version:** 1.2.0  
 **Scope:** End‑user installation and execution of DyCoV using the prebuilt
 distribution image (recommended installation method).
 
@@ -196,11 +195,26 @@ This method is intended for users comfortable with Docker tooling.
 
 Open PowerShell in the folder containing `dycov_rawimage.tar.gz`.
 
-Define the required metadata:
+Define the PATH metadata:
 
 ```powershell
-$DycovPath  = 'ENV PATH=\"/opt/dynawo_install/dynawo:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+$DycovPath = 'ENV PATH=/opt/dynawo_install/dynawo:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+```
+
+The entrypoint is JSON, and the two PowerShell editions pass its quotes to Docker
+differently. Check which one you are running with `$PSVersionTable.PSVersion`, then
+use the matching line.
+
+Windows PowerShell 5.1:
+
+```powershell
 $DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
+```
+
+PowerShell 7 or newer:
+
+```powershell
+$DycovEntry = 'ENTRYPOINT ["/start_dycov.sh"]'
 ```
 
 Import the image:
@@ -208,6 +222,15 @@ Import the image:
 ```powershell
 docker import --change $DycovPath --change $DycovEntry .\dycov_rawimage.tar.gz dycov:latest
 ```
+
+Check that the entrypoint survived the import — this must print `["/start_dycov.sh"]`:
+
+```powershell
+docker image inspect dycov:latest --format '{{json .Config.Entrypoint}}'
+```
+
+Anything else means the other edition's line was used. Run `docker rmi dycov:latest`
+and import again, otherwise the container will not start.
 
 ---
 

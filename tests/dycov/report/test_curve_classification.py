@@ -30,7 +30,9 @@ def test_get_equipment_label_bus_zone1():
 
 
 def test_get_equipment_label_generator_ignores_zone():
-    assert get_equipment_label("Wind_Turbine_GEN_IpInjTerminal", zone=1) == "Wind_Turbine"
+    assert (
+        get_equipment_label("Wind_Turbine_GEN_ActiveCurrentInjTerminal", zone=1) == "Wind_Turbine"
+    )
 
 
 def test_get_equipment_label_unknown():
@@ -85,23 +87,23 @@ def test_build_figure_title_generator_variables_ignores_zone():
 
 def test_build_figure_title_injector_terminal_currents_zone1():
     variables = [
-        {"variable": "IpInjTerminal", "type": "generator"},
-        {"variable": "IqInjTerminal", "type": "generator"},
+        {"variable": "ActiveCurrentInjTerminal", "type": "generator"},
+        {"variable": "ReactiveCurrentInjTerminal", "type": "generator"},
     ]
 
     assert build_figure_title(variables, zone=1) == "Ip / Iq — InternalNode2"
 
 
 def test_build_figure_title_injector_terminal_voltage_zone1():
-    variables = [{"variable": "UPuInjTerminal", "type": "generator"}]
+    variables = [{"variable": "VoltageInjTerminal", "type": "generator"}]
 
     assert build_figure_title(variables, zone=1) == "Voltage — InternalNode2"
 
 
 def test_build_figure_title_injector_terminal_currents_zone3_keeps_generator():
     variables = [
-        {"variable": "IpInjTerminal", "type": "generator"},
-        {"variable": "IqInjTerminal", "type": "generator"},
+        {"variable": "ActiveCurrentInjTerminal", "type": "generator"},
+        {"variable": "ReactiveCurrentInjTerminal", "type": "generator"},
     ]
 
     assert build_figure_title(variables, zone=3) == "Ip / Iq — Generator"
