@@ -26,6 +26,9 @@ from dycov.logging.test_context import (
 
 colorama.init()
 
+_RUN_LOG_NAME = "dycov_run.log"
+_RUN_HANDLER_NAME = "run"
+
 
 class _ContextAdapter(logging.LoggerAdapter):
     """
@@ -87,6 +90,39 @@ class DycovLogger(logging.getLoggerClass()):
         if not disable_file:
             self.addHandler(file_handler)
 
+    def _add_run_handler(self, run_log_dir: Path) -> None:
+        settings = self._handler_settings
+        run_handler = logging.FileHandler(run_log_dir / _RUN_LOG_NAME, mode="a", delay=True)
+        run_handler.setLevel(settings["file_log_level"])
+        run_handler.setFormatter(logging.Formatter(settings["file_formatter"]))
+        run_handler.set_name(_RUN_HANDLER_NAME)
+        self.addHandler(run_handler)
+
+    def add_run_handler(self, run_log_dir: Path) -> None:
+        """Also write the log of this run where its results are produced.
+
+        The shared log mixes every run ever made by this user; this one belongs to a
+        single execution and travels with its results.
+
+        Parameters
+        ----------
+        run_log_dir: Path
+            Directory the log of this run is written to.
+        """
+        if self._handler_settings is None:
+            return
+        self._handler_settings["run_log_dir"] = run_log_dir
+        self._add_run_handler(run_log_dir)
+
+    def close_run_handler(self) -> None:
+        """Stop writing the log of this run, so its file can be moved with the results."""
+        for handler in list(self.handlers):
+            if handler.get_name() == _RUN_HANDLER_NAME:
+                self.removeHandler(handler)
+                handler.close()
+        if self._handler_settings is not None:
+            self._handler_settings.pop("run_log_dir", None)
+
     def init_handlers(
         self,
         file_log_level: int,
@@ -97,6 +133,7 @@ class DycovLogger(logging.getLoggerClass()):
         log_dir: Path,
         disable_console: bool = False,
         disable_file: bool = False,
+        run_log_dir: Optional[Path] = None,
     ) -> None:
         """Initialize console and file handlers with the given configurations.
         The effective log level of the logger is set to the lowest of the console and file log
@@ -120,6 +157,9 @@ class DycovLogger(logging.getLoggerClass()):
             If True, the console handler will not be added. Default is False.
         disable_file: bool, optional
             If True, the file handler will not be added. Default is False.
+        run_log_dir: Path, optional
+            Directory the log of this run is also written to. Default is None, which
+            writes only the shared log.
         """
         # Set the effective level to the lowest of console/file levels
         self.setLevel(console_log_level)
@@ -140,6 +180,8 @@ class DycovLogger(logging.getLoggerClass()):
             "disable_console": disable_console,
             "disable_file": disable_file,
         }
+        if run_log_dir is not None:
+            self.add_run_handler(run_log_dir)
 
     def get_handler_settings(self) -> Optional[dict]:
         """The arguments init_handlers was called with, so a process that does not
