@@ -110,7 +110,7 @@ throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpd
 | 3 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
 | 4 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
 | 5 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |
-| 6 | Collects all end-user artifacts into the output directory and zips `tools/dynawo_par` into `dycov_par_tool.zip`. |
+| 6 | Collects all end-user artifacts into the output directory. |
 | 7 | Removes the Docker images `dycov:latest` and `dycov:VERSION` from the local registry. |
 
 **Output directory:** `./release_VERSION/`
@@ -138,21 +138,12 @@ to the GitHub release:
 | `run_dycov_docker.sh` | Method 4 (Linux Docker) |
 | `linux_install.sh` | Method 3 (Linux Native) |
 | `Dynawo_omc_v1.8.0.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`) |
-| `dycov_par_tool.zip` | Standalone Dynawo PAR utility (also bundled inside every install method) |
-
-The standalone Dynawo PAR utility (`tools/dynawo_par`) is shipped to end users by
-every install method — it is copied into `~/tools/dynawo_par` in the Docker/WSL
-image (via `start_dycov.sh`) and into `<install_dir>/tools/dynawo_par` by
-`linux_install.sh`. `dycov_par_tool.zip` is additionally provided as a direct
-download for users who only want the script. Being dependency-free (standard
-library only), it runs with any Python 3 — e.g.
-`python tools/dynawo_par/generate_par.py --excel <file.xlsx>`.
 
 ---
 
 ## Post-Release Checklist
 
-1. **Create the GitHub release** from the tag and upload all nine files from `release_VERSION/`.
+1. **Create the GitHub release** from the tag and upload all eight files from `release_VERSION/`.
 2. Verify that `linux_install.sh` can download `Dynawo_omc_v1.8.0.zip` from the new
    release URL before announcing the release publicly.
 3. Note that `import_image.sh` and `run_dycov_docker.sh` lose their exec bit when downloaded

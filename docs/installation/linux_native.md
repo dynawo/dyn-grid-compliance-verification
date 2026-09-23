@@ -1,6 +1,5 @@
 # Native Linux installation of DyCoV (advanced)
 
-**DyCoV version:** 1.2.0  
 **Scope:** Native installation of DyCoV on Linux systems without using the
 prebuilt distribution image.
 
