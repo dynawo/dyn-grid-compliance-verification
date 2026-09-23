@@ -36,6 +36,11 @@ if [[ ! -f "start_dycov.sh" ]]; then
     exit 1
 fi
 
+if [[ ! -f "dycov-open" ]]; then
+    echo "ERROR: dycov-open not found in installers/docker/"
+    exit 1
+fi
+
 if [[ ! -f "$ROOT_DIR/pyproject.toml" ]]; then
     echo "ERROR: pyproject.toml not found at $ROOT_DIR"
     exit 1
@@ -53,10 +58,9 @@ fi
 TEMP_DIR=$(mktemp -d temp.XXXXXX)
 
 EXAMPLES_DIR="$TEMP_DIR/examples"
-TOOLS_DIR="$TEMP_DIR/tools"
 DYNAWO_DIR_NAME="$TEMP_DIR/dynawo_build"
 
-mkdir -p "$EXAMPLES_DIR" "$TOOLS_DIR" "$DYNAWO_DIR_NAME"
+mkdir -p "$EXAMPLES_DIR" "$DYNAWO_DIR_NAME"
 
 cleanup() {
     echo "Cleaning up temp directory..."
@@ -149,14 +153,9 @@ if ! git -C "$ROOT_DIR" archive HEAD examples | tar -x -C "$TEMP_DIR"; then
     exit 1
 fi
 
-
-########################################
-# 5b. Copy standalone tools (Dynawo PAR utility)
-########################################
-
-echo "Copying standalone tools..."
-if ! git -C "$ROOT_DIR" archive HEAD tools/dynawo_par | tar -x -C "$TOOLS_DIR" --strip-components=1; then
-    echo "ERROR: could not stage tools/dynawo_par from Git."
+echo "Copying workbooks..."
+if ! git -C "$ROOT_DIR" archive HEAD workbooks | tar -x -C "$TEMP_DIR"; then
+    echo "ERROR: could not stage workbooks from Git."
     exit 1
 fi
 
@@ -218,14 +217,15 @@ cp -a "$ROOT_DIR/docs/installation"/*.md "$TEMP_DIR/installation/"
 
 
 ########################################
-# 8. Copy Dockerfile + start script
+# 8. Copy Dockerfile + runtime scripts
 ########################################
 
 cp Dockerfile "$TEMP_DIR/"
 cp start_dycov.sh "$TEMP_DIR/"
+cp dycov-open "$TEMP_DIR/"
 # Normalize the exec bit so the build context is deterministic regardless of the
 # host checkout's file mode (Windows/WSL, git archive, core.fileMode=false, ...).
-chmod 0755 "$TEMP_DIR/start_dycov.sh"
+chmod 0755 "$TEMP_DIR/start_dycov.sh" "$TEMP_DIR/dycov-open"
 
 
 ########################################
@@ -239,7 +239,7 @@ docker build \
     -t "dycov:$TAG" \
     --build-arg dycov_PKG="$PKG_BASENAME" \
     --build-arg dycov_EXAMPLES="examples" \
-    --build-arg dycov_TOOLS="tools" \
+    --build-arg dycov_WORKBOOKS="workbooks" \
     --build-arg dycov_TUTORIALS="tutorials" \
     --build-arg dycov_INSTALLATION="installation" \
     --build-arg DYNAWO_DIR_NAME="dynawo_build" \

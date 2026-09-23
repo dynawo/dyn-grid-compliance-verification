@@ -354,6 +354,8 @@ deactivate
 ################################################################################
 color_msg "Step 5: Installing examples, tutorials and building the manual..."
 cp -a "$TMP_LOCAL_REPO"/examples "$INSTALL_DIR"/
+# Blank workbooks to describe an installation in, one per standard.
+cp -a "$TMP_LOCAL_REPO"/workbooks "$INSTALL_DIR"/
 # User-facing tutorials and installation guides (only the *.md files, so their
 # relative cross-links work: tutorials/README.md links to ../installation/).
 # Build helpers (md2pdf.sh, listings-setup.tex) are not installed.
@@ -373,16 +375,6 @@ mv "$TMP_LOCAL_REPO"/docs/manual/build/latex/dycov.pdf "$INSTALL_DIR"/manual/
 color_msg "Examples, tutorials and manuals ready."
 
 ################################################################################
-# Install standalone tools (e.g. the Dynawo PAR generation utility)
-################################################################################
-if [ -d "$TMP_LOCAL_REPO/tools/dynawo_par" ]; then
-    color_msg "Step 6: Installing standalone tools..."
-    mkdir -p "$INSTALL_DIR"/tools
-    cp -a "$TMP_LOCAL_REPO"/tools/dynawo_par "$INSTALL_DIR"/tools/
-    color_msg "Tools installed in $INSTALL_DIR/tools."
-fi
-
-################################################################################
 # Final Cleanup
 ################################################################################
 rm -rf "$TMP_LOCAL_REPO"
@@ -397,8 +389,5 @@ exec 6>&- 7>&-
 echo -e ""
 echo -e "${GREEN}INSTALLATION COMPLETED SUCCESSFULLY!${NC}"
 echo -e "${GREEN}To start using the tool, run: source $INSTALL_DIR/activate_dycov${NC}"
-echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
-if [ -d "$INSTALL_DIR/tools/dynawo_par" ]; then
-    echo -e "${GREEN}Dynawo PAR utility: python $INSTALL_DIR/tools/dynawo_par/generate_par.py --excel <file.xlsx>${NC}"
-fi
+echo -e "${GREEN}Examples: $INSTALL_DIR/examples  |  Workbooks: $INSTALL_DIR/workbooks  |  Tutorials: $INSTALL_DIR/tutorials  |  Manual: $INSTALL_DIR/manual${NC}"
 echo -e ""

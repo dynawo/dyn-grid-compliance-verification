@@ -230,41 +230,83 @@ def test_injector_terminal_currents_divided_by_terminal_voltage():
 
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_UPuInjTerminal": [complex(0.8, 0.6), complex(0.5, 0.0)],
-            "GEN1_GEN_IpInjTerminal": [0.5, 1.0],
-            "GEN1_GEN_IqInjTerminal": [0.25, 0.5],
+            "GEN1_GEN_VoltageInjTerminal": [complex(0.8, 0.6), complex(0.5, 0.0)],
+            "GEN1_GEN_ActivePowerInjTerminal": [0.5, 1.0],
+            "GEN1_GEN_ReactivePowerInjTerminal": [0.25, 0.5],
         }
     )
     curves_dict = {}
 
     _get_injector_terminal_curves(90.0, 45.0, [Generator("GEN1")], df_curves, curves_dict)
 
-    assert curves_dict["GEN1_GEN_UPuInjTerminal"] == pytest.approx([1.0, 0.5])
-    assert curves_dict["GEN1_GEN_IpInjTerminal"] == pytest.approx([1.0, 4.0])
-    assert curves_dict["GEN1_GEN_IqInjTerminal"] == pytest.approx([0.5, 2.0])
-    assert "GEN1_GEN_IpInjTerminal" not in df_curves.columns
-    assert "GEN1_GEN_IqInjTerminal" not in df_curves.columns
-    assert "GEN1_GEN_UPuInjTerminal" not in df_curves.columns
+    assert curves_dict["GEN1_GEN_VoltageInjTerminal"] == pytest.approx([1.0, 0.5])
+    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([1.0, 4.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.5, 2.0])
+    assert "GEN1_GEN_ActivePowerInjTerminal" not in df_curves.columns
+    assert "GEN1_GEN_ReactivePowerInjTerminal" not in df_curves.columns
+    assert "GEN1_GEN_VoltageInjTerminal" not in df_curves.columns
 
 
-def test_injector_terminal_currents_zeroed_below_voltage_guard():
+def test_the_injector_currents_are_emitted_under_their_own_name():
     class Generator:
         def __init__(self, id_):
             self.id = id_
 
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_UPuInjTerminal": [complex(1e-4, 0.0), complex(1.0, 0.0)],
-            "GEN1_GEN_IpInjTerminal": [1.0, 1.0],
-            "GEN1_GEN_IqInjTerminal": [0.5, 0.5],
+            "GEN1_GEN_VoltageInjTerminal": [complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerInjTerminal": [1.0],
+            "GEN1_GEN_ReactivePowerInjTerminal": [0.5],
         }
     )
     curves_dict = {}
 
     _get_injector_terminal_curves(100.0, 100.0, [Generator("GEN1")], df_curves, curves_dict)
 
-    assert curves_dict["GEN1_GEN_IpInjTerminal"] == pytest.approx([0.0, 1.0])
-    assert curves_dict["GEN1_GEN_IqInjTerminal"] == pytest.approx([0.0, 0.5])
+    assert "GEN1_GEN_ActiveCurrentInjTerminal" in curves_dict
+    assert "GEN1_GEN_ReactiveCurrentInjTerminal" in curves_dict
+    assert "GEN1_GEN_ActivePowerInjTerminal" not in curves_dict
+    assert "GEN1_GEN_ReactivePowerInjTerminal" not in curves_dict
+
+
+def test_injector_terminal_currents_divide_however_small_the_voltage_is():
+    class Generator:
+        def __init__(self, id_):
+            self.id = id_
+
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageInjTerminal": [complex(1e-6, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerInjTerminal": [1e-6, 1.0],
+            "GEN1_GEN_ReactivePowerInjTerminal": [5e-7, 0.5],
+        }
+    )
+    curves_dict = {}
+
+    _get_injector_terminal_curves(100.0, 100.0, [Generator("GEN1")], df_curves, curves_dict)
+
+    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([1.0, 1.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.5, 0.5])
+
+
+def test_injector_terminal_currents_are_zero_only_where_the_voltage_is():
+    class Generator:
+        def __init__(self, id_):
+            self.id = id_
+
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageInjTerminal": [complex(0.0, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerInjTerminal": [1.0, 1.0],
+            "GEN1_GEN_ReactivePowerInjTerminal": [0.5, 0.5],
+        }
+    )
+    curves_dict = {}
+
+    _get_injector_terminal_curves(100.0, 100.0, [Generator("GEN1")], df_curves, curves_dict)
+
+    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([0.0, 1.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.0, 0.5])
 
 
 def test_voltage_guard_matches_documented_value():

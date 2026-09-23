@@ -205,14 +205,34 @@ the image export:
 
 .. code-block:: console
 
-   $DycovPath  = 'ENV PATH=\"/opt/dynawo_install/dynawo:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
+   $DycovPath = 'ENV PATH=/opt/dynawo_install/dynawo:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+The entrypoint is JSON, and the two PowerShell editions pass its quotes to Docker
+differently. Check which one you are running with ``$PSVersionTable.PSVersion``, then
+use the matching line — Windows PowerShell 5.1:
+
+.. code-block:: console
+
    $DycovEntry = 'ENTRYPOINT [\"/start_dycov.sh\"]'
+
+or PowerShell 7 or newer:
+
+.. code-block:: console
+
+   $DycovEntry = 'ENTRYPOINT ["/start_dycov.sh"]'
 
 Import the image:
 
 .. code-block:: console
 
    docker import --change $DycovPath --change $DycovEntry .\dycov_rawimage.tar.gz dycov:latest
+
+Check that the entrypoint survived the import; this must print
+``["/start_dycov.sh"]``, and anything else means the other edition's line was used:
+
+.. code-block:: console
+
+   docker image inspect dycov:latest --format '{{json .Config.Entrypoint}}'
 
 Launch a session mapped to your current directory:
 

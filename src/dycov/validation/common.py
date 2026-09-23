@@ -9,11 +9,13 @@
 #
 
 import math
+from typing import Iterable
 
 import numpy as np
 
 from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
+from dycov.validation import compared_curves
 
 # when magnitudes are smaller than atol, switch to absolute error
 ATOL = 1.0e-6
@@ -981,14 +983,12 @@ def get_time_lag(
 
 def get_measurement_name(
     modified_setpoint: str,
+    zone: int = 3,
+    columns: Iterable[str] = (),
 ) -> str:
-    if modified_setpoint == "ActivePowerSetpointPu":
-        return "BusPDR_BUS_ActivePower"
-    if modified_setpoint == "ReactivePowerSetpointPu":
-        return "BusPDR_BUS_ReactivePower"
-    if modified_setpoint == "VoltageSetpointPu":
-        return "BusPDR_BUS_Voltage"
-    if modified_setpoint == "NetworkFrequencyPu":
-        return "NetworkFrequencyPu"
+    """The curve a setpoint step is tracked on, in the frame the zone compares.
 
-    return "BusPDR_BUS_ReactivePower"
+    Electrical performance measures at the PDR, which is the frame of Zone 3, so that is the
+    default; Zone 1 tracks the magnitudes at the converter instead.
+    """
+    return compared_curves.for_setpoint(zone, modified_setpoint, columns)

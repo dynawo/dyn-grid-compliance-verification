@@ -1,6 +1,5 @@
 # Grid‑Forming (GFM) analysis with DyCoV
 
-**DyCoV version:** 1.2.0  
 **Scope:** Generation and analysis of Grid‑Forming (GFM) admissible envelopes
 using analytical methods, as supported by DyCoV.
 
