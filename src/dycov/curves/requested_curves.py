@@ -33,6 +33,7 @@ _ZONE_3_BUS = (
 )
 
 _ZONE_3_GENERATOR = (
+    "VoltageInjTerminal",
     "ActiveCurrentInjTerminal",
     "ReactiveCurrentInjTerminal",
     "MagnitudeControlledByAVRPu",
