@@ -9,7 +9,6 @@
 #
 
 import argparse
-import os
 import shutil
 import sys
 
@@ -45,7 +44,7 @@ def get_dynawo_launcher_name(parser: argparse.ArgumentParser, args: argparse.Nam
 
     if not dynawo_launcher_name:
         # Default to system-specific launcher name if not provided.
-        dynawo_launcher_name = "dynawo.cmd" if os.name == "nt" else "dynawo.sh"
+        dynawo_launcher_name = "dynawo.sh"
         dycov_logging.get_logger("CliUtils").debug(
             f"No launcher specified, defaulting to: {dynawo_launcher_name}"
         )
