@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,6 +18,24 @@ from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSim
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
 from dycov.logging import dycov_logging
+
+Remedy = Callable[[SolverParams, Path], str]
+"""A change tried on the solver, which reports what it changed."""
+
+_SMALL_NETWORK_PARAMETERS = {
+    "IDA": [
+        {"type": "INT", "name": "maximumNumberSlowStepIncrease", "value": "100"},
+        {"type": "INT", "name": "mxiterAlg", "value": "30"},
+        {"type": "INT", "name": "mxiterAlgInit", "value": "30"},
+        {"type": "INT", "name": "mxiterAlgJ", "value": "30"},
+        {"type": "INT", "name": "msbsetAlg", "value": "1"},
+    ],
+    "SIM": [
+        {"type": "INT", "name": "maximumNumberSlowStepIncrease", "value": "100"},
+        {"type": "INT", "name": "maxNewtonTry", "value": "30"},
+        {"type": "INT", "name": "msbset", "value": "1"},
+    ],
+}
 
 
 @dataclass
@@ -61,41 +80,14 @@ class SolverRetryStrategy:
         result = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
-        if result.succeeded or self._retries_exhausted():
-            return result
-
-        # 2) Reduce min step
-        self._warn("Retry: reducing minimum time step")
-        self._reduce_min_step(solver, working_oc_dir)
-        result = self._attempt(
-            run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
-        )
-        if result.succeeded or self._retries_exhausted():
-            return result
-
-        # 3) Increase required accuracy
-        self._warn("Retry: increasing required accuracy")
-        self._increase_accuracy(solver, working_oc_dir)
-        result = self._attempt(
-            run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
-        )
-        if result.succeeded or self._retries_exhausted():
-            return result
-
-        if self.settings.add_parameters_small_network:
-            self._warn("Retry: adding parameters for small networks")
-            self._add_parameters_small_networks(solver, working_oc_dir)
-            result = self._attempt(
-                run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
-            )
+        for remedy in self._remedies():
             if result.succeeded or self._retries_exhausted():
                 return result
 
-        if self.settings.enable_solver_flip:
-            self._warn("Retry: flipping solver type SIM <-> IDA")
-            self._flip_solver(solver)
-            replace_placeholders.modify_jobs_file(
-                working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
+            self._warn(
+                f"Retry {self.settings.attempt_count}/{self.settings.allowed_retries}: "
+                f"{remedy(solver, working_oc_dir)} "
+                f"(previous attempt: {self._why_it_failed(result, max_sim_time)})"
             )
             result = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
@@ -104,6 +96,24 @@ class SolverRetryStrategy:
         if result.sim_time > (max_sim_time or float("inf")):
             self._warn(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
         return result
+
+    def _remedies(self) -> Iterator[Remedy]:
+        """The changes tried on the solver, in the order they are tried."""
+        yield self._reduce_min_step
+        yield self._increase_accuracy
+        if self.settings.add_parameters_small_network:
+            yield self._add_parameters_small_networks
+        if self.settings.enable_solver_flip:
+            yield self._flip_solver
+
+    def _why_it_failed(self, result: DynawoResult, max_sim_time: float | None) -> str:
+        """What the attempt just made reported, to be quoted in the retry message."""
+        if max_sim_time is not None and result.sim_time > max_sim_time:
+            return f"took {result.sim_time:.1f}s, over the {max_sim_time}s limit"
+        if result.has_timeline_error:
+            return "Dynawo logged an error"
+        reported = (result.log or "").strip().splitlines()
+        return reported[-1] if reported else "Dynawo did not report success"
 
     def _warn(self, message: str) -> None:
         if not self.settings.disable_retry_logs:
@@ -129,7 +139,8 @@ class SolverRetryStrategy:
         return self.settings.attempt_count > self.settings.allowed_retries
 
     # --- mutations & file updates ---
-    def _reduce_min_step(self, solver: SolverParams, working_oc_dir: Path) -> None:
+    def _reduce_min_step(self, solver: SolverParams, working_oc_dir: Path) -> str:
+        previous = solver.minimum_time_step
         solver.minimum_time_step /= self.settings.step_divisor
         solver.minimal_acceptable_step /= self.settings.step_divisor
         param_name_min_step = "minStep" if solver.solver_id == "IDA" else "hMin"
@@ -139,8 +150,13 @@ class SolverRetryStrategy:
         replace_placeholders.modify_par_file(
             working_oc_dir, "solvers.par", "minimalAcceptableStep", solver.minimal_acceptable_step
         )
+        return (
+            f"{param_name_min_step} {previous:.3g} -> {solver.minimum_time_step:.3g}, "
+            f"minimalAcceptableStep {solver.minimal_acceptable_step:.3g}"
+        )
 
-    def _increase_accuracy(self, solver: SolverParams, working_oc_dir: Path) -> None:
+    def _increase_accuracy(self, solver: SolverParams, working_oc_dir: Path) -> str:
+        previous = solver.absAccuracy
         if solver.relAccuracy is not None:
             solver.relAccuracy *= self.settings.accuracy_multiplier
         solver.absAccuracy *= self.settings.accuracy_multiplier
@@ -152,38 +168,26 @@ class SolverRetryStrategy:
             replace_placeholders.modify_par_file(
                 working_oc_dir, "solvers.par", "absAccuracy", solver.absAccuracy
             )
-        else:  # SIM
-            replace_placeholders.modify_par_file(
-                working_oc_dir, "solvers.par", "fnormtol", solver.absAccuracy
+            return (
+                f"absAccuracy {previous:.3g} -> {solver.absAccuracy:.3g}, "
+                f"relAccuracy {solver.relAccuracy:.3g}"
             )
 
-    def _add_parameters_small_networks(self, solver: SolverParams, working_oc_dir: Path) -> None:
-        if solver.solver_id == "IDA":
-            replace_placeholders.add_parameters(
-                working_oc_dir,
-                "solvers.par",
-                solver.solver_id,
-                [
-                    {"type": "INT", "name": "maximumNumberSlowStepIncrease", "value": "100"},
-                    {"type": "INT", "name": "mxiterAlg", "value": "30"},
-                    {"type": "INT", "name": "mxiterAlgInit", "value": "30"},
-                    {"type": "INT", "name": "mxiterAlgJ", "value": "30"},
-                    {"type": "INT", "name": "msbsetAlg", "value": "1"},
-                ],
-            )
-        else:  # SIM
-            replace_placeholders.add_parameters(
-                working_oc_dir,
-                "solvers.par",
-                solver.solver_id,
-                [
-                    {"type": "INT", "name": "maximumNumberSlowStepIncrease", "value": "100"},
-                    {"type": "INT", "name": "maxNewtonTry", "value": "30"},
-                    {"type": "INT", "name": "msbset", "value": "1"},
-                ],
-            )
+        replace_placeholders.modify_par_file(
+            working_oc_dir, "solvers.par", "fnormtol", solver.absAccuracy
+        )
+        return f"fnormtol {previous:.3g} -> {solver.absAccuracy:.3g}"
 
-    def _flip_solver(self, solver: SolverParams) -> None:
+    def _add_parameters_small_networks(self, solver: SolverParams, working_oc_dir: Path) -> str:
+        parameters = _SMALL_NETWORK_PARAMETERS[solver.solver_id]
+        replace_placeholders.add_parameters(
+            working_oc_dir, "solvers.par", solver.solver_id, parameters
+        )
+        added = ", ".join(f"{p['name']}={p['value']}" for p in parameters)
+        return f"added the small network parameters ({added})"
+
+    def _flip_solver(self, solver: SolverParams, working_oc_dir: Path) -> str:
+        previous = solver.solver_id
         if solver.solver_id == "SIM":
             solver.solver_id = "IDA"
             solver.solver_lib = "dynawo_SolverIDA"
@@ -202,3 +206,7 @@ class SolverRetryStrategy:
             )
             solver.absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
             solver.relAccuracy = None
+        replace_placeholders.modify_jobs_file(
+            working_oc_dir, "TSOModel.jobs", solver.solver_id, solver.solver_lib
+        )
+        return f"solver {previous} -> {solver.solver_id}, back to its configured settings"
