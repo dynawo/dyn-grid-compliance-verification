@@ -276,9 +276,9 @@ class DycovInitializer:
                 if src.exists():
                     try:
                         manage_files.copy_directory(src, dest, dirs_exist_ok=True)
-                    except Exception as e:
-                        dycov_logging.get_logger("Initialization").error(
-                            f"Failed to copy {src} to {dest}: {e}"
+                    except Exception:
+                        dycov_logging.get_logger("Initialization").exception(
+                            f"Failed to copy {src} to {dest}"
                         )
             else:
                 for model in models:
@@ -294,9 +294,9 @@ class DycovInitializer:
                     if src.exists():
                         try:
                             manage_files.copy_directory(src, dest, dirs_exist_ok=True)
-                        except Exception as e:
-                            dycov_logging.get_logger("Initialization").error(
-                                f"Failed to copy {src} to {dest}: {e}"
+                        except Exception:
+                            dycov_logging.get_logger("Initialization").exception(
+                                f"Failed to copy {src} to {dest}"
                             )
 
     def _configure_user_models(self):
