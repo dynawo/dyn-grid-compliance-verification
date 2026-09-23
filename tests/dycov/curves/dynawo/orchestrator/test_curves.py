@@ -307,6 +307,30 @@ class TestGetSolver:
         assert result["absAccuracy"].default == pytest.approx(1e-6)
 
     @patch(f"{_MODULE}.config")
+    def test_a_solver_no_retry_touched_declares_no_added_parameters(self, mock_cfg):
+        mock_cfg.get_value.side_effect = _cfg_get_value
+        mock_cfg.get_float.side_effect = _cfg_get_float
+        mock_cfg.get_int.side_effect = _cfg_get_int
+
+        result = self._make_ida_curves().get_solver()
+
+        assert "mxiterAlg" not in result
+
+    @patch(f"{_MODULE}.config")
+    def test_reports_the_parameters_a_retry_added(self, mock_cfg):
+        mock_cfg.get_value.side_effect = _cfg_get_value
+        mock_cfg.get_float.side_effect = _cfg_get_float
+        mock_cfg.get_int.side_effect = _cfg_get_int
+
+        curves = self._make_ida_curves()
+        curves._solver.added_parameters = {"mxiterAlg": "30"}
+
+        result = curves.get_solver()
+
+        assert result["mxiterAlg"].actual == "30"
+        assert result["mxiterAlg"].default == "not set"
+
+    @patch(f"{_MODULE}.config")
     def test_reports_the_solver_a_retry_flipped_to(self, mock_cfg):
         mock_cfg.get_value.side_effect = _cfg_get_value
         mock_cfg.get_float.side_effect = _cfg_get_float
