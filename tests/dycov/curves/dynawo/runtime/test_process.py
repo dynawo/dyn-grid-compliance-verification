@@ -9,6 +9,7 @@
 #
 """Tests for what the Dynawo log is asked about after a simulation."""
 
+import logging
 from pathlib import Path
 
 from dycov.curves.dynawo.runtime._process import find_timeline_error
@@ -34,8 +35,11 @@ def test_a_log_without_errors_reports_none(tmp_path: Path):
     assert find_timeline_error(log) is None
 
 
-def test_a_log_that_was_never_written_reports_none(tmp_path: Path):
-    assert find_timeline_error(tmp_path / "dynawo.log") is None
+def test_a_log_that_was_never_written_reports_none_without_warning(tmp_path: Path, caplog):
+    with caplog.at_level(logging.DEBUG, logger="DyCoV"):
+        assert find_timeline_error(tmp_path / "dynawo.log") is None
+
+    assert not [record for record in caplog.records if record.levelno >= logging.WARNING]
 
 
 def test_an_error_logged_without_the_usual_prefix_comes_back_whole(tmp_path: Path):
