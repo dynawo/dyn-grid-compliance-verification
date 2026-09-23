@@ -22,7 +22,7 @@ from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetr
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
-from dycov.files import manage_files, model_parameters
+from dycov.files import manage_files, simulation_files
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.logging import dycov_logging
 from dycov.logging.simulation_logger import SimulationLogger
@@ -186,7 +186,7 @@ class DynawoCurves(ProducerCurves):
             ),
             working_oc_dir,
         )
-        jobs_output_dir = model_parameters.find_output_dir(working_oc_dir, "TSOModel")
+        jobs_output_dir = simulation_files.find_output_dir(working_oc_dir, "TSOModel")
         return output_dir, jobs_output_dir
 
     def __build_run_inputs(self) -> DynawoRunInputs:
