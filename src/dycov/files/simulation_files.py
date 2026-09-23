@@ -15,6 +15,9 @@ from lxml import etree
 
 from dycov.model.parameters import PdrParams
 
+SIMULATION_INPUTS_FILE = "simulation_inputs.ini"
+"""Record, next to the curves of a test, of what its simulation ran with."""
+
 
 def write_pdr_comment(path: Path, par_file: str, pdr: PdrParams) -> None:
     """

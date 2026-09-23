@@ -7,7 +7,7 @@
 # omsg@aia.es
 # demiguelm@aia.es
 #
-import logging
+import configparser
 from collections import namedtuple
 from pathlib import Path
 
@@ -24,15 +24,15 @@ from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, simulation_files
 from dycov.files.manage_files import ModelFiles, ProducerFiles
+from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.logging import dycov_logging
-from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import DisconnectionModel, SimulationOutcomeError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 
 _CURVES_CSV = "curves/curves.csv"
-# The record of a test is a handful of lines; the cap only guards against a runaway file.
-_SIMULATION_LOG_MAX_BYTES = 1024 * 1024
+_SIMULATION_SECTION = "Simulation"
+_NOT_CONFIGURED = "not set"
 
 SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 SolverParam = namedtuple("SolverParam", "actual default")
@@ -102,13 +102,6 @@ class DynawoCurves(ProducerCurves):
 
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
-        # Solver parameters — initialised by __reset_solver
-        self._solver_id = ""
-        self._solver_lib = ""
-        self._minimum_time_step = 0.0
-        self._minimal_acceptable_step = 0.0
-        self._absAccuracy = 0.0
-        self._relAccuracy = 0.0
         self.__reset_solver()
 
         self._voltage_dip = None
@@ -121,26 +114,34 @@ class DynawoCurves(ProducerCurves):
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def __configured_solver(self) -> SolverParams:
+        """Builds the solver parameters as the configuration declares them."""
+        solver_lib = config.get_value("Dynawo", "solver_lib", "dynawo_SolverIDA")
+        solver_id = solver_lib.replace("dynawo_Solver", "")
+        if solver_id == "IDA":
+            return SolverParams(
+                solver_id=solver_id,
+                solver_lib=solver_lib,
+                minimum_time_step=config.get_float("Dynawo", "ida_minStep", 1e-6),
+                minimal_acceptable_step=config.get_float(
+                    "Dynawo", "ida_minimalAcceptableStep", 1e-6
+                ),
+                absAccuracy=config.get_float("Dynawo", "ida_absAccuracy", 1e-6),
+                relAccuracy=config.get_float("Dynawo", "ida_relAccuracy", 1e-4),
+            )
+        return SolverParams(
+            solver_id=solver_id,
+            solver_lib=solver_lib,
+            minimum_time_step=config.get_float("Dynawo", "sim_hMin", 1e-6),
+            minimal_acceptable_step=config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
+            absAccuracy=config.get_float("Dynawo", "sim_fnormtol", 1e-4),
+            relAccuracy=None,
+        )
+
     def __reset_solver(self) -> None:
         """Resets all solver parameters to their configured defaults."""
-        self._solver_lib = config.get_value("Dynawo", "solver_lib", "dynawo_SolverIDA")
-        self._solver_id = self._solver_lib.replace("dynawo_Solver", "")
-        if self._solver_id == "IDA":
-            self._minimum_time_step = config.get_float("Dynawo", "ida_minStep", 1e-6)
-            self._minimal_acceptable_step = config.get_float(
-                "Dynawo", "ida_minimalAcceptableStep", 1e-6
-            )
-            self._absAccuracy = config.get_float("Dynawo", "ida_absAccuracy", 1e-6)
-            self._relAccuracy = config.get_float("Dynawo", "ida_relAccuracy", 1e-4)
-        else:
-            self._minimum_time_step = config.get_float("Dynawo", "sim_hMin", 1e-6)
-            self._minimal_acceptable_step = config.get_float(
-                "Dynawo", "sim_minimalAcceptableStep", 1e-6
-            )
-            self._absAccuracy = config.get_float("Dynawo", "sim_fnormtol", 1e-4)
-            if hasattr(self, "_relAccuracy"):
-                delattr(self, "_relAccuracy")
-        parameter_checks.check_solver(self._solver_id, self._solver_lib)
+        self._solver = self.__configured_solver()
+        parameter_checks.check_solver(self._solver.solver_id, self._solver.solver_lib)
 
     def _build_bisection_engine(self) -> BisectionEngine:
         return BisectionEngine(
@@ -200,16 +201,6 @@ class DynawoCurves(ProducerCurves):
             f_nom=self._f_nom,
         )
 
-    def __build_solver_params(self) -> SolverParams:
-        return SolverParams(
-            solver_id=self._solver_id,
-            solver_lib=self._solver_lib,
-            minimum_time_step=self._minimum_time_step,
-            minimal_acceptable_step=self._minimal_acceptable_step,
-            absAccuracy=self._absAccuracy,
-            relAccuracy=self._relAccuracy if hasattr(self, "_relAccuracy") else None,
-        )
-
     def __execute_simulation(
         self,
         output_dir: Path,
@@ -245,7 +236,7 @@ class DynawoCurves(ProducerCurves):
         )
         result = strategy.run(
             run=self.__build_run_inputs(),
-            solver=self.__build_solver_params(),
+            solver=self._solver,
             output_dir=output_dir,
             working_oc_dir=working_oc_dir,
             jobs_output_dir=jobs_output_dir,
@@ -323,18 +314,13 @@ class DynawoCurves(ProducerCurves):
             )
         }
 
-    def __log_simulation_inputs(self, working_oc_dir: Path, event_params: dict) -> None:
+    def __record_simulation_inputs(self, working_oc_dir: Path, event_params: dict) -> None:
         """Record next to the curves of a test what its simulation ran with.
 
         `dycov anonymize` rebuilds the [Curves-Metadata] section of the dictionaries it
         generates by reading this file: without it every generated curve set declares its
         event at t = 0 and no warning is raised.
         """
-        simulation_logger = SimulationLogger("Simulation")
-        simulation_logger.init_handlers(
-            logging.INFO, "%(message)s", _SIMULATION_LOG_MAX_BYTES, working_oc_dir
-        )
-
         curves_metadata = {
             "is_field_measurements": False,
             "sim_t_event_start": event_params.get("start_time"),
@@ -348,10 +334,16 @@ class DynawoCurves(ProducerCurves):
             "event_step_value": event_params.get("step_value"),
         } | {f"solver_{name}": value.actual for name, value in self.get_solver().items()}
 
-        for name, value in (curves_metadata | self.__initial_state() | simulation_inputs).items():
-            simulation_logger.info(f"{name} = {value}")
-
-        simulation_logger.close_handlers()
+        record = configparser.ConfigParser()
+        record.optionxform = str
+        record[_SIMULATION_SECTION] = {
+            name: str(value)
+            for name, value in (
+                curves_metadata | self.__initial_state() | simulation_inputs
+            ).items()
+        }
+        with open(working_oc_dir / SIMULATION_INPUTS_FILE, "w") as record_file:
+            record.write(record_file)
 
     def obtain_simulated_curve(
         self,
@@ -471,7 +463,7 @@ class DynawoCurves(ProducerCurves):
             error_message = e.error
 
         if event_params:
-            self.__log_simulation_inputs(working_oc_dir, event_params)
+            self.__record_simulation_inputs(working_oc_dir, event_params)
 
         simulation_result = SimulationResult(
             is_test_applicable,
@@ -554,6 +546,18 @@ class DynawoCurves(ProducerCurves):
         """Returns the simulation precision."""
         return self._simulation_precision
 
+    def get_solver_params(self) -> SolverParams:
+        """
+        Returns the solver parameters the next simulation runs with, as the retry strategy
+        leaves them.
+
+        Returns
+        -------
+        SolverParams
+            Live solver parameters.
+        """
+        return self._solver
+
     def get_solver(self) -> dict[str, SolverParam]:
         """
         Returns the current and default solver parameters, used for reporting.
@@ -564,14 +568,13 @@ class DynawoCurves(ProducerCurves):
             Parameter name mapped to SolverParam(actual, default).
         """
         P = SolverParam
+        solver = self._solver
+        configured_lib = config.get_value("Dynawo", "solver_lib")
         solver_parameters = {
-            "lib": P(self._solver_lib, config.get_value("Dynawo", "solver_lib")),
-            "parId": P(
-                self._solver_id,
-                config.get_value("Dynawo", "solver_lib").replace("dynawo_Solver", ""),
-            ),
+            "lib": P(solver.solver_lib, configured_lib),
+            "parId": P(solver.solver_id, configured_lib.replace("dynawo_Solver", "")),
         }
-        if self._solver_id == "IDA":
+        if solver.solver_id == "IDA":
             solver_parameters.update(
                 {
                     "order": P(
@@ -579,11 +582,11 @@ class DynawoCurves(ProducerCurves):
                         config.get_int("Dynawo", "ida_order", 2),
                     ),
                     "initStep": P(
-                        config.get_float("Dynawo", "ida_initStep", 1e-9),
+                        config.get_float("Dynawo", "ida_initStep", 1e-6),
                         config.get_float("Dynawo", "ida_initStep", 1e-6),
                     ),
                     "minStep": P(
-                        self._minimum_time_step,
+                        solver.minimum_time_step,
                         config.get_float("Dynawo", "ida_minStep", 1e-6),
                     ),
                     "maxStep": P(
@@ -591,15 +594,15 @@ class DynawoCurves(ProducerCurves):
                         config.get_float("Dynawo", "ida_maxStep", 1.0),
                     ),
                     "absAccuracy": P(
-                        self._absAccuracy,
+                        solver.absAccuracy,
                         config.get_float("Dynawo", "ida_absAccuracy", 1e-6),
                     ),
                     "relAccuracy": P(
-                        self._relAccuracy,
+                        solver.relAccuracy,
                         config.get_float("Dynawo", "ida_relAccuracy", 1e-4),
                     ),
                     "minimalAcceptableStep": P(
-                        self._minimal_acceptable_step,
+                        solver.minimal_acceptable_step,
                         config.get_float("Dynawo", "ida_minimalAcceptableStep", 1e-6),
                     ),
                 }
@@ -608,7 +611,7 @@ class DynawoCurves(ProducerCurves):
             solver_parameters.update(
                 {
                     "hMin": P(
-                        self._minimum_time_step, config.get_float("Dynawo", "sim_hMin", 0.01)
+                        solver.minimum_time_step, config.get_float("Dynawo", "sim_hMin", 1e-6)
                     ),
                     "hMax": P(
                         config.get_float("Dynawo", "sim_hMax", 0.01),
@@ -627,14 +630,17 @@ class DynawoCurves(ProducerCurves):
                         config.get_value("Dynawo", "sim_linearSolverName"),
                     ),
                     "fnormtol": P(
-                        self._absAccuracy, config.get_float("Dynawo", "sim_fnormtol", 0.01)
+                        solver.absAccuracy, config.get_float("Dynawo", "sim_fnormtol", 1e-4)
                     ),
                     "minimalAcceptableStep": P(
-                        self._minimal_acceptable_step,
+                        solver.minimal_acceptable_step,
                         config.get_float("Dynawo", "sim_minimalAcceptableStep", 1e-6),
                     ),
                 }
             )
+        solver_parameters.update(
+            {name: P(value, _NOT_CONFIGURED) for name, value in solver.added_parameters.items()}
+        )
         return solver_parameters
 
     # ------------------------------------------------------------------

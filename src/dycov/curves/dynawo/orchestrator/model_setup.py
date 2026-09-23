@@ -727,9 +727,10 @@ class ModelSetup:
         self._table_file = TableFile(self._owner, pcs_bm_name, oc_name)
         self._solvers_file = SolversFile(self._owner, pcs_bm_name, oc_name)
 
-        solver_id = self._owner._solver_id
-        solver_lib = self._owner._solver_lib
-        self._jobs_file.complete_file(working_oc_dir, solver_id, solver_lib, event_params)
+        solver = self._owner.get_solver_params()
+        self._jobs_file.complete_file(
+            working_oc_dir, solver.solver_id, solver.solver_lib, event_params
+        )
         self._par_file.complete_file(
             working_oc_dir,
             line_rpu,

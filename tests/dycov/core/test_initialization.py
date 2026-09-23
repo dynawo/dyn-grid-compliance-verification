@@ -177,6 +177,20 @@ class TestDycovInitializer:
                     dest = config_templates_dir / template / category / model / ".DummySample"
                     mock_copy_directory.assert_any_call(src, dest, dirs_exist_ok=True)
 
+    def test_a_template_that_cannot_be_copied_is_reported_with_its_traceback(
+        self, dycov_initializer, tool_path_fixture, mocker
+    ):
+        mocker.patch(
+            "dycov.files.manage_files.copy_directory",
+            side_effect=PermissionError("read-only file system"),
+        )
+        mocker.patch("dycov.files.manage_files.copy_from_path")
+
+        dycov_initializer._configure_templates(tool_path_fixture)
+
+        assert self._mock_logger.exception.called
+        assert not self._mock_logger.error.called
+
     def test_is_valid_config_file_with_correct_version(self, dycov_initializer, tmp_path):
         """
         Tests _is_valid_config_file with a configuration file having the correct version.

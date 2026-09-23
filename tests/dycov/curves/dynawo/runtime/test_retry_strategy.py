@@ -18,13 +18,13 @@ from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetr
 from dycov.curves.dynawo.runtime.run_types import SolverParams
 
 MAX_SIM_TIME = 10.0
-RETRY_WARNINGS = [
-    "Retry: reducing minimum time step",
-    "Retry: increasing required accuracy",
-    "Retry: adding parameters for small networks",
-    "Retry: flipping solver type SIM <-> IDA",
-    f"Simulation time exceeds the maximum allowed ({MAX_SIM_TIME})",
+RETRY_HEADINGS = [
+    "Retry 1/4: minStep 1e-06 -> 1e-07",
+    "Retry 2/4: absAccuracy 1e-06 -> 1e-05",
+    "Retry 3/4: added the small network parameters",
+    "Retry 4/4: solver IDA -> SIM",
 ]
+TIME_WARNING = f"Simulation time exceeds the maximum allowed ({MAX_SIM_TIME})"
 
 
 class RecordingLogger:
@@ -121,7 +121,7 @@ def _added_parameters(writes):
 
 @pytest.mark.parametrize(
     "disable_retry_logs, expected_warnings",
-    [(False, RETRY_WARNINGS), (True, [])],
+    [(False, len(RETRY_HEADINGS) + 1), (True, 0)],
 )
 def test_retry_warnings_follow_disable_flag(
     recorded_warnings, recorded_writes, failing_attempts, disable_retry_logs, expected_warnings
@@ -132,7 +132,56 @@ def test_retry_warnings_follow_disable_flag(
 
     assert not result.succeeded
     assert len(failing_attempts) == 5
-    assert recorded_warnings == expected_warnings
+    assert len(recorded_warnings) == expected_warnings
+
+
+def test_each_retry_says_which_attempt_it_is_and_what_it_changed(
+    recorded_warnings, recorded_writes, failing_attempts
+):
+    strategy = SolverRetryStrategy(RetrySettings())
+
+    _run(strategy, _ida_solver())
+
+    retries = recorded_warnings[:-1]
+    assert len(retries) == len(RETRY_HEADINGS)
+    for warning, heading in zip(retries, RETRY_HEADINGS):
+        assert warning.startswith(heading)
+    assert recorded_warnings[-1] == TIME_WARNING
+
+
+@pytest.mark.parametrize(
+    "result, expected_reason",
+    [
+        (
+            DynawoResult(False, "", False, None, MAX_SIM_TIME + 1.0),
+            f"took 11.0s, over the {MAX_SIM_TIME}s limit",
+        ),
+        (
+            DynawoResult(
+                False,
+                "Simulation Fails: network is not connected, logs in /work/dynawo.log",
+                "network is not connected",
+                None,
+                1.0,
+            ),
+            "network is not connected",
+        ),
+        (
+            DynawoResult(False, "job failed\nsolver diverged", False, None, 1.0),
+            "solver diverged",
+        ),
+        (DynawoResult(False, "", False, None, 1.0), "Dynawo did not report success"),
+    ],
+)
+def test_a_retry_says_why_the_previous_attempt_failed(
+    monkeypatch, recorded_warnings, recorded_writes, result, expected_reason
+):
+    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(lambda *args, **kwargs: result))
+    strategy = SolverRetryStrategy(RetrySettings())
+
+    _run(strategy, _ida_solver())
+
+    assert recorded_warnings[0].endswith(f"(previous attempt: {expected_reason})")
 
 
 @pytest.mark.parametrize("successful_attempt", [1, 2, 3, 4])
@@ -146,7 +195,30 @@ def test_retry_stops_at_the_first_successful_attempt(
 
     assert result.succeeded
     assert len(attempts) == successful_attempt
-    assert recorded_warnings == RETRY_WARNINGS[: successful_attempt - 1]
+    assert len(recorded_warnings) == successful_attempt - 1
+
+
+def test_the_small_network_parameters_are_declared_once_a_retry_adds_them(
+    monkeypatch, recorded_warnings, recorded_writes
+):
+    _patch_run_base(monkeypatch, successful_attempt=4)
+    solver = _ida_solver()
+
+    _run(SolverRetryStrategy(RetrySettings()), solver)
+
+    assert solver.added_parameters["mxiterAlg"] == "30"
+    assert solver.added_parameters["maximumNumberSlowStepIncrease"] == "100"
+
+
+def test_flipping_the_solver_drops_the_parameters_added_to_the_one_left_behind(
+    recorded_warnings, recorded_writes, failing_attempts
+):
+    solver = _ida_solver()
+
+    _run(SolverRetryStrategy(RetrySettings()), solver)
+
+    assert solver.solver_id == "SIM"
+    assert solver.added_parameters == {}
 
 
 def test_ida_retries_tune_the_ida_parameters(recorded_warnings, recorded_writes, failing_attempts):

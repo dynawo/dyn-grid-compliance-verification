@@ -528,8 +528,8 @@ def _get_instance() -> Config:
             )
         user_config.read(user_config_file)
         logger.info("Successfully loaded user configuration.")
-    except Exception as e:
-        logger.warning(f"Could not load user configuration from {user_config_file}: {e}")
+    except Exception:
+        logger.warning(f"Could not load user configuration from {user_config_file}", exc_info=True)
 
     return Config(config_dir, default_config, user_config, pcs_config)
 

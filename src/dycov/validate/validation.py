@@ -323,6 +323,7 @@ class Validation:
                 manage_files.remove_dir(self._parameters.get_working_dir() / "Latex")
 
             # Move output files to destination folder
+            dycov_logging.close_run_handler()
             manage_files.rename_path(
                 self._parameters.get_working_dir(),
                 self._parameters.get_output_dir(),

@@ -54,6 +54,7 @@ def set_test_context(
     pcs: Optional[str] = None,
     benchmark: Optional[str] = None,
     oc: Optional[str] = None,
+    producer: Optional[str] = None,
 ) -> None:
     """
     Convenience function to set the active test context for the current thread.
@@ -63,9 +64,9 @@ def set_test_context(
         set_test_context(pcs="PCS_RTE-I16z1", benchmark="ThreePhaseFault", oc="TransientHiZTc800")
 
     All subsequent log lines from this thread will be prefixed with:
-        [PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800]
+        [Producer PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800]
     """
-    dycov_logging.set_test_context(pcs=pcs, benchmark=benchmark, oc=oc)
+    dycov_logging.set_test_context(pcs=pcs, benchmark=benchmark, oc=oc, producer=producer)
 
 
 def clear_test_context() -> None:

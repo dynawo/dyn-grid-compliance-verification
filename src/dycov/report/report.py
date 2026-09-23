@@ -562,12 +562,11 @@ def _create_full_tex(
                     )
                 )
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
-        except Exception as e:
-            dycov_logging.get_logger("Report").error(
+        except Exception:
+            dycov_logging.get_logger("Report").exception(
                 f"{operating_condition}: "
                 "A non fatal error occurred while generating the HTML report"
             )
-            dycov_logging.get_logger("Report").error(f"{operating_condition}: {e}")
 
     return _pcs_replace(working_path, pcs_results, report_name, producer)
 
