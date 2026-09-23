@@ -5,9 +5,9 @@ is_field_measurements = False
 # Variable sim_t_event_start is called simply sim_t_event in the DTR
 sim_t_event_start = 30.0
 # Duration of the event or fault
-fault_duration = 0.0
+fault_duration = 9999.0
 # Frequency sampling of the reference curves
-frequency_sampling = 15
+frequency_sampling = 15.0
 
 [Curves-Dictionary]
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
@@ -16,12 +16,10 @@ frequency_sampling = 15
 #    SignalName_b =
 #    SignalName_c =
 time = time
-InternalNode1_BUS_ActivePower = InternalNode1_BUS_ActivePower
-InternalNode1_BUS_ReactivePower = InternalNode1_BUS_ReactivePower
-InternalNode1_BUS_ActiveCurrent = InternalNode1_BUS_ActiveCurrent
-InternalNode1_BUS_ReactiveCurrent = InternalNode1_BUS_ReactiveCurrent
 InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage
-Wind_Turbine_GEN_IpInjTerminal = Wind_Turbine_GEN_IpInjTerminal 
-Wind_Turbine_GEN_IqInjTerminal = Wind_Turbine_GEN_IqInjTerminal 
-Wind_Turbine_GEN_UPuInjTerminal = Wind_Turbine_GEN_UPuInjTerminal 
+Wind_Turbine_GEN_VoltageInjTerminal = Wind_Turbine_GEN_VoltageInjTerminal
+Wind_Turbine_GEN_ActivePowerControlledPu = Wind_Turbine_GEN_ActivePowerControlledPu
+Wind_Turbine_GEN_ReactivePowerControlledPu = Wind_Turbine_GEN_ReactivePowerControlledPu
+Wind_Turbine_GEN_ActiveCurrentInjTerminal = Wind_Turbine_GEN_ActiveCurrentInjTerminal
+Wind_Turbine_GEN_ReactiveCurrentInjTerminal = Wind_Turbine_GEN_ReactiveCurrentInjTerminal
 NetworkFrequencyPu = NetworkFrequencyPu

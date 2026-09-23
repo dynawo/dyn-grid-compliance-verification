@@ -7,7 +7,7 @@ sim_t_event_start = 20.0
 # Duration of the event or fault
 fault_duration = 0.15
 # Frequency sampling of the reference curves
-frequency_sampling = 15
+frequency_sampling = 15.0
 
 [Curves-Dictionary]
 # To represent a signal that is in raw abc three-phase form, the affected signal must be tripled
@@ -23,12 +23,12 @@ BusPDR_BUS_ReactivePower = BusPDR_BUS_ReactivePower
 BusPDR_BUS_ReactiveCurrent = BusPDR_BUS_ReactiveCurrent
 Wind_Turbine1_GEN_MagnitudeControlledByAVRPu = Wind_Turbine1_GEN_MagnitudeControlledByAVRPu
 Wind_Turbine1_GEN_VoltageSetpointPu = Wind_Turbine1_GEN_VoltageSetpointPu
-Wind_Turbine1_GEN_IpInjTerminal = Wind_Turbine1_GEN_IpInjTerminal
-Wind_Turbine1_GEN_IqInjTerminal = Wind_Turbine1_GEN_IqInjTerminal
-Wind_Turbine1_GEN_UPuInjTerminal = Wind_Turbine1_GEN_UPuInjTerminal
+Wind_Turbine1_GEN_ActiveCurrentInjTerminal = Wind_Turbine1_GEN_ActiveCurrentInjTerminal
+Wind_Turbine1_GEN_ReactiveCurrentInjTerminal = Wind_Turbine1_GEN_ReactiveCurrentInjTerminal
+Wind_Turbine1_GEN_VoltageInjTerminal = Wind_Turbine1_GEN_VoltageInjTerminal
 Wind_Turbine2_GEN_MagnitudeControlledByAVRPu = Wind_Turbine2_GEN_MagnitudeControlledByAVRPu
 Wind_Turbine2_GEN_VoltageSetpointPu = Wind_Turbine2_GEN_VoltageSetpointPu
-Wind_Turbine2_GEN_IpInjTerminal = Wind_Turbine2_GEN_IpInjTerminal
-Wind_Turbine2_GEN_IqInjTerminal = Wind_Turbine2_GEN_IqInjTerminal
-Wind_Turbine2_GEN_UPuInjTerminal = Wind_Turbine2_GEN_UPuInjTerminal
+Wind_Turbine2_GEN_ActiveCurrentInjTerminal = Wind_Turbine2_GEN_ActiveCurrentInjTerminal
+Wind_Turbine2_GEN_ReactiveCurrentInjTerminal = Wind_Turbine2_GEN_ReactiveCurrentInjTerminal
+Wind_Turbine2_GEN_VoltageInjTerminal = Wind_Turbine2_GEN_VoltageInjTerminal
 NetworkFrequencyPu = NetworkFrequencyPu

@@ -101,3 +101,27 @@ def test_zero_compression_keeps_every_sample(tmp_dirs):
     anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves, compression=0)
 
     assert len(pd.read_csv(out / "nf.csv", sep=";")) == len(original)
+
+
+def test_a_curve_the_set_does_not_carry_stays_declared_and_empty(tmp_dirs):
+    curves, out = tmp_dirs
+    stem = "PCS_RTE-I16z1.GridVoltageStep.Drop"
+    (curves / f"{stem}.csv").write_text(
+        "time;InternalNode1_BUS_Voltage\n" + "".join(f"{t / 10};1.0\n" for t in range(40)),
+        encoding="utf-8",
+    )
+    (curves / f"{stem}.log").write_text(
+        "sim_t_event_start=30.0\nfault_duration=0.0\nfrequency_sampling=15.0\n",
+        encoding="utf-8",
+    )
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves)
+
+    written = (out / f"{stem}.dict").read_text()
+    # An empty right side names no column, and rewriting it as a pattern would match at every
+    # word boundary and scatter the curve name through the file.
+    assert "InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage" in written
+    assert "PV_Array" not in written
+    for line in written.splitlines():
+        if line.startswith("_GEN_") or line.count("=") > 1:
+            raise AssertionError(f"dictionary line damaged: {line}")

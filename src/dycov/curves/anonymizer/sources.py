@@ -8,9 +8,11 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 from pathlib import Path
 from typing import Dict, List
 
+from dycov.curves import requested_curves
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
 
@@ -107,18 +109,60 @@ def create_curves_files_ini(curves_folder: Path) -> None:
 
 def create_dict_files(curves_folder: Path, metadata: Dict[str, Dict]) -> None:
     for curves_file in curve_files(curves_folder):
-        _create_dict_file_if_not_exists(curves_file, metadata)
+        _create_dict_file(curves_file, metadata)
 
 
-def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -> None:
-    dict_file = csv_file.with_suffix(".dict")
-    if dict_file.exists():
-        dycov_logging.get_logger("Anonymizer").debug(
-            f"{dict_file} already exists. Skipping creation."
+def _zone_of(csv_file: Path) -> int:
+    """The zone a curve file belongs to, as its PCS names it."""
+    return 1 if "z1" in csv_file.stem.split(".")[0] else 3
+
+
+def _columns_of(csv_file: Path) -> List[str]:
+    with open(csv_file, "r") as csv_f:
+        return [header for header in csv_f.readline().strip().split(";") if header]
+
+
+def _curve_lines(csv_file: Path) -> List[str]:
+    """The dictionary of a curve file: what the zone asks for, then what the file also carries.
+
+    The curves the zone asks for are always declared, so a set that lacks one says so instead
+    of hiding it; their right side names the column of the file just written, and is empty when
+    nothing in it carries that curve. Every other column follows, because the importer reads a
+    curve file through its dictionary and would drop what the dictionary leaves out.
+    """
+    columns = _columns_of(csv_file)
+    requested = requested_curves.for_columns(_zone_of(csv_file), columns)
+
+    lines = [f"{name} = {name if name in columns else ''}\n" for name in requested]
+    lines += [f"{column} = {column}\n" for column in columns if column not in requested]
+
+    compared = requested_curves.compared_for_columns(_zone_of(csv_file), columns)
+    unserved = [name for name in compared if name not in columns]
+    if unserved:
+        dycov_logging.get_logger("Anonymizer").warning(
+            f"{csv_file.name} does not carry {unserved}: their dictionary entries are left "
+            "empty, and the validation will report those curves as missing."
         )
-        return
+    return lines
 
-    if csv_file.stem not in metadata:
+
+def _kept_metadata(dict_file: Path) -> Dict[str, str]:
+    """The metadata an existing dictionary already states, which describes the user's own file."""
+    if not dict_file.is_file():
+        return {}
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    try:
+        parser.read(dict_file)
+    except configparser.Error:
+        return {}
+    return dict(parser["Curves-Metadata"]) if parser.has_section("Curves-Metadata") else {}
+
+
+def _create_dict_file(csv_file: Path, metadata: Dict[str, Dict]) -> None:
+    dict_file = csv_file.with_suffix(".dict")
+    kept = _kept_metadata(dict_file)
+
+    if csv_file.stem not in metadata and not kept:
         dycov_logging.get_logger("Anonymizer").warning(
             f"No simulation record found for {csv_file.name}: its dictionary declares the event "
             f"at t = 0, which is almost certainly wrong. Check the results directory."
@@ -132,6 +176,7 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
             "frequency_sampling": 15.0,
         },
     )
+    stem_metadata = {**stem_metadata, **kept}
 
     with open(dict_file, "w") as dict_f:
         dict_f.write("[Curves-Metadata]\n")
@@ -160,11 +205,7 @@ def _create_dict_file_if_not_exists(csv_file: Path, metadata: Dict[str, Dict]) -
         )
 
         try:
-            with open(csv_file, "r") as csv_f:
-                headers = csv_f.readline().strip().split(";")
-                for header in headers:
-                    if header:
-                        dict_f.write(f"{header} = {header}\n")
+            dict_f.writelines(_curve_lines(csv_file))
         except FileNotFoundError:
             dycov_logging.get_logger("Anonymizer").warning(
                 f"CSV file {csv_file} not found when creating dictionary. "
