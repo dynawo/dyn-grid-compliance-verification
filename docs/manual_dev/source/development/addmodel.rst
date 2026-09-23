@@ -1,12 +1,12 @@
-¡==========================
+==========================
 Adding a new dynamic model
 ==========================
 
 DyCoV is built on top of Dynawo, which has a large library of dynamic models
-covering most power generation and storage technologies. Custom models are 
-compiled with Dynawo directly. However, DyCoV does not automatically support 
-every model in Dynawo's library — when a new model is added to Dynawo, or 
-when an existing one changes its parameter or variable names, DyCoV needs 
+covering most power generation and storage technologies. Custom models are
+compiled with Dynawo directly. However, DyCoV does not automatically support
+every model in Dynawo's library — when a new model is added to Dynawo, or
+when an existing one changes its parameter or variable names, DyCoV needs
 to be updated to recognize it.
 
 This section explains what that update involves and how to do it.
@@ -69,10 +69,10 @@ Synchronous Generator
 
 Initialization:
 
-* ``'ActivePower10Pu'`` — start value of active power at terminal (pu).
-* ``'ReactivePower10Pu'`` — start value of reactive power at terminal (pu).
-* ``'Voltage10Pu'`` — start value of voltage amplitude at terminal (pu).
-* ``'Phase10'`` — start value of voltage angle at terminal (pu).
+* ``'ActivePower0Pu'`` — start value of active power at terminal (pu).
+* ``'ReactivePower0Pu'`` — start value of reactive power at terminal (pu).
+* ``'Voltage0Pu'`` — start value of voltage amplitude at terminal (pu).
+* ``'Phase0'`` — start value of voltage angle at terminal (pu).
 
 Control and frequency:
 
@@ -103,11 +103,6 @@ Control and frequency:
 * ``'MagnitudeControlledByAVRPu'``
     Voltage amplitude controlled by the AVR in per unit. Always required.
 
-Currents (required for Electrical Performance Verification and Model Validation):
-
-* ``'UPuInjTerminalRe'`` — real part of voltage amplitude at the injector terminal (pu).
-* ``'UPuInjTerminalIm'`` — imaginary part of voltage amplitude at the injector terminal (pu).
-
 
 Power Park
 ^^^^^^^^^^
@@ -120,6 +115,8 @@ Currents (required for Electrical Performance Verification and Model Validation)
 
 * ``'IpInjTerminal'`` — active current at the injector's LV terminal (pu).
 * ``'IqInjTerminal'`` — reactive current at the injector's LV terminal (pu).
+* ``'UPuInjTerminalRe'`` — real part of voltage amplitude at the injector terminal (pu).
+* ``'UPuInjTerminalIm'`` — imaginary part of voltage amplitude at the injector terminal (pu).
 * ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
   Electrical Performance Verification.
 
@@ -184,9 +181,9 @@ Load
 
 Initialization:
 
-* ``'ActivePower'``, ``'ReactivePower'`` — start values of P and Q (pu).
-* ``'Voltage'`` — start voltage amplitude at load terminal (pu).
-* ``'Phase'`` — start voltage angle at load terminal (rad).
+* ``'ActivePower0'``, ``'ReactivePower0'`` — start values of P and Q (pu).
+* ``'Voltage0'`` — start voltage amplitude at load terminal (pu).
+* ``'Phase0'`` — start voltage angle at load terminal (rad).
 
 Measurements (always required):
 
