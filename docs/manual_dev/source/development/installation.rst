@@ -29,7 +29,7 @@ Build tools:
 
 .. code-block:: console
 
-   sudo apt install git curl unzip gcc g++ cmake make
+   sudo apt install git curl unzip make
 
 LaTeX — DyCoV generates PDF compliance reports, so LaTeX must be available
 even during development if you want to inspect the full output:

@@ -30,7 +30,7 @@ All extend `FileVariables` (`io/file_variables.py`); fill template placeholders 
 - `crv.create_curves_file()` (`io/crv.py`) — builds `TSOModel.crv` + returns `curves_dict` (tool var ↔ Dynawo curve id)
 
 Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills placeholders** — it does NOT
-build network structure dynamically. Custom Modelica in `src/dycov/model_lib/modelica_models/`.
+build network structure dynamically.
 
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base

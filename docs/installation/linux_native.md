@@ -56,12 +56,11 @@ The instructions below assume a Debian‑based system (Debian or Ubuntu).
 ### 3.1 System build tools
 
 ```bash
-sudo apt install curl unzip gcc g++ cmake make
+sudo apt install curl unzip make
 ```
 
 `curl` and `unzip` are used by the installer itself, to download and unpack
-the components. `gcc`, `g++` and `cmake` are required by the installer and by
-DyCoV's startup checks. `make` is used by the installer to build the bundled
+the components. `make` is used by the installer to build the bundled
 manuals, and at runtime to compile the PDF reports.
 
 ---

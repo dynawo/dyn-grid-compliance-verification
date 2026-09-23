@@ -68,7 +68,7 @@ Build tools:
 
 .. code-block:: console
 
-   sudo apt install curl unzip gcc g++ cmake make
+   sudo apt install curl unzip make
 
 LaTeX (for PDF report generation):
 

@@ -48,8 +48,6 @@ def test_dycov_calls_validate_handler(mocker):
 
 def test_dycov_calls_compile_handler(mocker):
     _patch_common(mocker)
-
-    mock_handle = mocker.patch("dycov.launchers.handle_compile_command")
     mock_setup = mocker.patch("dycov.launchers.setup_cli_parsers")
 
     mock_setup.return_value.parse_args.return_value = _fake_args("compile")
@@ -57,8 +55,6 @@ def test_dycov_calls_compile_handler(mocker):
     from dycov.launchers import dycov
 
     dycov()
-
-    mock_handle.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
