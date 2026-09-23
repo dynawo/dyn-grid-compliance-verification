@@ -7,9 +7,9 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 
 @dataclass
@@ -31,3 +31,5 @@ class SolverParams:
     minimal_acceptable_step: float
     absAccuracy: float
     relAccuracy: Optional[float]  # None for SIM
+    added_parameters: Dict[str, str] = field(default_factory=dict)
+    """Parameters a retry added to the set of the solver in use, which it alone declares."""
