@@ -7,7 +7,7 @@
 # omsg@aia.es
 # demiguelm@aia.es
 #
-import logging
+import configparser
 from collections import namedtuple
 from pathlib import Path
 
@@ -24,15 +24,14 @@ from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files, simulation_files
 from dycov.files.manage_files import ModelFiles, ProducerFiles
+from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.logging import dycov_logging
-from dycov.logging.simulation_logger import SimulationLogger
 from dycov.model.parameters import DisconnectionModel, SimulationOutcomeError, SimulationResult
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 
 _CURVES_CSV = "curves/curves.csv"
-# The record of a test is a handful of lines; the cap only guards against a runaway file.
-_SIMULATION_LOG_MAX_BYTES = 1024 * 1024
+_SIMULATION_SECTION = "Simulation"
 
 SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 SolverParam = namedtuple("SolverParam", "actual default")
@@ -314,18 +313,13 @@ class DynawoCurves(ProducerCurves):
             )
         }
 
-    def __log_simulation_inputs(self, working_oc_dir: Path, event_params: dict) -> None:
+    def __record_simulation_inputs(self, working_oc_dir: Path, event_params: dict) -> None:
         """Record next to the curves of a test what its simulation ran with.
 
         `dycov anonymize` rebuilds the [Curves-Metadata] section of the dictionaries it
         generates by reading this file: without it every generated curve set declares its
         event at t = 0 and no warning is raised.
         """
-        simulation_logger = SimulationLogger("Simulation")
-        simulation_logger.init_handlers(
-            logging.INFO, "%(message)s", _SIMULATION_LOG_MAX_BYTES, working_oc_dir
-        )
-
         curves_metadata = {
             "is_field_measurements": False,
             "sim_t_event_start": event_params.get("start_time"),
@@ -339,10 +333,16 @@ class DynawoCurves(ProducerCurves):
             "event_step_value": event_params.get("step_value"),
         } | {f"solver_{name}": value.actual for name, value in self.get_solver().items()}
 
-        for name, value in (curves_metadata | self.__initial_state() | simulation_inputs).items():
-            simulation_logger.info(f"{name} = {value}")
-
-        simulation_logger.close_handlers()
+        record = configparser.ConfigParser()
+        record.optionxform = str
+        record[_SIMULATION_SECTION] = {
+            name: str(value)
+            for name, value in (
+                curves_metadata | self.__initial_state() | simulation_inputs
+            ).items()
+        }
+        with open(working_oc_dir / SIMULATION_INPUTS_FILE, "w") as record_file:
+            record.write(record_file)
 
     def obtain_simulated_curve(
         self,
@@ -462,7 +462,7 @@ class DynawoCurves(ProducerCurves):
             error_message = e.error
 
         if event_params:
-            self.__log_simulation_inputs(working_oc_dir, event_params)
+            self.__record_simulation_inputs(working_oc_dir, event_params)
 
         simulation_result = SimulationResult(
             is_test_applicable,

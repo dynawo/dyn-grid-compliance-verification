@@ -14,6 +14,7 @@ from typing import Dict, List
 
 from dycov.curves import requested_curves
 from dycov.files import manage_files
+from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.logging import dycov_logging
 
 # The extensions the importer reads, spelt for a case-insensitive glob.
@@ -43,9 +44,11 @@ def copy_from_pipeline(results: Path, target_folder: Path) -> None:
 
 
 def copy_from_producer(results: Path, target_folder: Path) -> None:
-    # Define file types to copy and their target suffixes
+    # Define file types to copy and their target suffixes. Results produced before the
+    # record of a simulation was named after what it holds still carry the old name.
     files_to_copy = {
         "curves_calculated.csv": ".csv",
+        SIMULATION_INPUTS_FILE: ".log",
         "dycov.log": ".log",
     }
 
