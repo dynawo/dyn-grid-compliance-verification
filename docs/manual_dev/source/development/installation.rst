@@ -41,7 +41,7 @@ even during development if you want to inspect the full output:
      texlive-latex-recommended texlive-science texlive-lang-french \
      latexmk
 
-Python 3.13 — DyCoV requires Python 3.13 or newer:
+Python — DyCoV runs on Python 3.13 and Python 3.14:
 
 .. code-block:: console
 
@@ -93,7 +93,8 @@ Clone the repository into a local directory of your choice:
 Setting up the Python environment
 -----------------------------------
 
-Create a virtual environment using Python 3.13:
+Create a virtual environment. This guide uses Python 3.13; Python 3.14 works
+the same way:
 
 .. code-block:: console
 
