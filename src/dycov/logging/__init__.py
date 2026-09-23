@@ -9,6 +9,7 @@
 #
 
 import logging
+import signal
 from typing import Optional
 
 from dycov.logging.logger import DycovLogger
@@ -29,6 +30,24 @@ def enable_warning_capture(force_runtimewarning_visible: bool = True) -> None:
         dycov_logging.enable_warning_capture(
             force_runtimewarning_visible=force_runtimewarning_visible
         )
+
+
+def worker_initializer(handler_settings: Optional[dict]) -> None:
+    """Prepare a process pool worker.
+
+    The main process coordinates the shutdown, so workers ignore SIGINT. A worker
+    started with forkserver or spawn does not inherit the handlers of the run, and
+    without them every record it emits is discarded, so they are built again here.
+
+    Parameters
+    ----------
+    handler_settings: Optional[dict]
+        Handler configuration of the run, from get_handler_settings().
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    if handler_settings and not dycov_logging.handlers:
+        dycov_logging.init_handlers(**handler_settings)
 
 
 def set_test_context(

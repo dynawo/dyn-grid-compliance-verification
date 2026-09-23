@@ -74,7 +74,8 @@ PCS I16 in the RTE DTR.
    accept both namings. The converter-output node of the Zone 1 unit model,
    between the unit and its transformer, is named **InternalNode2** (the node
    called *Node2* in the DTR); the injector-terminal signals
-   (``*_GEN_IpInjTerminal``, ``*_GEN_IqInjTerminal``, ``*_GEN_UPuInjTerminal``)
+   (``*_GEN_ActiveCurrentInjTerminal``, ``*_GEN_ReactiveCurrentInjTerminal``,
+   ``*_GEN_VoltageInjTerminal``)
    are measured there.
 
 For information on the DYD and PAR file formats, refer to the
@@ -420,6 +421,12 @@ excel2inputs`` writes every input file from it in one step:
 .. code-block:: console
 
    dycov excel2inputs Producer.xlsx
+
+The installation ships a blank workbook per standard, in the ``workbooks``
+directory next to ``examples``: ``Producer_IEC.xlsx`` for the IEC 61400-27-1
+models and ``Producer_WECC.xlsx`` for the WECC ones. Copy the one that matches
+your model and fill it in. The ``format_version`` cell of its ``Infos générales
+->`` sheet names the DyCoV release it was written for.
 
 The workbook is the single source of truth: the model comes from its
 ``Model Map`` sheet, the electrical values from the ``Zone1a`` and ``Zone3``

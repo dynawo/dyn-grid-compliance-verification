@@ -8,15 +8,7 @@
 #     demiguelm@aia.es
 #
 from dycov.configuration.cfg import config
-
-# Mapping of measurement names to their respective prefixes used in configuration keys.
-# This dictionary is used to retrieve the appropriate prefix for a given measurement name.
-MEASUREMENT_PREFIX_MAP = {
-    "BusPDR_BUS_ActivePower": "P",
-    "BusPDR_BUS_ReactivePower": "Q",
-    "BusPDR_BUS_ActiveCurrent": "Ip",
-    "BusPDR_BUS_ReactiveCurrent": "Iq",
-}
+from dycov.validation import compared_curves
 
 
 def _get_window_threshold_values_for_simulation(prefix: str) -> dict:
@@ -40,7 +32,7 @@ def _get_window_threshold_values_for_simulation(prefix: str) -> dict:
 
 
 def _get_voltage_dip_threshold_values_for_simulation(measurement_name: str) -> dict:
-    prefix = MEASUREMENT_PREFIX_MAP.get(measurement_name)
+    prefix = compared_curves.threshold_of(measurement_name)
     if prefix is None:
         return {
             "before": {"mxe": None, "me": None, "mae": None},
@@ -72,7 +64,7 @@ def _get_window_threshold_values_for_test(prefix: str) -> dict:
 
 
 def _get_voltage_dip_threshold_values_for_test(measurement_name: str) -> dict:
-    prefix = MEASUREMENT_PREFIX_MAP.get(measurement_name)
+    prefix = compared_curves.threshold_of(measurement_name)
     if prefix is None:
         return {
             "before": {"mxe": None, "me": None, "mae": None},
