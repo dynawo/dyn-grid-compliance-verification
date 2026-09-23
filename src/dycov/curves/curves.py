@@ -16,7 +16,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.electrical.generator_variables import generator_variables
-from dycov.files import model_parameters
+from dycov.files import value_registry
 from dycov.model.parameters import DisconnectionModel, SimulationResult
 from dycov.model.producer import Producer
 
@@ -108,7 +108,7 @@ class ProducerCurves:
         unit_characteristics = self.get_unit_characteristics()
         if not _references_base_magnitude(value_definition, unit_characteristics):
             return value_definition
-        return model_parameters.resolve_value_definition(
+        return value_registry.resolve_value_definition(
             value_definition, unit_characteristics, origin=origin
         )
 
@@ -130,7 +130,7 @@ class ProducerCurves:
         dict[str, float]
             set of unit characteristics.
         """
-        return model_parameters.unit_characteristics(
+        return value_registry.unit_characteristics(
             self.get_producer(), self.get_generator_u_dim(), self._line_Xpu
         )
 

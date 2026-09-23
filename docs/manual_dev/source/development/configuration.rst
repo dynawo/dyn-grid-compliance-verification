@@ -169,7 +169,7 @@ Every multiplier-based value read from ``PCSDescription.ini`` is written as a
 ``pdr_P``/``pdr_Q``/``pdr_U``, ``setpoint_step_value``, ``reference_step_size``,
 the islanding ``step_event_PPu``/``step_event_QPu``, and the TSO-load initial
 values. All of them resolve against a single registry
-(``model_parameters.unit_characteristics``) via ``resolve_value_definition``:
+(``value_registry.unit_characteristics``) via ``resolve_value_definition``:
 ``Pmax``/``PmaxInjection``/``PmaxConsumption``, ``Snom`` for power; ``Qmax``,
 ``Qmin``; ``Udim``, ``Unom`` for voltage; and ``line_XPu`` for the connection line
 reactance. Every magnitude in the registry is in the per-unit Dynawo uses for the

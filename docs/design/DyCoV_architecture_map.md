@@ -33,7 +33,7 @@ Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills pla
 build network structure dynamically.
 
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
-not per-key. `model_parameters.unit_characteristics(producer, u_dim)` is the single registry of base
+not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`Snom`/`Qmax`/`Qmin`/`Udim`/`Unom=1.0`, powers in s_nref pu, voltage in Unom pu);
 `resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|numeric against it;
 `origin=(section, key)` makes a rejected definition name its config file+line
@@ -78,7 +78,7 @@ curves that request feeds.
 
 Inputs sit **flat** in the working dir (base-case + producer files are copied in). Dynawo
 writes results under the subdir named by `<outputs directory>` in `TSOModel.jobs` (`outputs`),
-resolved by `find_output_dir` (`files/model_parameters.py`).
+resolved by `find_output_dir` (`files/simulation_files.py`).
 
 ```
 working_oc_dir/          TSOModel.{jobs,par,dyd,crv}, solvers.par, Producer.*, Omega.*, CurvesFiles.ini
