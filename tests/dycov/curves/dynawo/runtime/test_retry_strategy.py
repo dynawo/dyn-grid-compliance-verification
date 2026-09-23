@@ -157,8 +157,14 @@ def test_each_retry_says_which_attempt_it_is_and_what_it_changed(
             f"took 11.0s, over the {MAX_SIM_TIME}s limit",
         ),
         (
-            DynawoResult(False, "Simulation Fails, logs in /work/dynawo.log", True, None, 1.0),
-            "Dynawo logged an error",
+            DynawoResult(
+                False,
+                "Simulation Fails: network is not connected, logs in /work/dynawo.log",
+                "network is not connected",
+                None,
+                1.0,
+            ),
+            "network is not connected",
         ),
         (
             DynawoResult(False, "job failed\nsolver diverged", False, None, 1.0),
