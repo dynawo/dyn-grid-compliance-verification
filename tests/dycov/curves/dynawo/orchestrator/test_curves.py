@@ -10,7 +10,7 @@ Unit tests for DynawoCurves (curves.py).
 Strategy: DynawoCurves is an orchestrator — its value comes from *wiring*
 collaborators correctly, not from complex logic.  We therefore:
   1. Construct a DynawoCurves with all heavy dependencies mocked at the
-     module level (config, parameter_checks, manage_files, model_parameters,
+     module level (config, parameter_checks, manage_files, simulation_files,
      ModelSetup, BisectionEngine, SolverRetryStrategy).
   2. Test each public method by asserting on which collaborator is called,
      with which arguments, and how the return value is assembled.
@@ -409,13 +409,13 @@ class TestObtainSimulatedCurve:
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.manage_files")
-    @patch(f"{_MODULE}.model_parameters")
+    @patch(f"{_MODULE}.simulation_files")
     @patch(f"{_MODULE}.config")
-    def test_complete_model_is_called(self, mc, mock_mp, mock_mf, mock_mvd, tmp_path):
+    def test_complete_model_is_called(self, mc, mock_sf, mock_mf, mock_mvd, tmp_path):
         mc.get_value.side_effect = _cfg_get_value
         mc.get_float.side_effect = _cfg_get_float
         mc.get_boolean.return_value = False
-        mock_mp.find_output_dir.return_value = Path("results")
+        mock_sf.find_output_dir.return_value = Path("results")
 
         curves, ms, be, outcome, _ = self._prepare()
         curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
@@ -810,11 +810,11 @@ class TestConstructorWiring:
 
 
 class TestPrepareOcValidation:
-    @patch(f"{_MODULE}.model_parameters")
+    @patch(f"{_MODULE}.simulation_files")
     @patch(f"{_MODULE}.manage_files")
-    def test_copies_base_case_and_resolves_output_dirs(self, mock_mf, mock_mp):
+    def test_copies_base_case_and_resolves_output_dirs(self, mock_mf, mock_sf):
         curves, _, _ = _make_real_curves()
-        mock_mp.find_output_dir.return_value = Path("outputs")
+        mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
             Path("/work"), "PCS1", "BM1", "OC1"
