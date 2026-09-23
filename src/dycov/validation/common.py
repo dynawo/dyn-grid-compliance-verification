@@ -702,7 +702,7 @@ def maximum_error_position(
         )
 
     if len(reference) == 0 or np.isnan(reference).all():
-        dycov_logging.get_logger("Common Validation").warning(f"No reference values in {name}")
+        dycov_logging.warn_once("Common Validation", f"No reference values in {name}")
         return None
 
     errors = abs(signal - reference)

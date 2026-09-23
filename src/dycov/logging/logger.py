@@ -17,14 +17,19 @@ from typing import Optional
 import colorama
 
 from dycov.logging.custom_formatter import CustomFormatter
-from dycov.logging.test_context import clear_test_context, get_test_context, set_test_context
+from dycov.logging.test_context import (
+    clear_test_context,
+    get_test_context,
+    is_first_report,
+    set_test_context,
+)
 
 colorama.init()
 
 
 class _ContextAdapter(logging.LoggerAdapter):
     """
-    LoggerAdapter that injects the active test context (PCS.Benchmark.OC)
+    LoggerAdapter that injects the active test context (Producer PCS.Benchmark.OC)
     from the current thread into every log record.
     """
 
@@ -187,10 +192,12 @@ class DycovLogger(logging.getLoggerClass()):
         pcs: Optional[str] = None,
         benchmark: Optional[str] = None,
         oc: Optional[str] = None,
+        producer: Optional[str] = None,
     ) -> None:
         """
         Set the active test context for the current thread.
-        All subsequent log calls from this thread will include [PCS.Benchmark.OC].
+        All subsequent log calls from this thread will include
+        [Producer PCS.Benchmark.OC].
         Safe to use with parallel threads — each thread has its own context.
 
         Parameters
@@ -201,12 +208,29 @@ class DycovLogger(logging.getLoggerClass()):
             Benchmark name (e.g., "Benchmark1").
         oc: str, optional
             Operating condition name (e.g., "OC1").
+        producer: str, optional
+            Producer the test runs against (e.g., "Producer", "Wind_Farm").
         """
-        set_test_context(pcs, benchmark, oc)
+        set_test_context(pcs, benchmark, oc, producer)
 
     def clear_test_context(self) -> None:
         """Clear the active test context for the current thread."""
         clear_test_context()
+
+    def warn_once(self, name: str, message: str) -> None:
+        """
+        Warn about something that holds for the whole test, however many times the check
+        that spots it runs.
+
+        Parameters
+        ----------
+        name: str
+            Name of the child logger (e.g., "curves", "report", "simulation").
+        message: str
+            Warning message, reported only the first time it comes up in the active test.
+        """
+        if is_first_report(message):
+            self.get_logger(name).warning(message)
 
     def get_logger(self, name: str) -> _ContextAdapter:
         """
