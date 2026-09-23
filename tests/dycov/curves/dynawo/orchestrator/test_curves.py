@@ -24,6 +24,7 @@ import pandas as pd
 import pytest
 
 from dycov.curves.dynawo.runtime.run_types import SolverParams
+from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.model.parameters import PdrParams, SimulationError, SimulationOutcomeError
 
 # We patch at the orchestrator module level throughout.
@@ -604,7 +605,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "sim_t_event_start = 1.0" in record
         assert "fault_duration = 0.15" in record
         assert "frequency_sampling = 15.0" in record
@@ -628,7 +629,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "solver_lib = dynawo_SolverIDA" in record
         assert "solver_minStep = 0.0001" in record
         assert "simulation_stop = 100.0" in record
@@ -653,7 +654,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "init_BusPDR_BUS_Voltage = 1.05" in record
         assert "init_BusPDR_BUS_ActivePower = 0.8" in record
         assert "init_BusPDR_BUS_ReactivePower = 0.2" in record
@@ -680,7 +681,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "init_InternalNode1_BUS_Voltage = 1.05" in record
         assert "init_BusPDR_BUS_Voltage" not in record
 
@@ -701,7 +702,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        assert not (tmp_path / "dycov.log").exists()
+        assert not (tmp_path / SIMULATION_INPUTS_FILE).exists()
 
 
 # ---------------------------------------------------------------------------
