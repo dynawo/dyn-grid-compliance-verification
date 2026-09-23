@@ -153,6 +153,11 @@ def _zone3_par_sets(
                 plant_model=True,
             )
         )
+        sets.append(
+            par.group_transformer_par_set(
+                gen["xfmr_id"], gen["zone1_data"], P.numbers("Zone3", zone3)("s_nom")
+            )
+        )
 
     if "aux" in topology.casefold():
         sets += [
@@ -286,15 +291,19 @@ def generate(excel: Path, outdir: Path) -> str:
         include_consumption=template == "model_BESS",
     )
 
-    signals = sig.parse_signals(
-        workbook, generators_info[0]["gen_id"], storage=template == "model_BESS"
-    )
-    curves = rc.write_reference_curves(outdir, PRODUCER_NAME, signals, excel.parent)
+    all_curves_reports = []
 
-    return "\n".join(
-        [
-            _submodel_report(resolved, config.selections, control),
-            "",
-            _reference_curves_report(curves),
-        ]
-    )
+    for gen in generators_info:
+        signals = sig.parse_signals(workbook, gen["gen_id"], storage=template == "model_BESS")
+
+        curves = rc.write_reference_curves(outdir, gen["gen_id"], signals, excel.parent)
+
+        all_curves_reports.append(curves)
+
+    final_report = [_submodel_report(resolved, config.selections, control), ""]
+
+    for curve_report in all_curves_reports:
+        final_report.append(_reference_curves_report(curve_report))
+        final_report.append("")
+
+    return "\n".join(final_report).strip()
