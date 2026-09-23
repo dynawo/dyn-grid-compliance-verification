@@ -52,16 +52,7 @@ def kill_process(proc: subprocess.Popen) -> None:
     proc : subprocess.Popen
         The process to kill.
     """
-    if os.name == "nt":
-        subprocess.run(
-            f"taskkill /F /T /PID {proc.pid}",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-    else:
-        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 
 def run_dynawo_process(
@@ -99,7 +90,7 @@ def run_dynawo_process(
         cwd=inputs_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        preexec_fn=os.setsid if os.name != "nt" else None,
+        preexec_fn=os.setsid,
     )
     _proc_registry.add(proc)
     start_time = time.time()
@@ -164,10 +155,7 @@ def has_error_timeline(pcs_name: str, bm_name: str, oc_name: str, log_path: Path
 def _sigterm_all(procs: list[subprocess.Popen]) -> None:
     for p in procs:
         try:
-            if os.name == "nt":
-                p.terminate()
-            else:
-                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         except Exception:
             try:
                 p.terminate()
