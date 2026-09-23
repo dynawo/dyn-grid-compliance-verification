@@ -574,7 +574,8 @@ def _add_results_argument(parser: argparse.ArgumentParser) -> None:
         "--results",
         arg_type=Path,
         help_msg="Path to a verification results directory. If provided,"
-        " 'curves_calculated.csv' and 'dycov.log' files will be copied from here.",
+        " 'curves_calculated.csv' and 'simulation_inputs.ini' files will be copied"
+        " from here.",
         completion=shtab.DIRECTORY,
     )
 

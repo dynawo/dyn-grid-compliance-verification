@@ -482,6 +482,8 @@ def _run_verification(
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")
         return 1
 
+    dycov_logging.add_run_handler(params.get_working_dir())
+
     try:
         # Determine if the execution parameters are valid or complete based on the
         # verification type.

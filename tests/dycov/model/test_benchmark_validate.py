@@ -8,6 +8,7 @@
 # demiguelm@aia.es
 #
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -84,6 +85,68 @@ def benchmark(monkeypatch):
     bm._validator = DummyValidator()
     bm._curves_manager = DummyCurvesManager()
     return bm
+
+
+def _benchmark_lines(caplog):
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "DyCoV.Benchmark" and record.levelno == logging.INFO
+    ]
+
+
+def test_each_operating_condition_says_where_it_starts_and_how_it_ended(
+    benchmark, monkeypatch, caplog
+):
+    from dycov.model.compliance import Compliance
+
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__validate_operating_condition",
+        lambda op_cond: (True, Compliance.NonCompliant, {"summary": Compliance.NonCompliant}),
+        raising=False,
+    )
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        benchmark.validate([], {})
+
+    lines = _benchmark_lines(caplog)
+    assert lines[0] == "Prod PCS.Bench.First: Start (1/2)"
+    assert lines[1].endswith("-> Non-compliant")
+    assert lines[2] == "Prod PCS.Bench.Second: Start (2/2)"
+
+
+def test_an_operating_condition_that_raises_still_says_how_it_ended(
+    benchmark, monkeypatch, caplog
+):
+    def always_raises(op_cond):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        benchmark, "_Benchmark__validate_operating_condition", always_raises, raising=False
+    )
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        benchmark.validate([], {})
+
+    assert _benchmark_lines(caplog)[1].endswith("-> Invalid test")
+
+
+def test_an_unexpected_failure_leaves_its_traceback_in_the_log(benchmark, monkeypatch, caplog):
+    def always_raises(op_cond):
+        raise KeyError("BusPDR_BUS_ActivePower")
+
+    monkeypatch.setattr(
+        benchmark, "_Benchmark__validate_operating_condition", always_raises, raising=False
+    )
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        benchmark.validate([], {})
+
+    failures = [record for record in caplog.records if record.levelno == logging.ERROR]
+    assert failures
+    assert failures[0].exc_info is not None
+    assert "BusPDR_BUS_ActivePower" in caplog.text
 
 
 def test_an_operating_condition_that_raises_does_not_stop_the_others(benchmark, monkeypatch):

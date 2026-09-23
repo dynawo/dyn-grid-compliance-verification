@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
+from dycov.curves.dynawo.runtime.run_types import SolverParams
 from dycov.model.parameters import PdrParams, PimodelParams
 
 # We patch at the model_setup module level throughout.
@@ -75,8 +76,14 @@ def _make_producer(
 def _make_owner(producer: MagicMock | None = None) -> MagicMock:
     owner = MagicMock()
     owner.get_producer.return_value = producer or _make_producer()
-    owner._solver_id = "IDA"
-    owner._solver_lib = "dynawo_SolverIDA"
+    owner.get_solver_params.return_value = SolverParams(
+        solver_id="IDA",
+        solver_lib="dynawo_SolverIDA",
+        minimum_time_step=1e-6,
+        minimal_acceptable_step=1e-6,
+        absAccuracy=1e-6,
+        relAccuracy=1e-4,
+    )
     owner.get_generator_u_dim.return_value = 20.0
     owner.obtain_value.side_effect = lambda v, origin=None: float(v)
     owner.complete_unit_characteristics = MagicMock()

@@ -55,7 +55,7 @@ def anonymize(
         Cut-off frequency of the filter used for smoothing the noise, in Hz.
     results: Optional[Path]
         Path of a verification results directory. If provided, 'curves_calculated.csv'
-        and 'dycov.log' files will be copied from here. Defaults to None.
+        and 'simulation_inputs.ini' files will be copied from here. Defaults to None.
     curves_folder: Optional[Path]
         Path of a set of curves. If not provided, `output_folder` will be used
         as the source for curves. Defaults to None.
@@ -77,7 +77,8 @@ def anonymize(
 
     if results:
         dycov_logging.get_logger("Anonymizer").info(
-            f"Copying curves_calculated.csv and dycov.log from {results} to {curves_folder}"
+            f"Copying curves_calculated.csv and simulation_inputs.ini from {results} "
+            f"to {curves_folder}"
         )
         copy_from_pipeline(results, curves_folder)
 

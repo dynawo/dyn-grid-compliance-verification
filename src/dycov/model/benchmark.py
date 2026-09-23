@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -817,13 +818,15 @@ class Benchmark:
         """
         success = False
 
-        for op_cond in self._oc_list:
+        for position, op_cond in enumerate(self._oc_list, start=1):
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
+                producer=self._producer_name,
             )
-            dycov_logging.get_logger("Benchmark").info("Validate")
+            logger = dycov_logging.get_logger("Benchmark")
+            logger.info(f"Start ({position}/{len(self._oc_list)})")
             if dycov_logging.get_logger("PCS").isEnabledFor(logging.DEBUG):
                 dump_effective_pcs_description(
                     config,
@@ -831,15 +834,17 @@ class Benchmark:
                     benchmark=self._name,
                     oc=op_cond.get_name(),
                 )
+            started_at = time.perf_counter()
             try:
                 op_cond_success, compliance, results = self.__validate_operating_condition(op_cond)
-            except Exception as error:
-                dycov_logging.get_logger("Benchmark").error(
-                    f"Operating condition not evaluated: {error}"
-                )
+            except Exception:
+                logger.exception("Operating condition not evaluated")
                 op_cond_success = False
                 compliance = Compliance.InvalidTest
                 results = {**_FAILED_RESULTS, "summary": compliance, "missed_columns": []}
+            logger.info(
+                f"Done in {time.perf_counter() - started_at:.1f}s -> {compliance.to_str()}"
+            )
             success |= op_cond_success
 
             summary_list.append(
@@ -863,13 +868,16 @@ class Benchmark:
     def generate(self) -> None:
         """Execute the generation step for all operating conditions of the benchmark."""
 
-        for op_cond in self._oc_list:
+        for position, op_cond in enumerate(self._oc_list, start=1):
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
+                producer=self._producer_name,
             )
-            dycov_logging.get_logger("Benchmark").info("Generate")
+            dycov_logging.get_logger("Benchmark").info(
+                f"Generate ({position}/{len(self._oc_list)})"
+            )
             working_oc_dir = (
                 self._working_dir
                 / self._producer_name
