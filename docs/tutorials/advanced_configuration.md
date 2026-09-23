@@ -1,6 +1,5 @@
 ## Advanced configuration
 
-**DyCoV version:** 1.2.0  
 **Scope:** Advanced user configuration of DyCoV execution scope, compliance
 thresholds and logging behavior, without modifying DyCoV source code.
 

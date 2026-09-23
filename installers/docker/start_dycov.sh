@@ -40,16 +40,16 @@ if [ -d "/opt/dycov/examples" ] && [ ! -d "$USER_HOME/examples" ]; then
     chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/examples"
 fi
 
+if [ -d "/opt/dycov/workbooks" ] && [ ! -d "$USER_HOME/workbooks" ]; then
+    echo "Copying workbooks to $USER_HOME/workbooks..."
+    cp -r /opt/dycov/workbooks "$USER_HOME/"
+    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/workbooks"
+fi
+
 if [ -d "/opt/dycov/manual" ] && [ ! -d "$USER_HOME/manual" ]; then
     echo "Copying manual to $USER_HOME/manual..."
     cp -r /opt/dycov/manual "$USER_HOME/"
     chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/manual"
-fi
-
-if [ -d "/opt/dycov/tools" ] && [ ! -d "$USER_HOME/tools" ]; then
-    echo "Copying tools to $USER_HOME/tools..."
-    cp -r /opt/dycov/tools "$USER_HOME/"
-    chown -R "$dycov_UID":"$dycov_GID" "$USER_HOME/tools"
 fi
 
 if [ -d "/opt/dycov/tutorials" ] && [ ! -d "$USER_HOME/tutorials" ]; then
@@ -70,11 +70,11 @@ echo -e " Dycov Container Environment"
 echo -e "-----------------------------------------------------------"
 echo -e " User:      $dycov_USER ($dycov_UID)"
 echo -e " Examples:  ~/examples"
+echo -e " Workbooks: ~/workbooks  (blank, one per standard)"
 echo -e " Tutorials: ~/tutorials/README.md  (start here)"
 echo -e " Install:   ~/installation/README.md"
 echo -e " Manual:    ~/manual/html/index.html  (HTML)"
 echo -e "            ~/manual/dycov.pdf        (PDF)"
-echo -e " Tools:     ~/tools/dynawo_par/generate_par.py  (Excel -> Dynawo PAR)"
 echo -e " Type 'exit' to quit."
 echo -e "-----------------------------------------------------------\n"
 

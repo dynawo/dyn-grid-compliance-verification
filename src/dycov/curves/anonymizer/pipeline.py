@@ -214,6 +214,10 @@ def _anonymized_curve(
 def _save_dictionary(dict_file: Path, importer: CurvesImporter, output_path: Path) -> None:
     filedata = dict_file.read_text()
     for original_id, dict_name in importer.config.items("Curves-Dictionary"):
+        # A curve the set does not carry names no column, and an empty pattern would match
+        # at every word boundary; it stays declared with nothing on its right.
+        if not dict_name:
+            continue
         # Use word boundaries to avoid replacing parts of other names
         filedata = re.sub(r"\b{}\b".format(re.escape(dict_name)), original_id, filedata)
     output_path.write_text(filedata)
