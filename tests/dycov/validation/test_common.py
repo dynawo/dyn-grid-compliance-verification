@@ -537,6 +537,9 @@ class _RecordingLogger:
     def warning(self, msg):
         self.warnings.append(msg)
 
+    def warn_once(self, name, msg):
+        self.warnings.append(msg)
+
 
 @pytest.fixture
 def logged_warnings(monkeypatch):
