@@ -183,11 +183,14 @@ class SolverRetryStrategy:
         replace_placeholders.add_parameters(
             working_oc_dir, "solvers.par", solver.solver_id, parameters
         )
-        added = ", ".join(f"{p['name']}={p['value']}" for p in parameters)
+        solver.added_parameters.update({p["name"]: p["value"] for p in parameters})
+        added = ", ".join(f"{name}={value}" for name, value in solver.added_parameters.items())
         return f"added the small network parameters ({added})"
 
     def _flip_solver(self, solver: SolverParams, working_oc_dir: Path) -> str:
         previous = solver.solver_id
+        # The parameters added so far belong to the set of the solver being left behind.
+        solver.added_parameters.clear()
         if solver.solver_id == "SIM":
             solver.solver_id = "IDA"
             solver.solver_lib = "dynawo_SolverIDA"

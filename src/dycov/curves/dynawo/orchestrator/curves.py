@@ -32,6 +32,7 @@ from dycov.sanity_checks import parameter_checks
 
 _CURVES_CSV = "curves/curves.csv"
 _SIMULATION_SECTION = "Simulation"
+_NOT_CONFIGURED = "not set"
 
 SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 SolverParam = namedtuple("SolverParam", "actual default")
@@ -637,6 +638,9 @@ class DynawoCurves(ProducerCurves):
                     ),
                 }
             )
+        solver_parameters.update(
+            {name: P(value, _NOT_CONFIGURED) for name, value in solver.added_parameters.items()}
+        )
         return solver_parameters
 
     # ------------------------------------------------------------------
