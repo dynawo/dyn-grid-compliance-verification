@@ -11,8 +11,6 @@ the user documentation instead:
   installation methods (prebuilt image on WSL/Docker, native Linux).
 - [Tutorials](../docs/tutorials/README.md) — how to run DyCoV once installed,
   including [Grid-Forming analysis](../docs/tutorials/grid_forming_analysis.md).
-- [Standalone Dynawo PAR utility](../tools/dynawo_par/README.md) — shipped by
-  every installation method and as `dycov_par_tool.zip` on the release page.
 
 ## Contents
 

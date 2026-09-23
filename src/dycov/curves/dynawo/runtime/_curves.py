@@ -313,8 +313,18 @@ def _get_injector_terminal_curves(
     df_curves: pd.DataFrame,
     curves_dict: dict,
 ) -> None:
-    """Calculate the active and reactive current curves for generator injectors based on the
-    voltage and power curves, applying the appropriate base conversion.
+    """Derive the active and reactive current curves of the generator injectors from the power
+    and voltage curves Dynawo provides, applying the appropriate base conversion.
+
+    Dynawo gives a power at the injector terminal, so the current is a curve the tool computes,
+    and it carries its own name: the dictionary declares what Dynawo provides, this function
+    emits what the criteria compare.
+
+    The injector terminal sits behind the unit's own impedance, so its voltage is never
+    exactly zero and the division always has an answer, however small the voltage gets: the
+    power vanishes with it and the quotient is the current all the same. Zero is guarded
+    against because nothing forbids it, not because it is expected — unlike the connection
+    point, which a bolted fault does take to zero.
 
     Parameters
     ----------
@@ -332,41 +342,38 @@ def _get_injector_terminal_curves(
         A dictionary to store the calculated current curves. The function will add entries to this
         dictionary for the active and reactive current curves of the generator injectors.
     """
-    abs_tol = ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD
     columns_to_remove = []
 
     for generator in generators:
-        voltage_col = f"{generator.id}_GEN_UPuInjTerminal"
-        active_current_col = f"{generator.id}_GEN_IpInjTerminal"
-        reactive_current_col = f"{generator.id}_GEN_IqInjTerminal"
+        voltage_col = f"{generator.id}_GEN_VoltageInjTerminal"
+        active_power_col = f"{generator.id}_GEN_ActivePowerInjTerminal"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerInjTerminal"
 
         has_all_columns = (
             voltage_col in df_curves.columns
-            and active_current_col in df_curves.columns
-            and reactive_current_col in df_curves.columns
+            and active_power_col in df_curves.columns
+            and reactive_power_col in df_curves.columns
         )
         if not has_all_columns:
             continue
 
-        active_current = np.multiply(
-            df_curves[active_current_col].to_numpy(dtype=float), snref / snom
-        )
-        reactive_current = np.multiply(
-            df_curves[reactive_current_col].to_numpy(dtype=float), snref / snom
+        active_power = np.multiply(df_curves[active_power_col].to_numpy(dtype=float), snref / snom)
+        reactive_power = np.multiply(
+            df_curves[reactive_power_col].to_numpy(dtype=float), snref / snom
         )
         voltage = _get_modulus(df_curves[voltage_col].tolist())
         voltage_array = np.array(voltage, dtype=float)
 
         curves_dict[voltage_col] = voltage
-        valid_mask = np.isfinite(voltage_array) & (np.abs(voltage_array) > abs_tol)
-        curves_dict[active_current_col] = np.divide(
-            active_current, voltage_array, out=np.zeros_like(active_current), where=valid_mask
+        valid_mask = np.isfinite(voltage_array) & (voltage_array != 0.0)
+        curves_dict[f"{generator.id}_GEN_ActiveCurrentInjTerminal"] = np.divide(
+            active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
         ).tolist()
-        curves_dict[reactive_current_col] = np.divide(
-            reactive_current, voltage_array, out=np.zeros_like(reactive_current), where=valid_mask
+        curves_dict[f"{generator.id}_GEN_ReactiveCurrentInjTerminal"] = np.divide(
+            reactive_power, voltage_array, out=np.zeros_like(reactive_power), where=valid_mask
         ).tolist()
 
-        columns_to_remove.extend([voltage_col, active_current_col, reactive_current_col])
+        columns_to_remove.extend([voltage_col, active_power_col, reactive_power_col])
 
     _drop_columns(df_curves, columns_to_remove)
 
@@ -382,6 +389,45 @@ def _extract_and_scale_power_columns(
             df_curves[raw_col].to_numpy(dtype=float), scale
         ).tolist()
     _drop_columns(df_curves, list(columns.keys()))
+
+
+def _get_controlled_point_curves(
+    snref: float,
+    snom: float,
+    generators: list,
+    df_curves: pd.DataFrame,
+    curves_dict: dict,
+) -> None:
+    """Rebase the power the converter injects at the point its control measures.
+
+    Dynawo reports it in s_nref pu and the criteria compare powers in SNom pu.
+
+    Parameters
+    ----------
+    snref : float
+        The reference apparent power, used for base conversion of the power curves.
+    snom : float
+        The nominal apparent power, used for base conversion of the power curves.
+    generators : list
+        A list of generator objects, which contain information about the generator IDs.
+    df_curves : pd.DataFrame
+        The DataFrame containing the translated curves.
+    curves_dict : dict
+        A dictionary to store the converted power curves.
+    """
+    for generator in generators:
+        active_power_col = f"{generator.id}_GEN_ActivePowerControlledPu"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerControlledPu"
+
+        if not all(col in df_curves.columns for col in (active_power_col, reactive_power_col)):
+            continue
+
+        _extract_and_scale_power_columns(
+            df_curves,
+            curves_dict,
+            {active_power_col: active_power_col, reactive_power_col: reactive_power_col},
+            snref / snom,
+        )
 
 
 def _get_tso_synchronous_condenser_curves(
@@ -558,6 +604,7 @@ def build_output_curves(
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
     _get_injector_terminal_curves(s_nref, s_nom, generators, df_curves, curves_dict)
+    _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)
     _get_tso_load_curves(s_nref, s_nom, df_curves, curves_dict)
     convert_columns(df_curves, curves_dict, f_nom)

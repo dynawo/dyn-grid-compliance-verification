@@ -7,14 +7,14 @@
 #     demiguelm@aia.es
 
 import logging
+import multiprocessing
 import sys
-from multiprocessing import Pool
 from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.files import manage_files
 from dycov.gfm.parameters import GFMParameters
-from dycov.logging import dycov_logging
+from dycov.logging import dycov_logging, worker_initializer
 from dycov.model.pcs import Pcs
 
 
@@ -169,7 +169,12 @@ class GFMGeneration:
             dycov_logging.get_logger("GFMGeneration").info(
                 f"Generating envelopes in parallel using {num_processes} processes."
             )
-            with Pool(processes=num_processes) as pool:
+
+            with multiprocessing.Pool(
+                processes=num_processes,
+                initializer=worker_initializer,
+                initargs=(dycov_logging.get_handler_settings(),),
+            ) as pool:
                 pool.map(_generate_pcs, self._pcs_list)
         else:
             dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")

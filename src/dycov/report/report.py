@@ -32,7 +32,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.files import manage_files, model_parameters
+from dycov.files import manage_files, value_registry
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
@@ -269,8 +269,6 @@ def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
     if missing_curves:
         notices += _build_notice_block("red", "Missing curves:", missing_curves)
         watermark = r"\SetWatermarkText{INVALID}"
-    if oc_results.get("warnings"):
-        notices += _build_notice_block("orange", "Warnings:", oc_results["warnings"])
     return notices, watermark
 
 
@@ -393,15 +391,15 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
 def _get_iq_last_val(plot_curves: list) -> float | None:
     """Return the last value of the first Iq curve found, or None."""
     for curve in plot_curves:
-        if "IqInjTerminal" in curve["name"]:
+        if "ReactiveCurrentInjTerminal" in curve["name"]:
             return curve["curve"][-1]
     return None
 
 
 def _add_current_magnitude(plot_curves: list) -> None:
     """Compute |I| = hypot(Ip, Iq) and append it to plot_curves if both are present."""
-    ip_curves = [c for c in plot_curves if "IpInjTerminal" in c["name"]]
-    iq_curves = [c for c in plot_curves if "IqInjTerminal" in c["name"]]
+    ip_curves = [c for c in plot_curves if "ActiveCurrentInjTerminal" in c["name"]]
+    iq_curves = [c for c in plot_curves if "ReactiveCurrentInjTerminal" in c["name"]]
     if not ip_curves or not iq_curves:
         return
 
@@ -424,8 +422,8 @@ def _add_current_magnitude(plot_curves: list) -> None:
 
 def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of curves with current_magnitude columns added if Ip and Iq are present."""
-    ip_cols = [c for c in curves.columns if "IpInjTerminal" in c]
-    iq_cols = [c for c in curves.columns if "IqInjTerminal" in c]
+    ip_cols = [c for c in curves.columns if "ActiveCurrentInjTerminal" in c]
+    iq_cols = [c for c in curves.columns if "ReactiveCurrentInjTerminal" in c]
     if not ip_cols or not iq_cols:
         return curves
 
@@ -543,7 +541,7 @@ def _create_full_tex(
         if oc_results["curves"] is None:
             continue
 
-        unit_characteristics = model_parameters.unit_characteristics(producer, oc_results["udim"])
+        unit_characteristics = value_registry.unit_characteristics(producer, oc_results["udim"])
         unit_characteristics["Unom"] = producer.u_nom
 
         xmin, xmax = figure.get_common_time_range(

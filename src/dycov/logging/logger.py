@@ -36,6 +36,10 @@ class _ContextAdapter(logging.LoggerAdapter):
 
 
 class DycovLogger(logging.getLoggerClass()):
+    def __init__(self, name: str, level: int = logging.NOTSET):
+        super().__init__(name, level)
+        self._handler_settings = None
+
     def _add_console_handler(
         self,
         console_log_level: int,
@@ -121,6 +125,27 @@ class DycovLogger(logging.getLoggerClass()):
         self._add_file_handler(
             file_log_level, file_formatter, file_max_bytes, log_dir, disable_file
         )
+        self._handler_settings = {
+            "file_log_level": file_log_level,
+            "file_formatter": file_formatter,
+            "file_max_bytes": file_max_bytes,
+            "console_log_level": console_log_level,
+            "console_formatter": console_formatter,
+            "log_dir": log_dir,
+            "disable_console": disable_console,
+            "disable_file": disable_file,
+        }
+
+    def get_handler_settings(self) -> Optional[dict]:
+        """The arguments init_handlers was called with, so a process that does not
+        inherit the handlers can build the same ones.
+
+        Returns
+        -------
+        Optional[dict]
+            Keyword arguments for init_handlers, or None if it was never called.
+        """
+        return self._handler_settings
 
     def enable_warning_capture(self, force_runtimewarning_visible: bool = True) -> None:
         """

@@ -18,11 +18,11 @@ _LOAD_SUFFIX = "_LOAD_TSO_"
 _XFMR_SUFFIX = "_XFMR_"
 
 _VARIABLE_LABELS = {
-    "IpInjTerminal": "Ip",
-    "IqInjTerminal": "Iq",
+    "ActiveCurrentInjTerminal": "Ip",
+    "ReactiveCurrentInjTerminal": "Iq",
     "VoltageSetpointPu": "Plant-level voltage regulation Setpoint",
     "MagnitudeControlledByAVRPu": "Plant-level voltage regulation Magnitude",
-    "UPuInjTerminal": "Voltage",
+    "VoltageInjTerminal": "Voltage",
     "RotorSpeedPu": "Rotor Speed",
     "NetworkFrequencyPu": "Frequency",
     "InternalAngle": "Internal Angle",
@@ -67,11 +67,11 @@ def is_controlled_magnitude(curve_name: str, column_name: str) -> bool:
         return column_name == "P"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
         return column_name == "Q"
-    if "IpInjTerminal" in curve_name:
+    if "ActiveCurrentInjTerminal" in curve_name:
         return column_name == "P"
-    if "IqInjTerminal" in curve_name:
+    if "ReactiveCurrentInjTerminal" in curve_name:
         return column_name == "Q"
-    if "UPuInjTerminal" in curve_name:
+    if "VoltageInjTerminal" in curve_name:
         return column_name == "V"
     if curve_name == "BusPDR_BUS_Voltage":
         return column_name == "V"
@@ -102,11 +102,11 @@ def get_measurement_type(curve_name: str) -> str:
         return "active_current"
     if curve_name == "BusPDR_BUS_ReactiveCurrent":
         return "reactive_current"
-    if "IpInjTerminal" in curve_name:
+    if "ActiveCurrentInjTerminal" in curve_name:
         return "active_current"
-    if "IqInjTerminal" in curve_name:
+    if "ReactiveCurrentInjTerminal" in curve_name:
         return "reactive_current"
-    if "UPuInjTerminal" in curve_name:
+    if "VoltageInjTerminal" in curve_name:
         return "voltage"
     if curve_name == "BusPDR_BUS_Voltage":
         return "voltage"
@@ -136,9 +136,9 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
         return CurveStyle(color="#dd8452", style="-")
     if "modIInjTerminal" in variable_name:
         return CurveStyle(color="#e2c22e", style="-")
-    if "IpInjTerminal" in variable_name:
+    if "ActiveCurrentInjTerminal" in variable_name:
         return CurveStyle(color="#64b5cd", style="-")
-    if "IqInjTerminal" in variable_name:
+    if "ReactiveCurrentInjTerminal" in variable_name:
         return CurveStyle(color="#8172b3", style="-")
     if "VoltageSetpointPu" in variable_name:
         return CurveStyle(color="#8c8c8c", style=":")

@@ -7,7 +7,7 @@ sim_t_event_start = 30.0
 # Duration of the event or fault
 fault_duration = 0.8
 # Frequency sampling of the reference curves
-frequency_sampling = 15
+frequency_sampling = 15.0
 # The maximum injected current of a generator, when the curves come from field measurements:
 #    <generator>_GEN_MaxInjectedCurrentPu =
 
@@ -19,10 +19,8 @@ frequency_sampling = 15
 #    SignalName_c =
 time = time
 InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage
-PV_Array_GEN_UPuInjTerminal = Wind_Turbine_GEN_UPuInjTerminal
-InternalNode1_BUS_ActivePower = InternalNode1_BUS_ActivePower
-InternalNode1_BUS_ReactivePower = InternalNode1_BUS_ReactivePower
-InternalNode1_BUS_ActiveCurrent = InternalNode1_BUS_ActiveCurrent
-InternalNode1_BUS_ReactiveCurrent = InternalNode1_BUS_ReactiveCurrent
-PV_Array_GEN_IpInjTerminal = Wind_Turbine_GEN_IpInjTerminal
-PV_Array_GEN_IqInjTerminal = Wind_Turbine_GEN_IqInjTerminal
+PV_Array_GEN_VoltageInjTerminal = PV_Array_GEN_VoltageInjTerminal
+PV_Array_GEN_ActivePowerControlledPu = PV_Array_GEN_ActivePowerControlledPu
+PV_Array_GEN_ReactivePowerControlledPu = PV_Array_GEN_ReactivePowerControlledPu
+PV_Array_GEN_ActiveCurrentInjTerminal = PV_Array_GEN_ActiveCurrentInjTerminal
+PV_Array_GEN_ReactiveCurrentInjTerminal = PV_Array_GEN_ReactiveCurrentInjTerminal

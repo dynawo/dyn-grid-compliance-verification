@@ -30,7 +30,7 @@ from dycov.report.types import (
     FinalValueBand,
     FrequencyBand,
 )
-from dycov.validation import compliance_list
+from dycov.validation import compared_curves, compliance_list
 from dycov.validation.model import ModelValidator
 from dycov.validation.performance import PerformanceValidator
 
@@ -395,7 +395,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_P",
-                variables="BusPDR_BUS_ActivePower",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "active_power"
+                ),
                 ylabel=p_label,
                 tolerance_band=tolerance_band,
             )
@@ -414,7 +416,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_Q",
-                variables="BusPDR_BUS_ReactivePower",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "reactive_power"
+                ),
                 ylabel=q_label,
             )
         )
@@ -432,7 +436,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_Ip",
-                variables="BusPDR_BUS_ActiveCurrent",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "active_current"
+                ),
                 ylabel=ip_label,
             )
         )
@@ -450,7 +456,9 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_Iq",
-                variables="BusPDR_BUS_ReactiveCurrent",
+                variables=compared_curves.plot_variables(
+                    self._producer.get_zone(), "reactive_current"
+                ),
                 ylabel=iq_label,
             )
         )
@@ -510,8 +518,8 @@ class Benchmark:
             FigureDescription(
                 name="fig_I",
                 variables=[
-                    {"type": "generator", "variable": "IpInjTerminal"},
-                    {"type": "generator", "variable": "IqInjTerminal"},
+                    {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
+                    {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
                 ],
                 ylabel=i_label,
                 tolerance_band=tolerance_band,
@@ -526,7 +534,7 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_UIt",
-                variables=[{"type": "generator", "variable": "UPuInjTerminal"}],
+                variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
                 ylabel="V (pu base Unom)",
             )
         )
@@ -770,7 +778,11 @@ class Benchmark:
             results = {**_FAILED_RESULTS}
 
         results["missed_columns"] = self._curves_manager.get_missed_curves("reference")
-        if results["missed_columns"] and compliance.show_report():
+        if (
+            results["missed_columns"]
+            and compliance.show_report()
+            and not compliance.states_missing_curves()
+        ):
             compliance = Compliance.InvalidTest
         results["summary"] = compliance
 

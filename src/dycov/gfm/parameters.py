@@ -13,7 +13,7 @@ import numpy as np
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
-from dycov.files import model_parameters
+from dycov.files import value_registry
 from dycov.gfm.producer import GFMProducer
 
 
@@ -160,7 +160,7 @@ class GFMParameters(Parameters):
             The initial active power in pu.
         """
         p0_definition = self.__get_value("P0")
-        return model_parameters.extract_defined_value(
+        return value_registry.extract_defined_value(
             p0_definition, "Pmax", self.get_max_active_power(), 1
         )
 
@@ -203,10 +203,10 @@ class GFMParameters(Parameters):
         """
         q0_definition = self.__get_value("Q0")
         if "Qmin" in q0_definition:
-            return model_parameters.extract_defined_value(
+            return value_registry.extract_defined_value(
                 q0_definition, "Qmin", self.get_min_reactive_power(), 1
             )
-        return model_parameters.extract_defined_value(
+        return value_registry.extract_defined_value(
             q0_definition, "Qmax", self.get_max_reactive_power(), 1
         )
 
