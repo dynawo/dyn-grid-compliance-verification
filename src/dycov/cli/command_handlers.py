@@ -18,7 +18,6 @@ from typing import Optional
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.curves import anonymizer
-from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.excel import generator as excel_generator
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
@@ -335,43 +334,6 @@ def handle_performance_command(
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
-    return result_code
-
-
-def handle_compile_command(
-    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> int:
-    """Handles the 'compile' command.
-
-    Compiles custom Modelica models.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The argument parser instance.
-    args: argparse.Namespace
-        Parsed command-line arguments.
-    dwo_launcher: Path
-        Path to the Dynawo launcher.
-    """
-    dycov_logging.get_logger("CommandHandlers").info("Handling 'compile' command.")
-    model_name: Optional[str] = args.dynamic_model if args.dynamic_model else None
-    force_recompile: bool = args.force
-
-    try:
-        if prepare_tool.precompile(dwo_launcher, model_name, force_recompile):
-            dycov_logging.get_logger("CommandHandlers").info("Model compilation aborted by user.")
-            result_code = 1
-        else:
-            dycov_logging.get_logger("CommandHandlers").info("Model(s) compiled successfully.")
-            result_code = 0
-    except Exception as e:
-        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
-            dycov_logging.get_logger("CommandHandlers").exception("Error compiling models")
-        else:
-            dycov_logging.get_logger("CommandHandlers").error(f"Error compiling models: {e}")
-        parser.error(f"Failed to compile models: {e}")
-        result_code = 1
     return result_code
 
 
