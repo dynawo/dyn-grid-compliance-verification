@@ -733,7 +733,8 @@ class TestCompleteModel:
 
         # Initialize ExitStack to manage all our context managers (patches) safely
         with ExitStack() as stack:
-            mock_mp = stack.enter_context(patch(f"{_MS}.model_parameters"))
+            mock_pcs = stack.enter_context(patch(f"{_MS}.pcs_parameters"))
+            mock_init = stack.enter_context(patch(f"{_MS}.producer_init"))
             stack.enter_context(patch(f"{_MS}.value_registry"))
             stack.enter_context(patch(f"{_MS}.simulation_files"))
             stack.enter_context(patch(f"{_MS}.init_calcs"))
@@ -762,10 +763,10 @@ class TestCompleteModel:
             stack.enter_context(patch.object(setup, "_adjust_event_value"))
             stack.enter_context(patch.object(setup, "_calculate_xv_values"))
 
-            mock_mp.adjust_producer_init.return_value = applicable
-            mock_mp.get_pcs_load_params.return_value = []
-            mock_mp.get_pcs_lines_params.return_value = []
-            mock_mp.get_pcs_generators_params.return_value = []
+            mock_init.adjust_producer_init.return_value = applicable
+            mock_pcs.get_pcs_load_params.return_value = []
+            mock_pcs.get_pcs_lines_params.return_value = []
+            mock_pcs.get_pcs_generators_params.return_value = []
             mock_crv.create_curves_file.return_value = {"var": "curve"}
 
             setup.has_line = has_line
@@ -774,7 +775,7 @@ class TestCompleteModel:
             )
 
             mocks = dict(
-                mp=mock_mp,
+                pcs=mock_pcs,
                 of=mock_of,
                 tf=mock_tf,
                 crv=mock_crv,
@@ -822,10 +823,10 @@ class TestCompleteModel:
 
     def test_line_params_read_only_when_has_line(self):
         _, _, mocks = self._run(has_line=True)
-        mocks["mp"].get_pcs_lines_params.assert_called_once()
+        mocks["pcs"].get_pcs_lines_params.assert_called_once()
 
         _, _, mocks = self._run(has_line=False)
-        mocks["mp"].get_pcs_lines_params.assert_not_called()
+        mocks["pcs"].get_pcs_lines_params.assert_not_called()
 
     def test_aux_and_main_xfmrs_included_in_curves_file(self):
         producer = _make_producer()
@@ -972,8 +973,8 @@ class TestSortStepupXfmrs:
 
 
 class TestGetTsoLoads:
-    @patch(f"{_MS}.model_parameters")
-    def test_separates_pdr_and_grid_loads(self, mock_mp):
+    @patch(f"{_MS}.pcs_parameters")
+    def test_separates_pdr_and_grid_loads(self, mock_pcs):
         setup = _make_setup()
         pdr_tso = MagicMock(id="L1")
         pdr_tso.terminals = [MagicMock(connected_equipment="BusPDR")]
@@ -986,7 +987,7 @@ class TestGetTsoLoads:
         with patch.object(setup, "_complete_loads", return_value=[init_l1, init_l2]):
             setup._get_tso_loads("PCS1", "BM1", "OC1", u_dim=20.0)
 
-        pdr_call, grid_call = mock_mp.get_grid_load.call_args_list
+        pdr_call, grid_call = mock_pcs.get_grid_load.call_args_list
         assert pdr_call[0][0] == [init_l1]
         assert grid_call[0][0] == [init_l2]
 
