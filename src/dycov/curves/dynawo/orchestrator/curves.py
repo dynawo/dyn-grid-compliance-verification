@@ -43,6 +43,7 @@ class DynawoCurves(ProducerCurves):
     Orchestrates the full Dynawo simulation workflow for one producer.
 
     Responsibilities:
+
     - Solver lifecycle: reset, build params, retry strategy.
     - Environment preparation: copy base-case and producer files.
     - Delegation to ModelSetup (model file completion) and

@@ -33,13 +33,9 @@ Matplotlib) and interactive **HTML** figures (via Plotly).
 Code architecture
 ------------------
 
-The module is organized around a clear separation of concerns. The following
-diagram shows the overall structure:
-
-.. image:: ../figs_structure/flowchart.*
-   :width: 80%
-   :align: center
-   :alt: GFM module execution flowchart
+The module is organized around a clear separation of concerns; the per-event
+flowcharts of the sections below (from ``docs/manual_dev/GFM_Flowchart/``)
+show how each calculator runs.
 
 Orchestration layer
 ^^^^^^^^^^^^^^^^^^^^
@@ -115,6 +111,10 @@ Output and visualization
 PNG and HTML figures. A notable feature is intelligent signal trimming, which
 removes unnecessary steady-state portions from the plots to keep them focused
 on the transient of interest.
+
+The ``verification/`` subpackage (``functional_tests.py``) compares a run's
+envelopes against verified baseline CSVs; it backs the ``-t`` flag of
+``dycov generate_gfm_envelopes``.
 
 
 Execution flow

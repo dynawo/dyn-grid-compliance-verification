@@ -231,7 +231,12 @@ It includes:
 * the corresponding thresholds,
 * a boolean result for each check.
 
-The test is considered compliant only if **all criteria are satisfied**.
+Not every row carries a verdict: the voltage errors of an RMS model
+validation are reported for information only, because the DTR sets no
+threshold on that magnitude.
+
+The test is considered compliant only if **all criteria that carry a
+threshold are satisfied**.
 
 
 Workflow-specific differences
