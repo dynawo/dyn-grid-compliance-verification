@@ -103,7 +103,7 @@ class ParametersHelper(GFMParameters):
         self._oc_section = "DEFAULT"
         self._eval_sections = (self._oc_section, self._bm_section, self._pcs_section)
 
-        config._pcs_config.read_string(config_str)
+        config._pcs_default_config.read_string(config_str)
 
 
 def test_phase_jump_initialization():

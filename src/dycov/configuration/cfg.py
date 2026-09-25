@@ -22,9 +22,15 @@ class Config:
     """Manages application configuration from various sources.
 
     Configuration is loaded with the following priority:
-    1. User configuration
-    2. Performance Checking Sheet (PCS) configuration
-    3. Default configuration
+    1. User Performance Checking Sheet (PCS) description
+    2. User configuration
+    3. PCS description of the selected DTR revision
+    4. PCS description shipped with the tool
+    5. Default configuration
+
+    The three PCS layers describe one PCS at a time, and load_pcs_config rebuilds them
+    every time a PCS is prepared. The user configuration outlives them, because it also
+    holds the runtime overrides and the file given on the command line.
 
     Attributes
     ----------
@@ -34,18 +40,42 @@ class Config:
         Parser for the default configuration.
     _user_config: configparser.ConfigParser
         Parser for the user-specific configuration.
-    _pcs_config: configparser.ConfigParser
-        Parser for the Performance Checking Sheet (PCS) configuration.
-    _pcs_files: list[str]
-        Paths of the PCS configuration files read so far, used to locate an option
-        in its source file when reporting errors.
+    _pcs_user_config: configparser.ConfigParser
+        Parser for the PCS description written by the user.
+    _pcs_dtr_config: configparser.ConfigParser
+        Parser for the PCS description of the selected DTR revision.
+    _pcs_default_config: configparser.ConfigParser
+        Parser for the PCS description shipped with the tool.
+    _pcs_user_files: list[str]
+        Path of the user PCS description in preparation, used to locate an option in its
+        source file when reporting errors.
+    _pcs_dtr_files: list[str]
+        Path of the DTR revision description in preparation, used to locate an option in
+        its source file when reporting errors.
+    _pcs_default_files: list[str]
+        Path of the shipped PCS description in preparation, used to locate an option in
+        its source file when reporting errors.
     """
 
     _config_dir: Path
     _default_config: configparser.ConfigParser
     _user_config: configparser.ConfigParser
-    _pcs_config: configparser.ConfigParser
-    _pcs_files: list[str] = field(default_factory=list)
+    _pcs_user_config: configparser.ConfigParser
+    _pcs_dtr_config: configparser.ConfigParser
+    _pcs_default_config: configparser.ConfigParser
+    _pcs_user_files: list[str] = field(default_factory=list)
+    _pcs_dtr_files: list[str] = field(default_factory=list)
+    _pcs_default_files: list[str] = field(default_factory=list)
+
+    def _layers(self) -> tuple[configparser.ConfigParser, ...]:
+        """Configuration parsers, from the highest precedence to the lowest."""
+        return (
+            self._pcs_user_config,
+            self._user_config,
+            self._pcs_dtr_config,
+            self._pcs_default_config,
+            self._default_config,
+        )
 
     def _is_valid_value(self, value: str) -> bool:
         """Internal helper to validate if a string value is not None or empty.
@@ -62,13 +92,19 @@ class Config:
         """
         return value is not None and value != ""
 
+    def _has_valid_option(self, parser: configparser.ConfigParser, section: str, key: str) -> bool:
+        """Internal helper to check that a parser defines a key with a valid value."""
+        return parser.has_option(section, key) and self._is_valid_value(parser.get(section, key))
+
     def _get_config_value(self, section: str, key: str) -> Optional[str]:
         """Gets a configuration value for a given key and section.
 
         The priority defined in the configuration is:
-          1. User config
-          2. Performance Checking Sheet (PCS) config
-          3. Default config
+          1. User Performance Checking Sheet (PCS) description
+          2. User config
+          3. PCS description of the selected DTR revision
+          4. PCS description shipped with the tool
+          5. Default config
 
         Parameters
         ----------
@@ -82,20 +118,9 @@ class Config:
         Optional[str]
             The string value if it exists, None otherwise.
         """
-        if self._user_config.has_option(section, key):
-            value = self._user_config.get(section, key)
-            if self._is_valid_value(value):
-                return value
-
-        if self._pcs_config.has_option(section, key):
-            value = self._pcs_config.get(section, key)
-            if self._is_valid_value(value):
-                return value
-
-        if self._default_config.has_option(section, key):
-            value = self._default_config.get(section, key)
-            if self._is_valid_value(value):
-                return value
+        for parser in self._layers():
+            if self._has_valid_option(parser, section, key):
+                return parser.get(section, key)
 
         return None
 
@@ -119,54 +144,58 @@ class Config:
             )
             raise
 
-    def load_pcs_config(self, pcs_path: str) -> None:
-        """Load the Performance Checking Sheet (PCS) configuration file. It
-        also implements an inheritance mechanism using alias files.
-        It searches for any file named "*aliases*" located two levels above the
-        pcs path. If a section in the main config contains an "inherit" key,
-        it will load the key-value pairs from the corresponding section in the
-        alias files. This allows for shared, default configurations.
-        Values already present in the main config section will NOT be overwritten.
+    def load_pcs_config(
+        self,
+        pcs_path: Optional[Path],
+        user_pcs_path: Optional[Path] = None,
+        dtr_pcs_path: Optional[Path] = None,
+    ) -> None:
+        """Rebuild the Performance Checking Sheet (PCS) description layers from the files
+        of a single PCS, discarding whatever a previously prepared PCS had left.
+
+        Each file goes into the layer of its origin, so which one wins is a matter of
+        precedence and not of the order in which they are read.
+
+        Every layer then resolves the inheritance mechanism using alias files: any file
+        named "*aliases*" located two levels above its PCS file. If a section contains an
+        "inherit" key, the key-value pairs of the corresponding section in the alias files
+        are loaded into it. This allows for shared, default configurations. Values already
+        present in the section will NOT be overwritten.
 
         Parameters
         ----------
-        pcs_path: str
-            Path to the PCS configuration file to read.
+        pcs_path: Optional[Path]
+            Path to the PCS description shipped with the tool.
+        user_pcs_path: Optional[Path]
+            Path to the PCS description written by the user.
+        dtr_pcs_path: Optional[Path]
+            Path to the PCS description of the selected DTR revision.
         """
-        dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", pcs_path)
+        self._load_pcs_layer(self._pcs_user_config, self._pcs_user_files, user_pcs_path)
+        self._load_pcs_layer(self._pcs_dtr_config, self._pcs_dtr_files, dtr_pcs_path)
+        self._load_pcs_layer(self._pcs_default_config, self._pcs_default_files, pcs_path)
+
+    def _load_pcs_layer(
+        self,
+        parser: configparser.ConfigParser,
+        layer_files: list[str],
+        path: Optional[Path],
+    ) -> None:
+        """Internal helper to replace the contents of one PCS layer with the given file."""
+        parser.clear()
+        layer_files.clear()
+        if path is None:
+            return
+
+        dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", path)
         try:
-            self._pcs_config.read(pcs_path, encoding="utf-8")
-            self._pcs_files.append(str(pcs_path))
-
-            pcs_aliases_path = Path(pcs_path).resolve().parent.parent
-            aliases_files = [str(p) for p in pcs_aliases_path.rglob("*aliases*") if p.is_file()]
-
-            aliases_config = configparser.ConfigParser()
-            aliases_config.optionxform = str
-            aliases_config.read(aliases_files, encoding="utf-8")
-
-            for section_to_modify in list(self._pcs_config.sections()):
-                if self._pcs_config.has_option(section_to_modify, "inherit"):
-                    alias_section_name = self._pcs_config.get(section_to_modify, "inherit")
-                    if aliases_config.has_section(alias_section_name):
-                        for key_to_inherit, value_to_inherit in aliases_config.items(
-                            alias_section_name
-                        ):
-                            if not self._pcs_config.has_option(section_to_modify, key_to_inherit):
-                                self._pcs_config.set(
-                                    section_to_modify, key_to_inherit, value_to_inherit
-                                )
-                        self._pcs_config.remove_option(section_to_modify, "inherit")
-                    else:
-                        dycov_logging.get_logger("Cfg").warning(
-                            f"  [WARNING] The alias section '[{alias_section_name}]' was not found"
-                            " in the alias files."
-                        )
-
+            parser.read(path, encoding="utf-8")
+            layer_files.append(str(path))
+            _resolve_inherited_sections(parser, _alias_files(path))
             dycov_logging.get_logger("Cfg").info("Successfully loaded PCS configuration.")
         except Exception as e:
             dycov_logging.get_logger("Cfg").error(
-                "Error loading PCS configuration from %s: %s", pcs_path, e
+                "Error loading PCS configuration from %s: %s", path, e
             )
             raise
 
@@ -195,11 +224,7 @@ class Config:
         bool
             True if the key exists in any of the configuration sources, False otherwise.
         """
-        return (
-            self._user_config.has_option(section, key)
-            or self._pcs_config.has_option(section, key)
-            or self._default_config.has_option(section, key)
-        )
+        return any(parser.has_option(section, key) for parser in self._layers())
 
     def describe_option(self, section: str, key: str) -> str:
         """Locates an option in the configuration files, to point the user to its origin.
@@ -227,8 +252,10 @@ class Config:
     def _option_files(self) -> list[Path]:
         """Configuration files that may define an option, in precedence order."""
         return [
+            *(Path(pcs_file) for pcs_file in self._pcs_user_files),
             _user_config_path(self._config_dir),
-            *(Path(pcs_file) for pcs_file in self._pcs_files),
+            *(Path(pcs_file) for pcs_file in self._pcs_dtr_files),
+            *(Path(pcs_file) for pcs_file in self._pcs_default_files),
             _default_config_path(),
         ]
 
@@ -236,14 +263,12 @@ class Config:
         """Sets (or overrides) a configuration value at runtime using the same
         precedence policy as get_value().
 
-        The precedence to choose the target source mirrors get_value() by checking:
-        1. User config
-        2. PCS config
-        3. Default config
-
         Concretely:
-        - If (section, key) exists with a valid (non-empty) value in user → pcs → default
-        (checked with _is_valid_value), the override is applied in that same source.
+        - If (section, key) exists with a valid (non-empty) value (checked with
+        _is_valid_value), the override is applied in that same source.
+        - The DTR revision layer describes a published revision, so it is never written:
+        an option whose effective value comes from it is overridden in the user config,
+        which outranks it.
         - If it does not exist in any source with a valid value, the key is created in
         the user config.
 
@@ -264,36 +289,30 @@ class Config:
         None
             The value is set in-memory. No value is returned.
         """
-        target_parser = None
-
-        # user
-        if self._user_config.has_option(section, key):
-            current = self._user_config.get(section, key)
-            if self._is_valid_value(current):
-                target_parser = self._user_config
-
-        # pcs (solo si no se decidió aún)
-        if target_parser is None and self._pcs_config.has_option(section, key):
-            current = self._pcs_config.get(section, key)
-            if self._is_valid_value(current):
-                target_parser = self._pcs_config
-
-        # default (solo si no se decidió aún)
-        if target_parser is None and self._default_config.has_option(section, key):
-            current = self._default_config.get(section, key)
-            if self._is_valid_value(current):
-                target_parser = self._default_config
-
-        # Si no se encontró un valor válido en ningún origen, crear en user
-        if target_parser is None:
-            target_parser = self._user_config
-
-        # Asegurar la sección en el origen elegido
+        target_parser = self._override_target(section, key)
         if not target_parser.has_section(section):
             target_parser.add_section(section)
 
-        # Log old -> new y escribir
         target_parser.set(section, key, value)
+
+    def _override_target(self, section: str, key: str) -> configparser.ConfigParser:
+        """Internal helper to choose the parser a runtime override must be written into."""
+        if self._has_valid_option(self._pcs_user_config, section, key):
+            return self._pcs_user_config
+
+        if self._has_valid_option(self._user_config, section, key):
+            return self._user_config
+
+        if self._has_valid_option(self._pcs_dtr_config, section, key):
+            return self._user_config
+
+        if self._has_valid_option(self._pcs_default_config, section, key):
+            return self._pcs_default_config
+
+        if self._has_valid_option(self._default_config, section, key):
+            return self._default_config
+
+        return self._user_config
 
     def get_value(self, section: str, key: str, default: str = None) -> str:
         """Gets a configuration value for a given key and section.
@@ -419,12 +438,11 @@ class Config:
         return value.split(",")
 
     def get_options(self, section: str) -> list:
-        """Returns a list of keys of a section.
+        """Returns a list of keys of a section, gathered from every layer that defines it.
 
-        The priority for retrieving options is:
-        1. User config
-        2. Performance Checking Sheet (PCS) config
-        3. Default config
+        A layer describes a section by the keys it changes, so the keys of a section are
+        the union of the layers and not the contents of the first one that defines it.
+        The value behind each key still follows the precedence of get_value().
 
         Parameters
         ----------
@@ -436,20 +454,50 @@ class Config:
         list
             A list of keys in the specified section, or an empty list otherwise.
         """
-        if self._user_config.has_section(section):
-            options = self._user_config.options(section)
-            if options:
-                return options
+        options = dict.fromkeys(
+            option
+            for parser in self._layers()
+            if parser.has_section(section)
+            for option in parser.options(section)
+        )
+        return list(options)
 
-        if self._pcs_config.has_section(section):
-            options = self._pcs_config.options(section)
-            if options:
-                return options
 
-        if self._default_config.has_section(section):
-            return self._default_config.options(section)
+def _new_parser() -> configparser.ConfigParser:
+    """A parser that reads DyCoV configuration files, preserving the case of the keys."""
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    parser.optionxform = str
+    return parser
 
-        return []
+
+def _alias_files(path: Path) -> list[str]:
+    """Alias files that the given PCS file may inherit from, two levels above it."""
+    aliases_path = Path(path).resolve().parent.parent
+    return [str(alias) for alias in aliases_path.rglob("*aliases*") if alias.is_file()]
+
+
+def _resolve_inherited_sections(parser: configparser.ConfigParser, alias_files: list[str]) -> None:
+    """Fills every section declaring an "inherit" key with the keys of its alias section."""
+    aliases_config = configparser.ConfigParser()
+    aliases_config.optionxform = str
+    aliases_config.read(alias_files, encoding="utf-8")
+
+    for section_to_modify in list(parser.sections()):
+        if not parser.has_option(section_to_modify, "inherit"):
+            continue
+
+        alias_section_name = parser.get(section_to_modify, "inherit")
+        if not aliases_config.has_section(alias_section_name):
+            dycov_logging.get_logger("Cfg").warning(
+                f"  [WARNING] The alias section '[{alias_section_name}]' was not found"
+                " in the alias files."
+            )
+            continue
+
+        for key_to_inherit, value_to_inherit in aliases_config.items(alias_section_name):
+            if not parser.has_option(section_to_modify, key_to_inherit):
+                parser.set(section_to_modify, key_to_inherit, value_to_inherit)
+        parser.remove_option(section_to_modify, "inherit")
 
 
 def _user_config_path(config_dir: Path) -> Path:
@@ -497,12 +545,11 @@ def _get_instance() -> Config:
     config_dir = Path.home() / ".config/dycov"
     logger.debug(f"Config directory set to: {config_dir}")
 
-    default_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    default_config.optionxform = str
-    user_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    user_config.optionxform = str
-    pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    pcs_config.optionxform = str
+    default_config = _new_parser()
+    user_config = _new_parser()
+    pcs_user_config = _new_parser()
+    pcs_dtr_config = _new_parser()
+    pcs_default_config = _new_parser()
 
     # Load default configuration from the package
     default_config_path = _default_config_path()
@@ -531,7 +578,14 @@ def _get_instance() -> Config:
     except Exception:
         logger.warning(f"Could not load user configuration from {user_config_file}", exc_info=True)
 
-    return Config(config_dir, default_config, user_config, pcs_config)
+    return Config(
+        config_dir,
+        default_config,
+        user_config,
+        pcs_user_config,
+        pcs_dtr_config,
+        pcs_default_config,
+    )
 
 
 # Global instance of the Config class

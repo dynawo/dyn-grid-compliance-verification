@@ -21,14 +21,16 @@ from dycov.configuration.dump import (
 
 
 class DummyCfg:
-    """Minimal stand-in for Config exposing the three layered parsers.
+    """Minimal stand-in for Config exposing the five layered parsers.
 
     Each layer is given as a ``{(section, key): value}`` mapping.
     """
 
-    def __init__(self, user=None, pcs=None, default=None):
+    def __init__(self, pcs_user=None, user=None, dtr=None, pcs=None, default=None):
+        self._pcs_user_config = self._build_parser(pcs_user)
         self._user_config = self._build_parser(user)
-        self._pcs_config = self._build_parser(pcs)
+        self._pcs_dtr_config = self._build_parser(dtr)
+        self._pcs_default_config = self._build_parser(pcs)
         self._default_config = self._build_parser(default)
 
     @staticmethod
@@ -82,6 +84,24 @@ def test_get_effective_value_fallback_to_pcs():
     assert src == "pcs"
 
 
+def test_get_effective_value_prefers_the_dtr_revision_over_the_shipped_pcs():
+    cfg = DummyCfg(dtr={("A", "k"): "dtr_val"}, pcs={("A", "k"): "pcs_val"})
+
+    val, src = _get_effective_value_with_source(cfg, "A", "k")
+
+    assert val == "dtr_val"
+    assert src == "dtr"
+
+
+def test_get_effective_value_prefers_the_user_pcs_over_the_user_config():
+    cfg = DummyCfg(pcs_user={("A", "k"): "pcs_user_val"}, user={("A", "k"): "user_val"})
+
+    val, src = _get_effective_value_with_source(cfg, "A", "k")
+
+    assert val == "pcs_user_val"
+    assert src == "pcs-user"
+
+
 def test_dump_effective_config_no_non_default(debug_logs):
     dump_effective_config(DummyCfg())
 
@@ -102,3 +122,11 @@ def test_dump_effective_pcs_description_nested(debug_logs):
     dump_effective_pcs_description(cfg, "PCS", "BM", "OC")
 
     assert any("PCS.BM.OC" in log for log in debug_logs)
+
+
+def test_dump_effective_pcs_description_shows_the_highest_pcs_layer(debug_logs):
+    cfg = DummyCfg(pcs_user={("PCS", "a"): "3"}, dtr={("PCS", "a"): "2"}, pcs={("PCS", "a"): "1"})
+
+    dump_effective_pcs_description(cfg, "PCS")
+
+    assert any("a = 3" in log for log in debug_logs)
