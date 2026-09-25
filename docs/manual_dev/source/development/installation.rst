@@ -117,6 +117,13 @@ Editable mode means that any change you make to the source files under
 ``src/dycov/`` is reflected immediately the next time you run ``dycov`` —
 no reinstallation needed.
 
+To get shell completion in the development environment, generate and hook the
+script into the venv once:
+
+.. code-block:: console
+
+   bash installers/install_bash_completion.sh "$PWD/dycov_venv"
+
 The ``[dev,test]`` extras pull in everything you need to work on the codebase:
 
 .. list-table::
@@ -197,9 +204,10 @@ environment active, get into the relevant directory and run ``make``:
    make latexpdf   # -> build/latex/dycov-dev.pdf
    make html       # -> build/html/index.html
 
-Both ``Makefile`` targets automatically run ``helps.py`` before invoking
-Sphinx, so the CLI reference pages are always regenerated from the current
-version of the tool before the manual is compiled.
+The user manual's ``Makefile`` automatically runs ``helps.py`` before
+invoking Sphinx, so its CLI reference pages are always regenerated from the
+current version of the tool. The developer manual's ``Makefile`` is the
+standard Sphinx catch-all and needs no such step.
 
 
 Day-to-day workflow
@@ -229,10 +237,12 @@ Once the environment is set up, a typical development loop looks like this:
 
       pytest -q
 
-6. Check linting before committing:
+6. Check linting and formatting before committing — the CI runs both, over
+   ``src`` and ``tests``:
 
    .. code-block:: console
 
-      ruff check src
+      ruff check src tests
+      ruff format --check src tests
 
 7. Iterate.

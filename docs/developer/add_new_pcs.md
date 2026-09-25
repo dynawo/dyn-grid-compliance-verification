@@ -42,14 +42,7 @@ The tree under `src/dycov/templates/` is organized as follows:
 ```text
 src/dycov/templates/
 ├── PCS/
-│   ├── model/
-│   │   ├── BESS/
-│   │   └── PPM/
-│   └── performance/
-│       ├── BESS/
-│       ├── PPM/
-│       └── SM/
-├── inputs/
+│   ├── gfm/
 │   ├── model/
 │   │   ├── BESS/
 │   │   └── PPM/
@@ -66,6 +59,9 @@ src/dycov/templates/
         ├── PPM/
         └── SM/
 ```
+
+The `gfm` category holds its PCS directories directly, without a technology
+level, and has no `reports/` counterpart.
 
 ---
 
@@ -107,17 +103,18 @@ src/dycov/templates/PCS/model/PPM/PCS_RTE-I16zX/
 
 ### 3.2 Add reference curve DICT files
 
-For each OC of the new PCS, add a `.dict` file under the appropriate
-`inputs/` path:
+Reference-curve dictionaries no longer ship with the tool: they live next to
+the reference curves of each case,
 
 ```text
-src/dycov/templates/inputs/model/PPM/ReferenceCurves/Producer/
+<case>/ReferenceCurves/Producer/
     PCS_RTE-I16zX.<Benchmark>.<OC>.dict
 ```
 
 DICT files map DyCoV-expected signal names to curve columns and provide
-event metadata. Use an existing `.dict` file from the same benchmark
-family as a reference.
+event metadata. `dycov excel2inputs` scaffolds them with the signals the
+zone compares (the `validation/compared_curves.py` registry); the
+dictionaries under `examples/` serve as a reference for hand-written ones.
 Incorrect or incomplete DICT definitions will prevent curves from being correctly 
 interpreted and may lead to invalid validation results.
 
@@ -187,6 +184,11 @@ validator class:
 | RMS model validation | `src/dycov/validation/model.py` | `ModelValidator` |
 | Shared utilities | `src/dycov/validation/common.py` | (module-level functions) |
 
+If the test evaluates a new curve, first declare it in the per-zone registry
+`src/dycov/validation/compared_curves.py` — the error calculation, the
+checks, the thresholds, the figures and the DICT scaffolding all read the
+set of compared curves from that single registry.
+
 Add a private method to the appropriate class following the existing
 patterns (e.g. `__check_*` for checks, `__calculate_*` for computations).
 
@@ -228,10 +230,14 @@ The existing map modules and their Jinja prefixes are:
 | `steady_state_error.py` | `ssem<OC>` | Steady-state error |
 | `characteristics_response.py` | `tem<OC>` | Reaction / rise / settling times |
 | `active_power_recovery.py` | `apr<OC>` | Active power recovery indicators |
+| `solver.py` | `solver<OC>` | Solver the simulation ended with |
+
+The modules live under `src/dycov/report/tables/` (`summary.py`, in the same
+package, builds the global summary table rather than a per-OC map).
 
 Where `<OC>` is derived from the operating condition name by removing the
-case separator and `_RTE-` (e.g. `PCS_RTE-I16z1.Benchmark.Rise` →
-`I16z1BenchmarkRise`).
+case separators and `_RTE-`, keeping the `PCS` prefix (e.g.
+`PCS_RTE-I16z1.Benchmark.Rise` → `PCSI16z1BenchmarkRise`).
 
 Check whether the new result fits naturally into one of these existing
 modules. If it does, add it there. If the result introduces a genuinely

@@ -21,13 +21,22 @@ At a high level, the DyCoV repository is organized as follows:
 dyn-grid-compliance-verification/
 ├── src/
 ├── examples/
+├── workbooks/
 ├── docs/
 ├── installers/
 ├── tests/
 ├── tests_integration/
+├── tools/
+├── scripts/
+├── attic/
 ├── pyproject.toml
 └── ...
 ```
+
+`workbooks/` holds the Excel templates that `dycov excel2inputs` consumes;
+`tools/` and `scripts/` are development utilities (each with its own README);
+`attic/` keeps retired code — the in-tool model compilation and the native
+Windows installers live there and are not part of the product.
 
 Each top‑level directory serves a distinct purpose.
 Understanding these roles is essential when introducing changes, 
@@ -118,8 +127,11 @@ tooling and are not part of the main reading flow.
 ```text
 installers/
 ├── linux_install.sh
+├── install_bash_completion.sh
+├── prepare_release.sh
+├── RELEASING.md
 ├── docker/
-└── windows/
+└── wsl/
 ```
 
 This directory contains scripts and tooling used to:
