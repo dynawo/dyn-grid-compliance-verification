@@ -29,24 +29,52 @@ from dycov.logging import dycov_logging
 # -----------------------------------------------------------------------------
 # Internal helpers
 # -----------------------------------------------------------------------------
+def _layers_by_source(config) -> Tuple[Tuple[str, object], ...]:
+    """Every layer as a (source, parser) pair, from the highest precedence to the lowest."""
+    return (
+        ("pcs-user", config._pcs_user_config),
+        ("user", config._user_config),
+        ("dtr", config._pcs_dtr_config),
+        ("pcs", config._pcs_default_config),
+        ("default", config._default_config),
+    )
+
+
+def _pcs_layers_by_source(config) -> Tuple[Tuple[str, object], ...]:
+    """The layers describing a PCS, from the highest precedence to the lowest."""
+    return tuple(
+        (source, parser)
+        for source, parser in _layers_by_source(config)
+        if source in ("pcs-user", "dtr", "pcs")
+    )
+
+
+def _pcs_sections(config) -> set:
+    """Sections defined by any of the PCS layers."""
+    return {
+        section for _, parser in _pcs_layers_by_source(config) for section in parser.sections()
+    }
+
+
+def _pcs_items(config, section: str) -> dict:
+    """Options of a PCS section, with the higher precedence layers overriding the lower."""
+    items = {}
+    for _, parser in reversed(_pcs_layers_by_source(config)):
+        if parser.has_section(section):
+            items.update(parser.items(section))
+
+    return items
+
+
 def _get_effective_value_with_source(
     config, section: str, key: str
 ) -> Tuple[Optional[str], Optional[str]]:
-    """Return effective value and its source (user | pcs | default)."""
-    if config._user_config.has_option(section, key):
-        value = config._user_config.get(section, key)
-        if config._is_valid_value(value):
-            return value, "user"
-
-    if config._pcs_config.has_option(section, key):
-        value = config._pcs_config.get(section, key)
-        if config._is_valid_value(value):
-            return value, "pcs"
-
-    if config._default_config.has_option(section, key):
-        value = config._default_config.get(section, key)
-        if config._is_valid_value(value):
-            return value, "default"
+    """Return effective value and its source (pcs-user | user | dtr | pcs | default)."""
+    for source, parser in _layers_by_source(config):
+        if parser.has_option(section, key):
+            value = parser.get(section, key)
+            if config._is_valid_value(value):
+                return value, source
 
     return None, None
 
@@ -67,21 +95,15 @@ def dump_effective_config(config) -> None:
     # ------------------------------------------------------------------
     # Build effective config map
     # ------------------------------------------------------------------
-    sections = (
-        set(config._default_config.sections())
-        | set(config._pcs_config.sections())
-        | set(config._user_config.sections())
-    )
+    layers = _layers_by_source(config)
+    sections = {section for _, parser in layers for section in parser.sections()}
 
     effective = {}
     for section in sections:
         keys = set()
-        if config._default_config.has_section(section):
-            keys |= set(config._default_config.options(section))
-        if config._pcs_config.has_section(section):
-            keys |= set(config._pcs_config.options(section))
-        if config._user_config.has_section(section):
-            keys |= set(config._user_config.options(section))
+        for _, parser in layers:
+            if parser.has_section(section):
+                keys |= set(parser.options(section))
 
         for key in keys:
             value, source = _get_effective_value_with_source(config, section, key)
@@ -97,7 +119,7 @@ def dump_effective_config(config) -> None:
         (sec, k, v, src)
         for sec, items in effective.items()
         for k, (v, src) in items.items()
-        if src in ("user", "pcs")
+        if src != "default"
     ]
 
     if non_default:
@@ -124,7 +146,10 @@ def dump_effective_config(config) -> None:
     # ------------------------------------------------------------------
     # 2) FULL EFFECTIVE CONFIG (forensic)
     # ------------------------------------------------------------------
-    logger.debug("===== DYCOV EFFECTIVE CONFIGURATION (precedence: user > pcs > default) =====")
+    logger.debug(
+        "===== DYCOV EFFECTIVE CONFIGURATION "
+        "(precedence: pcs-user > user > dtr > pcs > default) ====="
+    )
 
     for section in sorted(effective):
         logger.debug("--- %s %s", section, "-" * max(1, 60 - len(section)))
@@ -146,7 +171,7 @@ def dump_effective_pcs_description(
 ) -> None:
     logger = dycov_logging.get_logger("ConfigDump")
 
-    pcs_cfg = config._pcs_config
+    pcs_sections = _pcs_sections(config)
 
     logger.debug("===== DYCOV PCS EFFECTIVE DESCRIPTION =====")
     logger.debug("PCS       : %s", pcs)
@@ -163,14 +188,15 @@ def dump_effective_pcs_description(
     if benchmark and oc:
         base = f"{pcs}.{benchmark}.{oc}"
         sections.append(base)
-        sections.extend(sorted(s for s in pcs_cfg.sections() if s.startswith(base + ".")))
+        sections.extend(sorted(s for s in pcs_sections if s.startswith(base + ".")))
 
     for section in sections:
-        if not pcs_cfg.has_section(section):
+        if section not in pcs_sections:
             continue
 
         logger.debug("--- %s ------------------------------", section)
-        for key, value in sorted(pcs_cfg.items(section), key=lambda kv: kv[0].lower()):
+        items = _pcs_items(config, section)
+        for key, value in sorted(items.items(), key=lambda kv: kv[0].lower()):
             logger.debug("  %s = %s", key, value)
 
     logger.debug("===== END DYCOV PCS EFFECTIVE DESCRIPTION =====")

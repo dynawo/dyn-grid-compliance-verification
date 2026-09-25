@@ -9,16 +9,45 @@ through the tool.
 
 The configuration is written in the standard INI format
 (`Python flavor <https://docs.python.org/3/library/configparser.html>`_)
-and organized into three levels, in decreasing order of priority:
+and organized into five layers, in decreasing order of priority:
 
-1. **User Configuration** — settings provided by the user in
-   ``~/.config/dycov/config.ini``. These always take precedence.
-2. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
+1. **User PCS Description** — the ``PCSDescription.ini`` the user writes under
+   ``~/.config/dycov/templates/PCS/``. Being the most specific file, it takes
+   precedence over everything else.
+2. **User Configuration** — settings provided by the user in
+   ``~/.config/dycov/config.ini``.
+3. **DTR Revision** — the PCS description of a selected DTR revision. This
+   layer is not populated yet.
+4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.
-3. :ref:`Tool Configuration <toolconf>` — global defaults in
+5. :ref:`Tool Configuration <toolconf>` — global defaults in
    ``src/dycov/configuration/defaultConfig.ini``. These should only be
    modified when a DTR update changes global conditions.
+
+Each file lands in the layer of its origin, so which one wins is a matter of
+precedence and never of the order in which the files happen to be read.
+
+
+How the layers combine
+----------------------
+
+A file in a higher layer is a **patch over** the ones below it, not a
+replacement: it only has to carry the keys it changes. Reading an option walks
+the layers from the top and returns the first one that defines it with a
+non-empty value, so:
+
+* A key a layer does not mention keeps the value of the layer below.
+* A key a layer defines **empty** is a way of removing it: the tool treats an
+  empty value as "not defined here" and keeps looking down the stack. This is
+  how a PCS turns off a report figure that the defaults would otherwise draw.
+* Listing the keys of a section gathers them from every layer, so a partial
+  override never hides the keys it does not mention.
+
+The three PCS layers describe one PCS at a time and are rebuilt every time the
+tool prepares a PCS, so nothing read for one PCS can reach the next. The two
+user layers are not: they also hold the settings given on the command line and
+the overrides the tool applies at start-up, which belong to the whole run.
 
 
 .. _pcsconf:
@@ -32,7 +61,13 @@ defines the complete structure of the PCS — its benchmarks, operating
 conditions, validation tests, and report curves.
 
 These files should only be edited by developers, and only when a DTR update
-requires it.
+requires it. A user adapts a PCS by writing the same relative path under
+``~/.config/dycov/templates/PCS/``, carrying only the sections and keys to
+change; see the *Advanced PCS customization* tutorial.
+
+The file must be named ``PCSDescription.ini``. A PCS directory that holds an
+INI file under any other name is reported as an invalid PCS and skipped,
+rather than loading a file whose role the tool cannot tell.
 
 
 PCS structure parameters
