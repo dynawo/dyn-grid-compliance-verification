@@ -8,6 +8,8 @@
 # demiguelm@aia.es
 #
 
+from pathlib import Path
+
 
 class DummyProducer:
     def __init__(self):
@@ -50,6 +52,27 @@ class DummyBenchmark:
 
     def generate(self):
         self.generated = True
+
+
+class DummyConfig:
+    def __init__(self, config_dir):
+        self._config_dir = config_dir
+        self.loaded = None
+
+    def get_config_dir(self):
+        return self._config_dir
+
+    def get_value(self, section, key):
+        return "templates"
+
+    def get_int(self, section, key, default):
+        return 1
+
+    def get_list(self, section, key):
+        return ["BM"]
+
+    def load_pcs_config(self, pcs_path, user_pcs_path=None, dtr_pcs_path=None):
+        self.loaded = (pcs_path, user_pcs_path, dtr_pcs_path)
 
 
 def _make_pcs(monkeypatch, bms=("BM_OK", "BM_KO")):
@@ -126,6 +149,55 @@ def test_generate(monkeypatch):
     assert all(bm.generated for bm in DummyBenchmark.instances)
 
 
+def _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file):
+    import dycov.model.pcs as pcs_module
+    from dycov.model.pcs import Pcs
+
+    DummyBenchmark.instances = []
+    dummy_config = DummyConfig(tmp_path / "user_config")
+    found = {
+        Path(pcs_module.__file__).resolve().parent.parent: tool_file,
+        dummy_config.get_config_dir(): user_file,
+    }
+    monkeypatch.setattr(pcs_module, "Benchmark", DummyBenchmark)
+    monkeypatch.setattr(pcs_module, "config", dummy_config)
+    monkeypatch.setattr(
+        Pcs,
+        "_Pcs__get_pcs_path",
+        lambda self, producer, source_path: found.get(source_path),
+    )
+
+    pcs = Pcs("Prod", "PCS_Test", DummyParams(DummyProducer()))
+    return pcs, dummy_config
+
+
+def test_prepare_pcs_config_loads_both_files_at_once(monkeypatch, tmp_path):
+    tool_file = tmp_path / "tool" / "PCSDescription.ini"
+    user_file = tmp_path / "user" / "PCSDescription.ini"
+
+    pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file)
+
+    assert dummy_config.loaded == (tool_file, user_file, None)
+    assert pcs.is_valid() is True
+
+
+def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_path):
+    user_file = tmp_path / "user" / "PCSDescription.ini"
+
+    pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file)
+
+    assert dummy_config.loaded == (None, user_file, None)
+    assert pcs._has_pcs_config is False
+    assert pcs._has_user_config is True
+
+
+def test_prepare_pcs_config_without_any_file_is_not_a_valid_pcs(monkeypatch, tmp_path):
+    pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, None)
+
+    assert dummy_config.loaded == (None, None, None)
+    assert pcs.is_valid() is False
+
+
 def test_get_pcs_path_prefers_pcs_description(monkeypatch, tmp_path):
     pcs = _make_pcs(monkeypatch)
     producer = DummyProducer()
@@ -143,7 +215,7 @@ def test_get_pcs_path_prefers_pcs_description(monkeypatch, tmp_path):
     assert result.name == "PCSDescription.ini"
 
 
-def test_get_pcs_path_falls_back_to_other_ini(monkeypatch, tmp_path):
+def test_get_pcs_path_does_not_guess_another_ini(monkeypatch, tmp_path):
     pcs = _make_pcs(monkeypatch)
     producer = DummyProducer()
 
@@ -151,9 +223,7 @@ def test_get_pcs_path_falls_back_to_other_ini(monkeypatch, tmp_path):
     pcs_dir.mkdir(parents=True)
     (pcs_dir / "Whatever.ini").write_text("[x]\n")
 
-    result = pcs._Pcs__get_pcs_path(producer, tmp_path)
-
-    assert result.name == "Whatever.ini"
+    assert pcs._Pcs__get_pcs_path(producer, tmp_path) is None
 
 
 def test_get_pcs_path_missing_dir_returns_none(monkeypatch, tmp_path):

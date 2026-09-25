@@ -73,21 +73,14 @@ class Pcs:
         return self._name
 
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
-        # It checks if the PCS configuration file exists in the tool and reads it.
-        pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
-        dycov_logging.get_logger("PCS").debug(f"PCS Path {pcs_path}")
-        if pcs_path and pcs_path.exists():
-            config.load_pcs_config(pcs_path)
-            self._has_pcs_config = True
+        tool_pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
+        user_pcs_path = self.__get_pcs_path(producer, config.get_config_dir())
+        dycov_logging.get_logger("PCS").debug(f"PCS Path {tool_pcs_path}")
+        dycov_logging.get_logger("PCS").debug(f"User PCS Path {user_pcs_path}")
 
-        # It checks if the PCS configuration file exists in the user directory and reads it.
-        # The order is important, since the user configuration must override the tool
-        #  configuration if both files exists
-        pcs_path = self.__get_pcs_path(producer, config.get_config_dir())
-        dycov_logging.get_logger("PCS").debug(f"User PCS Path {pcs_path}")
-        if pcs_path and pcs_path.exists():
-            config.load_pcs_config(pcs_path)
-            self._has_user_config = True
+        self._has_pcs_config = tool_pcs_path is not None
+        self._has_user_config = user_pcs_path is not None
+        config.load_pcs_config(tool_pcs_path, user_pcs_path)
 
         # Read configurations
         report_name = config.get_value(self._name, "report_name")
@@ -102,18 +95,8 @@ class Pcs:
         if not path.exists():
             return None
 
-        files = {file.stem.lower(): file for file in list(path.glob("*.[iI][nN][iI]"))}
-        if "pcsdescription" in files:
-            return files["pcsdescription"]
-        elif len(files) > 0:
-            file = files[list(files.keys())[0]]
-            dycov_logging.get_logger("PCS").warning(
-                f"Loading '{file.name}'. To avoid confusion it is recommended to rename "
-                f"the configuration file to use the name: 'PCSDescription.ini'"
-            )
-            return file
-
-        return None
+        files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
+        return files.get("pcsdescription")
 
     def validate(
         self,
