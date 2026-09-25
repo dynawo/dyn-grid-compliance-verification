@@ -76,8 +76,8 @@ Use them when opening new issues.
 
 ## 4. CI checks
 
-CI runs automatically on every pull request across three platforms
-(Linux, macOS, Windows) with Python 3.13.
+CI runs automatically on every pull request on Linux and macOS, with Python
+3.13 and Python 3.14.
 
 The following checks must pass before merging:
 

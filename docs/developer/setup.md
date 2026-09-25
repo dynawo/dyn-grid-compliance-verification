@@ -78,17 +78,17 @@ sudo apt install \
 
 ---
 
-### 2.4 Python (≥ 3.13)
+### 2.4 Python (3.13 or 3.14)
 
-DyCoV **requires Python version 3.13 or newer**.
+DyCoV runs on **Python 3.13 and Python 3.14**. CI builds and tests both.
 
-Ensure Python 3.13 is installed and available:
+Ensure one of them is installed and available:
 
 ```bash
 python3.13 --version
 ```
 
-If multiple Python versions are installed, explicitly use Python 3.13 when
+If several Python versions are installed, pass the one you want explicitly when
 creating the development environment.
 
 ---
@@ -168,7 +168,8 @@ cd dycov_repo
 
 ## 5. Creating the development environment
 
-Create a virtual environment using **Python 3.13**:
+Create a virtual environment. This guide uses Python 3.13; Python 3.14 works
+the same way:
 
 ```bash
 uv venv dycov_venv --python 3.13
