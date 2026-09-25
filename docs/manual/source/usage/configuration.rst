@@ -166,6 +166,11 @@ Besides ``config.ini`` and its profiles, the configuration directory holds a
 packaged PCS definitions and LaTeX report templates can be overridden or
 extended. See the *Advanced PCS customization* tutorial for the workflow.
 
+A ``PCSDescription.ini`` placed there needs to carry only the sections and keys
+it changes; the rest keeps the packaged value. It is also the most specific
+file DyCoV reads, so a PCS section written there wins over the same section
+written in ``config.ini``.
+
 
 Modifying the Benchmarks of a PCS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
