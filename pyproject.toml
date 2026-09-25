@@ -44,6 +44,7 @@ keywords = ["Power Systems", "Dynamic modeling", "verification", "validation"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent"
 ]
 

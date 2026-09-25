@@ -9,6 +9,18 @@ in `../tutorials/`.
 
 ---
 
+## Supported Python versions
+
+DyCoV runs on **Python 3.13 and Python 3.14**. Continuous integration builds and
+tests both, on Linux and on macOS.
+
+The two installation methods below provision **Python 3.13**: it is the
+interpreter shipped inside the prebuilt distribution image, and the one the
+native installer asks `uv` for. Running DyCoV on 3.14 is supported, but it is
+something you set up yourself.
+
+---
+
 ## Supported installation methods
 
 DyCoV supports two installation paths for end‑users.
@@ -44,8 +56,8 @@ In this mode:
 - DyCoV is installed inside a user‑level Python virtual environment,
 - Dynawo can be downloaded and installed by the installer (it asks for
   confirmation; a Dynawo installation of your own can be used instead),
-- system‑level prerequisites (Python ≥ 3.13, uv, LaTeX, build tools) must be
-  installed manually by the user.
+- system‑level prerequisites (Python 3.13 or 3.14, uv, LaTeX, build tools)
+  must be installed manually by the user.
 
 This method is intended for **advanced users** who require full control over
 their system environment.

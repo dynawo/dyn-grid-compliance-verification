@@ -176,7 +176,7 @@ The following steps install DyCoV in a native Linux environment.
 For detailed procedures and advanced setups, see: [Linux native](docs/installation/linux_native.md)
 
 DyCoV requires a Linux environment with system dependencies
-(e.g. Python ≥ 3.13, build tools, LaTeX).
+(e.g. Python 3.13 or 3.14, build tools, LaTeX).
 
 #### Install DyCoV
 
