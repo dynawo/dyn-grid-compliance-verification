@@ -43,8 +43,13 @@ to the DyCoV generic keywords described below.
 Generic keywords by equipment type
 ------------------------------------
 
-The following sections list all the generic keywords that DyCoV uses for each
-equipment type, together with their meaning and when they are required.
+The following sections list the main generic keywords that DyCoV uses for each
+equipment type, together with their meaning and when they are required. The
+dictionary INI files are the authoritative, complete list; when in doubt, copy
+the section of an existing model of the same family.
+
+Every model section must also declare its ``family`` key (``WECC`` or
+``IEC``): it selects which set of control flags applies to the model.
 
 Bus
 ^^^
@@ -146,6 +151,10 @@ WECC family:
 
 * ``'PFlag'``
     Power reference flag: constant Pref (False) or speed-dependent (True).
+
+* ``'FreqFlag'``
+    Plant-level frequency control: governor response disabled (False) or
+    enabled (True). Plant models only.
 
 * ``'PfFlag'``
     Power factor flag: Q control (False) or PF control (True).
@@ -298,17 +307,23 @@ WECC plant configurations:
      - QFlag
      - RefFlag
      - VCompFlag
+     - PFlag
+     - FreqFlag
    * - ``WTG_Voltage_Droop``
      - —
      - —
      - —
      - True
      - False
+     - —
+     - —
    * - ``WTG_UControl_Local_Coordinated``
      - False
      - True
      - True
      - True
+     - —
+     - —
      - —
    * - ``WTG_QControl_Local_Coordinated``
      - False
@@ -316,11 +331,15 @@ WECC plant configurations:
      - True
      - False
      - —
+     - —
+     - —
    * - ``WTG_Only_UControl``
      - False
      - —
      - False
      - True
+     - —
+     - —
      - —
    * - ``WTG_Only_QControl``
      - False
@@ -328,18 +347,24 @@ WECC plant configurations:
      - False
      - False
      - —
+     - —
+     - —
    * - ``WTG_PControl``
      - —
      - —
      - —
      - —
      - —
+     - False
+     - True
    * - ``WTG_PControl_Oscillation``
      - —
      - —
      - —
      - —
      - —
+     - True
+     - True
 
 WECC turbine configurations:
 

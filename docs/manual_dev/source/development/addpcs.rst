@@ -25,6 +25,7 @@ The tree under ``src/dycov/templates/`` is organized as follows:
 
    src/dycov/templates/
    ├── PCS/
+   │   ├── gfm/
    │   ├── model/
    │   │   ├── BESS/
    │   │   └── PPM/
@@ -32,12 +33,12 @@ The tree under ``src/dycov/templates/`` is organized as follows:
    │       ├── BESS/
    │       ├── PPM/
    │       └── SM/
-   ├── inputs/
-   │   ├── model/
-   │   └── performance/
    └── reports/
        ├── model/
        └── performance/
+
+The ``gfm`` category holds its PCS directories directly, without a technology
+level, and has no ``reports/`` counterpart.
 
 
 .. _scenario_a:
@@ -82,17 +83,18 @@ subdirectory named after the benchmark:
 Step 2: Add reference curve DICT files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For each OC of the new PCS, add a ``.dict`` file under the appropriate
-``inputs/`` path:
+Reference-curve dictionaries no longer ship with the tool: they live next to
+the reference curves of each case,
 
 .. code-block:: text
 
-   src/dycov/templates/inputs/model/PPM/ReferenceCurves/Producer/
+   <case>/ReferenceCurves/Producer/
        PCS_RTE-I16zX.<Benchmark>.<OC>.dict
 
 DICT files map DyCoV-expected signal names to curve columns and provide event
-metadata. Use an existing ``.dict`` from the same benchmark family as a
-reference.
+metadata. ``dycov excel2inputs`` scaffolds them with the signals the zone
+compares (the ``validation/compared_curves.py`` registry); the dictionaries
+under ``examples/`` serve as a reference for hand-written ones.
 
 Step 3: Create the report templates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -171,6 +173,11 @@ validator class:
      - ``src/dycov/validation/common.py``
      - (module-level functions)
 
+If the test evaluates a new curve, first declare it in the per-zone registry
+``src/dycov/validation/compared_curves.py`` — the error calculation, the
+checks, the thresholds, the figures and the DICT scaffolding all read the set
+of compared curves from that single registry.
+
 Add a private method to the appropriate class following existing patterns
 (``__check_*`` for checks, ``__calculate_*`` for computations). Call it from
 ``__check`` or ``__calculate``, guarded by ``compliance_list.contains_key``:
@@ -225,10 +232,16 @@ modules and their Jinja prefixes are:
    * - ``active_power_recovery.py``
      - ``apr<OC>``
      - Active power recovery indicators
+   * - ``solver.py``
+     - ``solver<OC>``
+     - Solver the simulation ended with
+
+The modules live under ``src/dycov/report/tables/`` (``summary.py``, in the
+same package, builds the global summary table rather than a per-OC map).
 
 Where ``<OC>`` is derived from the operating condition name by removing the
-case separator and ``_RTE-`` (e.g. ``PCS_RTE-I16z1.Benchmark.Rise`` →
-``I16z1BenchmarkRise``).
+case separators and ``_RTE-``, keeping the ``PCS`` prefix (e.g.
+``PCS_RTE-I16z1.Benchmark.Rise`` → ``PCSI16z1BenchmarkRise``).
 
 If the new result fits an existing module, add it there. If it introduces a
 genuinely new category, create a new map module and register it in

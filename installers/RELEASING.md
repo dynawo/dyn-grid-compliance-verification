@@ -150,3 +150,12 @@ to the GitHub release:
    from GitHub; end users must run `chmod +x` first, as documented in
    `docs/installation/using_the_provided_image.md` (section 3.2). `linux_install.sh` does not
    need it: the installation docs pipe it straight into `bash`.
+
+---
+
+## Why DyCoV is not on PyPI
+
+Publishing to PyPI is deliberately out of scope for now: the package alone is
+not usable without Dynawo and a LaTeX toolchain, so the supported distribution
+channels are the prebuilt image and the Linux native installer, both attached
+to each GitHub release.

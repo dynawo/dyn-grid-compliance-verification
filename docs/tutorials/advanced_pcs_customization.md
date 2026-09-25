@@ -66,6 +66,7 @@ The relevant substructure is:
 ├── config.ini
 └── templates/
     ├── PCS/
+    │   ├── gfm/
     │   ├── model/
     │   │   ├── BESS/
     │   │   └── PPM/
@@ -83,6 +84,10 @@ The relevant substructure is:
             └── SM/
 ```
 
+The `gfm/` category holds its PCS directories directly, without a technology
+level, and has no `reports/` counterpart: the GFM workflow produces no LaTeX
+report.
+
 Conceptually:
 
 *   `templates/PCS/` contains user‑defined PCS operating conditions.
@@ -96,6 +101,9 @@ the PCS you are adapting:
 ```text
 ~/.config/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/PCSDescription.ini
 ```
+
+(For the `gfm` workflow there is no technology level:
+`templates/PCS/gfm/<PCSName>/PCSDescription.ini`.)
 
 That file is a **patch over** the one shipped with the tool, not a replacement:
 write only the sections and keys you change, and everything you leave out keeps

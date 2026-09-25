@@ -6,7 +6,6 @@ Dynamic grid Compliance Verification API
    :toctree: _autosummary
 
    dycov.launchers
-   dycov.core.input_template
    dycov.core.validator
    dycov.curves.anonymizer
    dycov.curves.curves_factory

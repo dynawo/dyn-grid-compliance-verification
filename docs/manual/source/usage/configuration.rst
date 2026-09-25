@@ -79,6 +79,11 @@ Basic configuration
   Comma-separated list of PCSs to run for **RMS Model Validation of Battery
   Energy Storage Systems**. Leave empty to run all applicable PCSs.
 
+* ``gridforming_pcs``
+
+  Comma-separated list of PCSs to run for **GFM envelope generation**. Leave
+  empty to run all applicable PCSs.
+
 * ``file_log_level``
 
   Log level for the log file, as a numeric Python logging level: ``50``
@@ -107,6 +112,14 @@ Options controlling the Dynawo simulation, applicable to all execution modes.
 
 Basic configuration
 """""""""""""""""""
+
+* ``log_level``
+
+  How much Dynawo writes to its own log, next to the curves of every test:
+  ``DEBUG``, ``INFO``, ``WARN`` (the default) or ``ERROR``. ``INFO`` adds one
+  line per solver time step — megabytes per test, only useful when looking
+  into the solver itself. Running DyCoV with ``--debug`` asks Dynawo for
+  ``DEBUG`` whatever this says.
 
 * ``simulation_limit``
 
