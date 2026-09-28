@@ -72,6 +72,8 @@ def choose_parameter(entry: PdrEntry) -> str:
     s = entry.value.lower()
 
     if entry.key == "pdr_p":
+        if "pmin" in s:
+            return "PMin"
         return "PMax"
 
     if entry.key == "pdr_q":

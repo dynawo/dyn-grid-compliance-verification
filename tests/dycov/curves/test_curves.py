@@ -20,6 +20,7 @@ from dycov.files import value_registry
 def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0, zone=3):
     return SimpleNamespace(
         p_max_pu=p_max_pu,
+        p_min_pu=0.1,
         q_max_pu=q_max_pu,
         q_min_pu=q_min_pu,
         s_nom_pu=s_nom_pu,

@@ -353,6 +353,14 @@ class ModelProducer(Producer):
                 float(producer_config.get(default_section, "p_max_consumption_at_PDR"))
                 / self._s_nref
             )
+        self.p_min_injection_pu = (
+            producer_config.getfloat(default_section, "p_min_injection_at_PDR", fallback=0.0)
+            / self._s_nref
+        )
+        self.p_min_consumption_pu = (
+            producer_config.getfloat(default_section, "p_min_consumption_at_PDR", fallback=0.0)
+            / self._s_nref
+        )
         self.q_max_pu = float(producer_config.get(default_section, "q_max_at_PDR")) / self._s_nref
         self.q_min_pu = float(producer_config.get(default_section, "q_min_at_PDR")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom_at_PDR"))
@@ -458,22 +466,24 @@ class ModelProducer(Producer):
         return list()
 
     def set_consumption(self, consumption: bool) -> None:
-        """The value of p_max_pu is defined depending on the
+        """The values of p_max_pu and p_min_pu are defined depending on the
         operating mode: injection or consumption.
 
         Parameters
         ----------
         consumption: bool
-            If True use the maximum active power consumption.
-            If False use the maximum active power injection.
+            If True use the maximum and minimum active power consumption.
+            If False use the maximum and minimum active power injection.
 
         """
         if consumption:
-            # The maximum active power consumption value must be
+            # The active power consumption values must be
             # sign-flipped to adhere to the tool's adopted sign convention.
             self.p_max_pu = -self.p_max_consumption_pu
+            self.p_min_pu = -self.p_min_consumption_pu
         else:
             self.p_max_pu = self.p_max_injection_pu
+            self.p_min_pu = self.p_min_injection_pu
 
     @property
     def s_nom_pu(self) -> float:
