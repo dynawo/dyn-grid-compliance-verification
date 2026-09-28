@@ -76,7 +76,11 @@ PCS I16 in the RTE DTR.
    called *Node2* in the DTR); the injector-terminal signals
    (``*_GEN_ActiveCurrentInjTerminal``, ``*_GEN_ReactiveCurrentInjTerminal``,
    ``*_GEN_VoltageInjTerminal``)
-   are measured there.
+   are measured there. A Zone 1 reference-curve dictionary declares six
+   signals: those three, ``InternalNode1_BUS_Voltage`` (or its
+   ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
+   point controlled by the converter,
+   ``*_GEN_ActivePowerControlledPu`` and ``*_GEN_ReactivePowerControlledPu``.
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.

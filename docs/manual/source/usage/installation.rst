@@ -61,8 +61,8 @@ Dynawo, clones the latest DyCoV release, and sets up a Python virtual
 environment so that your system Python is left untouched.
 
 Before running the installer, make sure the following system packages are
-present. They are required by the installer and by DyCoV's startup checks,
-and are used to generate PDF reports and manage the Python environment.
+present. They are required by the installer, and used to generate PDF reports
+and manage the Python environment.
 
 Build tools:
 
@@ -79,11 +79,12 @@ LaTeX (for PDF report generation):
      texlive-latex-recommended texlive-science texlive-lang-french \
      latexmk
 
-Python 3.13 and uv:
+Python and uv — DyCoV runs on Python 3.13 and Python 3.14; the installer
+provisions 3.13 through ``uv``, so no system Python is needed:
 
 .. code-block:: console
 
-   sudo apt install python3.13 python3.13-venv git
+   sudo apt install git
    curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Once the prerequisites are in place, choose a working directory and run:

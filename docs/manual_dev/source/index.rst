@@ -31,7 +31,11 @@ without changing the Python code.
 Overall project structure
 =========================
 
-At the highest level, the **Dynamic grid Compliance Verification** tool is divided into 5 directories:
+At the highest level, the **Dynamic grid Compliance Verification** repository
+holds these directories (besides them, ``workbooks/`` carries the Excel
+templates that ``dycov excel2inputs`` consumes, ``tools/`` and ``scripts/``
+hold development utilities, ``tests_integration/`` the end-to-end tests, and
+``attic/`` the retired code):
 
 .. figure:: figs_structure/main_structure.png
     :scale: 80
@@ -90,24 +94,40 @@ that the application should perform:
     for the selected verification, obtaining the curves through dynamic simulation and/or
     files, and verifying them.
 
-* ``curves``
-    Code responsible for importing and management of the signals files.
+* ``cli``
+    The command-line interface: argument parsers (including shell completion)
+    and one handler per subcommand.
 
-* ``dynawo``
-    Code responsible for launching the Dynawo simulator for running a given case.
+* ``curves``
+    Code responsible for importing and managing the signal files, and — under
+    ``curves/dynawo/`` — for preparing, launching and post-processing the
+    Dynawo simulations of a case.
+
+* ``excel``
+    The ``excel2inputs`` workbook reader that generates a model's input files
+    from the Excel templates under ``workbooks/``.
 
 * ``electrical``
     Code for calculating some electrical values needed at runtime (such as the
     generator's Udim, Pmax, etc.) and, most importantly, the **initialization** values
-    for Dynawo simulations (see ``initialization_calcs.py`` and the technical note at
-    ``docs/initialization/initialization.pdf``).
+    for Dynawo simulations (see ``initialization_calcs.py`` and the technical note
+    under ``docs/initialization/``, built from its LaTeX sources with the ``Makefile``
+    in that directory).
 
 * ``files``
     Code related to file management, creating new files and/or directories, moving files from one
     location to another, replacing placeholders in files, etc.
 
+* ``gfm``
+    The Grid-Forming envelope generation workflow: analytical calculators per
+    event type, outputs and functional verification (see :doc:`development/GFM_module`).
+
 * ``logging``
     Logger for message management.
+
+* ``sanity_checks``
+    Validation of the user's inputs and environment: files, parameters,
+    topologies and system commands, checked before a run starts.
 
 * ``model``
     Contains the model definition based around the concept of the **PCS**, as defined by RTE's
@@ -163,8 +183,14 @@ that the application should perform:
     Contains the LaTeX templates for the reports corresponding to each *PCS* of the
     DTR document.  The templating system is Jinja.
 
+* ``validate``
+    Entry objects of a verification run: the parameters, the producer under
+    test and the top-level ``validation`` driver the CLI handlers invoke.
+
 * ``validation``
     Implementation of the compliance checks defined by each of the DTR document *PCSs*.
+    The set of curves each zone compares is declared once, in the
+    ``compared_curves.py`` registry.
 
 Flowchart
 =========

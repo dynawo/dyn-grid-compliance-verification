@@ -43,7 +43,7 @@
     * Results: inspect the results directory (tree structure and its contents)
 
 - [10 min] Preparing the inputs
-    * Emphasize working from the provided examples, but also briefly mention "dycov generate"
+    * Emphasize working from the provided examples, but also briefly mention "dycov excel2inputs"
 	* Re-emphasize that initialization parameters are not needed, the tool calculates them
     * Emphasize the DICT files necessary for the reference curves
     * Jump into an already-prepared example to finish the example (no time for a live demo)
