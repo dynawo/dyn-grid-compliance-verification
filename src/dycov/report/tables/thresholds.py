@@ -10,8 +10,12 @@
 from dycov.validation import threshold_variables
 
 
-def _setpoint_tracking_thresholds(results: dict, measurement: str, thresholds_map: list) -> None:
-    windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values()
+def _setpoint_tracking_thresholds(
+    results: dict, measurement: str, thresholds_family: str, thresholds_map: list
+) -> None:
+    windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values(
+        thresholds_family
+    )
 
     if "setpoint_tracking_" + measurement + "_check" not in results:
         return
@@ -120,7 +124,7 @@ def _voltage_dips_thresholds(
         )
 
 
-def create_map(results: dict, is_field_measurements: bool) -> list:
+def create_map(results: dict, is_field_measurements: bool, thresholds_family: str = "") -> list:
     """Creates a list to populate the signal thresholds table in the LaTex reports
 
     Parameters
@@ -129,6 +133,8 @@ def create_map(results: dict, is_field_measurements: bool) -> list:
         Results of the validations applied in the pcs
     is_field_measurements: bool
         True if the reference signals are field measurements.
+    thresholds_family: str
+        Family of the thresholds the PCS applies to the controlled magnitude ("" for I16's).
 
     Returns
     -------
@@ -136,9 +142,11 @@ def create_map(results: dict, is_field_measurements: bool) -> list:
         Signal thresholds table
     """
     thresholds_map = []
-    _setpoint_tracking_thresholds(results, "controlled_magnitude", thresholds_map)
-    _setpoint_tracking_thresholds(results, "active_power", thresholds_map)
-    _setpoint_tracking_thresholds(results, "reactive_power", thresholds_map)
+    _setpoint_tracking_thresholds(
+        results, "controlled_magnitude", thresholds_family, thresholds_map
+    )
+    _setpoint_tracking_thresholds(results, "active_power", thresholds_family, thresholds_map)
+    _setpoint_tracking_thresholds(results, "reactive_power", thresholds_family, thresholds_map)
 
     _voltage_dips_thresholds(results, "V", "voltage", is_field_measurements, thresholds_map)
     _voltage_dips_thresholds(results, "P", "active_power", is_field_measurements, thresholds_map)

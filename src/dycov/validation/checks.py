@@ -76,12 +76,15 @@ def _check_setpoint_tracking_by_window(
     compliance_values: dict,
     measure: str,
     error: str,
+    thresholds_family: str,
 ) -> dict:
     """Returns the error of every applicable window. The "during" window is absent from the
     result when the event has no such window; a window mapped to None holds a measurement whose
     error is not computable.
     """
-    windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values()
+    windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values(
+        thresholds_family
+    )
     windows = {
         window: _check_measure_curve_error_by_event(
             compliance_values[window],
@@ -106,6 +109,7 @@ def _check_setpoint_tracking(
     modified_setpoint: str,
     error: str,
     zone: int,
+    thresholds_family: str,
 ) -> dict:
     measured = {
         name
@@ -116,6 +120,7 @@ def _check_setpoint_tracking(
         compliance_values,
         common.get_measurement_name(modified_setpoint, zone, measured),
         error,
+        thresholds_family,
     )
 
 
@@ -146,12 +151,14 @@ def _complete_setpoint_tracking_by_error(
     error: str,
     results: dict,
     zone: int,
+    thresholds_family: str,
 ) -> None:
     windows = _check_setpoint_tracking(
         compliance_values,
         modified_setpoint=modified_setpoint,
         error=error,
         zone=zone,
+        thresholds_family=thresholds_family,
     )
     tracking_check = "setpoint_tracking_" + measurement + "_check"
     results.setdefault(tracking_check, True)
@@ -405,6 +412,7 @@ def complete_setpoint_tracking(
     measurement: str,
     results: dict,
     zone: int,
+    thresholds_family: str = "",
 ) -> None:
     """Completes the setpoint tracking results for a specific measurement and error type by
     checking the compliance values and updating the results dictionary accordingly.
@@ -423,6 +431,11 @@ def complete_setpoint_tracking(
         A dictionary to store the completed setpoint tracking results for the measurement. The
         function will update this dictionary with the compliance status and error values for each
         error type (MAE, ME, MXE) and for each time window (before, during, after).
+    zone : int
+        The zone of the test, which names the controlled magnitude.
+    thresholds_family : str
+        Family of the thresholds the PCS applies to the controlled magnitude, as its description
+        names it ("" for the DTR Fiche I16 table).
     """
     # MAE
     _complete_setpoint_tracking_by_error(
@@ -432,6 +445,7 @@ def complete_setpoint_tracking(
         "mae",
         results,
         zone,
+        thresholds_family,
     )
 
     # ME
@@ -442,6 +456,7 @@ def complete_setpoint_tracking(
         "me",
         results,
         zone,
+        thresholds_family,
     )
 
     # MXE
@@ -452,6 +467,7 @@ def complete_setpoint_tracking(
         "mxe",
         results,
         zone,
+        thresholds_family,
     )
 
 

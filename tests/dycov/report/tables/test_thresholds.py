@@ -14,7 +14,7 @@ from dycov.report.tables import thresholds
 
 class DummyThresholdVariables:
     @staticmethod
-    def get_setpoint_tracking_threshold_values():
+    def get_setpoint_tracking_threshold_values(thresholds_family=""):
         return {
             "before": {"mxe": 0.11, "me": 0.12, "mae": 0.13},
             "during": {"mxe": 0.21, "me": 0.22, "mae": 0.23},
@@ -101,7 +101,7 @@ def test_setpoint_tracking_thresholds_with_during_window():
         "during_mxe_active_power_value": 0.0,
     }
     thresholds_map = []
-    thresholds._setpoint_tracking_thresholds(results, "active_power", thresholds_map)
+    thresholds._setpoint_tracking_thresholds(results, "active_power", "", thresholds_map)
     assert len(thresholds_map) == 1
     entry = thresholds_map[0]
     assert entry[0] == "P"
@@ -140,5 +140,5 @@ def test_setpoint_tracking_thresholds_missing_check_key():
         "during_mxe_active_power_value": 1,
     }
     thresholds_map = []
-    thresholds._setpoint_tracking_thresholds(results, "active_power", thresholds_map)
+    thresholds._setpoint_tracking_thresholds(results, "active_power", "", thresholds_map)
     assert thresholds_map == []
