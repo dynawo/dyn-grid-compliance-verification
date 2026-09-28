@@ -56,7 +56,8 @@ PCS Configuration
 ------------------
 
 Each PCS has its own ``PCSDescription.ini`` file, located under
-``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/``. This file
+``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/`` (the ``gfm``
+workflow has no technology level: ``templates/PCS/gfm/<PCSName>/``). This file
 defines the complete structure of the PCS — its benchmarks, operating
 conditions, validation tests, and report curves.
 
@@ -186,7 +187,8 @@ Under ``[PCSName.BenchmarkName.OCName]``:
 
 * ``report_name`` — LaTeX file name for the Operating Condition report.
 * ``reference_step_size`` — step magnitude for reference tracking tests,
-  used to scale the compliance tolerance. Optional.
+  used to scale the absolute tolerance with which the figures frame the
+  response (it plays no part in the compliance checks). Optional.
 * ``bolted_fault`` — whether the fault test uses a bolted fault.
 * ``hiz_fault`` — whether the fault test uses a Hi-Z fault.
 * ``setpoint_change_test_type`` — type of setpoint affected in step tests.
@@ -209,7 +211,11 @@ values. All of them resolve against a single registry
 ``Qmin``; ``Udim``, ``Unom`` for voltage; and ``line_XPu`` for the connection line
 reactance. Every magnitude in the registry is in the per-unit Dynawo uses for the
 network — base SnRef (``s_nref``) for powers and impedances, ``Unom`` for voltages
-— which is also the base used in the report figures. Adding a new base magnitude
+— which is also the base used in the report figures. Two callers override
+``Unom`` with the nominal voltage in kV before resolving: the report (for the
+figure ranges) and the TSO-load initialization, which resolves voltages
+against a kV variant of the registry and divides by ``u_nom`` afterwards.
+Adding a new base magnitude
 is a matter of adding an entry to that registry — no per-key parsing code changes.
 (GFM keys and the ``line_XPu`` *key*, whose base is a DTR reactance-table entry,
 use their own resolution and are not part of this registry.)
@@ -224,16 +230,19 @@ was read from and its line number, plus the magnitudes accepted at that point
 The infinite bus table configuration also lives in this section. The tool
 replaces placeholders found in the ``TableInfiniteBus.txt`` file with the
 values defined here. If a value depends on the generator type, append the
-type identifier to the variable name (e.g. ``u_ret_HTB1``).
+type identifier to the variable name (e.g. ``u_fault_HTB1``,
+``fault_duration_HTB1``).
 
 The same placeholder substitution applies to the TSO model files
-(``TSOModel.jobs``, ``TSOModel.dyd``, ``TSOModel.par``). Commonly used
-examples:
+(``TSOModel.jobs``, ``TSOModel.dyd``, ``TSOModel.par``). Examples used by the
+shipped models:
 
-* ``main_P0Pu``, ``main_Q0Pu``, ``main_U0Pu`` — initial conditions for the
-  main load.
-* ``secondary_P0Pu``, ``secondary_Q0Pu``, ``secondary_U0Pu`` — initial
-  conditions for the secondary load.
+* ``pdr_P``, ``pdr_Q``, ``pdr_U`` — initial conditions of the islanding
+  loads.
+* ``step_event_PPu``, ``step_event_QPu`` — magnitude of the islanding load
+  steps.
+* ``line_RPu``, ``line_XPu``, ``bus_UNom``, ``event_start`` — grid-side
+  parameters of the benchmark.
 
 Under ``[PCSName.BenchmarkName.OCName.Event]``:
 
@@ -271,7 +280,6 @@ Logging:
 Path configuration (these paths are relative to the package installation and
 should not normally be changed):
 
-* ``input_templates_path`` — path to input skeleton templates within the package.
 * ``latex_templates_path`` — path to PDF templates within the package.
 * ``templates_path`` — path to PCS templates within the package.
 * ``lib_path`` — path to RTE models within the package.

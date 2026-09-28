@@ -39,7 +39,8 @@ build network structure dynamically.
 
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
-magnitudes (`Pmax`/`Snom`/`Qmax`/`Qmin`/`Udim`/`Unom=1.0`, powers in s_nref pu, voltage in Unom pu);
+magnitudes (`Pmax`/`PmaxInjection`/`PmaxConsumption`/`Qmax`/`Qmin`/`Snom`/`Udim`/`Unom=1.0`/`line_XPu`,
+powers in s_nref pu, voltage in Unom pu);
 `resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|numeric against it;
 `origin=(section, key)` makes a rejected definition name its config file+line
 (`config.describe_option`). Every

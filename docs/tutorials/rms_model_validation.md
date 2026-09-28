@@ -274,6 +274,17 @@ including large active and reactive power setpoint variations.
 
 ## 7. Comparison methodology
 
+Each zone compares a fixed set of curves, in every one of its benchmarks:
+
+- **Zone 1**: the voltage at InternalNode1, the voltage at InternalNode2,
+  the active and reactive power at the point controlled by the converter,
+  and the currents Ip and Iq at InternalNode2 (six curves).
+- **Zone 3**: the voltage, active and reactive power, and currents Ip and Iq
+  at the PDR bus, plus the network frequency (six curves).
+
+The voltages and the frequency carry no DTR threshold: their errors are
+reported for information, without a verdict.
+
 For all PCS‑I16 tests:
 
 - only the positive‑sequence component is considered,

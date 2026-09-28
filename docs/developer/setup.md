@@ -49,15 +49,11 @@ sudo apt install \
   git \
   curl \
   unzip \
-  gcc \
-  g++ \
-  cmake
+  make
 ```
 
-These tools are required for:
-
-*   building and running Dynawo,
-*   developing and debugging DyCoV.
+`make` builds the Sphinx manuals and compiles the PDF reports at runtime;
+`curl` and `unzip` fetch and unpack the components.
 
 ---
 
