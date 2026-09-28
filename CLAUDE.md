@@ -17,6 +17,11 @@ codebase. Keep it dense but short; update it when the subsystem structure change
 
 ## Conventions
 
+- Read the whole issue before starting: its description and every one of its comments.
+- A pull request points to one issue and nothing else. The issue is where the work is explained, in
+  general terms and without code detail, and anything that needs saying beyond what is already
+  written there — a decision taken along the way, a finding, a constraint — goes as a comment on the
+  issue, at that same level, not into the pull request.
 - Python package installed in editable mode. Tests under `tests/` mirror the `src/dycov/` layout;
   run with `pytest`.
 - Prefer reusing existing utilities (e.g. `replace_placeholders.*`, `create_curves`) over introducing
