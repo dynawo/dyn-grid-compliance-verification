@@ -85,6 +85,11 @@ def _validate_pcs(pcs_args) -> tuple:
         if not pcs.is_valid():
             dycov_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
             return pcs.get_producer_name(), pcs.get_name(), False, {}
+        if not pcs.declares_tests():
+            dycov_logging.get_logger("Validation").info(
+                f"{pcs.get_name()}: no test declared, nothing to validate"
+            )
+            return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
         report_name, success, pcs_results = pcs.validate(summary_list)
         pcs_results["pcs"] = pcs
@@ -303,6 +308,11 @@ class Validation:
         dycov_logging.get_logger("Validation").debug(f"Sorted summary {summary_list}")
 
         try:
+            if not summary_list:
+                dycov_logging.get_logger("Validation").warning(
+                    "No test was run, so there is no report to generate"
+                )
+                return
             report.create_pdf(
                 summary_list,
                 report_results,
