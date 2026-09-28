@@ -527,6 +527,26 @@ def test_complete_setpoint_tracking_with_an_absent_measurement_saves_no_value():
     assert "before_mxe_tc_voltage_position" not in results
 
 
+def test_complete_setpoint_tracking_without_reference_is_not_computable():
+    """Issue #561: a test without reference curves has no window to compare, which is not
+    computable rather than an error."""
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        {"t_event_start": 20.0, "is_invalid_test": False},
+        "ActivePowerSetpointPu",
+        "active_power",
+        results,
+        3,
+    )
+
+    assert results["setpoint_tracking_active_power_check"] == checks.NOT_COMPUTABLE
+    assert results["before_mxe_tc_active_power_check"] == checks.NOT_COMPUTABLE
+    assert results["after_mae_tc_active_power_check"] == checks.NOT_COMPUTABLE
+    assert "during_mxe_tc_active_power_check" not in results
+    assert results["compliance"] is False
+
+
 def test_complete_setpoint_tracking_keeps_not_computable_over_a_later_window():
     """A window that could not be computed keeps the aggregated check at "N/A" even when the
     remaining windows are compliant."""
