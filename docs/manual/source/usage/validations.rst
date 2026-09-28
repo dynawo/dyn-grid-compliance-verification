@@ -25,6 +25,10 @@ to the DTR's PCS structure. The following tests are currently implemented:
     Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
     (like I7), Ramp Response to Grid Frequency, and Islanding (like I10).
 
+* **RMS model validation against on-site measurements (Power Parks and
+  BESS)**: PCS F16, the second phase of PCS I16, with the same two zones and
+  the setpoint steps a commissioning test can apply.
+
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
 * **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
@@ -335,6 +339,47 @@ defined by an operating point (OP), event parameters, and grid parameters.
    :width: 70%
    :alt: network setup for PCS I16 Zone 1
    :align: center
+
+
+PCS F16
+^^^^^^^
+
+PCS F16 is the second phase of the open phasor model validation: the model is
+compared against the on-site measurements recorded during the commissioning
+tests, on the same two zones as PCS I16. The fiche selects no test of its own:
+the producer proposes the on-site tests, RTE approves them, and the recorded
+signals are the reference. It only fixes two things, and those are what the
+tool ships:
+
+* the active power levels every test runs at — minimum, 50% of the maximum and
+  maximum injection for a PPM; maximum and 50% consumption, 50% and maximum
+  injection for a BESS. The minimum is declared in ``Producer.ini`` as
+  ``p_min_injection_at_PDR`` (``p_min_consumption_at_PDR`` for the consumption
+  mode), in MW, 0 when absent;
+* the errors it tolerates on the controlled magnitude — MXE/ME/MAE of
+  0.05/0.03/0.04 before and after the event and 0.1/0.05/0.07 during it,
+  configured as ``thr_FT_reftrack_*`` in the ``[GridCode]`` section. The PCS
+  names that family in its description, ``setpoint_tracking_thresholds = FT``,
+  which is what selects the table; PCS I16 keeps its own whatever the
+  reference curves are.
+
+The tests themselves are declared by the producer, with their records. The
+shipped ``PCSDescription.ini`` of ``PCS_RTE-F16z1`` and ``PCS_RTE-F16z3``
+declares no test: it holds a declaration template, commented out, with one
+operating condition per active power level. DyCoV leaves a copy of it in the
+user configuration, under ``templates/PCS/model/<technology>/PCS_RTE-F16z<zone>/``;
+complete it there, or copy it to
+``<ReferenceCurves>/PCS_RTE-F16z<zone>/PCSDescription.ini``, uncommenting it
+once per recorded test: the grid during the test, the recorded Q and U, and the
+event.
+A description found next to the reference curves is taken as the user's
+description of that PCS, in place of the one in the configuration directory.
+A declared test
+is reported with a template shared by all of them, and a PCS that declares no
+test is left out of the run.
+
+The ``Wind/IECB2015`` and ``BESS/WECC`` examples carry such declarations, invented
+for the example, with records anonymized from the tool's own simulations.
 
 
 Electrical performance verification  (Power Park Modules)
