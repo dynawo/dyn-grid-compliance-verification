@@ -121,3 +121,14 @@ def test_build_oc_notices_without_reference_curves_and_with_missed_columns():
     assert notices.count("Missing curves:") == 1
     assert "\\item \\textcolor{red}{BusPDR\\_BUS\\_Voltage}" in notices
     assert watermark == "\\SetWatermarkText{INVALID}"
+
+
+def test_a_stable_test_is_labelled_as_such():
+    assert report._stability_label(True) == "stable"
+
+
+def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
+    label = report._stability_label(False)
+
+    assert label == r"\textcolor{red}{unstable}"
+    assert "\t" not in label

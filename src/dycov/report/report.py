@@ -307,8 +307,9 @@ def _pcs_replace(
         subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
         subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
         if "stabilized" in oc_results:
-            stabilized = "stable" if oc_results["stabilized"] else "\textcolor{red}{unstable}"
-            subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
+            subst_dict = subst_dict | {
+                "stabilized" + operating_condition_: _stability_label(oc_results["stabilized"])
+            }
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
@@ -339,6 +340,10 @@ def _pcs_replace(
     subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
     template.stream(subst_dict2).dump(str(working_path / report_name))
     return len(subreports)
+
+
+def _stability_label(stabilized: bool) -> str:
+    return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 
 def _get_template(path, template_file):
