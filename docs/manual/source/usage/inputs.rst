@@ -81,6 +81,10 @@ PCS I16 in the RTE DTR.
    ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
    point controlled by the converter,
    ``*_GEN_ActivePowerControlledPu`` and ``*_GEN_ReactivePowerControlledPu``.
+   It may also declare the setpoints sent to the converter,
+   ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
+   ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,
+   the report draws the one the step moves over the magnitude it drives.
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.

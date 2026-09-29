@@ -100,7 +100,7 @@ def test_metadata_without_a_simulation_record_is_empty(tmp_path):
     assert metadata == {}
 
 
-def test_the_dictionary_asks_for_every_curve_the_zone_compares(tmp_path):
+def test_the_dictionary_asks_for_every_curve_the_zone_compares_or_draws(tmp_path):
     curves = tmp_path / "curves"
     curves.mkdir()
     csv = _make_zone1_curves(curves)
@@ -116,7 +116,40 @@ def test_the_dictionary_asks_for_every_curve_the_zone_compares(tmp_path):
         "PV_Array_GEN_ReactivePowerControlledPu = PV_Array_GEN_ReactivePowerControlledPu",
         "PV_Array_GEN_ActiveCurrentInjTerminal = PV_Array_GEN_ActiveCurrentInjTerminal",
         "PV_Array_GEN_ReactiveCurrentInjTerminal = PV_Array_GEN_ReactiveCurrentInjTerminal",
+        "PV_Array_GEN_ActivePowerSetpointPu = ",
+        "PV_Array_GEN_ReactivePowerSetpointPu = ",
     ]
+
+
+def test_a_setpoint_the_file_carries_is_declared_where_it_is_asked_for(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = curves / "PCS_RTE-I16z1.SetPointStep.Active.csv"
+    csv.write_text(
+        ZONE1_COLUMNS.rstrip("\n") + ";PV_Array_GEN_ActivePowerSetpointPu\n"
+        "0.0;1.0;1.0;0.5;0.1;0.5;0.1;0.5\n",
+        encoding="utf-8",
+    )
+
+    _create_dict_file(csv, {})
+
+    section = _curves_section(csv.with_suffix(".dict"))
+    assert section[-2:] == [
+        "PV_Array_GEN_ActivePowerSetpointPu = PV_Array_GEN_ActivePowerSetpointPu",
+        "PV_Array_GEN_ReactivePowerSetpointPu = ",
+    ]
+
+
+def test_a_setpoint_the_file_does_not_carry_is_not_warned_about(tmp_path, caplog):
+    """#554: the setpoints are only drawn, so their absence costs nothing."""
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = _make_zone1_curves(curves)
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file(csv, {})
+
+    assert "does not carry" not in caplog.text
 
 
 def test_an_existing_dictionary_is_repointed_at_the_file_just_written(tmp_path):
