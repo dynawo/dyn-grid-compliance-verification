@@ -107,7 +107,8 @@ def _plotly_figures(
             ymax=0.0,
         )
     draw_response_characteristics(renderer, curve_name, results)
-    draw_mxe(renderer, curve_name, results)
+    if figure_description.draws_one_magnitude():
+        draw_mxe(renderer, curve_name, results, zone)
 
     curve_style = get_curve_style(curve_name)
     role = "setpoint" if "VoltageSetpointPu" in curve_name else "calculated"

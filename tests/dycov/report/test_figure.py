@@ -3,12 +3,11 @@
 #
 # (c) 2025 RTE
 # Developed by Grupo AIA
-# marinjl@aia.es
-# omsg@aia.es
-# demiguelm@aia.es
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
 #
-import tempfile
-from pathlib import Path
+"""Tests for the figures of the PDF report."""
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -16,7 +15,7 @@ import pandas as pd
 import pytest
 
 from dycov.configuration.cfg import config
-from dycov.report.curve_classification import is_controlled_magnitude
+from dycov.report import figure
 from dycov.report.figure import (
     _add_curve2plot,
     _get_xrange,
@@ -27,8 +26,13 @@ from dycov.report.figure import (
     get_curves2plot,
 )
 from dycov.report.figure_decorations import draw_additional_curves, draw_response_characteristics
-from dycov.report.figure_renderer import MatplotlibRenderer
-from dycov.report.types import FigureDescription
+from dycov.report.types import (
+    DynamicBand,
+    EventMarker,
+    FigureDescription,
+    FinalValueBand,
+    FrequencyBand,
+)
 
 matplotlib.use("Agg")
 
@@ -68,34 +72,96 @@ def set_user_option():
         parser.remove_section(section)
 
 
-def test_create_plot_saves_expected_plot():
+def test_create_plot_saves_expected_plot(tmp_path):
     time = [0, 1, 2, 3, 4]
     curves = [{"curve": [0, 1, 2, 3, 4], "color": "#4c72b0", "style": "-"}]
     time_reference = [0, 1, 2, 3, 4]
     curves_reference = [{"curve": [0, 0.5, 1, 1.5, 2], "color": "#dd8452", "style": "-"}]
     time_range = {"min": 0, "max": 4}
     results = {"AVR_5_crvs": [[1, 1, 1, 1, 1]], "time_85U": 2, "sim_t_event_start": 0}
-    unit = "MW"
+    output_file = tmp_path / "plot.png"
+    figure_description = FigureDescription(
+        name="ActiveCurrentInjTerminal",
+        variables="ActiveCurrentInjTerminal",
+        ylabel="MW",
+    )
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        output_file = Path(tmpdir) / "plot.png"
-        figure_description = FigureDescription(
-            name="ActiveCurrentInjTerminal",
-            variables="ActiveCurrentInjTerminal",
-            ylabel=unit,
-        )
-        create_plot(
-            time,
-            figure_description,
-            curves,
-            time_reference,
-            curves_reference,
-            time_range,
-            output_file,
-            results,
-        )
-        assert output_file.exists()
-        assert output_file.stat().st_size > 0
+    create_plot(
+        time,
+        figure_description,
+        curves,
+        time_reference,
+        curves_reference,
+        time_range,
+        output_file,
+        results,
+    )
+
+    assert output_file.exists()
+    assert output_file.stat().st_size > 0
+
+
+def _make_plot_curve(name: str) -> dict:
+    return {"name": name, "curve": [0.0, 0.5, 1.0], "color": "#4c72b0", "style": "-"}
+
+
+def test_create_plot_marks_the_mxe_the_zone_measured_on_the_curve(monkeypatch, tmp_path):
+    marked = []
+    monkeypatch.setattr(
+        figure,
+        "draw_mxe",
+        lambda renderer, curve_name, results, zone: marked.append((curve_name, zone)),
+    )
+    figure_description = FigureDescription(
+        name="fig_V", variables=[{"type": "bus", "variable": "Voltage"}], ylabel="V"
+    )
+
+    create_plot(
+        [0, 1, 2],
+        figure_description,
+        [_make_plot_curve("BusPDR_BUS_Voltage")],
+        None,
+        None,
+        {"min": 0, "max": 2},
+        tmp_path / "plot.pdf",
+        {},
+        zone=1,
+    )
+
+    assert marked == [("BusPDR_BUS_Voltage", 1)]
+
+
+def test_create_plot_marks_no_mxe_on_a_figure_of_several_magnitudes(monkeypatch, tmp_path):
+    """#553: the figure of the currents draws Ip and Iq together, and their MXE belongs to the
+    figures that draw each of them alone."""
+    marked = []
+    monkeypatch.setattr(figure, "draw_mxe", lambda *args: marked.append(args[1]))
+    figure_description = FigureDescription(
+        name="fig_I",
+        variables=[
+            {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
+            {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+        ],
+        ylabel="I",
+    )
+    curves = [
+        _make_plot_curve("WT_GEN_ActiveCurrentInjTerminal"),
+        _make_plot_curve("WT_GEN_ReactiveCurrentInjTerminal"),
+    ]
+
+    create_plot(
+        [0, 1, 2],
+        figure_description,
+        curves,
+        None,
+        None,
+        {"min": 0, "max": 2},
+        tmp_path / "plot.pdf",
+        {},
+        zone=1,
+    )
+
+    assert marked == []
 
 
 def test_get_common_time_range_includes_all_events():
@@ -158,29 +224,22 @@ def test_get_xrange_for_curve_honors_figures_overrides(set_user_option):
     assert xmax == pytest.approx(2.0)
 
 
-def test_add_curve2plot_applies_color_and_style():
-    df = pd.DataFrame(
-        {
-            "ActiveCurrentInjTerminal": [1, 2, 3],
-            "ReactiveCurrentInjTerminal": [4, 5, 6],
-            "VoltageSetpointPu": [7, 8, 9],
-            "Other": [10, 11, 12],
-        }
-    )
-
+@pytest.mark.parametrize(
+    "variable, color",
+    [
+        ("ActiveCurrentInjTerminal", "#64b5cd"),
+        ("ReactiveCurrentInjTerminal", "#8172b3"),
+        ("VoltageSetpointPu", "#8c8c8c"),
+        ("Other", "#4c72b0"),
+    ],
+)
+def test_add_curve2plot_applies_color_and_style(variable, color):
+    curves = pd.DataFrame({variable: [1, 2, 3]})
     plot_curves = []
 
-    _add_curve2plot("ActiveCurrentInjTerminal", "ActiveCurrentInjTerminal", df, plot_curves)
-    assert plot_curves[-1]["color"] == "#64b5cd"
+    _add_curve2plot(variable, variable, curves, plot_curves)
 
-    _add_curve2plot("ReactiveCurrentInjTerminal", "ReactiveCurrentInjTerminal", df, plot_curves)
-    assert plot_curves[-1]["color"] == "#8172b3"
-
-    _add_curve2plot("VoltageSetpointPu", "VoltageSetpointPu", df, plot_curves)
-    assert plot_curves[-1]["color"] == "#8c8c8c"
-
-    _add_curve2plot("Other", "Other", df, plot_curves)
-    assert plot_curves[-1]["color"] == "#4c72b0"
+    assert [(curve["name"], curve["color"]) for curve in plot_curves] == [(variable, color)]
 
 
 def test_get_curves2plot_reference_skips_setpoint_and_missing_columns():
@@ -248,20 +307,13 @@ def test_graph_options_in_global_section_are_ignored(set_user_option):
     assert yrange_max == pytest.approx(1.055)
 
 
-def test_plot_additional_curves_renders_all_types():
-    from dycov.report.types import DynamicBand, EventMarker, FinalValueBand, FrequencyBand
-
-    time = [0, 1, 2, 3, 4]
+def test_draw_additional_curves_draws_every_band_and_marker(renderer):
     results = {
         "time_85U": 2,
         "sim_t_event_start": 0,
         "AVR_5_crvs": [[1, 1, 1, 1, 1]],
     }
-    ymin, ymax = 0, 2
-    last_val = 1
-
-    renderer = MatplotlibRenderer()
-    figure_description_test = FigureDescription(
+    figure_description = FigureDescription(
         name="test",
         variables="BusPDR_BUS_ActivePower",
         ylabel="",
@@ -270,10 +322,25 @@ def test_plot_additional_curves_renders_all_types():
         dynamic_band=DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs"),
         event_markers=[EventMarker(source_key="time_85U")],
     )
-    draw_additional_curves(renderer, figure_description_test, time, last_val, results, ymin, ymax)
+
+    ymin, ymax = draw_additional_curves(
+        renderer, figure_description, [0, 1, 2, 3, 4], 1, results, 0, 2
+    )
+
+    # 10% around the last value, then 1 Hz around 50 Hz in pu, 5% around the AVR curve, T85U
+    assert renderer.marks == [
+        ("hline", pytest.approx(1.1)),
+        ("hline", pytest.approx(0.9)),
+        ("hline", pytest.approx(1.02)),
+        ("hline", pytest.approx(0.98)),
+        ("curve", pytest.approx([1.05] * 5)),
+        ("curve", pytest.approx([0.95] * 5)),
+        ("vline", 2),
+    ]
+    assert (ymin, ymax) == (0, 2)
 
 
-def test_plot_response_characteristics_annotations():
+def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer):
     results = {
         "calc_reaction_target": {"BusPDR_BUS_ActivePower": 2.0},
         "calc_reaction_time": 1.0,
@@ -285,72 +352,30 @@ def test_plot_response_characteristics_annotations():
         "calc_ss_value": 2.5,
     }
 
-    renderer = MatplotlibRenderer()
     draw_response_characteristics(renderer, "BusPDR_BUS_ActivePower", results)
 
-
-def test_is_controlled_magnitude_identifies_correct_combinations():
-    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
-    assert is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
-    assert is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
-    assert is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
-    assert is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
-    assert is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
-    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "Q") is False
-    assert is_controlled_magnitude("UnknownCurve", "P") is False
-
-
-def test_plot_functions_with_unsupported_curve_types():
-    # Should not raise
-    try:
-        _get_yrange([{"curve": {"a": 1, "b": 2}}])
-    except Exception:
-        pass
-
-    class Dummy:
-        pass
-
-    try:
-        _get_yrange([{"curve": Dummy()}])
-    except Exception:
-        pass
+    assert renderer.marks == [
+        ("hline", 2.0),
+        ("vline", 1.5),
+        ("hline", 3.0),
+        ("vline", 2.5),
+        ("scatter", (2.5, 3.0)),
+        ("annotation", "2.5000s"),
+        ("hrect", (1.5, 3.5)),
+        ("vline", 3.5),
+        ("scatter", (3.5, 2.5)),
+        ("annotation", "3.5000s"),
+    ]
 
 
-def test_get_xrange_aggregates_curve_ranges():
-    def fake_get_xrange_for_curve(
-        operating_condition, unit_characteristics, time_curve, curve, sim_t_event_end
-    ):
-        return min(time_curve), max(time_curve)
+def test_get_xrange_aggregates_curve_ranges(monkeypatch):
+    curve_ranges = iter([(1, 3), (0, 2), (0.5, 4)])
+    monkeypatch.setattr(figure, "_get_xrange_for_curve", lambda *args: next(curve_ranges))
+    curves = [{"curve": [1, 2, 3]}, {"curve": [2, 3, 4]}, {"curve": [0, 5, 6]}]
 
-    import dycov.report.figure as figure_mod
+    xmin, xmax = _get_xrange("OC.Benchmark", {}, [0, 1, 2], curves, 2)
 
-    orig = figure_mod._get_xrange_for_curve
-    figure_mod._get_xrange_for_curve = fake_get_xrange_for_curve
-
-    try:
-        curves = [
-            {"curve": [1, 2, 3]},
-            {"curve": [2, 3, 4]},
-            {"curve": [0, 5, 6]},
-        ]
-        time_curve = [0, 1, 2]
-        operating_condition = "OC.Benchmark"
-        unit_characteristics = {}
-        sim_t_event_end = 2
-
-        xmin, xmax = _get_xrange(
-            operating_condition,
-            unit_characteristics,
-            time_curve,
-            curves,
-            sim_t_event_end,
-        )
-
-        assert xmin == 0
-        assert xmax == 2
-
-    finally:
-        figure_mod._get_xrange_for_curve = orig
+    assert (xmin, xmax) == (0, 4)
 
 
 def test_get_yrange_falls_back_to_defaults_on_invalid_values(set_user_option):

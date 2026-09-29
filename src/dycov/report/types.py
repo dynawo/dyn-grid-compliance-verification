@@ -56,7 +56,10 @@ class EventMarker:
 
 @dataclass
 class FigureDescription:
-    """Description of a figure to be rendered in reports."""
+    """Description of a figure to be rendered in reports.
+
+    Every figure goes to the HTML report; ``in_pdf`` says whether it also goes to the PDF.
+    """
 
     name: str
     variables: str | list[dict]
@@ -65,6 +68,12 @@ class FigureDescription:
     frequency_band: FrequencyBand | None = None
     dynamic_band: DynamicBand | None = None
     event_markers: list[EventMarker] = field(default_factory=list)
+    in_pdf: bool = True
+
+    def draws_one_magnitude(self) -> bool:
+        """Whether the figure draws a single magnitude. Only such a figure marks the MXE of its
+        curves: one that draws several repeats the figures of each."""
+        return isinstance(self.variables, str) or len(self.variables) == 1
 
 
 def band_limits(

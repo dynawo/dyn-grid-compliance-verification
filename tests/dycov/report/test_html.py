@@ -7,15 +7,46 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import tempfile
+"""Tests for the figures and the page of the HTML report."""
+
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from dycov.report import html
-from dycov.report.curve_classification import get_measurement_type, is_controlled_magnitude
-from dycov.report.types import FigureDescription
+from dycov.report.types import DynamicBand, FigureDescription, FinalValueBand, FrequencyBand
+
+
+@pytest.fixture
+def html_templates(monkeypatch, tmp_path):
+    """Points the HTML module at a templates directory of the test's own, holding the charts
+    script, and returns where the page template goes."""
+    module_dir = tmp_path / "report"
+    templates_dir = module_dir / "templates"
+    templates_dir.mkdir(parents=True)
+    (templates_dir / "sync_charts.js").write_text("// sync charts js dummy")
+    monkeypatch.setattr(html, "__file__", str(module_dir / "html.py"))
+    return templates_dir / "template.html"
+
+
+def _make_output_path(tmp_path: Path) -> Path:
+    output_path = tmp_path / "output"
+    (output_path / "HTML").mkdir(parents=True)
+    (output_path / "HTML" / "plotly.min.js").write_text("// plotly js dummy")
+    return output_path
+
+
+def _make_injector_current_curves():
+    """The Zone 1 injector currents, with the magnitude column the report adds beforehand."""
+    return pd.DataFrame(
+        {
+            "time": [0, 1, 2],
+            "WT_GEN_ActiveCurrentInjTerminal": [0.8, 0.6, 0.4],
+            "WT_GEN_ReactiveCurrentInjTerminal": [0.1, 0.3, 0.5],
+            "WT_GEN_modIInjTerminal": [0.81, 0.67, 0.64],
+        }
+    )
 
 
 def test_plotly_figures_single_curve_success():
@@ -43,8 +74,6 @@ def test_plotly_figures_single_curve_success():
 
 
 def test_plotly_figures_with_additional_traces():
-    from dycov.report.types import DynamicBand, FinalValueBand, FrequencyBand
-
     figure_description = FigureDescription(
         name="desc",
         variables=[{"type": "bus", "variable": "ActivePower"}],
@@ -83,45 +112,15 @@ def test_plotly_figures_with_additional_traces():
     assert "plotly" in html_out.lower()
 
 
-def test_create_html_success():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        output_path = Path(tmpdir)
-        html_dir = output_path / "HTML"
-        html_dir.mkdir()
+def test_create_html_success(html_templates, tmp_path):
+    html_templates.write_text("{{ figures|length }} figures rendered")
+    output_path = _make_output_path(tmp_path)
+    figures = [("figure1", "<div>figure1</div>"), ("figure2", "<div>figure2</div>")]
 
-        (html_dir / "plotly.min.js").write_text("// plotly js dummy")
+    html.create_html("producer", figures, "test_condition", output_path)
 
-        templates_dir = Path(__file__).resolve().parent / "templates"
-        templates_dir.mkdir(exist_ok=True)
-        template_path = templates_dir / "template.html"
-        template_path.write_text("{{ figures|length }} figures rendered")
-
-        js_path = templates_dir / "sync_charts.js"
-        js_path.write_text("// sync charts js dummy")
-
-        producer = "producer"
-        figures = [("figure1", "<div>figure1</div>"), ("figure2", "<div>figure2</div>")]
-        operating_condition = "test_condition"
-
-        orig_file = html.__file__
-        html.__file__ = str(Path(__file__))
-
-        try:
-            html.create_html(producer, figures, operating_condition, output_path)
-            output_html = html_dir / f"{producer}.{operating_condition}.html"
-            assert output_html.exists()
-            content = output_html.read_text()
-            assert "2 figures rendered" in content
-        finally:
-            html.__file__ = orig_file
-            if template_path.exists():
-                template_path.unlink()
-            if js_path.exists():
-                js_path.unlink()
-            try:
-                templates_dir.rmdir()
-            except Exception:
-                pass
+    output_html = output_path / "HTML" / "producer.test_condition.html"
+    assert output_html.read_text() == "2 figures rendered"
 
 
 def test_plotly_figures_missing_reference_curves():
@@ -226,29 +225,12 @@ def test_plotly_figures_multiple_curves():
     assert isinstance(html_out, str)
 
 
-def test_create_html_missing_template():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        output_path = Path(tmpdir)
-        html_dir = output_path / "HTML"
-        html_dir.mkdir()
+def test_create_html_missing_template(html_templates, tmp_path):
+    output_path = _make_output_path(tmp_path)
+    figures = [("figure1", "<div>figure1</div>")]
 
-        templates_dir = Path(__file__).resolve().parent / "templates"
-        template_path = templates_dir / "template.html"
-        if template_path.exists():
-            template_path.unlink()
-
-        producer = "producer"
-        figures = [("figure1", "<div>figure1</div>")]
-        operating_condition = "missing_template"
-
-        orig_file = html.__file__
-        html.__file__ = str(Path(__file__))
-
-        try:
-            with pytest.raises(FileNotFoundError):
-                html.create_html(producer, figures, operating_condition, output_path)
-        finally:
-            html.__file__ = orig_file
+    with pytest.raises(FileNotFoundError, match="template.html"):
+        html.create_html("producer", figures, "missing_template", output_path)
 
 
 def test_plotly_figures_zone1_uses_internalnode1_labels():
@@ -296,6 +278,62 @@ def test_plotly_figures_zone3_uses_pdr_labels():
     assert "InternalNode1" not in html_out
 
 
+def test_plotly_figures_marks_the_mxe_the_zone_measured_on_the_curve(monkeypatch):
+    marked = []
+    monkeypatch.setattr(
+        html,
+        "draw_mxe",
+        lambda renderer, curve_name, results, zone: marked.append((curve_name, zone)),
+    )
+    figure_description = FigureDescription(
+        name="fig_V", variables=[{"type": "bus", "variable": "Voltage"}], ylabel="V"
+    )
+    calculated_curves = pd.DataFrame({"time": [0, 1, 2], "BusPDR_BUS_Voltage": [1.0, 0.5, 1.0]})
+
+    html.plotly_figures(figure_description, calculated_curves, None, {}, zone=1)
+
+    assert marked == [("BusPDR_BUS_Voltage", 1)]
+
+
+def test_plotly_figures_marks_no_mxe_on_a_figure_of_several_magnitudes(monkeypatch):
+    """#553: the figure of the currents draws Ip and Iq together, and their MXE belongs to the
+    figures that draw each of them alone."""
+    marked = []
+    monkeypatch.setattr(html, "draw_mxe", lambda *args: marked.append(args[1]))
+    figure_description = FigureDescription(
+        name="fig_I",
+        variables=[
+            {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
+            {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+        ],
+        ylabel="I",
+    )
+
+    html.plotly_figures(figure_description, _make_injector_current_curves(), None, {}, zone=1)
+
+    assert marked == []
+
+
+def test_plotly_figures_draws_a_curve_without_reference_alone():
+    """#553: the power at InternalNode1 needs no reference curve to be drawn."""
+    figure_description = FigureDescription(
+        name="fig_InternalNode1P", variables="BusPDR_BUS_ActivePower", ylabel="P"
+    )
+    calculated_curves = pd.DataFrame(
+        {"time": [0, 1, 2], "BusPDR_BUS_ActivePower": [0.0, 0.5, 1.0]}
+    )
+    reference_curves = pd.DataFrame({"time": [0, 1, 2], "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0]})
+
+    curve_names, name, html_out = html.plotly_figures(
+        figure_description, calculated_curves, reference_curves, {}, zone=1
+    )
+
+    assert (curve_names, name) == (["BusPDR_BUS_ActivePower"], "fig_InternalNode1P")
+    assert "InternalNode1" in html_out
+    assert "Active Power calculated" in html_out
+    assert "Active Power reference" not in html_out
+
+
 def test_plotly_all_curves_skips_plotted_and_time():
     calculated_curves = pd.DataFrame(
         {
@@ -312,66 +350,6 @@ def test_plotly_all_curves_skips_plotted_and_time():
 
     assert len(figures) == 1
     assert figures[0][0] == "curve1"
-
-
-def test_returns_active_power_for_active_power_curve():
-    assert get_measurement_type("BusPDR_BUS_ActivePower") == "active_power"
-
-
-def test_returns_reactive_power_for_reactive_power_curve():
-    assert get_measurement_type("BusPDR_BUS_ReactivePower") == "reactive_power"
-
-
-def test_returns_active_current_for_active_current_curve():
-    assert get_measurement_type("BusPDR_BUS_ActiveCurrent") == "active_current"
-
-
-def test_returns_reactive_current_for_reactive_current_curve():
-    assert get_measurement_type("BusPDR_BUS_ReactiveCurrent") == "reactive_current"
-
-
-def test_returns_voltage_for_voltage_curve():
-    assert get_measurement_type("BusPDR_BUS_Voltage") == "voltage"
-
-
-def test_returns_frequency_for_network_frequency_curve():
-    assert get_measurement_type("NetworkFrequencyPu") == "frequency"
-
-
-def test_active_power_with_p_returns_true():
-    assert is_controlled_magnitude("BusPDR_BUS_ActivePower", "P") is True
-
-
-def test_reactive_power_with_q_returns_true():
-    assert is_controlled_magnitude("BusPDR_BUS_ReactivePower", "Q") is True
-
-
-def test_active_current_with_p_returns_true():
-    assert is_controlled_magnitude("BusPDR_BUS_ActiveCurrent", "P") is True
-
-
-def test_reactive_current_with_q_returns_true():
-    assert is_controlled_magnitude("BusPDR_BUS_ReactiveCurrent", "Q") is True
-
-
-def test_voltage_with_v_returns_true():
-    assert is_controlled_magnitude("BusPDR_BUS_Voltage", "V") is True
-
-
-def test_network_frequency_with_omega_returns_true():
-    assert is_controlled_magnitude("NetworkFrequencyPu", "$\\omega") is True
-
-
-def _make_injector_current_curves():
-    """The Zone 1 injector currents, with the magnitude column the report adds beforehand."""
-    return pd.DataFrame(
-        {
-            "time": [0, 1, 2],
-            "WT_GEN_ActiveCurrentInjTerminal": [0.8, 0.6, 0.4],
-            "WT_GEN_ReactiveCurrentInjTerminal": [0.1, 0.3, 0.5],
-            "WT_GEN_modIInjTerminal": [0.81, 0.67, 0.64],
-        }
-    )
 
 
 def test_get_curve_names_draws_the_magnitude_with_both_components():
