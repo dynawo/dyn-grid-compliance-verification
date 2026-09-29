@@ -80,21 +80,22 @@ def _check_setpoint_tracking_by_window(
 ) -> dict:
     """Returns the error of every applicable window. The "during" window is absent from the
     result when the event has no such window; a window mapped to None holds a measurement whose
-    error is not computable.
+    error is not computable, which is also the case of every window when there is no reference
+    to compare with.
     """
     windows_thresholds = threshold_variables.get_setpoint_tracking_threshold_values(
         thresholds_family
     )
     windows = {
         window: _check_measure_curve_error_by_event(
-            compliance_values[window],
+            compliance_values.get(window, {}),
             measure=measure,
             error=error,
             window_thresholds=windows_thresholds[window],
         )
         for window in ("before", "after")
     }
-    if compliance_values["during"]:
+    if compliance_values.get("during"):
         windows["during"] = _check_measure_curve_error_by_event(
             compliance_values["during"],
             measure=measure,
