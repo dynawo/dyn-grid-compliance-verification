@@ -378,6 +378,7 @@ class Benchmark:
                 ylabel="V (pu base Unom)",
                 event_markers=event_markers,
                 tolerance_band=tolerance_band,
+                setpoint=self.__setpoint_driving("voltage"),
             )
         )
 
@@ -407,6 +408,7 @@ class Benchmark:
                 ),
                 ylabel=p_label,
                 tolerance_band=tolerance_band,
+                setpoint=self.__setpoint_driving("active_power"),
             )
         )
 
@@ -427,7 +429,13 @@ class Benchmark:
                     self._producer.get_zone(), "reactive_power"
                 ),
                 ylabel=q_label,
+                setpoint=self.__setpoint_driving("reactive_power"),
             )
+        )
+
+    def __setpoint_driving(self, label: str) -> str | None:
+        return compared_curves.setpoint_driving(
+            self._producer.get_zone(), label, self._producer.controls_internal_node2()
         )
 
     def __init_figures_internal_node1(self, pcs_benchmark_name: str) -> None:
@@ -570,6 +578,7 @@ class Benchmark:
                 name="fig_UIt",
                 variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
                 ylabel="V (pu base Unom)",
+                setpoint=self.__setpoint_driving("injector_voltage"),
             )
         )
 

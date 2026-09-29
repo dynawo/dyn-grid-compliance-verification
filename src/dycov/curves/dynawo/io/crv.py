@@ -14,6 +14,7 @@ from lxml import etree
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.validation import compared_curves
 
 
 def create_curves_file(
@@ -82,7 +83,9 @@ def create_curves_file(
         if zone == 3:
             generator_variables = config.get_list("CurvesVariables", "ModelValidationZ3")
         elif zone == 1:
-            generator_variables = config.get_list("CurvesVariables", "ModelValidationZ1")
+            generator_variables = _with_stepped_setpoint(
+                config.get_list("CurvesVariables", "ModelValidationZ1"), control_mode
+            )
         else:
             generator_variables = []
     else:  # Assumed to be PPM for sim_type == 2
@@ -98,6 +101,19 @@ def create_curves_file(
         path / curves_filename, encoding="utf-8", pretty_print=True, xml_declaration=True
     )
     return curves_dict
+
+
+def _with_stepped_setpoint(generator_variables: list, control_mode: str) -> list:
+    """The variables Zone 1 asks for, plus the setpoint its test steps.
+
+    A setpoint the zone does not ask of every test is asked only of the test that steps it:
+    some models carry the reactive power and the voltage setpoints in a single variable, which
+    any other test would publish under both names.
+    """
+    stepped = compared_curves.setpoint_stepped_by(1, control_mode)
+    if stepped is None or stepped in generator_variables:
+        return generator_variables
+    return [*generator_variables, stepped]
 
 
 def _add_curves_dict(
