@@ -266,6 +266,9 @@ def _pcs_replace(
     # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
     #  eliminating potentially problematic characters and unnecessary information.
     producer_name = pcs_results["producer"].replace("_", "")
+    thresholds_family = config.get_value(
+        pcs_results["pcs"].get_name(), "setpoint_tracking_thresholds", ""
+    )
 
     _render_zone1_circuits(working_path, producer)
 
@@ -291,25 +294,30 @@ def _pcs_replace(
         solver_map = solver.create_map(oc_results)
         results_map = results.create_map(oc_results)
         compliance_map = compliance.create_map(oc_results)
-        thresholds_map = thresholds.create_map(oc_results, producer.is_field_measurements())
+        thresholds_map = thresholds.create_map(
+            oc_results, producer.is_field_measurements(), thresholds_family
+        )
         error_map = signal_error.create_map(oc_results)
         steady_state_error_map = steady_state_error.create_map(oc_results)
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
-        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
-        subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
-        subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
-        subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
-        subst_dict = subst_dict | {"thm" + operating_condition_: thresholds_map}
-        subst_dict = subst_dict | {"em" + operating_condition_: error_map}
-        subst_dict = subst_dict | {"ssem" + operating_condition_: steady_state_error_map}
-        subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
-        subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
+        oc_maps = {
+            "solver": solver_map,
+            "rm": results_map,
+            "cm": compliance_map,
+            "thm": thresholds_map,
+            "em": error_map,
+            "ssem": steady_state_error_map,
+            "tem": time_error_map,
+            "apr": active_power_recovery_map,
+        }
         if "stabilized" in oc_results:
-            subst_dict = subst_dict | {
-                "stabilized" + operating_condition_: _stability_label(oc_results["stabilized"])
-            }
+            oc_maps["stabilized"] = _stability_label(oc_results["stabilized"])
+        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
+        subst_dict = subst_dict | {
+            name + operating_condition_: value for name, value in oc_maps.items()
+        }
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
@@ -318,7 +326,8 @@ def _pcs_replace(
 
         oc_report = config.get_value(operating_condition, "report_name")
         if oc_report is not None:
-            oc_report_name = f"{producer_name}.{oc_report}"
+            benchmark, oc_name = operating_condition.split(CASE_SEPARATOR)[-2:]
+            oc_report_name = f"{producer_name}.report.{operating_condition}.tex"
             if oc_results["summary"].show_report():
                 subreports.append(f"\\input{{{oc_report_name.replace('.tex', '')}}}")
 
@@ -326,8 +335,16 @@ def _pcs_replace(
             notices_block, watermark = _build_oc_notices(oc_results)
             oc_subst_dict2 |= {"missedColumns": notices_block}
             oc_subst_dict2 |= {"waterMarkText": watermark}
+            # A template shared by every test of a PCS reads the maps of the test it renders
+            # without the suffix that tells them apart in the whole-PCS dictionary.
+            oc_subst_dict2 |= oc_maps
+            oc_subst_dict2 |= {
+                "benchmark": benchmark,
+                "operatingcondition": oc_name,
+                "link": latex_link,
+            }
 
-            oc_template = _get_template(working_path, oc_report_name)
+            oc_template = _get_template(working_path, f"{producer_name}.{oc_report}")
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
 
     subst_dict = subst_dict | {"subReports": subreports}

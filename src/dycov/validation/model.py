@@ -71,6 +71,10 @@ class ModelValidator(Validator):
         )
         self._pcs_bm_name = pcs_bm_name
 
+    def __thresholds_family(self) -> str:
+        """The family of [GridCode] thresholds the PCS applies to the controlled magnitude."""
+        return config.get_value(self._pcs_name, "setpoint_tracking_thresholds", "")
+
     def __active_power_recovery_error(
         self,
         zone: int,
@@ -685,6 +689,7 @@ class ModelValidator(Validator):
                 "controlled_magnitude",
                 check_results,
                 zone,
+                self.__thresholds_family(),
             )
             check_results["setpoint_tracking_controlled_magnitude_name"] = _get_column_name(
                 modified_setpoint
@@ -697,6 +702,7 @@ class ModelValidator(Validator):
                 "active_power",
                 check_results,
                 zone,
+                self.__thresholds_family(),
             )
             check_results["setpoint_tracking_active_power_name"] = "P"
 
@@ -707,6 +713,7 @@ class ModelValidator(Validator):
                 "reactive_power",
                 check_results,
                 zone,
+                self.__thresholds_family(),
             )
             check_results["setpoint_tracking_reactive_power_name"] = "Q"
 

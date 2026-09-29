@@ -141,15 +141,19 @@ MODEL_DIR = re.compile(r"\*\*\*Model dir: examples/Model/(.+?)/Dynawo\*\*\*")
 log_path, examples = Path(sys.argv[1]), sys.argv[2:]
 
 
-def declared_tests(family: str) -> set:
-    """The operating conditions the PCS of a family declare, which is what must run."""
+def declared_tests(family: str, example: str) -> set:
+    """The operating conditions the PCS of a family declare, which is what must run, plus the
+    ones the example declares with its reference curves."""
     declared = set()
-    for description in sorted((TEMPLATES / family).glob("[!.]*/PCSDescription.ini")):
+    descriptions = sorted((TEMPLATES / family).glob("[!.]*/PCSDescription.ini")) + sorted(
+        Path("examples/Model", example, "ReferenceCurves").glob("PCS_*/PCSDescription.ini")
+    )
+    for description in descriptions:
         pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         pcs_config.optionxform = str
         pcs_config.read(description)
         for pcs, benchmarks in pcs_config.items("PCS-Benchmarks"):
-            for benchmark in benchmarks.split(","):
+            for benchmark in filter(None, benchmarks.split(",")):
                 conditions = pcs_config.get("PCS-OperatingConditions", f"{pcs}.{benchmark}")
                 declared.update((pcs, benchmark, oc) for oc in conditions.split(","))
     return declared
@@ -173,7 +177,7 @@ executed = executed_tests(log_path)
 declared_total = covered_total = 0
 missing = {}
 for example in examples:
-    declared = declared_tests("BESS" if example.startswith("BESS/") else "PPM")
+    declared = declared_tests("BESS" if example.startswith("BESS/") else "PPM", example)
     declared_total += len(declared)
     covered_total += len(declared & executed[example])
     if declared - executed[example]:

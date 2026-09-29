@@ -1,0 +1,20 @@
+% Custom macros common to all reports:
+{{ producercommand }}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The document starts here
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \section{Results for PCS: RTE-F16 Zone 3}
+
+    The reference curves are the on-site measurements recorded during the commissioning
+    tests (DTR Fiche F16, second phase of the open phasor model validation). The model
+    runs the tests the producer declared, at the active power levels the fiche requires.
+
+    \BLOCK{for subReport in subReports}
+    {{subReport}}
+    \newpage
+    \BLOCK{endfor}
+

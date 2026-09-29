@@ -45,6 +45,9 @@ class DummyConfig:
     def get_float(self, section: str, key: str, default: float) -> float:
         return self._values.get(key, default)
 
+    def get_value(self, section: str, key: str, default=None):
+        return self._values.get(key, default)
+
 
 class DummyProducer:
     def __init__(self, zone=1):

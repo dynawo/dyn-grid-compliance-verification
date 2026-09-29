@@ -18,7 +18,7 @@ import dycov
 
 _PACKAGE_ROOT = Path(dycov.__file__).resolve().parent
 _ZONE_1_DESCRIPTIONS = sorted(
-    (_PACKAGE_ROOT / "templates" / "PCS" / "model").glob("*/PCS_RTE-I16z1/PCSDescription.ini")
+    (_PACKAGE_ROOT / "templates" / "PCS" / "model").glob("*/PCS_RTE-*z1/PCSDescription.ini")
 )
 _USTATOR_CURVES = ("MagnitudeControlledByAVRPu", "VoltageSetpointPu")
 

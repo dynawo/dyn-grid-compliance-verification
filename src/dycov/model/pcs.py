@@ -74,7 +74,7 @@ class Pcs:
 
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
         tool_pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
-        user_pcs_path = self.__get_pcs_path(producer, config.get_config_dir())
+        user_pcs_path = self.__get_user_pcs_path(producer)
         dycov_logging.get_logger("PCS").debug(f"PCS Path {tool_pcs_path}")
         dycov_logging.get_logger("PCS").debug(f"User PCS Path {user_pcs_path}")
 
@@ -95,8 +95,18 @@ class Pcs:
         if not path.exists():
             return None
 
-        files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
-        return files.get("pcsdescription")
+        return _pcs_description_in(path)
+
+    def __get_user_pcs_path(self, producer: Producer) -> Union[Path, None]:
+        """The user's description of this PCS: the one delivered with the reference curves of
+        the case, where the tests a fiche leaves to the producer are declared with their records,
+        or else the one in the configuration directory."""
+        if not producer.is_gfm() and producer.has_reference_curves_path():
+            case_pcs_path = _pcs_description_in(producer.get_reference_path() / self._name)
+            if case_pcs_path is not None:
+                return case_pcs_path
+
+        return self.__get_pcs_path(producer, config.get_config_dir())
 
     def validate(
         self,
@@ -195,3 +205,18 @@ class Pcs:
             True if it is a valid PCS
         """
         return self._has_pcs_config or self._has_user_config
+
+    def declares_tests(self) -> bool:
+        """Whether the PCS declares at least one benchmark.
+
+        Returns
+        -------
+        bool
+            False for a PCS whose tests the producer has to declare, when none is.
+        """
+        return bool(self._bm_list)
+
+
+def _pcs_description_in(path: Path) -> Union[Path, None]:
+    files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
+    return files.get("pcsdescription")

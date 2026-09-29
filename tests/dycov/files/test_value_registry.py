@@ -34,9 +34,10 @@ def test_extract_defined_value_errors():
             value_registry.extract_defined_value(invalid, "p", 1)
 
 
-def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0):
+def _producer(p_max_pu=0.8, p_min_pu=0.1, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0):
     return SimpleNamespace(
         p_max_pu=p_max_pu,
+        p_min_pu=p_min_pu,
         q_max_pu=q_max_pu,
         q_min_pu=q_min_pu,
         s_nom_pu=s_nom_pu,
@@ -55,6 +56,7 @@ def test_unit_characteristics_exposes_power_and_voltage_bases():
     chars = value_registry.unit_characteristics(_producer(), u_dim=21.0, line_Xpu=0.05)
 
     assert chars["Pmax"] == pytest.approx(0.8)
+    assert chars["Pmin"] == pytest.approx(0.1)
     assert chars["Snom"] == pytest.approx(1.8)
     assert chars["Qmax"] == pytest.approx(0.5)
     assert chars["Qmin"] == pytest.approx(-0.5)
