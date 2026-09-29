@@ -313,9 +313,7 @@ def _pcs_replace(
             "apr": active_power_recovery_map,
         }
         if "stabilized" in oc_results:
-            oc_maps["stabilized"] = (
-                "stable" if oc_results["stabilized"] else "\textcolor{red}{unstable}"
-            )
+            oc_maps["stabilized"] = _stability_label(oc_results["stabilized"])
         subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
         subst_dict = subst_dict | {
             name + operating_condition_: value for name, value in oc_maps.items()
@@ -359,6 +357,10 @@ def _pcs_replace(
     subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
     template.stream(subst_dict2).dump(str(working_path / report_name))
     return len(subreports)
+
+
+def _stability_label(stabilized: bool) -> str:
+    return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 
 def _get_template(path, template_file):
