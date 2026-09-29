@@ -12,8 +12,11 @@ The configuration is written in the standard INI format
 and organized into five layers, in decreasing order of priority:
 
 1. **User PCS Description** — the ``PCSDescription.ini`` the user writes under
-   ``~/.config/dycov/templates/PCS/``. Being the most specific file, it takes
-   precedence over everything else.
+   ``~/.config/dycov/templates/PCS/``, or delivers with the reference curves of
+   a case under ``<ReferenceCurves>/<PCS>/``, which takes its place for that
+   PCS (this is where the tests a fiche leaves to the producer are declared,
+   PCS F16). Being the most specific file, it takes precedence over everything
+   else.
 2. **User Configuration** — settings provided by the user in
    ``~/.config/dycov/config.ini``.
 3. **DTR Revision** — the PCS description of a selected DTR revision. This

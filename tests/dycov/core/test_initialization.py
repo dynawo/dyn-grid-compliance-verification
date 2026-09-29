@@ -96,6 +96,16 @@ class TestDycovInitializer:
                     (dummy_sample_dir / "dummy.txt").write_text(
                         f"dummy sample for {template}/{category}/{model}"
                     )
+        to_declare = templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z1"
+        to_declare.mkdir(parents=True)
+        (to_declare / "PCSDescription.ini").write_text(
+            "[PCS_RTE-F16z1]\nzone = 1\n[PCS-Benchmarks]\nPCS_RTE-F16z1 =\n"
+        )
+        fixed = templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-I16z1"
+        fixed.mkdir(parents=True)
+        (fixed / "PCSDescription.ini").write_text(
+            "[PCS_RTE-I16z1]\nzone = 1\n[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep\n"
+        )
         return tool_path
 
     # Test cases for _configure_template_category
@@ -117,12 +127,14 @@ class TestDycovInitializer:
             base_template_dir / template_name / "model",
             base_template_dir / template_name / "performance",
         ]
-        for model in ["BESS", "PPM", "SM"]:
+        for model in ["BESS", "PPM"]:
             expected_dirs.append(base_template_dir / template_name / "model" / model)
+        for model in ["BESS", "PPM", "SM"]:
             expected_dirs.append(base_template_dir / template_name / "performance" / model)
 
         for d in expected_dirs:
             assert d.is_dir()
+        assert not (base_template_dir / template_name / "model" / "SM").exists()
 
     def test_configure_templates_copies_files(
         self, dycov_initializer, tmp_path, tool_path_fixture, mocker
@@ -158,14 +170,27 @@ class TestDycovInitializer:
             config_templates_dir / "reports",
         )
 
-        assert mock_copy_from_path.call_count == 5  # Total copy_from_path calls
+        mock_copy_from_path.assert_any_call(
+            tool_path_fixture
+            / "templates"
+            / "PCS"
+            / "model"
+            / "PPM"
+            / "PCS_RTE-F16z1"
+            / "PCSDescription.ini",
+            config_templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z1",
+        )
+        assert mock_copy_from_path.call_count == 6  # Total copy_from_path calls
 
-        # There are 2 templates ("PCS", "reports"), 2 categories,
-        # 3 models = 12 copy_directory calls
-        assert mock_copy_directory.call_count == 12
+        # There are 2 templates ("PCS", "reports"), 2 model technologies and
+        # 3 performance technologies = 10 copy_directory calls
+        assert mock_copy_directory.call_count == 10
         for template in ["PCS", "reports"]:
-            for category in ["performance", "model"]:
-                for model in ["SM", "PPM", "BESS"]:
+            for category, models in (
+                ("performance", ["SM", "PPM", "BESS"]),
+                ("model", ["PPM", "BESS"]),
+            ):
+                for model in models:
                     src = (
                         tool_path_fixture
                         / "templates"
@@ -176,6 +201,40 @@ class TestDycovInitializer:
                     )
                     dest = config_templates_dir / template / category / model / ".DummySample"
                     mock_copy_directory.assert_any_call(src, dest, dirs_exist_ok=True)
+
+    def test_configure_templates_leaves_a_copy_of_the_pcs_to_declare(
+        self, dycov_initializer, tool_path_fixture, mocker
+    ):
+        mocker.patch("dycov.files.manage_files.copy_directory")
+        user_pcs = self.mock_config.get_config_dir.return_value / "templates" / "PCS" / "model"
+
+        dycov_initializer._configure_templates(tool_path_fixture)
+
+        copied = user_pcs / "PPM" / "PCS_RTE-F16z1" / "PCSDescription.ini"
+        assert (
+            copied.read_text() == "[PCS_RTE-F16z1]\nzone = 1\n[PCS-Benchmarks]\nPCS_RTE-F16z1 =\n"
+        )
+        assert not (user_pcs / "PPM" / "PCS_RTE-I16z1").exists()
+
+    def test_configure_templates_keeps_the_pcs_the_user_already_declared(
+        self, dycov_initializer, tool_path_fixture, mocker
+    ):
+        mocker.patch("dycov.files.manage_files.copy_directory")
+        declared = (
+            self.mock_config.get_config_dir.return_value
+            / "templates"
+            / "PCS"
+            / "model"
+            / "PPM"
+            / "PCS_RTE-F16z1"
+            / "PCSDescription.ini"
+        )
+        declared.parent.mkdir(parents=True)
+        declared.write_text("[PCS-Benchmarks]\nPCS_RTE-F16z1 = Recorded\n")
+
+        dycov_initializer._configure_templates(tool_path_fixture)
+
+        assert declared.read_text() == "[PCS-Benchmarks]\nPCS_RTE-F16z1 = Recorded\n"
 
     def test_a_template_that_cannot_be_copied_is_reported_with_its_traceback(
         self, dycov_initializer, tool_path_fixture, mocker

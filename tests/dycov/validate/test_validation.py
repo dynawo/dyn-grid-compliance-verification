@@ -23,7 +23,7 @@ from dycov.core.global_variables import (
 )
 from dycov.model.pcs import Pcs
 from dycov.validate.parameters import ValidationParameters
-from dycov.validate.validation import Validation, _open_document
+from dycov.validate.validation import Validation, _open_document, _validate_pcs
 
 
 # ---- Logger fixture: force Report logger level != DEBUG (deterministic cleanup) ----
@@ -317,3 +317,53 @@ def test_open_document_survives_a_failing_viewer(monkeypatch, recorded_logs):
     assert any(
         level == "warning" and "could not be opened" in message for level, message in recorded_logs
     )
+
+
+def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
+    class UndeclaredPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return True
+
+        def declares_tests(self):
+            return False
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+        def validate(self, summary_list):
+            raise AssertionError("a PCS without tests must not be validated")
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", UndeclaredPcs)
+
+    result = _validate_pcs((None, "PCS_RTE-F16z1", "Producer", Path("/tmp")))
+
+    assert result == ("Producer", "PCS_RTE-F16z1", [], {})
+
+
+def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path / "output")
+    validation._path_latex_files = tmp_path / "latex"
+    validation._dry_run = False
+    moved = []
+    monkeypatch.setattr(
+        "dycov.validate.validation.report.create_pdf",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no report expected")),
+    )
+    monkeypatch.setattr("dycov.validate.validation.manage_files.remove_dir", lambda path: None)
+    monkeypatch.setattr(
+        "dycov.validate.validation.manage_files.rename_path",
+        lambda source, target: moved.append((source, target)),
+    )
+    monkeypatch.setattr("dycov.validate.validation.dycov_logging.close_run_handler", lambda: None)
+
+    validation._Validation__create_report([], {})
+
+    assert moved == [(validation._parameters.get_working_dir(), tmp_path / "output")]

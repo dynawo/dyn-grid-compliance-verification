@@ -562,7 +562,7 @@ def test_complete_setpoint_tracking_without_thresholds_aggregates_nothing(monkey
     no_thresholds = {window: dict.fromkeys(ERRORS) for window in WINDOWS}
     monkeypatch.setattr(
         "dycov.validation.threshold_variables.get_setpoint_tracking_threshold_values",
-        lambda: no_thresholds,
+        lambda thresholds_family="": no_thresholds,
     )
     results = {"compliance": True}
 
