@@ -11,9 +11,10 @@
 import tempfile
 from pathlib import Path
 
+import pytest
 from lxml import etree
 
-from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_SM, MODEL_VALIDATION_PPM
 from dycov.curves.dynawo.io.crv import create_curves_file
 
 
@@ -118,6 +119,40 @@ def test_zone_1_asks_the_infinite_bus_for_no_curve(tmp_path):
     ]
     assert "InfiniteBus" not in models
     assert not any("InfiniteBus" in key for key in curves_dict)
+
+
+def _zone_1_setpoints(tmp_path: Path, control_mode: str) -> set:
+    """The setpoints Zone 1 asks the simulation of a unit whose model carries the reactive power
+    and the voltage setpoints in a single variable."""
+    curves_dict = create_curves_file(
+        tmp_path,
+        "curves_z1.xml",
+        [],
+        [DummyEquipment("WT", lib="WT4BWeccCurrentSource")],
+        [],
+        [],
+        MODEL_VALIDATION_PPM,
+        1,
+        control_mode,
+    )
+    return {key for key in curves_dict if key.startswith("WT_GEN_") and key.endswith("SetpointPu")}
+
+
+def test_zone_1_asks_for_the_voltage_setpoint_in_the_test_that_steps_it(tmp_path):
+    """#554: in a voltage setpoint step the shared variable is the voltage setpoint."""
+    assert _zone_1_setpoints(tmp_path, "USetpoint") == {
+        "WT_GEN_ActivePowerSetpointPu",
+        "WT_GEN_VoltageSetpointPu",
+    }
+
+
+@pytest.mark.parametrize("control_mode", ["PSetpoint", "QSetpoint", "Others", None])
+def test_zone_1_asks_no_other_test_for_the_voltage_setpoint(tmp_path, control_mode):
+    """#554: anywhere else the shared variable would be published under both names."""
+    assert _zone_1_setpoints(tmp_path, control_mode) == {
+        "WT_GEN_ActivePowerSetpointPu",
+        "WT_GEN_ReactivePowerSetpointPu",
+    }
 
 
 def test_create_curves_file_invalid_sim_type_and_zone():

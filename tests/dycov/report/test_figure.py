@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 
-from dycov.configuration.cfg import config
 from dycov.report import figure
 from dycov.report.figure import (
     _add_curve2plot,
@@ -41,35 +40,6 @@ matplotlib.use("Agg")
 def cleanup_matplotlib():
     yield
     plt.close("all")
-
-
-@pytest.fixture
-def set_user_option():
-    """Yields a setter that writes options into the in-memory user config and
-    restores the previous state on teardown."""
-    parser = config._user_config
-    added_sections = []
-    backup = {}
-
-    def _set(section, key, value):
-        if not parser.has_section(section):
-            parser.add_section(section)
-            added_sections.append(section)
-        if (section, key) not in backup:
-            backup[(section, key)] = (
-                parser.get(section, key) if parser.has_option(section, key) else None
-            )
-        parser.set(section, key, str(value))
-
-    yield _set
-
-    for (section, key), old_value in backup.items():
-        if old_value is None:
-            parser.remove_option(section, key)
-        else:
-            parser.set(section, key, old_value)
-    for section in added_sections:
-        parser.remove_section(section)
 
 
 def test_create_plot_saves_expected_plot(tmp_path):
@@ -230,6 +200,8 @@ def test_get_xrange_for_curve_honors_figures_overrides(set_user_option):
         ("ActiveCurrentInjTerminal", "#64b5cd"),
         ("ReactiveCurrentInjTerminal", "#8172b3"),
         ("VoltageSetpointPu", "#8c8c8c"),
+        ("ActivePowerSetpointPu", "#8c8c8c"),
+        ("ReactivePowerSetpointPu", "#8c8c8c"),
         ("Other", "#4c72b0"),
     ],
 )
@@ -242,22 +214,98 @@ def test_add_curve2plot_applies_color_and_style(variable, color):
     assert [(curve["name"], curve["color"]) for curve in plot_curves] == [(variable, color)]
 
 
-def test_get_curves2plot_reference_skips_setpoint_and_missing_columns():
+_POWER_WITH_ITS_SETPOINT = [
+    {"type": "generator", "variable": "ActivePowerControlledPu"},
+    {"type": "generator", "variable": "ActivePowerSetpointPu"},
+]
+
+
+def test_get_curves2plot_draws_the_setpoint_of_the_reference_in_a_style_of_its_own():
+    """#554: the setpoint of the reference is the trace that shows whether the reference curves
+    stepped the setpoint the test applies."""
     reference = pd.DataFrame(
         {
-            "BusPDR_BUS_Voltage": [1.0, 0.9],
-            "Wind_Turbine_GEN_VoltageSetpointPu": [1.0, 1.0],
+            "WT_GEN_ActivePowerControlledPu": [0.85, 0.80],
+            "WT_GEN_ActivePowerSetpointPu": [0.85, 0.80],
         }
     )
+
+    plot_curves = get_curves2plot(_POWER_WITH_ITS_SETPOINT, reference, is_reference=True)
+
+    assert [(curve["name"], curve["color"], curve["style"]) for curve in plot_curves] == [
+        ("WT_GEN_ActivePowerControlledPu", "#dd8452", "-"),
+        ("WT_GEN_ActivePowerSetpointPu", "#dd8452", "--"),
+    ]
+
+
+def test_get_curves2plot_draws_the_magnitude_of_a_reference_without_its_setpoint_alone():
+    reference = pd.DataFrame({"WT_GEN_ActivePowerControlledPu": [0.85, 0.80]})
+
+    plot_curves = get_curves2plot(_POWER_WITH_ITS_SETPOINT, reference, is_reference=True)
+
+    assert [curve["name"] for curve in plot_curves] == ["WT_GEN_ActivePowerControlledPu"]
+
+
+def test_get_curves2plot_skips_a_bus_curve_the_curves_do_not_carry():
+    reference = pd.DataFrame({"BusPDR_BUS_Voltage": [1.0, 0.9]})
     variables = [
         {"type": "bus", "variable": "Voltage"},
         {"type": "bus", "variable": "ActivePower"},
-        {"type": "generator", "variable": "VoltageSetpointPu"},
     ]
 
     plot_curves = get_curves2plot(variables, reference, is_reference=True)
 
     assert [curve["name"] for curve in plot_curves] == ["BusPDR_BUS_Voltage"]
+
+
+def test_save_plot_draws_each_reference_curve_in_its_own_style(tmp_path):
+    fig, ax = plt.subplots()
+    curves_reference = [
+        {"curve": [0.85, 0.85, 0.80], "color": "#dd8452", "style": "-"},
+        {"curve": [0.85, 0.80, 0.80], "color": "#dd8452", "style": "--"},
+    ]
+
+    figure._save_plot(
+        fig,
+        ax,
+        [0, 1, 2],
+        [],
+        [0, 1, 2],
+        curves_reference,
+        {"min": None, "max": None},
+        tmp_path / "plot.pdf",
+        "P",
+        None,
+        None,
+    )
+
+    assert [line.get_linestyle() for line in ax.get_lines()] == ["-", "--"]
+
+
+def test_create_plot_marks_the_mxe_of_a_magnitude_drawn_with_its_setpoint(monkeypatch, tmp_path):
+    marked = []
+    monkeypatch.setattr(figure, "draw_mxe", lambda *args: marked.append(args[1]))
+    figure_description = FigureDescription(
+        name="fig_P", variables=_POWER_WITH_ITS_SETPOINT, ylabel="P"
+    )
+    curves = [
+        _make_plot_curve("WT_GEN_ActivePowerControlledPu"),
+        _make_plot_curve("WT_GEN_ActivePowerSetpointPu"),
+    ]
+
+    create_plot(
+        [0, 1, 2],
+        figure_description,
+        curves,
+        None,
+        None,
+        {"min": 0, "max": 2},
+        tmp_path / "plot.pdf",
+        {},
+        zone=1,
+    )
+
+    assert marked == ["WT_GEN_ActivePowerControlledPu"]
 
 
 def test_get_yrange_applies_explicit_range_for_low_variation(set_user_option):

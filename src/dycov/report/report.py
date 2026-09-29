@@ -14,6 +14,7 @@ import shutil
 import signal
 import subprocess
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -48,9 +49,11 @@ from dycov.report.tables import (
     summary,
     thresholds,
 )
+from dycov.report.types import FigureDescription
 from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
+from dycov.validation import compared_curves
 
 
 # --- Process registry for LaTeX compilation ---
@@ -445,6 +448,22 @@ def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
     return curves
 
 
+def _with_stepped_setpoint(
+    figure_description: FigureDescription, operating_condition: str, zone: int
+) -> FigureDescription:
+    """The figure as the test draws it: in a setpoint step, the figure of the magnitude the
+    stepped setpoint drives also draws that setpoint, both as simulated and as the reference
+    curves carry it, which is how a reference that stepped another setpoint shows."""
+    test_type = config.get_value(operating_condition, "setpoint_change_test_type")
+    stepped = compared_curves.setpoint_stepped_by(zone, test_type)
+    if stepped is None or figure_description.setpoint != stepped:
+        return figure_description
+    return replace(
+        figure_description,
+        variables=[*figure_description.variables, {"type": "generator", "variable": stepped}],
+    )
+
+
 def _generate_figures(
     working_path: Path,
     producer_name: str,
@@ -466,6 +485,7 @@ def _generate_figures(
         reference_curves = None
 
     for figure_description in figures_description[figure_key]:
+        figure_description = _with_stepped_setpoint(figure_description, operating_condition, zone)
         plot_curves = figure.get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
