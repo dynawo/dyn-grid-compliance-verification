@@ -21,6 +21,20 @@ from dycov.excel import names as excel_names
 from dycov.files import manage_files
 from dycov.logging import dycov_logging, enable_warning_capture
 
+# The technologies each verification mode has PCS for: only the performance verification
+# covers synchronous machines.
+_TEMPLATE_MODELS = {"model": ("BESS", "PPM"), "performance": ("BESS", "PPM", "SM")}
+
+
+def _declares_no_test(description: Path) -> bool:
+    """Whether a PCS description leaves its tests to the producer, as the DTR Fiche F16 does."""
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    parser.optionxform = str
+    parser.read(description, encoding="utf-8")
+    return parser.has_section("PCS-Benchmarks") and not any(
+        value.strip() for _, value in parser.items("PCS-Benchmarks")
+    )
+
 
 def _get_linux_info() -> str:
     try:
@@ -222,10 +236,7 @@ class DycovInitializer:
         category_path = base_template_dir / sub_template
         self._template_cmd_config(category_path)  # Create the base category directory
 
-        subdirs = ["model", "performance"]
-        models = ["BESS", "PPM", "SM"]
-
-        for subdir in subdirs:
+        for subdir, models in _TEMPLATE_MODELS.items():
             self._template_cmd_config(category_path / subdir)
             for model in models:
                 self._template_cmd_config(category_path / subdir / model)
@@ -246,6 +257,7 @@ class DycovInitializer:
         for template in templates_to_configure:
             self._configure_template_category(config_templates_dir, template)
             self._copy_dummy_samples(tool_path, template)
+        self._copy_pcs_to_declare(tool_path)
 
         # Copy top-level READMEs and report-specific assets
         manage_files.copy_from_path(tool_path / "templates" / "README.md", config_templates_dir)
@@ -263,12 +275,26 @@ class DycovInitializer:
             config_templates_dir / "reports",
         )
 
+    def _copy_pcs_to_declare(self, tool_path: Path):
+        """A PCS whose fiche fixes no test ships as a declaration template: a copy goes to the
+        user's templates, where the producer completes it, unless one is already there."""
+        shipped = tool_path / "templates" / "PCS" / "model"
+        for description in sorted(shipped.glob("*/PCS_*/PCSDescription.ini")):
+            if not _declares_no_test(description):
+                continue
+            target_dir = (
+                config.get_config_dir() / "templates" / "PCS" / "model"
+            ) / description.relative_to(shipped).parent
+            if (target_dir / description.name).exists():
+                continue
+            self._template_cmd_config(target_dir)
+            manage_files.copy_from_path(description, target_dir)
+
     def _copy_dummy_samples(self, tool_path: Path, source: str):
         """
         Copies dummy sample files from the tool's templates to the user's configuration directory.
         """
         categories = ["performance", "model", "gfm"]
-        models = ["SM", "PPM", "BESS"]
         for category in categories:
             if category == "gfm":
                 src = tool_path / "templates" / source / category / ".DummySample"
@@ -281,7 +307,7 @@ class DycovInitializer:
                             f"Failed to copy {src} to {dest}"
                         )
             else:
-                for model in models:
+                for model in _TEMPLATE_MODELS[category]:
                     src = tool_path / "templates" / source / category / model / ".DummySample"
                     dest = (
                         config.get_config_dir()

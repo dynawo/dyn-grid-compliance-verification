@@ -12,14 +12,24 @@ from pathlib import Path
 
 
 class DummyProducer:
-    def __init__(self):
+    def __init__(self, reference_path=None):
         self.zone = None
+        self._reference_path = reference_path
 
     def set_zone(self, zone, name):
         self.zone = zone
 
     def get_sim_type_str(self):
         return "performance"
+
+    def is_gfm(self):
+        return False
+
+    def has_reference_curves_path(self):
+        return self._reference_path is not None
+
+    def get_reference_path(self):
+        return self._reference_path
 
 
 class DummyParams:
@@ -149,7 +159,7 @@ def test_generate(monkeypatch):
     assert all(bm.generated for bm in DummyBenchmark.instances)
 
 
-def _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file):
+def _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer=None):
     import dycov.model.pcs as pcs_module
     from dycov.model.pcs import Pcs
 
@@ -167,7 +177,7 @@ def _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file):
         lambda self, producer, source_path: found.get(source_path),
     )
 
-    pcs = Pcs("Prod", "PCS_Test", DummyParams(DummyProducer()))
+    pcs = Pcs("Prod", "PCS_Test", DummyParams(producer or DummyProducer()))
     return pcs, dummy_config
 
 
@@ -196,6 +206,39 @@ def test_prepare_pcs_config_without_any_file_is_not_a_valid_pcs(monkeypatch, tmp
 
     assert dummy_config.loaded == (None, None, None)
     assert pcs.is_valid() is False
+
+
+def test_the_description_delivered_with_the_reference_curves_is_the_user_one(
+    monkeypatch, tmp_path
+):
+    tool_file = tmp_path / "tool" / "PCSDescription.ini"
+    user_file = tmp_path / "user" / "PCSDescription.ini"
+    case_file = tmp_path / "ReferenceCurves" / "PCS_Test" / "PCSDescription.ini"
+    case_file.parent.mkdir(parents=True)
+    case_file.write_text("[PCS-Benchmarks]\nPCS_Test = Recorded\n")
+    producer = DummyProducer(reference_path=tmp_path / "ReferenceCurves")
+
+    pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer)
+
+    assert dummy_config.loaded == (tool_file, case_file, None)
+    assert pcs.is_valid() is True
+
+
+def test_a_description_delivered_for_another_pcs_is_not_the_user_one(monkeypatch, tmp_path):
+    user_file = tmp_path / "user" / "PCSDescription.ini"
+    other_file = tmp_path / "ReferenceCurves" / "PCS_Other" / "PCSDescription.ini"
+    other_file.parent.mkdir(parents=True)
+    other_file.write_text("[PCS-Benchmarks]\nPCS_Other = Recorded\n")
+    producer = DummyProducer(reference_path=tmp_path / "ReferenceCurves")
+
+    pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file, producer)
+
+    assert dummy_config.loaded == (None, user_file, None)
+
+
+def test_a_pcs_without_benchmarks_declares_no_test(monkeypatch):
+    assert _make_pcs(monkeypatch, bms=()).declares_tests() is False
+    assert _make_pcs(monkeypatch).declares_tests() is True
 
 
 def test_get_pcs_path_prefers_pcs_description(monkeypatch, tmp_path):

@@ -53,6 +53,16 @@ def _render_ini_text(
             "# p_{max_unite} consumption as defined by the DTR in MW (only for BESS)",
             _kv("p_max_consumption_at_PDR", values.get("p_max_consumption_at_PDR", "")),
         ]
+    lines += [
+        "# p_{min_unite} injection in MW, the lowest active power the on-site tests of the DTR",
+        "# Fiche F16 start from (optional, 0 when absent)",
+        "# p_min_injection_at_PDR =",
+    ]
+    if include_consumption:
+        lines += [
+            "# p_{min_unite} consumption in MW (optional, 0 when absent)",
+            "# p_min_consumption_at_PDR =",
+        ]
     if zone == 1:
         lines += ["# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV"]
     else:
