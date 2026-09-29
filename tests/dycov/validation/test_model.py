@@ -1137,6 +1137,7 @@ def test_check_setpoint_tracking_names_every_tracked_magnitude():
     )
 
     assert check_results["setpoint_tracking_controlled_magnitude_name"] == "V"
+    assert check_results["setpoint_tracking_controlled_magnitude_label"] == "voltage"
     assert check_results["setpoint_tracking_active_power_name"] == "P"
     assert check_results["setpoint_tracking_reactive_power_name"] == "Q"
     assert check_results["setpoint_tracking_controlled_magnitude_check"] is True

@@ -472,23 +472,25 @@ def _generate_figures(
         _add_current_magnitude(plot_curves)
         iq_last_val = _get_iq_last_val(plot_curves)
 
-        plot_reference_curves = None
-        if reference_curves is not None:
-            plot_reference_curves = figure.get_curves2plot(
-                figure_description.variables, reference_curves, is_reference=True
+        if figure_description.in_pdf:
+            plot_reference_curves = None
+            if reference_curves is not None:
+                plot_reference_curves = figure.get_curves2plot(
+                    figure_description.variables, reference_curves, is_reference=True
+                )
+            figure.create_plot(
+                list(curves["time"]),
+                figure_description,
+                plot_curves,
+                list(reference_curves["time"]) if reference_curves is not None else None,
+                plot_reference_curves,
+                {"min": xmin, "max": xmax},
+                working_path
+                / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
+                oc_results,
+                band_ref_val=iq_last_val,
+                zone=zone,
             )
-        figure.create_plot(
-            list(curves["time"]),
-            figure_description,
-            plot_curves,
-            list(reference_curves["time"]) if reference_curves is not None else None,
-            plot_reference_curves,
-            {"min": xmin, "max": xmax},
-            working_path
-            / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
-            oc_results,
-            band_ref_val=iq_last_val,
-        )
 
         try:
             html_curves, div_id, html_figure = html.plotly_figures(

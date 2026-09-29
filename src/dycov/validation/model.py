@@ -694,6 +694,9 @@ class ModelValidator(Validator):
             check_results["setpoint_tracking_controlled_magnitude_name"] = _get_column_name(
                 modified_setpoint
             )
+            check_results["setpoint_tracking_controlled_magnitude_label"] = (
+                compared_curves.setpoint_label(modified_setpoint)
+            )
 
         if compliance_list.contains_key(["setpoint_tracking_active_power"], self._validations):
             complete_setpoint_tracking(
@@ -792,6 +795,8 @@ class ModelValidator(Validator):
                 'ss_error_reactive_current_1P': float, steady-state error for reactive current.
                 'setpoint_tracking_controlled_magnitude_name': str, name of the controlled
                     magnitude.
+                'setpoint_tracking_controlled_magnitude_label': str, label under which the
+                    zone compares the controlled magnitude.
                 'setpoint_tracking_active_power_name': str, name of the active power setpoint.
                 'setpoint_tracking_reactive_power_name': str, name of the reactive power setpoint.
                 't_P90_error': float, error in reaching 90% of the active power recovery.
