@@ -592,6 +592,20 @@ class ModelProducer(Producer):
         """
         return self._is_dynawo_model
 
+    def controls_internal_node2(self) -> bool:
+        """Check if the converter controls InternalNode2, the low-voltage side of its
+        transformer, rather than InternalNode1.
+
+        Returns
+        -------
+        bool
+            The ConverterLVControl flag of the model's generating units, or its default, True,
+            for curves supplied without a model, which do not state it
+        """
+        if not self.is_dynawo_model():
+            return True
+        return all(gen.converter_lv_control for gen in self.generators)
+
     def is_user_curves(self) -> bool:
         """Check if the producer has a curves directory.
 
