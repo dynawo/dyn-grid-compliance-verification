@@ -112,8 +112,8 @@ def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[
     Parameters
     ----------
     producer :
-        Producer model exposing ``p_max_pu``, ``q_max_pu``, ``q_min_pu``, ``s_nom_pu``
-        and ``u_nom``.
+        Producer model exposing ``p_max_pu``, ``p_min_pu``, ``q_max_pu``, ``q_min_pu``,
+        ``s_nom_pu`` and ``u_nom``.
     u_dim : float
         Dimensioning voltage (kV) of the generator.
     line_Xpu : float
@@ -128,6 +128,7 @@ def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[
         "Pmax": producer.p_max_pu,
         "PmaxInjection": producer.p_max_pu,
         "PmaxConsumption": producer.p_max_pu,
+        "Pmin": producer.p_min_pu,
         "Qmax": producer.q_max_pu,
         "Qmin": producer.q_min_pu,
         "Snom": producer.s_nom_pu,

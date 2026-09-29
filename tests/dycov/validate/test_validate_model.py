@@ -36,6 +36,18 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMin
         Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.Pmax
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.Pmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.Pmax
     ] == compliance
 
 
@@ -94,4 +106,20 @@ def test_model_validation_bess_producer_curves():
         Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
         Compliance.NonCompliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.ConsumptionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.ConsumptionP50
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.InjectionP50
+        Compliance.Compliant,  # PCS_RTE-F16z1.PSetPointStep.InjectionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.ConsumptionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.ConsumptionP50
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.InjectionP50
+        Compliance.Compliant,  # PCS_RTE-F16z1.QSetPointStep.InjectionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.InjectionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.InjectionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.ConsumptionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.ConsumptionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.InjectionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.InjectionPmax
     ] == compliance
