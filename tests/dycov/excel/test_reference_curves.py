@@ -81,16 +81,19 @@ def test_a_row_is_mapped_to_the_curve_its_label_stands_for():
     # The label decides the curve, and the sheet only carries the column that holds it.
     assert parsed.curves == {
         "InternalNode1_BUS_Voltage": "U1",
+        "Wind_Turbine_GEN_ActivePowerSetpointPu": "PRef",
         "Wind_Turbine_GEN_ActiveCurrentInjTerminal": "Ip2",
     }
 
 
 def test_a_row_with_no_curve_of_its_own_is_informative_only():
-    # The setpoint rows are in the sheet because the DTR asks for them, but DyCoV reads no such
-    # curve, so they map to nothing.
-    parsed = sig.parse_zone_signals(_workbook(), "Zone1", GEN)
+    # The active power setpoint row of zone 3 is in the sheet because the DTR asks for it, but
+    # DyCoV reads no such curve there, so it maps to nothing.
+    rows = ZONE3_ROWS + [("Consigne de puissance active", "PRef")]
 
-    assert not any("Setpoint" in curve for curve in parsed.curves)
+    parsed = sig.parse_zone_signals(_workbook(zone3=(rows, ZONE3_TESTS)), "Zone3", GEN)
+
+    assert parsed.curves == {"BusPDR_BUS_Voltage": "U"}
 
 
 def test_a_case_is_mapped_to_the_operating_condition_it_runs_as():
@@ -295,7 +298,7 @@ def test_write_reference_curves_writes_nothing_when_no_test_is_described(tmp_pat
 
 def test_every_curve_of_the_names_file_is_a_dycov_curve():
     # The mapping is data: guard it against a typo that would silently drop a curve.
-    for zone, expected in (("Zone1", 6), ("Zone3", 9)):
+    for zone, expected in (("Zone1", 8), ("Zone3", 9)):
         curves = names.curves(zone, GEN)
 
         assert len(curves) == expected
