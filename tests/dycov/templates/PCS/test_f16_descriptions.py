@@ -132,6 +132,23 @@ def test_the_declaration_template_leaves_the_test_itself_to_the_producer(ini_pat
         )
 
 
+@pytest.mark.parametrize("figure", ["fig_InternalNode1P", "fig_InternalNode1Q"])
+@pytest.mark.parametrize(
+    "ini_path",
+    [path for path in _F16_DESCRIPTIONS if _pcs_name(path).endswith("z1")],
+    ids=_description_id,
+)
+def test_the_zone_1_declaration_template_draws_the_internal_node1_power(ini_path, figure):
+    """#553: the operating point of a Zone 1 test is the one at InternalNode1."""
+    parser = _completed_declaration(ini_path)
+    pcs = _pcs_name(ini_path)
+    benchmarks = {
+        f"{pcs}.{benchmark}" for benchmark in parser.get("PCS-Benchmarks", pcs).split(",")
+    }
+
+    assert set(parser.get("ReportCurves", figure).split(",")) == benchmarks
+
+
 @pytest.mark.parametrize("ini_path", _F16_DESCRIPTIONS, ids=_description_id)
 def test_the_declaration_template_applies_the_checks_of_the_fiche(ini_path):
     parser = _completed_declaration(ini_path)

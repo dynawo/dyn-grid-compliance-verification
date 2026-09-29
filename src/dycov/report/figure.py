@@ -321,6 +321,7 @@ def create_plot(
     output_file: Path,
     results: dict,
     band_ref_val: float | None = None,
+    zone: int = 0,
 ) -> None:
     """Draw a figure.
 
@@ -344,6 +345,8 @@ def create_plot(
         Results of the validations applied in the pcs
     band_ref_val: float | None
         Reference value for the tolerance band, if applicable
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
     """
     ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
     last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
@@ -364,8 +367,9 @@ def create_plot(
             unit,
             ymin,
             ymax,
-            figure_description=figure_description,
-            last_val=last_val,
+            figure_description,
+            last_val,
+            zone,
         )
     elif variable_names[0]["type"] == "bus":
         curve_name = "BusPDR_BUS_" + variable_names[0]["variable"]
@@ -383,6 +387,7 @@ def create_plot(
             ymax,
             figure_description,
             last_val,
+            zone,
         )
     else:
         variable_type = variable_names[0]["type"]
@@ -413,6 +418,7 @@ def create_plot(
                 ymax,
                 figure_description,
                 last_val,
+                zone,
             )
 
 
@@ -430,6 +436,7 @@ def _plot_curve(
     ymax: float,
     figure_description: FigureDescription,
     last_val: float,
+    zone: int,
 ) -> None:
     fig, ax = plt.subplots()
     plt.sca(ax)
@@ -440,7 +447,8 @@ def _plot_curve(
     )
     draw_response_characteristics(renderer, curve_name, results)
     draw_exclusion_windows(renderer, results)
-    draw_mxe(renderer, curve_name, results)
+    if figure_description.draws_one_magnitude():
+        draw_mxe(renderer, curve_name, results, zone)
 
     _save_plot(
         fig,

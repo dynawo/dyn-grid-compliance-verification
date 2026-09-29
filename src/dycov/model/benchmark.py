@@ -50,6 +50,11 @@ class Summary:
 
 _FAILED_RESULTS: dict = {"compliance": False, "curves": None}
 
+_INTERNAL_NODE1_FIGURES = (
+    ("fig_InternalNode1P", "internal_node1_active_power", "P"),
+    ("fig_InternalNode1Q", "internal_node1_reactive_power", "Q"),
+)
+
 
 def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
     match error:
@@ -330,14 +335,15 @@ class Benchmark:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         self._figures_description = []
         self.__init_figures_v(validations, pcs_benchmark_name)
+        self.__init_figures_uit(validations, pcs_benchmark_name)
         self.__init_figures_p(validations, pcs_benchmark_name)
         self.__init_figures_q(validations, pcs_benchmark_name)
+        self.__init_figures_internal_node1(pcs_benchmark_name)
         self.__init_figures_ip(validations, pcs_benchmark_name)
         self.__init_figures_iq(validations, pcs_benchmark_name)
+        self.__init_figures_i(validations, pcs_benchmark_name)
         self.__init_figures_w(validations, pcs_benchmark_name)
         self.__init_figures_wref(validations, pcs_benchmark_name)
-        self.__init_figures_i(validations, pcs_benchmark_name)
-        self.__init_figures_uit(validations, pcs_benchmark_name)
         self.__init_figures_ustator(validations, pcs_benchmark_name)
         self.__init_figures_theta(validations, pcs_benchmark_name)
         self.__init_figures_tap(validations, pcs_benchmark_name)
@@ -423,6 +429,33 @@ class Benchmark:
                 ylabel=q_label,
             )
         )
+
+    def __init_figures_internal_node1(self, pcs_benchmark_name: str) -> None:
+        """The power at InternalNode1, where the DTR sets the operating point of a Zone 1 test.
+
+        No check compares it. The PDF leaves it out when the converter controls InternalNode1,
+        because it then repeats the figures of the controlled power.
+        """
+        for name, label, magnitude in _INTERNAL_NODE1_FIGURES:
+            if pcs_benchmark_name not in config.get_list("ReportCurves", name):
+                continue
+            variables = compared_curves.plot_variables(self._producer.get_zone(), label)
+            if variables is None:
+                continue
+
+            self._figures_description.append(
+                FigureDescription(
+                    name=name,
+                    variables=variables,
+                    ylabel=self.__power_ylabel(magnitude),
+                    in_pdf=self._producer.controls_internal_node2(),
+                )
+            )
+
+    def __power_ylabel(self, magnitude: str) -> str:
+        if self._producer.is_dynawo_model():
+            return f"{magnitude} (pu base Snom = {self._producer.s_nom}MVA)"
+        return f"{magnitude} (pu base Snom)"
 
     def __init_figures_ip(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Ip = config.get_list("ReportCurves", "fig_Ip")
