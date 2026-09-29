@@ -15,6 +15,7 @@ import pytest
 
 from dycov.configuration.cfg import Config
 from dycov.core.global_variables import MODEL_VALIDATION_PPM
+from dycov.model.parameters import GenParams, Terminal
 from dycov.validate.producer import ModelProducer
 
 _PRODUCER_INI = """[DEFAULT]
@@ -34,6 +35,29 @@ def _producer_reading(monkeypatch, ini_text: str) -> ModelProducer:
     producer_config.read_string(ini_text)
     monkeypatch.setattr(producer, "_ModelProducer__read_producer_ini", lambda: producer_config)
     producer._ModelProducer__init_parameters()
+    return producer
+
+
+def _make_generator(converter_lv_control: bool) -> GenParams:
+    return GenParams(
+        id="PV_Array",
+        lib="",
+        terminals=(Terminal(connected_equipment=""),),
+        par_id="",
+        s_nom=100.0,
+        i_max=1.0,
+        p=0.0,
+        q=0.0,
+        voltage_droop=0.0,
+        use_voltage_droop=False,
+        converter_lv_control=converter_lv_control,
+    )
+
+
+def _producer_with_model(*generators: GenParams) -> ModelProducer:
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._is_dynawo_model = True
+    producer.generators = list(generators)
     return producer
 
 
@@ -90,3 +114,23 @@ def test_the_operating_mode_selects_the_active_power_limits(monkeypatch):
 
     assert injection == pytest.approx((0.8, 0.08))
     assert consumption == pytest.approx((-0.6, -0.04))
+
+
+@pytest.mark.parametrize("converter_lv_control", [True, False])
+def test_the_controlled_node_is_the_converter_lv_control_flag_of_the_model(converter_lv_control):
+    producer = _producer_with_model(_make_generator(converter_lv_control))
+
+    assert producer.controls_internal_node2() is converter_lv_control
+
+
+def test_the_controlled_node_is_internal_node1_when_a_unit_controls_it():
+    producer = _producer_with_model(_make_generator(True), _make_generator(False))
+
+    assert producer.controls_internal_node2() is False
+
+
+def test_the_controlled_node_keeps_the_flag_default_for_curves_without_a_model():
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._is_dynawo_model = False
+
+    assert producer.controls_internal_node2() is True

@@ -169,6 +169,11 @@ listing the Benchmarks or Operating Conditions that should include each graph:
 * ``fig_WRef`` — network frequency (Hz).
 * ``fig_I`` — injected active and reactive currents.
 * ``fig_Tap`` — main transformer tap ratio.
+* ``fig_InternalNode1P`` and ``fig_InternalNode1Q`` — active and reactive power at
+  InternalNode1, where the DTR sets the operating point of a Zone 1 test (Zone 1 only). No
+  check compares them, so they need no reference curve. They always go to the HTML figures,
+  and to the PDF only when the converter controls InternalNode2 (``ConverterLVControl =
+  true``), since otherwise they repeat the figures of the controlled power.
 
 
 PCS-level parameters

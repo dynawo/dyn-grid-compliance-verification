@@ -10,7 +10,6 @@
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.report.curve_classification import get_measurement_type, is_controlled_magnitude
 from dycov.report.figure_renderer import FigureRenderer
 from dycov.report.types import (
     DynamicBand,
@@ -21,6 +20,7 @@ from dycov.report.types import (
     ToleranceBand,
     band_limits,
 )
+from dycov.validation import compared_curves
 
 _COLOR_MXE = "#9acd83"
 _COLOR_REACTION = "#bee7fa"
@@ -356,12 +356,30 @@ def _build_mxe_text(
     return text
 
 
+def _checked_as(label: str, results: dict) -> str | None:
+    """The name the test checked the errors of a compared magnitude under, or None when the test
+    does not check them: the curves a test checks depend on the test, as its compliance table
+    shows."""
+    if (
+        "setpoint_tracking_controlled_magnitude_check" in results
+        and results.get("setpoint_tracking_controlled_magnitude_label") == label
+    ):
+        return "tc_controlled_magnitude"
+    if f"setpoint_tracking_{label}_check" in results:
+        return f"tc_{label}"
+    if f"voltage_dips_{label}_check" in results:
+        return label
+    return None
+
+
 def draw_mxe(
     renderer: FigureRenderer,
     curve_name: str,
     results: dict,
+    zone: int,
 ) -> None:
-    """Draw MXE (Maximum Excursion) annotations on the figure based on the results.
+    """Draw the MXE (maximum error) of each window on the figure of the curve it was measured
+    on.
 
     Parameters
     ----------
@@ -374,15 +392,16 @@ def draw_mxe(
         keys "before_mxe_{measurement_type}_value", "before_mxe_{measurement_type}_position",
         "during_mxe_{measurement_type}_value", "during_mxe_{measurement_type}_position",
         "after_mxe_{measurement_type}_value", and "after_mxe_{measurement_type}_position", where
-        {measurement_type} is determined based on the curve_name.
+        {measurement_type} is the name the test checked the errors of the curve under.
+    zone: int
+        Validation zone, whose compared curves say which curve each MXE was measured on.
     """
-    measurement_type = get_measurement_type(curve_name)
-    if "setpoint_tracking_controlled_magnitude_name" in results:
-        measurement_type = "tc_controlled_magnitude"
-        if not is_controlled_magnitude(
-            curve_name, results["setpoint_tracking_controlled_magnitude_name"]
-        ):
-            return
+    curve = compared_curves.in_column(zone, curve_name)
+    if curve is None:
+        return
+    measurement_type = _checked_as(curve.label, results)
+    if measurement_type is None:
+        return
 
     text = _build_mxe_text(curve_name, measurement_type, results, renderer)
     if text:
