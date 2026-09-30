@@ -338,7 +338,9 @@ results-file cell per case, so the workbook carries the file's base name and the
 suffix of `[Storage]` to both the test name and the file name (`…ActiveInjection.csv`,
 `…ActiveConsumption.csv`). The template needs no storage-specific row.
 
-A row with no curve of its own — the setpoint rows, say — is informative: DyCoV reads no such curve.
+A row with no curve of its own — the active power setpoint of zone 3, say — is informative: DyCoV
+reads no such curve. The two setpoint rows of zone 1 do name a curve, which no check compares: the
+report draws each over the power it drives.
 Likewise, a DTR case the sheets do not list gets no reference file. The frequency ramp is listed by
 both sheets, and only zone 3 runs it: its zone-1 row carries the note that marks it as not
 applicable there, and no results file.

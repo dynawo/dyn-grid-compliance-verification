@@ -111,9 +111,8 @@ def _plotly_figures(
         draw_mxe(renderer, curve_name, results, zone)
 
     curve_style = get_curve_style(curve_name)
-    role = "setpoint" if "VoltageSetpointPu" in curve_name else "calculated"
     show_equipment = not isinstance(figure_description.variables, str)
-    label = build_curve_label(curve_name, role, show_equipment, zone)
+    label = build_curve_label(curve_name, "calculated", show_equipment, zone)
     ref_label = build_curve_label(curve_name, "reference", show_equipment, zone)
 
     draw_reference_curve(renderer, curve_name, reference_curves, ref_label)
