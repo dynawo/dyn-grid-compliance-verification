@@ -123,9 +123,8 @@ terminal voltage and emits the currents as ``'ActiveCurrentInjTerminal'`` and
 
 * ``'ActivePowerInjTerminal'`` — active power at the injector's LV terminal (pu).
 * ``'ReactivePowerInjTerminal'`` — reactive power at the injector's LV terminal (pu).
-* ``'VoltageInjTerminal'`` — the amplitude of the terminal voltage (pu), when the model
-  provides it; otherwise ``'VoltageInjTerminalRe'`` / ``'VoltageInjTerminalIm'``, its
-  components, whose amplitude the tool emits under that same name.
+* ``'VoltageInjTerminalRe'`` / ``'VoltageInjTerminalIm'`` — the terminal voltage (pu),
+  whose amplitude the tool emits as ``'VoltageInjTerminal'``.
 * ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
   Electrical Performance Verification.
 
