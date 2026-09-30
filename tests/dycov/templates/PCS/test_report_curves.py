@@ -25,7 +25,6 @@ _ZONE_1_DESCRIPTIONS = sorted(
 _I16_ZONE_1_DESCRIPTIONS = sorted(
     (_PACKAGE_ROOT / "templates" / "PCS" / "model").glob("*/PCS_RTE-I16z1/PCSDescription.ini")
 )
-_USTATOR_CURVES = ("MagnitudeControlledByAVRPu", "VoltageSetpointPu")
 
 
 def read_option(ini_path: Path, section: str, option: str) -> str:
@@ -62,8 +61,11 @@ def test_i16_zone_1_draws_the_internal_node1_power_in_every_benchmark(ini_path, 
     assert declared == [f"PCS_RTE-I16z1.{benchmark}" for benchmark in benchmarks]
 
 
-@pytest.mark.parametrize("curve", _USTATOR_CURVES)
-def test_zone_1_computes_none_of_the_ustator_curves(curve):
+@pytest.mark.parametrize("curve", ["MagnitudeControlledByAVRPu", "VoltageSetpointPu"])
+def test_zone_1_does_not_compute_the_ustator_curves_in_every_test(curve):
+    """#554: the voltage setpoint is asked for only in the test that steps it, which draws it
+    over the voltage of the node the converter controls, never next to the plant-level
+    magnitude fig_Ustator pairs it with."""
     zone_1_curves = read_option(
         _PACKAGE_ROOT / "configuration" / "defaultConfig.ini",
         "CurvesVariables",

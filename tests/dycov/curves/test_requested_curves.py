@@ -23,7 +23,7 @@ def _generator_curves(zone):
     ]
 
 
-def test_zone_1_asks_for_the_curves_it_compares():
+def test_zone_1_asks_for_the_curves_it_compares_and_the_setpoints_it_draws():
     requested = requested_curves.for_zone(1, GENERATORS)
 
     assert requested == [
@@ -33,7 +33,31 @@ def test_zone_1_asks_for_the_curves_it_compares():
         "Wind_Turbine_GEN_ReactivePowerControlledPu",
         "Wind_Turbine_GEN_ActiveCurrentInjTerminal",
         "Wind_Turbine_GEN_ReactiveCurrentInjTerminal",
+        "Wind_Turbine_GEN_ActivePowerSetpointPu",
+        "Wind_Turbine_GEN_ReactivePowerSetpointPu",
     ]
+
+
+def test_zone_1_asks_every_unit_for_its_setpoints():
+    requested = requested_curves.for_zone(1, iter(["WT1", "WT2"]))
+
+    assert [name for name in requested if name.endswith("SetpointPu")] == [
+        "WT1_GEN_ActivePowerSetpointPu",
+        "WT1_GEN_ReactivePowerSetpointPu",
+        "WT2_GEN_ActivePowerSetpointPu",
+        "WT2_GEN_ReactivePowerSetpointPu",
+    ]
+
+
+def test_zone_1_asks_for_no_voltage_setpoint():
+    """#554: the curves of a producer name their generating units by their voltage setpoint."""
+    assert "Wind_Turbine_GEN_VoltageSetpointPu" not in requested_curves.for_zone(1, GENERATORS)
+
+
+def test_a_unit_that_only_carries_setpoints_is_asked_for_every_curve():
+    requested = requested_curves.for_columns(1, ["time", "WT_GEN_ActivePowerSetpointPu"])
+
+    assert "WT_GEN_ActivePowerControlledPu" in requested
 
 
 def test_zone_3_asks_for_the_bus_the_taps_and_the_injector_terminal():

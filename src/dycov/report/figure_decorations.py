@@ -10,6 +10,7 @@
 import pandas as pd
 
 from dycov.configuration.cfg import config
+from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_renderer import FigureRenderer
 from dycov.report.types import (
     DynamicBand,
@@ -29,7 +30,6 @@ _COLOR_SETTLE_LINE = "#f7d7f6"
 _COLOR_SETTLE_POINT = "#fcb1fa"
 _COLOR_SETTLE_LABEL = "#ff82fc"
 _COLOR_EXCLUSION = "#e8e8e8"
-_COLOR_REFERENCE = "#dd8452"
 _COLOR_IMAX_REAC = "#8172b3"
 _COLOR_EVENT_MARKER = "#cccccc"
 
@@ -437,13 +437,12 @@ def draw_reference_curve(
         return
     if curve_name not in reference_curves:
         return
-    if "VoltageSetpointPu" in curve_name:
-        return
 
+    curve_style = get_curve_style(curve_name, is_reference=True)
     renderer.add_curve(
         x=reference_curves["time"],
         y=reference_curves[curve_name],
-        color=_COLOR_REFERENCE,
-        style="-",
+        color=curve_style.color,
+        style=curve_style.style,
         name=label,
     )

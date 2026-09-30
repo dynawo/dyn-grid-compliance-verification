@@ -192,6 +192,42 @@ def test_internal_node1_power_is_not_drawn_where_the_benchmark_does_not_declare_
 
 
 # ---------------------------------------------------------------------------
+# Setpoints drawn over the magnitude they drive
+# ---------------------------------------------------------------------------
+
+_SETPOINT_FIGURES = {name: [_PCS_BENCHMARK] for name in ("fig_V", "fig_UIt", "fig_P", "fig_Q")}
+
+
+def _setpoints(bm: Benchmark) -> dict:
+    return {figure.name: figure.setpoint for figure in bm.get_figures_description()}
+
+
+@pytest.mark.parametrize(
+    "controls_internal_node2, voltage_figure", [(True, "fig_UIt"), (False, "fig_V")]
+)
+def test_zone_1_names_the_setpoint_that_drives_what_each_figure_draws(
+    monkeypatch, controls_internal_node2, voltage_figure
+):
+    """#554: the voltage setpoint drives the voltage of the node the converter controls."""
+    producer = DummyProducer(controls_internal_node2=controls_internal_node2)
+    bm = _make_benchmark(monkeypatch, producer, _SETPOINT_FIGURES)
+
+    expected = {
+        "fig_V": None,
+        "fig_UIt": None,
+        "fig_P": "ActivePowerSetpointPu",
+        "fig_Q": "ReactivePowerSetpointPu",
+    }
+    assert _setpoints(bm) == expected | {voltage_figure: "VoltageSetpointPu"}
+
+
+def test_zone_3_names_no_setpoint(monkeypatch):
+    bm = _make_benchmark(monkeypatch, DummyProducer(zone=3), _SETPOINT_FIGURES)
+
+    assert set(_setpoints(bm).values()) == {None}
+
+
+# ---------------------------------------------------------------------------
 # Compliance labels
 # ---------------------------------------------------------------------------
 

@@ -12,6 +12,7 @@
 from pathlib import Path
 
 import pandas as pd
+import plotly.graph_objects as go
 import pytest
 
 from dycov.report import html
@@ -332,6 +333,68 @@ def test_plotly_figures_draws_a_curve_without_reference_alone():
     assert "InternalNode1" in html_out
     assert "Active Power calculated" in html_out
     assert "Active Power reference" not in html_out
+
+
+_POWER_WITH_ITS_SETPOINT = FigureDescription(
+    name="fig_P",
+    variables=[
+        {"type": "generator", "variable": "ActivePowerControlledPu"},
+        {"type": "generator", "variable": "ActivePowerSetpointPu"},
+    ],
+    ylabel="P",
+)
+
+
+def _make_power_curves(with_setpoint: bool = True) -> pd.DataFrame:
+    curves = {"time": [0, 1, 2], "WT_GEN_ActivePowerControlledPu": [0.85, 0.82, 0.80]}
+    if with_setpoint:
+        curves["WT_GEN_ActivePowerSetpointPu"] = [0.85, 0.80, 0.80]
+    return pd.DataFrame(curves)
+
+
+def _drawn_traces(figure_description, calculated_curves, reference_curves) -> list:
+    """The name and dash of every trace the figure draws, which the page only holds escaped."""
+    fig = go.Figure()
+    for curve_name in html._get_curve_names(figure_description.variables, calculated_curves):
+        html._plotly_figures(
+            fig, curve_name, figure_description, calculated_curves, reference_curves, {}, zone=1
+        )
+    return [(trace.name, trace.line.dash) for trace in fig.data]
+
+
+def test_plotly_figures_draws_both_setpoints_over_the_power_they_drive():
+    """#554: a reference setpoint that does not lie on the simulated one tells the user the
+    reference curves stepped another setpoint, so both are drawn and named apart."""
+    traces = _drawn_traces(_POWER_WITH_ITS_SETPOINT, _make_power_curves(), _make_power_curves())
+
+    assert traces == [
+        ("Active Power — WT reference", "solid"),
+        ("Active Power — WT calculated", "solid"),
+        ("Active Power Setpoint — WT reference", "dash"),
+        ("Active Power Setpoint — WT calculated", "dot"),
+    ]
+
+
+def test_plotly_figures_draws_the_power_of_a_reference_without_its_setpoint():
+    traces = _drawn_traces(
+        _POWER_WITH_ITS_SETPOINT, _make_power_curves(), _make_power_curves(with_setpoint=False)
+    )
+
+    assert [name for name, _ in traces] == [
+        "Active Power — WT reference",
+        "Active Power — WT calculated",
+        "Active Power Setpoint — WT calculated",
+    ]
+
+
+def test_plotly_figures_titles_the_figure_after_the_power_and_not_its_setpoint():
+    curve_names, name, html_out = html.plotly_figures(
+        _POWER_WITH_ITS_SETPOINT, _make_power_curves(), None, {}, zone=1
+    )
+
+    assert curve_names == ["WT_GEN_ActivePowerControlledPu", "WT_GEN_ActivePowerSetpointPu"]
+    assert name == "fig_P"
+    assert "Active Power \\u2014 Generator" in html_out
 
 
 def test_plotly_all_curves_skips_plotted_and_time():

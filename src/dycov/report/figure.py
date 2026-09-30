@@ -23,7 +23,6 @@ from dycov.files import value_registry
 from dycov.logging import dycov_logging
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_decorations import (
-    _COLOR_REFERENCE,
     draw_additional_curves,
     draw_exclusion_windows,
     draw_mxe,
@@ -41,8 +40,6 @@ def _add_curve2plot(
     is_reference: bool = False,
 ) -> None:
     if curve_name is None:
-        return
-    if variable_tool_name == "VoltageSetpointPu" and is_reference:
         return
 
     curve_style = get_curve_style(variable_tool_name, is_reference)
@@ -198,7 +195,10 @@ def _save_plot(
     if time_reference is not None and curves_reference is not None:
         for curve_reference in curves_reference:
             ax.plot(
-                time_reference, curve_reference["curve"], color=_COLOR_REFERENCE, linestyle="-"
+                time_reference,
+                curve_reference["curve"],
+                color=curve_reference["color"],
+                linestyle=curve_reference["style"],
             )
 
     for curve in curves:

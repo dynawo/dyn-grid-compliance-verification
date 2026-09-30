@@ -16,10 +16,13 @@ _GEN_SUFFIX = "_GEN_"
 _SYNCCOND_SUFFIX = "_GEN_TSO_"
 _LOAD_SUFFIX = "_LOAD_TSO_"
 _XFMR_SUFFIX = "_XFMR_"
+_SETPOINT_SUFFIX = "SetpointPu"
 
 _VARIABLE_LABELS = {
     "ActiveCurrentInjTerminal": "Ip",
     "ReactiveCurrentInjTerminal": "Iq",
+    "ActivePowerSetpointPu": "Active Power Setpoint",
+    "ReactivePowerSetpointPu": "Reactive Power Setpoint",
     "VoltageSetpointPu": "Plant-level voltage regulation Setpoint",
     "MagnitudeControlledByAVRPu": "Plant-level voltage regulation Magnitude",
     "VoltageInjTerminal": "Voltage",
@@ -34,6 +37,9 @@ _VARIABLE_LABELS = {
     "Voltage": "Voltage",
 }
 
+# Zone 1 has no plant-level voltage regulation: its voltage setpoint is the unit's own.
+_VARIABLE_LABELS_BY_ZONE = {1: {"VoltageSetpointPu": "Voltage Setpoint"}}
+
 
 @dataclass(frozen=True)
 class CurveStyle:
@@ -41,6 +47,11 @@ class CurveStyle:
 
     color: str
     style: str
+
+
+def is_setpoint(variable_name: str) -> bool:
+    """Whether a curve is a setpoint, which a figure draws over the magnitude it drives."""
+    return variable_name.endswith(_SETPOINT_SUFFIX)
 
 
 def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyle:
@@ -59,6 +70,10 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
     CurveStyle
         The color and line style to use for plotting the curve
     """
+    if is_setpoint(variable_name):
+        if is_reference:
+            return CurveStyle(color="#dd8452", style="--")
+        return CurveStyle(color="#8c8c8c", style=":")
     if is_reference:
         return CurveStyle(color="#dd8452", style="-")
     if "modIInjTerminal" in variable_name:
@@ -67,18 +82,19 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
         return CurveStyle(color="#64b5cd", style="-")
     if "ReactiveCurrentInjTerminal" in variable_name:
         return CurveStyle(color="#8172b3", style="-")
-    if "VoltageSetpointPu" in variable_name:
-        return CurveStyle(color="#8c8c8c", style=":")
     return CurveStyle(color="#4c72b0", style="-")
 
 
-def get_variable_label(variable_name: str) -> str:
+def get_variable_label(variable_name: str, zone: int = 0) -> str:
     """Determine a human-readable label for a variable based on its internal name.
 
     Parameters
     ----------
     variable_name: str
         Full internal variable name (e.g., "BusPDR_BUS_ActivePower", "modIInjTerminal")
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
+
     Returns
     -------
     str
@@ -86,9 +102,10 @@ def get_variable_label(variable_name: str) -> str:
     """
     if "modIInjTerminal" in variable_name:
         return "|I|"
-    for key, label in _VARIABLE_LABELS.items():
-        if key in variable_name:
-            return label
+    for labels in (_VARIABLE_LABELS_BY_ZONE.get(zone, {}), _VARIABLE_LABELS):
+        for key, label in labels.items():
+            if key in variable_name:
+                return label
     return variable_name.replace(_BUS_PREFIX, "")
 
 
@@ -131,7 +148,7 @@ def build_curve_label(
     curve_name: str
         Full internal curve name
     role: str
-        Curve role: "calculated", "reference", "setpoint"
+        Curve role: "calculated" or "reference"
     show_equipment: bool
         Whether to include the equipment id in the label
     zone: int
@@ -141,9 +158,9 @@ def build_curve_label(
     -------
     str
         A human-readable label for the curve (e.g., "Active Power — GEN calculated",
-        "Voltage Setpoint — PDR Bus setpoint")
+        "Active Power Setpoint — GEN reference")
     """
-    variable_label = get_variable_label(curve_name)
+    variable_label = get_variable_label(curve_name, zone)
     if show_equipment:
         equipment = get_equipment_label(curve_name, zone)
         if equipment:
@@ -172,9 +189,7 @@ def build_figure_title(variables: str | list[dict], zone: int = 0) -> str:
 
     variable_labels = list(
         dict.fromkeys(
-            get_variable_label(v["variable"])
-            for v in variables
-            if v["variable"] != "VoltageSetpointPu"
+            get_variable_label(v["variable"]) for v in variables if not is_setpoint(v["variable"])
         )
     )
     magnitude = " / ".join(variable_labels)
@@ -193,4 +208,4 @@ def build_figure_title(variables: str | list[dict], zone: int = 0) -> str:
 
 
 def _is_injector_terminal_figure(variables: list[dict]) -> bool:
-    return all("InjTerminal" in v["variable"] for v in variables)
+    return all("InjTerminal" in v["variable"] for v in variables if not is_setpoint(v["variable"]))

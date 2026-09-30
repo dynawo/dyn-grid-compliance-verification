@@ -198,6 +198,14 @@ InternalNode2. The two voltages carry no DTR threshold, so no compliance
 check applies to them; the powers and currents are checked against the
 ``thr_P_*``, ``thr_Q_*``, ``thr_Ip_*`` and ``thr_Iq_*`` threshold families.
 
+In a setpoint step, the figure of the magnitude the step drives also draws the
+setpoint, twice: as simulated and as the reference curves declare it. The two
+should lie on top of each other; when they do not, the reference curves were
+obtained with a different setpoint from the one the test applies. The active
+and reactive power setpoints drive the power at the point the converter
+controls, and the voltage setpoint the voltage there: at InternalNode2 when
+``ConverterLVControl`` is true, at InternalNode1 otherwise.
+
 Reference curves are always required. The producer response can come from
 Dynawo simulations or from producer-provided curves.
 

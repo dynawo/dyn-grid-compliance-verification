@@ -72,6 +72,85 @@ def test_the_curves_zone_1_draws_are_not_asked_of_the_producer():
     assert not set(_INTERNAL_NODE1_POWER) & set(names)
 
 
+@pytest.mark.parametrize("controls_internal_node2", [True, False])
+@pytest.mark.parametrize(
+    "label, setpoint",
+    [
+        ("active_power", "ActivePowerSetpointPu"),
+        ("reactive_power", "ReactivePowerSetpointPu"),
+    ],
+)
+def test_zone_1_draws_each_power_setpoint_over_the_power_it_drives(
+    label, setpoint, controls_internal_node2
+):
+    """#554: the controlled power is already the one at the point the converter controls."""
+    assert compared_curves.setpoint_driving(1, label, controls_internal_node2) == setpoint
+
+
+@pytest.mark.parametrize(
+    "controls_internal_node2, label", [(True, "injector_voltage"), (False, "voltage")]
+)
+def test_zone_1_draws_the_voltage_setpoint_over_the_voltage_the_converter_controls(
+    controls_internal_node2, label
+):
+    """#554: measured in voltage control, the setpoint lies on the voltage of InternalNode2 when
+    the converter controls it, and on the one of InternalNode1 when it does not."""
+    assert compared_curves.setpoint_driving(1, label, controls_internal_node2) == (
+        "VoltageSetpointPu"
+    )
+
+
+@pytest.mark.parametrize(
+    "controls_internal_node2, label", [(True, "voltage"), (False, "injector_voltage")]
+)
+def test_zone_1_draws_no_setpoint_over_the_voltage_the_converter_does_not_control(
+    controls_internal_node2, label
+):
+    assert compared_curves.setpoint_driving(1, label, controls_internal_node2) is None
+
+
+@pytest.mark.parametrize(
+    "test_type, setpoint",
+    [
+        ("PSetpoint", "ActivePowerSetpointPu"),
+        ("QSetpoint", "ReactivePowerSetpointPu"),
+        ("USetpoint", "VoltageSetpointPu"),
+    ],
+)
+def test_a_setpoint_step_steps_the_setpoint_of_its_type(test_type, setpoint):
+    assert compared_curves.setpoint_stepped_by(1, test_type) == setpoint
+
+
+@pytest.mark.parametrize("test_type", ["Others", None])
+def test_a_test_that_steps_no_setpoint_of_the_unit_steps_none(test_type):
+    """#554: a grid voltage step moves the voltage of the grid, not the setpoint of the unit."""
+    assert compared_curves.setpoint_stepped_by(1, test_type) is None
+
+
+def test_zone_1_asks_the_producer_for_the_power_setpoints_only():
+    """#554: the workbook of the TSO asks for no voltage setpoint in Zone 1, and the curves of
+    a producer name their generating units by theirs."""
+    assert compared_curves.asked_setpoints(1) == (
+        "ActivePowerSetpointPu",
+        "ReactivePowerSetpointPu",
+    )
+
+
+@pytest.mark.parametrize("zone", [0, 3])
+def test_no_setpoint_is_drawn_outside_zone_1(zone):
+    assert compared_curves.asked_setpoints(zone) == ()
+    assert compared_curves.setpoint_driving(zone, "active_power", True) is None
+    assert compared_curves.setpoint_stepped_by(zone, "PSetpoint") is None
+
+
+def test_the_setpoints_zone_1_draws_play_no_part_in_the_verdict():
+    columns = _ZONE_1_COLUMNS + ["PV_Array_GEN_ActivePowerSetpointPu"]
+
+    compared = [column for _, column in compared_curves.resolve_all(1, columns)]
+
+    assert "PV_Array_GEN_ActivePowerSetpointPu" not in compared
+
+
 # ---------------------------------------------------------------------------
 # Curves a zone compares
 # ---------------------------------------------------------------------------

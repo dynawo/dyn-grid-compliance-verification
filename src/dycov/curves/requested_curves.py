@@ -63,10 +63,14 @@ def for_zone(
         The curve names, in the order the dictionary declares them.
     """
     if zone == 1:
-        return [
-            naming.to_output_name(name, 1)
-            for name in compared_curves.curve_names(1, generator_ids)
+        generator_ids = list(generator_ids)
+        names = compared_curves.curve_names(1, generator_ids)
+        names += [
+            f"{generator_id}_GEN_{setpoint}"
+            for generator_id in generator_ids
+            for setpoint in compared_curves.asked_setpoints(1)
         ]
+        return [naming.to_output_name(name, 1) for name in names]
 
     requested = list(_ZONE_3_BUS)
     requested += [f"{transformer_id}_XFMR_Tap" for transformer_id in transformer_ids]
@@ -86,9 +90,10 @@ def every_name(
 
 def _generator_suffixes(zone: int) -> tuple[str, ...]:
     if zone == 1:
-        return tuple(
+        compared = tuple(
             curve.selector for curve in compared_curves.for_zone(1) if "_GEN_" in curve.selector
         )
+        return compared + tuple(f"_GEN_{name}" for name in compared_curves.asked_setpoints(1))
     return tuple(f"_GEN_{name}" for name in _ZONE_3_GENERATOR)
 
 
