@@ -22,6 +22,10 @@ codebase. Keep it dense but short; update it when the subsystem structure change
   general terms and without code detail, and anything that needs saying beyond what is already
   written there — a decision taken along the way, a finding, a constraint — goes as a comment on the
   issue, at that same level, not into the pull request.
+- Keep the disk as clean as possible: delete every temporary working directory the work created
+  once the development is finished — the run and comparison trees under the home directory or in
+  `/tmp`, the `Results` trees produced to try something out, and any copy of the repository made to
+  audit it. Reference material and the repository itself stay.
 - Python package installed in editable mode. Tests under `tests/` mirror the `src/dycov/` layout;
   run with `pytest`.
 - Prefer reusing existing utilities (e.g. `replace_placeholders.*`, `create_curves`) over introducing

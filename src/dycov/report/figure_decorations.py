@@ -34,6 +34,12 @@ _COLOR_IMAX_REAC = "#8172b3"
 _COLOR_EVENT_MARKER = "#cccccc"
 
 
+def drawn_scale(figure_description: FigureDescription) -> float:
+    """The factor the figure multiplies the values of its curves by when it draws them: f_nom
+    for a frequency drawn in Hz, 1 otherwise."""
+    return config.get_float("Dynawo", "f_nom", 50.0) if figure_description.in_hz else 1.0
+
+
 def draw_tolerance_band(
     renderer: FigureRenderer,
     band: ToleranceBand,
@@ -75,6 +81,7 @@ def draw_frequency_band(
     band: FrequencyBand,
     ymin: float,
     ymax: float,
+    scale: float = 1.0,
 ) -> tuple[float, float]:
     """Draw frequency deviation bands on the figure.
 
@@ -88,6 +95,8 @@ def draw_frequency_band(
         The current minimum y-axis limit, used to adjust the limit if the band extends beyond it.
     ymax: float
         The current maximum y-axis limit, used to adjust the limit if the band extends beyond it.
+    scale: float
+        The factor the figure draws its curves with (see drawn_scale).
 
     Returns
     -------
@@ -95,20 +104,20 @@ def draw_frequency_band(
         Updated ymin and ymax values after considering the frequency band limits.
     """
     f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-    margin = band.upper * 0.5 if band.upper is not None else 0.0
+    margin = (band.upper * 0.5 if band.upper is not None else 0.0) / f_nom * scale
     color = "#c44e52" if band.upper and band.upper >= 1.0 else "#55a868"
 
     if band.upper is not None:
-        y_upper = (f_nom + band.upper) / f_nom
+        y_upper = (f_nom + band.upper) / f_nom * scale
         renderer.add_hline(y=y_upper, color=color)
-        if ymax and ymax < y_upper + margin / f_nom:
-            ymax = y_upper + margin / f_nom
+        if ymax and ymax < y_upper + margin:
+            ymax = y_upper + margin
 
     if band.lower is not None:
-        y_lower = (f_nom - band.lower) / f_nom
+        y_lower = (f_nom - band.lower) / f_nom * scale
         renderer.add_hline(y=y_lower, color=color)
-        if ymin and ymin > y_lower - margin / f_nom:
-            ymin = y_lower - margin / f_nom
+        if ymin and ymin > y_lower - margin:
+            ymin = y_lower - margin
 
     return ymin, ymax
 
@@ -212,7 +221,13 @@ def draw_additional_curves(
     if figure_description.tolerance_band is not None:
         draw_tolerance_band(renderer, figure_description.tolerance_band, last_val, results)
     if figure_description.frequency_band is not None:
-        ymin, ymax = draw_frequency_band(renderer, figure_description.frequency_band, ymin, ymax)
+        ymin, ymax = draw_frequency_band(
+            renderer,
+            figure_description.frequency_band,
+            ymin,
+            ymax,
+            drawn_scale(figure_description),
+        )
     if figure_description.dynamic_band is not None:
         draw_dynamic_band(renderer, figure_description.dynamic_band, time, results)
     draw_event_markers(renderer, figure_description.event_markers, results)
@@ -250,6 +265,7 @@ def draw_response_characteristics(
     renderer: FigureRenderer,
     curve_name: str,
     results: dict,
+    scale: float = 1.0,
 ) -> None:
     """Draw response characteristics (reaction time, rise time, settling time) on the figure based
     on the results.
@@ -264,16 +280,18 @@ def draw_response_characteristics(
         The results dictionary containing the calculated response characteristics under the keys
         "calc_reaction_time", "calc_reaction_target", "calc_rise_time", "calc_rise_target",
         "calc_settling_time", "calc_ss_value", and "calc_settling_tube".
+    scale: float
+        The factor the figure draws its curves with (see drawn_scale).
     """
     if "calc_reaction_target" in results and curve_name in results["calc_reaction_target"]:
         treaction = results["calc_reaction_time"] + results["sim_t_event_start"]
-        target = results["calc_reaction_target"][curve_name]
+        target = results["calc_reaction_target"][curve_name] * scale
         renderer.add_hline(y=target, color=_COLOR_REACTION, style="-", linewidth=0.2)
         renderer.add_vline(x=treaction, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
 
     if "calc_rise_target" in results and curve_name in results["calc_rise_target"]:
         trise = results["calc_rise_time"] + results["sim_t_event_start"]
-        target = results["calc_rise_target"][curve_name]
+        target = results["calc_rise_target"][curve_name] * scale
         renderer.add_hline(y=target, color=_COLOR_REACTION, style="-", linewidth=0.2)
         renderer.add_vline(x=trise, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
         renderer.add_scatter(x=trise, y=target, color=_COLOR_SETTLE_POINT, name="rise time")
@@ -290,9 +308,9 @@ def draw_response_characteristics(
 
     if "calc_settling_tube" in results and curve_name in results["calc_settling_tube"]:
         tsettling = results["calc_settling_time"] + results["sim_t_event_start"]
-        ss_value = results["calc_ss_value"]
+        ss_value = results["calc_ss_value"] * scale
         tube = results["calc_settling_tube"][curve_name]
-        renderer.add_hrect(y0=tube[0], y1=tube[1], color=_COLOR_SETTLE_RECT)
+        renderer.add_hrect(y0=tube[0] * scale, y1=tube[1] * scale, color=_COLOR_SETTLE_RECT)
         renderer.add_vline(x=tsettling, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
         renderer.add_scatter(
             x=tsettling, y=ss_value, color=_COLOR_SETTLE_POINT, name="settling time"
@@ -419,6 +437,7 @@ def draw_reference_curve(
     curve_name: str,
     reference_curves: pd.DataFrame,
     label: str = "reference",
+    scale: float = 1.0,
 ) -> None:
     """Draw a reference curve on the figure if it exists in the reference_curves DataFrame.
 
@@ -432,6 +451,8 @@ def draw_reference_curve(
         The DataFrame containing reference curves, with a "time" column and columns for each curve.
     label: str
         The label to use for the reference curve in the legend.
+    scale: float
+        The factor the figure draws its curves with (see drawn_scale).
     """
     if reference_curves is None:
         return
@@ -441,7 +462,7 @@ def draw_reference_curve(
     curve_style = get_curve_style(curve_name, is_reference=True)
     renderer.add_curve(
         x=reference_curves["time"],
-        y=reference_curves[curve_name],
+        y=reference_curves[curve_name] * scale,
         color=curve_style.color,
         style=curve_style.style,
         name=label,
