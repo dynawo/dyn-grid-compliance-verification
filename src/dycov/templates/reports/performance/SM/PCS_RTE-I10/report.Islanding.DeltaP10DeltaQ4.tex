@@ -16,16 +16,13 @@
         side --- the Producer's side may vary, depending on the user-provided model.}
     \end{center}
 
-    In this case the network is not modeled. In Dynawo, we simply attach
-    two loads of type \code{LoadAlphaBeta} (since the DTR specifies that the
-    loads have alpha=beta=0 and do not depend on frequency). Then their
-    PQ values are configured as follows:
-    \begin{itemize}
-        \item Load 1: P = 0.7 Pmax, Q = -0.04 Pmax
-        \item Load 2: P = 0.1 Pmax, Q = 0.04 Pmax
-    \end{itemize}
-    And then disconnect Load 2. This complies with the initial conditions
-    and the desired changes specified by the DTR.
+    The separated network is reduced to its load: the generator is the only
+    synchronous machine left, and a load of type \code{LoadAlphaBeta} with
+    alpha = beta = 0, so that it depends neither on voltage nor on frequency, is
+    attached to the PDR bus. The load starts at the initial operating point of
+    the generator and, at the event, its consumption steps by 10\% of
+    $P_{max\_unite}$ in active power and by 4\% of $P_{max\_unite}$ in
+    reactive power.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:

@@ -55,7 +55,6 @@ class BisectionEngine:
         launcher_dwo: str,
         producer: Producer,
         s_nref: float,
-        f_nom: float,
         sim_time: float,
         thr_ss_tol: float,
         curves_dict: dict,
@@ -71,8 +70,6 @@ class BisectionEngine:
             The producer associated with the simulation.
         s_nref : float
             Reference apparent power (MVA).
-        f_nom : float
-            Nominal frequency (Hz).
         sim_time : float
             Current simulation elapsed time; updated after successful runs.
         thr_ss_tol : float
@@ -84,7 +81,6 @@ class BisectionEngine:
         self._launcher_dwo = launcher_dwo
         self._producer = producer
         self._s_nref = s_nref
-        self._f_nom = f_nom
         self.sim_time = sim_time
         self._thr_ss_tol = thr_ss_tol
         self._curves_dict = curves_dict
@@ -562,7 +558,6 @@ class BisectionEngine:
             self._producer.generators,
             self._producer.s_nom,
             self._s_nref,
-            self._f_nom,
             save_file=False,
             simulation_limit=self.sim_time + 10,
         )

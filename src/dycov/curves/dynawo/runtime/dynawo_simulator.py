@@ -85,7 +85,6 @@ class DynawoSimulator:
             run.generators,
             run.s_nom,
             run.s_nref,
-            run.f_nom,
             simulation_limit=max_sim_time,
         )
 
@@ -117,7 +116,6 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
-        f_nom: float,
         simulation_limit: float,
         save_file: bool = False,
     ) -> DynawoResult:
@@ -146,8 +144,6 @@ class DynawoSimulator:
             Nominal apparent power of the system.
         s_nref : float
             System-wide S base (SnRef).
-        f_nom : float
-            Nominal frequency of the system.
         simulation_limit : float
             Maximum time (in seconds) allowed for the simulation to run.
         save_file : bool, optional
@@ -176,7 +172,6 @@ class DynawoSimulator:
             generators,
             s_nom,
             s_nref,
-            f_nom,
             save_file=save_file,
             simulation_limit=simulation_limit,
         )
@@ -201,7 +196,6 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
-        f_nom: float,
         save_file: bool = True,
         simulation_limit: float | None = None,
     ) -> DynawoResult:
@@ -232,8 +226,6 @@ class DynawoSimulator:
             Nominal apparent power of the system.
         s_nref : float
             System-wide S base (SnRef).
-        f_nom : float
-            Nominal frequency of the system.
         save_file : bool, optional
             If True, the calculated curves DataFrame will be created and returned.
             Defaults to True.
@@ -269,7 +261,6 @@ class DynawoSimulator:
             generators,
             s_nom,
             s_nref,
-            f_nom,
             save_file,
             succeeded,
         )
@@ -289,10 +280,9 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
-        f_nom: float,
         save_file: bool,
         succeeded: bool,
     ) -> pd.DataFrame:
         if not path.exists() or not succeeded or not save_file:
             return pd.DataFrame()
-        return create_curves(variable_translations, path, generators, s_nom, s_nref, f_nom)
+        return create_curves(variable_translations, path, generators, s_nom, s_nref)
