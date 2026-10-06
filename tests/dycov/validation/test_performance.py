@@ -493,6 +493,40 @@ def test_calculate_frequency_outside_the_nominal_band():
     assert compliance_values["time_freq1"] == pytest.approx(2.0)
 
 
+def test_calculate_frequency_bounds_the_separated_network_not_the_frequency_the_units_measure():
+    """Fiche I10 bounds the frequency of the separated network, which the synchronous condenser
+    carries; the units measure a millisecond dip at the load step that the network never sees."""
+    validator = _make_validator(
+        validations=["freq_1"],
+        calculated=_make_pdr_curves(
+            G1_GEN_NetworkFrequencyPu=[1.0, 1.0, 0.914, 1.0, 1.0],
+            SyncCompensator_GEN_TSO_FrequencyHz=[50.0, 50.0, 49.6, 49.6, 49.6],
+        ),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_frequency(compliance_values)
+
+    assert compliance_values["check_freq1"] is True
+    assert compliance_values["time_freq1"] == -1
+
+
+def test_calculate_frequency_reports_the_separated_network_leaving_the_band():
+    validator = _make_validator(
+        validations=["freq_1"],
+        calculated=_make_pdr_curves(
+            G1_GEN_NetworkFrequencyPu=[1.0, 1.0, 1.0, 1.0, 1.0],
+            SyncCompensator_GEN_TSO_FrequencyHz=[50.0, 50.0, 48.9, 49.2, 49.2],
+        ),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_frequency(compliance_values)
+
+    assert compliance_values["check_freq1"] is False
+    assert compliance_values["time_freq1"] == pytest.approx(2.0)
+
+
 def test_calculate_frequency_reads_f_nom_from_the_dynawo_section(monkeypatch):
     recording = RecordingConfig()
     monkeypatch.setattr(f"{PERFORMANCE_MODULE}.config", recording)

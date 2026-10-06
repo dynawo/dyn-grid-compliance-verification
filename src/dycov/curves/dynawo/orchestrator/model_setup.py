@@ -74,7 +74,7 @@ class ModelSetup:
     run any simulations.
     """
 
-    def __init__(self, producer: ProducerCurves, pcs_name: str, s_nref: float, f_nom: float):
+    def __init__(self, producer: ProducerCurves, pcs_name: str, s_nref: float):
         """
         Parameters
         ----------
@@ -86,13 +86,10 @@ class ModelSetup:
             Name of the PCS (Power Control System).
         s_nref : float
             Reference apparent power (MVA).
-        f_nom : float
-            Nominal frequency (Hz).  (Unused directly here but kept for completeness.)
         """
         self._owner = producer
         self._pcs_name = pcs_name
         self._s_nref = s_nref
-        self._f_nom = f_nom
 
         # State populated during complete_model; exposed as attributes so that
         # DynawoCurves can read them after the call.

@@ -209,8 +209,11 @@ summarize_overall_results() {
     local out_html="${results_dir}/overall_result_counts.html"
 
     python3 - "$log_file" "$out_csv" "$out_png" "$out_html" << 'PYCODE'
-import sys, csv
+import sys, csv, re
 from collections import Counter
+
+# Every test logs its result as it finishes, and the summary table repeats it: only the table counts.
+PROGRESS_RECORD = re.compile(r"Done in [0-9.]+s -> ")
 
 POSSIBLE_RESULTS = [
     "Compliant",
@@ -235,7 +238,8 @@ def parse_counts(log_path: str):
             if (not line.strip()
                 or line.startswith('-')
                 or line.startswith('Producer            PCS            Benchmark')
-                or line.startswith('Summary Report')):
+                or line.startswith('Summary Report')
+                or PROGRESS_RECORD.search(line)):
                 continue
             for label in POSSIBLE_RESULTS:
                 if line.endswith(label):
