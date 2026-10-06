@@ -15,16 +15,16 @@
         side --- the Producer's side may vary, depending on the user-provided model.}
     \end{center}
 
-    In this case the network is not modeled. In Dynawo, we simply attach
-    two loads of type \code{LoadAlphaBeta} (since the DTR specifies that the
-    loads have alpha=beta=0 and do not depend on frequency). Then their
-    PQ values are configured as follows:
-    \begin{itemize}
-        \item Load 1: P = 0.7 Pmax, Q = -0.04 Pmax
-        \item Load 2: P = 0.1 Pmax, Q = 0.04 Pmax
-    \end{itemize}
-    And then disconnect Load 2. This complies with the initial conditions
-    and the desired changes specified by the DTR.
+    The separated network is modeled as the DTR describes it. A load of type
+    \code{LoadAlphaBeta} with alpha = beta = 0, so that it depends neither on
+    voltage nor on frequency, is attached to the PDR bus, and the PDR bus is
+    connected through a line of reactance $b$ to an inertial grid that stands
+    for the fictitious synchronous condenser: it holds a constant voltage, has
+    an inertia constant of 1 s on $P_{max\_unite}$, no damping and practically
+    no governor response, and carries no power before the event. The load
+    starts at the initial operating point of the plant and, at the event, its
+    consumption steps by 10\% of $P_{max\_unite}$ in active power and by 4\%
+    of $P_{max\_unite}$ in reactive power.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
@@ -69,8 +69,7 @@
         the PDR bus.
         \item Reactive power supplied at the connection point.
         \item Active power supplied at the connection point.
-        \item Network frequency: \code{generator\_omegaRefPu} (of the
-        fictitious Synchronous Condenser unit).
+        \item Network frequency, as the plant-level control measures it.
         \item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.
         All PPM units are plotted on the same graph.
     \end{itemize}
