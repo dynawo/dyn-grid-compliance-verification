@@ -95,7 +95,6 @@ class DynawoCurves(ProducerCurves):
         self._job_name = job_name
         self._thr_ss_tol = thr_ss_tol
 
-        self._f_nom = config.get_float("Dynawo", "f_nom", 50.0)
         self._simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
         self._simulation_stop = config.get_float("Dynawo", "simulation_stop", 100.0)
         self._simulation_precision = config.get_float("Dynawo", "simulation_precision", 1e-6)
@@ -108,7 +107,7 @@ class DynawoCurves(ProducerCurves):
         self._voltage_dip = None
 
         # Collaborators (created once; ModelSetup state is refreshed per OC)
-        self._setup = ModelSetup(self, pcs_name, self.get_snref(), self._f_nom)
+        self._setup = ModelSetup(self, pcs_name, self.get_snref())
         self._bisection = self._build_bisection_engine()
 
     # ------------------------------------------------------------------
@@ -150,7 +149,6 @@ class DynawoCurves(ProducerCurves):
             launcher_dwo=self._launcher_dwo,
             producer=self.get_producer(),
             s_nref=self.get_snref(),
-            f_nom=self._f_nom,
             sim_time=self._sim_time,
             thr_ss_tol=self._thr_ss_tol,
             curves_dict=self._setup.curves_dict,
@@ -199,7 +197,6 @@ class DynawoCurves(ProducerCurves):
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
             s_nref=self.get_snref(),
-            f_nom=self._f_nom,
         )
 
     def __execute_simulation(

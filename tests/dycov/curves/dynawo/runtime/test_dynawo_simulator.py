@@ -25,7 +25,6 @@ RUN = DynawoRunInputs(
     generators=[],
     s_nom=100.0,
     s_nref=100.0,
-    f_nom=50.0,
 )
 
 
