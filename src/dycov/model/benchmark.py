@@ -515,6 +515,7 @@ class Benchmark:
                 name="fig_W",
                 variables=[{"type": "generator", "variable": "RotorSpeedPu"}],
                 ylabel=r"$\omega$ (Hz)",
+                in_hz=True,
             )
         )
 
@@ -537,6 +538,7 @@ class Benchmark:
                 variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
                 ylabel=r"$\omega$ (Hz)",
                 frequency_band=frequency_band,
+                in_hz=True,
             )
         )
 
