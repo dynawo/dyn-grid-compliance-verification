@@ -73,8 +73,8 @@
     <par type="BOOL" name="WTG4A_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4A_VCompFlag" value="false"/>
     <par type="DOUBLE" name="WTG4A_DbdPu" value="0.0001"/>
-    <par type="DOUBLE" name="WTG4A_DDn" value="100"/>
-    <par type="DOUBLE" name="WTG4A_DUp" value="100"/>
+    <par type="DOUBLE" name="WTG4A_DDn" value="20"/>
+    <par type="DOUBLE" name="WTG4A_DUp" value="20"/>
     <par type="DOUBLE" name="WTG4A_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="WTG4A_EMinPu" value="-0.5"/>
     <par type="DOUBLE" name="WTG4A_FDbd1Pu" value="0.001"/>
@@ -83,9 +83,9 @@
     <par type="DOUBLE" name="WTG4A_FEMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG4A_Kc" value="0.3"/>
     <par type="DOUBLE" name="WTG4A_Ki" value="1.5"/>
-    <par type="DOUBLE" name="WTG4A_Kig" value="2.36"/>
+    <par type="DOUBLE" name="WTG4A_Kig" value="4"/>
     <par type="DOUBLE" name="WTG4A_Kp" value="0.1"/>
-    <par type="DOUBLE" name="WTG4A_Kpg" value="0.05"/>
+    <par type="DOUBLE" name="WTG4A_Kpg" value="1"/>
     <par type="DOUBLE" name="WTG4A_tFilterPC" value="0.04"/>
     <par type="DOUBLE" name="WTG4A_tFt" value="1e-5"/>
     <par type="DOUBLE" name="WTG4A_tFv" value="0.1"/>
@@ -186,8 +186,8 @@
     <par type="BOOL" name="WTG4B_FreqFlag" value="true"/>
     <par type="BOOL" name="WTG4B_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4B_VCompFlag" value="false"/>
-    <par type="DOUBLE" name="WTG4B_DDn" value="100"/>
-    <par type="DOUBLE" name="WTG4B_DUp" value="100"/>
+    <par type="DOUBLE" name="WTG4B_DDn" value="20"/>
+    <par type="DOUBLE" name="WTG4B_DUp" value="20"/>
     <par type="DOUBLE" name="WTG4B_DbdPu" value="0.0001"/>
     <par type="DOUBLE" name="WTG4B_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="WTG4B_EMinPu" value="-0.5"/>
@@ -197,9 +197,9 @@
     <par type="DOUBLE" name="WTG4B_FEMinPu" value="-999"/>
     <par type="DOUBLE" name="WTG4B_Kc" value="0.3"/>
     <par type="DOUBLE" name="WTG4B_Ki" value="1.5"/>
-    <par type="DOUBLE" name="WTG4B_Kig" value="2.36"/>
+    <par type="DOUBLE" name="WTG4B_Kig" value="4"/>
     <par type="DOUBLE" name="WTG4B_Kp" value="0.1"/>
-    <par type="DOUBLE" name="WTG4B_Kpg" value="0.05"/>
+    <par type="DOUBLE" name="WTG4B_Kpg" value="1"/>
     <par type="DOUBLE" name="WTG4B_PMaxREECPu" value="1"/>
     <par type="DOUBLE" name="WTG4B_PMinREECPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_QMaxREECPu" value="0.8"/>
