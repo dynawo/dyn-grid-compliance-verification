@@ -14,11 +14,11 @@
   <set id="PRef">
     <par type="DOUBLE" name="step_Height" value="{{step_event_PPu}}"/>
     <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
-    <par type="DOUBLE" name="step_Value0" value="0.8"/>
+    <par type="DOUBLE" name="step_Value0" value="{{pdr_P}}"/>
   </set>
   <set id="QRef">
     <par type="DOUBLE" name="step_Height" value="{{step_event_QPu}}"/>
     <par type="DOUBLE" name="step_tStep" value="{{event_start}}"/>
-    <par type="DOUBLE" name="step_Value0" value="0"/>
+    <par type="DOUBLE" name="step_Value0" value="{{pdr_Q}}"/>
   </set>
 </parametersSet>
