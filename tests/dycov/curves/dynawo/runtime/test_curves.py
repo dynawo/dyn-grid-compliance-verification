@@ -102,7 +102,7 @@ def _injector_terminal_curves(voltage_request: dict, voltage_columns: dict) -> d
 
 def test_create_curves_raises_on_a_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
-        create_curves(_PDR_TRANSLATIONS, tmp_path / "missing.csv", [], 1.0, 1.0, 50.0)
+        create_curves(_PDR_TRANSLATIONS, tmp_path / "missing.csv", [], 1.0, 1.0)
 
 
 def test_create_curves_raises_on_a_file_without_time(recorded_warnings, tmp_path):
@@ -110,7 +110,7 @@ def test_create_curves_raises_on_a_file_without_time(recorded_warnings, tmp_path
     malformed_file.write_text("not,a,valid,csv\n1,2,3\n")
 
     with pytest.raises(KeyError, match="time"):
-        create_curves(_PDR_TRANSLATIONS, malformed_file, [], 1.0, 1.0, 50.0)
+        create_curves(_PDR_TRANSLATIONS, malformed_file, [], 1.0, 1.0)
 
 
 def test_create_curves_divides_the_pdr_powers_by_the_pdr_voltage(monkeypatch, tmp_path):
@@ -125,7 +125,7 @@ def test_create_curves_divides_the_pdr_powers_by_the_pdr_voltage(monkeypatch, tm
     )
     monkeypatch.setattr(curves_module, "translate_curves", lambda *args: translated)
 
-    result = create_curves({}, input_file, [], 100.0, 100.0, 50.0)
+    result = create_curves({}, input_file, [], 100.0, 100.0)
 
     assert result["time"].tolist() == [0.0, 1.0, 2.0]
     assert result["BusPDR_BUS_ActiveCurrent"].tolist() == pytest.approx([0.5, 1.0, 0.5])
@@ -136,9 +136,18 @@ def test_convert_columns_emits_the_amplitude_of_a_complex_curve():
     df_curves = pd.DataFrame({"SomeComplex": np.array([3 + 4j, 5 + 12j], dtype=np.complex128)})
     curves_dict = {}
 
-    convert_columns(df_curves, curves_dict, 50.0)
+    convert_columns(df_curves, curves_dict)
 
     assert curves_dict["SomeComplex"] == pytest.approx([5.0, 13.0])
+
+
+def test_convert_columns_keeps_the_frequency_in_per_unit():
+    df_curves = pd.DataFrame({"Wind_Turbine_GEN_NetworkFrequencyPu": [1.0, 0.99]})
+    curves_dict = {}
+
+    convert_columns(df_curves, curves_dict)
+
+    assert curves_dict["Wind_Turbine_GEN_NetworkFrequencyPu"] == [1.0, 0.99]
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +454,7 @@ def test_create_curves_reports_the_requests_dynawo_did_not_serve(
         curves_module, "build_output_curves", lambda *args, **kwargs: pd.DataFrame()
     )
 
-    create_curves(variable_translations, input_file, [], 100.0, 100.0, 50.0)
+    create_curves(variable_translations, input_file, [], 100.0, 100.0)
 
     assert recorded_warnings == [
         "Dynawo did not provide the requested curves: "
