@@ -27,6 +27,7 @@ from dycov.report.figure_decorations import (
     draw_exclusion_windows,
     draw_mxe,
     draw_response_characteristics,
+    drawn_scale,
 )
 from dycov.report.figure_renderer import MatplotlibRenderer
 from dycov.report.types import FigureDescription
@@ -52,6 +53,14 @@ def _add_curve2plot(
                 "style": curve_style.style,
             }
         )
+
+
+def _scaled(plot_curves: list | None, scale: float) -> list | None:
+    if plot_curves is None or scale == 1.0:
+        return plot_curves
+    return [
+        {**curve, "curve": [value * scale for value in curve["curve"]]} for curve in plot_curves
+    ]
 
 
 def _get_xrange(
@@ -348,8 +357,11 @@ def create_plot(
     zone: int
         Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
     """
-    ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
     last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
+    scale = drawn_scale(figure_description)
+    curves = _scaled(curves, scale)
+    curves_reference = _scaled(curves_reference, scale)
+    ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
 
     variable_names = figure_description.variables
     unit = figure_description.ylabel
@@ -445,7 +457,7 @@ def _plot_curve(
     ymin, ymax = draw_additional_curves(
         renderer, figure_description, time, last_val, results, ymin, ymax
     )
-    draw_response_characteristics(renderer, curve_name, results)
+    draw_response_characteristics(renderer, curve_name, results, drawn_scale(figure_description))
     draw_exclusion_windows(renderer, results)
     if figure_description.draws_one_magnitude():
         draw_mxe(renderer, curve_name, results, zone)

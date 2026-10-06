@@ -96,8 +96,10 @@ because the fiche fixes no test and a record is what makes one exist.
 
 ## Curve post-processing (`runtime/_curves.py`)
 
-`create_curves(variable_translations, input_file, generators, s_nom, s_nref, f_nom)`: reads `;`-separated
+`create_curves(variable_translations, input_file, generators, s_nom, s_nref)`: reads `;`-separated
 `curves.csv` (`time` first col), combines complex `_re`/`_im` pairs, applies sign conventions + unit scaling.
+Frequencies stay in pu of `f_nom`, the unit producer curves arrive in and the checks (`freq_1`, the
+I16 ramp) are written in; only a figure declared `in_hz` (`fig_W`, `fig_WRef`) draws them in Hz.
 Core PCC signals come from the `Measurements` pseudo-model columns (`Measurements_BUS_*`).
 Dynawo drops a request for a variable its model does not have without failing, so
 `report_unserved_requests` warns for every `.crv` request absent from `curves.csv`, naming the tool

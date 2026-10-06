@@ -156,6 +156,20 @@ def test_internal_node1_power_is_drawn_in_power_units_of_snom(monkeypatch):
     assert ylabels == ["P (pu base Snom)", "Q (pu base Snom)"]
 
 
+# ---------------------------------------------------------------------------
+# Frequency
+# ---------------------------------------------------------------------------
+
+
+def test_frequency_figures_are_drawn_in_hz(monkeypatch):
+    report_curves = {"fig_W": [_PCS_BENCHMARK], "fig_WRef": [_PCS_BENCHMARK]}
+    bm = _make_benchmark(monkeypatch, DummyProducer(), report_curves)
+
+    drawn = {figure.name: (figure.ylabel, figure.in_hz) for figure in bm.get_figures_description()}
+
+    assert drawn == {"fig_W": (r"$\omega$ (Hz)", True), "fig_WRef": (r"$\omega$ (Hz)", True)}
+
+
 def test_figures_read_the_voltages_then_the_powers_then_the_currents(monkeypatch):
     """#553: the power at InternalNode1 sits under the controlled power it is checked against,
     and the figure of the currents with the currents it draws, as the PDF lays them out."""
