@@ -27,6 +27,7 @@ from dycov.report.figure_decorations import (
     draw_mxe,
     draw_reference_curve,
     draw_response_characteristics,
+    drawn_scale,
 )
 from dycov.report.figure_renderer import PlotlyRenderer
 from dycov.report.types import FigureDescription
@@ -92,6 +93,7 @@ def _plotly_figures(
     zone: int = 0,
 ):
     renderer = PlotlyRenderer(fig)
+    scale = drawn_scale(figure_description)
     is_iq_curve = "ReactiveCurrentInjTerminal" in curve_name
     if is_iq_curve or not _has_iq_curve(figure_description.variables):
         last_val = (
@@ -106,7 +108,7 @@ def _plotly_figures(
             ymin=0.0,
             ymax=0.0,
         )
-    draw_response_characteristics(renderer, curve_name, results)
+    draw_response_characteristics(renderer, curve_name, results, scale)
     if figure_description.draws_one_magnitude():
         draw_mxe(renderer, curve_name, results, zone)
 
@@ -115,12 +117,12 @@ def _plotly_figures(
     label = build_curve_label(curve_name, "calculated", show_equipment, zone)
     ref_label = build_curve_label(curve_name, "reference", show_equipment, zone)
 
-    draw_reference_curve(renderer, curve_name, reference_curves, ref_label)
+    draw_reference_curve(renderer, curve_name, reference_curves, ref_label, scale)
 
     fig.add_traces(
         go.Scatter(
             x=calculated_curves["time"],
-            y=calculated_curves[curve_name],
+            y=calculated_curves[curve_name] * scale,
             mode="lines",
             name=label,
             line_color=curve_style.color,
