@@ -62,7 +62,8 @@ class FigureDescription:
 
     Every figure goes to the HTML report; ``in_pdf`` says whether it also goes to the PDF.
     ``setpoint`` is the setpoint that drives the magnitude the figure draws, which a test that
-    steps it draws over that magnitude.
+    steps it draws over that magnitude. ``in_hz`` says the figure draws a frequency, which the
+    tool keeps in pu of f_nom, in Hz.
     """
 
     name: str
@@ -74,6 +75,7 @@ class FigureDescription:
     event_markers: list[EventMarker] = field(default_factory=list)
     in_pdf: bool = True
     setpoint: str | None = None
+    in_hz: bool = False
 
     def draws_one_magnitude(self) -> bool:
         """Whether the figure draws a single magnitude, the setpoint that drives it aside. Only

@@ -19,16 +19,6 @@ import pandas as pd
 from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
 from dycov.logging import dycov_logging
 
-_FREQUENCY_PATTERNS = [
-    r".*NetworkFrequencyPu$",
-    r".*RotorSpeedPu$",
-    r".*NetworkFrequencyReference$",
-]
-
-
-def _is_frequency_column(column_name: str) -> bool:
-    return any(re.match(pattern, column_name) for pattern in _FREQUENCY_PATTERNS)
-
 
 def _get_modulus(complex_list: list) -> list:
     return np.abs(complex_list).tolist()
@@ -279,9 +269,8 @@ def translate_curves(
     return pd.DataFrame(curves_translation)
 
 
-def convert_columns(df_curves: pd.DataFrame, curves_dict: dict, f_nom: float) -> None:
-    """Convert specific columns in the curves DataFrame to the appropriate units and store them in
-    the curves dictionary.
+def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
+    """Store the translated curves in the curves dictionary, a complex curve as its modulus.
 
     Parameters
     ----------
@@ -291,16 +280,12 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict, f_nom: float) ->
     curves_dict : dict
         A dictionary to store the converted curve data. The function will add entries to this
         dictionary for the converted columns.
-    f_nom : float
-        The nominal frequency, used to convert frequency-related columns to the appropriate units.
 
     """
     for col in df_curves.columns:
         if "_TE_" in col or col == "time":
             continue
-        if _is_frequency_column(col):
-            curves_dict[col] = (df_curves[col].astype(float) * f_nom).tolist()
-        elif pd.api.types.is_complex_dtype(df_curves[col]):
+        if pd.api.types.is_complex_dtype(df_curves[col]):
             curves_dict[col] = _get_modulus(df_curves[col].tolist())
         else:
             curves_dict[col] = df_curves[col].tolist()
@@ -539,7 +524,6 @@ def build_output_curves(
     generators: list,
     s_nom: float,
     s_nref: float,
-    f_nom: float,
 ) -> pd.DataFrame:
     """Build the output curves DataFrame by calculating the necessary curves based on the
     translated curves, the original imported curves, and the generator configurations, applying the
@@ -562,8 +546,6 @@ def build_output_curves(
         The nominal apparent power, used for base conversion of the power curves.
     s_nref : float
         The reference apparent power, used for base conversion of the power curves.
-        f_nom : float
-        The nominal frequency, used to convert frequency-related columns to the appropriate units.
 
     Returns
     -------
@@ -607,7 +589,7 @@ def build_output_curves(
     _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)
     _get_tso_load_curves(s_nref, s_nom, df_curves, curves_dict)
-    convert_columns(df_curves, curves_dict, f_nom)
+    convert_columns(df_curves, curves_dict)
 
     return pd.DataFrame(curves_dict)
 
@@ -618,7 +600,6 @@ def create_curves(
     generators: list,
     s_nom: float,
     s_nref: float,
-    f_nom: float,
 ) -> pd.DataFrame:
     """Create the final curves DataFrame by loading the raw curves, translating them, and building
     the output curves with all necessary calculations and conversions applied.
@@ -640,8 +621,6 @@ def create_curves(
         The nominal apparent power, used for base conversion of the power curves.
     s_nref : float
         The reference apparent power, used for base conversion of the power curves.
-    f_nom : float
-        The nominal frequency, used to convert frequency-related columns to the appropriate units.
 
     Returns
     -------
@@ -653,4 +632,4 @@ def create_curves(
     df_curves_imported = load_raw_curves(input_file)
     report_unserved_requests(variable_translations, df_curves_imported)
     df_curves = translate_curves(variable_translations, df_curves_imported)
-    return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref, f_nom)
+    return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref)
