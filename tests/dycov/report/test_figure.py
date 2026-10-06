@@ -416,6 +416,74 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
     ]
 
 
+# ---------------------------------------------------------------------------
+# Frequency drawn in Hz
+# ---------------------------------------------------------------------------
+
+
+def _frequency_figure() -> FigureDescription:
+    return FigureDescription(
+        name="fig_WRef",
+        variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+        ylabel=r"$\omega$ (Hz)",
+        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        in_hz=True,
+    )
+
+
+def _frequency_curve(values: list) -> dict:
+    return {"name": "WT_GEN_NetworkFrequencyPu", "curve": values, "color": "#4c72b0", "style": "-"}
+
+
+def test_create_plot_draws_the_frequency_and_its_reference_in_hz(monkeypatch, tmp_path):
+    drawn = {}
+    monkeypatch.setattr(
+        figure,
+        "_save_plot",
+        lambda fig, ax, time, curves, time_reference, curves_reference, *args: drawn.update(
+            curves=curves, reference=curves_reference
+        ),
+    )
+
+    create_plot(
+        [0, 1],
+        _frequency_figure(),
+        [_frequency_curve([1.0, 0.98])],
+        [0, 1],
+        [_frequency_curve([1.0, 0.99])],
+        {"min": 0, "max": 1},
+        tmp_path / "plot.pdf",
+        {},
+    )
+
+    assert [curve["curve"] for curve in drawn["curves"]] == [pytest.approx([50.0, 49.0])]
+    assert [curve["curve"] for curve in drawn["reference"]] == [pytest.approx([50.0, 49.5])]
+
+
+def test_draw_additional_curves_draws_the_frequency_band_of_a_figure_in_hz_in_hz(renderer):
+    draw_additional_curves(renderer, _frequency_figure(), [0, 1], 1.0, {}, None, None)
+
+    assert renderer.marks == [("hline", pytest.approx(51.0)), ("hline", pytest.approx(49.0))]
+
+
+def test_draw_response_characteristics_marks_the_settling_of_a_figure_in_hz_in_hz(renderer):
+    results = {
+        "calc_settling_tube": {"WT_GEN_NetworkFrequencyPu": (1.0099, 1.0101)},
+        "calc_settling_time": 0.37,
+        "sim_t_event_start": 20.0,
+        "calc_ss_value": 1.01,
+    }
+
+    draw_response_characteristics(renderer, "WT_GEN_NetworkFrequencyPu", results, 50.0)
+
+    assert renderer.marks == [
+        ("hrect", pytest.approx((50.495, 50.505))),
+        ("vline", pytest.approx(20.37)),
+        ("scatter", pytest.approx((20.37, 50.5))),
+        ("annotation", "20.3700s"),
+    ]
+
+
 def test_get_xrange_aggregates_curve_ranges(monkeypatch):
     curve_ranges = iter([(1, 3), (0, 2), (0.5, 4)])
     monkeypatch.setattr(figure, "_get_xrange_for_curve", lambda *args: next(curve_ranges))

@@ -38,7 +38,6 @@ SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curv
 
 _CONFIG_VALUES = {
     ("Dynawo", "solver_lib"): "dynawo_SolverIDA",
-    ("Dynawo", "f_nom"): 50.0,
     ("Dynawo", "s_nref"): 100.0,
     ("Dynawo", "simulation_start"): 0.0,
     ("Dynawo", "simulation_stop"): 100.0,
@@ -410,7 +409,6 @@ class TestObtainSimulatedCurve:
             curves._pcs_path = Path("/pcs")
             curves._job_name = "job1"
             curves._thr_ss_tol = 5.0
-            curves._f_nom = 50.0
             curves._s_nref = 100.0
             curves._sim_time = 30.0
             curves._simulation_start = 0.0
