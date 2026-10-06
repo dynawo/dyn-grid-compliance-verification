@@ -93,7 +93,7 @@ def _make_owner(producer: MagicMock | None = None) -> MagicMock:
 def _make_setup(owner: MagicMock | None = None, **kwargs) -> ModelSetup:
     if owner is None:
         owner = _make_owner()
-    defaults = dict(pcs_name="PCS1", s_nref=100.0, f_nom=50.0)
+    defaults = dict(pcs_name="PCS1", s_nref=100.0)
     defaults.update(kwargs)
     return ModelSetup(owner, **defaults)
 

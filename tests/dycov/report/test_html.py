@@ -113,6 +113,32 @@ def test_plotly_figures_with_additional_traces():
     assert "plotly" in html_out.lower()
 
 
+def test_plotly_figures_draw_the_frequency_and_its_reference_in_hz():
+    figure_description = FigureDescription(
+        name="fig_WRef",
+        variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+        ylabel=r"$\omega$ (Hz)",
+        in_hz=True,
+    )
+    calculated_curves = pd.DataFrame({"time": [0, 1], "WT_GEN_NetworkFrequencyPu": [1.0, 0.98]})
+    reference_curves = pd.DataFrame({"time": [0, 1], "WT_GEN_NetworkFrequencyPu": [1.0, 0.99]})
+    fig = go.Figure()
+
+    html._plotly_figures(
+        fig,
+        "WT_GEN_NetworkFrequencyPu",
+        figure_description,
+        calculated_curves,
+        reference_curves,
+        {},
+    )
+
+    assert [list(trace.y) for trace in fig.data] == [
+        pytest.approx([50.0, 49.5]),
+        pytest.approx([50.0, 49.0]),
+    ]
+
+
 def test_create_html_success(html_templates, tmp_path):
     html_templates.write_text("{{ figures|length }} figures rendered")
     output_path = _make_output_path(tmp_path)
