@@ -22,7 +22,6 @@ MODEL_EXAMPLES_WECC=(
     "Photovoltaics/WECCVoltageSource4"
     "Wind/WECC31"
     "Wind/WECC32"
-    "Wind/WECC4"
     "Wind/WECC4A"
     "Wind/WECC4B"
 )
