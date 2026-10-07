@@ -141,6 +141,18 @@ def test_complete_file_populates_variables_dict_correctly(
     assert captured["event_step_value"] == event_params["step_value"]
 
 
+@pytest.mark.parametrize("pmax", [40.0, -40.0])
+def test_complete_file_rates_the_condenser_at_the_magnitude_of_pmax(
+    tmp_path, tso_gen, event_params, pmax
+):
+    write_template_file(tmp_path, "TSOModel.par", ["inertialGrid_SNom"])
+    par = ParFile(DummyProducerCurves(), "BM", "OC")
+
+    par.complete_file(tmp_path, 0.01, 0.02, tso_gen, event_params, 225.0, pmax)
+
+    assert "inertialGrid_SNom = 40.0" in read_generated_file(tmp_path / "TSOModel.par")
+
+
 def test_complete_file_calls_complete_parameters(working_dir_with_template, tso_gen, event_params):
     par = ParFile(DummyProducerCurves(), "BM", "OC")
     called = {"flag": False}
