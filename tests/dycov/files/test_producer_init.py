@@ -13,8 +13,10 @@ import pytest
 from lxml import etree
 
 from dycov.files import par_access, producer_init
+from dycov.model.parameters import GenParams, PdrParams, Terminal
 
 _NS = "http://www.rte-france.com/dynawo"
+_IEC_PLANT = "IECWPP4ACurrentSource2020"
 
 
 def _make_root(ns=_NS):
@@ -206,8 +208,6 @@ def test_adjust_producer_init_without_group_xfmr(tmp_path, monkeypatch):
     list the generator must not be skipped (the transformer step is simply not
     applied).
     """
-    from dycov.model.parameters import GenParams, Terminal
-
     ns = "http://www.rte-france.com/dynawo"
     par_root = etree.Element(f"{{{ns}}}root", nsmap={None: ns})
     producer_par = tmp_path / "Producer.par"
@@ -256,3 +256,77 @@ def test_adjust_producer_init_without_group_xfmr(tmp_path, monkeypatch):
     assert is_test_applicable is True
     assert calls["gen"] == 1
     assert calls["xfmr"] == 0
+
+
+def _iec_plant(par_root, turbine_mode, plant_mode):
+    _add_parset(par_root, "parGen", {"WPP_MqG": turbine_mode, "WPP_MwpqMode": plant_mode})
+    return GenParams(
+        id="Wind_Turbine",
+        lib=_IEC_PLANT,
+        par_id="parGen",
+        terminals=(Terminal(connected_equipment=None),),
+        s_nom=90,
+        i_max=None,
+        p=0.75,
+        q=0.0,
+        voltage_droop=0.3,
+        use_voltage_droop=False,
+    )
+
+
+def _adjust_iec_plant(par_root, generator, generator_control_mode, force_voltage_droop):
+    pdr = PdrParams(u=1.0, u_phase=0.0, s=0.75, p=0.75, q=0.0)
+    return producer_init._adjust_generator(
+        par_root,
+        generator,
+        0.75,
+        0.0,
+        1.0,
+        0.0,
+        pdr,
+        generator_control_mode,
+        force_voltage_droop,
+        3,
+    )
+
+
+def _control_mode(par_root):
+    parset = par_root.xpath("//ns:set[@id='parGen']", namespaces={"ns": _NS})[0]
+    return {
+        par.get("name"): par.get("value")
+        for par in parset
+        if par.get("name") in ("WPP_MqG", "WPP_MwpqMode")
+    }
+
+
+@pytest.mark.parametrize(
+    "turbine_mode, plant_mode, droop_in_reference",
+    [
+        ("0", "2", False),
+        ("0", "3", True),
+        ("1", "2", False),
+        ("1", "3", True),
+        ("2", "2", False),
+        ("2", "3", True),
+    ],
+)
+def test_voltage_setpoint_test_keeps_the_iec_control_mode(
+    turbine_mode, plant_mode, droop_in_reference
+):
+    par_root = _make_root()
+    generator = _iec_plant(par_root, turbine_mode, plant_mode)
+
+    is_valid = _adjust_iec_plant(par_root, generator, "USetpoint", False)
+
+    assert is_valid is True
+    assert _control_mode(par_root) == {"WPP_MqG": turbine_mode, "WPP_MwpqMode": plant_mode}
+    assert generator.use_voltage_droop is droop_in_reference
+
+
+def test_forced_voltage_droop_replaces_an_iec_mode_without_droop():
+    par_root = _make_root()
+    generator = _iec_plant(par_root, "1", "0")
+
+    _adjust_iec_plant(par_root, generator, "Others", True)
+
+    assert _control_mode(par_root) == {"WPP_MqG": "0", "WPP_MwpqMode": "3"}
