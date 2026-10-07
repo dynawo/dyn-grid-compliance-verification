@@ -50,4 +50,4 @@ def save_curve(curves: pd.DataFrame, path: Path, precision: int = TIME_PRECISION
         curves_to_save = curves_to_save[cols]
 
     # Save to CSV without altering the original DataFrame
-    curves_to_save.to_csv(path, sep=";", float_format="%.3e", index=False)
+    curves_to_save.to_csv(path, sep=";", float_format="%.9g", index=False)

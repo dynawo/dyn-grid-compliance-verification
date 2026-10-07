@@ -212,7 +212,7 @@ class CurvesManager:
             cols = ["time"] + [col for col in curves_to_save.columns if col != "time"]
             curves_to_save = curves_to_save[cols]
 
-        curves_to_save.to_csv(path, sep=";", float_format="%.3e", index=False)
+        curves_to_save.to_csv(path, sep=";", float_format="%.9g", index=False)
 
     def __get_signal_processing_windows(self, curve: str, windows: str) -> tuple[float, float]:
         return self._windows[curve]["sigpro"][windows]

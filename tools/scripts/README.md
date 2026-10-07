@@ -87,7 +87,7 @@ Running with **no options** will:
 ### A) Validation — `dycov validate`
 
 *   **IEC Wind**: `IECA2015`, `IECA2020`, `IECA2020WithProtections`, `IECB2015`, `IECB2020`, `IECB2020WithProtections`
-*   **WECC Wind**: `WECC4A1`, `WECC4A2`, `WECC4B`, `WECC4`
+*   **WECC Wind**: `WECC31`, `WECC32`, `WECC4A`, `WECC4B` (`WECC4`, the multi-generator example, is not usable yet and is left out)
 *   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`, `WECCVoltageSource3`, `WECCVoltageSource4`
 *   **WECC BESS**: `WECC`
 *   Paths per model:

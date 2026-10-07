@@ -133,10 +133,3 @@ def test_wind_wecc4b_model_sanity():
         MODEL / "Wind" / "WECC4B" / "Dynawo",
         MODEL / "Wind" / "WECC4B" / "ReferenceCurves",
     )
-
-
-def test_wind_wecc4_model_sanity():
-    run_model_sanity_check(
-        MODEL / "Wind" / "WECC4" / "Dynawo",
-        MODEL / "Wind" / "WECC4" / "ReferenceCurves",
-    )
