@@ -88,7 +88,8 @@ class ParFile(FileVariables):
         unom: float
             The nominal voltage value for the generator.
         pmax: float
-            The maximum power value for the plant.
+            The maximum active power of the plant in MW, negative when it consumes; the
+            synchronous condenser of the islanding test is rated at its magnitude.
         """
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.par")
 
@@ -109,7 +110,7 @@ class ParFile(FileVariables):
         variables_dict["event_pre_value"] = event_params["pre_value"]
         variables_dict["event_step_value"] = event_params["step_value"]
 
-        variables_dict["inertialGrid_SNom"] = pmax
+        variables_dict["inertialGrid_SNom"] = abs(pmax)
 
         # Complete other parameters using the inherited method from FileVariables
         self.complete_parameters(variables_dict, event_params)
