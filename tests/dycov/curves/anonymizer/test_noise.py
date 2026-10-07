@@ -66,16 +66,14 @@ def test_no_noise_on_almost_flat_signal(tmp_dirs):
         encoding="utf-8",
     )
 
-    src_sig = df["signal1"].values
-
     anonymize(out, noisestd=0.2, frequency=10.0, curves_folder=curves)
 
-    out_sig = pd.read_csv(out / "almost_flat.csv", sep=";")["signal1"].values
+    result = pd.read_csv(out / "almost_flat.csv", sep=";")
 
-    assert np.std(out_sig) < 1e-6
-    assert np.ptp(out_sig) < 1e-5
-    assert abs(out_sig.mean() - src_sig.mean()) < 1e-6
-    assert len(out_sig) >= 10
+    np.testing.assert_allclose(
+        result["signal1"], np.interp(result["time"], t, signal), rtol=0.0, atol=1e-8
+    )
+    assert len(result) >= 10
 
 
 @pytest.fixture()
