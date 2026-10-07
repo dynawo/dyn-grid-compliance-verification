@@ -286,7 +286,7 @@ the list of available named configurations, following the naming convention
      - ``IECWPP_ReactivePowerControl_QReference``,
        ``IECWPP_Openloop_ReactivePowerControl_QReference``
    * - ``VoltageDroop_IEC_Zone3``
-     - ``IECWPP_Voltage_Droop``
+     - the six ``USetpoint_IEC_Zone3`` options
    * - ``USetpoint_IEC_Zone1``
      - ``IECWT_VoltageControl``
    * - ``QSetpoint_IEC_Zone1``
@@ -411,9 +411,6 @@ IEC plant configurations:
    * - Name
      - MqG
      - MwpqMode
-   * - ``IECWPP_Voltage_Droop``
-     - 0
-     - 3
    * - ``IECWPP_ReactivePowerControl_UQStatic``
      - 1
      - 2
