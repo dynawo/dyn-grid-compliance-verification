@@ -16,7 +16,7 @@ collaborators correctly, not from complex logic.  We therefore:
      with which arguments, and how the return value is assembled.
 """
 
-from collections import namedtuple
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -33,8 +33,6 @@ _MODULE = "dycov.curves.dynawo.orchestrator.curves"
 # ---------------------------------------------------------------------------
 # Minimal helpers
 # ---------------------------------------------------------------------------
-
-SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 
 _CONFIG_VALUES = {
     ("Dynawo", "solver_lib"): "dynawo_SolverIDA",
@@ -432,6 +430,7 @@ class TestObtainSimulatedCurve:
             time_exceeds=False,
             has_curves=sim_succeeds,
             curves=fake_curves_df,
+            sim_time=12.34,
         )
 
         mc_hiz = mc
@@ -569,6 +568,27 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             with pytest.raises(ValueError, match="Unknown magnitude 'Pnom'"):
                 curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_the_run_log_says_how_long_dynawo_ran(self, mc, mock_mvd, tmp_path, caplog):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_boolean.return_value = False
+        curves, _ms, _be, outcome, _ = self._prepare()
+        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with (
+            patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"),
+            caplog.at_level(logging.INFO, logger="DyCoV"),
+        ):
+            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+        assert "Dynawo ran in 12.3s" in [record.getMessage() for record in caplog.records]
 
     @patch(f"{_MODULE}.measure_voltage_dip", return_value=0.25)
     @patch(f"{_MODULE}.config")
@@ -884,6 +904,7 @@ class TestSimulateOutcomeAssembly:
         assert outcome.succeeded is True
         assert outcome.time_exceeds is False
         assert outcome.has_curves is False
+        assert outcome.sim_time == pytest.approx(10.0)
 
     def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
         curves, _, _ = _make_real_curves()

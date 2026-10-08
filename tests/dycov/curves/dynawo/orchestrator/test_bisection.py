@@ -6,7 +6,6 @@
 #
 import logging
 import math
-from collections import namedtuple
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -19,14 +18,13 @@ from dycov.curves.dynawo.orchestrator.bisection import (
     CCT_REL_TOL,
     BisectionEngine,
 )
+from dycov.curves.dynawo.orchestrator.curves import SimulateOutcome
 from dycov.curves.voltage_dip import VoltDipResult
 from dycov.model.parameters import SimulationError, SimulationOutcomeError
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
-
-SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 
 
 def _make_engine(**overrides) -> BisectionEngine:
@@ -55,12 +53,13 @@ def _succeed_outcome(curves: pd.DataFrame | None = None) -> SimulateOutcome:
         time_exceeds=False,
         has_curves=True,
         curves=curves if curves is not None else pd.DataFrame(),
+        sim_time=1.0,
     )
 
 
 def _fail_outcome() -> SimulateOutcome:
     return SimulateOutcome(
-        succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
+        succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame(), sim_time=1.0
     )
 
 
