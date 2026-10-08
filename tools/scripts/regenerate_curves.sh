@@ -146,7 +146,7 @@ def declared_tests(family: str, example: str) -> set:
     ones the example declares with its reference curves."""
     declared = set()
     descriptions = sorted((TEMPLATES / family).glob("[!.]*/PCSDescription.ini")) + sorted(
-        Path("examples/Model", example, "ReferenceCurves").glob("PCS_*/PCSDescription.ini")
+        Path("examples/Model", example, "ReferenceCurves").glob("*Description.ini")
     )
     for description in descriptions:
         pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))

@@ -308,6 +308,29 @@ def optional_number(zone_key: str, zone: dict, key: str) -> float | None:
     return zone_optional_number(zone, names.row(zone_key, key))
 
 
+def optional_value(zone_key: str, zone: dict, key: str) -> str | None:
+    """The value of a row that may be left empty, validated as a number but kept as written.
+
+    Parameters
+    ----------
+    zone_key: str
+        Zone the sheet describes, ``Zone1`` or ``Zone3``.
+    zone: dict
+        Rows of that sheet.
+    key: str
+        Concept the row stands for.
+
+    Returns
+    -------
+    str or None
+        The value as written, or None when the sheet has no such row or leaves it empty.
+    """
+    name = names.row(zone_key, key)
+    if zone_optional_number(zone, name) is None:
+        return None
+    return zone_text(zone, name)
+
+
 def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:
     """Parse a ``Zone1<x>`` / ``Zone3`` electrical table into ``{parameter name -> value}``.
 

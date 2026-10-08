@@ -64,6 +64,8 @@ recommend reading :ref:`get-started` first.
    :caption: User Guide
 
    usage/validations
+   usage/f16_description
+   usage/compliance_tests
    usage/inputs
    usage/understanding_reports
    usage/results
