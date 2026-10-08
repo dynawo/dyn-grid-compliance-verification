@@ -366,7 +366,7 @@ def test_draw_additional_curves_draws_every_band_and_marker(renderer):
         variables="BusPDR_BUS_ActivePower",
         ylabel="",
         tolerance_band=FinalValueBand(upper=10.0, lower=10.0, color="#55a868"),
-        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        frequency_bands=[FrequencyBand(upper=1.0, lower=1.0)],
         dynamic_band=DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs"),
         event_markers=[EventMarker(source_key="time_85U")],
     )
@@ -394,7 +394,7 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
         "calc_reaction_time": 1.0,
         "sim_t_event_start": 0.5,
         "calc_rise_target": {"BusPDR_BUS_ActivePower": 3.0},
-        "calc_rise_time": 2.0,
+        "calc_rise_time": 1.5,
         "calc_settling_tube": {"BusPDR_BUS_ActivePower": (1.5, 3.5)},
         "calc_settling_time": 3.0,
         "calc_ss_value": 2.5,
@@ -402,13 +402,14 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
 
     draw_response_characteristics(renderer, "BusPDR_BUS_ActivePower", results)
 
+    # The rise time runs from the reaction instant, so its mark sits at event + reaction + rise.
     assert renderer.marks == [
         ("hline", 2.0),
         ("vline", 1.5),
         ("hline", 3.0),
-        ("vline", 2.5),
-        ("scatter", (2.5, 3.0)),
-        ("annotation", "2.5000s"),
+        ("vline", 3.0),
+        ("scatter", (3.0, 3.0)),
+        ("annotation", "3.0000s"),
         ("hrect", (1.5, 3.5)),
         ("vline", 3.5),
         ("scatter", (3.5, 2.5)),
@@ -421,12 +422,12 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
 # ---------------------------------------------------------------------------
 
 
-def _frequency_figure() -> FigureDescription:
+def _frequency_figure(*deviations: float) -> FigureDescription:
     return FigureDescription(
         name="fig_WRef",
         variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
         ylabel=r"$\omega$ (Hz)",
-        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        frequency_bands=[FrequencyBand(upper=d, lower=d) for d in deviations or (1.0,)],
         in_hz=True,
     )
 
@@ -464,6 +465,17 @@ def test_draw_additional_curves_draws_the_frequency_band_of_a_figure_in_hz_in_hz
     draw_additional_curves(renderer, _frequency_figure(), [0, 1], 1.0, {}, None, None)
 
     assert renderer.marks == [("hline", pytest.approx(51.0)), ("hline", pytest.approx(49.0))]
+
+
+def test_draw_additional_curves_draws_every_frequency_band_of_a_figure(renderer):
+    draw_additional_curves(renderer, _frequency_figure(0.2, 0.25), [0, 1], 1.0, {}, None, None)
+
+    assert renderer.marks == [
+        ("hline", pytest.approx(50.2)),
+        ("hline", pytest.approx(49.8)),
+        ("hline", pytest.approx(50.25)),
+        ("hline", pytest.approx(49.75)),
+    ]
 
 
 def test_draw_response_characteristics_marks_the_settling_of_a_figure_in_hz_in_hz(renderer):

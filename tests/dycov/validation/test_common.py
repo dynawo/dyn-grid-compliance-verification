@@ -730,9 +730,69 @@ def test_get_reached_time_raises_on_length_mismatch():
 
 
 def test_get_overshoot_measures_the_peak_above_the_final_value():
-    result = common.get_overshoot([1.0, 2.0, 3.5, 2.5, 2.0])
+    time = [0, 1, 2, 3, 4]
+
+    result = common.get_overshoot(time, [1.0, 2.0, 3.5, 2.5, 2.0], sim_t_event_start=1)
 
     assert result == pytest.approx(1.5)
+
+
+def test_get_overshoot_ignores_the_samples_before_the_event():
+    """Issue #586: a sample before the event is not part of the response."""
+    time = [0, 1, 2, 3, 4]
+
+    result = common.get_overshoot(time, [2.0, 0.0, 0.0, 1.2, 1.0], sim_t_event_start=2)
+
+    assert result == pytest.approx(0.2)
+
+
+def test_get_overshoot_of_a_downward_step_is_its_undershoot():
+    """Issue #586: a step from 1.0 to 0.5 that dips 8 % of the step below its final value."""
+    time = [0, 1, 2, 3, 4]
+
+    result = common.get_overshoot(time, [1.0, 1.0, 0.5, 0.46, 0.5], sim_t_event_start=2)
+
+    assert result == pytest.approx(0.04)
+
+
+def test_get_overshoot_of_a_monotone_response_is_zero():
+    time = [0, 1, 2, 3]
+
+    result = common.get_overshoot(time, [0.0, 0.0, 0.5, 1.0], sim_t_event_start=1)
+
+    assert result == pytest.approx(0.0)
+
+
+def test_get_overshoot_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_overshoot([0, 1, 2], [1, 2], sim_t_event_start=1)
+
+
+# ---------------------------------------------------------------------------
+# Rise time
+# ---------------------------------------------------------------------------
+
+
+def _first_order_response(time: np.ndarray, start: float) -> list:
+    """A unit first-order response of 1 s time constant starting at a given instant."""
+    return list(np.where(time < start, 0.0, 1.0 - np.exp(-(time - start))))
+
+
+def test_get_rise_time_of_a_delayed_response_is_the_same():
+    """Issue #586: a pure delay moves the reaction time, not the rise time (CdC, annex 2)."""
+    time = np.linspace(0.0, 10.0, 1001)
+
+    rise_time, target = common.get_rise_time(
+        list(time), _first_order_response(time, 1.0), sim_t_event_start=1.0
+    )
+    delayed_rise_time, _ = common.get_rise_time(
+        list(time), _first_order_response(time, 1.3), sim_t_event_start=1.0
+    )
+
+    # From 10 % to 90 % of a first-order response takes ln(9) time constants.
+    assert rise_time == pytest.approx(2.2)
+    assert delayed_rise_time == pytest.approx(rise_time)
+    assert target == pytest.approx(0.9, abs=1e-3)
 
 
 # ---------------------------------------------------------------------------

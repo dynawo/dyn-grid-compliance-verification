@@ -161,7 +161,7 @@ class ModelSetup:
                 xpu_multiplier = float(parts[0])
                 line_xtype = parts[1]
             try:
-                line_xpu = float(line_xtype)
+                line_xpu = xpu_multiplier * float(line_xtype)
             except ValueError:
                 line_xpu = xpu_multiplier * generator_variables.calculate_line_xpu(
                     line_xtype,
@@ -488,13 +488,11 @@ class ModelSetup:
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         dycov_logging.get_logger("ModelSetup").debug(f"\tsim_t_event_start={start_time}")
 
-        if config.has_option(config_section, "fault_duration"):
-            fault_duration = config.get_float(config_section, "fault_duration", 0.0)
-        else:
-            generator_type = generator_variables.get_generator_type(producer.u_nom)
-            fault_duration = config.get_float(
-                config_section, f"fault_duration_{generator_type}", 0.0
-            )
+        generator_type = generator_variables.get_generator_type(producer.u_nom)
+        fault_duration_key = config.find_option(config_section, "fault_duration", generator_type)
+        fault_duration = 0.0
+        if fault_duration_key is not None:
+            fault_duration = config.get_float(config_section, fault_duration_key, 0.0)
         dycov_logging.get_logger("ModelSetup").debug(f"\tfault_duration={fault_duration}")
 
         step_value = 0.0

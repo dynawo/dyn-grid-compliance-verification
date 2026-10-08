@@ -23,12 +23,9 @@ from dycov.validation.checks import (
     calculate_errors,
     check_measurement,
     complete_setpoint_tracking,
+    is_error_within_threshold,
     save_measurement_errors,
 )
-
-
-def _check_value_by_threshold(mxre: float, threshold: float) -> bool:
-    return mxre < threshold
 
 
 def _get_column_name(
@@ -137,14 +134,12 @@ class ModelValidator(Validator):
             results["calc_reaction_target"] = {measurement_name: res_reaction_target}
 
         if compliance_list.contains_key(["rise_time"], self._validations):
-            res_rise_time, res_rise_target = common.get_reached_time(
-                0.9,
+            res_rise_time, res_rise_target = common.get_rise_time(
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
-            ref_rise_time, ref_rise_target = common.get_reached_time(
-                0.9,
+            ref_rise_time, ref_rise_target = common.get_rise_time(
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
@@ -197,10 +192,14 @@ class ModelValidator(Validator):
 
         if compliance_list.contains_key(["overshoot"], self._validations):
             res_overshoot = common.get_overshoot(
+                list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
+                start_event,
             )
             ref_overshoot = common.get_overshoot(
+                list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
+                start_event,
             )
             results["calc_overshoot"] = res_overshoot
             results["ref_overshoot"] = ref_overshoot
@@ -541,7 +540,7 @@ class ModelValidator(Validator):
             if "mae_voltage_1P" in compliance_values:
                 check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
                 check_results["ss_error_voltage_1P"] = compliance_values["ss_error_voltage_1P"]
-                check_results["mae_voltage_1P_check"] = _check_value_by_threshold(
+                check_results["mae_voltage_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_voltage_1P"], thr_final_ss_mae
                 )
                 check_results["mae_voltage_1P_stabilized"] = compliance_values[
@@ -564,7 +563,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_active_power_1P"] = compliance_values[
                     "ss_error_active_power_1P"
                 ]
-                check_results["mae_active_power_1P_check"] = _check_value_by_threshold(
+                check_results["mae_active_power_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_active_power_1P"], thr_final_ss_mae
                 )
                 check_results["mae_active_power_1P_stabilized"] = compliance_values[
@@ -586,7 +585,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_reactive_power_1P"] = compliance_values[
                     "ss_error_reactive_power_1P"
                 ]
-                check_results["mae_reactive_power_1P_check"] = _check_value_by_threshold(
+                check_results["mae_reactive_power_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_reactive_power_1P"], thr_final_ss_mae
                 )
                 check_results["mae_reactive_power_1P_stabilized"] = compliance_values[
@@ -609,7 +608,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_active_current_1P"] = compliance_values[
                     "ss_error_active_current_1P"
                 ]
-                check_results["mae_active_current_1P_check"] = _check_value_by_threshold(
+                check_results["mae_active_current_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_active_current_1P"], thr_final_ss_mae
                 )
                 check_results["mae_active_current_1P_stabilized"] = compliance_values[
@@ -633,7 +632,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_reactive_current_1P"] = compliance_values[
                     "ss_error_reactive_current_1P"
                 ]
-                check_results["mae_reactive_current_1P_check"] = _check_value_by_threshold(
+                check_results["mae_reactive_current_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
                 )
                 check_results["mae_reactive_current_1P_stabilized"] = compliance_values[

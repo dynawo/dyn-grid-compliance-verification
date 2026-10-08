@@ -710,6 +710,14 @@ def maximum_error_position(
     return time.iloc[pos], signal.iloc[pos], reference.iloc[pos]
 
 
+def _position_at(time: list, instant: float) -> int:
+    """The position of the first sample at or after an instant, the last one when none is."""
+    pos = 0
+    while instant > time[pos] and pos < len(time) - 1:
+        pos += 1
+    return pos
+
+
 def get_response_time(percent: float, time: list, curve: list, sim_t_event_start: float) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value
     for the first time.
@@ -733,9 +741,7 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    pos_t_event = 0
-    while sim_t_event_start > time[pos_t_event] and pos_t_event < len(time) - 1:
-        pos_t_event += 1
+    pos_t_event = _position_at(time, sim_t_event_start)
 
     # Cut list values
     time = time[pos_t_event:]
@@ -835,9 +841,7 @@ def get_reached_time(
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    pos_t_event = 0
-    while sim_t_event_start > time[pos_t_event] and pos_t_event < len(time) - 1:
-        pos_t_event += 1
+    pos_t_event = _position_at(time, sim_t_event_start)
 
     stable_value = curve[pos_t_event - 1]
 
@@ -869,21 +873,56 @@ def get_reached_time(
     return ret_val, objective_value
 
 
-def get_overshoot(curve: list) -> float:
-    """Gets the difference between the peak of the curve and the mean stability value
+def get_rise_time(time: list, curve: list, sim_t_event_start: float) -> tuple[float, float]:
+    """Gets the time the curve takes from 10 % to 90 % of its variation after the event.
 
     Parameters
     ----------
+    time: list
+        List of time instants that make up the curve
     curve: list
         List of values that make up the curve
+    sim_t_event_start: float
+        Instant of time when the event is triggered
 
     Returns
     -------
     float
-        Overshoot of the curve compared to the mean stability value
+        Time between the 10 % and the 90 % crossings
+    float
+        Target value of the 90 % crossing
     """
-    overshoot = max(curve) - curve[-1]
-    return overshoot
+    reaction_time, _ = get_reached_time(0.1, time, curve, sim_t_event_start)
+    reached_time, target = get_reached_time(0.9, time, curve, sim_t_event_start)
+    return reached_time - reaction_time, target
+
+
+def get_overshoot(time: list, curve: list, sim_t_event_start: float) -> float:
+    """Gets how far the curve goes beyond its final value, in the direction of the step, after
+    the event: the undershoot of a downward step is its overshoot.
+
+    Parameters
+    ----------
+    time: list
+        List of time instants that make up the curve
+    curve: list
+        List of values that make up the curve
+    sim_t_event_start: float
+        Instant of time when the event is triggered
+
+    Returns
+    -------
+    float
+        Overshoot of the curve compared to its final value, never negative
+    """
+    if len(time) != len(curve):
+        raise ValueError("curve values and time values have different length")
+
+    pos_t_event = _position_at(time, sim_t_event_start)
+    response = np.asarray(curve[pos_t_event:], dtype=float)
+    final_value = response[-1]
+    direction = -1.0 if final_value < curve[max(pos_t_event - 1, 0)] else 1.0
+    return float(max(direction * (response - final_value)))
 
 
 def get_value_error(

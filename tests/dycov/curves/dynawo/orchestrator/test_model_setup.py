@@ -6,11 +6,13 @@
 #
 import math
 from contextlib import ExitStack
+from functools import partial
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from dycov.configuration.cfg import Config
 from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
 from dycov.curves.dynawo.runtime.run_types import SolverParams
 from dycov.model.parameters import PdrParams, PimodelParams
@@ -295,6 +297,7 @@ class TestGetEventParameters:
         mock_config.get_value.side_effect = get_value
         mock_config.get_float.side_effect = get_float
         mock_config.has_option.side_effect = has_option
+        mock_config.find_option.side_effect = partial(Config.find_option, mock_config)
 
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.config")
@@ -466,10 +469,34 @@ class TestGetEventParameters:
         mock_config.get_value.return_value = "ActivePowerSetpointPu"
         mock_config.get_float.side_effect = get_float
         mock_config.has_option.side_effect = has_option
+        mock_config.find_option.side_effect = partial(Config.find_option, mock_config)
 
         result = setup._get_event_parameters(
             "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
         )
+        assert result["duration_time"] == pytest.approx(0.25)
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_fault_duration_of_the_voltage_level_wins_over_the_plain_key(
+        self, mock_config, mock_gv
+    ):
+        setup = _make_setup()
+        mock_gv.get_generator_type.return_value = "HTB1"
+        durations = {"fault_duration": 0.15, "fault_duration_HTB1": 0.25}
+
+        def get_float(section, key, default=None):
+            return durations.get(key, default or 0.0)
+
+        mock_config.get_value.return_value = "ActivePowerSetpointPu"
+        mock_config.get_float.side_effect = get_float
+        mock_config.has_option.side_effect = lambda section, key: key in durations
+        mock_config.find_option.side_effect = partial(Config.find_option, mock_config)
+
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
+
         assert result["duration_time"] == pytest.approx(0.25)
 
 
@@ -509,6 +536,16 @@ class TestGetLine:
         setup = _make_setup()
         _, xpu = setup._get_line("PCS1", "BM1", "OC1")
         assert xpu == pytest.approx(0.15)
+
+    @patch(f"{_MS}.config")
+    def test_line_xpu_multiplier_applies_to_a_number(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key == "line_XPu"
+        mock_config.get_value.return_value = "2*0.05"
+        setup = _make_setup()
+
+        _, xpu = setup._get_line("PCS1", "BM1", "OC1")
+
+        assert xpu == pytest.approx(0.1)
 
     @patch(f"{_MS}.config")
     def test_scr_sets_has_line_true(self, mock_config):
