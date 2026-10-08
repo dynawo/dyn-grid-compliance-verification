@@ -28,6 +28,10 @@ _LIMITS = {
 # Storage declares the consumption limit in both zones, and DyCoV rejects an INI without it. Each
 # zone takes its own row: the Zone1a one is per unit, the Zone3 one is the whole plant.
 _CONSUMPTION_KEY = "p_max_consumption_at_PDR"
+# The minimum powers are the starting points of the on-site tests of the DTR Fiche F16, which only
+# Zone3 runs, and a plant may leave them empty.
+_ZONE3_MINIMUMS = {"p_min_injection_at_PDR": "p_min_injection"}
+_ZONE3_CONSUMPTION_MINIMUMS = {"p_min_consumption_at_PDR": "p_min_consumption"}
 
 
 def write_ini(
@@ -69,6 +73,11 @@ def write_ini(
     if include_consumption:
         values["Zone1"][_CONSUMPTION_KEY] = z1_value("p_max_consumption")
         values["Zone3"][_CONSUMPTION_KEY] = z3_value("p_max_consumption")
+    minimums = {**_ZONE3_MINIMUMS, **(_ZONE3_CONSUMPTION_MINIMUMS if include_consumption else {})}
+    for key, row in minimums.items():
+        value = P.optional_value("Zone3", zone3, row)
+        if value is not None:
+            values["Zone3"][key] = value
 
     for zone, zone_topology, number in (("Zone1", "S", 1), ("Zone3", topology, 3)):
         write_producer_ini_file(

@@ -334,11 +334,16 @@ def check_zone_curves_and_references(
 
 
 def check_validation_model(
-    model_path: Path, reference_path: Path, z3_generators: int, z3_names: list, z1_names: list
+    model_path: Path,
+    reference_path: Path,
+    z3_generators: int,
+    z3_names: list,
+    z1_names: list,
+    zone1_required: bool = True,
 ) -> None:
     """
-    Checks if the Dynawo model files for Zone1 and Zone3 are present,
-    and if the number of Zone3 generators matches the number of Zone1 files.
+    Checks if the Dynawo model files for Zone3 are present, that Zone1 is delivered when a PCS
+    of zone 1 needs it, and if the number of Zone3 generators matches the number of Zone1 files.
     Also warns about missing reference curve files for Zone1 generators.
 
     Parameters
@@ -352,16 +357,26 @@ def check_validation_model(
     z3_names : list
         List of Zone3 generator names.
     z1_names : list
-        List of Zone1 generator names.
+        List of Zone1 generator names, empty when no Zone1 model is delivered.
+    zone1_required : bool
+        Whether a PCS of zone 1 is going to be validated.
 
     Raises
     ------
+    FileNotFoundError
+        If the Zone1 model is required and not delivered.
     ValueError
         If the number of Zone3 generators does not match the number of Zone1 files.
     """
     check_dynawo_model_files(model_path / "Zone3")
-    # Verify that the number of Zone3 generators matches the number of Zone1 files
-    if z3_generators != len(z1_names):
+    if zone1_required and not z1_names:
+        dycov_logging.get_logger("Sanity Checks").error(
+            "The Zone1 model files are not present: the PCS of zone 1 need them."
+        )
+        raise FileNotFoundError(
+            errno.ENOENT, os.strerror(errno.ENOENT), "Zone1 model files not found."
+        )
+    if z1_names and z3_generators != len(z1_names):
         dycov_logging.get_logger("Sanity Checks").error(
             "The number of Zone3 generators must match the number of Zone1 files."
         )
@@ -380,10 +395,13 @@ def check_validation_model(
             )
 
 
-def check_validation_curves(curves_path: Path, reference_path: Path) -> None:
+def check_validation_curves(
+    curves_path: Path, reference_path: Path, zone1_required: bool = True
+) -> None:
     """
-    Checks if the curves files are present for both Zone1 and Zone3 within the specified
-    curves path, and if corresponding reference files exist.
+    Checks if the curves files are present for Zone3, and for Zone1 when a PCS of zone 1 needs
+    them or they are delivered, within the specified curves path, and if corresponding reference
+    files exist.
 
     Parameters
     ----------
@@ -391,6 +409,9 @@ def check_validation_curves(curves_path: Path, reference_path: Path) -> None:
         Path to the curves files directory (containing Zone1 and Zone3 subdirectories).
     reference_path : Path
         Path to the reference curves directory.
+    zone1_required : bool
+        Whether a PCS of zone 1 is going to be validated.
     """
-    check_zone_curves_and_references("Zone1", curves_path, reference_path)
+    if zone1_required or (curves_path / "Zone1").is_dir():
+        check_zone_curves_and_references("Zone1", curves_path, reference_path)
     check_zone_curves_and_references("Zone3", curves_path, reference_path)

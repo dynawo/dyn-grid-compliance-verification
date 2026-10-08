@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dycov.validate.parameters import ValidationParameters
+from dycov.validate.parameters import ValidationParameters, _requires_zone1
 
 
 def _get_resources_path():
@@ -85,3 +85,17 @@ def test_without_model_nor_curves_is_not_valid():
 
     assert not params.is_valid()
     assert not params.is_complete()
+
+
+@pytest.mark.parametrize(
+    "selected_pcs, required",
+    [
+        ("", True),
+        (None, True),
+        ("PCS_RTE-I16z1", True),
+        ("PCS_RTE-I16z3", False),
+        ("PCS_RTE-F16z3", False),
+    ],
+)
+def test_zone1_is_required_unless_the_run_is_limited_to_a_pcs_of_zone_3(selected_pcs, required):
+    assert _requires_zone1(selected_pcs) is required

@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import configparser
 import copy
 from pathlib import Path
 from typing import Union
@@ -102,9 +103,9 @@ class Pcs:
         the case, where the tests a fiche leaves to the producer are declared with their records,
         or else the one in the configuration directory."""
         if not producer.is_gfm() and producer.has_reference_curves_path():
-            case_pcs_path = _pcs_description_in(producer.get_reference_path() / self._name)
-            if case_pcs_path is not None:
-                return case_pcs_path
+            delivered = _description_declaring(producer.get_reference_path(), self._name)
+            if delivered is not None:
+                return delivered
 
         return self.__get_pcs_path(producer, config.get_config_dir())
 
@@ -220,3 +221,15 @@ class Pcs:
 def _pcs_description_in(path: Path) -> Union[Path, None]:
     files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
     return files.get("pcsdescription")
+
+
+def _description_declaring(path: Path, pcs_name: str) -> Union[Path, None]:
+    """The ``<fiche>Description.ini`` delivered with the reference curves that declares the
+    benchmarks of the PCS, if any: such a file names the PCS it describes."""
+    for description in sorted(path.glob("*[dD]escription.[iI][nN][iI]")):
+        parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        parser.optionxform = str
+        parser.read(description, encoding="utf-8")
+        if parser.has_option("PCS-Benchmarks", pcs_name):
+            return description
+    return None

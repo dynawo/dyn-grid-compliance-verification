@@ -134,3 +134,14 @@ def test_the_controlled_node_keeps_the_flag_default_for_curves_without_a_model()
     producer._is_dynawo_model = False
 
     assert producer.controls_internal_node2() is True
+
+
+def test_get_filenames_of_a_zone_not_delivered_is_empty(tmp_path):
+    (tmp_path / "Zone3").mkdir()
+    (tmp_path / "Zone3" / "Producer.dyd").write_text("")
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._producer_model_path = tmp_path
+    producer._producer_curves_path = None
+
+    assert producer.get_filenames(zone=1) == []
+    assert producer.get_filenames(zone=3) == ["Producer"]

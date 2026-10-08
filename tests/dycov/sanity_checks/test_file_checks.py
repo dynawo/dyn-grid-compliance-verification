@@ -423,3 +423,41 @@ def test_check_curves_metadata_skips_an_unreadable_dictionary(tmp_path):
     (curves_path / "PCS_RTE-I16z3.Bm.Oc.dict").write_text("sim_t_event_start =\n")
 
     assert file_checks.check_curves_metadata(tmp_path / "ReferenceCurves") is None
+
+
+def test_check_validation_model_accepts_zone3_alone_when_no_pcs_of_zone_1_runs(tmp_path):
+    model_path = tmp_path / "Dynawo"
+    _write_model_files(model_path / "Zone3")
+    reference_path = tmp_path / "ReferenceCurves"
+    (reference_path / "Producer").mkdir(parents=True)
+
+    assert (
+        file_checks.check_validation_model(
+            model_path, reference_path, 2, ["Producer"], [], zone1_required=False
+        )
+        is None
+    )
+
+
+def test_check_validation_model_demands_zone1_when_a_pcs_of_zone_1_runs(tmp_path):
+    model_path = tmp_path / "Dynawo"
+    _write_model_files(model_path / "Zone3")
+    reference_path = tmp_path / "ReferenceCurves"
+    reference_path.mkdir()
+
+    with pytest.raises(FileNotFoundError) as not_found_error:
+        file_checks.check_validation_model(model_path, reference_path, 2, ["Producer"], [])
+
+    assert "Zone1 model files not found" in str(not_found_error.value)
+
+
+def test_check_validation_curves_accepts_zone3_alone_when_no_pcs_of_zone_1_runs(tmp_path):
+    curves_path = tmp_path / "ProducerCurves"
+    _write_zone_curves(curves_path, "Zone3")
+    reference_path = tmp_path / "ReferenceCurves"
+    (reference_path / "Producer").mkdir(parents=True)
+
+    assert (
+        file_checks.check_validation_curves(curves_path, reference_path, zone1_required=False)
+        is None
+    )
