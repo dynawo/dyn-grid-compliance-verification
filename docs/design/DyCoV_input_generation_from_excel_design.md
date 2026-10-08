@@ -69,7 +69,7 @@ model, curves or a reference directory given alongside it is refused.
 | `Général` | Block selection (`Type de bloc \| Choix \| Zone`: block → variant or `Aucun`, plus the `;`-separated zones the block's parameters go to) and the Excel-computed `Model Map` lookup key (derived table; the tool reads the cached key cell verbatim). |
 | `Model Map` | Variant tuple → Dynawo `lib` + prefix, per zone (§6). |
 | `Zone1<x>` (`Zone1a`, …) | One sheet per generator. Zone-1 data: `SnZone1`, `N_Zone1`, `ConverterLVControl`, `Un1`, `Un2`, the group transformer (`Z_cc_TG`, `R_cc_TG / X_cc_TG`, `r_TG`), `Pmax_injection_z1`, `Pmax_soutirage_z1`, `Qmax_z1`, `Qmin_z1`, `P_share`, `Q_share`. |
-| `Zone3` | Exactly one. `Topologie`, `SnZone3` (computed as `N_Zone1 · SnZone1`), `Un_PDR`, `Pmax_injection_PDR`, `Pmax_soutirage_PDR`, `Qmax_PDR`, `Qmin_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`, and the starting tap `Tap_0` or `r_0`), aux load (`+Aux`), collector (`+i`). |
+| `Zone3` | Exactly one. `Topologie`, `SnZone3` (computed as `N_Zone1 · SnZone1`), `Un_PDR`, `Pmax_injection_PDR`, `Pmax_soutirage_PDR`, `Qmax_PDR`, `Qmin_PDR`, the optional `Pmin_injection_PDR` and `Pmin_soutirage_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`, and the starting tap `Tap_0` or `r_0`), aux load (`+Aux`), collector (`+i`). |
 | `Signaux zone 1` / `Signaux zone 3` | Per zone: the quantities to provide with the `.csv` column holding each, the DTR cases to run with the `.csv` file of each, and the folder those files live in (§8). |
 | Control sheets (`REPC`, `REEC`, `REGC`, `Mechanical Part`, …) | Control-block parameters, one column group per variant. Any sheet with a parameter table is one; how many there are, and their names, are the workbook's business. |
 | Descriptive sheets | Ignored: without a parameter table they yield nothing. |
@@ -129,7 +129,9 @@ Three files per zone, plus the reference-curve tree (§8). The resolved model cl
 
 - **Producer.ini** — DTR envelope + topology: `p_max_injection_at_PDR`, `u_nom_at_PDR`,
   `q_max_at_PDR`, `q_min_at_PDR`, `topology`, `P_sharing_*`, `Q_sharing_*`, and
-  `p_max_consumption_at_PDR` for storage, which DyCoV requires in both zones. Each zone declares
+  `p_max_consumption_at_PDR` for storage, which DyCoV requires in both zones. Zone3 also declares
+  `p_min_injection_at_PDR` (and `p_min_consumption_at_PDR` for storage) when its row is filled:
+  they are the starting points of the Fiche F16 tests, which only Zone3 runs. Each zone declares
   the node it connects at, so `u_nom_at_PDR` is `Un1` in Zone1 and `Un_PDR` in Zone3, and Zone1's
   `topology` is always `S`: one unit connected to its internal node, whatever the plant's.
 - **Producer.dyd** — a `blackBoxModel` for the converter (resolved `lib`), the topology network
