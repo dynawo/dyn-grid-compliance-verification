@@ -179,7 +179,10 @@ def test_frequency_figure_draws_every_declared_band(monkeypatch):
     bands = {figure.name: figure.frequency_bands for figure in bm.get_figures_description()}
 
     assert bands == {
-        "fig_WRef": [FrequencyBand(upper=0.2, lower=0.2), FrequencyBand(upper=0.25, lower=0.25)]
+        "fig_WRef": [
+            FrequencyBand(upper=0.2, lower=0.2, color="#55a868"),
+            FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
+        ]
     }
 
 

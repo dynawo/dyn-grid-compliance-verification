@@ -55,7 +55,11 @@ _INTERNAL_NODE1_FIGURES = (
     ("fig_InternalNode1Q", "internal_node1_reactive_power", "Q"),
 )
 
-_FREQUENCY_BAND_DEVIATIONS = {"freq_1": 1.0, "freq_200": 0.2, "freq_250": 0.25}
+_FREQUENCY_BANDS = {
+    "freq_1": FrequencyBand(upper=1.0, lower=1.0, color="#c44e52"),
+    "freq_200": FrequencyBand(upper=0.2, lower=0.2, color="#55a868"),
+    "freq_250": FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
+}
 
 
 def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
@@ -527,9 +531,7 @@ class Benchmark:
             return
 
         frequency_bands = [
-            FrequencyBand(upper=deviation, lower=deviation)
-            for validation, deviation in _FREQUENCY_BAND_DEVIATIONS.items()
-            if validation in validations
+            band for validation, band in _FREQUENCY_BANDS.items() if validation in validations
         ]
 
         self._figures_description.append(
