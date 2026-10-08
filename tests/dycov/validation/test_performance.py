@@ -1047,6 +1047,20 @@ def test_check_others_avr_and_frequency():
     assert results["compliance"] is False
 
 
+@pytest.mark.parametrize("avr_5_check, expected_compliance", [(False, False), (True, True)])
+def test_check_others_avr_5_enters_the_verdict(avr_5_check, expected_compliance):
+    validator = _make_validator(validations=["AVR_5"])
+    results = {"compliance": True}
+    compliance_values = {"AVR_5_check": avr_5_check, "AVR_5": 0.3, "AVR_5_crvs": [[1.0, 1.0]]}
+
+    validator._PerformanceValidator__check_others(
+        results, _make_stability(), False, compliance_values
+    )
+
+    assert results["AVR_5_check"] is avr_5_check
+    assert results["compliance"] is expected_compliance
+
+
 # ---------------------------------------------------------------------------
 # Validation orchestration
 # ---------------------------------------------------------------------------

@@ -719,6 +719,7 @@ class PerformanceValidator(Validator):
             results["AVR_5_check"] = compliance_values["AVR_5_check"]
             results["AVR_5"] = compliance_values["AVR_5"]
             results["AVR_5_crvs"] = compliance_values["AVR_5_crvs"]
+            results["compliance"] &= results["AVR_5_check"]
 
         if compliance_list.contains_key(["freq_1"], self._validations):
             results["freq1"] = compliance_values["time_freq1"]
