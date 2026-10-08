@@ -55,13 +55,14 @@ A rejected definition aborts the run — `obtain_simulated_curve` turns only `Si
 Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`).
 
-**Declared tests (F16)**: the DTR Fiche F16 fixes no test, so `PCS_RTE-F16z{1,3}` ship with an
-empty `[PCS-Benchmarks]` and a commented declaration template, which `core/initialization.py`
-copies into the user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS
-that declares no benchmark is skipped by `_validate_pcs`. The producer declares the recorded tests in
-`<ReferenceCurves>/<PCS>/PCSDescription.ini`, which `Pcs` takes as the user PCS description of
-that PCS (in place of the one in the configuration directory), so `cfg.py` keeps its five layers. Every
-declared test is rendered with the shared `report.F16z<zone>.DeclaredTest.tex`: `_pcs_replace` writes
+**Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
+`PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and a commented declaration template, which
+`core/initialization.py` copies into the user's templates (`_copy_pcs_to_declare`, never over a copy
+already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
+the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
+description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
+of the one in the configuration directory), so `cfg.py` keeps its five layers. Every
+declared test is rendered with the shared `report.F16z3.DeclaredTest.tex`: `_pcs_replace` writes
 one `report.<pcs>.<bm>.<oc>.tex` per operating condition and hands the template its maps without the
 `PCS…` suffix (`rm`, `thm`, `tem`…) plus `benchmark`/`operatingcondition`. The F16 error
 thresholds are the `thr_FT_reftrack_*` family of `[GridCode]`: a PCS names the family it applies
@@ -70,7 +71,15 @@ reads `thr_<family>_reftrack_*`, the I16 table when the PCS names none. The `is_
 flag of the curves plays no part here: I16 keeps its single table whatever the reference is.
 A PCS section may also declare `recorded_tests_only = true` (F16 does): `Benchmark` then keeps
 only the operating conditions whose reference `.dict` exists under `<reference>/<producer>/`,
-because the fiche fixes no test and a record is what makes one exist.
+because the fiche fixes no test and a record is what makes one exist. The Zone 1 model is
+what the PCS of zone 1 validate: `ValidationParameters` tells `ModelProducer` whether it is
+required (`_requires_zone1`: any run not limited by `-p` to one zone-3 PCS), and
+`check_validation_model` / `check_validation_curves` demand `Zone1/` only then, so a producer
+in FON delivers `Zone3/` alone for F16. The declaration may be
+of any Zone 3 kind of test; a dip or a swell needs the voltage table the simulation copies from
+the shipped PCS directory (`curves_factory.py`), so `PCS_RTE-F16z3` ships the
+`GridVoltageDip/` and `GridVoltageSwell/` tables of I16z3 and those two benchmarks keep their
+names.
 
 ## Numerical layer (mutated many times, persisted to disk)
 
