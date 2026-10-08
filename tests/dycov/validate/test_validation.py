@@ -342,9 +342,9 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
 
     monkeypatch.setattr("dycov.validate.validation.Pcs", UndeclaredPcs)
 
-    result = _validate_pcs((None, "PCS_RTE-F16z1", "Producer", Path("/tmp")))
+    result = _validate_pcs((None, "PCS_RTE-F16z3", "Producer", Path("/tmp")))
 
-    assert result == ("Producer", "PCS_RTE-F16z1", [], {})
+    assert result == ("Producer", "PCS_RTE-F16z3", [], {})
 
 
 def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):

@@ -96,15 +96,15 @@ class TestDycovInitializer:
                     (dummy_sample_dir / "dummy.txt").write_text(
                         f"dummy sample for {template}/{category}/{model}"
                     )
-        to_declare = templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z1"
+        to_declare = templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z3"
         to_declare.mkdir(parents=True)
         (to_declare / "PCSDescription.ini").write_text(
-            "[PCS_RTE-F16z1]\nzone = 1\n[PCS-Benchmarks]\nPCS_RTE-F16z1 =\n"
+            "[PCS_RTE-F16z3]\nzone = 3\n[PCS-Benchmarks]\nPCS_RTE-F16z3 =\n"
         )
         fixed = templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-I16z1"
         fixed.mkdir(parents=True)
         (fixed / "PCSDescription.ini").write_text(
-            "[PCS_RTE-I16z1]\nzone = 1\n[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep\n"
+            "[PCS_RTE-I16z1]\nzone = 3\n[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep\n"
         )
         return tool_path
 
@@ -176,9 +176,9 @@ class TestDycovInitializer:
             / "PCS"
             / "model"
             / "PPM"
-            / "PCS_RTE-F16z1"
+            / "PCS_RTE-F16z3"
             / "PCSDescription.ini",
-            config_templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z1",
+            config_templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z3",
         )
         assert mock_copy_from_path.call_count == 6  # Total copy_from_path calls
 
@@ -210,9 +210,9 @@ class TestDycovInitializer:
 
         dycov_initializer._configure_templates(tool_path_fixture)
 
-        copied = user_pcs / "PPM" / "PCS_RTE-F16z1" / "PCSDescription.ini"
+        copied = user_pcs / "PPM" / "PCS_RTE-F16z3" / "PCSDescription.ini"
         assert (
-            copied.read_text() == "[PCS_RTE-F16z1]\nzone = 1\n[PCS-Benchmarks]\nPCS_RTE-F16z1 =\n"
+            copied.read_text() == "[PCS_RTE-F16z3]\nzone = 3\n[PCS-Benchmarks]\nPCS_RTE-F16z3 =\n"
         )
         assert not (user_pcs / "PPM" / "PCS_RTE-I16z1").exists()
 
@@ -226,15 +226,15 @@ class TestDycovInitializer:
             / "PCS"
             / "model"
             / "PPM"
-            / "PCS_RTE-F16z1"
+            / "PCS_RTE-F16z3"
             / "PCSDescription.ini"
         )
         declared.parent.mkdir(parents=True)
-        declared.write_text("[PCS-Benchmarks]\nPCS_RTE-F16z1 = Recorded\n")
+        declared.write_text("[PCS-Benchmarks]\nPCS_RTE-F16z3 = Recorded\n")
 
         dycov_initializer._configure_templates(tool_path_fixture)
 
-        assert declared.read_text() == "[PCS-Benchmarks]\nPCS_RTE-F16z1 = Recorded\n"
+        assert declared.read_text() == "[PCS-Benchmarks]\nPCS_RTE-F16z3 = Recorded\n"
 
     def test_a_template_that_cannot_be_copied_is_reported_with_its_traceback(
         self, dycov_initializer, tool_path_fixture, mocker
