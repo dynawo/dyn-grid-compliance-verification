@@ -605,9 +605,10 @@ Step-response Characteristics
 -------------------------------
 
 Several compliance criteria are based on reaction time, rise time, settling
-time, and overshoot. For RMS model validation tests, these definitions follow
-exactly the IEC standard. For Electrical performance verification, the rise time is
-defined as equivalent to the IEC reaction + rise time combined.
+time, and overshoot. These definitions follow exactly the IEC standard, in the
+RMS model validation tests and in the Electrical performance verification alike:
+the rise time runs from the reaction time (the 10 % crossing) to the 90 % crossing,
+and the overshoot is measured after the event in the direction of the step.
 
 The figure below, taken from IEC 61400-21-1 (Section 3, Terms and definitions),
 illustrates these step-response characteristics:
