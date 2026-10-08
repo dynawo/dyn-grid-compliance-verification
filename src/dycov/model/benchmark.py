@@ -55,6 +55,12 @@ _INTERNAL_NODE1_FIGURES = (
     ("fig_InternalNode1Q", "internal_node1_reactive_power", "Q"),
 )
 
+_FREQUENCY_BANDS = {
+    "freq_1": FrequencyBand(upper=1.0, lower=1.0, color="#c44e52"),
+    "freq_200": FrequencyBand(upper=0.2, lower=0.2, color="#55a868"),
+    "freq_250": FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
+}
+
 
 def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
     match error:
@@ -524,20 +530,16 @@ class Benchmark:
         if pcs_benchmark_name not in fig_WRef:
             return
 
-        frequency_band = None
-        if "freq_1" in validations:
-            frequency_band = FrequencyBand(upper=1.0, lower=1.0)
-        elif "freq_250" in validations:
-            frequency_band = FrequencyBand(upper=0.250, lower=0.250)
-        elif "freq_200" in validations:
-            frequency_band = FrequencyBand(upper=0.2, lower=0.2)
+        frequency_bands = [
+            band for validation, band in _FREQUENCY_BANDS.items() if validation in validations
+        ]
 
         self._figures_description.append(
             FigureDescription(
                 name="fig_WRef",
                 variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
                 ylabel=r"$\omega$ (Hz)",
-                frequency_band=frequency_band,
+                frequency_bands=frequency_bands,
                 in_hz=True,
             )
         )
