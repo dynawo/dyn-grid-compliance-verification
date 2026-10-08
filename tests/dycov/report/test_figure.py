@@ -394,7 +394,7 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
         "calc_reaction_time": 1.0,
         "sim_t_event_start": 0.5,
         "calc_rise_target": {"BusPDR_BUS_ActivePower": 3.0},
-        "calc_rise_time": 2.0,
+        "calc_rise_time": 1.5,
         "calc_settling_tube": {"BusPDR_BUS_ActivePower": (1.5, 3.5)},
         "calc_settling_time": 3.0,
         "calc_ss_value": 2.5,
@@ -402,13 +402,14 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
 
     draw_response_characteristics(renderer, "BusPDR_BUS_ActivePower", results)
 
+    # The rise time runs from the reaction instant, so its mark sits at event + reaction + rise.
     assert renderer.marks == [
         ("hline", 2.0),
         ("vline", 1.5),
         ("hline", 3.0),
-        ("vline", 2.5),
-        ("scatter", (2.5, 3.0)),
-        ("annotation", "2.5000s"),
+        ("vline", 3.0),
+        ("scatter", (3.0, 3.0)),
+        ("annotation", "3.0000s"),
         ("hrect", (1.5, 3.5)),
         ("vline", 3.5),
         ("scatter", (3.5, 2.5)),
