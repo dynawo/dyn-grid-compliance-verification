@@ -26,8 +26,8 @@ to the DTR's PCS structure. The following tests are currently implemented:
     (like I7), Ramp Response to Grid Frequency, and Islanding (like I10).
 
 * **RMS model validation against on-site measurements (Power Parks and
-  BESS)**: PCS F16, the second phase of PCS I16, with the same two zones and
-  the setpoint steps a commissioning test can apply.
+  BESS)**: PCS F16, the second phase of PCS I16, on Zone 3 only, with the
+  tests the producer recorded during the commissioning of the installation.
 
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
@@ -354,17 +354,18 @@ PCS F16
 
 PCS F16 is the second phase of the open phasor model validation: the model is
 compared against the on-site measurements recorded during the commissioning
-tests, on the same two zones as PCS I16. The fiche selects no test of its own:
-the producer proposes the on-site tests, RTE approves them, and the recorded
-signals are the reference. It only fixes two things, and those are what the
-tool ships:
+tests of the installation, at the connection point (Zone 3). The fiche
+selects no test of its own: the producer proposes the on-site tests, RTE
+approves them, and the recorded signals are the reference. It only fixes two
+things, and those are what the tool ships:
 
-* the active power levels every test runs at — minimum, 50% of the maximum and
-  maximum injection for a PPM; maximum and 50% consumption, 50% and maximum
-  injection for a BESS. The minimum is declared in ``Producer.ini`` as
-  ``p_min_injection_at_PDR`` (``p_min_consumption_at_PDR`` for the consumption
-  mode), in MW, 0 when absent; in the input workbook, these are the
-  ``Pmin_injection_PDR`` and ``Pmin_soutirage_PDR`` rows of the ``Zone3`` sheet;
+* the active power levels every test runs at — minimum, 50% of the maximum
+  and maximum injection for a PPM; maximum and 50% consumption, 50% and
+  maximum injection for a BESS. The minimum is declared in ``Producer.ini``
+  as ``p_min_injection_at_PDR`` (``p_min_consumption_at_PDR`` for the
+  consumption mode), in MW, 0 when absent; in the input workbook, these are
+  the ``Pmin_injection_PDR`` and ``Pmin_soutirage_PDR`` rows of the ``Zone3``
+  sheet;
 * the errors it tolerates on the controlled magnitude — MXE/ME/MAE of
   0.05/0.03/0.04 before and after the event and 0.1/0.05/0.07 during it,
   configured as ``thr_FT_reftrack_*`` in the ``[GridCode]`` section. The PCS
@@ -372,23 +373,28 @@ tool ships:
   which is what selects the table; PCS I16 keeps its own whatever the
   reference curves are.
 
-The tests themselves are declared by the producer, with their records. The
-shipped ``PCSDescription.ini`` of ``PCS_RTE-F16z1`` and ``PCS_RTE-F16z3``
-declares no test: it holds a declaration template, commented out, with one
-operating condition per active power level. DyCoV leaves a copy of it in the
-user configuration, under ``templates/PCS/model/<technology>/PCS_RTE-F16z<zone>/``;
-complete it there, or copy it to
-``<ReferenceCurves>/PCS_RTE-F16z<zone>/PCSDescription.ini``, uncommenting it
-once per recorded test: the grid during the test, the recorded Q and U, and the
-event.
-A description found next to the reference curves is taken as the user's
-description of that PCS, in place of the one in the configuration directory.
-A declared test
-is reported with a template shared by all of them, and a PCS that declares no
-test is left out of the run.
+The inputs of PCS F16 are the Zone 3 model of the installation and the
+records of its commissioning tests; no Zone 1 model is needed. The tests
+themselves are declared by the producer, with their records, in an
+``F16Description.ini`` delivered at the root of the reference curves
+directory. DyCoV takes it as the user description of ``PCS_RTE-F16z3``, the
+PCS the file names in its ``[PCS-Benchmarks]``: one benchmark per kind of
+recorded test, one operating condition per active power level, the grid and
+the event of each one, the compliance tests to apply and the figures to
+draw. The shipped ``PCSDescription.ini`` of ``PCS_RTE-F16z3`` declares no
+test; a template of ``F16Description.ini`` ships next to it, and DyCoV
+leaves a copy of it at start-up in the user configuration, under
+``templates/PCS/model/<technology>/PCS_RTE-F16z3/F16Description.ini``, to
+copy next to the reference curves and complete. A PCS that declares no
+test is left out of the run, and every declared test is reported with a
+template shared by all of them.
 
-The ``Wind/IECB2015`` and ``BESS/WECC`` examples carry such declarations, invented
-for the example, with records anonymized from the tool's own simulations.
+The tutorial *Declaring the on-site tests of PCS F16* walks through the
+declaration step by step; every key it can carry is described in
+:ref:`The F16 declaration file <f16-description>`, and the tests it can
+activate in :ref:`Compliance tests <compliance-tests>`. The ``Wind/IECB2015`` and
+``BESS/WECC`` examples carry such declarations, invented for the example,
+with records anonymized from the tool's own simulations.
 
 
 Electrical performance verification  (Power Park Modules)
@@ -602,13 +608,16 @@ process re-synchronizes the subnetwork with the bulk transmission network.
    :align: center
 
 
+.. _step-response-characteristics:
+
 Step-response Characteristics
 -------------------------------
 
 Several compliance criteria are based on reaction time, rise time, settling
-time, and overshoot. For RMS model validation tests, these definitions follow
-exactly the IEC standard. For Electrical performance verification, the rise time is
-defined as equivalent to the IEC reaction + rise time combined.
+time, and overshoot. These definitions follow exactly the IEC standard, in the
+RMS model validation tests and in the Electrical performance verification alike:
+the rise time runs from the reaction time (the 10 % crossing) to the 90 % crossing,
+and the overshoot is measured after the event in the direction of the step.
 
 The figure below, taken from IEC 61400-21-1 (Section 3, Terms and definitions),
 illustrates these step-response characteristics:

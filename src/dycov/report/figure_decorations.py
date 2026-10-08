@@ -105,17 +105,16 @@ def draw_frequency_band(
     """
     f_nom = config.get_float("Dynawo", "f_nom", 50.0)
     margin = (band.upper * 0.5 if band.upper is not None else 0.0) / f_nom * scale
-    color = "#c44e52" if band.upper and band.upper >= 1.0 else "#55a868"
 
     if band.upper is not None:
         y_upper = (f_nom + band.upper) / f_nom * scale
-        renderer.add_hline(y=y_upper, color=color)
+        renderer.add_hline(y=y_upper, color=band.color)
         if ymax and ymax < y_upper + margin:
             ymax = y_upper + margin
 
     if band.lower is not None:
         y_lower = (f_nom - band.lower) / f_nom * scale
-        renderer.add_hline(y=y_lower, color=color)
+        renderer.add_hline(y=y_lower, color=band.color)
         if ymin and ymin > y_lower - margin:
             ymin = y_lower - margin
 
@@ -220,10 +219,10 @@ def draw_additional_curves(
     """
     if figure_description.tolerance_band is not None:
         draw_tolerance_band(renderer, figure_description.tolerance_band, last_val, results)
-    if figure_description.frequency_band is not None:
+    for frequency_band in figure_description.frequency_bands:
         ymin, ymax = draw_frequency_band(
             renderer,
-            figure_description.frequency_band,
+            frequency_band,
             ymin,
             ymax,
             drawn_scale(figure_description),
@@ -290,7 +289,11 @@ def draw_response_characteristics(
         renderer.add_vline(x=treaction, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
 
     if "calc_rise_target" in results and curve_name in results["calc_rise_target"]:
-        trise = results["calc_rise_time"] + results["sim_t_event_start"]
+        trise = (
+            results["sim_t_event_start"]
+            + results["calc_reaction_time"]
+            + results["calc_rise_time"]
+        )
         target = results["calc_rise_target"][curve_name] * scale
         renderer.add_hline(y=target, color=_COLOR_REACTION, style="-", linewidth=0.2)
         renderer.add_vline(x=trise, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)

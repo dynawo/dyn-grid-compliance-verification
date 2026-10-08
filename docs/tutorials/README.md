@@ -53,6 +53,15 @@ This tutorial explains:
 
 See: [RMS model validation](rms_model_validation.md)
 
+### Declaring the on-site tests of PCS F16
+
+This tutorial explains, step by step:
+- how to write the `F16Description.ini` delivered with the commissioning records,
+- how to declare the recorded tests at the active power levels the fiche fixes,
+- how to activate and configure each compliance test of DyCoV for them.
+
+See: [Declaring the on-site tests of PCS F16](f16_declaring_recorded_tests.md)
+
 ---
 
 ## 4. Electrical performance verification

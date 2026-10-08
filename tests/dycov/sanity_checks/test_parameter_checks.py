@@ -577,3 +577,20 @@ def _tap_changer(id: str) -> XfmrParams:
 def test_check_trafo_accepts_a_tap_changer_on_any_transformer(xfmr_id):
     """RTE allows either transformer model on any block of the topology."""
     parameter_checks.check_trafo(_tap_changer(xfmr_id))
+
+
+def test_check_generators_without_zone1_counts_the_zone3_generators():
+    ppm = GenParams(
+        id=None,
+        lib="WTG4AWeccCurrentSource",
+        terminals=(Terminal(connected_equipment=""),),
+        s_nom=90,
+        i_max=100.0,
+        par_id="",
+        p=0.1,
+        q=0.05,
+        voltage_droop=None,
+        use_voltage_droop=False,
+    )
+
+    assert parameter_checks.check_generators([], [ppm, ppm]) == (0, 2, 0)

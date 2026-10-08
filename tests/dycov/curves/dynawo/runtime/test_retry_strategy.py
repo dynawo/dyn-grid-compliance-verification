@@ -30,16 +30,25 @@ TIME_WARNING = f"Simulation time exceeds the maximum allowed ({MAX_SIM_TIME})"
 class RecordingLogger:
     def __init__(self):
         self.messages = []
+        self.debug_messages = []
 
     def warning(self, message):
         self.messages.append(message)
 
+    def debug(self, message):
+        self.debug_messages.append(message)
+
 
 @pytest.fixture
-def recorded_warnings(monkeypatch):
+def recording_logger(monkeypatch):
     logger = RecordingLogger()
     monkeypatch.setattr(retry_strategy_module.dycov_logging, "get_logger", lambda name: logger)
-    return logger.messages
+    return logger
+
+
+@pytest.fixture
+def recorded_warnings(recording_logger):
+    return recording_logger.messages
 
 
 @pytest.fixture
@@ -182,6 +191,18 @@ def test_a_retry_says_why_the_previous_attempt_failed(
     _run(strategy, _ida_solver())
 
     assert recorded_warnings[0].endswith(f"(previous attempt: {expected_reason})")
+
+
+def test_every_attempt_reports_how_long_dynawo_ran(monkeypatch, recording_logger, recorded_writes):
+    _patch_run_base(monkeypatch, successful_attempt=2)
+    strategy = SolverRetryStrategy(RetrySettings())
+
+    _run(strategy, _ida_solver())
+
+    assert recording_logger.debug_messages == [
+        "Attempt 1 ran in 11.0s (failed)",
+        "Attempt 2 ran in 11.0s (succeeded)",
+    ]
 
 
 @pytest.mark.parametrize("successful_attempt", [1, 2, 3, 4])

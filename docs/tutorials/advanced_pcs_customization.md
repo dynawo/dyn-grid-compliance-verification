@@ -142,6 +142,11 @@ An Operating Condition defines:
 *   event characteristics (type, timing, duration, magnitude),
 *   grid‑side parameters (e.g. SCR).
 
+The chapter *PCS description reference* of the developer manual is the
+reference of every section and key of a `PCSDescription.ini`, kind of test by
+kind of test, and *Compliance tests* in the user manual the reference of the
+tests they activate.
+
 Each PCS includes a predefined set of operating conditions.
 User‑side customization can:
 

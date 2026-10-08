@@ -210,7 +210,7 @@ def _adjust_generator(
     is_valid, control_mode_name = _apply_control_mode(
         generator, parset, nsmap, generator_control_mode, zone
     )
-    if not config.get_boolean("General", "skip_voltage_droop_adjustment", default=False):
+    if not config.get_boolean("Global", "skip_voltage_droop_adjustment", default=False):
         _apply_voltage_droop(
             generator,
             parset,
