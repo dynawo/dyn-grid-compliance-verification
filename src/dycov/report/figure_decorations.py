@@ -289,7 +289,11 @@ def draw_response_characteristics(
         renderer.add_vline(x=treaction, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
 
     if "calc_rise_target" in results and curve_name in results["calc_rise_target"]:
-        trise = results["calc_rise_time"] + results["sim_t_event_start"]
+        trise = (
+            results["sim_t_event_start"]
+            + results["calc_reaction_time"]
+            + results["calc_rise_time"]
+        )
         target = results["calc_rise_target"][curve_name] * scale
         renderer.add_hline(y=target, color=_COLOR_REACTION, style="-", linewidth=0.2)
         renderer.add_vline(x=trise, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)

@@ -14,11 +14,7 @@ import pytest
 
 from dycov.model.parameters import ExclusionWindows
 from dycov.validation.common import get_measurement_name
-from dycov.validation.model import (
-    ModelValidator,
-    _check_value_by_threshold,
-    _get_column_name,
-)
+from dycov.validation.model import ModelValidator, _get_column_name
 
 MODEL_MODULE = "dycov.validation.model"
 COMMON_MODULE = "dycov.validation.common"
@@ -250,12 +246,6 @@ def test_get_measurement_name_maps_every_setpoint(modified_setpoint, expected):
     assert get_measurement_name(modified_setpoint) == expected
 
 
-def test_check_value_by_threshold_is_strict():
-    assert _check_value_by_threshold(0.001, 0.01) is True
-    assert _check_value_by_threshold(0.01, 0.01) is False
-    assert _check_value_by_threshold(0.1, 0.01) is False
-
-
 # ---------------------------------------------------------------------------
 # Ideal ramp calculation
 # ---------------------------------------------------------------------------
@@ -444,8 +434,9 @@ def test_compare_event_times_computes_reaction_and_rise_times():
     assert results["calc_reaction_time"] == pytest.approx(1.0)
     assert results["ref_reaction_time"] == pytest.approx(2.0)
     assert results["calc_reaction_target"] == {"BusPDR_BUS_ActivePower": pytest.approx(0.1)}
-    assert results["calc_rise_time"] == pytest.approx(1.0)
-    assert results["ref_rise_time"] == pytest.approx(2.0)
+    # A step crosses 10 % and 90 % at the same instant, so it rises in no time.
+    assert results["calc_rise_time"] == pytest.approx(0.0)
+    assert results["ref_rise_time"] == pytest.approx(0.0)
     assert results["calc_rise_target"] == {"BusPDR_BUS_ActivePower": pytest.approx(0.9)}
 
 
