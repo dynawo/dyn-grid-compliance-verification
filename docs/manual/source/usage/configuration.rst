@@ -104,6 +104,15 @@ Basic configuration
 
   Maximum number of parallel processes allowed (default: 4).
 
+Advanced configuration
+""""""""""""""""""""""
+
+* ``skip_voltage_droop_adjustment``
+
+  When ``true``, the voltage droop adjustment of the generator initialization
+  is skipped and the voltage droop parameters of the producer PAR file are
+  left as written (default: ``false``).
+
 
 Dynawo options
 ^^^^^^^^^^^^^^

@@ -70,7 +70,7 @@ class FigureDescription:
     variables: str | list[dict]
     ylabel: str
     tolerance_band: ToleranceBand | None = None
-    frequency_band: FrequencyBand | None = None
+    frequency_bands: list[FrequencyBand] = field(default_factory=list)
     dynamic_band: DynamicBand | None = None
     event_markers: list[EventMarker] = field(default_factory=list)
     in_pdf: bool = True
