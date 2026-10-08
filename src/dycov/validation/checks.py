@@ -16,8 +16,9 @@ from dycov.validation import common, compared_curves, threshold_variables
 NOT_COMPUTABLE = "N/A"
 
 
-def _check_value_by_threshold(mxre: float, threshold: float) -> bool:
-    return mxre < threshold
+def is_error_within_threshold(error: float, threshold: float) -> bool:
+    """Whether the magnitude of an error stays under its maximum permissible value."""
+    return abs(error) < threshold
 
 
 def _check_measure_curve_error(
@@ -34,7 +35,7 @@ def _check_measure_curve_error(
 
     error_value = compliance_values[measurement][error_type]
     if threshold:
-        error_check = _check_value_by_threshold(error_value, threshold)
+        error_check = is_error_within_threshold(error_value, threshold)
     else:
         error_check = None
     if "t" + error_type in compliance_values[measurement]:
