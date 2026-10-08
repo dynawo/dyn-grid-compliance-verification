@@ -4,25 +4,20 @@
     <!-- QControl_2020 -->
     <par type="INT" name="WT_MqG" value="1"/>
     <par type="INT" name="WT_Mqfrt" value="1"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kpq" value="1.1"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kiq" value="2.25"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kpu" value="2"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kiu" value="10"/>
-    <!-- Base unit: Un2, SNom -->
     <par type="DOUBLE" name="WT_Kpufrt" value="2"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2)^2, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_Kqv" value="2"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2)^2, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_IqH1Pu" value="1.05"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2)^2, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_IqMaxPu" value="1.05"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2)^2, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_IqMinPu" value="-1.05"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2)^2, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_IqPostPu" value="0"/>
     <par type="DOUBLE" name="WT_tPost" value="0"/>
     <par type="DOUBLE" name="WT_tQord" value="0.05"/>
@@ -36,35 +31,35 @@
     <par type="DOUBLE" name="WT_UqDipPu" value="0.9"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT_UqRisePu" value="1.1"/>
-    <!-- Base unit: Un2 -->
+    <!-- Valeur <= 0 | Base unit: Un2 -->
     <par type="DOUBLE" name="WT_DUdb1Pu" value="-0.1"/>
-    <!-- Base unit: Un2 -->
+    <!-- Valeur >= 0 | Base unit: Un2 -->
     <par type="DOUBLE" name="WT_DUdb2Pu" value="0.1"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: (Un2)^2 / SnZone1 -->
     <par type="DOUBLE" name="WT_RDropPu" value="0"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: (Un2)^2 / SnZone1 -->
     <par type="DOUBLE" name="WT_XDropPu" value="0"/>
     <par type="DOUBLE" name="WT_tUss" value="1"/>
     <!-- PControl_4B2020 -->
-    <!-- Base unit: SNom -->
+    <!-- Ce param&#232;tre n'existe pas dans le standard IEC. Il est li&#233; &#224; l'impl&#233;mentation dans Dynawo. Si aucune valeur n'est renseign&#233;e, une valeur par d&#233;faut sera appliqu&#233;e. -->
     <par type="DOUBLE" name="WT_Kpaw" value="1000"/>
     <par type="BOOL" name="WT_MpUScale" value="false"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT_UpDipPu" value="0"/>
-    <!-- Base unit: SNom -->
+    <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT_DPMaxP4BPu" value="1"/>
     <par type="DOUBLE" name="WT_tPOrdP4B" value="0.05"/>
     <par type="DOUBLE" name="WT_tPAero" value="0.1"/>
-    <!-- Base unit: SNom -->
+    <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT_DPRefMax4BPu" value="100"/>
-    <!-- Base unit: SNom -->
+    <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT_DPRefMin4BPu" value="-100"/>
     <!-- CurrentLimiter_2020 -->
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2), convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_IMaxPu" value="1.3"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2), convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_IMaxDipPu" value="1.3"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2)^2, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_Kpqu" value="20"/>
     <par type="BOOL" name="WT_MdfsLim" value="false"/>
     <par type="BOOL" name="WT_Mqpri" value="true"/>
@@ -72,32 +67,33 @@
     <par type="DOUBLE" name="WT_UpquMaxPu" value="1.1"/>
     <!-- QLimiter_2020 -->
     <par type="BOOL" name="WT_QlConst" value="true"/>
-    <!-- Base unit: SNom -->
+    <!-- Base unit: SnZone1, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_QMaxPu" value="0.8"/>
-    <!-- Base unit: SNom -->
+    <!-- Base unit: SnZone1, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_QMinPu" value="-0.8"/>
     <!-- Control -->
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2) -->
     <par type="DOUBLE" name="WT_DipMaxPu" value="1"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2) -->
     <par type="DOUBLE" name="WT_DiqMaxPu" value="100"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Base unit: SnZone1 / (Un2) -->
     <par type="DOUBLE" name="WT_DiqMinPu" value="-100"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Ce param&#232;tre n'existe pas dans le standard IEC. Il est li&#233; &#224; l'impl&#233;mentation dans Dynawo. Si aucune valeur n'est renseign&#233;e, une valeur par d&#233;faut sera appliqu&#233;e. -->
     <par type="DOUBLE" name="WT_Kipaw" value="100"/>
-    <!-- Base unit: Un2, SNom -->
+    <!-- Ce param&#232;tre n'existe pas dans le standard IEC. Il est li&#233; &#224; l'impl&#233;mentation dans Dynawo. Si aucune valeur n'est renseign&#233;e, une valeur par d&#233;faut sera appliqu&#233;e. -->
     <par type="DOUBLE" name="WT_Kiqaw" value="100"/>
     <par type="DOUBLE" name="WT_tG" value="0.01"/>
     <!-- PLL -->
     <par type="DOUBLE" name="WT_tPll" value="0.01"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT_UPll1Pu" value="999"/>
-    <!-- Base unit: Un2 -->
+    <!-- UPll2Pu < UPll1Pu typically | Base unit: Un2 -->
     <par type="DOUBLE" name="WT_UPll2Pu" value="0.13"/>
     <!-- Simulation -->
+    <!-- Ce param&#232;tre n'existe pas dans le standard IEC. Il est li&#233; &#224; l'impl&#233;mentation dans Dynawo. Si aucune valeur n'est renseign&#233;e, une valeur par d&#233;faut sera appliqu&#233;e. -->
     <par type="DOUBLE" name="WT_tS" value="0.001"/>
     <!-- MeasurementC_2020 -->
-    <!-- Base unit: fNom -->
+    <!-- Base unit: 50 Hz -->
     <par type="DOUBLE" name="WT_DfcMaxPu" value="1"/>
     <par type="DOUBLE" name="WT_tUcFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tfcFilt" value="0.01"/>
@@ -105,7 +101,7 @@
     <par type="DOUBLE" name="WT_tPcFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tQcFilt" value="0.01"/>
     <!-- MeasurementP_2020 -->
-    <!-- Base unit: fNom -->
+    <!-- Base unit: 50 Hz -->
     <par type="DOUBLE" name="WT_DfpMaxPu" value="1"/>
     <par type="DOUBLE" name="WT_tUpFilt" value="0.01"/>
     <par type="DOUBLE" name="WT_tfpFilt" value="0.01"/>
@@ -117,16 +113,16 @@
     <par type="DOUBLE" name="WT_UOverPu" value="1.35"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT_UUnderPu" value="0"/>
-    <!-- Base unit: fNom -->
+    <!-- Base unit: 50 Hz -->
     <par type="DOUBLE" name="WT_fOverPu" value="1.1"/>
-    <!-- Base unit: fNom -->
+    <!-- Base unit: 50 Hz -->
     <par type="DOUBLE" name="WT_fUnderPu" value="0.9"/>
     <!-- Mechanical_4B -->
     <par type="DOUBLE" name="WT_Hwtr" value="5"/>
     <par type="DOUBLE" name="WT_Hgen" value="1"/>
-    <!-- Base unit: SNom, omegaNom -->
+    <!-- Base unit: SnZone1, 50 Hz -->
     <par type="DOUBLE" name="WT_KdrtPu" value="500"/>
-    <!-- Base unit: SNom, omegaNom -->
+    <!-- Base unit: SnZone1, 50 Hz -->
     <par type="DOUBLE" name="WT_CdrtPu" value="15"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WT_ConverterLVControl" value="true"/>
