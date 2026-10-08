@@ -116,8 +116,10 @@ Curve Anonymizer
 The anonymizer produces a version of your curves with generic signal names
 and an added noise signal, useful for sharing data without exposing
 proprietary information. It also removes the oscillation a simulation adds to
-its own curves, which a reference curve should not carry, leaving the signal
-untouched wherever it does not oscillate, and reduces the curves to the samples
+its own curves, which a reference curve should not carry: only a sustained
+one, swinging fast with swings of a similar size for at least 0.2 s, so the
+response to an event, which dies out, is left as it is, and so is the signal
+wherever it does not oscillate. It then reduces the curves to the samples
 that carry their shape, keeping a floor of samples in the event window. Each of
 those is asked not to run by giving it a zero: ``--deripple 0`` keeps the
 oscillation, ``--compression 0`` keeps every sample, ``--noisestd 0`` adds no
