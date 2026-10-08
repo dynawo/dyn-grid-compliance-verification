@@ -131,9 +131,14 @@ class SolverRetryStrategy:
         max_sim_time: float | None,
     ) -> DynawoResult:
         self.settings.attempt_count += 1
-        return DynawoSimulator.run_base(
+        result = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
+        dycov_logging.get_logger("SolverRetryStrategy").debug(
+            f"Attempt {self.settings.attempt_count} ran in {result.sim_time:.1f}s "
+            f"({'succeeded' if result.succeeded else 'failed'})"
+        )
+        return result
 
     def _retries_exhausted(self) -> bool:
         return self.settings.attempt_count > self.settings.allowed_retries
