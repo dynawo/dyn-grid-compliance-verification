@@ -54,6 +54,9 @@ class ModelProducer(Producer):
     verification_type: int
         0 if it is an electrical performance verification
         10 if it is a model validation
+    zone1_required: bool
+        Whether the model validation needs the Zone 1 model: it does when a PCS of zone 1
+        is going to be validated
     """
 
     def __init__(
@@ -62,12 +65,14 @@ class ModelProducer(Producer):
         producer_curves_path: Path,
         reference_curves_path: Path,
         verification_type: int,
+        zone1_required: bool = True,
     ):
         self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._producer_model_path = producer_model_path
         self._producer_curves_path = producer_curves_path
         self._reference_curves_path = reference_curves_path
         self._zone = 0
+        self._zone1_required = zone1_required
 
         self._is_dynawo_model = self._producer_model_path is not None
         self._is_user_curves = self._producer_curves_path is not None
@@ -221,10 +226,10 @@ class ModelProducer(Producer):
         if self.is_dynawo_model():
             sm_models, ppm_models, bess_models = self.__set_dynawo_model_validation_type()
         else:
-            sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
             file_checks.check_validation_curves(
-                self._producer_curves_path, self._reference_curves_path
+                self._producer_curves_path, self._reference_curves_path, self._zone1_required
             )
+            sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
 
         if sm_models > 0:
             raise ValueError("Synchronous machine models are not allowed for model validation")
@@ -297,34 +302,25 @@ class ModelProducer(Producer):
             len(generators_z3),
             self.get_filenames(zone=3),
             self.get_filenames(zone=1),
+            self._zone1_required,
         )
         return sm_models, ppm_models, bess_models
 
     def __set_curves_model_validation_type(self):
-        default_section = "DEFAULT"
-        self._zone = 1
-        producer_config = self.__read_producer_ini()
-        generator_type_z1 = producer_config.get(default_section, "generator_type")
-        self._zone = 3
-        producer_config = self.__read_producer_ini()
-        generator_type_z3 = producer_config.get(default_section, "generator_type")
-        sm_models = 0
-        ppm_models = 0
-        bess_models = 0
-        if "SM" == generator_type_z1:
-            sm_models += 1
-        elif "PPM" == generator_type_z1:
-            ppm_models += 1
-        elif "BESS" == generator_type_z1:
-            bess_models += 1
-        if "SM" == generator_type_z3:
-            sm_models += 1
-        elif "PPM" == generator_type_z3:
-            ppm_models += 1
-        elif "BESS" == generator_type_z3:
-            bess_models += 1
+        generator_types = [self.__generator_type_of_zone(zone) for zone in self.__zones_to_read()]
+        return (
+            generator_types.count("SM"),
+            generator_types.count("PPM"),
+            generator_types.count("BESS"),
+        )
 
-        return sm_models, ppm_models, bess_models
+    def __zones_to_read(self) -> list[int]:
+        zone1_delivered = (self._producer_curves_path / "Zone1").is_dir()
+        return [1, 3] if self._zone1_required or zone1_delivered else [3]
+
+    def __generator_type_of_zone(self, zone: int) -> str:
+        self._zone = zone
+        return self.__read_producer_ini().get("DEFAULT", "generator_type")
 
     def __read_producer_ini(self):
         if self._filename is None:
@@ -444,6 +440,8 @@ class ModelProducer(Producer):
                 path = self._producer_model_path / "Zone1"
             elif zone == 3:
                 path = self._producer_model_path / "Zone3"
+            if not path.is_dir():
+                return []
 
             pattern = re.compile(r".*.[dD][yY][dD]")
             return sorted(

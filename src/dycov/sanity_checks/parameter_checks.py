@@ -217,13 +217,11 @@ def check_generators(
     tuple[int, int, int]
         Number of Synchronous Machines, Power Park Modules, and Battery Energy Storage Systems.
     """
-    generators = generators_z1
-    if generators_z3:
-        generators = generators_z1 + generators_z3
-        if len(generators_z1) != len(generators_z3):
-            raise ValueError(
-                "The model validation must contain the same number of generators in both zones."
-            )
+    generators = generators_z1 + (generators_z3 or [])
+    if generators_z1 and generators_z3 and len(generators_z1) != len(generators_z3):
+        raise ValueError(
+            "The model validation must contain the same number of generators in both zones."
+        )
 
     sm_models = sum(
         1 for g in generators if g.lib in dynawo_translator.get_synchronous_machine_models()
