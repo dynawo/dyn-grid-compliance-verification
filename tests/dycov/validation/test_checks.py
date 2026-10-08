@@ -596,6 +596,36 @@ def test_complete_setpoint_tracking_without_thresholds_aggregates_nothing(monkey
     assert results["compliance"] is True
 
 
+def test_is_error_within_threshold_bounds_the_magnitude():
+    assert checks.is_error_within_threshold(0.001, 0.01) is True
+    assert checks.is_error_within_threshold(0.01, 0.01) is False
+    assert checks.is_error_within_threshold(0.025, 0.02) is False
+    assert checks.is_error_within_threshold(-0.025, 0.02) is False
+
+
+def test_complete_setpoint_tracking_fails_a_negative_mean_error_as_a_positive_one(monkeypatch):
+    """Issue #586: the ME thresholds are maximum permissible errors, so a bias fails whatever
+    its sign, and the signed value is kept for the report."""
+    thresholds = {window: {"mae": 0.03, "me": 0.02, "mxe": 0.05} for window in WINDOWS}
+    monkeypatch.setattr(
+        "dycov.validation.threshold_variables.get_setpoint_tracking_threshold_values",
+        lambda thresholds_family="": thresholds,
+    )
+    compliance_values = _windowed_compliance_values()
+    compliance_values["after"]["BusPDR_BUS_ActivePower"]["me"] = -0.025
+    results = {"compliance": True}
+
+    checks.complete_setpoint_tracking(
+        compliance_values, "ActivePowerSetpointPu", "active_power", results, 3
+    )
+
+    assert results["after_me_tc_active_power_value"] == pytest.approx(-0.025)
+    assert results["after_me_tc_active_power_check"] is False
+    assert results["before_me_tc_active_power_check"] is True
+    assert results["setpoint_tracking_active_power_check"] is False
+    assert results["compliance"] is False
+
+
 def test_check_voltage_dips_without_the_during_window_returns_no_during_metrics():
     compliance_values = _windowed_compliance_values()
     compliance_values["during"] = {}

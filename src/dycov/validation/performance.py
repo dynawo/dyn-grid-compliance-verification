@@ -440,13 +440,12 @@ class PerformanceValidator(Validator):
         compliance_values["calc_reaction_time"] = res_reaction_time + event_duration
         compliance_values["calc_reaction_target"] = {measurement_name: res_reaction_target}
 
-        res_rise_time, res_rise_target = common.get_reached_time(
-            0.9,
+        res_rise_time, res_rise_target = common.get_rise_time(
             time_curve,
             measurement_curve,
             time_clear,
         )
-        compliance_values["calc_rise_time"] = res_rise_time + event_duration
+        compliance_values["calc_rise_time"] = res_rise_time
         compliance_values["calc_rise_target"] = {measurement_name: res_rise_target}
 
         res_settling_time, _, res_settling_min, res_settling_max, calc_ss_value = (
