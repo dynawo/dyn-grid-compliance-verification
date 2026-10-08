@@ -194,7 +194,8 @@ Run `--help` for the options. Three things are worth knowing before using it:
 
 *   **The oscillation goes.** A reference curve should not carry the oscillation of the
     simulation that produced it, so the script de-ripples with a 5 Hz cut-off, and says so in
-    its own `--help`. The conditions whose model oscillates then report Non-compliant, which is
+    its own `--help`. Only a sustained oscillation is filtered; the response to the event, which
+    dies out, stays as simulated. The conditions whose model oscillates then report Non-compliant, which is
     what the criterion says about them.
 *   **Nothing is replaced until everything is in place.** The curves of the repository are only
     touched once every example has been anonymized and checked, so a failed run leaves the
