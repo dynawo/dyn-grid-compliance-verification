@@ -416,6 +416,29 @@ class Config:
             return default
         return value.lower() == "true"
 
+    def find_option(self, section: str, key: str, suffix: str) -> str | None:
+        """Names the key the section defines for a suffix: ``<key>_<suffix>`` wins over ``<key>``.
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Plain key within the section.
+        suffix: str
+            Suffix of the specific key, e.g. the voltage level of the producer.
+
+        Returns
+        -------
+        str | None
+            The suffixed key if the section defines it, else the plain key if it defines that,
+            else None.
+        """
+        for candidate in (f"{key}_{suffix}", key):
+            if self.has_option(section, candidate):
+                return candidate
+        return None
+
     def get_list(self, section: str, key: str) -> list:
         """Gets a list of string values for a given key and section.
         Values are assumed to be comma-separated in the configuration file.
