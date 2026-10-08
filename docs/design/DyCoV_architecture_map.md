@@ -149,7 +149,9 @@ Every record names the test it belongs to — `set_test_context(pcs, benchmark, 
 (`logging/test_context.py`, thread-local) and the `_ContextAdapter` that prefixes it.
 `warn_once(logger, message)` reports something that holds for the whole test however many times the
 check that spots it runs, forgetting it when the context changes. `Benchmark.validate` opens each
-operating condition with `Start (n/N)` and closes it with `Done in Xs -> <compliance>`.
+operating condition with `Start (n/N)` and closes it with `Done in Xs -> <compliance>`; in between,
+the simulation the curves come from logs `Dynawo ran in Xs`, Dynawo's own time, while every attempt
+of the retry strategy, bisection runs included, logs its time at DEBUG.
 
 ## Shell completion (CLI)
 
