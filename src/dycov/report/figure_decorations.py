@@ -220,10 +220,10 @@ def draw_additional_curves(
     """
     if figure_description.tolerance_band is not None:
         draw_tolerance_band(renderer, figure_description.tolerance_band, last_val, results)
-    if figure_description.frequency_band is not None:
+    for frequency_band in figure_description.frequency_bands:
         ymin, ymax = draw_frequency_band(
             renderer,
-            figure_description.frequency_band,
+            frequency_band,
             ymin,
             ymax,
             drawn_scale(figure_description),

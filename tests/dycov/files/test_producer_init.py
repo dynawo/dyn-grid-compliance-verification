@@ -12,6 +12,7 @@
 import pytest
 from lxml import etree
 
+from dycov.configuration.cfg import Config
 from dycov.files import par_access, producer_init
 from dycov.model.parameters import GenParams, PdrParams, Terminal
 
@@ -330,3 +331,19 @@ def test_forced_voltage_droop_replaces_an_iec_mode_without_droop():
     _adjust_iec_plant(par_root, generator, "Others", True)
 
     assert _control_mode(par_root) == {"WPP_MqG": "0", "WPP_MwpqMode": "3"}
+
+
+def test_skip_voltage_droop_adjustment_of_the_global_section_keeps_the_mode(monkeypatch):
+    monkeypatch.setattr(
+        Config,
+        "get_boolean",
+        lambda self, section, key, default=False: (
+            (section, key) == ("Global", "skip_voltage_droop_adjustment")
+        ),
+    )
+    par_root = _make_root()
+    generator = _iec_plant(par_root, "1", "0")
+
+    _adjust_iec_plant(par_root, generator, "Others", True)
+
+    assert _control_mode(par_root) == {"WPP_MqG": "1", "WPP_MwpqMode": "0"}

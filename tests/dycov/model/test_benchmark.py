@@ -22,6 +22,7 @@ from dycov.model.benchmark import (
 )
 from dycov.model.compliance import Compliance
 from dycov.model.parameters import CurvesAvailability, SimulationError
+from dycov.report.types import FrequencyBand
 
 _PCS_BENCHMARK = "PCS.Bench"
 _INTERNAL_NODE1_FIGURES = {
@@ -69,13 +70,14 @@ class DummyParams:
         return self._producer
 
 
-def _make_benchmark(monkeypatch, producer: DummyProducer, report_curves: dict = None):
-    """A benchmark whose configuration enables nothing but the given report figures."""
-    report_curves = report_curves or {}
+def _make_benchmark(
+    monkeypatch, producer: DummyProducer, report_curves: dict = None, validations: dict = None
+):
+    """A benchmark whose configuration enables nothing but the given report figures and
+    performance validations."""
+    lists = {"ReportCurves": report_curves or {}, "Performance-Validations": validations or {}}
     monkeypatch.setattr(
-        Config,
-        "get_list",
-        lambda self, section, key: report_curves.get(key, []) if section == "ReportCurves" else [],
+        Config, "get_list", lambda self, section, key: lists.get(section, {}).get(key, [])
     )
     monkeypatch.setattr(benchmark.manage_files, "create_dir", lambda path: None)
     return Benchmark(
@@ -168,6 +170,17 @@ def test_frequency_figures_are_drawn_in_hz(monkeypatch):
     drawn = {figure.name: (figure.ylabel, figure.in_hz) for figure in bm.get_figures_description()}
 
     assert drawn == {"fig_W": (r"$\omega$ (Hz)", True), "fig_WRef": (r"$\omega$ (Hz)", True)}
+
+
+def test_frequency_figure_draws_every_declared_band(monkeypatch):
+    validations = {"freq_200": [_PCS_BENCHMARK], "freq_250": [_PCS_BENCHMARK]}
+    bm = _make_benchmark(monkeypatch, DummyProducer(), {"fig_WRef": [_PCS_BENCHMARK]}, validations)
+
+    bands = {figure.name: figure.frequency_bands for figure in bm.get_figures_description()}
+
+    assert bands == {
+        "fig_WRef": [FrequencyBand(upper=0.2, lower=0.2), FrequencyBand(upper=0.25, lower=0.25)]
+    }
 
 
 def test_figures_read_the_voltages_then_the_powers_then_the_currents(monkeypatch):
