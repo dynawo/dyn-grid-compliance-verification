@@ -1,3 +1,5 @@
+.. _configuration:
+
 =============
 Configuration
 =============
@@ -378,8 +380,9 @@ The corresponding parameters follow the same naming convention but with the
 
 **For setpoint monitoring tests**
 
-Regardless of the nature of the reference signal, the maximum permissible
-errors on the tracked quantity (in pu, base: setpoint variation level) are:
+The maximum permissible errors on the tracked quantity (in pu, base: setpoint
+variation level) depend on the PCS, not on the nature of the reference
+signal. For PCS I16, whatever the reference curves are, they are:
 
 +--------+--------------------+
 | window | quantity tracked   |
@@ -395,6 +398,25 @@ errors on the tracked quantity (in pu, base: setpoint variation level) are:
 
 Configurable parameters: ``thr_reftrack_<metric>_<window>``. For example:
 ``thr_reftrack_mxe_before``, ``thr_reftrack_mae_after``.
+
+For PCS F16, whose reference curves are on-site measurements, they are:
+
++--------+--------------------+
+| window | quantity tracked   |
+|        +------+------+------+
+|        | MXE  | ME   | MAE  |
++========+======+======+======+
+| Before | 0.05 | 0.03 | 0.04 |
++--------+------+------+------+
+| During | 0.10 | 0.05 | 0.07 |
++--------+------+------+------+
+| After  | 0.05 | 0.03 | 0.04 |
++--------+------+------+------+
+
+Configurable parameters: ``thr_FT_reftrack_<metric>_<window>``. A PCS
+selects this family by naming it in its description,
+``setpoint_tracking_thresholds = FT``; a PCS that names none uses the
+``thr_reftrack_*`` family.
 
 
 Configuring graph appearance in reports

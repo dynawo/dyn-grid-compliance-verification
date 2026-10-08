@@ -62,7 +62,9 @@ for PPM:
    src/dycov/templates/PCS/model/PPM/PCS_RTE-I16zX/
 
 Inside it, create ``PCSDescription.ini`` following the structure of an
-existing PCS (e.g. ``PCS_RTE-I16z1/PCSDescription.ini``). This file defines:
+existing PCS (e.g. ``PCS_RTE-I16z1/PCSDescription.ini``); every section and
+key is described in :ref:`PCS description reference <pcs-description>`. This
+file defines:
 
 * the benchmarks belonging to the PCS,
 * the operating conditions (OC) for each benchmark,
