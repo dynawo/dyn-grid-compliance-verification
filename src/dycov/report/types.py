@@ -39,7 +39,7 @@ class FinalValueBand(ToleranceBand):
 class FrequencyBand(ToleranceBand):
     """Band relative to f_nom, deviation expressed in Hz."""
 
-    pass
+    color: str = "#55a868"
 
 
 @dataclass
