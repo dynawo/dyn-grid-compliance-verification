@@ -64,7 +64,7 @@
     <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="photovoltaics_Iql1Pu" value="-1.1"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="photovoltaics_VRef0Pu" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_VRef0Pu" value="0"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_tpREEC" value="0.05"/>
