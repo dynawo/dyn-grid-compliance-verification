@@ -120,13 +120,10 @@ the description shipped with the tool, which already carries the PCS header
 (`zone = 3`, the report template, the F16 tolerance family). You only write
 the tests.
 
-A declaration delivered with the curves takes the place of a
-`PCSDescription.ini` of the same PCS in your configuration directory
-(`~/.config/dycov/templates/PCS/model/<technology>/PCS_RTE-F16z3/`). DyCoV
-leaves a copy of the shipped template there at start-up, commented out: you
-can complete that copy instead, but it then applies to every case you run on
-that machine. The file delivered with the records is the one to use for a
-real installation.
+DyCoV leaves a template of this file at start-up in your configuration
+directory, `~/.config/dycov/templates/PCS/model/<technology>/PCS_RTE-F16z3/F16Description.ini`,
+with every key explained and the values the producer fills left empty: copy
+it next to your reference curves and complete it.
 
 When no file declares a test for `PCS_RTE-F16z3`, the run logs
 `PCS_RTE-F16z3: no test declared, nothing to validate` and goes on with the
@@ -603,9 +600,10 @@ are invented for the example and the records are the tool's own simulations
 anonymized as measurements, so they show the mechanics, not a real
 commissioning.
 
-The shipped template, with every key of this tutorial commented out and
-explained, is `src/dycov/templates/PCS/model/<technology>/PCS_RTE-F16z3/PCSDescription.ini`
-in the source tree, and its copy in your configuration directory.
+The template of the declaration, with every key of this tutorial explained,
+is `F16Description.ini` next to the shipped description of the PCS
+(`src/dycov/templates/PCS/model/<technology>/PCS_RTE-F16z3/`), and its copy
+in your configuration directory.
 
 ---
 

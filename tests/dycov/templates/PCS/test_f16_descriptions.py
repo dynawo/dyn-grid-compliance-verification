@@ -7,9 +7,9 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""The shipped F16 descriptions declare no test, because the DTR Fiche F16 fixes none: they
-carry a declaration template, commented out, that a producer completes with the recorded tests
-at the active power levels the fiche does fix."""
+"""The shipped F16 descriptions declare no test, because the DTR Fiche F16 fixes none: next to
+each one ships the F16Description.ini template that a producer copies beside the reference
+curves and completes with the recorded tests, at the active power levels the fiche does fix."""
 
 from __future__ import annotations
 
@@ -59,15 +59,9 @@ def _description_id(ini_path: Path) -> str:
     return f"{_technology(ini_path)}/{_pcs_name(ini_path)}"
 
 
-def _completed_declaration(ini_path: Path) -> configparser.ConfigParser:
-    """The description with its declaration template uncommented, as a producer leaves it: a
-    template line starts with a single '#', a comment with '# '."""
-    lines = []
-    for line in ini_path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("#") and not line.startswith("# "):
-            line = line[1:]
-        lines.append(line)
-    return _parse("\n".join(lines))
+def _declaration_template(ini_path: Path) -> configparser.ConfigParser:
+    """The F16Description.ini shipped next to the description of the PCS."""
+    return _parse((ini_path.parent / "F16Description.ini").read_text(encoding="utf-8"))
 
 
 def _operating_conditions(parser: configparser.ConfigParser, pcs: str):
@@ -99,8 +93,16 @@ def test_the_description_applies_the_on_site_thresholds_to_the_controlled_magnit
 
 
 @pytest.mark.parametrize("ini_path", _F16_DESCRIPTIONS, ids=_description_id)
+def test_the_declaration_template_names_the_pcs_it_declares(ini_path):
+    parser = _declaration_template(ini_path)
+
+    assert parser.get("PCS-Benchmarks", _pcs_name(ini_path)) != ""
+    assert not parser.has_section(_pcs_name(ini_path))
+
+
+@pytest.mark.parametrize("ini_path", _F16_DESCRIPTIONS, ids=_description_id)
 def test_the_declaration_template_runs_every_test_at_the_levels_of_the_fiche(ini_path):
-    parser = _completed_declaration(ini_path)
+    parser = _declaration_template(ini_path)
     pcs = _pcs_name(ini_path)
 
     levels_by_benchmark = {}
@@ -116,7 +118,7 @@ def test_the_declaration_template_runs_every_test_at_the_levels_of_the_fiche(ini
 
 @pytest.mark.parametrize("ini_path", _F16_DESCRIPTIONS, ids=_description_id)
 def test_the_declaration_template_leaves_the_test_itself_to_the_producer(ini_path):
-    parser = _completed_declaration(ini_path)
+    parser = _declaration_template(ini_path)
     pcs = _pcs_name(ini_path)
 
     for benchmark, oc in _operating_conditions(parser, pcs):
@@ -130,26 +132,9 @@ def test_the_declaration_template_leaves_the_test_itself_to_the_producer(ini_pat
         )
 
 
-@pytest.mark.parametrize("figure", ["fig_InternalNode1P", "fig_InternalNode1Q"])
-@pytest.mark.parametrize(
-    "ini_path",
-    [path for path in _F16_DESCRIPTIONS if _pcs_name(path).endswith("z1")],
-    ids=_description_id,
-)
-def test_the_zone_1_declaration_template_draws_the_internal_node1_power(ini_path, figure):
-    """#553: the operating point of a Zone 1 test is the one at InternalNode1."""
-    parser = _completed_declaration(ini_path)
-    pcs = _pcs_name(ini_path)
-    benchmarks = {
-        f"{pcs}.{benchmark}" for benchmark in parser.get("PCS-Benchmarks", pcs).split(",")
-    }
-
-    assert set(parser.get("ReportCurves", figure).split(",")) == benchmarks
-
-
 @pytest.mark.parametrize("ini_path", _F16_DESCRIPTIONS, ids=_description_id)
 def test_the_declaration_template_applies_the_checks_of_the_fiche(ini_path):
-    parser = _completed_declaration(ini_path)
+    parser = _declaration_template(ini_path)
     pcs = _pcs_name(ini_path)
     benchmarks = {
         f"{pcs}.{benchmark}" for benchmark in parser.get("PCS-Benchmarks", pcs).split(",")

@@ -36,6 +36,14 @@ def _declares_no_test(description: Path) -> bool:
     )
 
 
+def _declaration_templates(pcs_dir: Path) -> list[Path]:
+    return sorted(
+        path
+        for path in pcs_dir.glob("*[dD]escription.[iI][nN][iI]")
+        if path.name.lower() != "pcsdescription.ini"
+    )
+
+
 def _get_linux_info() -> str:
     try:
         distro = platform.freedesktop_os_release()
@@ -276,8 +284,9 @@ class DycovInitializer:
         )
 
     def _copy_pcs_to_declare(self, tool_path: Path):
-        """A PCS whose fiche fixes no test ships as a declaration template: a copy goes to the
-        user's templates, where the producer completes it, unless one is already there."""
+        """A PCS whose fiche fixes no test ships the template of the declaration file the
+        producer delivers with the reference curves (``<fiche>Description.ini``): a copy goes to
+        the user's templates under that same name, unless one is already there."""
         shipped = tool_path / "templates" / "PCS" / "model"
         for description in sorted(shipped.glob("*/PCS_*/PCSDescription.ini")):
             if not _declares_no_test(description):
@@ -285,10 +294,11 @@ class DycovInitializer:
             target_dir = (
                 config.get_config_dir() / "templates" / "PCS" / "model"
             ) / description.relative_to(shipped).parent
-            if (target_dir / description.name).exists():
-                continue
-            self._template_cmd_config(target_dir)
-            manage_files.copy_from_path(description, target_dir)
+            for declaration in _declaration_templates(description.parent):
+                if (target_dir / declaration.name).exists():
+                    continue
+                self._template_cmd_config(target_dir)
+                manage_files.copy_from_path(declaration, target_dir)
 
     def _copy_dummy_samples(self, tool_path: Path, source: str):
         """

@@ -18,10 +18,11 @@ DyCoV reads every ``*Description.ini`` found next to the reference curves
 and takes as the description of ``PCS_RTE-F16z3`` the file that names it in
 its ``[PCS-Benchmarks]``. The file completes the description shipped with
 the tool, which already carries the header of the PCS (its zone, its report
-and the tolerances of the fiche): the producer writes only the tests. A copy
-of the shipped description, with the declaration commented out and every
-key explained, is left in the configuration directory under
-``templates/PCS/model/<technology>/PCS_RTE-F16z3/PCSDescription.ini``.
+and the tolerances of the fiche): the producer writes only the tests. A
+template of the file, with every key explained and the values the producer
+fills left empty, is left at start-up in the configuration directory, under
+``templates/PCS/model/<technology>/PCS_RTE-F16z3/F16Description.ini``: copy
+it next to the reference curves and complete it.
 
 .. code-block:: ini
 

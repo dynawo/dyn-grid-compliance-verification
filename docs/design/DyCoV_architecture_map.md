@@ -56,9 +56,9 @@ Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for 
 and `line_XPu` (DTR reactance-table base `a`/`b`).
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
-`PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and a commented declaration template, which
-`core/initialization.py` copies into the user's templates (`_copy_pcs_to_declare`, never over a copy
-already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
+`PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
+template of the declaration, which `core/initialization.py` copies under that same name into the
+user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
 the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
 description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
 of the one in the configuration directory), so `cfg.py` keeps its five layers. Every
