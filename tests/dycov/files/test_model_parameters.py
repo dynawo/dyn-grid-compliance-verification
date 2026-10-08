@@ -10,6 +10,7 @@
 """Tests for the producer model parameter extraction helpers."""
 
 import configparser
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -257,6 +258,31 @@ def test_get_generator_ppc_local_reads_a_declared_false():
     ppc_local = model_parameters._get_generator_ppc_local(
         [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
     )
+
+    assert ppc_local is False
+
+
+def _models_with_a_pcc():
+    """Every model whose dictionary declares an operating point at the PCC, with its prefix."""
+    dictionaries = Path(model_parameters.__file__).parents[1] / "curves" / "dynawo" / "dictionary"
+    models = []
+    for name in ("Power_Park.ini", "Storage.ini"):
+        parser = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
+        parser.optionxform = str
+        parser.read(dictionaries / name)
+        for lib in parser.sections():
+            if parser.has_option(lib, "ActivePowerPcc0Pu"):
+                prefix = parser.get(lib, "ActivePowerPcc0Pu").lstrip("-").split("_")[0]
+                models.append((lib, prefix))
+    return models
+
+
+@pytest.mark.parametrize("lib, prefix", _models_with_a_pcc())
+def test_get_generator_ppc_local_reads_every_model_with_a_pcc(lib, prefix):
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {f"{prefix}_PPCLocal": "false"})
+
+    ppc_local = model_parameters._get_generator_ppc_local([parset], {"ns": _NS}, lib)
 
     assert ppc_local is False
 
