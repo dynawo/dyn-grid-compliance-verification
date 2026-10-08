@@ -213,27 +213,40 @@ def test_the_description_delivered_with_the_reference_curves_is_the_user_one(
 ):
     tool_file = tmp_path / "tool" / "PCSDescription.ini"
     user_file = tmp_path / "user" / "PCSDescription.ini"
-    case_file = tmp_path / "ReferenceCurves" / "PCS_Test" / "PCSDescription.ini"
-    case_file.parent.mkdir(parents=True)
-    case_file.write_text("[PCS-Benchmarks]\nPCS_Test = Recorded\n")
+    delivered = tmp_path / "ReferenceCurves" / "F16Description.ini"
+    delivered.parent.mkdir(parents=True)
+    delivered.write_text("[PCS-Benchmarks]\nPCS_Test = Recorded\n")
     producer = DummyProducer(reference_path=tmp_path / "ReferenceCurves")
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer)
 
-    assert dummy_config.loaded == (tool_file, case_file, None)
+    assert dummy_config.loaded == (tool_file, delivered, None)
     assert pcs.is_valid() is True
 
 
 def test_a_description_delivered_for_another_pcs_is_not_the_user_one(monkeypatch, tmp_path):
     user_file = tmp_path / "user" / "PCSDescription.ini"
-    other_file = tmp_path / "ReferenceCurves" / "PCS_Other" / "PCSDescription.ini"
-    other_file.parent.mkdir(parents=True)
-    other_file.write_text("[PCS-Benchmarks]\nPCS_Other = Recorded\n")
+    other = tmp_path / "ReferenceCurves" / "F99Description.ini"
+    other.parent.mkdir(parents=True)
+    other.write_text("[PCS-Benchmarks]\nPCS_Other = Recorded\n")
     producer = DummyProducer(reference_path=tmp_path / "ReferenceCurves")
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file, producer)
 
     assert dummy_config.loaded == (None, user_file, None)
+
+
+def test_only_a_description_file_delivered_with_the_reference_curves_is_read(
+    monkeypatch, tmp_path
+):
+    curves_index = tmp_path / "ReferenceCurves" / "CurvesFiles.ini"
+    curves_index.parent.mkdir(parents=True)
+    curves_index.write_text("[PCS-Benchmarks]\nPCS_Test = Recorded\n")
+    producer = DummyProducer(reference_path=tmp_path / "ReferenceCurves")
+
+    pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, None, producer)
+
+    assert dummy_config.loaded == (None, None, None)
 
 
 def test_a_pcs_without_benchmarks_declares_no_test(monkeypatch):
