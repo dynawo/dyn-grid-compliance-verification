@@ -644,6 +644,7 @@ def test_calculate_measures_the_response_on_the_curve_the_event_drives():
     assert list(compliance_values["calc_rise_target"]) == ["BusPDR_BUS_ReactivePower"]
     assert list(compliance_values["calc_settling_tube"]) == ["BusPDR_BUS_ReactivePower"]
     assert compliance_values["calc_reaction_time"] == pytest.approx(1.0)
+    assert compliance_values["calc_rise_time"] == pytest.approx(1.0)
 
 
 def test_calculate_measures_no_response_without_the_curve_the_event_drives():
