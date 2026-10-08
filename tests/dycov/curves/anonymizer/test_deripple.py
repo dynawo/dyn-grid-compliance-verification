@@ -38,11 +38,44 @@ def test_ripple_spans_finds_the_oscillation(rippled_curve):
     assert spans[0][1] <= 5.6
 
 
+@pytest.fixture()
+def response_that_dies_out() -> pd.DataFrame:
+    """A step answered by an oscillation that swings fast for a third of a second while it rings
+    down, as a converter does when a fault clears."""
+    t = np.arange(0.0, 10.0, 1e-3)
+    after = np.clip(t - 5.0, 0.0, None)
+    ring_down = 0.4 * np.exp(-after / 0.1) * (t >= 5.0) * np.sin(2 * np.pi * 10.0 * after)
+    return pd.DataFrame({"time": t, "signal1": np.where(t < 5.0, 1.0, 0.5) + ring_down})
+
+
 def test_ripple_spans_ignores_a_curve_that_only_steps():
     t = np.arange(0.0, 10.0, 1e-3)
     values = np.where(t < 5.0, 1.0, 0.5)
 
     assert _ripple_spans(t, values) == []
+
+
+def test_ripple_spans_ignores_a_response_that_dies_out(response_that_dies_out):
+    spans = _ripple_spans(
+        response_that_dies_out["time"].to_numpy(), response_that_dies_out["signal1"].to_numpy()
+    )
+
+    assert spans == []
+
+
+def test_ripple_spans_ignores_a_burst_too_short_to_be_sustained():
+    t = np.arange(0.0, 10.0, 1e-3)
+    burst = (t >= 5.0) & (t < 5.15)
+    values = 0.5 + burst * 0.4 * np.sin(2 * np.pi * 40.0 * (t - 5.0))
+
+    assert _ripple_spans(t, values) == []
+
+
+def test_deripple_curves_leaves_a_response_that_dies_out_untouched(response_that_dies_out):
+    result = deripple_curves(response_that_dies_out, cutoff=5.0, event_time=5.0)
+
+    original = response_that_dies_out["signal1"].to_numpy()
+    assert np.array_equal(result["signal1"].to_numpy(), original)
 
 
 def test_remove_spikes_replaces_a_one_sample_excursion():
