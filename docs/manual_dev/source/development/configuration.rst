@@ -110,8 +110,10 @@ each Benchmark or Operating Condition must pass. Available tests:
 * ``time_10P_85U`` — time when 10P is achieved, measured from when voltage
   returns above 0.85 pu.
 * ``freq_1`` — checks that frequency stays between 49 Hz and 51 Hz.
-* ``freq_200`` — checks that frequency stays within ±200 mHz.
-* ``freq_250`` — checks that frequency stays within ±250 mHz.
+* ``freq_200`` — draws a ±200 mHz band around the nominal frequency on the
+  frequency figure; nothing is checked.
+* ``freq_250`` — draws a ±250 mHz band around the nominal frequency on the
+  frequency figure; nothing is checked.
 * ``time_10Pfloor_85U`` — time when 10P_floor is achieved after voltage
   returns above 0.85 pu.
 * ``time_10Pfloor_clear`` — time when 10P_tclear is achieved after voltage
@@ -129,8 +131,9 @@ Benchmark or Operating Condition must pass. Available tests:
   the tolerance range of the target value.
 * ``settling_time`` — time from step command until measured value enters the
   tolerance range for the last time.
-* ``overshoot`` — difference between maximum response and final steady-state
-  value.
+* ``overshoot`` — how far the response goes beyond its final steady-state
+  value in the direction of the step, after the event (the undershoot of a
+  downward step).
 * ``ramp_time_lag`` — tracking error time.
 * ``ramp_error`` — tracking error value.
 * ``mean_absolute_error_power_1P`` — P and Q MAE must not exceed 1% of Pmax.
