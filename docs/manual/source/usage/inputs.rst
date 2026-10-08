@@ -61,7 +61,10 @@ named ``Zone1/`` and ``Zone3/``, each with its own set of three files.
 Zone 1 should represent a single production unit (e.g. a single wind turbine),
 while Zone 3 should represent the complete installation at the PDR, including
 plant-level control. For the precise definition of these zones, refer to
-PCS I16 in the RTE DTR.
+PCS I16 in the RTE DTR. The ``Zone1/`` model is what the PCS of zone 1
+(``PCS_RTE-I16z1``) validate: a run limited with ``-p`` to a PCS of zone 3
+(``PCS_RTE-I16z3``, or the tests declared for ``PCS_RTE-F16z3``) accepts a
+directory with ``Zone3/`` alone.
 
 .. note::
    The name *PDR* always refers to the real connection point of the complete

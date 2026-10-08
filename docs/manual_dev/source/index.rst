@@ -217,6 +217,7 @@ and assume more knowledge of Dynamic grid Compliance Verification.
    :caption: Task-oriented Developer Guides
 
    development/installation
+   development/pcs_description
    development/addpcs
    development/addmodel
    development/GFM_module

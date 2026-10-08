@@ -80,7 +80,7 @@ def test_plotly_figures_with_additional_traces():
         variables=[{"type": "bus", "variable": "ActivePower"}],
         ylabel="Power [pu]",
         tolerance_band=FinalValueBand(upper=10.0, lower=10.0, color="#55a868"),
-        frequency_band=FrequencyBand(upper=1.0, lower=1.0),
+        frequency_bands=[FrequencyBand(upper=1.0, lower=1.0)],
         dynamic_band=DynamicBand(upper=5.0, lower=5.0, source_key="AVR_5_crvs"),
     )
 

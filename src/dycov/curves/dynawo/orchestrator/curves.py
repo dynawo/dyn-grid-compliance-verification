@@ -34,7 +34,9 @@ _CURVES_CSV = "curves/curves.csv"
 _SIMULATION_SECTION = "Simulation"
 _NOT_CONFIGURED = "not set"
 
-SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
+SimulateOutcome = namedtuple(
+    "SimulateOutcome", "succeeded time_exceeds has_curves curves sim_time"
+)
 SolverParam = namedtuple("SolverParam", "actual default")
 
 
@@ -289,6 +291,7 @@ class DynawoCurves(ProducerCurves):
             time_exceeds=result.sim_time > self._sim_time,
             has_curves=has_curves,
             curves=result.curves,
+            sim_time=result.sim_time,
         )
 
     # ------------------------------------------------------------------
@@ -389,7 +392,11 @@ class DynawoCurves(ProducerCurves):
         )
         event_params: dict = {}
         outcome = SimulateOutcome(
-            succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
+            succeeded=False,
+            time_exceeds=False,
+            has_curves=False,
+            curves=pd.DataFrame(),
+            sim_time=0.0,
         )
         error_message = None
         is_test_applicable = False
@@ -444,6 +451,9 @@ class DynawoCurves(ProducerCurves):
             outcome = self.__simulate(
                 output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name
             )
+            dycov_logging.get_logger("ProducerCurves").info(
+                f"Dynawo ran in {outcome.sim_time:.1f}s"
+            )
             self._voltage_dip = measure_voltage_dip(
                 self._pcs_name,
                 bm_name,
@@ -453,7 +463,7 @@ class DynawoCurves(ProducerCurves):
                 event_params["duration_time"],
             )
             dycov_logging.get_logger("ProducerCurves").debug(
-                f"Simulation finished in {self._sim_time}s: "
+                f"Simulation finished in {outcome.sim_time:.1f}s: "
                 f"succeeded={outcome.succeeded} time_exceeds={outcome.time_exceeds} "
                 f"has_curves={outcome.has_curves}",
             )
