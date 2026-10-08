@@ -13,6 +13,11 @@ from dycov.core.parameters import Parameters
 from dycov.validate.producer import ModelProducer
 
 
+def _requires_zone1(selected_pcs: str) -> bool:
+    """A run limited to one PCS of zone 3 validates nothing of zone 1; any other run does."""
+    return not (selected_pcs and selected_pcs.endswith("z3"))
+
+
 class ValidationParameters(Parameters):
     """Parameters to define the validation of a model.
 
@@ -54,7 +59,11 @@ class ValidationParameters(Parameters):
 
         # Read producer inputs
         self._producer = ModelProducer(
-            producer_model, producer_curves_path, reference_curves_path, verification_type
+            producer_model,
+            producer_curves_path,
+            reference_curves_path,
+            verification_type,
+            zone1_required=_requires_zone1(selected_pcs),
         )
         self._producer_workbook = producer_workbook
 
