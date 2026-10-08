@@ -51,7 +51,7 @@
     <!-- Base unit: Un_PDR -->
     <par type="DOUBLE" name="WPP_UwpqDipPu" value="0.8"/>
     <!-- Base unit: Un_PDR -->
-    <par type="DOUBLE" name="WPP_UwpqRisePu" value="1.2"/>
+    <par type="DOUBLE" name="WPP_UwpqRisePu" value="1.1"/>
     <!-- Base unit: Un_PDR^2 / SnZone3 -->
     <par type="DOUBLE" name="WPP_RwpDropPu" value="0"/>
     <!-- Base unit: Un_PDR^2 / SnZone3 -->
