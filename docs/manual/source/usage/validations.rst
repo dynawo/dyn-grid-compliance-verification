@@ -382,9 +382,10 @@ PCS the file names in its ``[PCS-Benchmarks]``: one benchmark per kind of
 recorded test, one operating condition per active power level, the grid and
 the event of each one, the compliance tests to apply and the figures to
 draw. The shipped ``PCSDescription.ini`` of ``PCS_RTE-F16z3`` declares no
-test and holds that declaration as a commented template; DyCoV leaves a copy
-of it in the user configuration, under
-``templates/PCS/model/<technology>/PCS_RTE-F16z3/``. A PCS that declares no
+test; a template of ``F16Description.ini`` ships next to it, and DyCoV
+leaves a copy of it at start-up in the user configuration, under
+``templates/PCS/model/<technology>/PCS_RTE-F16z3/F16Description.ini``, to
+copy next to the reference curves and complete. A PCS that declares no
 test is left out of the run, and every declared test is reported with a
 template shared by all of them.
 

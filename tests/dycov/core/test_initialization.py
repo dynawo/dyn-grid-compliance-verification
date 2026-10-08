@@ -101,6 +101,9 @@ class TestDycovInitializer:
         (to_declare / "PCSDescription.ini").write_text(
             "[PCS_RTE-F16z3]\nzone = 3\n[PCS-Benchmarks]\nPCS_RTE-F16z3 =\n"
         )
+        (to_declare / "F16Description.ini").write_text(
+            "[PCS-Benchmarks]\nPCS_RTE-F16z3 = RecordedTest\n"
+        )
         fixed = templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-I16z1"
         fixed.mkdir(parents=True)
         (fixed / "PCSDescription.ini").write_text(
@@ -177,7 +180,7 @@ class TestDycovInitializer:
             / "model"
             / "PPM"
             / "PCS_RTE-F16z3"
-            / "PCSDescription.ini",
+            / "F16Description.ini",
             config_templates_dir / "PCS" / "model" / "PPM" / "PCS_RTE-F16z3",
         )
         assert mock_copy_from_path.call_count == 6  # Total copy_from_path calls
@@ -210,10 +213,9 @@ class TestDycovInitializer:
 
         dycov_initializer._configure_templates(tool_path_fixture)
 
-        copied = user_pcs / "PPM" / "PCS_RTE-F16z3" / "PCSDescription.ini"
-        assert (
-            copied.read_text() == "[PCS_RTE-F16z3]\nzone = 3\n[PCS-Benchmarks]\nPCS_RTE-F16z3 =\n"
-        )
+        copied = user_pcs / "PPM" / "PCS_RTE-F16z3" / "F16Description.ini"
+        assert copied.read_text() == "[PCS-Benchmarks]\nPCS_RTE-F16z3 = RecordedTest\n"
+        assert not (user_pcs / "PPM" / "PCS_RTE-F16z3" / "PCSDescription.ini").exists()
         assert not (user_pcs / "PPM" / "PCS_RTE-I16z1").exists()
 
     def test_configure_templates_keeps_the_pcs_the_user_already_declared(
@@ -227,7 +229,7 @@ class TestDycovInitializer:
             / "model"
             / "PPM"
             / "PCS_RTE-F16z3"
-            / "PCSDescription.ini"
+            / "F16Description.ini"
         )
         declared.parent.mkdir(parents=True)
         declared.write_text("[PCS-Benchmarks]\nPCS_RTE-F16z3 = Recorded\n")
