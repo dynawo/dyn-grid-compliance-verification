@@ -76,11 +76,9 @@ def _operating_conditions(parser: configparser.ConfigParser, pcs: str):
             yield benchmark, oc
 
 
-def test_every_technology_and_zone_has_an_f16_description():
+def test_every_technology_has_an_f16_description_of_zone_3():
     assert {(_technology(p), _pcs_name(p)) for p in _F16_DESCRIPTIONS} == {
-        ("PPM", "PCS_RTE-F16z1"),
         ("PPM", "PCS_RTE-F16z3"),
-        ("BESS", "PCS_RTE-F16z1"),
         ("BESS", "PCS_RTE-F16z3"),
     }
 
