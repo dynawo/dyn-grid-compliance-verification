@@ -6,8 +6,8 @@
     <par type="BOOL" name="photovoltaics_RefFlag" value="true"/>
     <par type="BOOL" name="photovoltaics_FreqFlag" value="true"/>
     <par type="DOUBLE" name="photovoltaics_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="photovoltaics_Kp" value="0.1"/>
-    <par type="DOUBLE" name="photovoltaics_Ki" value="1.5"/>
+    <par type="DOUBLE" name="photovoltaics_Kp" value="1"/>
+    <par type="DOUBLE" name="photovoltaics_Ki" value="5"/>
     <par type="DOUBLE" name="photovoltaics_tFt" value="1e-05"/>
     <par type="DOUBLE" name="photovoltaics_tFv" value="0.1"/>
     <!-- Base unit: Un_PDR -->
@@ -77,7 +77,7 @@
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="photovoltaics_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="photovoltaics_Kqp" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="photovoltaics_Kqi" value="1"/>
     <par type="DOUBLE" name="photovoltaics_Kvp" value="1"/>
     <par type="DOUBLE" name="photovoltaics_Kvi" value="1"/>
     <par type="DOUBLE" name="photovoltaics_tIq" value="0.02"/>
