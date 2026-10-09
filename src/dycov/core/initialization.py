@@ -140,8 +140,7 @@ class DycovInitializer:
         This includes creating the config directory if it doesn't exist,
         and setting up basic and advanced configuration files.
         """
-        if not config.get_config_dir().is_dir():
-            manage_files.create_dir(config.get_config_dir())
+        manage_files.create_dir(config.get_config_dir(), clean_first=False)
 
         # Create basic and advanced configuration files from templates.
         manage_files.create_config_file(
@@ -206,8 +205,7 @@ class DycovInitializer:
         Sets up file and console loggers based on configuration settings.
         """
         log_dir = config.get_config_dir() / "log"
-        if not log_dir.is_dir():
-            manage_files.create_dir(log_dir)
+        manage_files.create_dir(log_dir, clean_first=False)
 
         file_log_level = config.get_int("Global", "file_log_level", 20)
         file_formatter = config.get_value("Global", "file_formatter")
@@ -234,8 +232,7 @@ class DycovInitializer:
         """
         Ensures the existence of a specific template command directory.
         """
-        if not template_path.is_dir():
-            manage_files.create_dir(template_path)
+        manage_files.create_dir(template_path, clean_first=False)
 
     def _configure_template_category(self, base_template_dir: Path, sub_template: str):
         """
@@ -258,9 +255,7 @@ class DycovInitializer:
         templates_to_configure = ["PCS", "reports"]
         config_templates_dir = config.get_config_dir() / "templates"
 
-        # Create base templates directory if it doesn't exist
-        if not config_templates_dir.is_dir():
-            manage_files.create_dir(config_templates_dir)
+        manage_files.create_dir(config_templates_dir, clean_first=False)
 
         for template in templates_to_configure:
             self._configure_template_category(config_templates_dir, template)

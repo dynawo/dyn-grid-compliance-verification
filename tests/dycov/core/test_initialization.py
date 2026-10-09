@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 import configparser
+from pathlib import Path
 
 import pytest
 
@@ -138,6 +139,21 @@ class TestDycovInitializer:
         for d in expected_dirs:
             assert d.is_dir()
         assert not (base_template_dir / template_name / "model" / "SM").exists()
+
+    def test_configure_template_category_keeps_a_directory_another_run_just_created(
+        self, dycov_initializer, monkeypatch
+    ):
+        """Several runs initialising one fresh home must not wipe each other's templates."""
+        base_template_dir = self.mock_config.get_config_dir.return_value / "templates"
+        ppm_dir = base_template_dir / "PCS" / "model" / "PPM"
+        ppm_dir.mkdir(parents=True)
+        (ppm_dir / "PCSDescription.ini").write_text("[PCS-Benchmarks]\n")
+        real_is_dir = Path.is_dir
+        monkeypatch.setattr(Path, "is_dir", lambda path: path != ppm_dir and real_is_dir(path))
+
+        dycov_initializer._configure_template_category(base_template_dir, "PCS")
+
+        assert (ppm_dir / "PCSDescription.ini").exists()
 
     def test_configure_templates_copies_files(
         self, dycov_initializer, tmp_path, tool_path_fixture, mocker
