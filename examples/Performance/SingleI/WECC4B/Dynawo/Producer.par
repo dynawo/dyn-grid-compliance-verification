@@ -6,8 +6,8 @@
     <par type="BOOL" name="WTG4B_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4B_FreqFlag" value="true"/>
     <par type="DOUBLE" name="WTG4B_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="WTG4B_Kp" value="0.1"/>
-    <par type="DOUBLE" name="WTG4B_Ki" value="1.5"/>
+    <par type="DOUBLE" name="WTG4B_Kp" value="1"/>
+    <par type="DOUBLE" name="WTG4B_Ki" value="5"/>
     <par type="DOUBLE" name="WTG4B_tFt" value="1e-05"/>
     <par type="DOUBLE" name="WTG4B_tFv" value="0.1"/>
     <!-- Base unit: Un_PDR -->
@@ -82,9 +82,9 @@
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WTG4B_VMinPu" value="0.8"/>
     <par type="DOUBLE" name="WTG4B_Kqp" value="1"/>
-    <par type="DOUBLE" name="WTG4B_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WTG4B_Kqi" value="1"/>
     <par type="DOUBLE" name="WTG4B_Kvp" value="1"/>
-    <par type="DOUBLE" name="WTG4B_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WTG4B_Kvi" value="1"/>
     <par type="DOUBLE" name="WTG4B_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WTG4B_DPMaxPu" value="999"/>
