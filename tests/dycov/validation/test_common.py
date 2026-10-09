@@ -41,12 +41,8 @@ def dummy_config(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_get_ss_tolerance_without_setpoint_variation_returns_the_configured_tolerance():
-    assert common.get_ss_tolerance(0.0) == pytest.approx(0.002)
-
-
-def test_get_ss_tolerance_scales_with_the_setpoint_variation():
-    assert common.get_ss_tolerance(0.1) == pytest.approx(0.0002)
+def test_get_ss_tolerance_returns_the_configured_tolerance():
+    assert common.get_ss_tolerance() == pytest.approx(0.002)
 
 
 # ---------------------------------------------------------------------------
@@ -661,6 +657,30 @@ def test_get_settling_time_raises_on_length_mismatch():
         common.get_settling_time(0.05, [0, 1, 2], [1, 2], sim_t_event_start=1)
 
 
+@pytest.mark.parametrize("step", [0.0222, -0.0222])
+def test_get_settling_time_of_a_step_takes_its_band_from_the_step(step):
+    time = [0, 1, 2, 3, 4]
+    curve = [0.0, 0.0, 0.0195, 0.0191, 0.0192]
+
+    ret_val, pos, tube_min, tube_max, _ = common.get_settling_time(
+        0.005, time, curve, sim_t_event_start=1, step=step
+    )
+
+    assert tube_min == pytest.approx(0.0192 - 0.005 * 0.0222)
+    assert tube_max == pytest.approx(0.0192 + 0.005 * 0.0222)
+    assert pos == 2
+    assert ret_val == pytest.approx(1.0)
+
+
+def test_get_response_time_of_a_step_takes_its_band_from_the_step():
+    time = [0, 1, 2, 3, 4]
+    curve = [0.0, 0.0, 0.018, 0.0191, 0.0192]
+
+    result = common.get_response_time(0.005, time, curve, sim_t_event_start=1, step=0.0222)
+
+    assert result == pytest.approx(1.0)
+
+
 # ---------------------------------------------------------------------------
 # Reached time
 # ---------------------------------------------------------------------------
@@ -766,6 +786,18 @@ def test_get_overshoot_of_a_monotone_response_is_zero():
 def test_get_overshoot_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
         common.get_overshoot([0, 1, 2], [1, 2], sim_t_event_start=1)
+
+
+def test_get_overshoot_tolerance_of_a_step_is_the_settling_band_of_the_step():
+    result = common.get_overshoot_tolerance([0.0, 0.5, 2.0], setpoint_variation=0.1)
+
+    assert result == pytest.approx(0.0002)
+
+
+def test_get_overshoot_tolerance_without_a_step_is_the_settling_band_of_the_value():
+    result = common.get_overshoot_tolerance([0.0, 0.5, 2.0], setpoint_variation=0.0)
+
+    assert result == pytest.approx(0.004)
 
 
 # ---------------------------------------------------------------------------

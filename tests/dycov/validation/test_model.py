@@ -482,6 +482,7 @@ def test_compare_event_times_computes_overshoot():
 
     assert results["calc_overshoot"] == pytest.approx(0.25)
     assert results["ref_overshoot"] == pytest.approx(0.10)
+    assert results["overshoot_tolerance"] == pytest.approx(0.0002)
 
 
 def test_compare_event_times_without_validations_only_stores_the_event_start():
@@ -586,6 +587,7 @@ def test_check_times_within_the_thresholds_is_compliant():
         "calc_ss_value": 1.0,
         "calc_overshoot": 0.10,
         "ref_overshoot": 0.105,
+        "overshoot_tolerance": 0.0002,
     }
 
     validator._ModelValidator__check_times(check_results, compliance_values)
@@ -616,6 +618,38 @@ def test_check_times_outside_the_reaction_time_threshold_fails():
 
     assert check_results["reaction_time_check"] is False
     assert check_results["reaction_time_error"] == pytest.approx(100.0)
+    assert check_results["compliance"] is False
+
+
+def test_check_times_overshoots_inside_the_tolerance_band_match():
+    """Neither response overshoots: what is left is numerical residue, far inside the band."""
+    validator = _make_validator(validations=["overshoot"])
+    check_results = {"compliance": True}
+    compliance_values = {
+        "calc_overshoot": 1.6e-8,
+        "ref_overshoot": 1.05e-6,
+        "overshoot_tolerance": 1.7e-4,
+    }
+
+    validator._ModelValidator__check_times(check_results, compliance_values)
+
+    assert check_results["overshoot_check"] is True
+    assert check_results["compliance"] is True
+
+
+def test_check_times_overshoots_beyond_the_band_keep_the_relative_threshold():
+    validator = _make_validator(validations=["overshoot"])
+    check_results = {"compliance": True}
+    compliance_values = {
+        "calc_overshoot": 0.10,
+        "ref_overshoot": 0.13,
+        "overshoot_tolerance": 0.0002,
+    }
+
+    validator._ModelValidator__check_times(check_results, compliance_values)
+
+    assert check_results["overshoot_check"] is False
+    assert check_results["overshoot_error"] == pytest.approx(100 * 0.03 / 0.13)
     assert check_results["compliance"] is False
 
 
