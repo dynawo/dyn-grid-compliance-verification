@@ -150,16 +150,18 @@ class ModelValidator(Validator):
 
         if compliance_list.contains_key(["response_time"], self._validations):
             res_response_time = common.get_response_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             ref_response_time = common.get_response_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             results["calc_response_time"] = res_response_time
             results["ref_response_time"] = ref_response_time
@@ -172,16 +174,18 @@ class ModelValidator(Validator):
                 res_settling_max,
                 calc_ss_value,
             ) = common.get_settling_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             ref_settling_time, _, _, _, _ = common.get_settling_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             results["calc_settling_time"] = res_settling_time
             results["calc_ss_value"] = calc_ss_value
@@ -203,6 +207,10 @@ class ModelValidator(Validator):
             )
             results["calc_overshoot"] = res_overshoot
             results["ref_overshoot"] = ref_overshoot
+            results["overshoot_tolerance"] = common.get_overshoot_tolerance(
+                list(self._get_calculated_curve_by_name((measurement_name))),
+                setpoint_variation,
+            )
 
     def __compare_ideal_ramp(
         self,
@@ -264,17 +272,19 @@ class ModelValidator(Validator):
         reference_curves = curves[1]
 
         _, ref_settlin_t_pos, _, _, _ = common.get_settling_time(
-            common.get_ss_tolerance(setpoint_variation),
+            common.get_ss_tolerance(),
             list(reference_curves["time"]),
             list(reference_curves[measurement_name]),
             reference_curves["time"][0],
+            setpoint_variation,
         )
 
         _, res_settlin_t_pos, _, _, _ = common.get_settling_time(
-            common.get_ss_tolerance(setpoint_variation),
+            common.get_ss_tolerance(),
             list(calculated_curves["time"]),
             list(calculated_curves[measurement_name]),
             calculated_curves["time"][0],
+            setpoint_variation,
         )
 
         thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
@@ -491,6 +501,7 @@ class ModelValidator(Validator):
                         compliance_values["calc_overshoot"],
                         compliance_values["ref_overshoot"],
                         thr_overshoot,
+                        compliance_values["overshoot_tolerance"],
                     )
                 )
 
@@ -780,6 +791,7 @@ class ModelValidator(Validator):
                 'ref_settling_time': float, reference settling time.
                 'calc_overshoot': float, calculated overshoot.
                 'ref_overshoot': float, reference overshoot.
+                'overshoot_tolerance': float, half-width of the tolerance band of the response.
                 'ramp_time_lag': float, ramp time lag.
                 'ramp_error': float, ramp error.
                 'mae_voltage_1P': float, mean absolute error for voltage.
