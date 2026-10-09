@@ -34,7 +34,7 @@
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="photovoltaics_VMinPu" value="0.8"/>
     <par type="DOUBLE" name="photovoltaics_Kqp" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="photovoltaics_Kqi" value="1"/>
     <par type="DOUBLE" name="photovoltaics_Kvp" value="1"/>
     <par type="DOUBLE" name="photovoltaics_Kvi" value="0.7"/>
     <par type="DOUBLE" name="photovoltaics_tIq" value="0.01"/>

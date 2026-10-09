@@ -39,9 +39,9 @@
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT4B_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WT4B_Kqp" value="1"/>
-    <par type="DOUBLE" name="WT4B_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WT4B_Kqi" value="1"/>
     <par type="DOUBLE" name="WT4B_Kvp" value="1"/>
-    <par type="DOUBLE" name="WT4B_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WT4B_Kvi" value="1"/>
     <par type="DOUBLE" name="WT4B_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT4B_DPMaxPu" value="999"/>
