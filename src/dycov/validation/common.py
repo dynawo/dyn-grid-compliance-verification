@@ -33,11 +33,8 @@ SS_WINDOW_FRACTION = 0.1
 MIN_SS_WINDOW_SAMPLES = 2
 
 
-def get_ss_tolerance(setpoint_variation: float) -> float:
-    tolerance = config.get_float("GridCode", "thr_ss_tol", 0.002)
-    if setpoint_variation > 0.0:
-        tolerance = setpoint_variation * tolerance
-    return tolerance
+def get_ss_tolerance() -> float:
+    return config.get_float("GridCode", "thr_ss_tol", 0.002)
 
 
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
@@ -47,17 +44,20 @@ def _show_error(calculated_value: float, reference_value: float, rtol: float, at
     return False
 
 
-def _compute_tube(target: float, percent: float) -> tuple[float, float]:
+def _compute_tube(target: float, percent: float, step: float = 0.0) -> tuple[float, float]:
     """Compute tolerance tube around target value.
 
-    If target is near zero (<TUBE_TARGET_THRESHOLD), use absolute ±TUBE_ABSOLUTE_TOL.
-    Otherwise, use relative tolerance based on percent.
+    The response to a step gets percent of the step, whichever its sign. Otherwise, if target
+    is near zero (<TUBE_TARGET_THRESHOLD), use absolute ±TUBE_ABSOLUTE_TOL, and else percent of
+    the target.
     """
-    if abs(target) < TUBE_TARGET_THRESHOLD:
-        return target - TUBE_ABSOLUTE_TOL, target + TUBE_ABSOLUTE_TOL
+    if step:
+        delta = abs(percent * step)
+    elif abs(target) < TUBE_TARGET_THRESHOLD:
+        delta = TUBE_ABSOLUTE_TOL
     else:
         delta = abs(percent * target)
-        return target - delta, target + delta
+    return target - delta, target + delta
 
 
 def check_time(
@@ -718,20 +718,24 @@ def _position_at(time: list, instant: float) -> int:
     return pos
 
 
-def get_response_time(percent: float, time: list, curve: list, sim_t_event_start: float) -> float:
+def get_response_time(
+    percent: float, time: list, curve: list, sim_t_event_start: float, step: float = 0.0
+) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value
     for the first time.
 
     Parameters
     ----------
     percent: float
-        Percentage of the target value
+        Percentage of the target value, or of the step when there is one
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_start: float
         Instant of time when the event is triggered
+    step: float
+        Magnitude of the setpoint step the curve responds to, 0 when there is none
 
     Returns
     -------
@@ -749,7 +753,7 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent, step)
 
     for pos in range(len(curve)):
         if mean_val_min < curve[pos] < mean_val_max:
@@ -767,20 +771,22 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
 
 
 def get_settling_time(
-    percent: float, time: list, curve: list, sim_t_event_start: float
+    percent: float, time: list, curve: list, sim_t_event_start: float, step: float = 0.0
 ) -> tuple[float, int, float, float, float]:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value.
 
     Parameters
     ----------
     percent: float
-        Percentage of the target value
+        Percentage of the target value, or of the step when there is one
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_start: float
         Instant of time when the event is triggered
+    step: float
+        Magnitude of the setpoint step the curve responds to, 0 when there is none
 
     Returns
     -------
@@ -800,7 +806,7 @@ def get_settling_time(
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent, step)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -923,6 +929,26 @@ def get_overshoot(time: list, curve: list, sim_t_event_start: float) -> float:
     final_value = response[-1]
     direction = -1.0 if final_value < curve[max(pos_t_event - 1, 0)] else 1.0
     return float(max(direction * (response - final_value)))
+
+
+def get_overshoot_tolerance(curve: list, setpoint_variation: float) -> float:
+    """Gets the half-width of the tolerance band around the final value of the curve, the band
+    the settling time is measured against: an excursion that never leaves it is no overshoot.
+
+    Parameters
+    ----------
+    curve: list
+        List of values that make up the curve
+    setpoint_variation: float
+        Magnitude of the setpoint step
+
+    Returns
+    -------
+    float
+        Half-width of the tolerance band
+    """
+    band_min, band_max = _compute_tube(curve[-1], get_ss_tolerance(), setpoint_variation)
+    return (band_max - band_min) / 2
 
 
 def get_value_error(
