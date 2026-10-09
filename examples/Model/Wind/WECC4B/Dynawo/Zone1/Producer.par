@@ -35,7 +35,7 @@
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT4B_QMinREECPu" value="-0.8"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT4B_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="WT4B_VMaxPu" value="1.2"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT4B_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WT4B_Kqp" value="1"/>

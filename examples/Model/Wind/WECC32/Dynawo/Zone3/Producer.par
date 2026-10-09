@@ -78,7 +78,7 @@
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WTG3_QMinREECPu" value="-1"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WTG3_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="WTG3_VMaxPu" value="1.2"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WTG3_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WTG3_Kqp" value="1"/>
