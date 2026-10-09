@@ -27,7 +27,7 @@
     <par type="DOUBLE" name="photovoltaics_VRef1Pu" value="0"/>
     <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="photovoltaics_IqFrzPu" value="0"/>
-    <par type="DOUBLE" name="photovoltaics_tHoldIq" value="0"/>
+    <par type="DOUBLE" name="photovoltaics_tHoldIq" value="-0.1"/>
     <par type="DOUBLE" name="photovoltaics_tHoldIpMax" value="0"/>
     <par type="DOUBLE" name="photovoltaics_tpREEC" value="0.05"/>
     <!-- Base unit: SnZone1 -->
@@ -39,9 +39,9 @@
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="photovoltaics_VMinPu" value="0.8"/>
     <par type="DOUBLE" name="photovoltaics_Kqp" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="photovoltaics_Kqi" value="1"/>
     <par type="DOUBLE" name="photovoltaics_Kvp" value="1"/>
-    <par type="DOUBLE" name="photovoltaics_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="photovoltaics_Kvi" value="1"/>
     <par type="DOUBLE" name="photovoltaics_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="photovoltaics_DPMaxPu" value="999"/>
@@ -98,9 +98,9 @@
     <par type="DOUBLE" name="photovoltaics_KpPLL" value="3"/>
     <par type="DOUBLE" name="photovoltaics_KiPLL" value="20"/>
     <!-- Base unit: wn (= 2*pi*50 rd/s) -->
-    <par type="DOUBLE" name="photovoltaics_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="photovoltaics_OmegaMaxPu" value="1.1"/>
     <!-- Base unit: wn (= 2*pi*50 rd/s) -->
-    <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="0.5"/>
+    <par type="DOUBLE" name="photovoltaics_OmegaMinPu" value="0.9"/>
     <par type="BOOL" name="photovoltaics_RateFlag" value="false"/>
     <par type="DOUBLE" name="photovoltaics_tE" value="0.005"/>
     <par type="DOUBLE" name="photovoltaics_RSourcePu" value="0"/>
