@@ -35,13 +35,13 @@
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT4A_QMinREECPu" value="-0.8"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WT4A_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="WT4A_VMaxPu" value="1.2"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT4A_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WT4A_Kqp" value="1"/>
-    <par type="DOUBLE" name="WT4A_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WT4A_Kqi" value="1"/>
     <par type="DOUBLE" name="WT4A_Kvp" value="1"/>
-    <par type="DOUBLE" name="WT4A_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WT4A_Kvi" value="1"/>
     <par type="DOUBLE" name="WT4A_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WT4A_DPMaxPu" value="999"/>
