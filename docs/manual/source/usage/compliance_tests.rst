@@ -277,9 +277,10 @@ Frequency and current
   nothing.
 
 ``imax_reac``
-  Whether, while the current of a generating unit sits at its maximum, the
-  active current never rises above its running minimum, i.e. whether the
-  reactive current keeps its priority. Needs the maximum current of the
+  Whether the reactive current of a generating unit keeps its priority at the
+  current limit, as the DTR states it: the active current fits in what the
+  reactive current leaves under the maximum current, IA² ≤ IMAX² − IQ². It
+  reports the first instant it does not. Needs the maximum current of the
   units, read from the model. Meant for the faults of PCS I5.
 
 
