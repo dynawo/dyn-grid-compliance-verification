@@ -369,36 +369,50 @@ def test_get_txu_raises_on_length_mismatch():
 # ---------------------------------------------------------------------------
 
 
-def test_check_generator_imax_prioritizes_the_reactive_current():
-    time = [0, 1, 2, 3, 4, 5]
-
-    first_id_value, id_not_increase = common.check_generator_imax(
-        5, time, [1, 3, 5, 5, 5, 5], [2, 2, 2, 2, 2, 2]
-    )
-
-    assert id_not_increase is True
-    assert first_id_value == -1
-
-
-def test_check_generator_imax_detects_an_active_current_increase_under_saturation():
+def test_check_generator_imax_accepts_a_current_within_the_limit():
     time = [0, 1, 2, 3]
 
-    first_id_value, id_not_increase = common.check_generator_imax(
-        5, time, [5, 5, 5, 5], [1, 1, 2, 2]
-    )
+    first_time, respected = common.check_generator_imax(5, time, [1, 3, 5, 5], [1, 1, 3, 4])
 
-    assert id_not_increase is False
-    assert first_id_value == 2
+    assert respected is True
+    assert first_time == -1
 
 
-def test_check_generator_imax_resets_when_the_saturation_ends():
+def test_check_generator_imax_accepts_more_active_current_as_the_reactive_current_falls():
     time = [0, 1, 2]
 
-    first_id_value, id_not_increase = common.check_generator_imax(5, time, [5, 1, 5], [1, 1, 5])
+    first_time, respected = common.check_generator_imax(5, time, [5, 5, 5], [1, 2, 3])
 
-    # Leaving saturation drops the reference, so the later increase is not a violation.
-    assert id_not_increase is True
-    assert first_id_value == -1
+    # At the limit the active current takes the room the reactive current leaves.
+    assert respected is True
+    assert first_time == -1
+
+
+def test_check_generator_imax_detects_active_current_beyond_the_limit():
+    time = [0, 1, 2]
+
+    first_time, respected = common.check_generator_imax(5, time, [4, 6, 5], [1, 1, 1])
+
+    assert respected is False
+    assert first_time == 1
+
+
+def test_check_generator_imax_accepts_a_reactive_current_alone_beyond_the_limit():
+    time = [0, 1]
+
+    first_time, respected = common.check_generator_imax(5, time, [6, 6], [0, 0])
+
+    assert respected is True
+    assert first_time == -1
+
+
+def test_check_generator_imax_measures_the_active_current_in_consumption():
+    time = [0, 1]
+
+    first_time, respected = common.check_generator_imax(5, time, [5, 6], [-1, -1])
+
+    assert respected is False
+    assert first_time == 1
 
 
 def test_check_generator_imax_raises_on_length_mismatch():
