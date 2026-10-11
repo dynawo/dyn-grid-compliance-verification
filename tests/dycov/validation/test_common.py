@@ -316,6 +316,27 @@ def test_get_txpfloor_only_considers_the_lower_bound():
     assert result == pytest.approx(0.5)
 
 
+def test_get_txpfloor_in_consumption_only_considers_the_upper_bound():
+    time = [0, 1, 2, 3]
+    curve = [-2.0, -0.5, -1.0, -1.0]
+
+    result = common.get_txpfloor(0.1, time, curve, sim_t_event_end=0.5)
+
+    # The overshoot into consumption at t = 0 s is ignored; only the -0.5 sample is above the
+    # -0.9 floor.
+    assert result == pytest.approx(0.5)
+
+
+def test_get_txpfloor_in_consumption_ignores_an_overshoot_after_the_recovery():
+    time = [0, 1, 2, 3, 4]
+    curve = [-1.0, -0.2, -1.0, -1.6, -1.0]
+
+    result = common.get_txpfloor(0.1, time, curve, sim_t_event_end=0.5)
+
+    # The power is back at t = 2 s; going further into consumption at t = 3 s is no delay.
+    assert result == pytest.approx(0.5)
+
+
 def test_get_txpfloor_of_an_event_after_the_deviation_returns_zero():
     time = [0, 1, 2]
     curve = [0.5, 1.0, 1.0]
