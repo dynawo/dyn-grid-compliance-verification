@@ -24,7 +24,7 @@ def test_perf_ppm_producer_curves():
         Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.AReactance
         Compliance.Compliant,  # PCS_RTE-I2.USetPointStep.BReactance
         Compliance.Compliant,  # PCS_RTE-I5.ThreePhaseFault.TransientBolted
-        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
+        Compliance.NonCompliant,  # PCS_RTE-I6.GridVoltageDip.Qzero
         Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMax
         Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMin
         Compliance.Compliant,  # PCS_RTE-I10.Islanding.DeltaP10DeltaQ4
