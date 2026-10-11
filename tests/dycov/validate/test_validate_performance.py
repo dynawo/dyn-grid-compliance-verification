@@ -41,7 +41,7 @@ def test_perf_bess_producer_curves():
         Compliance.Compliant,  # PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection
         Compliance.Compliant,  # PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption
         Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.QzeroInjection
-        Compliance.NonCompliant,  # PCS_RTE-I6.GridVoltageDip.QzeroConsumption
+        Compliance.Compliant,  # PCS_RTE-I6.GridVoltageDip.QzeroConsumption
         Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMaxInjection
         Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMinInjection
         Compliance.Compliant,  # PCS_RTE-I7.GridVoltageSwell.QMaxConsumption
