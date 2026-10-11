@@ -12,7 +12,6 @@ import math
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pandas as pd
 
@@ -92,16 +91,16 @@ class BisectionEngine:
     @contextmanager
     def _isolated_copy(self, src_dir: Path):
         """
-        Yields a temporary directory pre-populated with a copy of src_dir.
-        The directory is cleaned up automatically on exit.
+        Yields a copy of the files of src_dir in a subdirectory of its own, as the CCT search
+        clones it, so the run stays within its working directory. The copy is removed on exit.
         """
-        with TemporaryDirectory(prefix="dynawo_") as temp_dir:
-            work = (
-                Path(temp_dir)
-                / f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            )
-            manage_files.copy_directory(src_dir, work)
+        work = manage_files.clone_as_subdirectory(
+            src_dir, f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        )
+        try:
             yield work
+        finally:
+            manage_files.remove_dir(work)
 
     @staticmethod
     def _fault_rpu_from_xpu(xpu: float, r_factor: float) -> float:
