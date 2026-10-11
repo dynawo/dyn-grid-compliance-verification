@@ -163,18 +163,36 @@ class TestModifyFault:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def oc_dir(tmp_path):
+    working_oc_dir = tmp_path / "OC"
+    working_oc_dir.mkdir()
+    (working_oc_dir / "TSOModel.par").write_text("par")
+    (working_oc_dir / "curves_calculated.csv").write_text("time;P")
+    return working_oc_dir
+
+
 class TestIsolatedCopy:
-    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
-    def test_yields_populated_temp_dir_and_cleans_up(self, mock_mf):
+    def test_copies_the_inputs_into_a_subdirectory_and_removes_it(self, oc_dir):
         engine = _make_engine()
 
-        with engine._isolated_copy(Path("/src")) as work:
-            assert work.name.startswith("fault_time_execution_")
-            mock_mf.copy_directory.assert_called_once_with(Path("/src"), work)
-            temp_root = work.parent
-            assert temp_root.exists()
+        with engine._isolated_copy(oc_dir) as work:
+            copied = sorted(p.name for p in work.iterdir())
+            inside = work.parent == oc_dir
 
-        assert not temp_root.exists()
+        assert work.name.startswith("fault_time_execution_")
+        assert inside
+        assert copied == ["TSOModel.par"]
+        assert not work.exists()
+
+    def test_removes_the_copy_when_the_iteration_fails(self, oc_dir):
+        engine = _make_engine()
+
+        with pytest.raises(RuntimeError):
+            with engine._isolated_copy(oc_dir) as work:
+                raise RuntimeError("simulation failed")
+
+        assert not work.exists()
 
 
 # ---------------------------------------------------------------------------
