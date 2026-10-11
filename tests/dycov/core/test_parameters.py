@@ -7,7 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""Tests for the purge of the temporary working directories left by previous runs."""
+"""Tests for the temporary working directory of a run: where it is created, and the purge of
+those left by previous runs."""
 
 import os
 import subprocess
@@ -16,7 +17,7 @@ import textwrap
 import time
 from datetime import timedelta
 
-from dycov.core.parameters import _purge_stale_temp_dirs
+from dycov.core.parameters import Parameters, _purge_stale_temp_dirs
 
 PREFIX = "Dynawo_user_"
 OLDER_THAN = timedelta(minutes=30)
@@ -50,6 +51,30 @@ def _start_owner(path):
     )
     assert owner.stdout.readline().strip() == "locked"
     return owner
+
+
+def test_working_directory_is_created_next_to_the_output(tmp_path, monkeypatch):
+    monkeypatch.setattr(Parameters, "_register_cleanup_hooks", lambda self: None)
+    output_dir = tmp_path / "runs" / "Results"
+
+    parameters = Parameters(None, None, output_dir, True)
+    location = parameters.get_working_dir().parent
+    parameters.cleanup_working_dir(preserve_on_debug=False)
+
+    assert location == tmp_path / "runs"
+
+
+def test_working_directory_without_an_output_is_created_in_the_current_directory(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(Parameters, "_register_cleanup_hooks", lambda self: None)
+    monkeypatch.chdir(tmp_path)
+
+    parameters = Parameters(None, None, None, True)
+    location = parameters.get_working_dir().parent
+    parameters.cleanup_working_dir(preserve_on_debug=False)
+
+    assert location == tmp_path
 
 
 def test_purge_removes_a_stale_directory_no_run_owns(tmp_path):
