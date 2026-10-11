@@ -370,9 +370,16 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     return ret_val
 
 
+def _short_of_target(value: float, target: float, tube: tuple[float, float]) -> bool:
+    """Whether value still lies between zero and the tube around target."""
+    tube_min, tube_max = tube
+    return value < tube_min if target >= 0 else value > tube_max
+
+
 def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value,
-    only applies to the minimum value.
+    only applies to the side of zero: below the target when it is positive, above it when it is
+    negative.
 
     Parameters
     ----------
@@ -396,11 +403,11 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, _ = _compute_tube(mean_val, percent)
+    tube = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
-        if curve[pos] < mean_val_min:
+        if _short_of_target(curve[pos], mean_val, tube):
             break
 
     if time[pos] < sim_t_event_end:
@@ -460,8 +467,9 @@ def check_generator_imax(
     current_at_converter: list,
     active_current_at_converter: list,
 ) -> tuple[float, bool]:
-    """Check that, when the generator current reaches Imax, reactive current is
-    prioritized over active current (Id should not increase while saturated).
+    """Check that the reactive current keeps its priority at the current limit, as the DTR
+    states it: the active current fits in what the reactive current leaves under Imax,
+    IA² <= IMAX² - IQ².
 
     Parameters
     ----------
@@ -472,12 +480,12 @@ def check_generator_imax(
     current_at_converter : list
         Total current magnitude |I|
     active_current_at_converter : list
-        Active current Id
+        Active current IA
 
     Returns
     -------
     float
-        Time where Id increases while |I| >= Imax. -1 if no issue detected.
+        First time the active current exceeds that room. -1 if it never does.
     bool
         True if the condition is respected, False otherwise
     """
@@ -486,36 +494,14 @@ def check_generator_imax(
 
     TOL = 1e-3
 
-    in_saturation = False
-    id_ref = None
-    first_id_value = -1
-    id_not_increase = True
-
-    for i in range(len(time)):
-        Im = current_at_converter[i]
-        Id = active_current_at_converter[i]
-
-        if Im >= imax - TOL:
-            # Entering saturation
-            if not in_saturation:
-                in_saturation = True
-                id_ref = Id
-            else:
-                # Check condition only while saturated
-                if Id > id_ref + TOL:
-                    first_id_value = time[i]
-                    id_not_increase = False
-                    break
-
-                # Update reference (Id should not increase, allow decrease)
-                id_ref = min(id_ref, Id)
-
-        else:
-            # Leave saturation → reset logic
-            in_saturation = False
-            id_ref = None
-
-    return first_id_value, id_not_increase
+    current = np.asarray(current_at_converter, dtype=float)
+    active = np.abs(np.asarray(active_current_at_converter, dtype=float))
+    reactive_squared = np.maximum(current**2 - active**2, 0.0)
+    room = np.sqrt(np.maximum(imax**2 - reactive_squared, 0.0))
+    exceeded = np.nonzero(active > room + TOL)[0]
+    if len(exceeded) == 0:
+        return -1, True
+    return time[exceeded[0]], False
 
 
 def get_AVR_x(
