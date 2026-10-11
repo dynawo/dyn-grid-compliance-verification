@@ -370,9 +370,16 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     return ret_val
 
 
+def _short_of_target(value: float, target: float, tube: tuple[float, float]) -> bool:
+    """Whether value still lies between zero and the tube around target."""
+    tube_min, tube_max = tube
+    return value < tube_min if target >= 0 else value > tube_max
+
+
 def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value,
-    only applies to the minimum value.
+    only applies to the side of zero: below the target when it is positive, above it when it is
+    negative.
 
     Parameters
     ----------
@@ -396,11 +403,11 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, _ = _compute_tube(mean_val, percent)
+    tube = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
-        if curve[pos] < mean_val_min:
+        if _short_of_target(curve[pos], mean_val, tube):
             break
 
     if time[pos] < sim_t_event_end:
