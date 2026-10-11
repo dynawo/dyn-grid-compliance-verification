@@ -467,12 +467,13 @@ everything the conversion writes it uses only ``Dynawo/Zone3``. In both
 commands the workbook replaces the other inputs: giving a model, curves or a
 reference directory alongside it is refused.
 
-The inputs are generated into a temporary directory that is removed when the
-run ends — the only input you keep is the workbook, and the report names it
-instead of the directory that no longer exists. The conversion is checked
-before the validation starts: if the workbook leaves the curve metadata of a
-test blank, the run stops there saying which tests are affected, rather than
-failing later when DyCoV tries to read the reference curves.
+The inputs are generated into a temporary directory next to the output
+directory, removed when the run ends — the only input you keep is the
+workbook, and the report names it instead of the directory that no longer
+exists. The conversion is checked before the validation starts: if the
+workbook leaves the curve metadata of a test blank, the run stops there saying
+which tests are affected, rather than failing later when DyCoV tries to read
+the reference curves.
 
 The run reports what it could not complete rather than failing silently: the
 blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
