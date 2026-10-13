@@ -7,7 +7,7 @@ sim_t_event_start = 30.0
 # Duration of the event or fault
 fault_duration = 0.085
 # Frequency sampling of the reference curves
-frequency_sampling = 15
+frequency_sampling = 15.0
 # Maximum injected current by Wind Turbine or PV Array
 Wind_Turbine_GEN_MaxInjectedCurrentPu = 1.3
 
