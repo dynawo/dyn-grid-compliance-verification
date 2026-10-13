@@ -293,7 +293,8 @@ should not normally be changed):
 * ``latex_templates_path`` — path to PDF templates within the package.
 * ``templates_path`` — path to PCS templates within the package.
 * ``lib_path`` — path to RTE models within the package.
-* ``temporal_path`` — path for temporary calculation files.
+* ``temporal_path`` — name prefix of the working directory of a run, created
+  next to the output directory and moved onto it at the end.
 
 PCS execution scope (empty means "run all"):
 
