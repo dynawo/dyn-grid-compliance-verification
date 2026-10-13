@@ -210,7 +210,7 @@ def run_comparisons(args):
     if not src_dynawo.exists():
         raise FileNotFoundError(f"Dynawo directory not found: {src_dynawo}")
     global_summary, index_links = [], []
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory(dir=args.output_dir) as tmpdir:
         tmp = Path(tmpdir)
         model_base = tmp / "DynawoBase"
         model_pdr = tmp / "DynawoPDR"

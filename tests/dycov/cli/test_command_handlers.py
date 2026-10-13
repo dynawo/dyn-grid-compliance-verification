@@ -246,6 +246,26 @@ def test_validate_from_a_workbook_leaves_no_temporary_directory(mocker, tmp_path
     assert not generate.call_args.args[1].exists()
 
 
+def test_validate_from_a_workbook_converts_next_to_the_output(mocker, tmp_path):
+    workbook = tmp_path / "Workbooks" / "Producer.xlsx"
+    workbook.parent.mkdir()
+    workbook.touch()
+    generate = mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.generate", return_value="report"
+    )
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.tests_without_metadata", return_value=[]
+    )
+    mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+    args = _validate_args(excel=str(workbook))
+    args.output = str(tmp_path / "Runs" / "Results")
+
+    handle_validate_command(parser, args, _LAUNCHER)
+
+    assert generate.call_args.args[1].parent == tmp_path / "Runs"
+
+
 def test_validate_from_a_workbook_stops_when_the_metadata_is_blank(mocker, tmp_path):
     workbook = tmp_path / "Producer.xlsx"
     workbook.touch()

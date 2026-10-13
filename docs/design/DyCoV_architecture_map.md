@@ -94,8 +94,10 @@ names.
   `_add_parameters_small_networks` wrote into the set of the solver in use, cleared on a flip because
   the job then reads the other set.
 - **Bisection** (`orchestrator/bisection.py`): `find_hiz_fault`, `find_bolted_fault`, `find_cct`.
-  Per-iteration isolated working dir via `_isolated_copy` (temp dir). Mutates fault R/X/duration in
-  `TSOModel.par` via `replace_placeholders.fault_par_file` / `fault_time`. CCT reads `curves/curves.csv` directly.
+  Per-iteration isolated working dir via `_isolated_copy`: a subdirectory of the OC working dir, cloned
+  without its curves like the CCT's (`manage_files.clone_as_subdirectory`), never the system temp dir.
+  Mutates fault R/X/duration in `TSOModel.par` via `replace_placeholders.fault_par_file` / `fault_time`.
+  CCT reads `curves/curves.csv` directly.
   Bolted: searches by bisection for a "sufficient" fault impedance X — one that both converges and
   leaves the residual PDR voltage under an SNom-interpolated threshold (`bolted_fault_*` config keys).
   Starts at `bolted_fault_min_impedance`, resolving the common case in one simulation, and raises X only
@@ -133,7 +135,9 @@ accepts the `dycov.log` older results carry); without it every generated curve s
 t = 0.
 
 The Results tree (`-o` output dir: `<Results>/…/Producer/<PCS>/<benchmark>/<oc>/`) **is** the working dir:
-`validation.py` moves it there whole at the end, so nothing is selected or copied. Alongside the inputs
+`validation.py` moves it there whole at the end, so nothing is selected or copied. It is created next to
+the `-o` (`Parameters`: `<temporal_path>_<user>_*` in its parent, the current dir without one), so that
+move is a rename within one filesystem. Alongside the inputs
 it holds the post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`, and at its
 root the `dycov_run.log` of the execution.
 
