@@ -25,9 +25,9 @@ dycov validate
 Runs RMS model validation against a set of reference curves. Requires a Dynawo
 model (``-m``), producer curves (``-c``), or the workbook that describes the
 installation (``-e``). With a workbook, the model and its reference curves are
-generated from it into a temporary directory that is removed when the run ends,
-so the reference directory is not given either and the report names the
-workbook as its input.
+generated from it into a temporary directory next to the output directory,
+removed when the run ends, so the reference directory is not given either and
+the report names the workbook as its input.
 
 .. include:: helps/validate.rst
 
@@ -41,9 +41,9 @@ Requires a Dynawo model (``-m``), producer curves (``-c``), or both — when
 both are given, compliance is evaluated on the simulated curves only and the
 producer curves are drawn in the figures as an overlay. It also takes the
 workbook that describes the installation (``-e``), on its own: the model is
-generated from it into a temporary directory that is removed when the run
-ends, and since performance is a zone-3 workflow, only the ``Dynawo/Zone3``
-half of the conversion is used.
+generated from it into a temporary directory next to the output directory,
+removed when the run ends, and since performance is a zone-3 workflow, only
+the ``Dynawo/Zone3`` half of the conversion is used.
 
 .. include:: helps/performance.rst
 

@@ -220,7 +220,9 @@ def _verify_from_workbook(
     """Convert the workbook, then run the verification on what came out.
 
     The conversion goes to a temporary directory that is removed when the run ends: the input the
-    user keeps is the workbook itself, and the report names it instead of the temporary copy.
+    user keeps is the workbook itself, and the report names it instead of the temporary copy. That
+    directory sits next to the output, where the user chose to write, rather than in the system
+    temporary directory, which current distributions keep in memory.
     """
     logger = dycov_logging.get_logger("CommandHandlers")
     flow = _WORKBOOK_FLOWS[verification_type]
@@ -232,7 +234,9 @@ def _verify_from_workbook(
         return 1
 
     output_dir = args.output if args.output else workbook.parent / "Results"
-    with tempfile.TemporaryDirectory(prefix="dycov_excel2inputs_") as tmpdir:
+    scratch_parent = Path(output_dir).parent
+    scratch_parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="dycov_excel2inputs_", dir=scratch_parent) as tmpdir:
         generated = Path(tmpdir)
         if not _convert_workbook(parser, workbook, generated, flow["purpose"]):
             return 1
