@@ -144,10 +144,10 @@
     <par type="DOUBLE" name="WT_CdrtPu" value="15"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WT_ConverterLVControl" value="true"/>
-    <par type="DOUBLE" name="WT_ResPu" value="0"/>
-    <par type="DOUBLE" name="WT_XesPu" value="0"/>
-    <par type="DOUBLE" name="WT_GesPu" value="0"/>
-    <par type="DOUBLE" name="WT_BesPu" value="0"/>
+    <par type="DOUBLE" name="WT_RLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT_XLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT_GLvTrPu" value="0"/>
+    <par type="DOUBLE" name="WT_BLvTrPu" value="0"/>
     <!-- General -->
     <par type="DOUBLE" name="WT_SNom" value="4.0"/>
   </set>
