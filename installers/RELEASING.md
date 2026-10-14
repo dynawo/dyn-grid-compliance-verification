@@ -73,7 +73,14 @@ against those the PCS of the examples declare, and stops without touching the re
 they differ, because half a regeneration is worse than none. Commit the curves it replaced
 before tagging: the build script refuses to run with a dirty working tree.
 
-### 2. Create and push the tag
+### 2. Close the changelog entry
+
+Rename `## Unreleased` in [../CHANGELOG.md](../CHANGELOG.md) to the version being released with
+its date, leave a fresh empty `## Unreleased` above it, and commit. The build runs from the
+tagged commit, so this has to be done before the tag exists: otherwise the artifacts ship a
+changelog that does not name its own version.
+
+### 3. Create and push the tag
 
 ```bash
 git tag v0.9.3
@@ -83,7 +90,7 @@ git push origin v0.9.3
 The build script refuses to run unless HEAD is exactly on the tag and the working tree is
 clean.
 
-### 3. Run the build script from the repository root
+### 4. Run the build script from the repository root
 
 ```bash
 ./installers/prepare_release.sh VERSION DYNAWO_DIR [--dry-run]
