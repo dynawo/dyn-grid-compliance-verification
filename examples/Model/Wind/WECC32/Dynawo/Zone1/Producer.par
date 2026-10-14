@@ -158,6 +158,17 @@
     <par type="DOUBLE" name="WT3_P4" value="1"/>
     <!-- Base unit: wn = 2*pi*50 rd/s -->
     <par type="DOUBLE" name="WT3_Spd4" value="1"/>
+    <!-- LHVRT -->
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="lhvrt_UOverPu" value="1.5"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="lhvrt_UUnderPu" value="0.5"/>
+    <par type="DOUBLE" name="lhvrt_tLagAction" value="0.05"/>
+    <par type="DOUBLE" name="lhvrt_tUFilt" value="0.01"/>
+    <par type="STRING" name="lhvrt_TablesFile" value="LHVRT.txt"/>
+    <par type="BOOL" name="lhvrt_TablesOnFile" value="true"/>
+    <par type="STRING" name="lhvrt_TabletUoverUfilt" value="hvrt"/>
+    <par type="STRING" name="lhvrt_TabletUunderUfilt" value="lvrt"/>
     <!-- LV Transformer -->
     <par type="BOOL" name="WT3_ConverterLVControl" value="true"/>
     <par type="DOUBLE" name="WT3_RLvTrPu" value="0"/>
