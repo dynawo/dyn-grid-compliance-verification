@@ -78,12 +78,31 @@ def test_control_params_are_filtered_by_the_zone_they_declare():
     ]
     zones = {"REPC": ["Zone3"], "REEC": ["Zone1", "Zone3"]}  # NOZONE declares nothing
 
-    z1 = par.control_params_for_zone(control, zones, "Zone1")
-    z3 = par.control_params_for_zone(control, zones, "Zone3")
+    z1 = par.control_params_for_zone(control, zones, "Zone1", "WT4B_")
+    z3 = par.control_params_for_zone(control, zones, "Zone3", "WTG4B_")
 
-    assert [p["name"] for p in z1] == ["Kqp"]
-    assert [p["name"] for p in z3] == ["FreqFlag", "Kqp"]  # a zone-less block enters neither
+    assert [p["name"] for p in z1] == ["WT4B_Kqp"]
+    # A zone-less block enters neither, and each zone's prefix is the one of its own model.
+    assert [p["name"] for p in z3] == ["WTG4B_FreqFlag", "WTG4B_Kqp"]
     assert all("block" not in p for p in z1 + z3)
+
+
+def test_control_params_of_a_block_with_its_own_submodel_keep_its_prefix():
+    control = [
+        {"block": "REEC", "name": "Kqp", "type": "DOUBLE", "value": "1", "comments": []},
+        {
+            "block": "Protection de tension",
+            "name": "UOverPu",
+            "type": "DOUBLE",
+            "value": "1.5",
+            "comments": [],
+        },
+    ]
+    zones = {"REEC": ["Zone1"], "Protection de tension": ["Zone1"]}
+
+    z1 = par.control_params_for_zone(control, zones, "Zone1", "photovoltaics_")
+
+    assert [p["name"] for p in z1] == ["photovoltaics_Kqp", "lhvrt_UOverPu"]
 
 
 def test_topology_spelled_with_spaces_is_accepted(tmp_path, monkeypatch):
@@ -204,9 +223,11 @@ def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
     book = make_workbook()
     book["REEC"] = variant_sheet("REEC_B", [("Kqp", "double", None)])
     book["REGC"] = variant_sheet("REGC_A", [("Iqrmax", "double", None)])
+    book["Protection de tension"] = variant_sheet("LHVRT", [("UOverPu", "double", None)])
     monkeypatch.setattr(G.wb, "read_workbook", lambda _path: book)
 
     with pytest.raises(
-        ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"
+        ValueError,
+        match=r"Zone1 control blocks \(REEC, REGC, Protection de tension\) carry no parameter",
     ):
         G.generate(Path("ignored.xlsx"), tmp_path)

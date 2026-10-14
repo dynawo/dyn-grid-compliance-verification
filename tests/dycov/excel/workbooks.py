@@ -77,6 +77,7 @@ GENERAL = [
     ["WTGP", "Aucun", "Zone1;Zone3"],
     ["WTGA", "Aucun", "Zone1;Zone3"],
     ["WTGQ", "Aucun", "Zone1;Zone3"],
+    ["Protection de tension", "LHVRT", "Zone1;Zone3"],
 ]
 MODEL_MAP = [
     ["Key", "Zone3_lib", "Zone3_prefix", "Zone1_lib", "Zone1_prefix"],
@@ -87,6 +88,29 @@ MODEL_MAP = [
         "PhotovoltaicsWeccCurrentSourceNoPlantControl",
         "photovoltaics_",
     ],
+]
+
+
+PROTECTION = [
+    ["Protection de haute et basse tension"],
+    ["LHVRT"],
+    [
+        "Paramètres (Dynawo)",
+        "Valeurs",
+        "Types",
+        "Unités",
+        "Bases pour les pu",
+        None,
+        "lvrt U (pu)",
+        "lvrt t (s)",
+        "hvrt U (pu)",
+        "hvrt t (s)",
+    ],
+    ["UOverPu", "1.5", "double", "pu", "-", None, "0", "0.25", "0", "1000000"],
+    ["UUnderPu", "0.5", "double", "pu", "-", None, "0.5", "1", "1.5", "0.5"],
+    ["TablesFile", "LHVRT.txt", "string", "-", "-"],
+    ["TabletUoverUfilt", "hvrt", "string", "-", "-"],
+    ["TabletUunderUfilt", "lvrt", "string", "-", "-"],
 ]
 
 
@@ -114,6 +138,7 @@ def make_workbook() -> dict:
         "REPC": variant_sheet("REPC_A", [("FreqFlag", "boolean", "true")]),
         "REEC": variant_sheet("REEC_B", [("Kqp", "double", "1.0"), ("QFlag", "boolean", "true")]),
         "REGC": variant_sheet("REGC_A", [("Iqrmax", "double", "20")]),
+        "Protection de tension": PROTECTION,
     }
 
 
