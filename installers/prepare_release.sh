@@ -14,7 +14,7 @@
 # Output directory: ./release_VERSION (created automatically)
 #
 # Artifacts generated:
-#   - Dynawo_omc_v1.8.0.zip        (zipped from DYNAWO_DIR)
+#   - Dynawo_omc_v2.0.0.zip        (zipped from DYNAWO_DIR)
 #   - linux_install.sh              (updated with new version and URLs)
 #   - dycov_rawimage.tar.gz         (Docker image export)
 #   - import_image.sh
@@ -30,7 +30,7 @@ set -o nounset -o errexit -o pipefail
 ###############################################################################
 
 # Fixed Dynawo zip name — update here when Dynawo version changes
-DYNAWO_ZIP_NAME="Dynawo_omc_v1.8.0.zip"
+DYNAWO_ZIP_NAME="Dynawo_omc_v2.0.0.zip"
 
 RED='\033[1;31m'
 GREEN='\033[1;32m'

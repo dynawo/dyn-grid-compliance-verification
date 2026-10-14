@@ -105,7 +105,7 @@ throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpd
 | Step | Action |
 | :--- | :--- |
 | 0 | Verifies the Git state (tag exists, HEAD on the tag, clean tree) and that every expected installer file is present. |
-| 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v1.8.0.zip` and places it in the output directory. |
+| 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v2.0.0.zip` and places it in the output directory. |
 | 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag and setting `DYNAWO_SHA256SUM` to the checksum of the zip from Step 1. |
 | 3 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
 | 4 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
@@ -137,14 +137,14 @@ to the GitHub release:
 | `import_image.sh` | Method 4 (Linux Docker) |
 | `run_dycov_docker.sh` | Method 4 (Linux Docker) |
 | `linux_install.sh` | Method 3 (Linux Native) |
-| `Dynawo_omc_v1.8.0.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`) |
+| `Dynawo_omc_v2.0.0.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`) |
 
 ---
 
 ## Post-Release Checklist
 
 1. **Create the GitHub release** from the tag and upload all eight files from `release_VERSION/`.
-2. Verify that `linux_install.sh` can download `Dynawo_omc_v1.8.0.zip` from the new
+2. Verify that `linux_install.sh` can download `Dynawo_omc_v2.0.0.zip` from the new
    release URL before announcing the release publicly.
 3. Note that `import_image.sh` and `run_dycov_docker.sh` lose their exec bit when downloaded
    from GitHub; end users must run `chmod +x` first, as documented in
