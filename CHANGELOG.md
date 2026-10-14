@@ -37,10 +37,11 @@ two capability curves — the time the unit may stay connected against the volta
 watches. Without the parameters the run stops at once with a missing-parameter error; without the
 file it does not start at all.
 
-The curves the examples ship end with a time longer than the simulation itself. That is a
-workaround for a behaviour we have observed and cannot yet explain — the protection disconnecting a
-unit whose voltage has already recovered — not a recommended setting. The case has been sent to the
-Dynawo team; see issue #606.
+The curves the examples carry are those of the French grid code, and they allow 100 s anywhere
+inside the normal voltage band. That is deliberate: the counter the protection compares against the
+curve does not reset when the voltage comes back into that band, so the time allowed there has to
+outlast the simulation — otherwise a unit that rode the fault through is disconnected once the
+counter reaches the allowance. The behaviour has been reported to the Dynawo team; see issue #606.
 
 #### IEC wind turbines, zone 1: the low-voltage transformer moved
 
@@ -51,8 +52,10 @@ given one.
 
 #### WECC workbooks: a new sheet
 
-The WECC template gained a `Protection de tension` sheet, holding the protection's parameters and
-the points of its two capability curves, and a row for it in `Général`. A workbook made with the
+The WECC template gained a `Protection de tension` sheet, holding the parameters the producer
+chooses and the points of its two capability curves, and a row for it in `Général`. The name of the
+table file and the flag that says the curves are read from one are not among them: the generator
+writes both. A workbook made with the
 previous template has no such sheet, and `excel2inputs` will generate a model Dynawo refuses: copy
 the sheet from `workbooks/Producer_WECC.xlsx`, or start again from that template.
 
