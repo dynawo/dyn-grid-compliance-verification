@@ -22,22 +22,53 @@ CURVES = (
     ("overvoltage_curve", "TabletUoverUfilt"),
 )
 
+# The file holding the curves and the flag saying they are read from one: the producer describes
+# the curves, so these two are the generator's to write.
+TABLE_FILE = "LHVRT.txt"
+WRITTEN_PARAMETERS = (
+    ("STRING", "TablesFile", TABLE_FILE),
+    ("BOOL", "TablesOnFile", "true"),
+)
+
+
+def written_parameters(workbook: dict) -> list:
+    """The protection parameters the generator writes itself, as the PAR carries them.
+
+    Parameters
+    ----------
+    workbook: dict
+        The whole workbook, as ``{sheet name -> grid}``.
+
+    Returns
+    -------
+    list
+        One parameter per entry of ``WRITTEN_PARAMETERS``, or none when the workbook describes
+        no curve and therefore has no protection to configure.
+    """
+    if not any(read_curves(workbook).values()):
+        return []
+    prefix = names.block_prefixes().get(names.normalize(names.sheet("protection")), "")
+    return [
+        {"name": f"{prefix}{name}", "type": kind, "value": value, "comments": []}
+        for kind, name, value in WRITTEN_PARAMETERS
+    ]
+
 
 def write_table_file(workbook: dict, params: list, target: Path) -> str | None:
     """Write the protection's table file next to the PAR that names it.
 
     The protection reads its curves from a file, so that file is part of the model the producer
-    delivers. The name it takes and the name of each table in it are the parameters the workbook
-    declares, which is what keeps the file and the PAR consistent. A workbook that describes no
-    curve writes no file.
+    delivers. It takes the name the generator writes into the PAR, and each table in it the name
+    the workbook declares, which is what keeps the file and the PAR consistent. A workbook that
+    describes no curve writes no file.
 
     Parameters
     ----------
     workbook: dict
         The whole workbook, as ``{sheet name -> grid}``.
     params: list
-        Parameters of the generating unit, as the PAR carries them: the ones naming the file and
-        its tables are read from here.
+        Parameters of the generating unit, as the PAR carries them: the ones naming its tables
+        are read from here.
     target: Path
         Directory of the PAR, where the file is written.
 
@@ -50,12 +81,7 @@ def write_table_file(workbook: dict, params: list, target: Path) -> str | None:
     if not any(curves.values()):
         return None
 
-    filename = _parameter(params, "TablesFile")
-    if not filename:
-        raise ValueError(
-            "the protection sheet describes the ride-through curves, but no 'TablesFile' "
-            "parameter says which file holds them."
-        )
+    filename = TABLE_FILE
 
     blocks = []
     for key, table_parameter in CURVES:
