@@ -17,7 +17,6 @@ from workbooks import make_workbook
 from dycov.excel import protection
 
 PARAMS = [
-    {"name": "lhvrt_TablesFile", "type": "STRING", "value": "LHVRT.txt"},
     {"name": "lhvrt_TabletUoverUfilt", "type": "STRING", "value": "hvrt"},
     {"name": "lhvrt_TabletUunderUfilt", "type": "STRING", "value": "lvrt"},
 ]
@@ -30,7 +29,7 @@ def test_read_curves_takes_the_points_in_sheet_order():
     assert curves["overvoltage_curve"] == [(0.0, 1000000.0), (1.5, 0.5)]
 
 
-def test_write_table_file_names_the_file_and_its_tables_as_the_parameters_do(tmp_path):
+def test_write_table_file_names_its_tables_as_the_parameters_do(tmp_path):
     written = protection.write_table_file(make_workbook(), PARAMS, tmp_path)
 
     assert written == "LHVRT.txt"
@@ -54,8 +53,22 @@ def test_write_table_file_without_curves_writes_nothing(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
-def test_write_table_file_refuses_curves_no_parameter_names(tmp_path):
-    without_file = [p for p in PARAMS if not p["name"].endswith("TablesFile")]
+def test_write_table_file_refuses_a_curve_whose_table_is_not_named(tmp_path):
+    unnamed = [p for p in PARAMS if not p["name"].endswith("TabletUoverUfilt")]
 
-    with pytest.raises(ValueError, match="no 'TablesFile' parameter"):
-        protection.write_table_file(make_workbook(), without_file, tmp_path)
+    with pytest.raises(ValueError, match="no 'TabletUoverUfilt' parameter"):
+        protection.write_table_file(make_workbook(), unnamed, tmp_path)
+
+
+def test_written_parameters_carry_the_file_and_the_flag_that_reads_it():
+    assert protection.written_parameters(make_workbook()) == [
+        {"name": "lhvrt_TablesFile", "type": "STRING", "value": "LHVRT.txt", "comments": []},
+        {"name": "lhvrt_TablesOnFile", "type": "BOOL", "value": "true", "comments": []},
+    ]
+
+
+def test_written_parameters_are_empty_without_curves():
+    book = make_workbook()
+    del book["Protection de tension"]
+
+    assert protection.written_parameters(book) == []

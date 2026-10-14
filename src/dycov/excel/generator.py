@@ -208,9 +208,9 @@ def generate(excel: Path, outdir: Path) -> str:
 
     zone1_sets = _zone1_par_sets(root, zone1, z1_control, resolved, gen_id, lv_control)
     zone3_sets = _zone3_par_sets(zone1, zone3, z3_control, resolved, gen_id, topology)
-    write_producer_par_file(root / "Zone1", f"{PRODUCER_NAME}.par", zone1_sets)
-    write_producer_par_file(root / "Zone3", f"{PRODUCER_NAME}.par", zone3_sets)
     for zone, sets in (("Zone1", zone1_sets), ("Zone3", zone3_sets)):
+        sets[0][1].extend(protection.written_parameters(workbook))
+        write_producer_par_file(root / zone, f"{PRODUCER_NAME}.par", sets)
         protection.write_table_file(workbook, sets[0][1], root / zone)
 
     ini.write_ini(

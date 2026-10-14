@@ -108,7 +108,6 @@ PROTECTION = [
     ],
     ["UOverPu", "1.5", "double", "pu", "-", None, "0", "0.25", "0", "1000000"],
     ["UUnderPu", "0.5", "double", "pu", "-", None, "0.5", "1", "1.5", "0.5"],
-    ["TablesFile", "LHVRT.txt", "string", "-", "-"],
     ["TabletUoverUfilt", "hvrt", "string", "-", "-"],
     ["TabletUunderUfilt", "lvrt", "string", "-", "-"],
 ]
