@@ -77,7 +77,7 @@ LaTeX (for PDF report generation):
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     latexmk
+     latexmk dvisvgm
 
 Python and uv — DyCoV runs on Python 3.13 and Python 3.14; the installer
 provisions 3.13 through ``uv``, so no system Python is needed:
