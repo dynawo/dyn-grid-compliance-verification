@@ -138,7 +138,8 @@ from invocation to output:
 6. ``calculator_factory`` returns the correct calculator instance.
 7. The calculator's ``calculate_envelopes()`` method performs the computation.
 8. Results are passed to ``outputs.py`` to generate CSV, PNG, and HTML files.
-9. Temporary working directories are removed.
+9. The generated files are copied to the output directory, and the temporary
+   working directories are removed.
 
 
 .. _gfm_abc:
@@ -197,12 +198,12 @@ step-on ramp and subtracts the delayed response to a step-off ramp.
 
    # rocof.py -> _calculate_delta_p_for_damping
 
-   # 1. Response to the step-on ramp starting at event_time.
-   p1, p_peak, t_response = calc_func(D, H, x_total, time_event_start)
+   # 1. Response to the step-on ramp, shifted to the start of the event.
+   p1, p_peak, t_response = calc_func(D, H, x_total, time_array - event_time)
    p1 = np.where(time_array < event_time, 0, p1)
 
-   # 2. Response to the step-off ramp (negated) starting at rocof_stop_time.
-   p2, _, _ = calc_func(D, H, x_total, time_event_stop)
+   # 2. Response to the step-off ramp, shifted to the end of the ramp.
+   p2, _, _ = calc_func(D, H, x_total, time_array - rocof_stop_time)
    p2 = np.where(time_array < rocof_stop_time, 0, p2)
 
    # 3. The final response is the superposition of both.
