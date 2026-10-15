@@ -16,22 +16,17 @@ from pathlib import Path
 from dycov.excel import parse as P
 from dycov.files.producer_ini_file import write_producer_ini_file
 
-# u_nom_at_PDR is the nominal voltage of the node the zone connects at: Un1 for Zone1, whose node
+# u_nom is the nominal voltage of the node the zone connects at: Un1 for Zone1, whose node
 # is internal to the plant and free of the DTR's level list (dycov#477), and Un_PDR for Zone3, the
 # actual connection point.
-_LIMITS = {
-    "p_max_injection_at_PDR": "p_max_injection",
-    "u_nom_at_PDR": "u_nom",
-    "q_max_at_PDR": "q_max",
-    "q_min_at_PDR": "q_min",
-}
+_LIMITS = ("p_max_injection", "u_nom", "q_max", "q_min")
 # Storage declares the consumption limit in both zones, and DyCoV rejects an INI without it. Each
 # zone takes its own row: the Zone1a one is per unit, the Zone3 one is the whole plant.
-_CONSUMPTION_KEY = "p_max_consumption_at_PDR"
+_CONSUMPTION_KEY = "p_max_consumption"
 # The minimum powers are the starting points of the on-site tests of the DTR Fiche F16, which only
 # Zone3 runs, and a plant may leave them empty.
-_ZONE3_MINIMUMS = {"p_min_injection_at_PDR": "p_min_injection"}
-_ZONE3_CONSUMPTION_MINIMUMS = {"p_min_consumption_at_PDR": "p_min_consumption"}
+_ZONE3_MINIMUMS = ("p_min_injection",)
+_ZONE3_CONSUMPTION_MINIMUMS = ("p_min_consumption",)
 
 
 def write_ini(
@@ -67,17 +62,17 @@ def write_ini(
     sharing = {gen_id: (z1_value("p_sharing"), z1_value("q_sharing"))}
 
     values = {
-        "Zone1": {key: z1_value(row) for key, row in _LIMITS.items()},
-        "Zone3": {key: z3_value(row) for key, row in _LIMITS.items()},
+        "Zone1": {name: z1_value(name) for name in _LIMITS},
+        "Zone3": {name: z3_value(name) for name in _LIMITS},
     }
     if include_consumption:
         values["Zone1"][_CONSUMPTION_KEY] = z1_value("p_max_consumption")
         values["Zone3"][_CONSUMPTION_KEY] = z3_value("p_max_consumption")
-    minimums = {**_ZONE3_MINIMUMS, **(_ZONE3_CONSUMPTION_MINIMUMS if include_consumption else {})}
-    for key, row in minimums.items():
-        value = P.optional_value("Zone3", zone3, row)
+    minimums = _ZONE3_MINIMUMS + (_ZONE3_CONSUMPTION_MINIMUMS if include_consumption else ())
+    for name in minimums:
+        value = P.optional_value("Zone3", zone3, name)
         if value is not None:
-            values["Zone3"][key] = value
+            values["Zone3"][name] = value
 
     for zone, zone_topology, number in (("Zone1", "S", 1), ("Zone3", topology, 3)):
         write_producer_ini_file(
