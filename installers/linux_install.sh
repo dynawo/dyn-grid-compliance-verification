@@ -205,7 +205,7 @@ exec 7>&2
 exec 2>&1
 
 color_msg "Step 0: Verifying system dependencies..."
-for cmd in curl unzip make pdflatex latexmk git awk uv sha256sum; do
+for cmd in curl unzip make pdflatex latexmk dvisvgm git awk uv sha256sum; do
     if ! command -v "$cmd" > /dev/null; then
         color_err_msg "ERROR: Required command not found: '$cmd'. Please install it."
         exit 1
@@ -366,8 +366,11 @@ cp -a "$TMP_LOCAL_REPO"/docs/installation/*.md "$INSTALL_DIR"/installation/
 . "$INSTALL_DIR"/activate_dycov
 uv pip install -q sphinx
 cd "$TMP_LOCAL_REPO"/docs/manual
-make latexpdf > /dev/null 2>&1
-make html > /dev/null 2>&1
+# The installation log already collects their output. Their stdin is closed
+# because the documentation pipes this script into bash, and a child reading
+# it would swallow the rest of the installer.
+make latexpdf < /dev/null
+make html < /dev/null
 deactivate
 mkdir -p "$INSTALL_DIR"/manual
 mv "$TMP_LOCAL_REPO"/docs/manual/build/html "$INSTALL_DIR"/manual/
