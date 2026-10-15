@@ -3,6 +3,10 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
+# Without it pdfTeX answers an error it cannot recover from with its interactive
+# prompt, and the build waits there instead of failing.
+LATEXOPTS    ?= -interaction=nonstopmode
+export LATEXOPTS
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = dycov
 SOURCEDIR     = source
