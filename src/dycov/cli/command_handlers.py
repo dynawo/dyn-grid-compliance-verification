@@ -19,6 +19,7 @@ from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.curves import anonymizer
 from dycov.excel import generator as excel_generator
+from dycov.files import producer_ini_migration
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.verification.functional_tests import compare_csv_directories
@@ -384,6 +385,46 @@ def handle_excel2inputs_command(parser: argparse.ArgumentParser, args: argparse.
 
     logger.info(report)
     logger.info(f"Input files written under {output}")
+    return 0
+
+
+def handle_migrate_inputs_command(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> int:
+    """Handles the 'migrate_inputs' command.
+
+    Renames the magnitude keys a producer's INI files declare to the names DyCoV reads, so a
+    case written for an earlier version runs unchanged.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The argument parser instance.
+    args: argparse.Namespace
+        Parsed command-line arguments.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info("Handling 'migrate_inputs' command.")
+    inputs = Path(args.inputs)
+    if not inputs.exists():
+        parser.error(f"Input files not found: {inputs}")
+        return 1
+
+    try:
+        renamed = producer_ini_migration.migrate(inputs, dry_run=args.dry_run)
+    except OSError as e:
+        parser.error(f"Failed to migrate the input files: {e}")
+        return 1
+
+    if not renamed:
+        logger.info(f"Nothing to rename under {inputs}.")
+        return 0
+
+    for ini_file, keys in renamed.items():
+        logger.info(f"{ini_file}: {', '.join(keys)}")
+    keys_renamed = sum(len(keys) for keys in renamed.values())
+    outcome = "would be renamed" if args.dry_run else "renamed"
+    logger.info(f"{keys_renamed} keys {outcome} in {len(renamed)} files.")
     return 0
 
 

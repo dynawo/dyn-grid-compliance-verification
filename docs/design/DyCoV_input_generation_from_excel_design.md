@@ -127,13 +127,13 @@ Every zone field reaches the output except three, which are informative:
 Three files per zone, plus the reference-curve tree (§8). The resolved model class (§6) drives the
 `lib` ids and the parameter-name prefix; parameter type and value come from the Excel:
 
-- **Producer.ini** — DTR envelope + topology: `p_max_injection_at_PDR`, `u_nom_at_PDR`,
-  `q_max_at_PDR`, `q_min_at_PDR`, `topology`, `P_sharing_*`, `Q_sharing_*`, and
-  `p_max_consumption_at_PDR` for storage, which DyCoV requires in both zones. Zone3 also declares
-  `p_min_injection_at_PDR` (and `p_min_consumption_at_PDR` for storage) when its row is filled:
-  they are the starting points of the Fiche F16 tests, which only Zone3 runs. Each zone declares
-  the node it connects at, so `u_nom_at_PDR` is `Un1` in Zone1 and `Un_PDR` in Zone3, and Zone1's
-  `topology` is always `S`: one unit connected to its internal node, whatever the plant's.
+- **Producer.ini** — DTR envelope + topology: `p_max_injection`, `u_nom`, `q_max`, `q_min`,
+  `topology`, `P_sharing_*`, `Q_sharing_*`, and `p_max_consumption` for storage, which DyCoV
+  requires in both zones. Zone3 also declares `p_min_injection` (and `p_min_consumption` for
+  storage) when its row is filled: they are the starting points of the Fiche F16 tests, which only
+  Zone3 runs. The keys name no node, because each zone declares the node it connects at: `u_nom` is
+  `Un1` in Zone1 and `Un_PDR` in Zone3, and Zone1's `topology` is always `S`: one unit connected to
+  its internal node, whatever the plant's.
 - **Producer.dyd** — a `blackBoxModel` for the converter (resolved `lib`), the topology network
   blocks and the `connect` lines. The converter terminal is `<prefix>terminal`. Zone3 uses the
   **plant** lib, Zone1 its **turbine** sibling (§6).
