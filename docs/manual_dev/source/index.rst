@@ -50,10 +50,10 @@ hold development utilities, ``tests_integration/`` the end-to-end tests, and
     during the development of the tool, which are useful mostly for developers.
 
 * ``installers``
-    Contains the scripts and tooling used to build distribution artifacts, generate
-    container images, and prepare end-user installation packages for both Linux
-    (native and Docker) and Windows (WSL and Docker). This directory is not used
-    during normal DyCoV execution.
+    Contains the scripts and tooling used to build the distribution artifacts of a
+    release: the prebuilt image, which runs natively on Linux and, on a Windows host,
+    through WSL or Docker Desktop, and the native Linux installer. This directory is
+    not used during normal DyCoV execution.
 
 * ``examples``
     Contains ready-to-run examples for all supported workflows, organized by
@@ -110,9 +110,9 @@ that the application should perform:
 * ``electrical``
     Code for calculating some electrical values needed at runtime (such as the
     generator's Udim, Pmax, etc.) and, most importantly, the **initialization** values
-    for Dynawo simulations (see ``initialization_calcs.py`` and the technical note
-    under ``docs/initialization/``, built from its LaTeX sources with the ``Makefile``
-    in that directory).
+    for Dynawo simulations (see ``initialization_calcs.py``). The method behind them
+    is written up in a technical note that the repository keeps as LaTeX sources only:
+    run ``make doc`` under ``docs/initialization/`` to build its PDF.
 
 * ``files``
     Code related to file management, creating new files and/or directories, moving files from one
