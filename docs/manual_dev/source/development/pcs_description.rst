@@ -82,7 +82,7 @@ Voltage levels
 
 Several keys exist in three variants, suffixed ``_HTB1``, ``_HTB2`` and
 ``_HTB3``. DyCoV picks the one of the voltage level of the installation,
-from ``u_nom_at_PDR`` of ``Producer.ini``: HTB1 for 63 and 90 kV (66 kV
+from ``u_nom`` of ``Producer.ini``: HTB1 for 63 and 90 kV (66 kV
 offshore), HTB2 for 150 and 225 kV (132 kV offshore), HTB3 for 400 kV. The
 levels and their values are the ``HTB<n>_*`` keys of ``[GridCode]``.
 
