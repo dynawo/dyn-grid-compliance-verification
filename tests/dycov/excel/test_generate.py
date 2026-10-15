@@ -158,7 +158,7 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     # Zone3 INI: filled values
     cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
     cp.read(root / "Zone3" / "Producer.ini")
-    assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == ZONE3_ROWS["Un_PDR"]
+    assert cp.get("DEFAULT", "u_nom").strip() == ZONE3_ROWS["Un_PDR"]
     assert cp.get("DEFAULT", "topology").strip() == "S+Aux+i"
 
     assert "present" in report
