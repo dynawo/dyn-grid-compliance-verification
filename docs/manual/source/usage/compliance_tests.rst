@@ -251,7 +251,7 @@ Stability and protections
   Whether the voltage, the active and the reactive power at the PDR reach a
   steady state, within ``thr_ss_tol`` over the last tenth of the simulation;
   for synchronous machines, also whether every internal angle settles and
-  stays within ±π. Applies to every benchmark.
+  stays within :math:`\pm\pi`. Applies to every benchmark.
 
 ``no_disconnection_gen``, ``no_disconnection_load``
   Whether the simulation timeline records the disconnection of the
@@ -279,9 +279,10 @@ Frequency and current
 ``imax_reac``
   Whether the reactive current of a generating unit keeps its priority at the
   current limit, as the DTR states it: the active current fits in what the
-  reactive current leaves under the maximum current, IA² ≤ IMAX² − IQ². It
-  reports the first instant it does not. Needs the maximum current of the
-  units, read from the model. Meant for the faults of PCS I5.
+  reactive current leaves under the maximum current,
+  :math:`I_a^2 \leq I_{max}^2 - I_q^2`. It reports the first instant it does
+  not. Needs the maximum current of the units, read from the model. Meant for
+  the faults of PCS I5.
 
 
 Report figures (``[ReportCurves]``)
