@@ -32,13 +32,21 @@ Overall project structure
 =========================
 
 At the highest level, the **Dynamic grid Compliance Verification** repository
-holds these directories (besides them, ``workbooks/`` carries the Excel
-templates that ``dycov excel2inputs`` consumes, ``tools/`` and ``scripts/``
-hold development utilities, ``tests_integration/`` the end-to-end tests, and
-``attic/`` the retired code):
+holds these directories:
 
-.. figure:: figs_structure/main_structure.png
-    :scale: 80
+.. code-block:: text
+
+   dyn-grid-compliance-verification/
+   ├── attic/
+   ├── docs/
+   ├── examples/
+   ├── installers/
+   ├── scripts/
+   ├── src/
+   ├── tests/
+   ├── tests_integration/
+   ├── tools/
+   └── workbooks/
 
 * ``docs``
     The tool documentation. Contains the manuals (user, developer), written in
@@ -80,8 +88,26 @@ The source directory has been organized based on the logical division of interna
 that the application should perform:
 
 
-.. figure:: figs_structure/src_structure.png
-    :scale: 80
+.. code-block:: text
+
+   src/dycov/
+   ├── cli/
+   ├── configuration/
+   ├── core/
+   ├── curves/
+   ├── electrical/
+   ├── excel/
+   ├── files/
+   ├── gfm/
+   ├── logging/
+   ├── model/
+   ├── model_lib/
+   ├── report/
+   ├── sanity_checks/
+   ├── sigpro/
+   ├── templates/
+   ├── validate/
+   └── validation/
 
 * ``configuration``
     Contains the code responsible for importing the configuration files and the classes
