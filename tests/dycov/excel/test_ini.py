@@ -42,10 +42,10 @@ def test_each_zone_declares_the_node_it_connects_at(tmp_path, zone1, zone3):
     # converter's own Un2.
     z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert (z1["u_nom_at_pdr"], z3["u_nom_at_pdr"]) == (zone1["Un1"], zone3["Un_PDR"])
-    assert z1["p_max_injection_at_pdr"] == zone1["Pmax_injection_z1"]
-    assert z3["p_max_injection_at_pdr"] == zone3["Pmax_injection_PDR"]
-    assert (z1["q_min_at_pdr"], z3["q_min_at_pdr"]) == (zone1["Qmin_z1"], zone3["Qmin_PDR"])
+    assert (z1["u_nom"], z3["u_nom"]) == (zone1["Un1"], zone3["Un_PDR"])
+    assert z1["p_max_injection"] == zone1["Pmax_injection_z1"]
+    assert z3["p_max_injection"] == zone3["Pmax_injection_PDR"]
+    assert (z1["q_min"], z3["q_min"]) == (zone1["Qmin_z1"], zone3["Qmin_PDR"])
 
 
 def test_zone1_describes_its_own_node_and_not_the_pdr(tmp_path, zone1, zone3):
@@ -54,7 +54,8 @@ def test_zone1_describes_its_own_node_and_not_the_pdr(tmp_path, zone1, zone3):
 
     text = (tmp_path / "Zone1" / "Producer.ini").read_text()
 
-    assert "# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV" in text
+    assert "declared at InternalNode1" in text
+    assert "declared at the PDR" not in text
     assert "Allowed values" not in text
 
 
@@ -79,15 +80,15 @@ def test_storage_declares_its_consumption_in_both_zones(tmp_path, zone1, zone3):
 
     z1, z3 = _write(tmp_path, zone1, zone3, gen_id="Bess", include_consumption=True)
 
-    assert z1["p_max_consumption_at_pdr"] == "0.333"
-    assert z3["p_max_consumption_at_pdr"] == "40"
+    assert z1["p_max_consumption"] == "0.333"
+    assert z3["p_max_consumption"] == "40"
 
 
 def test_a_non_storage_model_declares_no_consumption(tmp_path, zone1, zone3):
     z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert "p_max_consumption_at_pdr" not in z1
-    assert "p_max_consumption_at_pdr" not in z3
+    assert "p_max_consumption" not in z1
+    assert "p_max_consumption" not in z3
 
 
 def test_zone3_declares_the_minimum_injection_the_f16_tests_start_from(tmp_path, zone1, zone3):
@@ -95,8 +96,8 @@ def test_zone3_declares_the_minimum_injection_the_f16_tests_start_from(tmp_path,
 
     z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert z3["p_min_injection_at_pdr"] == "7.5"
-    assert "p_min_injection_at_pdr" not in z1
+    assert z3["p_min_injection"] == "7.5"
+    assert "p_min_injection" not in z1
 
 
 def test_an_empty_minimum_injection_stays_commented_out(tmp_path, zone1, zone3):
@@ -104,8 +105,8 @@ def test_an_empty_minimum_injection_stays_commented_out(tmp_path, zone1, zone3):
 
     _z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert "p_min_injection_at_pdr" not in z3
-    assert "# p_min_injection_at_PDR =" in (tmp_path / "Zone3" / "Producer.ini").read_text()
+    assert "p_min_injection" not in z3
+    assert "# p_min_injection =" in (tmp_path / "Zone3" / "Producer.ini").read_text()
 
 
 def test_storage_declares_its_minimum_consumption_in_zone3(tmp_path, zone1, zone3):
@@ -115,8 +116,8 @@ def test_storage_declares_its_minimum_consumption_in_zone3(tmp_path, zone1, zone
 
     z1, z3 = _write(tmp_path, zone1, zone3, gen_id="Bess", include_consumption=True)
 
-    assert z3["p_min_consumption_at_pdr"] == "4"
-    assert "p_min_consumption_at_pdr" not in z1
+    assert z3["p_min_consumption"] == "4"
+    assert "p_min_consumption" not in z1
 
 
 def test_a_non_storage_model_ignores_the_minimum_consumption(tmp_path, zone1, zone3):
@@ -124,4 +125,4 @@ def test_a_non_storage_model_ignores_the_minimum_consumption(tmp_path, zone1, zo
 
     _z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert "p_min_consumption_at_pdr" not in z3
+    assert "p_min_consumption" not in z3

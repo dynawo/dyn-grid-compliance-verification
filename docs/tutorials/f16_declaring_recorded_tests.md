@@ -75,14 +75,14 @@ power** the tests start from:
 
 ```ini
 # p_{max_unite} injection as defined by the DTR in MW
-p_max_injection_at_PDR = 75
+p_max_injection = 75
 # p_{min_unite} injection in MW, the lowest active power the on-site tests of the DTR
 # Fiche F16 start from
-p_min_injection_at_PDR = 7.5
+p_min_injection = 7.5
 ```
 
-Storage installations declare `p_min_consumption_at_PDR` as well. A missing
-key is read as 0 MW.
+Storage installations declare `p_min_consumption` as well. A missing key is
+read as 0 MW.
 
 **One record per test and per active power level**, in the reference curves
 directory, in any of the formats DyCoV reads (COMTRADE, EUROSTAG EXP or CSV):
@@ -623,5 +623,5 @@ in your configuration directory.
   are expressed in pu of that value.
 - **A dip or a swell does not simulate, Dynawo missing `TableInfiniteBus.txt`**:
   the benchmark is not named `GridVoltageDip` or `GridVoltageSwell`.
-- **`Pmin` resolves to 0**: `p_min_injection_at_PDR` is missing from
+- **`Pmin` resolves to 0**: `p_min_injection` is missing from
   `Producer.ini`.

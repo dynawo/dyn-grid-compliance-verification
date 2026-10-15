@@ -8,6 +8,7 @@ COMMANDS = [
     "anonymize",
     "excel2inputs",
     "generate_gfm_envelopes",
+    "migrate_inputs",
     "performance",
     "validate",
 ]

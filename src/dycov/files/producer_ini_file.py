@@ -13,6 +13,17 @@ from pathlib import Path
 
 from dycov.logging import dycov_logging
 
+RETIRED_SUFFIX = "_at_PDR"
+MAGNITUDE_KEYS = (
+    "p_max_injection",
+    "p_max_consumption",
+    "p_min_injection",
+    "p_min_consumption",
+    "u_nom",
+    "q_max",
+    "q_min",
+)
+
 _PREAMBLE = [
     "# IMPORTANT: The raison d'être for this INI file is that some models from the Dynawo",
     "# library do not have a few parameters needed by DyCoV tests, and therefore they can only",
@@ -21,6 +32,18 @@ _PREAMBLE = [
     "# have to make sure you provide said parameters in **both** input files, Producer.INI and",
     "# Producer.PAR. DyCoV will double-check that INI values are more restrictive than PAR",
     "# values, and stop with an ERROR if they are not.",
+    "",
+]
+
+
+_ZONE1_POINT = [
+    "# The magnitudes below are declared at InternalNode1, the internal node of the plant that",
+    "# the Zone 1 unit connects at.",
+    "",
+]
+_PDR_POINT = [
+    "# The magnitudes below are declared at the PDR, the point where the complete installation",
+    "# connects to TSO's grid.",
     "",
 ]
 
@@ -50,37 +73,38 @@ def _render_ini_text(
     lines = [
         "[DEFAULT]",
         *_PREAMBLE,
+        *(_ZONE1_POINT if zone == 1 else _PDR_POINT),
         "# p_{max_unite} injection as defined by the DTR in MW",
-        _kv("p_max_injection_at_PDR", values.get("p_max_injection_at_PDR", "")),
+        _kv("p_max_injection", values.get("p_max_injection", "")),
     ]
     if include_consumption:
         lines += [
             "# p_{max_unite} consumption as defined by the DTR in MW (only for BESS)",
-            _kv("p_max_consumption_at_PDR", values.get("p_max_consumption_at_PDR", "")),
+            _kv("p_max_consumption", values.get("p_max_consumption", "")),
         ]
     lines += [
         "# p_{min_unite} injection in MW, the lowest active power the on-site tests of the DTR",
         "# Fiche F16 start from (optional, 0 when absent)",
-        _optional_kv("p_min_injection_at_PDR", values.get("p_min_injection_at_PDR")),
+        _optional_kv("p_min_injection", values.get("p_min_injection")),
     ]
     if include_consumption:
         lines += [
             "# p_{min_unite} consumption in MW (optional, 0 when absent)",
-            _optional_kv("p_min_consumption_at_PDR", values.get("p_min_consumption_at_PDR")),
+            _optional_kv("p_min_consumption", values.get("p_min_consumption")),
         ]
     if zone == 1:
-        lines += ["# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV"]
+        lines += ["# u_nom is the nominal voltage of that node (in kV)"]
     else:
         lines += [
-            "# u_nom is the nominal voltage at the PDR bus (in kV)",
+            "# u_nom is the nominal voltage of that bus (in kV)",
             "# Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)",
         ]
     lines += [
-        _kv("u_nom_at_PDR", values.get("u_nom_at_PDR", "")),
-        "# q_max is the maximum reactive power at the PDR bus (in MVar)",
-        _kv("q_max_at_PDR", values.get("q_max_at_PDR", "")),
-        "# q_min is the minimum reactive power at the PDR bus (in MVar)",
-        _kv("q_min_at_PDR", values.get("q_min_at_PDR", "")),
+        _kv("u_nom", values.get("u_nom", "")),
+        "# q_max is the maximum reactive power (in MVar)",
+        _kv("q_max", values.get("q_max", "")),
+        "# q_min is the minimum reactive power (in MVar)",
+        _kv("q_min", values.get("q_min", "")),
         "# Active power sharing per generator unit (%).  Values must be between 0 and 1.",
     ]
     lines += [_kv(f"P_sharing_{gen_id}", p) for gen_id, (p, _q) in gen_sharing.items()]
@@ -126,7 +150,7 @@ def write_producer_ini_file(
 
     Thin wrapper over ``_create_producer_ini_file``; the only difference from the blank template
     is the data (``values`` and per-generator ``gen_sharing`` ``{id -> (P_sharing, Q_sharing)}``).
-    Set ``include_consumption`` for BESS (adds ``p_max_consumption_at_PDR``), and ``zone`` to the
+    Set ``include_consumption`` for BESS (adds ``p_max_consumption``), and ``zone`` to the
     zone being written, which decides how the nominal voltage is described.
     """
     _create_producer_ini_file(
