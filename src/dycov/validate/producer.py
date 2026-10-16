@@ -460,12 +460,12 @@ class ModelProducer(Producer):
         elif self._producer_curves_path is not None:
             path = self._producer_curves_path
 
-            exclude_pattern = re.compile(r".*.Zone[13]")
+            zone_directories = {"Zone1", "Zone3"}
             return sorted(
                 [
                     p.stem
                     for p in path.resolve().iterdir()
-                    if not exclude_pattern.match(str(p)) and p.is_dir()
+                    if p.name not in zone_directories and p.is_dir()
                 ]
             )
 
