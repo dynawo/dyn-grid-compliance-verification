@@ -529,15 +529,13 @@ class Benchmark:
         fig_WRef = config.get_list("ReportCurves", "fig_WRef")
         if pcs_benchmark_name not in fig_WRef:
             return
-
         frequency_bands = [
             band for validation, band in _FREQUENCY_BANDS.items() if validation in validations
         ]
-
         self._figures_description.append(
             FigureDescription(
                 name="fig_WRef",
-                variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+                variables="NetworkFrequencyPu",
                 ylabel=r"$\omega$ (Hz)",
                 frequency_bands=frequency_bands,
                 in_hz=True,

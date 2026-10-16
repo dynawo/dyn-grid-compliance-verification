@@ -220,6 +220,15 @@ def test_internal_node1_power_is_not_drawn_where_the_benchmark_does_not_declare_
 
     assert _internal_node1_figures(bm) == []
 
+def test_wref_figure_reads_the_network_frequency_curve(monkeypatch):
+    """#489: both the simulated and the reference curves carry the network frequency under
+    NetworkFrequencyPu, whereas the generator-prefixed column only exists on the simulated side."""
+    bm = _make_benchmark(monkeypatch, DummyProducer(zone=3), {"fig_WRef": [_PCS_BENCHMARK]})
+
+    figures = bm.get_figures_description()
+
+    assert [figure.variables for figure in figures] == ["NetworkFrequencyPu"]
+
 
 # ---------------------------------------------------------------------------
 # Setpoints drawn over the magnitude they drive
