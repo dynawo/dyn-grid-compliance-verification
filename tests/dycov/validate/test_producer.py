@@ -10,6 +10,7 @@
 """Tests for the ModelProducer helpers."""
 
 import configparser
+from pathlib import Path
 
 import pytest
 
@@ -54,6 +55,20 @@ def _make_generator(converter_lv_control: bool) -> GenParams:
         use_voltage_droop=False,
         converter_lv_control=converter_lv_control,
     )
+
+
+def _producer_with_curves(curves_path: Path) -> ModelProducer:
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._producer_model_path = None
+    producer._producer_curves_path = curves_path
+    return producer
+
+
+def _curves_tree(root: Path) -> Path:
+    curves_path = root / "ProducerCurves"
+    for folder in ("Producer", "Zone1", "Zone3"):
+        (curves_path / folder).mkdir(parents=True)
+    return curves_path
 
 
 def _producer_with_model(*generators: GenParams) -> ModelProducer:
@@ -165,3 +180,16 @@ def test_get_filenames_of_a_zone_not_delivered_is_empty(tmp_path):
 
     assert producer.get_filenames(zone=1) == []
     assert producer.get_filenames(zone=3) == ["Producer"]
+
+
+def test_get_filenames_skips_the_zone_folders_of_the_curves_directory(tmp_path):
+    producer = _producer_with_curves(_curves_tree(tmp_path))
+
+    assert producer.get_filenames() == ["Producer"]
+
+
+@pytest.mark.parametrize("enclosing_folder", ["Zone1_validation_file", "Zone3_case"])
+def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, enclosing_folder):
+    producer = _producer_with_curves(_curves_tree(tmp_path / enclosing_folder))
+
+    assert producer.get_filenames() == ["Producer"]
