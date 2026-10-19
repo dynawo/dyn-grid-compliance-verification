@@ -29,6 +29,23 @@ def execute_tool(
     producer_curves_path: Optional[Path],
     reference_curves_path: Optional[Path],
 ):
+    """The verdict of every test, in the order the report presents them."""
+    return [
+        summary.compliance
+        for summary in execute_tool_summary(
+            producer_model_path, producer_curves_path, reference_curves_path
+        )
+    ]
+
+
+def execute_tool_summary(
+    producer_model_path: Optional[Path],
+    producer_curves_path: Optional[Path],
+    reference_curves_path: Optional[Path],
+):
+    """Every test of the run, each with the PCS, benchmark and operating condition it belongs
+    to. What the run executed and what each test could conclude are told apart here; the
+    verdict alone cannot."""
     with TemporaryDirectory() as tmp_dir:
         output_dir = Path(tmp_dir)
         assert output_dir.exists()
@@ -68,8 +85,8 @@ def execute_tool(
             )
             md = Validation(params, dry_run=True)
             md.set_testing(True)
-            compliance = md.validate(use_parallel=True, num_processes=4)
-            return compliance
+            md.validate(use_parallel=True, num_processes=4)
+            return md.get_summary()
         except Exception:
             raise
         finally:
