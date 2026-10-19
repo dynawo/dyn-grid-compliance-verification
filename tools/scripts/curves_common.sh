@@ -62,6 +62,13 @@ isolate_home() {
     mkdir -p "$HOME"
 }
 
+# Where each example says how it is doing, so that whoever launched them all can show it. The
+# launcher sets it; a single example run by hand has nowhere to report and does not need one.
+set_state() {
+    [ -n "${DYCOV_STATE_DIR:-}" ] || return 0
+    printf '%s\n' "$2" >| "$DYCOV_STATE_DIR/${1//\//__}"
+}
+
 anonymize_run() {
     local results="$1"
     local output="$2"

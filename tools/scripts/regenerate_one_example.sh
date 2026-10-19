@@ -66,6 +66,9 @@ user_config="$script_dir/release.ini"
 mkdir -p "$reference_path/Producer" "$(dirname "$run_log")"
 isolate_home "$working_path"
 
+# Whatever stops this example, the one who launched it has to see it stopped.
+trap 'set_state "$example" failed' ERR
+
 # 1. Run it. Nothing the anonymizer does changes a simulation, so a run already made can be
 #    reused when only the anonymizer's settings have changed.
 if [ "$reuse" = true ]; then
@@ -73,6 +76,7 @@ if [ "$reuse" = true ]; then
     log_msg "$example: reusing the run in $results_path"
 else
     log_msg "$example: running..."
+    set_state "$example" running
     rm -rf "${results_path:?}"
     start=$(date +%s)
     dycov --user-config "$user_config" validate -l "$launcher" \
@@ -89,6 +93,7 @@ python3 "$script_dir/declared_tests.py" --log "$run_log" --examples "$example" |
 
 # 3. Anonymize and write.
 log_msg "$example: anonymizing..."
+set_state "$example" anonymizing
 anonymize_run "$results_path" "$curves_path" "$user_config"
 
 for producer_path in "$curves_path"/*/; do
@@ -104,4 +109,5 @@ if [ -f "$declaration" ]; then
         --declaration "$declaration" --producer "$reference_path/Producer"
 fi
 
+set_state "$example" "done, $(find "$reference_path" -name '*.csv' | wc -l) curves"
 log_msg "$example: done."
