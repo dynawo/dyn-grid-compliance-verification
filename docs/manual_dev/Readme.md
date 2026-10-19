@@ -11,8 +11,8 @@ In particular, the virtual environment must be activated and the `dev` extra
 must be installed:
 
 ```bash
-uv pip install -e ".[dev,test]"
 source dycov_venv/bin/activate
+uv pip install -e ".[dev,test]"
 ```
 
 ## Building the manual

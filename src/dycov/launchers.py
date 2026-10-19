@@ -18,6 +18,7 @@ from dycov.cli.command_handlers import (
     handle_anonymize_command,
     handle_excel2inputs_command,
     handle_generate_gfm_envelopes_command,
+    handle_migrate_inputs_command,
     handle_performance_command,
     handle_validate_command,
 )
@@ -134,6 +135,8 @@ class DycovCLI:
             ret = handle_excel2inputs_command(parser, args)
         elif args.command == "anonymize":
             ret = handle_anonymize_command(parser, args)
+        elif args.command == "migrate_inputs":
+            ret = handle_migrate_inputs_command(parser, args)
         else:
             # This case should ideally not be reached due to argparse
             # configuration, but it serves as a safeguard.

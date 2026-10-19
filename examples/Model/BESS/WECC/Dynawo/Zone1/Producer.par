@@ -21,20 +21,20 @@
     <!-- Base unit: Un2, SnZone1 -->
     <par type="DOUBLE" name="BESS_Iql1Pu" value="-1.1"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="BESS_VRef0Pu" value="1"/>
+    <par type="DOUBLE" name="BESS_VRef0Pu" value="0"/>
     <par type="DOUBLE" name="BESS_tpREEC" value="0.05"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="BESS_QMaxREECPu" value="0.8"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="BESS_QMinREECPu" value="-0.8"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="BESS_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="BESS_VMaxPu" value="1.2"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="BESS_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="BESS_Kqp" value="1"/>
-    <par type="DOUBLE" name="BESS_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="BESS_Kqi" value="1"/>
     <par type="DOUBLE" name="BESS_Kvp" value="1"/>
-    <par type="DOUBLE" name="BESS_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="BESS_Kvi" value="1"/>
     <par type="DOUBLE" name="BESS_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="BESS_DPMaxPu" value="999"/>

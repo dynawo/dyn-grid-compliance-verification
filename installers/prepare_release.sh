@@ -198,8 +198,12 @@ uv pip install -q sphinx
 SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov=${VERSION_PLAIN} \
     uv pip install -q "$REPO_ROOT"
 cd "$REPO_ROOT/docs/manual"
-make latexpdf > /dev/null 2>&1
-make html > /dev/null 2>&1
+MANUAL_LOG="$OUTPUT_DIR/manual_build.log"
+make latexpdf > "$MANUAL_LOG" 2>&1 < /dev/null \
+    || error "The manual PDF build failed. See $MANUAL_LOG"
+make html >> "$MANUAL_LOG" 2>&1 < /dev/null \
+    || error "The manual HTML build failed. See $MANUAL_LOG"
+rm -f "$MANUAL_LOG"
 deactivate
 rm -rf "$REPO_ROOT/.manual_venv"
 

@@ -6,8 +6,8 @@
     <par type="BOOL" name="WTG3_RefFlag" value="true"/>
     <par type="BOOL" name="WTG3_FreqFlag" value="true"/>
     <par type="DOUBLE" name="WTG3_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="WTG3_Kp" value="0.1"/>
-    <par type="DOUBLE" name="WTG3_Ki" value="1.5"/>
+    <par type="DOUBLE" name="WTG3_Kp" value="1"/>
+    <par type="DOUBLE" name="WTG3_Ki" value="5"/>
     <par type="DOUBLE" name="WTG3_tFt" value="1e-05"/>
     <par type="DOUBLE" name="WTG3_tFv" value="0.1"/>
     <!-- Base unit: Un_PDR -->
@@ -24,8 +24,8 @@
     <par type="DOUBLE" name="WTG3_QMaxREPCPu" value="1"/>
     <!-- Base unit: SnZone3 -->
     <par type="DOUBLE" name="WTG3_QMinREPCPu" value="-1"/>
-    <par type="DOUBLE" name="WTG3_Kpg" value="0.05"/>
-    <par type="DOUBLE" name="WTG3_Kig" value="2.36"/>
+    <par type="DOUBLE" name="WTG3_Kpg" value="1"/>
+    <par type="DOUBLE" name="WTG3_Kig" value="4"/>
     <par type="DOUBLE" name="WTG3_tpREPC" value="0.05"/>
     <!-- Base unit: fn (50 Hz) -->
     <par type="DOUBLE" name="WTG3_FDbd1Pu" value="0.001"/>
@@ -40,9 +40,9 @@
     <!-- Base unit: SnZone3 -->
     <par type="DOUBLE" name="WTG3_PMinREPCPu" value="0"/>
     <!-- Base unit: fn (50 Hz) -->
-    <par type="DOUBLE" name="WTG3_DDn" value="100"/>
+    <par type="DOUBLE" name="WTG3_DDn" value="20"/>
     <!-- Base unit: fn (50 Hz) -->
-    <par type="DOUBLE" name="WTG3_DUp" value="100"/>
+    <par type="DOUBLE" name="WTG3_DUp" value="20"/>
     <par type="DOUBLE" name="WTG3_tLag" value="0.1"/>
     <!-- REEC_A -->
     <par type="BOOL" name="WTG3_PfFlag" value="false"/>
@@ -78,13 +78,13 @@
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WTG3_QMinREECPu" value="-1"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WTG3_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="WTG3_VMaxPu" value="1.2"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WTG3_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WTG3_Kqp" value="1"/>
-    <par type="DOUBLE" name="WTG3_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WTG3_Kqi" value="1"/>
     <par type="DOUBLE" name="WTG3_Kvp" value="1"/>
-    <par type="DOUBLE" name="WTG3_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WTG3_Kvi" value="1"/>
     <par type="DOUBLE" name="WTG3_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WTG3_DPMaxPu" value="2"/>

@@ -82,6 +82,20 @@ carry their shape.
 
 ----
 
+dycov migrate_inputs
+--------------------
+
+Renames the magnitude keys of a producer's ``Producer.ini`` — ``p_max_injection``,
+``u_nom``, ``q_max`` and the rest — from the ``*_at_PDR`` names DyCoV read before
+version 1.3. Only the key of a declaration is rewritten, so values, comments and
+layout survive and a file already using the current names comes back untouched.
+Run it on the directory holding the input files; ``--dry-run`` reports what it
+would change without writing. Inputs generated from a workbook need no migration.
+
+.. include:: helps/migrate_inputs.rst
+
+----
+
 Shell completion
 ----------------
 
