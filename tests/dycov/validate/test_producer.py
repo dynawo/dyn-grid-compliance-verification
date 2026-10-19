@@ -10,27 +10,30 @@
 """Tests for the ModelProducer helpers."""
 
 import configparser
+from pathlib import Path
 
 import pytest
 
 from dycov.configuration.cfg import Config
-from dycov.core.global_variables import MODEL_VALIDATION_PPM
+from dycov.core.global_variables import MODEL_VALIDATION_BESS, MODEL_VALIDATION_PPM
 from dycov.model.parameters import GenParams, Terminal
 from dycov.validate.producer import ModelProducer
 
 _PRODUCER_INI = """[DEFAULT]
-p_max_injection_at_PDR = 80
-u_nom_at_PDR = 225
-q_max_at_PDR = 40
-q_min_at_PDR = -40
+p_max_injection = 80
+u_nom = 225
+q_max = 40
+q_min = -40
 topology = S
 """
 
 
-def _producer_reading(monkeypatch, ini_text: str) -> ModelProducer:
+def _producer_reading(
+    monkeypatch, ini_text: str, sim_type: int = MODEL_VALIDATION_PPM
+) -> ModelProducer:
     producer = ModelProducer.__new__(ModelProducer)
     producer._s_nref = 100.0
-    producer._sim_type = MODEL_VALIDATION_PPM
+    producer._sim_type = sim_type
     producer_config = configparser.ConfigParser()
     producer_config.read_string(ini_text)
     monkeypatch.setattr(producer, "_ModelProducer__read_producer_ini", lambda: producer_config)
@@ -52,6 +55,20 @@ def _make_generator(converter_lv_control: bool) -> GenParams:
         use_voltage_droop=False,
         converter_lv_control=converter_lv_control,
     )
+
+
+def _producer_with_curves(curves_path: Path) -> ModelProducer:
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._producer_model_path = None
+    producer._producer_curves_path = curves_path
+    return producer
+
+
+def _curves_tree(root: Path) -> Path:
+    curves_path = root / "ProducerCurves"
+    for folder in ("Producer", "Zone1", "Zone3"):
+        (curves_path / folder).mkdir(parents=True)
+    return curves_path
 
 
 def _producer_with_model(*generators: GenParams) -> ModelProducer:
@@ -86,7 +103,7 @@ def test_init_reads_s_nref_from_the_dynawo_section(monkeypatch):
 def test_minimum_active_power_is_read_in_pu_of_s_nref(monkeypatch):
     producer = _producer_reading(
         monkeypatch,
-        _PRODUCER_INI + "p_min_injection_at_PDR = 8\np_min_consumption_at_PDR = 4\n",
+        _PRODUCER_INI + "p_min_injection = 8\np_min_consumption = 4\n",
     )
 
     assert producer.p_min_injection_pu == pytest.approx(0.08)
@@ -100,11 +117,29 @@ def test_minimum_active_power_is_zero_when_the_ini_does_not_declare_it(monkeypat
     assert producer.p_min_consumption_pu == 0.0
 
 
+def test_a_key_of_the_retired_naming_is_rejected_by_the_name_to_use(monkeypatch):
+    ini_text = _PRODUCER_INI.replace("u_nom = 225", "u_nom_at_PDR = 225")
+
+    with pytest.raises(ValueError, match="migrate_inputs.*rename it to u_nom"):
+        _producer_reading(monkeypatch, ini_text)
+
+
+def test_a_missing_magnitude_is_reported_by_its_name(monkeypatch):
+    ini_text = _PRODUCER_INI.replace("q_max = 40\n", "")
+
+    with pytest.raises(ValueError, match="must specify the q_max"):
+        _producer_reading(monkeypatch, ini_text)
+
+
+def test_storage_must_declare_the_consumption_limit(monkeypatch):
+    with pytest.raises(ValueError, match="must specify the p_max_consumption"):
+        _producer_reading(monkeypatch, _PRODUCER_INI, MODEL_VALIDATION_BESS)
+
+
 def test_the_operating_mode_selects_the_active_power_limits(monkeypatch):
     producer = _producer_reading(
         monkeypatch,
-        _PRODUCER_INI + "p_max_consumption_at_PDR = 60\n"
-        "p_min_injection_at_PDR = 8\np_min_consumption_at_PDR = 4\n",
+        _PRODUCER_INI + "p_max_consumption = 60\np_min_injection = 8\np_min_consumption = 4\n",
     )
 
     producer.set_consumption(False)
@@ -145,3 +180,16 @@ def test_get_filenames_of_a_zone_not_delivered_is_empty(tmp_path):
 
     assert producer.get_filenames(zone=1) == []
     assert producer.get_filenames(zone=3) == ["Producer"]
+
+
+def test_get_filenames_skips_the_zone_folders_of_the_curves_directory(tmp_path):
+    producer = _producer_with_curves(_curves_tree(tmp_path))
+
+    assert producer.get_filenames() == ["Producer"]
+
+
+@pytest.mark.parametrize("enclosing_folder", ["Zone1_validation_file", "Zone3_case"])
+def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, enclosing_folder):
+    producer = _producer_with_curves(_curves_tree(tmp_path / enclosing_folder))
+
+    assert producer.get_filenames() == ["Producer"]

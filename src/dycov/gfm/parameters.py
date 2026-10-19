@@ -139,17 +139,6 @@ class GFMParameters(Parameters):
         """
         return float(self._producer._config.get("GFM Parameters", "Snom"))
 
-    def get_nominal_voltage(self) -> float:
-        """
-        Retrieves the nominal voltage (Unom).
-
-        Returns
-        -------
-        float
-            The nominal voltage.
-        """
-        return float(self._producer._config.get("DEFAULT", "Unom"))
-
     def get_initial_active_power(self) -> float:
         """
         Calculates and retrieves the initial active power (P0).

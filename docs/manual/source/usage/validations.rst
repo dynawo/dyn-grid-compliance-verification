@@ -362,9 +362,9 @@ things, and those are what the tool ships:
 * the active power levels every test runs at — minimum, 50% of the maximum
   and maximum injection for a PPM; maximum and 50% consumption, 50% and
   maximum injection for a BESS. The minimum is declared in ``Producer.ini``
-  as ``p_min_injection_at_PDR`` (``p_min_consumption_at_PDR`` for the
-  consumption mode), in MW, 0 when absent; in the input workbook, these are
-  the ``Pmin_injection_PDR`` and ``Pmin_soutirage_PDR`` rows of the ``Zone3``
+  as ``p_min_injection`` (``p_min_consumption`` for the consumption mode),
+  in MW, 0 when absent; in the input workbook, these are the
+  ``Pmin_injection_PDR`` and ``Pmin_soutirage_PDR`` rows of the ``Zone3``
   sheet;
 * the errors it tolerates on the controlled magnitude — MXE/ME/MAE of
   0.05/0.03/0.04 before and after the event and 0.1/0.05/0.07 during it,

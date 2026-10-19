@@ -37,11 +37,10 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
-    "sphinx.ext.mathjax",
+    "sphinx.ext.imgmath",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.viewcode",
-    "sphinx.ext.imgmath",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -84,6 +83,11 @@ exclude_patterns = ["usage/figs_inputs", "usage/figs_results"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
+
+# The manual is read offline from the distribution image, so the mathematics
+# is rendered into the pages at build time instead of by a script from a CDN.
+imgmath_image_format = "svg"
+imgmath_use_preview = True
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True

@@ -39,7 +39,7 @@ even during development if you want to inspect the full output:
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     latexmk
+     latexmk dvisvgm
 
 Python — DyCoV runs on Python 3.13 and Python 3.14:
 
@@ -88,6 +88,14 @@ Clone the repository into a local directory of your choice:
 
    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    cd dycov_repo
+
+The repository declares a custom merge driver for the reference curves of the
+examples (``.gitattributes`` maps ``examples/**/*.csv`` to it). Register it
+once per clone:
+
+.. code-block:: console
+
+   bash scripts/setup-git-hooks.sh
 
 
 Setting up the Python environment
