@@ -55,9 +55,10 @@ given one.
 The WECC template gained a `Protection de tension` sheet, holding the parameters the producer
 chooses and the points of its two capability curves, and a row for it in `Général`. The name of the
 table file and the flag that says the curves are read from one are not among them: the generator
-writes both. A workbook made with the
-previous template has no such sheet, and `excel2inputs` will generate a model Dynawo refuses: copy
-the sheet from `workbooks/Producer_WECC.xlsx`, or start again from that template.
+writes both. What the sheet says about the curves, beside its Commentaire label, heads the table
+file as a comment. A workbook made with the previous template has no such sheet, and `excel2inputs`
+will generate a model Dynawo refuses: copy the sheet from `workbooks/Producer_WECC.xlsx`, or start
+again from that template.
 
 #### What Dynawo's own migration scripts can and cannot do
 

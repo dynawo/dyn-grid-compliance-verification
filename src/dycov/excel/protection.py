@@ -59,8 +59,9 @@ def write_table_file(workbook: dict, params: list, target: Path) -> str | None:
 
     The protection reads its curves from a file, so that file is part of the model the producer
     delivers. It takes the name the generator writes into the PAR, and each table in it the name
-    the workbook declares, which is what keeps the file and the PAR consistent. A workbook that
-    describes no curve writes no file.
+    the workbook declares, which is what keeps the file and the PAR consistent. What the sheet
+    says about the curves heads the file, so the capability they describe is named where they are
+    read. A workbook that describes no curve writes no file.
 
     Parameters
     ----------
@@ -97,8 +98,33 @@ def write_table_file(workbook: dict, params: list, target: Path) -> str | None:
         rows = "\n".join(f"  {voltage:<8g} {time:g}" for voltage, time in points)
         blocks.append(f"double {table}({len(points)},2)\n{rows}\n")
 
-    (Path(target) / filename).write_text("#1\n" + "\n".join(blocks), encoding="utf-8")
+    note = read_note(workbook)
+    heading = "#1\n" + (f"# {note}\n" if note else "")
+    (Path(target) / filename).write_text(heading + "\n".join(blocks), encoding="utf-8")
     return filename
+
+
+def read_note(workbook: dict) -> str:
+    """What the protection sheet says about its curves, for the file that holds them.
+
+    Parameters
+    ----------
+    workbook: dict
+        The whole workbook, as ``{sheet name -> grid}``.
+
+    Returns
+    -------
+    str
+        The sheet's note, empty when it carries none.
+    """
+    grid = _protection_sheet(workbook)
+    if grid is None:
+        return ""
+    labelled = _column(grid, names.anchor("comment"))
+    if not labelled:
+        return ""
+    row, column = labelled
+    return str(wb._cell(grid, row, column + 1) or "").strip()
 
 
 def read_curves(workbook: dict) -> dict:

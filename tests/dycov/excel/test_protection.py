@@ -22,6 +22,18 @@ PARAMS = [
 ]
 
 
+NOTE = "What these curves are, in the producer's own words."
+
+
+def workbook_noting(note: str) -> dict:
+    """The synthetic workbook, with the protection sheet saying something about its curves."""
+    book = make_workbook()
+    book["Protection de tension"] = book["Protection de tension"] + [
+        [None, None, None, None, None, None, "Commentaire", note]
+    ]
+    return book
+
+
 def test_read_curves_takes_the_points_in_sheet_order():
     curves = protection.read_curves(make_workbook())
 
@@ -72,3 +84,19 @@ def test_written_parameters_are_empty_without_curves():
     del book["Protection de tension"]
 
     assert protection.written_parameters(book) == []
+
+
+def test_read_note_takes_what_the_sheet_says_about_its_curves():
+    assert protection.read_note(workbook_noting(NOTE)) == NOTE
+
+
+def test_read_note_is_empty_when_the_sheet_says_nothing():
+    assert protection.read_note(make_workbook()) == ""
+
+
+def test_write_table_file_heads_the_file_with_the_note(tmp_path):
+    protection.write_table_file(workbook_noting(NOTE), PARAMS, tmp_path)
+
+    assert (tmp_path / "LHVRT.txt").read_text().startswith(
+        f"#1\n# {NOTE}\ndouble lvrt(2,2)\n"
+    )

@@ -133,8 +133,10 @@ or how the `Model Map` key is formed). It reads:
   two capability curves from a file, so the `Protection de tension` sheet carries
   their points next to the protection's parameters and the file is written beside
   the PAR, under the name `lhvrt_TablesFile` gives it and with each table named as
-  `lhvrt_TabletUunderUfilt` / `lhvrt_TabletUoverUfilt` say. A sheet that describes
-  no curve writes no file.
+  `lhvrt_TabletUunderUfilt` / `lhvrt_TabletUoverUfilt` say. What the sheet says
+  about the curves, in the cell beside its `Commentaire` label, heads the file as a
+  comment, so the capability they describe is named where they are read. A sheet
+  that describes no curve writes no file.
 - **Reference curves** — `CurvesFiles.ini`, one `.dict` per test with the
   metadata of its own row, and the `.csv` files copied from the folder the sheet
   names. A storage plant runs every DTR case twice, so one results-file cell
