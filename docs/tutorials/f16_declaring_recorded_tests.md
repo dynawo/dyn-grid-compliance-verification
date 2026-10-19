@@ -592,12 +592,12 @@ Producer  PCS_RTE-F16z3  USetPointStep  Pmax  Not applicable test
 
 ## 11. A complete example
 
-The `Wind/IECB2015` example ships a complete declaration,
-`examples/Model/Wind/IECB2015/ReferenceCurves/F16Description.ini`, with active
-and voltage setpoint steps at the three levels and their twelve records; the
-`BESS/WECC` example does the same for storage, at its four levels. The tests
-are invented for the example and the records are the tool's own simulations
-anonymized as measurements, so they show the mechanics, not a real
+Every Model example ships a complete declaration, such as
+`examples/Model/Wind/IECB2015/ReferenceCurves/F16Description.ini`: active and
+voltage setpoint steps at the three power levels of a plant, with their twelve
+records, and at the four of a storage unit in the `BESS/WECC` example. The
+tests are invented for the examples and the records are the tool's own
+simulations anonymized as measurements, so they show the mechanics, not a real
 commissioning.
 
 The template of the declaration, with every key of this tutorial explained,
