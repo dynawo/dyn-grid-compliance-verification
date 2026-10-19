@@ -161,13 +161,18 @@ git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
 cd dycov_repo
 ```
 
-The repository declares a custom merge driver for the reference curves of the
-examples (`.gitattributes` maps `examples/**/*.csv` to it). Register it once
-per clone:
+The clone comes without the curves of the examples. They are not versioned: a
+release publishes them as the `dycov_examples.zip` asset, beside the Dynawo
+build, and this puts them where the examples expect them:
 
 ```bash
-bash scripts/setup-git-hooks.sh
+tools/scripts/fetch_example_curves.sh
 ```
+
+It takes them from the release this checkout descends from. The other way to
+get them is `tools/scripts/regenerate_curves.sh`, which produces them from the
+tool itself and needs Dynawo and a few hours; that is what a release runs.
+Until a release publishes the asset, regenerating is the only way.
 
 ---
 
@@ -313,7 +318,8 @@ A common development loop is:
     ```
 2.  Modify source files under `src/dycov/`.
 3.  Ensure Dynawo is correctly configured and reachable.
-4.  Run DyCoV commands against one of the bundled examples.
+4.  Run DyCoV commands against one of the bundled examples, which needs their
+    curves (section 4).
 5.  Inspect logs, generated results, and reports.
 6.  Run the checks of section 8 before committing: `pytest` and `ruff`.
 7.  Iterate.

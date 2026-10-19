@@ -27,14 +27,13 @@ dyn-grid-compliance-verification/
 ├── tests/
 ├── tests_integration/
 ├── tools/
-├── scripts/
 ├── attic/
 ├── pyproject.toml
 └── ...
 ```
 
 `workbooks/` holds the Excel templates that `dycov excel2inputs` consumes;
-`tools/` and `scripts/` are development utilities (each with its own README);
+`tools/` holds the development utilities (with its own README);
 `attic/` keeps retired code — the in-tool model compilation and the native
 Windows installers live there and are not part of the product.
 
@@ -83,6 +82,12 @@ examples/
 
 This directory contains **validated example inputs** for the main DyCoV
 workflows.
+
+Their curves are the one thing it does not hold: they are regenerated once per
+release and ship as its `dycov_examples.zip` asset, so a clone gets them with
+`tools/scripts/fetch_example_curves.sh` and git ignores them where they land.
+Everything else — the models, the dictionaries, the descriptions — is versioned
+as usual.
 
 It is used for:
 
