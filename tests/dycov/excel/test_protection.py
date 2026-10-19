@@ -97,6 +97,4 @@ def test_read_note_is_empty_when_the_sheet_says_nothing():
 def test_write_table_file_heads_the_file_with_the_note(tmp_path):
     protection.write_table_file(workbook_noting(NOTE), PARAMS, tmp_path)
 
-    assert (tmp_path / "LHVRT.txt").read_text().startswith(
-        f"#1\n# {NOTE}\ndouble lvrt(2,2)\n"
-    )
+    assert (tmp_path / "LHVRT.txt").read_text().startswith(f"#1\n# {NOTE}\ndouble lvrt(2,2)\n")
