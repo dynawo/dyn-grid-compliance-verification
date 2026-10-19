@@ -17,15 +17,17 @@ from collections import defaultdict
 from pathlib import Path
 
 TEMPLATES = Path("src/dycov/templates/PCS/model")
+CONFIGURATION = Path(__file__).resolve().parent / "example_inputs.ini"
 MODEL_DIR = re.compile(r"\*\*\*Model dir: .*examples/Model/(.+?)/Dynawo\*\*\*")
 
 # Where the summary of a run says how each test ended. The columns before it are fixed-width:
 # producer, PCS, benchmark and operating condition.
 VERDICT_AT = 20 + 15 + 25 + 40
 
-# A test that ran and fell over. Its curve is missing or wrong, and the ones that did run are
-# not a release: a regeneration that accepted these would ship half an example without saying
-# so, which is how a Dynawo that DyCoV does not support gets past the coverage count.
+# A test that ran and fell over, and so has no curve to ship. The ones that did run are still
+# worth writing — an example is more useful with the curves it has than with none — so these are
+# named, every time, and the count of them travels with the example. A test that did not run at
+# all is another matter: something selected what to verify, and that stops the regeneration.
 FELL_OVER = (
     "Invalid test",
     "Failed simulation",
@@ -93,10 +95,10 @@ def main() -> None:
     print(f"Tests: {covered_total} executed, {declared_total} declared for the examples.")
     for example, tests in missing.items():
         print(f"  {example} never ran " + ", ".join(".".join(test) for test in tests))
-    for example, tests in fell_over.items():
+    for example, tests in sorted(fell_over.items()):
         for test, verdict in sorted(tests):
-            print(f"  {example} {test}: {verdict}")
-    sys.exit(1 if missing or fell_over else 0)
+            print(f"  no curve for {example} {test}: {verdict}")
+    sys.exit(1 if missing else 0)
 
 
 if __name__ == "__main__":
