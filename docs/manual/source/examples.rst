@@ -7,7 +7,9 @@ They cover all three workflows and use real model files, so you can see exactly
 what DyCoV produces before working with your own data.
 
 All examples live under the ``examples/`` directory at the root of the
-repository. If you installed DyCoV natively on Linux, a copy was placed in
+repository, except their curves, which are regenerated for each release and
+published with it, so an installation brings them and a clone of the sources
+does not. If you installed DyCoV natively on Linux, a copy was placed in
 ``$PWD/dycov/examples/`` (inside the directory the installer was run from).
 If you are using the Docker or WSL image, the examples are copied to your home
 directory the first time you start a session.

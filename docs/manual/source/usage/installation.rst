@@ -57,7 +57,7 @@ Native installation (advanced users)
 
 This method is intended for advanced users who want full control over their
 environment. A single shell script handles everything: it offers to download
-Dynawo, clones the latest DyCoV release, and sets up a Python virtual
+Dynawo, clones the latest DyCoV release with its examples, and sets up a Python virtual
 environment so that your system Python is left untouched.
 
 Before running the installer, make sure the following system packages are

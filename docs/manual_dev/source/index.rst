@@ -62,8 +62,10 @@ holds these directories:
     during the development of the tool, which are useful mostly for developers.
 
 * ``examples``
-    Contains ready-to-run examples for all supported workflows, organized by
-    workflow type:
+    Contains ready-to-run examples for all supported workflows. Their curves are not
+    versioned: a release publishes them as its ``dycov_examples.zip`` asset, and a clone
+    gets them with ``tools/scripts/fetch_example_curves.sh`` or by regenerating them.
+    They are organized by workflow type:
 
         * ``Model/`` — RMS Model Validation examples (Dynawo models and ProducerCurves).
         * ``Performance/`` — Electric Performance Verification examples (Dynawo models and ProducerCurves).
@@ -74,10 +76,6 @@ holds these directories:
     release: the prebuilt image, which runs natively on Linux and, on a Windows host,
     through WSL or Docker Desktop, and the native Linux installer. This directory is
     not used during normal DyCoV execution.
-
-* ``scripts``
-    Helpers for the git working copy: the merge driver that resolves the conflicts of
-    the example curve files, and the script that registers it after cloning.
 
 * ``src``
     Contains the sources of the tool, which are "built" as a Python package using

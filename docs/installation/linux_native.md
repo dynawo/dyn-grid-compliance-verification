@@ -138,6 +138,7 @@ This installer will:
 
 *   download and install a compatible version of Dynawo (after user confirmation),
 *   clone the latest stable DyCoV release,
+*   download the examples of that release, curves included,
 *   create a Python virtual environment using **Python 3.13** via `uv`,
 *   install DyCoV and all its Python dependencies inside that environment.
 
@@ -151,6 +152,11 @@ The Dynawo version is pinned: the installer downloads
 `Dynawo_omc_v1.8.0.zip` — a Dynawo Nightly distribution validated by the
 DyCoV team and published as an asset of the DyCoV release itself — verifies
 its checksum, and unpacks it under `$PWD/dycov/dynawo`.
+
+The examples are pinned the same way: they are published as the
+`dycov_examples.zip` asset of the release — their curves are not in the
+repository, because they are regenerated for each release — and the installer
+verifies its checksum and unpacks it under `$PWD/dycov/examples`.
 
 If you skip the Dynawo download, you can use a Dynawo installation of your
 own: either make its launcher (`dynawo.sh`) reachable through `PATH`, or
