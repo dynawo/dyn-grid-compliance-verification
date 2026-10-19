@@ -13,9 +13,11 @@ NC="\\033[0m"
 # fd 1 is for log output (standard output)
 # fd 7 is for original stderr (not used explicitly in log_msg, but good to preserve)
 
+# The log keeps every line and the console shows the green ones; a run with no console — the
+# regeneration of a release, a pipeline — has only the log, and must not die for want of one.
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S')     | $1"
-    echo -e "${GREEN}$1${NC}" > /dev/tty
+    echo -e "${GREEN}$1${NC}" > /dev/tty 2> /dev/null || true
 }
 export -f log_msg
 
@@ -45,6 +47,8 @@ usage() {
     echo "  --user-config: configuration file for every run (default: the one of the user)"
     echo "  -d, --debug: run with the log level at DEBUG, which also keeps in every test"
     echo "               directory the curves the criteria compare (signal.csv, reference.csv)"
+    echo "      --without-curves: run although the examples have no reference curves, which is"
+    echo "               what regenerate_curves.sh does to produce them"
     echo "  -h, --help: display this help"
     echo
     echo "Notes:"
@@ -333,6 +337,7 @@ generate=false
 any_exec_flag=false
 remove=false     # by default, do NOT remove Results path
 debug=false      # by default, the log level is the one of the configuration
+curves_required=true  # the examples are run to be verified, and verdicts need their curves
 examples_path="./examples"
 results_path="../Results"
 max_parallel=4  # default
@@ -397,6 +402,10 @@ while (($#)); do
             debug=true
             shift
             ;;
+        --without-curves)
+            curves_required=false
+            shift
+            ;;
         *)
             echo "$1: invalid option."
             usage
@@ -410,6 +419,25 @@ if [ "$any_exec_flag" = false ]; then
     validate=true
     performance=true
     generate=true
+fi
+
+# The curves of the examples are not versioned: a clone has them only after fetching the asset
+# of a release or regenerating them. A run without them reports every test as having no curves,
+# which says nothing about the tool — except when the run is the regeneration itself, which is
+# what produces them and reads no verdict.
+curveless=""
+if [ "$curves_required" = true ]; then
+    curveless=$(find "$examples_path" -name '*.dict' -printf '%h\n' | sort -u \
+        | while read -r directory; do
+              compgen -G "$directory/*.csv" > /dev/null || echo "$directory"
+          done)
+fi
+if [ -n "$curveless" ]; then
+    echo "$curveless" >&2
+    echo "The examples above have no curves. To get them:" >&2
+    echo "    tools/scripts/fetch_example_curves.sh   (from the asset of a release)" >&2
+    echo "    tools/scripts/regenerate_curves.sh      (from the tool itself, with Dynawo)" >&2
+    exit 1
 fi
 
 if [ "$debug" = true ]; then

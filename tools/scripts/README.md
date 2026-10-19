@@ -3,7 +3,16 @@
 | Script | What it does |
 | --- | --- |
 | `test_tool.sh` | Runs the bundled examples: model validation, performance verification and envelope generation. Documented below. |
-| `regenerate_curves.sh` | Regenerates the curves shipped with the Model examples, the last step before a release. See the final section. |
+| `regenerate_curves.sh` | Regenerates every curve directory of the examples, the last step before a release. It is the launcher of the four stages below. See the final section. |
+| `regenerate_f16.sh` | Stage 1: declares the tests of the DTR Fiche F16 in every Model example and announces their records. |
+| `regenerate_producer_inis.sh` | Stage 2: writes the producer each curve directory declares. |
+| `regenerate_reference_curves.sh` | Stage 3: runs every Model example and writes its reference curves. |
+| `regenerate_one_example.sh` | The whole cycle of one Model example: run, check, anonymize, write. Stage 3 is this, once per example. |
+| `regenerate_producer_curves.sh` | Stage 4: writes the curves a producer delivers instead of a model, Model and Performance. |
+| `curves_common.sh` | What the four stages share: the anonymizer's settings, and how a curve directory is written. Sourced, not run. |
+| `example_inputs.py` | Writes the inputs of a curve directory — the producer declaration and the F16 one — from `example_inputs.ini`. |
+| `declared_tests.py` | Checks that a run covered every test the PCS and the examples declare. |
+| `fetch_example_curves.sh` | Puts the curves of the examples in a clone, from the asset of a release. The quick alternative to regenerating them. |
 | `models.sh` | The catalogue of Model examples, sourced by both of the above. Adding an example is one edit here. |
 | `extract_curves.sh` | Pulls the curves of a results tree into a flat directory. |
 | `run_complexity_analysis.sh` | Runs the complexity analysis of `tools/analysis`. |
@@ -177,32 +186,51 @@ tools/scripts/test_tool.sh --examples /home/marcos/project/examples
 
 # `regenerate_curves.sh` — the curves the examples ship
 
-The reference curves under `examples/Model/**/ReferenceCurves`, and the producer curves under
-`examples/Model/ProducerCurves`, are regenerated once per release, from the tool itself. This
-command does the three stages in one go:
-
-1.  Runs every Model example through `test_tool.sh`, which writes `curves_calculated.csv` and
-    the simulation record of each test.
-2.  Anonymizes each results tree with `dycov anonymize`.
-3.  Replaces the curves in the repository, and updates the event metadata of their dictionaries.
+`examples/**/ReferenceCurves` and `examples/**/ProducerCurves` are **not versioned**: nothing in
+them is — not the curves, not their dictionaries, not the declarations beside them. They are
+written whole, once per release, by this command, and what it writes is what
+`installers/prepare_release.sh` packs as the `dycov_examples.zip` asset of the release, which is
+how the installer and the image get them, and how `fetch_example_curves.sh` brings them back into
+a clone.
 
 ```bash
 tools/scripts/regenerate_curves.sh --launcher "$DYNAWOPATH/dynawo.sh"
 ```
 
-Run `--help` for the options. Three things are worth knowing before using it:
+It launches four stages, each a script of its own that can be run alone. The order is not a
+matter of taste:
+
+1.  **`regenerate_f16.sh`** — writes the F16 declaration of every Model example and announces the
+    records of the tests it declares. It has to be first: a declared test of Fiche F16 is run
+    only where its record exists, so the dictionary that names the record goes in before the run,
+    and the run is then what produces the curves the record is made of.
+2.  **`regenerate_producer_inis.sh`** — writes the producer each curve directory declares, from
+    the model whose curves it ships.
+3.  **`regenerate_reference_curves.sh`** — the reference curves of every Model example. Each
+    one is a cycle of its own (`regenerate_one_example.sh`): it is run, checked against the
+    tests it declares, anonymized and written before the next is started, so its curves are
+    usable while the rest are still running, one that fails costs only itself, and redoing one
+    is a single command.
+4.  **`regenerate_producer_curves.sh`** — writes the curves a producer delivers instead of a
+    model: the Model ones from the run of stage 3, the Performance ones from a run of their own,
+    in performance mode.
+
+Run `--help` on any of them for what it does. Four things are worth knowing before using it:
 
 *   **The oscillation goes.** A reference curve should not carry the oscillation of the
     simulation that produced it, so the script de-ripples with a 5 Hz cut-off, and says so in
     its own `--help`. Only a sustained oscillation is filtered; the response to the event, which
-    dies out, stays as simulated. The conditions whose model oscillates then report Non-compliant, which is
-    what the criterion says about them.
-*   **Nothing is replaced until everything is in place.** The curves of the repository are only
-    touched once every example has been anonymized and checked, so a failed run leaves the
-    shipped curves untouched. Every curve of a producer directory is removed before the new ones
-    are copied, so a test that is no longer run leaves none behind.
-*   **The dictionaries stay**, but the event they declare is corrected to the one the run used:
-    a stale instant or duration silently misplaces every window computed from it.
+    dies out, stays as simulated. The conditions whose model oscillates then report
+    Non-compliant, which is what the criterion says about them.
+*   **Nothing is deduced.** The producer of a curve directory is the producer of the example its
+    curves come from, named in `models.sh`; what no model states — the apparent power, the power
+    levels of the F16 tests — is in `example_inputs.ini`. Both are data, not logic.
+*   **Each directory is written whole.** The curves, their dictionaries and the index of both
+    come from the anonymized run, so a test that is no longer run leaves nothing behind, and the
+    dictionaries carry the event of the run that produced them rather than a stale one.
+*   **The run needs no console.** Everything it reports goes to the log as well, so it can be
+    launched from a pipeline, and `-y` answers the only question it would otherwise ask.
 
-Review the result with `git status` and `git diff --stat` before committing: a regeneration that
-moves a verdict is telling you something about the examples, not only about the curves.
+Review the result before trusting it: a regeneration that moves a verdict is telling you something
+about the examples, not only about the curves. Nothing it writes appears in `git status`: the curve
+directories are ignored whole.
