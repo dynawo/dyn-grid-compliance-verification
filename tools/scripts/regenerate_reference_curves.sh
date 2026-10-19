@@ -72,10 +72,60 @@ log_msg "Regenerating ${#examples[@]} Model examples, $jobs at a time..."
 failures="$working_path/failed_examples.txt"
 :>| "$failures"
 
-printf '%s\n' "${examples[@]}" \
-    | xargs -P "$jobs" -I {} bash -c \
-        "\"$script_dir/regenerate_one_example.sh\" \"\${@}\" {} || echo {} >> \"$failures\"" \
-        _ "${options[@]}"
+# Every example reports where it is, and with a console in front of us that is what is shown:
+# the whole list at once, redrawn in place, instead of sixteen conversations interleaved.
+DYCOV_STATE_DIR="$working_path/state"
+export DYCOV_STATE_DIR
+rm -rf "${DYCOV_STATE_DIR:?}"
+mkdir -p "$DYCOV_STATE_DIR"
+for example in "${examples[@]}"; do
+    printf 'pending\n' >| "$DYCOV_STATE_DIR/${example//\//__}"
+done
+
+draw_states() {
+    local example file state colour since now
+    now=$(date +%s)
+    for example in "${examples[@]}"; do
+        file="$DYCOV_STATE_DIR/${example//\//__}"
+        state=$(cat "$file" 2> /dev/null)
+        case "$state" in
+            done*)    colour="$GREEN" ;;
+            failed)   colour="$RED" ;;
+            pending)  colour="" ;;
+            *)        # Still at it: say for how long, which is what tells a slow one from a
+                      # stuck one.
+                      colour="$GREEN"
+                      since=$((now - $(stat -c %Y "$file" 2> /dev/null || echo "$now")))
+                      state="$state ${since}s"
+                      ;;
+        esac
+        printf "  %-46s ${colour}%s${NC}\033[K\n" "$example" "${state:-pending}"
+    done
+}
+
+run_examples() {
+    printf '%s\n' "${examples[@]}" \
+        | xargs -P "$jobs" -I {} bash -c \
+            "\"$script_dir/regenerate_one_example.sh\" \"\${@}\" {} || echo {} >> \"$failures\"" \
+            _ "${options[@]}"
+}
+
+if [ -t 1 ]; then
+    run_examples > "$working_path/regeneration.log" 2>&1 &
+    runner=$!
+    echo "  (the chatter of each example goes to $working_path/regeneration.log)"
+    draw_states
+    while kill -0 "$runner" 2> /dev/null; do
+        sleep 1
+        printf '\033[%dA' "${#examples[@]}"
+        draw_states
+    done
+    wait "$runner" || true
+    printf '\033[%dA' "${#examples[@]}"
+    draw_states
+else
+    run_examples
+fi
 
 if [ -s "$failures" ]; then
     echo -e "${RED}These examples were not regenerated:${NC}" >&2
