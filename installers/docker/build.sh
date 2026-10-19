@@ -153,6 +153,23 @@ if ! git -C "$ROOT_DIR" archive HEAD examples | tar -x -C "$TEMP_DIR"; then
     exit 1
 fi
 
+# The curve directories are not in the Git index at all — they ship as the dycov_examples.zip
+# asset of the release — so the image takes them from the working tree, which at release time
+# is the tagged tree with the directories that release regenerated.
+echo "Copying the curves of the examples..."
+TEMP_DIR_ABS=$(cd "$TEMP_DIR" && pwd)
+if ! (cd "$ROOT_DIR" && find examples -type d \
+        \( -name ReferenceCurves -o -name ProducerCurves \) \
+        -exec cp -a --parents {} "$TEMP_DIR_ABS" \;); then
+    echo "ERROR: could not stage the curves of the examples."
+    exit 1
+fi
+if [[ -z "$(find "$TEMP_DIR/examples" -name '*.csv' -print -quit)" ]]; then
+    echo "ERROR: the examples have no curves. Run tools/scripts/regenerate_curves.sh"
+    echo "       or tools/scripts/fetch_example_curves.sh before building the image."
+    exit 1
+fi
+
 echo "Copying workbooks..."
 if ! git -C "$ROOT_DIR" archive HEAD workbooks | tar -x -C "$TEMP_DIR"; then
     echo "ERROR: could not stage workbooks from Git."

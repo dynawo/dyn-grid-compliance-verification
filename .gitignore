@@ -50,3 +50,10 @@ complexity_report/
 
 # dycov installation folder
 /dycov/
+
+# The curve directories of the examples ship as an asset of the release, not as repository
+# content: tools/scripts/regenerate_curves.sh writes them whole — curves, dictionaries and the
+# declarations that go with them — and they are fetched or regenerated, never committed.
+examples/**/ReferenceCurves/
+examples/**/ProducerCurves/
+examples/.curves-release
