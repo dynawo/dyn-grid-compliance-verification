@@ -52,8 +52,8 @@ definition*: a number in per unit, the name of a base magnitude, or
 
 The base magnitudes, case-sensitive, come from ``Producer.ini``: ``Pmax``,
 ``PmaxInjection``, ``PmaxConsumption`` and ``Pmin`` (the active power
-limits, ``p_max_injection_at_PDR``, ``p_max_consumption_at_PDR``,
-``p_min_injection_at_PDR`` and ``p_min_consumption_at_PDR``), ``Qmax`` and
+limits, ``p_max_injection``, ``p_max_consumption``, ``p_min_injection``
+and ``p_min_consumption``), ``Qmax`` and
 ``Qmin``, ``Snom`` (``s_nom``), and ``Udim`` and ``Unom`` (the dimensioning
 and nominal voltages at the PDR). Powers are in pu of the 100 MVA base of
 the simulation, voltages in pu of the nominal voltage. Writing
