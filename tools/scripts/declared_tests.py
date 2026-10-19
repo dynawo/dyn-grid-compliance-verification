@@ -19,6 +19,23 @@ from pathlib import Path
 TEMPLATES = Path("src/dycov/templates/PCS/model")
 MODEL_DIR = re.compile(r"\*\*\*Model dir: .*examples/Model/(.+?)/Dynawo\*\*\*")
 
+# Where the summary of a run says how each test ended. The columns before it are fixed-width:
+# producer, PCS, benchmark and operating condition.
+VERDICT_AT = 20 + 15 + 25 + 40
+
+# A test that ran and fell over. Its curve is missing or wrong, and the ones that did run are
+# not a release: a regeneration that accepted these would ship half an example without saying
+# so, which is how a Dynawo that DyCoV does not support gets past the coverage count.
+FELL_OVER = (
+    "Invalid test",
+    "Failed simulation",
+    "Undefined validations",
+    "Fault simulation fails",
+    "Fault dip unachievable",
+    "Simulation time out",
+    "Missing the simulated voltage curve",
+)
+
 
 def declared_tests(family: str, example: str) -> set:
     """The operating conditions the PCS of a family declare, which is what must run, plus the
@@ -38,18 +55,23 @@ def declared_tests(family: str, example: str) -> set:
     return declared
 
 
-def executed_tests(log_path: Path) -> dict:
-    """The tests each example reports. An example whose zones are split among producers reports
-    the same test once per producer, so they are gathered as a set."""
+def executed_tests(log_path: Path) -> tuple[dict, dict]:
+    """The tests each example reports and how each one ended. An example whose zones are split
+    among producers reports the same test once per producer, so they are gathered as a set."""
     executed = defaultdict(set)
+    fell_over = defaultdict(set)
     example = None
     for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
         model_dir = MODEL_DIR.search(line)
         if model_dir:
             example = model_dir.group(1)
         elif example and line.startswith("Producer") and "PCS_RTE-" in line:
-            executed[example].add(tuple(line.split()[1:4]))
-    return executed
+            test = tuple(line.split()[1:4])
+            executed[example].add(test)
+            verdict = line[VERDICT_AT:].strip()
+            if verdict in FELL_OVER:
+                fell_over[example].add((".".join(test), verdict))
+    return executed, fell_over
 
 
 def main() -> None:
@@ -58,7 +80,7 @@ def main() -> None:
     parser.add_argument("--examples", nargs="+", required=True, help="the examples that ran")
     arguments = parser.parse_args()
 
-    executed = executed_tests(arguments.log)
+    executed, fell_over = executed_tests(arguments.log)
     declared_total = covered_total = 0
     missing = {}
     for example in arguments.examples:
@@ -71,7 +93,10 @@ def main() -> None:
     print(f"Tests: {covered_total} executed, {declared_total} declared for the examples.")
     for example, tests in missing.items():
         print(f"  {example} never ran " + ", ".join(".".join(test) for test in tests))
-    sys.exit(1 if missing else 0)
+    for example, tests in fell_over.items():
+        for test, verdict in sorted(tests):
+            print(f"  {example} {test}: {verdict}")
+    sys.exit(1 if missing or fell_over else 0)
 
 
 if __name__ == "__main__":
