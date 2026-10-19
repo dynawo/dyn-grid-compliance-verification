@@ -66,8 +66,9 @@ user_config="$script_dir/release.ini"
 mkdir -p "$reference_path/Producer" "$(dirname "$run_log")"
 isolate_home "$working_path"
 
-# Whatever stops this example, the one who launched it has to see it stopped.
-trap 'set_state "$example" failed' ERR
+# Whatever stops this example, the one who launched it has to see it stopped — and what stops
+# it is usually a guard calling exit, which no ERR trap ever sees.
+trap 'status=$?; [ "$status" -eq 0 ] || set_state "$example" failed' EXIT
 
 # 1. Run it. Nothing the anonymizer does changes a simulation, so a run already made can be
 #    reused when only the anonymizer's settings have changed.
@@ -80,7 +81,7 @@ else
     rm -rf "${results_path:?}"
     start=$(date +%s)
     dycov --user-config "$user_config" validate -l "$launcher" \
-        -m "$model_path" "$reference_path" -o "$results_path" --testing > "$run_log" 2>&1 ||
+        -m "$model_path" "$reference_path" -o "$results_path" --testing >| "$run_log" 2>&1 ||
         fail "$example: the run failed. See $run_log"
     log_msg "$example: ran in $(($(date +%s) - start))s"
 fi
@@ -88,8 +89,12 @@ fi
 # 2. Check what ran before anything is written. A selection of PCS, of benchmarks or of
 #    operating conditions anywhere would produce fewer tests, and the curves of the rest would
 #    be written by nothing.
-python3 "$script_dir/declared_tests.py" --log "$run_log" --examples "$example" ||
-    fail "$example: the run did not cover every test it declares. Nothing was written."
+coverage=$(python3 "$script_dir/declared_tests.py" \
+    --log "$run_log" --examples "$example" 2>&1) ||
+    fail "$example: the run did not cover every test it declares. Nothing was written.
+$coverage"
+echo "$coverage"
+not_simulated=$(printf '%s\n' "$coverage" | grep -c 'no curve for' || true)
 
 # 3. Anonymize and write.
 log_msg "$example: anonymizing..."
@@ -109,5 +114,7 @@ if [ -f "$declaration" ]; then
         --declaration "$declaration" --producer "$reference_path/Producer"
 fi
 
-set_state "$example" "done, $(find "$reference_path" -name '*.csv' | wc -l) curves"
+written="$(find "$reference_path" -name '*.csv' | wc -l) curves"
+[ "$not_simulated" -eq 0 ] || written="$written, $not_simulated not simulated"
+set_state "$example" "done, $written"
 log_msg "$example: done."

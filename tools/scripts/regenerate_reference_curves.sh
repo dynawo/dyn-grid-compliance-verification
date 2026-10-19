@@ -111,7 +111,7 @@ run_examples() {
 }
 
 if [ -t 1 ]; then
-    run_examples > "$working_path/regeneration.log" 2>&1 &
+    run_examples >| "$working_path/regeneration.log" 2>&1 &
     runner=$!
     echo "  (the chatter of each example goes to $working_path/regeneration.log)"
     draw_states
@@ -125,6 +125,13 @@ if [ -t 1 ]; then
     draw_states
 else
     run_examples
+fi
+
+incomplete=$(grep -l 'not simulated' "$DYCOV_STATE_DIR"/* 2> /dev/null | wc -l)
+if [ "$incomplete" -gt 0 ]; then
+    echo
+    echo "Curves that no simulation produced, and so are not in the examples:"
+    grep -h 'no curve for' "$working_path/regeneration.log" 2> /dev/null | sort -u | sed 's/^ *//'
 fi
 
 if [ -s "$failures" ]; then
