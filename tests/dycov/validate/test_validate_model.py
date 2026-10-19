@@ -34,7 +34,7 @@ def test_model_validation_ppm_producer_curves():
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.Qzero
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMax
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMin
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmin
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.P50
@@ -96,9 +96,9 @@ def test_model_validation_bess_producer_curves():
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMinInjection
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionPmax
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionP50

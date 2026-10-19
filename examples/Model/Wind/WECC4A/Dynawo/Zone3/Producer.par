@@ -6,8 +6,8 @@
     <par type="BOOL" name="WTG4A_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4A_FreqFlag" value="true"/>
     <par type="DOUBLE" name="WTG4A_tFilterPC" value="0.04"/>
-    <par type="DOUBLE" name="WTG4A_Kp" value="0.1"/>
-    <par type="DOUBLE" name="WTG4A_Ki" value="1.5"/>
+    <par type="DOUBLE" name="WTG4A_Kp" value="1"/>
+    <par type="DOUBLE" name="WTG4A_Ki" value="5"/>
     <par type="DOUBLE" name="WTG4A_tFt" value="1e-05"/>
     <par type="DOUBLE" name="WTG4A_tFv" value="0.1"/>
     <!-- Base unit: Un_PDR -->
@@ -24,8 +24,8 @@
     <par type="DOUBLE" name="WTG4A_QMaxREPCPu" value="0.8"/>
     <!-- Base unit: SnZone3 -->
     <par type="DOUBLE" name="WTG4A_QMinREPCPu" value="-0.8"/>
-    <par type="DOUBLE" name="WTG4A_Kpg" value="0.05"/>
-    <par type="DOUBLE" name="WTG4A_Kig" value="2.36"/>
+    <par type="DOUBLE" name="WTG4A_Kpg" value="1"/>
+    <par type="DOUBLE" name="WTG4A_Kig" value="4"/>
     <par type="DOUBLE" name="WTG4A_tpREPC" value="0.05"/>
     <!-- Base unit: fn (50 Hz) -->
     <par type="DOUBLE" name="WTG4A_FDbd1Pu" value="0.001"/>
@@ -40,9 +40,9 @@
     <!-- Base unit: SnZone3 -->
     <par type="DOUBLE" name="WTG4A_PMinREPCPu" value="0"/>
     <!-- Base unit: fn (50 Hz) -->
-    <par type="DOUBLE" name="WTG4A_DDn" value="100"/>
+    <par type="DOUBLE" name="WTG4A_DDn" value="20"/>
     <!-- Base unit: fn (50 Hz) -->
-    <par type="DOUBLE" name="WTG4A_DUp" value="100"/>
+    <par type="DOUBLE" name="WTG4A_DUp" value="20"/>
     <par type="DOUBLE" name="WTG4A_tLag" value="0.1"/>
     <!-- REEC_A -->
     <par type="BOOL" name="WTG4A_PfFlag" value="false"/>
@@ -78,13 +78,13 @@
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WTG4A_QMinREECPu" value="-0.8"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WTG4A_VMaxPu" value="1.1"/>
+    <par type="DOUBLE" name="WTG4A_VMaxPu" value="1.2"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WTG4A_VMinPu" value="0.9"/>
     <par type="DOUBLE" name="WTG4A_Kqp" value="1"/>
-    <par type="DOUBLE" name="WTG4A_Kqi" value="0.5"/>
+    <par type="DOUBLE" name="WTG4A_Kqi" value="1"/>
     <par type="DOUBLE" name="WTG4A_Kvp" value="1"/>
-    <par type="DOUBLE" name="WTG4A_Kvi" value="0.7"/>
+    <par type="DOUBLE" name="WTG4A_Kvi" value="1"/>
     <par type="DOUBLE" name="WTG4A_tIq" value="0.01"/>
     <!-- Base unit: SnZone1 -->
     <par type="DOUBLE" name="WTG4A_DPMaxPu" value="999"/>
