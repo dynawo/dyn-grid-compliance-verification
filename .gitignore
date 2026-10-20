@@ -27,3 +27,7 @@ Results/
 # Exlude auto-generate docs
 docs/manual/source/usage/helps
 docs/manual_dev/source/man/_autosummary
+
+examples/**/ReferenceCurves/
+examples/**/ProducerCurves/
+examples/.curves-release
