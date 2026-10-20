@@ -155,7 +155,9 @@ Any change that affects user-facing behavior, available workflows,
 inputs, or outputs must be reflected in the documentation:
 
 - Update the relevant tutorial under `docs/tutorials/`.
-- Add or update examples under `examples/`.
+- Add or update examples under `examples/`. Their curves are not committed: they
+  are regenerated once per release and ship as an asset of it, so a new or
+  changed example reaches the user with that release, not with the commit.
 - Update `docs/developer/` if the change affects internal architecture.
 
 Developer-only refactors with no user impact may be documented in

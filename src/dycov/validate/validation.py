@@ -153,6 +153,7 @@ class Validation:
         self._parameters = parameters
         self._is_testing = False  # Flag to avoid opening the report in the tests
         self._dry_run = dry_run
+        self._summary: list = []
 
         # Environment Path
         self._templates_path = Path(config.get_value("Global", "templates_path"))
@@ -419,6 +420,7 @@ class Validation:
         summary_list, report_results = self._validate(use_parallel, num_processes)
         # Create the pcs report
         sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone", "producer_name"))
+        self._summary = sorted_summary_list
         self.__create_report(sorted_summary_list, report_results)
 
         if self._parameters.get_output_dir().exists():
@@ -434,6 +436,17 @@ class Validation:
 
         compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
         return compliance_list
+
+    def get_summary(self) -> list:
+        """Returns what the last validation produced, one Summary per test, in the order the
+        report presents them. The compliance list that validate() returns is its verdict column.
+
+        Returns
+        -------
+        list
+            Summary of each test of the last validation, empty before the first one.
+        """
+        return self._summary
 
     def set_testing(self, testing: bool) -> None:
         """Sets the testing flag to avoid opening the report.
