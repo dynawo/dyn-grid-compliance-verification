@@ -19,6 +19,7 @@ from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.files import manage_files
+from dycov.gfm.report import GFMTestReport
 from dycov.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
@@ -911,9 +912,15 @@ class Benchmark:
 
         return success
 
-    def generate(self) -> None:
-        """Execute the generation step for all operating conditions of the benchmark."""
+    def generate(self) -> list[GFMTestReport]:
+        """Execute the generation step for all operating conditions of the benchmark.
 
+        Returns
+        -------
+        list[GFMTestReport]
+            What the report shows of every operating condition.
+        """
+        test_reports = []
         for position, op_cond in enumerate(self._oc_list, start=1):
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
@@ -931,7 +938,14 @@ class Benchmark:
                 / self._name
                 / op_cond.get_name()
             )
-            op_cond.generate(working_oc_dir)
+            test_report = op_cond.generate(working_oc_dir, self._producer_name)
+            if test_report.compliance is not None:
+                dycov_logging.get_logger("Benchmark").info(
+                    f"Done -> {test_report.compliance.to_str()}"
+                )
+            test_reports.append(test_report)
+
+        return test_reports
 
     def get_name(self) -> str:
         """Get the benchmark name.

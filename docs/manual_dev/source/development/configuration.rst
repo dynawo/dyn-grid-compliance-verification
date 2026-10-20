@@ -58,8 +58,10 @@ PCS Configuration
 ------------------
 
 Each PCS has its own ``PCSDescription.ini`` file, located under
-``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/`` (the ``gfm``
-workflow has no technology level: ``templates/PCS/gfm/<PCSName>/``). This file
+``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/``. The ``gfm``
+workflow has a ``BESS`` and a ``PPM`` technology too, because the DTR Fiche I18
+applies to storage alone: the ``generator_type`` of the GFM producer picks the
+tree. This file
 defines the complete structure of the PCS — its benchmarks, operating
 conditions, validation tests, and report curves.
 
@@ -477,8 +479,21 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
 GFM section
 ^^^^^^^^^^^^
 
-* ``SCRmin`` — minimum Short-Circuit Ratio for GFM envelope generation.
-* ``SCRmax`` — maximum Short-Circuit Ratio for GFM envelope generation.
+* ``SCRmin``, ``SCRmed``, ``SCRmax`` — the short-circuit ratios of the DTR
+  Fiche I18 (2, 10 and 20), which the GFM PCS name in their ``SCR`` keys.
+
+The checks of the producer curves given to ``generate_gfm_envelopes -c``:
+
+* ``cutoff`` — low-pass filter cut-off frequency (Hz) of those curves, 30 Hz
+  as the DTR asks for Grid Forming units, apart from the ``[GridCode]`` one.
+* ``envelope_tolerance`` — tolerance (pu) with which a curve is still inside
+  its envelope; it also absorbs the narrowing of the envelopes in their first
+  20 ms.
+* ``thr_damping_ratio`` — minimum damping ratio of the oscillations (0.40).
+* ``damping_f_min``, ``damping_f_max`` — band (Hz) of the oscillations whose
+  damping is checked.
+* ``damping_min_amplitude`` — smallest amplitude (pu) of an oscillation, below
+  which it is numerical noise.
 
 
 CurvesVariables section

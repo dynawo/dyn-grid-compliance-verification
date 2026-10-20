@@ -18,6 +18,7 @@ from dycov.core.parameters import Parameters
 from dycov.core.validator import Validator
 from dycov.curves.curves import get_cfg_oc_name
 from dycov.gfm.gfm import GridForming
+from dycov.gfm.report import GFMTestReport
 
 
 class OperatingCondition:
@@ -136,21 +137,29 @@ class OperatingCondition:
         results["udim"] = validator.get_generator_u_dim()
         return results
 
-    def generate(self, working_path: Path) -> None:
+    def generate(self, working_path: Path, producer_name: str) -> GFMTestReport:
         """Execute the GFM module for the current operating condition.
 
         Parameters
         ----------
         working_path: Path
             Working path.
+        producer_name: str
+            Name of the producer.
+
+        Returns
+        -------
+        GFMTestReport
+            What the report shows of the operating condition.
         """
         gfm = GridForming()
-        gfm.generate(
+        return gfm.generate(
             working_path,
             self._parameters,
             self._pcs_name,
             self._bm_name,
             self._name,
+            producer_name,
         )
 
     def get_name(self) -> str:

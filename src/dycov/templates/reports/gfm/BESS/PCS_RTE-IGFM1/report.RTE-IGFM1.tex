@@ -1,0 +1,20 @@
+% Custom macros common to all reports:
+{{ producercommand }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The document starts here
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \section{Results for PCS RTE-IGFM1}
+
+    Test 1 of the DTR Fiche I18 (Grid Forming), for non-synchronous storage units of type C
+    and D: the phase of the voltage at the infinite bus jumps by
+    \(\Delta\theta_{grid} = \pm 0.3\,(x_{eff} + x_{grid})\) and \(\pm 0.6\,(x_{eff} + x_{grid})\)
+    rad, with a grid of short-circuit ratio 2, 10 and 20, from the operating points OC1 to OC5.
+    The envelopes bound the active current \(I_p\) at the PGU terminals.
+
+    \BLOCK{for subReport in subReports}
+    {{subReport}}
+    \newpage
+    \BLOCK{endfor}

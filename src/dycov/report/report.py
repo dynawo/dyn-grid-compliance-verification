@@ -104,11 +104,13 @@ def terminate_all_children(timeout: float = 5.0) -> None:
                 pass
 
 
-def _run_pdflatex(working_path: Path, report_name_noext: str):
+def run_pdflatex(working_path: Path, report_name_noext: str):
     """Run pdflatex in a controllable way (as a process group) so we can terminate it on abort."""
     proc = subprocess.Popen(
         ["pdflatex", "-shell-escape", "-halt-on-error", report_name_noext],
         cwd=working_path,
+        # A missing file makes pdflatex prompt for another name, which no one would answer
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         preexec_fn=os.setsid,
@@ -187,38 +189,43 @@ def _get_reports(
     return reports
 
 
-def _copy_pcs_latex_files(
-    pcs_results: dict,
-    parameters: ValidationParameters,
+def copy_pcs_latex_files(
     path_latex_files: Path,
+    sim_type_str: str,
+    pcs_name: str,
+    producer_name: str,
     working_path: Path,
-):
-    pcs = pcs_results["pcs"]
-    latex_template_path = (
-        path_latex_files / parameters.get_producer().get_sim_type_str() / pcs.get_name()
-    )
+) -> None:
+    """Copies the LaTeX templates of a PCS, the user's and the tool's, to the working path.
+
+    Parameters
+    ----------
+    path_latex_files: Path
+        Path to the LaTeX templates, relative to the tool and to the configuration directory
+    sim_type_str: str
+        Directory of the kind of verification and producer, e.g. 'model/BESS'
+    pcs_name: str
+        Name of the PCS
+    producer_name: str
+        Name of the producer, which prefixes the copied templates
+    working_path: Path
+        Directory where the report is compiled
+    """
+    latex_template_path = path_latex_files / sim_type_str / pcs_name
 
     latex_user_path = config.get_config_dir() / latex_template_path
-    dycov_logging.get_logger("Report").debug(
-        f"{pcs.get_name()}: User LaTeX path:{latex_user_path}"
-    )
+    dycov_logging.get_logger("Report").debug(f"{pcs_name}: User LaTeX path:{latex_user_path}")
     latex_tool_path = Path(__file__).resolve().parent.parent / latex_template_path
-    dycov_logging.get_logger("Report").debug(
-        f"{pcs.get_name()}: Tool LaTeX path:{latex_tool_path}"
-    )
+    dycov_logging.get_logger("Report").debug(f"{pcs_name}: Tool LaTeX path:{latex_tool_path}")
 
+    prefix = producer_name.replace("_", "")
     if latex_user_path.exists():
-        manage_files.copy_latex_files(
-            latex_user_path, working_path, pcs_results["producer"].replace("_", "")
-        )
+        manage_files.copy_latex_files(latex_user_path, working_path, prefix)
     if latex_tool_path.exists():
-        manage_files.copy_latex_files(
-            latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
-        )
+        manage_files.copy_latex_files(latex_tool_path, working_path, prefix)
 
     if not (latex_tool_path.exists() or latex_user_path.exists()):
-        dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
-        return
+        dycov_logging.get_logger("Report").error(f"{pcs_name}: Latex Template do not exist")
 
 
 def _create_pcs_figures(
@@ -347,7 +354,7 @@ def _pcs_replace(
                 "link": latex_link,
             }
 
-            oc_template = _get_template(working_path, f"{producer_name}.{oc_report}")
+            oc_template = get_template(working_path, f"{producer_name}.{oc_report}")
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
 
     subst_dict = subst_dict | {"subReports": subreports}
@@ -356,7 +363,7 @@ def _pcs_replace(
     # cannot use LaTeX's active characters to separate words in the Jinja placeholders. With
     # the following instruction we get the tool to use a character that separates words with
     # a valid (i.e. non-active LaTeX) character.
-    template = _get_template(working_path, report_name)
+    template = get_template(working_path, report_name)
     subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
     template.stream(subst_dict2).dump(str(working_path / report_name))
     return len(subreports)
@@ -366,7 +373,7 @@ def _stability_label(stabilized: bool) -> str:
     return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 
-def _get_template(path, template_file):
+def get_template(path, template_file):
     latex_jinja_env = Environment(
         block_start_string="\\BLOCK{",
         block_end_string="}",
@@ -397,7 +404,7 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
     has_group_xfmr = group_xfmrs is None or len(group_xfmrs) > 0
     for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
         if (working_path / tikz_name).exists():
-            tikz_template = _get_template(working_path, tikz_name)
+            tikz_template = get_template(working_path, tikz_name)
             tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(str(working_path / tikz_name))
 
 
@@ -652,7 +659,8 @@ def _summary_log(
     dycov_logging.get_logger("Report").info(f"{header_txt + body_txt}")
 
 
-def _clean(working_path: Path):
+def clean_latex_outputs(working_path: Path) -> None:
+    """Deletes the auxiliary files of the LaTeX compilation, and its log once the PDF exists."""
     extensions_to_clean = [
         "*.toc",
         "*.aux",
@@ -696,10 +704,11 @@ def prepare_pcs_report(
     output_path = parameters.get_working_dir() / "Reports"
     working_path = parameters.get_working_dir() / "Latex"
 
-    _copy_pcs_latex_files(
-        pcs_results,
-        parameters,
+    copy_pcs_latex_files(
         path_latex_files,
+        parameters.get_producer().get_sim_type_str(),
+        pcs_results["pcs"].get_name(),
+        pcs_results["producer"],
         working_path,
     )
 
@@ -804,7 +813,7 @@ def create_pdf(
     if 3 in zones:
         commonz3_include = "\\input{{commonz3}}"
 
-    oc_template = _get_template(working_path, REPORT_NAME)
+    oc_template = get_template(working_path, REPORT_NAME)
     oc_template.stream(
         {
             "commonz1": commonz1_include,
@@ -822,11 +831,11 @@ def create_pdf(
         return
 
     report_name_ = REPORT_NAME.replace(".tex", "")
-    proc = _run_pdflatex(working_path, report_name_)
-    proc = _run_pdflatex(working_path, report_name_)
+    proc = run_pdflatex(working_path, report_name_)
+    proc = run_pdflatex(working_path, report_name_)
 
     if dycov_logging.get_logger("Report").getEffectiveLevel() != logging.DEBUG:
-        _clean(working_path)
+        clean_latex_outputs(working_path)
 
     dycov_logging.get_logger("Report").debug(proc.stderr.decode("utf-8"))
     report_moved = manage_files.move_report(working_path, output_path, REPORT_NAME)

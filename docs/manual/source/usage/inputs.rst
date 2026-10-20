@@ -103,12 +103,20 @@ describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
 nominal and operational parameters, and a ``[GFM Parameters]`` section for
 the core GFM control constants.
 
+The ``generator_type`` of the ``[DEFAULT]`` section, ``BESS`` or ``PPM``, says
+what the unit is, and with it which tests it is given: a storage unit gets
+the matrix of the DTR Fiche I18, a power park module the tests agreed with RTE
+before the fiche (see :ref:`Tests by kind of unit <gfm_tests_by_unit>`). The
+command stops when it is missing.
+
 A typical file looks like this:
 
 .. code-block:: ini
    :caption: Example GFM Producer INI file
 
    [DEFAULT]
+   # Kind of unit: BESS or PPM
+   generator_type = BESS
    # Nominal voltage at the PDR bus (in kV)
    # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
    u_nom = 225
@@ -128,6 +136,9 @@ A typical file looks like this:
    Xeff = 0.15
    # Nominal apparent power (in MVA)
    Snom = 110.0
+   # Optional: short-duration maximum current (in pu of Snom), which bounds
+   # every envelope as the DTR Fiche I18 requires
+   Imax = 1.2
 
 For **Hybrid mode** (combining overdamped and underdamped envelopes), the
 ``[GFM Parameters]`` section should instead define separate damping and

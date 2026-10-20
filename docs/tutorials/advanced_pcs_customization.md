@@ -102,8 +102,8 @@ the PCS you are adapting:
 ~/.config/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/PCSDescription.ini
 ```
 
-(For the `gfm` workflow there is no technology level:
-`templates/PCS/gfm/<PCSName>/PCSDescription.ini`.)
+(The `gfm` workflow has its `BESS` and `PPM` technologies as well:
+`templates/PCS/gfm/BESS/<PCSName>/PCSDescription.ini`.)
 
 That file is a **patch over** the one shipped with the tool, not a replacement:
 write only the sections and keys you change, and everything you leave out keeps

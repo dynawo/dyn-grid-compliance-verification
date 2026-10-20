@@ -146,6 +146,24 @@ outputs (saved CSVs, report/figure labels) rename the bus to `InternalNode1` —
 reserved for the real connection point (issue #275). The importer accepts both namings
 in Zone 1 reference-curve dictionaries.
 
+## Grid Forming (`gfm/`)
+
+`dycov generate_gfm_envelopes` is analytical, no Dynawo: `GFMGeneration` (`generator.py`) runs
+`Pcs.generate` → `Benchmark.generate` → `OperatingCondition.generate` → `GridForming.generate`
+(`gfm.py`), whose calculator (`calculators/`, named by the benchmark `calculator` key) returns the
+`Ip`/`Iq` envelopes. The producer INI declares `generator_type` (`gfm/producer.py`), which picks
+the PCS tree: `templates/PCS/gfm/BESS` holds the DTR Fiche I18 matrix (IGFM1–4, OCs in pu of the
+converter rating), `gfm/PPM` the four PCS agreed before the fiche. A declared `Imax` bounds every
+envelope (`gfm.py`). SCRmin/med/max and the curve
+checks are in the `[GFM]` config section. With `-c`, `verification/curves_compliance.py` reads
+the producer curves through `CurvesImporter` (Zone 1 naming), filters them at the `[GFM]` cutoff
+(30 Hz) per `signal_windows.filter_windows`, checks the envelope and the damping of every mode
+(`sigpro/matrix_pencil.py`), and `results.json` records the verdict. Each OC returns a
+`GFMTestReport` up to the generator, and `gfm/report.py` writes `Reports/report.pdf` with the
+LaTeX machinery of `report/report.py`: the main `report.tex` (`gridforming` drops the Dynawo
+header and the step-response appendix), a section by PCS (`templates/reports/gfm/<tech>/<PCS>`)
+and the shared test page `templates/reports/gfm/report.GFMTest.tex`.
+
 ## Logging (`logging/`)
 
 `dycov_logging` is one process-wide `DycovLogger`. `init_handlers` (from `core/initialization.py`) keeps

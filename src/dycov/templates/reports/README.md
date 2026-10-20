@@ -4,6 +4,8 @@ Contains the LaTex report files of the PCS. And it is made up of 3 directories:
 * **model/PPM**: DyCoV Model Validation tests (Power Parks)
 * **performance/PPM**: Electric Performance tests (Power Parks)
 * **performance/SM**: Electric Performance tests (Synchronous Machines)
+* **gfm/BESS** and **gfm/PPM**: Grid Forming tests, one section by PCS; every test is rendered
+  with the shared page `gfm/report.GFMTest.tex`
 
 # Modify an existing PCS
 

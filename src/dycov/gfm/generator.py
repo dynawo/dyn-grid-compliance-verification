@@ -9,16 +9,20 @@
 import logging
 import multiprocessing
 import sys
+from collections import Counter
 from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.files import manage_files
+from dycov.gfm import report
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.report import PcsReport
 from dycov.logging import dycov_logging, worker_initializer
+from dycov.model.compliance import Compliance
 from dycov.model.pcs import Pcs
 
 
-def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
+def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> PcsReport:
     """
     Worker function that generates envelopes for a specific PCS.
 
@@ -27,15 +31,21 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     pcs_args : tuple[GFMParameters, str, str]
         A tuple containing the
         simulation parameters, the PCS name, and the producer name.
+
+    Returns
+    -------
+    PcsReport
+        What the report shows of every test of the PCS, none when the PCS cannot be generated.
     """
     parameters, pcs_name, producer_name = pcs_args
     pcs = Pcs(producer_name, pcs_name, parameters)
+    pcs_report = PcsReport(producer_name, pcs_name, pcs.get_report_name(), [])
 
     try:
         if not pcs.is_valid():
             dycov_logging.get_logger("GFMGeneration").error(f"{pcs.get_name()} is not a valid PCS")
-            return
-        pcs.generate()
+            return pcs_report
+        return pcs_report._replace(tests=pcs.generate())
     except (FileNotFoundError, IOError, ValueError) as e:
         # Provide full traceback only when debug mode is enabled
         if dycov_logging.get_logger("GFMGeneration").getEffectiveLevel() == logging.DEBUG:
@@ -46,6 +56,7 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
             dycov_logging.get_logger("GFMGeneration").error(
                 f"Aborted execution for {pcs.get_name()}. {e}"
             )
+        return pcs_report
 
 
 class GFMGeneration:
@@ -99,7 +110,9 @@ class GFMGeneration:
         if self._parameters.get_selected_pcs():
             validation_pcs.add(self._parameters.get_selected_pcs())
 
-        self.__populate_validation_pcs(validation_pcs, "gridforming_pcs", "gfm")
+        self.__populate_validation_pcs(
+            validation_pcs, "gridforming_pcs", self._parameters.get_producer().get_sim_type_str()
+        )
 
         return sorted(list(validation_pcs))
 
@@ -175,17 +188,46 @@ class GFMGeneration:
                 initializer=worker_initializer,
                 initargs=(dycov_logging.get_handler_settings(),),
             ) as pool:
-                pool.map(_generate_pcs, self._pcs_list)
+                pcs_reports = pool.map(_generate_pcs, self._pcs_list)
         else:
             dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")
-            for pcs_tuple in self._pcs_list:
-                _generate_pcs(pcs_tuple)
+            pcs_reports = [_generate_pcs(pcs_tuple) for pcs_tuple in self._pcs_list]
 
-        # Post-processing: Migrate generated files to final output directory and cleanup temp space
-        for _, pcs_name, producer_name in self._pcs_list:
-            manage_files.copy_directory(
-                self._parameters.get_working_dir() / producer_name,
-                self._parameters.get_output_dir(),
-                pcs_name,
-            )
-        manage_files.remove_dir(self._parameters.get_working_dir())
+        self.__log_compliance_summary(
+            [
+                test.compliance
+                for pcs_report in pcs_reports
+                for test in pcs_report.tests
+                if test.compliance is not None
+            ]
+        )
+
+        try:
+            # The report reads the figures from the working directory, before it is moved
+            report.create_pdf(pcs_reports, self._parameters)
+        finally:
+            # Migrate generated files to final output directory and cleanup temp space
+            for _, pcs_name, producer_name in self._pcs_list:
+                manage_files.copy_directory(
+                    self._parameters.get_working_dir() / producer_name,
+                    self._parameters.get_output_dir(),
+                    pcs_name,
+                )
+            manage_files.remove_dir(self._parameters.get_working_dir())
+
+    def __log_compliance_summary(self, compliances: list[Compliance]) -> None:
+        """
+        Logs how many tests reach each compliance, when producer curves were checked.
+
+        Parameters
+        ----------
+        compliances : list[Compliance]
+            Compliance of the producer curves of every test.
+        """
+        if not compliances:
+            return
+        counts = Counter(compliance.to_str() for compliance in compliances)
+        dycov_logging.get_logger("GFMGeneration").info(
+            f"Producer curves checked in {len(compliances)} tests: "
+            + ", ".join(f"{count} {label}" for label, count in sorted(counts.items()))
+        )

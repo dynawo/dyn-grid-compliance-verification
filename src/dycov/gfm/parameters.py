@@ -21,7 +21,13 @@ class GFMParameters(Parameters):
     """Configuration entity to define and manage GFM model validation parameters."""
 
     def __init__(
-        self, producer_ini: Path, selected_pcs: str, output_dir: Path, only_dtr: bool, emt: bool
+        self,
+        producer_ini: Path,
+        selected_pcs: str,
+        output_dir: Path,
+        only_dtr: bool,
+        emt: bool,
+        producer_curves: Optional[Path] = None,
     ) -> None:
         """
         Initializes the parameters object with producer configuration and runtime options.
@@ -38,10 +44,14 @@ class GFMParameters(Parameters):
             Flag indicating if only DTR evaluation is required.
         emt : bool
             Flag to enable EMT simulation mode.
+        producer_curves : Optional[Path], optional
+            Directory of the producer curves to check against the envelopes. Defaults to None,
+            in which case only the envelopes are generated.
         """
         super().__init__(None, selected_pcs, output_dir, only_dtr)
         self._emt = emt
         self._producer = GFMProducer(producer_ini)
+        self._producer_curves = producer_curves
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
         """
@@ -83,6 +93,17 @@ class GFMParameters(Parameters):
             True if EMT mode is enabled.
         """
         return self._emt
+
+    def get_producer_curves_path(self) -> Optional[Path]:
+        """
+        Retrieves the directory of the producer curves to check against the envelopes.
+
+        Returns
+        -------
+        Optional[Path]
+            The directory of the producer curves, or None when only envelopes are generated.
+        """
+        return self._producer_curves
 
     def get_calculator_name(self) -> str:
         """
@@ -638,6 +659,17 @@ class GFMParameters(Parameters):
             except ValueError:
                 return None
         return None
+
+    def get_max_current(self) -> Optional[float]:
+        """
+        Retrieves the short-duration maximum current of the unit (Imax), when declared.
+
+        Returns
+        -------
+        Optional[float]
+            The maximum current in pu of Snom, or None when the producer declares none.
+        """
+        return self._producer.get_config().getfloat("GFM Parameters", "Imax", fallback=None)
 
     def should_save_all_envelopes(self) -> bool:
         """

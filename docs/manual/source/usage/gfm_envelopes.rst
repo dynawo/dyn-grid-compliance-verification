@@ -11,7 +11,8 @@ the second-order differential equations that govern its dynamic behavior and
 computes a set of *admissible response envelopes*: upper and lower bounds on
 the dynamic response for specific grid disturbances.
 
-The result is not a pass/fail verdict but a quantitative envelope that can be:
+On its own, the result is not a pass/fail verdict but a quantitative envelope
+that can be:
 
 * examined visually to assess control robustness,
 * compared against external requirements or certification criteria,
@@ -20,22 +21,75 @@ The result is not a pass/fail verdict but a quantitative envelope that can be:
 Because the computation is analytical, it runs much faster than a time-domain
 simulation and requires no Dynawo model.
 
+When the curves of the producer are given as well, DyCoV checks them against
+the envelopes and the damping criterion of the DTR Fiche I18, and gives a
+verdict for every test (see :ref:`Checking the producer curves
+<gfm_curves_check>`).
+
+
+.. _gfm_tests_by_unit:
+
+Tests by kind of unit
+---------------------
+
+Which tests a unit is given follows from what it is, declared with
+``generator_type`` in the ``[DEFAULT]`` section of its input file (see
+:ref:`GFM Producer Input <gfm_producer_input>`):
+
+* ``BESS`` — a non-synchronous storage unit of type C or D, the scope of the
+  DTR Fiche I18 "Grid Forming". It is given the full matrix of the fiche
+  (``templates/PCS/gfm/BESS``):
+
+  .. list-table::
+     :header-rows: 1
+
+     * - PCS
+       - I18 test
+       - Scenarios
+       - Operating conditions
+     * - ``PCS_RTE-IGFM1``
+       - Test 1, phase jump of the voltage at the infinite bus
+       - ``S_VolAngStep1`` to ``12``
+       - OC1 to OC5
+     * - ``PCS_RTE-IGFM2``
+       - Test 2, amplitude step of the voltage at the infinite bus
+       - ``S_VolAmpStep1`` to ``6``
+       - OC1 to OC7
+     * - ``PCS_RTE-IGFM3``
+       - Test 3, short-circuit ratio jump
+       - ``S_SCRup1``, ``S_SCRdown1``
+       - OC1 to OC5
+     * - ``PCS_RTE-IGFM4``
+       - Test 4, frequency variation (RoCoF)
+       - ``S_Rocof1`` to ``12``
+       - OC1 to OC5
+
+  The operating points are given in pu of the rating of the converter, and
+  the grid short-circuit ratios are those of the fiche: ``SCRmin = 2``,
+  ``SCRmed = 10`` and ``SCRmax = 20`` (``[GFM]`` section of the
+  configuration). Test 5, the faults, is for information only in the fiche: it
+  has no envelope, and DyCoV does not generate it.
+
+* ``PPM`` — a power park module, which the fiche does not cover. It keeps the
+  four PCS built on the envelope method agreed with RTE before the fiche
+  existed (``templates/PCS/gfm/PPM``).
+
 
 Supported disturbance cases
 ---------------------------
 
 DyCoV currently supports four predefined disturbance families:
 
-* **Amplitude Step** — computes reactive current (:math:`I_q`) and reactive
-  power envelopes in response to a step change in the grid voltage amplitude.
+* **Amplitude Step** — computes reactive current (:math:`I_q`) envelopes in
+  response to a step change in the grid voltage amplitude.
 
-* **Phase Jump** — computes active power (:math:`P`) envelopes in response to
-  a sudden change in the grid voltage phase angle. This is typically the most
-  critical disturbance for GFM units.
+* **Phase Jump** — computes active current (:math:`I_p`) envelopes in response
+  to a sudden change in the grid voltage phase angle. This is typically the
+  most critical disturbance for GFM units.
 
-* **RoCoF** (Rate of Change of Frequency) — computes active power envelopes
-  in response to a frequency ramp. Finite-duration events are modeled by
-  superimposing step responses.
+* **RoCoF** (Rate of Change of Frequency) — computes active current
+  (:math:`I_p`) envelopes in response to a frequency ramp. Finite-duration
+  events are modeled by superimposing step responses.
 
 * **SCR Jump** — computes stability and power response envelopes following a
   sudden change in the Short-Circuit Ratio (grid impedance), differentiated
@@ -103,6 +157,74 @@ delay defaults to 0.02 s when the key is absent; all the shipped examples
 define it explicitly. Without ``-e``, ``emt_delay`` has no effect.
 
 
+.. _gfm_curves_check:
+
+Checking the producer curves
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pass ``-c``/``--curves`` with the directory of the curves of the producer to
+check them against the envelopes:
+
+.. code-block:: console
+
+   dycov generate_gfm_envelopes -i examples/GFM/Overdamped/Producer.ini -c Curves
+
+The directory holds one subdirectory per producer input file, named after it
+(``Curves/Producer/`` for ``Producer.ini``), laid out as any other set of
+curves given to DyCoV: a ``CurvesFiles.ini`` and, for every test, a curve file
+named after the test (``PCS_RTE-IGFM1.S_VolAngStep1.OC2.csv``, or a COMTRADE or
+EUROSTAG file) with its ``.dict``. The fiche asks for the RMS active and
+reactive currents and the voltage at the PGU terminals, sampled every 1 ms at
+most and covering at least from the event to the steady state. They are the
+Node 1 of the Zone 1 of the DTR, so the dictionary names them after that bus:
+
+.. code-block:: ini
+   :caption: CurvesFiles.ini
+
+   [Curves-Dictionary]
+   time = time
+
+   [Curves-Dictionary-Zone1]
+   InternalNode1_BUS_ActiveCurrent = Ip
+   InternalNode1_BUS_ReactiveCurrent = Iq
+   InternalNode1_BUS_Voltage = U
+
+   [Curves-Dictionary-Zone3]
+
+The ``.dict`` of each test declares in its ``[Curves-Metadata]`` section the
+time of the event in the curves, ``sim_t_event_start``, which DyCoV aligns
+with the event of the envelopes. The currents are in pu of the rating of the
+converter.
+
+The curves are low-pass filtered at the 30 Hz the DTR asks for, given the
+response dynamics of Grid Forming units (``cutoff`` of the ``[GFM]`` section;
+the other verifications keep the 15 Hz of ``[GridCode]``), each side of the
+event apart. A test is **compliant** when:
+
+* the current the envelope bounds (:math:`I_p` or :math:`I_q`) stays inside
+  it, over the time both cover, within ``envelope_tolerance`` (0.005 pu, which
+  also absorbs the narrowing of the envelopes in their first 20 ms);
+* no oscillation of the active or reactive current, nor of the voltage when it
+  is given, between ``damping_f_min`` and ``damping_f_max`` (0.1 Hz and
+  10 Hz) is damped less than ``thr_damping_ratio`` (40 %). The damping is
+  estimated with the Matrix Pencil method, on each window between the event
+  discontinuities (during the frequency ramp and after it, for the RoCoF
+  tests). Oscillations smaller than ``damping_min_amplitude`` (0.001 pu) are
+  the numerical noise of a nearly flat curve, and are not considered.
+
+Within the envelopes and well damped, the converter has also stayed connected
+and stable, the last criterion of the fiche. A test whose curves miss one of
+the currents is reported as missing producer curves; one whose curves cannot
+be read is an invalid test, and its envelopes are still delivered.
+
+.. note::
+   The Matrix Pencil method fits the response with a sum of damped
+   exponentials. A response with corners, as when a current enters or leaves
+   its limit, is not such a sum, and the fit may then show lightly damped
+   modes of small amplitude that are not oscillations of the unit. Every mode
+   found is listed, with its amplitude, in the ``results.json`` of the test.
+
+
 .. _gfm_outputs:
 
 Understanding the outputs
@@ -113,13 +235,16 @@ Results are organized hierarchically under ``Results/``:
 .. code-block:: text
 
    Results/
+   ├── Reports/
+   │   └── report.pdf
    └── PCS_RTE-IGFMx/
        └── S_<Scenario>/
            └── OC<k>/
                ├── *.csv
                ├── *.png
                ├── *.html
-               └── *_ini_dump.txt   (Hybrid mode only)
+               ├── *_ini_dump.txt   (Hybrid mode only)
+               └── results.json     (when producer curves are checked)
 
 Where:
 
@@ -127,6 +252,15 @@ Where:
 * ``S_<Scenario>`` identifies the disturbance scenario (e.g. Phase Jump,
   Amplitude Step, RoCoF, SCR Jump).
 * ``OC<k>`` identifies a specific operating condition for that scenario.
+
+The **PDF report** in ``Reports/`` gathers every test of the run. Its summary
+lists them all with their result (the compliance when producer curves were
+checked, ``Envelopes generated`` otherwise), and each PCS has a section that
+describes its test, with a page per scenario and operating condition: the
+parameters of the test, the envelope figure, a link to its HTML version and,
+when the producer curves were checked, the envelope and damping checks with
+their verdict. It is compiled with LaTeX, so the packages listed in the
+installation instructions are needed, as for the verification reports.
 
 For each combination of PCS, scenario, and operating condition:
 
@@ -147,6 +281,13 @@ For each combination of PCS, scenario, and operating condition:
   damping ratio :math:`\varepsilon`. Intended for full traceability when hybrid
   configurations are used.
 
+* **results.json** (when producer curves are checked) — the compliance of the
+  test, how far the curve leaves the envelope and over which time they are
+  compared, and every oscillating mode found (curve, window, frequency, damping
+  ratio and amplitude). The CSV file and the figures then carry the filtered
+  producer curve as well, and the log closes with how many tests reach each
+  compliance.
+
 
 Interpretation
 --------------
@@ -155,6 +296,7 @@ The envelopes define the *admissible dynamic response bounds* for a given
 disturbance and operating condition. A GFM unit whose response remains within
 the envelope is considered compliant with the analytical criteria.
 
-DyCoV does not issue a pass/fail verdict for GFM analysis. Interpretation of
+Without producer curves, DyCoV issues no pass/fail verdict: interpretation of
 the envelopes is the responsibility of the user and depends on the applicable
-regulatory or engineering framework.
+regulatory or engineering framework. With them, the verdict is that of the
+criteria of the DTR Fiche I18 described above.

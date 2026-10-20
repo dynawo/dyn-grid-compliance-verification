@@ -6,16 +6,26 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 
+import configparser
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 
 from dycov.gfm import constants
 from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
-from dycov.gfm.outputs import plot_results, save_ini_dump, save_results_to_csv
+from dycov.gfm.outputs import (
+    plot_results,
+    save_compliance_results,
+    save_ini_dump,
+    save_results_to_csv,
+)
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.report import GFMTestReport
+from dycov.gfm.verification import curves_compliance
 from dycov.logging import dycov_logging
+from dycov.model.compliance import Compliance
 
 LOGGER = dycov_logging.get_logger(__name__)
 
@@ -30,7 +40,8 @@ class GridForming:
         pcs_name: str,
         bm_name: str,
         oc_name: str,
-    ) -> None:
+        producer_name: str,
+    ) -> GFMTestReport:
         """
         Executes the primary pipeline for GFM simulation results generation.
 
@@ -46,6 +57,14 @@ class GridForming:
             The Base Model identifier.
         oc_name : str
             The Operating Condition identifier.
+        producer_name : str
+            The name of the producer, that of the directory holding its curves.
+
+        Returns
+        -------
+        GFMTestReport
+            What the report shows of the test: its parameters and, when the producer curves are
+            given, their compliance and checks.
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
         x_eff = parameters.get_effective_reactance()
@@ -141,9 +160,31 @@ class GridForming:
             LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
+        max_current = parameters.get_max_current()
+        if max_current is not None:
+            # The DTR Fiche I18 bounds every envelope by the short-duration maximum current
+            pcc_signal, lower_envelope, upper_envelope = (
+                np.clip(signal, -max_current, max_current)
+                for signal in (pcc_signal, lower_envelope, upper_envelope)
+            )
+
         # Retrieve any integrity warnings triggered during calculator execution
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
+
+        curves_check = self._check_producer_curves(
+            working_path,
+            parameters,
+            producer_name,
+            title,
+            magnitude_name,
+            time_array,
+            event_time,
+            calculator.get_event_duration(),
+            lower_envelope,
+            upper_envelope,
+        )
+        producer_signal = curves_check.signal if curves_check else None
 
         self._export_csv(
             working_path,
@@ -154,6 +195,7 @@ class GridForming:
             lower_envelope,
             upper_envelope,
             extra_envelopes=extra_envelopes,
+            producer_signal=producer_signal,
         )
 
         if not hybrid_params:
@@ -166,6 +208,7 @@ class GridForming:
                 calculator=calculator,
             )
 
+        params_info = self._get_params_plot_info(parameters, params_list, calculator)
         self._plot(
             working_path,
             title,
@@ -175,13 +218,92 @@ class GridForming:
             pcc_signal,
             lower_envelope,
             upper_envelope,
-            parameters,
-            params_list,
-            calculator,
+            params_info,
             is_inconsistent,
             disclaimer_msg,
             extra_envelopes=extra_envelopes,
+            producer_signal=producer_signal,
         )
+
+        return GFMTestReport(
+            producer_name=producer_name,
+            pcs=pcs_name,
+            benchmark=bm_name,
+            operating_condition=oc_name,
+            magnitude=magnitude_name,
+            parameters=params_info,
+            compliance=curves_check.compliance if curves_check else None,
+            envelope=curves_check.envelope if curves_check else None,
+            modes=curves_check.modes if curves_check else [],
+        )
+
+    def _check_producer_curves(
+        self,
+        working_path: Path,
+        parameters: GFMParameters,
+        producer_name: str,
+        title: str,
+        magnitude_name: str,
+        time_array: np.ndarray,
+        event_time: float,
+        event_duration: float,
+        lower_envelope: np.ndarray,
+        upper_envelope: np.ndarray,
+    ) -> Optional[curves_compliance.CurvesCheck]:
+        """
+        Checks the producer curves of the test against its envelopes, when they are given.
+
+        Parameters
+        ----------
+        working_path : Path
+            The directory path for intermediate and final outputs.
+        parameters : GFMParameters
+            The parsed parameter configuration object.
+        producer_name : str
+            The name of the producer, that of the directory holding its curves.
+        title : str
+            The name of the test.
+        magnitude_name : str
+            The magnitude the envelopes bound.
+        time_array : np.ndarray
+            The simulation time vector.
+        event_time : float
+            The timestamp of the grid event.
+        event_duration : float
+            How long the grid event lasts.
+        lower_envelope : np.ndarray
+            The calculated lower boundary array.
+        upper_envelope : np.ndarray
+            The calculated upper boundary array.
+
+        Returns
+        -------
+        Optional[curves_compliance.CurvesCheck]
+            The result of the check, None when no producer curves are given.
+        """
+        curves_path = parameters.get_producer_curves_path()
+        if curves_path is None:
+            return None
+
+        try:
+            curves_check = curves_compliance.check(
+                curves_path / producer_name,
+                working_path,
+                title,
+                magnitude_name,
+                time_array,
+                event_time,
+                event_duration,
+                lower_envelope,
+                upper_envelope,
+            )
+        except (OSError, ValueError, configparser.Error) as e:
+            # The envelopes are still delivered: only the producer curves cannot be judged
+            LOGGER.error(f"The producer curves of {title} cannot be checked. {e}")
+            curves_check = curves_compliance.CurvesCheck(Compliance.InvalidTest, None, None, [])
+
+        save_compliance_results(working_path / "results.json", curves_check)
+        return curves_check
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
         """
@@ -261,6 +383,7 @@ class GridForming:
         lower_envelope: np.ndarray,
         upper_envelope: np.ndarray,
         extra_envelopes: dict = None,
+        producer_signal: np.ndarray = None,
     ) -> None:
         """
         Exports generated signals to a CSV file.
@@ -283,6 +406,8 @@ class GridForming:
             The computed upper limit array.
         extra_envelopes : dict, optional
             Additional debugging envelopes to append.
+        producer_signal : np.ndarray, optional
+            The filtered producer curve on the same time values.
         """
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
@@ -292,6 +417,7 @@ class GridForming:
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
             extra_envelopes=extra_envelopes,
+            producer_signal=producer_signal,
         )
 
     def _get_params_plot_info(
@@ -368,6 +494,8 @@ class GridForming:
             text_params_info.append(f"H = {parameters.get_inertia_constant():.3f} s")
         if "Epsilon" in params_list:
             text_params_info.append(f"Epsilon = {calculator._epsilon:.3f}")
+        if parameters.get_max_current() is not None:
+            text_params_info.append(f"Imax = {parameters.get_max_current():.3f} pu")
 
         return text_params_info
 
@@ -381,12 +509,11 @@ class GridForming:
         pcc_signal: np.ndarray,
         lower_envelope: np.ndarray,
         upper_envelope: np.ndarray,
-        parameters: GFMParameters,
-        params_list: list,
-        calculator: GFMCalculator,
+        params_info: list[str],
         is_inconsistent: bool = False,
         disclaimer_msg: str = None,
         extra_envelopes: dict = None,
+        producer_signal: np.ndarray = None,
     ) -> None:
         """
         Dispatches variables to render visual plots in PNG and HTML format.
@@ -409,18 +536,16 @@ class GridForming:
             The calculated lower boundary array.
         upper_envelope : np.ndarray
             The calculated upper boundary array.
-        parameters : GFMParameters
-            The simulation parameter configuration.
-        params_list : list
-            The list of variables to print on the plot legend.
-        calculator : GFMCalculator
-            The calculator instance used for simulation.
+        params_info : list[str]
+            The parameters to print on the plot, one 'name = value' line each.
         is_inconsistent : bool, optional
             Whether to display a warning flag on the plot.
         disclaimer_msg : str, optional
             A custom text to display if inconsistencies exist.
         extra_envelopes : dict, optional
             Extra boundary arrays for UI rendering.
+        producer_signal : np.ndarray, optional
+            The filtered producer curve on the same time values.
         """
         plot_results(
             path=png_path / f"{title}.png",
@@ -433,8 +558,9 @@ class GridForming:
             lower_envelope=lower_envelope,
             upper_envelope=upper_envelope,
             output_format="png&html",
-            params_list=self._get_params_plot_info(parameters, params_list, calculator),
+            params_list=params_info,
             show_disclaimer=is_inconsistent,
             disclaimer_message=disclaimer_msg,
             extra_envelopes=extra_envelopes,
+            producer_signal=producer_signal,
         )

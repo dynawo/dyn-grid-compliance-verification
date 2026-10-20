@@ -46,6 +46,17 @@ class RoCoF(GFMCalculator):
         """
         return ["P0", "Q0", "Frequency0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
 
+    def get_event_duration(self) -> float:
+        """
+        Retrieves how long the frequency ramp lasts.
+
+        Returns
+        -------
+        float
+            The RoCoF duration in seconds.
+        """
+        return self._rocof_duration
+
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
     ) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
@@ -69,7 +80,7 @@ class RoCoF(GFMCalculator):
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             A tuple containing the
-            magnitude name ("P"), main signal, upper envelope, and lower envelope arrays.
+            magnitude name ("Ip"), main signal, upper envelope, and lower envelope arrays.
         """
         dycov_logging.get_logger("RoCoF").debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
@@ -94,7 +105,7 @@ class RoCoF(GFMCalculator):
             lower_envelope = p_down
             pcc_signal = p_pcc
 
-        return "P", pcc_signal, upper_envelope, lower_envelope
+        return "Ip", pcc_signal, upper_envelope, lower_envelope
 
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float

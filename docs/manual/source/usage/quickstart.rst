@@ -86,14 +86,18 @@ GFM Envelope Generation
 Grid-Forming (GFM) analysis is a purely analytical workflow — no dynamic
 simulation is involved. Given the key parameters of a GFM unit (inertia,
 damping, effective reactance), the tool computes the admissible upper and
-lower response envelopes for specific grid disturbances.
+lower response envelopes for specific grid disturbances: the tests of the DTR
+Fiche I18 for a storage unit, those agreed before it for a power park module.
 
 You would use the command ``dycov generate_gfm_envelopes``:
 
 .. include:: helps/generate_gfm_envelopes.rst
 
 The output consists of CSV files with the envelope data, static PNG figures,
-and interactive HTML plots.
+interactive HTML plots, and a PDF report that gathers every test. Given the
+curves of the producer (``-c``), it also checks them against the envelopes and
+the damping criterion of the DTR Fiche I18, and the report gives the verdict of
+each test.
 
 .. seealso::
    For a detailed description of the supported disturbance cases, input

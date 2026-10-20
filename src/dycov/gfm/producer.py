@@ -12,6 +12,9 @@ from pathlib import Path
 
 from dycov.model.producer import Producer
 
+# Each kind of producer is given its own tests: the DTR Fiche I18 applies to storage alone
+_GENERATOR_TYPES = ("PPM", "BESS")
+
 
 class GFMProducer(Producer):
     """Represents a producer parsed from an INI configuration file."""
@@ -24,9 +27,15 @@ class GFMProducer(Producer):
         ----------
         producer_ini : Path
             The file path to the producer's INI configuration.
+
+        Raises
+        ------
+        ValueError
+            If the INI file does not declare a supported generator type.
         """
         super().__init__(None, producer_ini)
         self._config = self.__read_producer_ini()
+        self._generator_type = self.__read_generator_type()
 
     def get_producer_path(self) -> Path:
         """
@@ -70,9 +79,9 @@ class GFMProducer(Producer):
         Returns
         -------
         str
-            The simulation string identifier (e.g., "gfm").
+            The directory of the PCS the producer is given, 'gfm/PPM' or 'gfm/BESS'.
         """
-        return "gfm"
+        return f"gfm/{self._generator_type}"
 
     def set_zone(self, zone: int, filename: str) -> None:
         """
@@ -127,3 +136,26 @@ class GFMProducer(Producer):
         producer_config.read(producer_ini_path)
 
         return producer_config
+
+    def __read_generator_type(self) -> str:
+        """
+        Reads the kind of producer the INI file declares.
+
+        Returns
+        -------
+        str
+            One of the supported generator types.
+
+        Raises
+        ------
+        ValueError
+            If the generator type is missing or not supported.
+        """
+        generator_type = self._config.get("DEFAULT", "generator_type", fallback="").strip()
+        if generator_type not in _GENERATOR_TYPES:
+            raise ValueError(
+                f"The producer INI in '{self.get_producer_path()}' declares generator_type = "
+                f"'{generator_type}' in its [DEFAULT] section; it must be one of "
+                f"{', '.join(_GENERATOR_TYPES)}, as the Grid Forming tests depend on it"
+            )
+        return generator_type

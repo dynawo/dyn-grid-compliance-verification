@@ -1,7 +1,8 @@
 from dycov.model.compliance import Compliance
 
 
-def _translate_compliance(value: Compliance) -> str:
+def translate_compliance(value: Compliance) -> str:
+    """The compliance as the report prints it, in red when it is not compliant."""
     if value != Compliance.Compliant:
         return f"\\textcolor{{red}}{{{value.to_str()}}}"
     else:
@@ -24,7 +25,7 @@ def create_map(summary_list: list) -> list:
     summary_map = []
     footnote_defined = False
     for i in summary_list:
-        compliance_str = _translate_compliance(i.compliance)
+        compliance_str = translate_compliance(i.compliance)
         if i.compliance is Compliance.NotApplicableTest:
             if not footnote_defined:
                 # First occurrence defines the footnote text; later occurrences reuse
@@ -40,8 +41,8 @@ def create_map(summary_list: list) -> list:
             [
                 f"{i.producer_name}".replace("_", r"\_").strip(),
                 f"{i.pcs}".replace("_", r"\_").strip(),
-                f"{i.benchmark}".strip(),
-                f"{i.operating_condition}".strip(),
+                f"{i.benchmark}".replace("_", r"\_").strip(),
+                f"{i.operating_condition}".replace("_", r"\_").strip(),
                 f"{compliance_str}".strip(),
             ]
         )

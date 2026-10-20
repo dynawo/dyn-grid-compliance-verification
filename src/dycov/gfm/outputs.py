@@ -8,6 +8,7 @@
 
 import configparser
 import importlib.metadata
+import json
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from matplotlib import pyplot as plt
+
+from dycov.configuration.cfg import config
 
 
 def save_results_to_csv(
@@ -25,6 +28,7 @@ def save_results_to_csv(
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
     extra_envelopes: dict[str, np.ndarray] = None,
+    producer_signal: np.ndarray = None,
 ) -> None:
     """
     Exports envelopes and signals to a CSV file.
@@ -45,6 +49,8 @@ def save_results_to_csv(
         Array of upper envelope values.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional envelopes to save. Defaults to None.
+    producer_signal : np.ndarray, optional
+        Filtered producer curve on the same time values. Defaults to None.
 
     Returns
     -------
@@ -61,6 +67,8 @@ def save_results_to_csv(
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
             data[f"{magnitude} {name} (pu)"] = signal
+    if producer_signal is not None:
+        data[f"{magnitude} producer (pu)"] = producer_signal
 
     df = pd.DataFrame(data)
     # Use scientific notation to preserve precision for sensitive envelope bounds
@@ -162,6 +170,7 @@ def plot_results(
     show_disclaimer: bool = False,
     disclaimer_message: str = None,
     extra_envelopes: dict[str, np.ndarray] = None,
+    producer_signal: np.ndarray = None,
 ) -> None:
     """
     Renders and exports simulation results graphically.
@@ -196,6 +205,9 @@ def plot_results(
         Custom disclaimer text. Defaults to None.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional signals to plot. Defaults to None.
+    producer_signal : np.ndarray, optional
+        Filtered producer curve on the same time values, checked against the envelopes.
+        Defaults to None.
 
     Returns
     -------
@@ -214,6 +226,9 @@ def plot_results(
     if extra_envelopes:
         for name, signal in extra_envelopes.items():
             extra_trimmed[name] = signal[start_index:end_index]
+    producer_trimmed = (
+        producer_signal[start_index:end_index] if producer_signal is not None else None
+    )
 
     disclaimer_text_mpl = ""
     disclaimer_text_html = ""
@@ -256,6 +271,14 @@ def plot_results(
             time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
         )
         plt.plot(time_trimmed, up_trimmed, linewidth=2, color="red")
+        if producer_trimmed is not None:
+            plt.plot(
+                time_trimmed,
+                producer_trimmed,
+                label=f"{magnitude} producer",
+                linewidth=2,
+                color="green",
+            )
 
         plt.xlabel("Time (s)")
         plt.ylabel(f"{magnitude} (pu)")
@@ -372,6 +395,16 @@ def plot_results(
                 name=f"{magnitude} PGU",
             )
         )
+        if producer_trimmed is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=time_trimmed,
+                    y=producer_trimmed,
+                    mode="lines",
+                    line=dict(color="green", width=2),
+                    name=f"{magnitude} producer",
+                )
+            )
 
         fig.add_vline(
             x=event_time + shift_time / 1000,
@@ -505,3 +538,36 @@ def save_ini_dump(
                 for key, value in producer_config.items(section):
                     f.write(f"{key} = {value}\n")
                 f.write("\n")
+
+
+def save_compliance_results(path: Path, curves_check: Any) -> None:
+    """
+    Exports the compliance of the producer curves of a test to a JSON file.
+
+    Parameters
+    ----------
+    path : Path
+        Destination path for the JSON file.
+    curves_check : Any
+        The result of checking the producer curves against the envelopes and the damping
+        criterion.
+
+    Returns
+    -------
+    None
+    """
+    results = {
+        "compliance": curves_check.compliance.to_str(),
+        "cutoff": config.get_float("GFM", "cutoff", 30.0),
+        "envelope_tolerance": config.get_float("GFM", "envelope_tolerance", 0.005),
+        "envelope": curves_check.envelope._asdict() if curves_check.envelope else None,
+        "thr_damping_ratio": config.get_float("GFM", "thr_damping_ratio", 0.40),
+        "damping_band": [
+            config.get_float("GFM", "damping_f_min", 0.1),
+            config.get_float("GFM", "damping_f_max", 10.0),
+        ],
+        "damping_min_amplitude": config.get_float("GFM", "damping_min_amplitude", 0.001),
+        "modes": [mode._asdict() for mode in curves_check.modes],
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=4)

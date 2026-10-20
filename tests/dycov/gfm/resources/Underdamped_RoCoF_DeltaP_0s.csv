@@ -1,4 +1,4 @@
-Time (s);P PGU (pu);P lower (pu);P upper (pu)
+Time (s);Ip PGU (pu);Ip lower (pu);Ip upper (pu)
 0.000e+00;9.000e-01;4.372e-01;1.100e+00
 5.000e-03;9.000e-01;4.372e-01;1.100e+00
 1.000e-02;9.000e-01;4.372e-01;1.100e+00

@@ -658,6 +658,13 @@ def _add_generate_gfm_envelopes_subparser(subparsers: argparse._SubParsersAction
         help="create all the envelopes based on the description of the different test cases",
     )
     _add_ini_argument(envelops, is_required=True)
+    _add_curves_argument(
+        envelops,
+        explain=(
+            "When given, the curves of the producer, one subdirectory per producer INI file, "
+            "are checked against the envelopes and the damping criterion of the DTR."
+        ),
+    )
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
     _add_pcs_argument(envelops)

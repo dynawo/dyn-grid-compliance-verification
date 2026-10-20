@@ -8,6 +8,8 @@
 # demiguelm@aia.es
 #
 
+import configparser
+
 import pytest
 
 
@@ -17,7 +19,11 @@ def _patch_config(monkeypatch):
     monkeypatch.setattr(Config, "get_float", lambda *args, **kwargs: 100.0)
 
 
-def _write_ini(path, name="Producer.ini", body="[Section]\nkey = value  # inline\n"):
+def _write_ini(
+    path,
+    name="Producer.ini",
+    body="[DEFAULT]\ngenerator_type = PPM\n\n[Section]\nkey = value  # inline\n",
+):
     ini = path / name
     ini.write_text(body)
     return ini
@@ -36,13 +42,27 @@ def test_read_producer_ini_and_get_config(monkeypatch, tmp_path):
     assert producer.get_producer_path() == tmp_path
 
 
-def test_get_sim_type_str(monkeypatch, tmp_path):
+@pytest.mark.parametrize("generator_type", ["PPM", "BESS"])
+def test_get_sim_type_str_follows_the_generator_type(monkeypatch, tmp_path, generator_type):
     from dycov.gfm.producer import GFMProducer
 
     _patch_config(monkeypatch)
-    ini = _write_ini(tmp_path)
+    ini = _write_ini(tmp_path, body=f"[DEFAULT]\ngenerator_type = {generator_type}\n")
 
-    assert GFMProducer(ini).get_sim_type_str() == "gfm"
+    assert GFMProducer(ini).get_sim_type_str() == f"gfm/{generator_type}"
+
+
+@pytest.mark.parametrize(
+    "body", ["[DEFAULT]\np_max_injection = 100\n", "[DEFAULT]\ngenerator_type = SM\n"]
+)
+def test_unsupported_generator_type_raises(monkeypatch, tmp_path, body):
+    from dycov.gfm.producer import GFMProducer
+
+    _patch_config(monkeypatch)
+    ini = _write_ini(tmp_path, body=body)
+
+    with pytest.raises(ValueError, match="generator_type"):
+        GFMProducer(ini)
 
 
 def test_get_filenames_sorted(monkeypatch, tmp_path):
@@ -77,3 +97,15 @@ def test_missing_ini_raises(monkeypatch, tmp_path):
 
     with pytest.raises(FileNotFoundError):
         GFMProducer(empty_dir / "Producer.ini")
+
+
+@pytest.mark.parametrize("declared, expected", [("Imax = 1.1\n", 1.1), ("", None)])
+def test_maximum_current_bounds_the_envelopes_only_when_declared(declared, expected):
+    from dycov.gfm.parameters import GFMParameters
+
+    producer_config = configparser.ConfigParser()
+    producer_config.read_string(f"[GFM Parameters]\nXeff = 0.27\n{declared}")
+    parameters = object.__new__(GFMParameters)
+    parameters._producer = type("Producer", (), {"get_config": lambda self: producer_config})()
+
+    assert parameters.get_max_current() == expected

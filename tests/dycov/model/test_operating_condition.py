@@ -139,12 +139,13 @@ def test_generate(monkeypatch, tmp_path):
     calls = {}
 
     class DummyGridForming:
-        def generate(self, working_path, parameters, pcs_name, bm_name, oc_name):
-            calls["args"] = (working_path, pcs_name, bm_name, oc_name)
+        def generate(self, working_path, parameters, pcs_name, bm_name, oc_name, producer_name):
+            calls["args"] = (working_path, pcs_name, bm_name, oc_name, producer_name)
+            return "compliance"
 
     monkeypatch.setattr(oc_module, "GridForming", DummyGridForming)
 
     oc = _make_oc(monkeypatch, tmp_path)
-    oc.generate(tmp_path)
 
-    assert calls["args"] == (tmp_path, "PCS", "Bench", "OC")
+    assert oc.generate(tmp_path, "Producer") == "compliance"
+    assert calls["args"] == (tmp_path, "PCS", "Bench", "OC", "Producer")

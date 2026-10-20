@@ -86,6 +86,7 @@ def handle_generate_gfm_envelopes_command(
     result_code = _generate_gfm_envelopes(
         output_dir=output_dir,
         producer_ini=producer_ini,
+        producer_curves=args.curves,
         emt=emt,
         user_pcs=args.pcs,
         only_dtr=args.only_dtr,
@@ -590,6 +591,7 @@ def _run_verification(
 def _generate_gfm_envelopes(
     output_dir: Path,
     producer_ini: Path,
+    producer_curves: Optional[Path],
     emt: bool,
     user_pcs: bool,
     only_dtr: bool,
@@ -603,6 +605,7 @@ def _generate_gfm_envelopes(
             output_dir=output_dir,
             only_dtr=only_dtr,
             emt=emt,
+            producer_curves=producer_curves,
         )
 
         # Determine if the parameters are valid.

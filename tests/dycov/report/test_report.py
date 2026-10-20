@@ -8,9 +8,12 @@
 #     demiguelm@aia.es
 #
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
+from dycov.core.global_variables import REPORT_NAME
 from dycov.report import report
 from dycov.report.curve_classification import is_setpoint
 from dycov.report.types import FigureDescription
@@ -374,3 +377,14 @@ def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
 
     assert label == r"\textcolor{red}{unstable}"
     assert "\t" not in label
+
+
+def test_main_template_of_a_verification_keeps_dynawo_and_the_step_response_appendix():
+    templates = Path(report.__file__).resolve().parent.parent / "templates" / "reports"
+
+    rendered = report.get_template(templates, REPORT_NAME).render(
+        {"summaryReport": [], "reports": []}
+    )
+
+    assert r"using \Dynawo~\cite{Dynawo}" in rendered
+    assert "step_response_characteristics" in rendered

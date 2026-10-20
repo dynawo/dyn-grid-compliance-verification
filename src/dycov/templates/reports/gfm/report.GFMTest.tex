@@ -1,0 +1,82 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Grid Forming test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    {{ waterMarkText }}
+
+    \subsection{Test \texttt{%
+{{ testname }}%
+}}
+
+    \subsubsection*{Test parameters}
+
+    \begin{center}
+        \begin{tabular}{lr}
+            \toprule
+            \textbf{Parameter} & \textbf{Value} \\
+            \midrule
+            \BLOCK{for row in parameters}
+            {{row[0]}} & {{row[1]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection*{Envelopes}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\textwidth]{%
+{{ figure }}%
+}
+        \caption{Envelopes of the test and the response of the ideal voltage source behind the
+        effective reactance\BLOCK{if envelope}, with the producer curve\BLOCK{endif}.}
+    \end{figure}
+
+    Go to {{ link }}
+
+    \BLOCK{if checked}
+    \subsubsection*{Compliance checks}
+
+    \BLOCK{if notices}
+    \noindent\textcolor{red}{%
+{{ notices }}%
+}
+    \BLOCK{else}
+    \noindent The producer curve, low-pass filtered at {{ cutoff }}~Hz, must stay inside the
+    envelopes, with a tolerance of {{ tolerance }}~pu:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lcccc}
+            \toprule
+            Magnitude & From (s) & To (s) & Max. excess (pu) & Compl. \\
+            \midrule
+            {{envelope[0]}} & {{envelope[1]}} & {{envelope[2]}} & {{envelope[3]}} & {{envelope[4]}} \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Every oscillation of the currents, and of the voltage when it is given, between
+    {{ fmin }} and {{ fmax }}~Hz must have a damping ratio of at least {{ threshold }}. The
+    damping ratio is estimated with the Matrix Pencil method, during the event and after it,
+    for the oscillations of an amplitude of {{ minamplitude }}~pu or more:
+    \BLOCK{if modes}
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{llcccc}
+            \toprule
+            Curve & Window & Frequency (Hz) & Damping ratio & Rel. amplitude & Compl. \\
+            \midrule
+            \BLOCK{for row in modes}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    \BLOCK{else}
+    no oscillation in the band.
+    \BLOCK{endif}
+    \BLOCK{endif}
+
+    \noindent Result: {{ compliance }}
+    \BLOCK{endif}
