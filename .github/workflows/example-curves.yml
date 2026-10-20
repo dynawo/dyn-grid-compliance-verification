@@ -1,0 +1,32 @@
+name: Example curves
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  not-versioned:
+    name: The example curves are not under version control
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: No curve directory is tracked
+        run: |
+          git ls-files -- examples |
+            grep -E '/(ReferenceCurves|ProducerCurves)/|^examples/\.curves-release$' \
+            > "$RUNNER_TEMP/tracked.txt" || true
+          tracked=$(wc -l < "$RUNNER_TEMP/tracked.txt")
+          if [ "$tracked" -gt 0 ]; then
+            echo "$tracked files of the example curve directories are under version control:"
+            head -5 "$RUNNER_TEMP/tracked.txt"
+            echo "  ..."
+            echo "::error::The curves of the examples ship as an asset of the release and are not in the repository. A branch started before that keeps them, and merging it puts them back. Merge the base branch into this one and keep the deletions it brings."
+            exit 1
+          fi
