@@ -50,3 +50,7 @@ complexity_report/
 
 # dycov installation folder
 /dycov/
+
+examples/**/ReferenceCurves/
+examples/**/ProducerCurves/
+examples/.curves-release
